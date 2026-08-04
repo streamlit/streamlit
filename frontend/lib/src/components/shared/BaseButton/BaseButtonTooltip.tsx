@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
@@ -27,12 +27,6 @@ interface Props {
   containerWidth: boolean
   help?: string
   placement?: Placement
-  /**
-   * The full, plain-text label to reveal in a tooltip when the button's label
-   * is truncated (`wrap=False`). Only used when `help` is not set, since `help`
-   * takes precedence. Like `help`, this tooltip is desktop-only.
-   */
-  truncatedLabel?: string
 }
 
 export function BaseButtonTooltip({
@@ -40,43 +34,22 @@ export function BaseButtonTooltip({
   help,
   placement,
   containerWidth,
-  truncatedLabel,
 }: Props): ReactElement {
-  if (help) {
-    return (
-      <>
-        <StyledTooltipNormal>
-          <TooltipIcon
-            content={help}
-            placement={placement || Placement.TOP}
-            containerWidth={containerWidth}
-          >
-            {children}
-          </TooltipIcon>
-        </StyledTooltipNormal>
-        <StyledTooltipMobile>{children}</StyledTooltipMobile>
-      </>
-    )
+  if (!help) {
+    return children
   }
-
-  if (truncatedLabel) {
-    // Reveal the full label on hover/focus (desktop only), mirroring how `help`
-    // is disabled on touch via the normal/mobile split.
-    return (
-      <>
-        <StyledTooltipNormal>
-          <Tooltip
-            content={truncatedLabel}
-            placement={placement || Placement.TOP}
-            containerWidth={containerWidth}
-          >
-            {children}
-          </Tooltip>
-        </StyledTooltipNormal>
-        <StyledTooltipMobile>{children}</StyledTooltipMobile>
-      </>
-    )
-  }
-
-  return children
+  return (
+    <>
+      <StyledTooltipNormal>
+        <TooltipIcon
+          content={help}
+          placement={placement || Placement.TOP}
+          containerWidth={containerWidth}
+        >
+          {children}
+        </TooltipIcon>
+      </StyledTooltipNormal>
+      <StyledTooltipMobile>{children}</StyledTooltipMobile>
+    </>
+  )
 }

@@ -277,40 +277,26 @@ describe("MenuButton widget", () => {
   })
 
   describe("wrap=false", () => {
-    const mockOverflow = (overflowing: boolean): void => {
-      vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
-        overflowing ? 200 : 100
-      )
-      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
-        100
-      )
-    }
-
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it("keeps the chevron visible when the label is truncated", () => {
-      mockOverflow(true)
+    it("keeps the chevron visible and sets the full label as a native title", () => {
       const props = getProps({ label: "A very long menu label", wrap: false })
       render(<MenuButton {...props} />)
 
-      // When truncated, the tooltip duplicates the trigger (desktop + mobile).
-      const button = screen.getAllByTestId("stMenuButtonButton")[0]
+      const button = screen.getByTestId("stMenuButtonButton")
       expect(button).toHaveTextContent("expand_more")
+      expect(screen.getByTitle("A very long menu label")).toBeVisible()
     })
 
-    it("reveals the full label in a tooltip when truncated and no help is set", async () => {
-      mockOverflow(true)
-      const user = userEvent.setup()
-      const props = getProps({ label: "A very long menu label", wrap: false })
+    it("does not set a title when help is set (help tooltip takes over)", () => {
+      const props = getProps({
+        label: "A very long menu label",
+        wrap: false,
+        help: "Help wins",
+      })
       render(<MenuButton {...props} />)
 
-      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
-      await user.hover(tooltipTarget)
-
-      const tooltipContent = await screen.findByTestId("stTooltipContent")
-      expect(tooltipContent).toHaveTextContent("A very long menu label")
+      expect(
+        screen.queryByTitle("A very long menu label")
+      ).not.toBeInTheDocument()
     })
   })
 

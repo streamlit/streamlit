@@ -39,6 +39,11 @@ export interface DynamicButtonLabelProps {
    * instead of wrapping. Icons and shortcuts keep their intrinsic size.
    */
   wrap?: boolean
+  /**
+   * Native tooltip text shown on hover. Used with `wrap=false` to reveal the
+   * full label when it is ellipsized.
+   */
+  title?: string
 }
 
 export const DynamicButtonLabel = ({
@@ -48,6 +53,7 @@ export const DynamicButtonLabel = ({
   iconPosition = "left",
   shortcut,
   wrap = true,
+  title,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const displayShortcut = useMemo(() => {
     return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
@@ -56,7 +62,7 @@ export const DynamicButtonLabel = ({
   const truncate = !wrap
 
   return (
-    <StyledButtonLabel $truncate={truncate}>
+    <StyledButtonLabel $truncate={truncate} title={title}>
       <StyledButtonMainLabel
         data-has-shortcut={Boolean(displayShortcut)}
         $truncate={truncate}

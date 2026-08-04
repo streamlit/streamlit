@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useRef } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -26,7 +26,6 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
-import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -42,14 +41,9 @@ function Button(props: Props): ReactElement {
   const shortcut = element.shortcut ? element.shortcut : undefined
 
   const wrap = element.wrap ?? true
-  const containerRef = useRef<HTMLDivElement>(null)
-  // Only measure when the label can ellipsize and no help tooltip takes over.
-  const { isTruncated, labelText } = useIsTruncated(
-    containerRef,
-    !wrap && !element.help,
-    [element.label]
-  )
-  const truncatedLabel = isTruncated ? labelText : undefined
+  // With wrap=false the label ellipsizes, so reveal the full label on hover via
+  // a native title. Skipped when help is set, since help provides the tooltip.
+  const title = !wrap && !element.help ? element.label : undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -73,10 +67,9 @@ function Button(props: Props): ReactElement {
   })
 
   return (
-    <Box className="stButton" data-testid="stButton" ref={containerRef}>
+    <Box className="stButton" data-testid="stButton">
       <BaseButtonTooltip
         help={element.help}
-        truncatedLabel={truncatedLabel}
         // The element wrapper determines the width so
         // we should always expand to fill the wrapper.
         containerWidth={true}
@@ -94,6 +87,7 @@ function Button(props: Props): ReactElement {
             label={element.label}
             shortcut={shortcut}
             wrap={wrap}
+            title={title}
           />
         </BaseButton>
       </BaseButtonTooltip>

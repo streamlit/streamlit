@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
+import { memo, ReactElement, useCallback, useEffect } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -27,7 +27,6 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
-import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -47,14 +46,9 @@ export const FormSubmitButton = memo(function FormSubmitButton(
   const shortcut = element.shortcut ? element.shortcut : undefined
 
   const wrap = element.wrap ?? true
-  const containerRef = useRef<HTMLDivElement>(null)
-  // Only measure when the label can ellipsize and no help tooltip takes over.
-  const { isTruncated, labelText } = useIsTruncated(
-    containerRef,
-    !wrap && !element.help,
-    [element.label]
-  )
-  const truncatedLabel = isTruncated ? labelText : undefined
+  // With wrap=false the label ellipsizes, so reveal the full label on hover via
+  // a native title. Skipped when help is set, since help provides the tooltip.
+  const title = !wrap && !element.help ? element.label : undefined
 
   const { formsData } = useRequiredContext(FormsContext)
   const hasInProgressUpload = formsData.formsWithUploads.has(formId)
@@ -88,16 +82,8 @@ export const FormSubmitButton = memo(function FormSubmitButton(
   })
 
   return (
-    <Box
-      className="stFormSubmitButton"
-      data-testid="stFormSubmitButton"
-      ref={containerRef}
-    >
-      <BaseButtonTooltip
-        help={element.help}
-        truncatedLabel={truncatedLabel}
-        containerWidth={true}
-      >
+    <Box className="stFormSubmitButton" data-testid="stFormSubmitButton">
+      <BaseButtonTooltip help={element.help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
@@ -111,6 +97,7 @@ export const FormSubmitButton = memo(function FormSubmitButton(
             label={element.label}
             shortcut={shortcut}
             wrap={wrap}
+            title={title}
           />
         </BaseButton>
       </BaseButtonTooltip>

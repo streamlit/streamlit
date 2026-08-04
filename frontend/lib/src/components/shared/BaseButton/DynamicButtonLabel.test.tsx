@@ -139,4 +139,14 @@ describe("DynamicButtonLabel", () => {
       "Button Label"
     )
   })
+
+  it("sets the native title on the label when provided", () => {
+    render(<DynamicButtonLabel {...getProps({ title: "Full label text" })} />)
+    expect(screen.getByTitle("Full label text")).toBeVisible()
+  })
+
+  it("does not set a title by default", () => {
+    render(<DynamicButtonLabel {...getProps()} />)
+    expect(screen.queryByTitle("Button Label")).not.toBeInTheDocument()
+  })
 })

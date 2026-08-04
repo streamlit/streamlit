@@ -47,7 +47,6 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
-import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -126,13 +125,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
   const wrap = element.wrap ?? true
-  // Only measure when the label can ellipsize and no help tooltip takes over.
-  const { isTruncated, labelText } = useIsTruncated(
-    elementRef,
-    !wrap && !element.help,
-    [element.label]
-  )
-  const truncatedLabel = isTruncated ? labelText : undefined
+  // With wrap=false the label ellipsizes, so reveal the full label on hover via
+  // a native title. Skipped when help is set, since help provides the tooltip.
+  const title = !wrap && !element.help ? element.label : undefined
 
   // Timestamp of the last open action — used by the outside-click handler to
   // ignore clicks that occur in the same tick as opening. In production
@@ -383,11 +378,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <div ref={setReferenceRef}>
-        <BaseButtonTooltip
-          help={element.help}
-          truncatedLabel={truncatedLabel}
-          containerWidth={true}
-        >
+        <BaseButtonTooltip help={element.help} containerWidth={true}>
           <BaseButton
             data-testid="stPopoverButton"
             kind={kind}
@@ -406,6 +397,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                 icon={element.icon}
                 label={element.label}
                 wrap={wrap}
+                title={title}
               />
               {!hideChevron && (
                 <StyledPopoverExpansionIcon aria-hidden="true">

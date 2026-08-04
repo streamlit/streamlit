@@ -21,7 +21,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react"
 
@@ -36,7 +35,6 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
-import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import useTimeout from "~lib/hooks/useTimeout"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -58,14 +56,9 @@ function DownloadButton(props: Props): ReactElement {
   const shortcut = element.shortcut ? element.shortcut : undefined
 
   const wrap = element.wrap ?? true
-  const containerRef = useRef<HTMLDivElement>(null)
-  // Only measure when the label can ellipsize and no help tooltip takes over.
-  const { isTruncated, labelText } = useIsTruncated(
-    containerRef,
-    !wrap && !help,
-    [label]
-  )
-  const truncatedLabel = isTruncated ? labelText : undefined
+  // With wrap=false the label ellipsizes, so reveal the full label on hover via
+  // a native title. Skipped when help is set, since help provides the tooltip.
+  const title = !wrap && !help ? label : undefined
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -198,16 +191,8 @@ function DownloadButton(props: Props): ReactElement {
   }, [clearErrorTimeout, error, restartErrorTimeout])
 
   return (
-    <div
-      className="stDownloadButton"
-      data-testid="stDownloadButton"
-      ref={containerRef}
-    >
-      <BaseButtonTooltip
-        help={help}
-        truncatedLabel={truncatedLabel}
-        containerWidth={true}
-      >
+    <div className="stDownloadButton" data-testid="stDownloadButton">
+      <BaseButtonTooltip help={help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
@@ -221,6 +206,7 @@ function DownloadButton(props: Props): ReactElement {
             label={label}
             shortcut={shortcut}
             wrap={wrap}
+            title={title}
           />
         </BaseButton>
       </BaseButtonTooltip>

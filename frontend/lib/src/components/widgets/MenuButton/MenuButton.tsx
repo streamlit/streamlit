@@ -44,7 +44,6 @@ import {
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
-import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -132,13 +131,9 @@ function MenuButton(props: Props): ReactElement {
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
   const wrap = element.wrap ?? true
-  // Only measure when the label can ellipsize and no help tooltip takes over.
-  const { isTruncated, labelText } = useIsTruncated(
-    containerRef,
-    !wrap && !element.help,
-    [element.label]
-  )
-  const truncatedLabel = isTruncated ? labelText : undefined
+  // With wrap=false the label ellipsizes, so reveal the full label on hover via
+  // a native title. Skipped when help is set, since help provides the tooltip.
+  const title = !wrap && !element.help ? element.label : undefined
 
   const handleItemSelect = useCallback(
     (key: Key) => {
@@ -164,11 +159,7 @@ function MenuButton(props: Props): ReactElement {
       className="stMenuButton"
       data-testid="stMenuButton"
     >
-      <BaseButtonTooltip
-        help={element.help}
-        truncatedLabel={truncatedLabel}
-        containerWidth={true}
-      >
+      <BaseButtonTooltip help={element.help} containerWidth={true}>
         <BaseButton
           data-testid="stMenuButtonButton"
           kind={kind}
@@ -187,6 +178,7 @@ function MenuButton(props: Props): ReactElement {
               icon={element.icon}
               label={element.label}
               wrap={wrap}
+              title={title}
             />
             {!hideChevron && (
               <StyledMenuButtonExpansionIcon aria-hidden="true">
