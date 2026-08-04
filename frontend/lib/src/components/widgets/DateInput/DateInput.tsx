@@ -24,7 +24,7 @@ import {
   useState,
 } from "react"
 
-import { CalendarDate } from "@internationalized/date"
+import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -36,10 +36,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import {
-  isInForm,
-  labelVisibilityProtoValueToEnum,
-} from "~lib/util/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -56,7 +53,6 @@ import {
 } from "./dateInputUtils"
 import RangeDateInput from "./RangeDateInput"
 import SingleDateInput from "./SingleDateInput"
-import { useIntlLocale } from "./useIntlLocale"
 
 export interface Props {
   disabled: boolean
@@ -124,7 +120,6 @@ function DateInput({
   })
 
   const { locale } = useContext(LibConfigContext)
-  const loadedLocale = useIntlLocale(locale)
 
   const minDateCalendar = useMemo(() => getMinDate(element), [element])
   const maxDateCalendar = useMemo(() => getMaxCalendarDate(element), [element])
@@ -296,6 +291,21 @@ function DateInput({
     [inForm, clearable, element, widgetMgr, fragmentId]
   )
 
+  const handleRangeFormCommit = useCallback(
+    (dates: CalendarDate[]): void => {
+      if (!inForm) return
+      if (dates.length === 0 && !clearable) return
+      const isoValue = dates.map(calendarDateToIso)
+      updateWidgetMgrState(
+        element,
+        widgetMgr,
+        { value: isoValue, fromUi: true },
+        fragmentId
+      )
+    },
+    [inForm, clearable, element, widgetMgr, fragmentId]
+  )
+
   const singleValue = useMemo(
     () => isoToCalendarDate(value[0] ?? "") ?? null,
     [value]
@@ -361,7 +371,10 @@ function DateInput({
           enableQuickSelect={enableQuickSelect}
           focusedValue={focusedValue}
           onFocusChange={setFocusedValue}
+          onValidate={handleValidate}
           onClose={handleClose}
+          formCommit={inForm ? handleRangeFormCommit : undefined}
+          formResetKey={formResetKey}
         />
       ) : (
         <SingleDateInput

@@ -18,7 +18,7 @@ import { ComponentType } from "react"
 
 import styled from "@emotion/styled"
 import { CalendarDate } from "@internationalized/date"
-import { getLuminance } from "color2k"
+import { getLuminance, transparentize } from "color2k"
 import {
   Button,
   Calendar,
@@ -47,17 +47,17 @@ export const StyledDateFieldContainer = styled.div({
   width: "100%",
 })
 
-export const StyledDateField = styled.div<{ $isRange?: boolean }>(
-  ({ theme, $isRange }) => ({
-    flex: $isRange ? "0 0 auto" : 1,
-    minWidth: 0,
-    ...($isRange && {
-      "&:first-of-type": {
-        paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
-      },
-    }),
-  })
-)
+export const StyledDateField = styled("div", {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
+  flex: $isRange ? "0 0 auto" : 1,
+  minWidth: 0,
+  ...($isRange && {
+    "&:first-of-type": {
+      paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+    },
+  }),
+}))
 
 /** Mirrors TimeInput's StyledTimeInputWrapper for cross-widget consistency. */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
@@ -89,21 +89,21 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
 }))
 
 /** Uses RAC `Group` instead of `DateInput` to allow custom segment ordering. */
-export const StyledDateFieldInput = styled(Group)<{ $isRange?: boolean }>(
-  ({ theme, $isRange }) => ({
-    display: "flex",
-    alignItems: "center",
-    flex: 1,
-    minWidth: 0,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm,
-    paddingLeft: $isRange
-      ? theme.spacing.none
-      : `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
-    paddingRight: $isRange ? theme.spacing.none : theme.spacing.sm,
-    outline: "none",
-  })
-)
+export const StyledDateFieldInput = styled(Group, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  minWidth: 0,
+  paddingTop: theme.spacing.sm,
+  paddingBottom: theme.spacing.sm,
+  paddingLeft: $isRange
+    ? theme.spacing.none
+    : `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+  paddingRight: $isRange ? theme.spacing.none : theme.spacing.sm,
+  outline: "none",
+}))
 
 export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
   const isLightPrimary = getLuminance(theme.colors.primary) > 0.5
@@ -147,11 +147,11 @@ export const StyledRangeSeparator = styled.span(({ theme }) => ({
   userSelect: "none",
 }))
 
-
 export const StyledErrorIconContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   color: theme.colors.redTextColor,
+  marginLeft: "auto",
   paddingLeft: theme.spacing.twoXS,
   paddingRight: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
   flexShrink: 0,
@@ -166,6 +166,7 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   border: "none",
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
+  marginLeft: "auto",
   marginRight: theme.spacing.sm,
   color: theme.colors.grayTextColor,
   flexShrink: 0,
@@ -234,6 +235,7 @@ const TypedRangeCalendar = RangeCalendar as ComponentType<
 export const StyledRangeCalendarRoot = styled(TypedRangeCalendar)(
   ({ theme }) => ({
     fontSize: theme.fontSizes.sm,
+    minWidth: theme.sizes.dateInputMinWidth,
   })
 )
 
@@ -323,6 +325,7 @@ export const StyledQuickSelectTrigger = styled(Button)(({ theme }) => ({
   },
 }))
 
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 export const StyledQuickSelectListBox = styled(ListBox)(({ theme }) => ({
   outline: "none",
   maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
@@ -342,6 +345,7 @@ export const StyledQuickSelectListBox = styled(ListBox)(({ theme }) => ({
   boxShadow: `0 4px 16px rgba(0, 0, 0, 0.12)`,
   zIndex: 1,
 }))
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 export const StyledQuickSelectListBoxItem = styled(ListBoxItem)(
   ({ theme }) => ({
@@ -361,7 +365,6 @@ export const StyledQuickSelectListBoxItem = styled(ListBoxItem)(
     },
   })
 )
-
 
 export const StyledCalendarHeaderSelectTrigger = styled(Button)(
   ({ theme }) => ({
@@ -448,20 +451,22 @@ export const StyledCalendarGrid = styled(CalendarGrid)(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 
-export const StyledCalendarHeaderCell = styled(CalendarHeaderCell)(({
-  theme,
-}) => ({
-  fontSize: theme.fontSizes.sm,
-  fontWeight: theme.fontWeights.semiBold,
-  color: theme.colors.bodyText,
-  paddingTop: theme.spacing.sm,
-  paddingBottom: theme.spacing.xs,
-}))
+export const StyledCalendarHeaderCell = styled(CalendarHeaderCell)(
+  ({ theme }) => ({
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.semiBold,
+    color: theme.colors.bodyText,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
+  })
+)
 
 /**
- * In single mode, `data-selected` draws the solid primary circle.
- * In range mode, only `data-selection-start`/`data-selection-end` get the
- * solid fill; days between them get a softer tint via `data-selected` alone.
+ * In single mode, `data-selected` draws the solid primary rounded rect.
+ * In range mode, `data-selection-start`/`data-selection-end` get the same
+ * rounded-rect highlight (via `::after` pseudo) with a tint band extending
+ * toward the range interior (via `::before` pseudo). Days between them get
+ * a seamless tint band via `data-selected` alone.
  */
 export const StyledCalendarCell = styled(CalendarCell, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
@@ -471,13 +476,54 @@ export const StyledCalendarCell = styled(CalendarCell, {
     ? theme.colors.black
     : theme.colors.white
 
-  const soloSelectedSelector = $isRangeMode
-    ? "&[data-selection-start], &[data-selection-end]"
-    : "&[data-selected]"
-
   const cellSize = theme.sizes.smallElementHeight
-  const rangeTint = theme.colors.darkenedBgMix15
   const primary = theme.colors.primary
+  const rangeTint = transparentize(primary, 0.85)
+  const radius = theme.radii.default
+
+  const borderWidth = theme.sizes.borderWidth
+
+  // Centered, rounded focus/hover ring drawn via ::after for range cells
+  // whose own dimensions (width: auto, borderRadius: 0) differ from the
+  // visual cellSize rounded-rect shape. Matches unselected cells' native
+  // boxShadow appearance exactly.
+  const rangeFocusRing = {
+    content: '""',
+    position: "absolute" as const,
+    top: 0,
+    bottom: 0,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: cellSize,
+    borderRadius: radius,
+    boxShadow: `inset 0 0 0 ${borderWidth} ${primary}`,
+    pointerEvents: "none" as const,
+  }
+
+  // Shared base for range start/end endpoints: cell fills td, pseudos
+  // create the tint band (::before) and primary rounded rect (::after).
+  const rangeEndpointBase = {
+    width: "auto",
+    marginLeft: 0,
+    marginRight: 0,
+    backgroundColor: "transparent",
+    color: selectedTextColor,
+    position: "relative" as const,
+    isolation: "isolate" as const,
+    // Primary rounded rect (same shape as single-mode selected cell)
+    "&::after": {
+      content: '""',
+      position: "absolute" as const,
+      top: 0,
+      bottom: 0,
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: cellSize,
+      borderRadius: radius,
+      backgroundColor: primary,
+      zIndex: -1,
+    },
+  }
 
   return {
     display: "flex",
@@ -494,7 +540,7 @@ export const StyledCalendarCell = styled(CalendarCell, {
     cursor: "pointer",
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
-    borderRadius: theme.radii.default,
+    borderRadius: radius,
     outline: "none",
 
     ...($isRangeMode && {
@@ -502,51 +548,84 @@ export const StyledCalendarCell = styled(CalendarCell, {
       "&[data-selected]:not([data-selection-start]):not([data-selection-end])":
         {
           width: "auto",
-          margin: 0,
+          marginLeft: 0,
+          marginRight: 0,
           borderRadius: 0,
           backgroundColor: rangeTint,
+          position: "relative" as const,
+          // Hover/focus: centered rounded ring via ::after
+          "&[data-hovered]::after, &[data-focus-visible]::after":
+            rangeFocusRing,
         },
-      // Start endpoint: fill td, circle via gradient
+      // Start endpoint: tint band on right half, primary rounded rect centered
       "&[data-selection-start]:not([data-selection-end])": {
-        width: "auto",
-        margin: 0,
-        borderRadius: 0,
-        background: `radial-gradient(circle closest-side, ${primary} 100%, transparent 100%), linear-gradient(to right, transparent 50%, ${rangeTint} 50%)`,
-        color: selectedTextColor,
+        ...rangeEndpointBase,
+        "&::before": {
+          content: '""',
+          position: "absolute" as const,
+          top: 0,
+          bottom: 0,
+          left: "50%",
+          right: 0,
+          backgroundColor: rangeTint,
+          zIndex: -2,
+        },
+        // Focus ring: outline on the ::after (which is already cellSize/rounded)
+        "&[data-hovered]::after, &[data-focus-visible]::after": {
+          outline: `${borderWidth} solid ${primary}`,
+          outlineOffset: `-${borderWidth}`,
+        },
       },
-      // End endpoint: fill td, circle via gradient
+      // End endpoint: tint band on left half, primary rounded rect centered
       "&[data-selection-end]:not([data-selection-start])": {
-        width: "auto",
-        margin: 0,
-        borderRadius: 0,
-        background: `radial-gradient(circle closest-side, ${primary} 100%, transparent 100%), linear-gradient(to left, transparent 50%, ${rangeTint} 50%)`,
-        color: selectedTextColor,
+        ...rangeEndpointBase,
+        "&::before": {
+          content: '""',
+          position: "absolute" as const,
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: "50%",
+          backgroundColor: rangeTint,
+          zIndex: -2,
+        },
+        // Focus ring: outline on the ::after (which is already cellSize/rounded)
+        "&[data-hovered]::after, &[data-focus-visible]::after": {
+          outline: `${borderWidth} solid ${primary}`,
+          outlineOffset: `-${borderWidth}`,
+        },
       },
-      // Single-day range: just the circle
+      // Single-day range: just the rounded rect (same as single mode)
       "&[data-selection-start][data-selection-end]": {
         backgroundColor: primary,
         color: selectedTextColor,
       },
+      // Suppress cell-level indicators on all selected range cells —
+      // they'd render at td-width with borderRadius:0 (square).
+      // The pseudo-element focus rings above handle it correctly.
+      "&[data-selected][data-hovered], &[data-selected][data-focus-visible]": {
+        boxShadow: "none",
+        outline: "none",
+      },
     }),
 
     ...(!$isRangeMode && {
-      [soloSelectedSelector]: {
+      "&[data-selected]": {
         backgroundColor: primary,
         color: selectedTextColor,
+      },
+      "&[data-selected][data-focus-visible]": {
+        outline: `${theme.sizes.focusOutlineWidth} solid ${primary}`,
+        outlineOffset: theme.spacing.threeXS,
       },
     }),
 
     "&[data-hovered]": {
-      boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${primary}`,
+      boxShadow: `inset 0 0 0 ${borderWidth} ${primary}`,
     },
 
     "&[data-focus-visible]": {
-      boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${primary}`,
-    },
-
-    "&[data-selected][data-focus-visible]": {
-      outline: `${theme.sizes.focusOutlineWidth} solid ${theme.colors.primary}`,
-      outlineOffset: theme.spacing.threeXS,
+      boxShadow: `inset 0 0 0 ${borderWidth} ${primary}`,
     },
 
     "&[data-disabled], &[data-unavailable]": {

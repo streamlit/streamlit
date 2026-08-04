@@ -950,15 +950,16 @@ describe("DateInput widget", () => {
       const region = screen.getByTestId("stDateInput")
       const { year, month, day } = getRangeDateSegments(region, "start")
 
-      // Clearing every segment of the start field completes only once the
-      // last one empties — at that point `endValue` is still 2019-07-08, so
-      // naively compacting [null, endValue] would silently promote the end
-      // date into the start slot instead of clearing the range (the bug
-      // handleStartFieldChange's docstring in RangeDateInput.tsx guards
-      // against).
+      // Clearing every segment of the start field makes displayStart null,
+      // which also clears displayEnd (can't have end without start). The
+      // commit fires on popover close — not immediately — because segment
+      // edits are buffered.
       await clearSegment(user, year)
       await clearSegment(user, month)
       await clearSegment(user, day)
+
+      // Close the popover to trigger commit-on-close.
+      await user.click(document.body)
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -1101,6 +1102,10 @@ describe("DateInput widget", () => {
       await typeIntoSegment(user, start.year, "2020")
       await typeIntoSegment(user, start.month, "02")
       await typeIntoSegment(user, start.day, "06")
+
+      // Close the popover to trigger commit-on-close (segment edits are
+      // buffered and only committed when the popover closes).
+      await user.click(document.body)
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -1516,6 +1521,386 @@ describe("DateInput paste handling", () => {
         )
       ).toBe(true)
     })
+  })
+})
+
+describe("DateInput range paste handling", () => {
+  it("pasting a full date into the start field updates the value", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await user.paste("2024/03/15")
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "1" }),
+        ["2024-03-15", "2019-07-08"],
+        expect.objectContaining({ fromUi: true }),
+        undefined
+      )
+    })
+  })
+
+  it("pasting a full date into the end field updates the value", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "end")
+
+    await user.click(year)
+    await user.paste("2024/12/25")
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "1" }),
+        ["2019-07-06", "2024-12-25"],
+        expect.objectContaining({ fromUi: true }),
+        undefined
+      )
+    })
+  })
+
+  it("paste is ignored when range widget is disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps(
+      { isRange: true, default: ["2019-07-06", "2019-07-08"] },
+      { disabled: true }
+    )
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const field = within(region).getByTestId("stDateInputField")
+    act(() => {
+      field.focus()
+    })
+
+    const callsBefore = (
+      props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+    ).mock.calls.length
+    await user.paste("2024/03/15")
+
+    const callsAfter = (
+      props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+    ).mock.calls.length
+    expect(callsAfter).toBe(callsBefore)
+  })
+
+  it("pasting an invalid date into a range field is rejected", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await user.paste("not-a-date")
+
+    await waitFor(() => {
+      const calls = (
+        props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+      ).mock.calls
+      const dateValues = calls.map(c => c[1])
+      expect(
+        dateValues.every(
+          v =>
+            JSON.stringify(v) === JSON.stringify(["2019-07-06", "2019-07-08"])
+        )
+      ).toBe(true)
+    })
+  })
+})
+
+describe("DateInput range keyboard navigation", () => {
+  it("Tab from last end-date segment closes calendar", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getRangeDateSegments(region, "end")
+
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.tab()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("Shift+Tab from first start-date segment closes calendar", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+          format: "YYYY/MM/DD",
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.tab({ shift: true })
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("Tab in range calendar closes popover and returns focus to field", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const prevMonthBtn = within(calendar).getByLabelText("Previous month")
+    act(() => prevMonthBtn.focus())
+    expect(prevMonthBtn).toHaveFocus()
+
+    await user.tab()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    const endDay = getRangeDateSegments(region, "end").day
+    expect(endDay).toHaveFocus()
+  })
+
+  it("range calendar selection (second click) writes exactly once", async () => {
+    const user = userEvent.setup()
+    vi.setSystemTime(new Date(2024, 2, 15))
+
+    const props = getProps({
+      isRange: true,
+      default: [],
+      min: "2019-07-01",
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+    await user.click(year)
+
+    // First click (anchor)
+    await user.click(await screen.findByLabelText("Wednesday, March 6, 2024"))
+
+    // Clear mock to only track the second click's write
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    // Second click (completes range)
+    await user.click(await screen.findByLabelText("Sunday, March 10, 2024"))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["2024-03-06", "2024-03-10"],
+      { fromUi: true },
+      undefined
+    )
+
+    vi.useRealTimers()
+  })
+})
+
+describe("DateInput range form commit-on-blur", () => {
+  it("commits pending range value on blur when inside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      formId: "form",
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+
+    await typeIntoSegment(user, start.year, "2024")
+    await typeIntoSegment(user, start.month, "03")
+    await typeIntoSegment(user, start.day, "15")
+
+    // Before blur: segment edits are buffered — no widget write yet.
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    // Blur writes the pending value synchronously.
+    await user.tab()
+    // Tab moves within the range fields (start→end), so we need to tab
+    // completely out of the widget.
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    await user.tab()
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["2024-03-15", "2019-07-08"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("does not commit placeholder state on blur in a range form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      formId: "form",
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+
+    // Partially clear the start year (leaves placeholders)
+    await clearSegment(user, start.year)
+
+    // Blur should NOT commit — placeholder segments are present.
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    await user.tab()
+
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+  })
+})
+
+describe("DateInput excludeEscape (month/year picker)", () => {
+  it("Escape closes the month picker without closing the calendar (single mode)", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+
+    // Open the month picker
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    await user.click(monthTrigger)
+
+    // Month picker popover should be open
+    expect(
+      screen.getByTestId("stDateInputHeaderPickerPopover")
+    ).toBeInTheDocument()
+
+    // Press Escape — should close the picker, NOT the calendar
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+
+    // Calendar should still be open
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+  })
+
+  it("Escape closes the month picker without closing the calendar (range mode)", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    await user.click(monthTrigger)
+
+    expect(
+      screen.getByTestId("stDateInputHeaderPickerPopover")
+    ).toBeInTheDocument()
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
   })
 })
 
