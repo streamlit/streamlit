@@ -80,8 +80,6 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
 _LOGGER: Final = get_logger(__name__)
 
 # Streamlit directory where persisted @st.cache_data objects live.
-# (This is the same directory that @st.cache persisted objects live.
-# But @st.cache_data uses a different extension, so they don't overlap.)
 _CACHE_DIR_NAME: Final = "cache"
 
 # The extension for our persisted @st.cache_data objects.

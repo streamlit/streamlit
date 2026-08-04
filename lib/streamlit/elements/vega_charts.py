@@ -26,13 +26,10 @@ from typing import (
     Any,
     Literal,
     TypeAlias,
-    TypedDict,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util, type_util
 from streamlit.deprecation_util import (
@@ -87,7 +84,7 @@ AltairChart: TypeAlias = Union[
 _altair_globals_lock = threading.Lock()
 
 
-class VegaLiteState(TypedDict, total=False):
+class VegaLiteState(AttributeDictionary):
     """
     The schema for the Vega-Lite event state.
 
@@ -190,7 +187,33 @@ class VegaLiteState(TypedDict, total=False):
 
     """
 
-    selection: Required[AttributeDictionary]
+    # Keep selection typed as AttributeDictionary; without this property,
+    # __getattr__ re-wraps the value in a plain AttributeDictionary, losing
+    # the eagerly constructed instance.
+    @property
+    def selection(self) -> AttributeDictionary:
+        try:
+            return self["selection"]
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute 'selection'"
+            ) from err
+
+    @selection.setter
+    def selection(self, value: AttributeDictionary) -> None:
+        self["selection"] = value
+
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> AttributeDictionary: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        item = super().__getitem__(key)
+        if key == "selection" and not isinstance(item, AttributeDictionary):
+            return AttributeDictionary(item)
+        return item
 
 
 @dataclass
@@ -200,23 +223,26 @@ class VegaLiteStateSerde:
     selection_parameters: Sequence[str]
 
     def deserialize(self, ui_value: str | None) -> VegaLiteState:
-        empty_selection_state: VegaLiteState = {
-            "selection": AttributeDictionary(
-                # Initialize the select state with empty dictionaries for each selection parameter.
-                {param: {} for param in self.selection_parameters}
-            ),
-        }
-
-        selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast("VegaLiteState", AttributeDictionary(json.loads(ui_value)))
+        empty_selection_state = VegaLiteState(
+            {
+                "selection": AttributeDictionary(
+                    # Initialize the select state with empty dictionaries for each selection parameter.
+                    {param: {} for param in self.selection_parameters}
+                ),
+            }
         )
 
-        if "selection" not in selection_state:
-            selection_state = empty_selection_state  # type: ignore[unreachable]
+        if ui_value is None:
+            return empty_selection_state
 
-        return cast("VegaLiteState", AttributeDictionary(selection_state))
+        parsed = json.loads(ui_value)
+        if "selection" not in parsed:
+            return empty_selection_state
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        parsed["selection"] = AttributeDictionary(parsed["selection"])
+        return VegaLiteState(parsed)
 
     def serialize(self, selection_state: VegaLiteState) -> str:
         return json.dumps(selection_state, default=str)
@@ -438,8 +464,20 @@ def _convert_altair_to_vega_lite_spec(
             with data_transformer:  # ty: ignore[invalid-context-manager]
                 chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict:
-    chart_dict["datasets"] = datasets
+    # Merge the Arrow-serialized datasets we collected with any datasets the chart
+    # already carries, letting the Arrow-serialized datasets win on key collisions.
+    #
+    # Replacing outright would discard data — charts built with alt.Chart.from_json
+    # carry their data as inline datasets keyed by name, with the spec referencing
+    # them via {"data": {"name": ...}}. Our transformer never sees a dataframe for
+    # those, so `datasets` is empty and the chart would render with axes but no
+    # data. See https://github.com/streamlit/streamlit/issues/6269.
+    existing_datasets = chart_dict.get("datasets")
+    chart_dict["datasets"] = (
+        {**existing_datasets, **datasets}
+        if isinstance(existing_datasets, dict)
+        else datasets
+    )
     return chart_dict
 
 
@@ -1930,7 +1968,7 @@ class VegaChartsMixin:
             internal placeholder for the chart element. Otherwise, this command
             returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            class.
 
         Examples
         --------
@@ -2162,7 +2200,7 @@ class VegaChartsMixin:
             internal placeholder for the chart element. Otherwise, this command
             returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            class.
 
         Examples
         --------

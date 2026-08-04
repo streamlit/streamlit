@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import moment from "moment"
 import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
@@ -280,28 +274,38 @@ describe("DateInput widget", () => {
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
-  it("resets its value to default when it's closed with empty input", () => {
+  it("resets its value to default when it's closed with empty input", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
     const dateInput = screen.getByTestId("stDateInputField")
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- fireEvent.change needed to set value to null (userEvent.clear sets to empty string, not null)
-    fireEvent.change(dateInput, {
-      target: { value: newDateDisplay },
-    })
+    await user.clear(dateInput)
+    await user.type(dateInput, newDateDisplay)
 
     expect(dateInput).toHaveValue(newDateDisplay)
 
-    // Simulating clearing the date input
-    // eslint-disable-next-line testing-library/prefer-user-event -- fireEvent.change needed to set value to null (userEvent.clear sets to empty string, not null)
-    fireEvent.change(dateInput, {
-      target: { value: null },
-    })
+    await user.clear(dateInput)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
 
-    // Simulating the close action
-    fireEvent.blur(dateInput)
+    // BaseUI still checks the deprecated keyCode field when Tab closes the
+    // datepicker. userEvent correctly leaves that field unset, so dispatch the
+    // legacy-compatible close event after exercising input through userEvent.
+    const closeEvent = new KeyboardEvent("keydown", {
+      bubbles: true,
+      key: "Tab",
+    })
+    Object.defineProperty(closeEvent, "keyCode", { value: 9 })
+    act(() => {
+      dateInput.dispatchEvent(closeEvent)
+    })
     expect(dateInput).toHaveValue(originalDateDisplay)
   })
 

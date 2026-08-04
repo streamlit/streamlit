@@ -29,6 +29,8 @@ from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.deck_gl_json_chart import (
     PydeckMixin,
     PydeckSelectionSerde,
+    PydeckSelectionState,
+    PydeckState,
     _get_pydeck_width,
     parse_selection_mode,
 )
@@ -673,7 +675,12 @@ class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
         result = serde.deserialize(json_str)
 
         # Should support both dict and attribute access
+        assert isinstance(result, PydeckState)
+        assert isinstance(result.selection, PydeckSelectionState)
         assert result.selection.indices["layer1"] == [0]
+        # Nested selection must be a stable stored instance (not a per-access copy).
+        assert result["selection"] is result["selection"]
+        assert result.selection is result["selection"]
 
 
 class ParseSelectionModeTest(DeltaGeneratorTestCase):
