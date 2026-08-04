@@ -336,6 +336,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "disabled",
     "format_func",
     "label_visibility",
+    # wrap only controls label text wrapping, not widget identity.
+    "wrap",
     # on_change callbacks and similar/related parameters.
     "args",
     "kwargs",

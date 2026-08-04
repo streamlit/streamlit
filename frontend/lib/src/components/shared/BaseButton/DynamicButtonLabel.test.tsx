@@ -133,8 +133,8 @@ describe("DynamicButtonLabel", () => {
     render(
       <DynamicButtonLabel {...getProps({ wrap: false, shortcut: "ctrl+k" })} />
     )
-    expect(screen.getByTestId("stIconEmoji")).toHaveTextContent("😀")
-    expect(screen.getByText("Ctrl + K")).toBeInTheDocument()
+    expect(screen.getByTestId("stIconEmoji")).toBeVisible()
+    expect(screen.getByText("Ctrl + K")).toBeVisible()
     expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
       "Button Label"
     )

@@ -75,6 +75,14 @@ export function useIsTruncated(
       }
       label = label ?? labels[0] ?? null
       if (!label) {
+        // No label is rendered (e.g. an icon-only control, or the label was
+        // cleared on a rerun). Clear any stale truncation state so a previously
+        // measured tooltip doesn't linger.
+        setResult(prev =>
+          prev.isTruncated || prev.labelText !== ""
+            ? { isTruncated: false, labelText: "" }
+            : prev
+        )
         return
       }
 
@@ -99,7 +107,23 @@ export function useIsTruncated(
     const resizeObserver = new ResizeObserver(() => measure())
     resizeObserver.observe(container)
 
-    return () => resizeObserver.disconnect()
+    // A web font or icon glyph can finish loading after the first measurement
+    // and change the label's intrinsic width without resizing the container, so
+    // re-measure once any pending fonts are ready.
+    let cancelled = false
+    const fontSet: FontFaceSet | undefined = document.fonts
+    if (fontSet) {
+      void fontSet.ready.then(() => {
+        if (!cancelled) {
+          measure()
+        }
+      })
+    }
+
+    return () => {
+      cancelled = true
+      resizeObserver.disconnect()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps are caller-provided re-measure triggers
   }, [containerRef, enabled, ...deps])
 
