@@ -14,8 +14,6 @@ This spec describes the next phase of the data-editor edit-preservation work.
   also removed once the source catches up to the edited value.
 - **Proposed here:** Add an explicit `commit_edits` API for persistence, validation, row operations,
   and programmatic reset.
-- **Future work:** Reconcile pending positional edits with independently reordered or replaced
-  source rows.
 
 ## Problem
 
@@ -211,11 +209,11 @@ version in the baseline and reject conflicts from `commit_edits`.
 Check the boxes or add a comment with the reason it cannot be checked.
 -->
 
-| Item                         | ✅ or comment          |
-|------------------------------|------------------------|
-| Works on SiS, Cloud, etc?    |                        |
-| No breaking API changes      |                        |
-| No new dependencies          |                        |
-| Metrics collected            |                        |
-| Any security/legal impact?   |                        |
-| Any docs changes needed?     |                        |
+| Item | ✅ or comment |
+|---|---|
+| Works on SiS, Cloud, etc? | ✅ Uses existing widget, rerun, and Session State infrastructure with no platform-specific behavior |
+| No breaking API changes | ✅ Additive optional parameter; omitting `commit_edits` preserves existing behavior |
+| No new dependencies | ✅ Reuses existing dataframe, callback, frontend, and protobuf infrastructure |
+| Metrics collected | ✅ Track `commit_edits` parameter usage through existing `st.data_editor` metrics |
+| Any security/legal impact? | ✅ No new privileges; callbacks execute app code, and unexpected errors retain standard redaction and logging behavior |
+| Any docs changes needed? | ✅ Document `commit_edits`, `DataEditorValidationError`, and `streamlit.typing.DataEditorEditState`, with persistence and validation examples |
