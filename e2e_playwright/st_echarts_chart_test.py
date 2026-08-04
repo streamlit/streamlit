@@ -218,6 +218,10 @@ def test_tooltip_xss_payload_is_not_executed(app: Page):
 
     # Hover the (chart-filling) bar to trigger the tooltip render path.
     chart.hover()
+    # This is a negative test (we assert that nothing malicious renders), so
+    # there is no positive DOM signal to wait on. The fixed delay gives ECharts'
+    # async tooltip render path time to run, so a malicious payload would already
+    # have executed by the time we assert below that it did not.
     app.wait_for_timeout(500)
 
     expect(app.locator("img[onerror]")).to_have_count(0)
