@@ -3,7 +3,7 @@ author: lukasmasuch
 created: 2026-05-13
 ---
 
-# `apply_edits` callback for st.data_editor
+# `commit_edits` callback for st.data_editor
 
 ## Status
 
@@ -12,7 +12,7 @@ This spec describes the next phase of the data-editor edit-preservation work.
 - **Shipped in [#15884](https://github.com/streamlit/streamlit/pull/15884):** When `key` is set
   and `num_rows="fixed"`, source value changes no longer reset compatible pending edits. Edits are
   also removed once the source catches up to the edited value.
-- **Proposed here:** Add an explicit `apply_edits` API for persistence, validation, row operations,
+- **Proposed here:** Add an explicit `commit_edits` API for persistence, validation, row operations,
   and programmatic reset.
 - **Future work:** Reconcile pending positional edits with independently reordered or replaced
   source rows.
@@ -38,7 +38,7 @@ Users need an explicit commit boundary that:
 
 ## Proposal
 
-Add an optional `apply_edits` callable to `st.data_editor`. It runs during the rerun caused by an
+Add an optional `commit_edits` callable to `st.data_editor`. It runs during the rerun caused by an
 edit, after Streamlit has deserialized and applied the pending edit state.
 
 ```python
@@ -46,21 +46,21 @@ def data_editor(
     data: DataTypes,
     *,
     # Existing parameters...
-    apply_edits: Callable[
+    commit_edits: Callable[
         [pd.DataFrame, pd.DataFrame, DataEditorEditState],
         pd.DataFrame,
     ] | None = None,
 ) -> DataTypes:
 ```
 
-The working name is `apply_edits`. Unlike `on_change`, this is a transformation/commit hook:
-Streamlit supplies arguments, consumes the returned dataframe, and clears edit state on success.
-The final name should be confirmed in API review; `commit_edits` is the main alternative.
+Unlike `on_change`, `commit_edits` is a transformation/commit hook: Streamlit supplies arguments,
+consumes the returned dataframe, and clears edit state on success. The name should be confirmed in
+API review.
 
 ### Callback contract
 
 ```python
-def apply_edits(
+def commit_edits(
     source_df: pd.DataFrame,
     edited_df: pd.DataFrame,
     edits: DataEditorEditState,
@@ -93,7 +93,7 @@ This keeps the callback contract uniform at the cost of a conversion when edits 
 
 | Situation | Behavior |
 |-----------|----------|
-| No pending edits | Do not call `apply_edits`; render `data` normally |
+| No pending edits | Do not call `commit_edits`; render `data` normally |
 | Callback succeeds | Validate and display its return value in the current render; clear pending edit state |
 | Callback returns the original source | Treat this as a revert; clear pending edits |
 | Callback raises `DataEditorValidationError` | Display the safe error message inline, preserve edits for correction, and return `edited_df` |
@@ -137,7 +137,7 @@ st.data_editor(
     st.session_state.orders,
     key="orders_editor",
     num_rows="dynamic",
-    apply_edits=persist_orders,
+    commit_edits=persist_orders,
 )
 ```
 
@@ -150,7 +150,7 @@ in the same render that accepts the edit.
 |------|------------------|
 | `key` | Required. Stable identity is necessary to clear a commit without dropping the next edit. |
 | `num_rows` | Supported for `"fixed"`, `"add"`, `"delete"`, and `"dynamic"`. |
-| `on_change` | Mutually exclusive with `apply_edits`; its earlier execution could change the positional baseline. |
+| `on_change` | Mutually exclusive with `commit_edits`; its earlier execution could change the positional baseline. |
 | Forms | Not supported until ordering with `st.form_submit_button` is designed. |
 | Fragments | Supported; callback execution and state clearing must work on fragment reruns. |
 | `pandas.Styler` | Not supported because styles are derived before the callback may replace rows. |
@@ -165,15 +165,7 @@ editor. Incompatible results raise `StreamlitAPIException`.
 While edits are pending, `data` must remain the last committed baseline. Independently reordering
 or replacing source rows is out of scope because edit metadata is positional and carries neither
 original row identity nor a source version. Apps that need optimistic concurrency should keep a
-version in the baseline and reject conflicts from `apply_edits`.
-
-## Success criteria
-
-- Database-backed editors can atomically persist cell and row operations without a second rerun.
-- A successful callback shows refreshed data and leaves frontend and backend edit state empty.
-- A validation failure keeps the user's edits visible and retryable.
-- The first edit after any successful commit is not dropped in any `num_rows` mode.
-- Existing behavior is unchanged when `apply_edits` is not provided.
+version in the baseline and reject conflicts from `commit_edits`.
 
 ## Out of scope
 
@@ -185,10 +177,25 @@ version in the baseline and reject conflicts from `apply_edits`.
 
 ## Open API decisions
 
-1. Confirm `apply_edits` versus `commit_edits`.
+1. Confirm the `commit_edits` name in API review.
 2. Confirm whether the normalized edit-state type needs a public import path or can remain a
    documented structural type.
 3. Confirm the three-argument callback rather than introducing a `DataEditorEditEvent` object.
 
-The recommended initial choices are `apply_edits`, the three explicit arguments shown above, and a
+The recommended initial choices are `commit_edits`, the three explicit arguments shown above, and a
 documented `DataEditorEditState` type in the owning data-editor module.
+
+## Checklist
+
+<!--
+Check the boxes or add a comment with the reason it cannot be checked.
+-->
+
+| Item                         | ✅ or comment          |
+|------------------------------|------------------------|
+| Works on SiS, Cloud, etc?    |                        |
+| No breaking API changes      |                        |
+| No new dependencies          |                        |
+| Metrics collected            |                        |
+| Any security/legal impact?   |                        |
+| Any docs changes needed?     |                        |
