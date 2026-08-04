@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 19
+DOWNLOAD_BUTTON_ELEMENTS = 20
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -345,3 +345,15 @@ def test_download_button_shortcut_triggers(app: Page):
     assert download.suggested_filename == "shortcut.txt"
     wait_for_app_run(app)
     expect_markdown(app, "Shortcut download triggered!")
+
+
+def test_wrap_false_sets_native_title(app: Page):
+    """wrap=False exposes the full label via a native title so an ellipsized
+    label stays recoverable on hover.
+    """
+    container = get_element_by_key(app, "wrap_false_download_button")
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

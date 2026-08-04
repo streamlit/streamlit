@@ -130,3 +130,13 @@ st.link_button(
     "javascript:alert('xss')",
     key="dangerous_link_button",
 )
+
+# wrap=False keeps the button on one row and exposes the full label via a
+# native title.
+st.link_button(
+    "Regenerate the complete quarterly report now",
+    "https://streamlit.io",
+    width="stretch",
+    wrap=False,
+    key="wrap_false_link_button",
+)

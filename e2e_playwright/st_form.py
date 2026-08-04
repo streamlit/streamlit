@@ -300,3 +300,14 @@ with st.form("form_with_dynamic_button"):
             key="dynamic_button_with_key",
         )
         st.write("Clicked initial button:", clicked)
+
+# wrap=False keeps the submit button on one row and exposes the full label via a
+# native title.
+with st.form("wrap_submit_form"):
+    st.write("Form with a no-wrap submit button")
+    st.form_submit_button(
+        "Regenerate the complete quarterly report now",
+        width="stretch",
+        wrap=False,
+        key="wrap_false_submit_button",
+    )

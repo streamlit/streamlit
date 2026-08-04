@@ -425,3 +425,13 @@ def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction)
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_wrap_false_submit_button_sets_native_title(app: Page):
+    """wrap=False exposes the full submit-button label via a native title."""
+    container = get_element_by_key(app, "wrap_false_submit_button")
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

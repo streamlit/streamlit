@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-LINK_BUTTON_ELEMENTS = 20
+LINK_BUTTON_ELEMENTS = 21
 
 
 def _click_link_and_wait_for_rerun(app: Page, link: Locator) -> None:
@@ -175,3 +175,15 @@ def test_link_button_shortcut_triggers(app: Page):
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
+
+
+def test_wrap_false_sets_native_title(app: Page):
+    """wrap=False exposes the full label via a native title so an ellipsized
+    label stays recoverable on hover.
+    """
+    container = get_element_by_key(app, "wrap_false_link_button")
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

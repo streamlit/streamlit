@@ -169,6 +169,16 @@ st.menu_button(
     key="short_options_button",
 )
 
+# wrap=False keeps the trigger on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title while keeping the chevron visible.
+st.menu_button(
+    "Regenerate the complete quarterly report now",
+    options=["CSV", "JSON"],
+    width="stretch",
+    wrap=False,
+    key="wrap_false_menu_button",
+)
+
 # Menu-style icons (chevron should be hidden)
 with st.container(key="menu_style_icons_container"):
     col1, col2, col3 = st.columns(3)

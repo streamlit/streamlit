@@ -284,3 +284,13 @@ with st.popover("Multi pop A", key="multi_pop_a", on_change="rerun"):
 
 with st.popover("Multi pop B", key="multi_pop_b", on_change="rerun"):
     st.button("Close B", on_click=close_multi_pop_b, key="close_multi_b_btn")
+
+# wrap=False keeps the trigger on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title while keeping the chevron visible.
+with st.popover(
+    "Regenerate the complete quarterly report now",
+    width="stretch",
+    wrap=False,
+    key="wrap_false_popover",
+):
+    st.write("wrap popover content")

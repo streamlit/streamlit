@@ -50,7 +50,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 19  # Including sidebar, fragment, and menu-style icons
+TOTAL_MENU_BUTTONS = 20  # Including sidebar, fragment, and menu-style icons
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -295,3 +295,18 @@ def test_menu_button_menu_style_icons_hide_chevron(
 
     # Snapshot the container with all three menu-style icon buttons
     assert_snapshot(container, name="st_menu_button-menu_style_icons")
+
+
+def test_wrap_false_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False exposes the full trigger label via a native title while keeping
+    the expansion chevron visible.
+    """
+    container = get_element_by_key(app, "wrap_false_menu_button")
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()
+    expect(container.get_by_test_id("stMenuButtonButton")).to_contain_text(
+        "expand_more"
+    )
