@@ -837,7 +837,9 @@ _create_option(
         returned for the other.
 
         Accepts any string; a numeric seed is derived from it. Leave unset to keep
-        the historical sample positions.
+        the historical sample positions. Only an unset or empty value does that --
+        setting it to ``0`` is treated as the string "0" and derives a different
+        seed, which invalidates existing cached entries like any other change.
 
         Changing this seed moves which positions are sampled. It does not
         eliminate collisions -- it selects a different set of them -- so it
