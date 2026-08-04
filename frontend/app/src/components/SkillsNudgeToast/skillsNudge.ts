@@ -169,13 +169,25 @@ export function skillsNudgeSuppressedLabel(reason: string): string {
  * label suffix because a fallback install is otherwise indistinguishable from a
  * project install in the success telemetry, and the causes point at different
  * fixes — only Developer Mode being off is something a user can simply turn on.
+ *
+ * `degradedTargets` names any *best-effort* install target whose write failed while
+ * every authoritative target succeeded — the install reached the agent, so it is a
+ * success, but a target we still write did not land. It goes in a THIRD segment so
+ * segment 2 keeps meaning `fallbackReason` for every existing query. A degraded
+ * install with no fallback therefore emits an empty segment 2
+ * (`skillsNudgeInstallSucceeded::agents_skills`), which is exactly what a plain
+ * success yields for that segment today — deliberate, so `split_part(label, ':', 2)`
+ * keeps returning the same thing it always has.
  */
 export function skillsNudgeInstallSuccessLabel(
-  fallbackReason?: string | null
+  fallbackReason?: string | null,
+  degradedTargets?: string | null
 ): string {
-  return fallbackReason
-    ? `skillsNudgeInstallSucceeded:${fallbackReason}`
-    : "skillsNudgeInstallSucceeded"
+  if (!fallbackReason && !degradedTargets) {
+    return "skillsNudgeInstallSucceeded"
+  }
+  const base = `skillsNudgeInstallSucceeded:${fallbackReason ?? ""}`
+  return degradedTargets ? `${base}:${degradedTargets}` : base
 }
 
 /**

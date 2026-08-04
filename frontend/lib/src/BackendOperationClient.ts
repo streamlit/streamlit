@@ -233,18 +233,22 @@ export class BackendOperationClient {
   /**
    * Request a one-click install of the bundled Streamlit agent skills.
    *
-   * @returns A promise that resolves with an optional outcome detail and a
+   * @returns A promise that resolves with an optional outcome detail, a
    * `fallbackReason` naming why a project install was rerouted to a global copy
-   * (empty when it wasn't), or rejects with a {@link BackendOperationError} whose
-   * `reason` classifies the failure for telemetry.
+   * (empty when it wasn't), and `degradedTargets` naming any best-effort install
+   * target whose write failed while the install still reached the agent (empty when
+   * none did), or rejects with a {@link BackendOperationError} whose `reason`
+   * classifies the failure for telemetry.
    */
   public requestInstallSkills(): Promise<{
     detail?: string | null
     fallbackReason?: string | null
+    degradedTargets?: string | null
   }> {
     return this.request<{
       detail?: string | null
       fallbackReason?: string | null
+      degradedTargets?: string | null
     }>("installSkills", {}, INSTALL_SKILLS_REQUEST_TIMEOUT_MS)
   }
 

@@ -24,12 +24,15 @@ import tempfile
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Final, Literal
+from typing import TYPE_CHECKING, Final, Literal, NamedTuple
 
 import click
 
 import streamlit
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -64,6 +67,17 @@ _FallbackReason = Literal[
     "symlinks_unsupported",  # The filesystem/OS has no directory symlinks.
     "symlink_failed",  # Pre-check passed, then an individual link would not lay.
 ]
+
+# Which install target a failure happened on. Emitted as a THIRD label segment
+# (``skillsNudgeInstallFailed:write_denied:claude_skills``) rather than folded into
+# the reason, so downstream queries that read the reason with
+# ``split_part(label, ':', 2)`` keep resolving unchanged. Closed for the same reason
+# the vocabularies above are: it reaches telemetry verbatim.
+_InstallTargetName = Literal["claude_skills", "agents_skills"]
+
+# Harness keys (matching :data:`_HARNESSES`) for the two dirs an install writes.
+_CLAUDE_HARNESS: Final[str] = "claude"
+_AGENTS_HARNESS: Final[str] = "agents"
 
 # OSError.errno -> reason. Built by name so a platform missing one of these (they
 # are not all defined everywhere) simply omits it rather than failing at import.
@@ -116,15 +130,38 @@ def classify_write_error(error: OSError) -> _InstallFailureReason:
 class InstallError(click.ClickException):
     """A skills-install failure carrying a stable machine-readable ``reason`` code.
 
-    The backend-operation handler forwards the ``reason`` to the client, which emits
-    it as a telemetry label suffix - hence the fixed :data:`_InstallFailureReason`
-    vocabulary, never user input. Behaves like a plain ``click.ClickException``
-    otherwise, so raising it changes nothing a user sees.
+    The backend-operation handler forwards :attr:`telemetry_reason` to the client,
+    which emits it as a telemetry label suffix - hence the fixed
+    :data:`_InstallFailureReason` vocabulary, never user input. Behaves like a plain
+    ``click.ClickException`` otherwise, so raising it changes nothing a user sees.
     """
 
-    def __init__(self, message: str, *, reason: _InstallFailureReason) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason: _InstallFailureReason,
+        target: _InstallTargetName | None = None,
+    ) -> None:
         super().__init__(message)
         self.reason = reason
+        # Which install target produced the failure, when it can be attributed to
+        # one. ``None`` for causes that are not per-target (a missing bundled
+        # source, a non-interactive terminal) or when targets disagreed.
+        self.target = target
+
+    @property
+    def telemetry_reason(self) -> str:
+        """The reason, with the failing target appended when one is known.
+
+        Composed here rather than in the handler so the whole emitted vocabulary
+        stays in this module. The target becomes a THIRD label segment, which is
+        what keeps it additive: ``split_part(label, ':', 2)`` still returns the bare
+        reason, so every downstream query reading segment 2 resolves unchanged.
+        Folding the target into the reason instead (``write_denied_claude``) would
+        fork the closed vocabulary above and break them silently.
+        """
+        return f"{self.reason}:{self.target}" if self.target else self.reason
 
 
 def _generate_gitignore_snippet(
@@ -145,6 +182,28 @@ def _generate_gitignore_snippet(
     return "\n".join(lines)
 
 
+@dataclass(frozen=True)
+class _InstallTarget:
+    """One directory a skills install writes to, and what a failure there means."""
+
+    path: Path
+    # Names this target in telemetry - see :data:`_InstallTargetName`.
+    telemetry_name: _InstallTargetName
+    # The load-bearing bit. A DETECTED harness is known to read an authoritative
+    # target, so a failure there means the install reached no agent and must be
+    # reported as a failure. A best-effort target has no verified reader, so a
+    # failure there must not fail an install that otherwise delivered. See
+    # :func:`_authoritative_harnesses` for how this is decided.
+    authoritative: bool
+
+
+class _TargetWriteFailure(NamedTuple):
+    """A single target's failed write: where it happened, and the classified cause."""
+
+    target: _InstallTarget
+    reason: _InstallFailureReason
+
+
 @dataclass
 class _InstallResult:
     """Result of a skill installation attempt."""
@@ -162,6 +221,11 @@ class _InstallResult:
     # target had which. Separate from the display strings above, which carry raw
     # OSError text that must not reach the browser.
     write_reasons: set[_InstallFailureReason] = field(default_factory=set)
+    # Best-effort targets whose write failed while the install still delivered to
+    # every authoritative one. Reported on the SUCCESS label, so demoting a target
+    # from "fails the install" to "best effort" does not make its failure rate
+    # unobservable - an attribution never emitted cannot be backfilled.
+    degraded_targets: list[_InstallTargetName] = field(default_factory=list)
     # Set when a project install was rerouted to a global copy, naming why. Surfaced
     # to telemetry so that cohort is countable - see InstallSkillsResponsePayload.
     fallback_reason: _FallbackReason | None = None
@@ -274,46 +338,113 @@ def _find_project_root(start: Path | None = None) -> Path:
     return start_dir
 
 
-def _get_project_target_dirs(project_root: Path) -> list[Path]:
+def _claude_code_installed() -> bool:
+    """Whether Claude Code is present on this machine, i.e. ``~/.claude`` exists.
+
+    ``is_dir()`` rather than ``exists()``: a *file* at ``~/.claude`` is not an
+    install, and treating it as one would add a ``.claude/skills`` target whose every
+    write then fails on the non-directory parent.
+    """
+    return (Path.home() / ".claude").is_dir()
+
+
+def _authoritative_harnesses() -> frozenset[str]:
+    """The harnesses whose skills dir must hold the skill for an install to count.
+
+    Claude Code is the only harness verified to read a directory we write. It reads
+    ``.claude/skills`` and ignores ``.agents/skills`` entirely (streamlit#16282), so
+    when Claude Code is present ``.claude/skills`` is what an install has to land and
+    ``.agents/skills`` is best-effort - written for harnesses that may or may not
+    read it, and never the reason an install that reached Claude Code is called a
+    failure.
+
+    When Claude Code is absent, none of our targets has a verified reader at all and
+    ``.agents/skills`` is the only one we write, so it carries authority by default.
+    That is a deliberate choice between two wrong answers: an empty set would make
+    "installed" unreachable, so the nudge would fire forever at a user for whom no
+    install could ever satisfy the gate. The real fix is a target such a harness
+    actually reads; until then this keeps that cohort's behavior as it is today
+    rather than regressing it.
+
+    Returning a set, and gating on "every member is satisfied", is what makes
+    requiring *all* targets safe - the objection that sank this in #16279. We ask
+    only for the dirs a DETECTED harness reads, so someone who deliberately keeps the
+    skill in one place is not nudged forever: the place they keep it is the place
+    their agent reads.
+    """
+    return frozenset(
+        {_CLAUDE_HARNESS} if _claude_code_installed() else {_AGENTS_HARNESS}
+    )
+
+
+def _skill_install_targets(root: Path) -> list[_InstallTarget]:
+    """Build the ordered install targets under ``root`` (a project root, or home).
+
+    Authoritative targets come FIRST so an install interrupted partway through
+    (Ctrl-C, a crash, a disk filling up) has already laid the copy an agent actually
+    reads, rather than only the best-effort one.
+    """
+    authoritative = _authoritative_harnesses()
+    targets: list[_InstallTarget] = []
+
+    if _claude_code_installed():
+        targets.append(
+            _InstallTarget(
+                path=root / ".claude" / "skills",
+                telemetry_name="claude_skills",
+                authoritative=_CLAUDE_HARNESS in authoritative,
+            )
+        )
+
+    # Always written: the cross-harness convention dir. Kept unconditional because
+    # its readership is unverified rather than disproven - cortex, for one, reads a
+    # PROJECT-level .agents/skills - so dropping it could silently break a harness
+    # nobody has probed.
+    targets.append(
+        _InstallTarget(
+            path=root / ".agents" / "skills",
+            telemetry_name="agents_skills",
+            authoritative=_AGENTS_HARNESS in authoritative,
+        )
+    )
+    return targets
+
+
+def _get_project_target_dirs(project_root: Path) -> list[_InstallTarget]:
     """Get target directories for project skill installation.
 
-    Always targets .agents/skills/. Also targets .claude/skills/
-    when ~/.claude exists (Claude Code is installed).
+    Targets ``.claude/skills/`` first when ``~/.claude`` exists (Claude Code is
+    installed), then always ``.agents/skills/``. See :func:`_skill_install_targets`
+    for the ordering, and :func:`_authoritative_harnesses` for which of them a
+    failure may fail the install on.
     """
-    targets = [project_root / ".agents" / "skills"]
-
-    claude_home = Path.home() / ".claude"
-    if claude_home.exists():
-        targets.append(project_root / ".claude" / "skills")
-
-    return targets
+    return _skill_install_targets(project_root)
 
 
-def _get_global_target_dirs() -> list[Path]:
+def _get_global_target_dirs() -> list[_InstallTarget]:
     """Get target directories for global skill installation.
 
-    Always targets ~/.agents/skills/. Also targets ~/.claude/skills/
-    when ~/.claude exists (Claude Code is installed).
+    The same targets as a project install, rooted at the home directory:
+    ``~/.claude/skills/`` first when ``~/.claude`` exists, then always
+    ``~/.agents/skills/``.
     """
-    home = Path.home()
-    targets = [home / ".agents" / "skills"]
-
-    claude_home = home / ".claude"
-    if claude_home.exists():
-        targets.append(claude_home / "skills")
-
-    return targets
+    return _skill_install_targets(Path.home())
 
 
 def are_skills_installed() -> bool:
     """Check whether Streamlit agent skills appear to be installed.
 
     Returns ``True`` if the bundled skill is present (as a symlink, copied
-    directory, or regular directory) in any of the project-local or global
-    target directories. This is a best-effort check used to decide whether to
-    recommend installing skills; it does not validate skill contents.
+    directory, or regular directory) in any *authoritative* project-local or global
+    target directory - one a detected harness is known to read. This is a
+    best-effort check used to decide whether to recommend installing skills; it does
+    not validate skill contents.
+
+    Best-effort targets are skipped deliberately. Counting them would suppress this
+    recommendation for a user whose only copy sits where their agent cannot see it -
+    the partial-install trap: told the install failed, then never offered a retry.
     """
-    candidate_dirs: list[Path] = []
+    candidate_targets: list[_InstallTarget] = []
     try:
         project_root = _find_project_root()
     except (OSError, RuntimeError):
@@ -322,20 +453,22 @@ def are_skills_installed() -> bool:
         pass
     else:
         try:
-            candidate_dirs.extend(_get_project_target_dirs(project_root))
+            candidate_targets.extend(_get_project_target_dirs(project_root))
         except (OSError, RuntimeError):
             # Same reasoning as above; still check global dirs.
             pass
 
     try:
-        candidate_dirs.extend(_get_global_target_dirs())
+        candidate_targets.extend(_get_global_target_dirs())
     except (OSError, RuntimeError):
         # Keep any project dirs already collected above instead of discarding
         # them; still a best-effort check, so just skip the global dirs.
         pass
 
-    for target_dir in candidate_dirs:
-        skill_path = target_dir / _GLOBAL_SKILL_NAME
+    for target in candidate_targets:
+        if not target.authoritative:
+            continue
+        skill_path = target.path / _GLOBAL_SKILL_NAME
         try:
             if skill_path.is_symlink() or skill_path.exists():
                 return True
@@ -668,7 +801,7 @@ def _prompt_install_mode() -> str:
 def _confirm_project_installation(
     project_root: Path,
     skills: list[str],
-    target_dirs: list[Path],
+    targets: list[_InstallTarget],
 ) -> bool:
     """Show project installation plan and confirm with user."""
     click.echo()
@@ -683,11 +816,11 @@ def _confirm_project_installation(
         )
 
     click.secho("\nTarget directories:", bold=True)
-    for target_dir in target_dirs:
+    for target in targets:
         try:
-            rel_path = target_dir.relative_to(project_root)
+            rel_path = target.path.relative_to(project_root)
         except ValueError:
-            rel_path = target_dir
+            rel_path = target.path
         click.echo(
             f"  {click.style('•', fg='magenta')} "
             f"{click.style(str(rel_path) + '/', fg='cyan')}"
@@ -697,7 +830,7 @@ def _confirm_project_installation(
     return click.confirm("Proceed with installation?", default=True)
 
 
-def _confirm_global_installation(target_dirs: list[Path]) -> bool:
+def _confirm_global_installation(targets: list[_InstallTarget]) -> bool:
     """Show global installation plan and confirm with user."""
     click.echo()
     click.echo("Installing globally")
@@ -716,11 +849,11 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
 
     click.secho("\nTarget directories:", bold=True)
     home = Path.home()
-    for target_dir in target_dirs:
+    for target in targets:
         try:
-            rel_path = Path("~") / target_dir.relative_to(home)
+            rel_path = Path("~") / target.path.relative_to(home)
         except ValueError:
-            rel_path = target_dir
+            rel_path = target.path
         click.echo(
             f"  {click.style('•', fg='magenta')} "
             f"{click.style(str(rel_path) + '/', fg='cyan')}"
@@ -768,27 +901,34 @@ def _conflict_error(skipped: list[str]) -> InstallError:
     )
 
 
-def _write_error(result: _InstallResult) -> InstallError:
+def _write_error(
+    result: _InstallResult, failures: Sequence[_TargetWriteFailure]
+) -> InstallError:
     """Build a "couldn't write" error for filesystem failures during copy.
 
     Distinct from :func:`_conflict_error`, which reports pre-existing files.
 
-    The reason follows what the failed targets agreed on:
+    ``failures`` are the failures that *justify* the error - in practice the
+    authoritative ones, whose targets a detected harness reads. Best-effort failures
+    are still named in the message (the user should see everything that did not land)
+    but never decide the reason or the target, so a dead-weight target cannot
+    mislabel a failure a load-bearing one caused.
 
-    - all agreed on one cause -> that cause
-    - they disagreed -> the generic ``write_failed``, because claiming "permission
-      denied" for a set that was half permissions and half disk-full would point
-      whoever reads the telemetry at the wrong fix
+    The reason and the target each follow what the failed targets agreed on:
+
+    - all agreed -> that cause / that target
+    - they disagreed -> the generic ``write_failed`` / no target, because claiming
+      "permission denied on .claude/skills" for a set that was half permissions and
+      half disk-full would point whoever reads the telemetry at the wrong fix
     """
     joined = ", ".join(_concise_install_paths(result.errored))
-    reasons = result.write_reasons
-    reason: _InstallFailureReason = (
-        next(iter(reasons)) if len(reasons) == 1 else "write_failed"
-    )
+    reasons = {failure.reason for failure in failures}
+    names = {failure.target.telemetry_name for failure in failures}
     return InstallError(
         f"Could not write {joined}. Check folder permissions and free disk "
         "space, then try again.",
-        reason=reason,
+        reason=next(iter(reasons)) if len(reasons) == 1 else "write_failed",
+        target=next(iter(names)) if len(names) == 1 else None,
     )
 
 
@@ -821,7 +961,7 @@ def _install_project_skills(
     # root resolves from the running app's directory (matching the nudge's skill
     # detection), instead of the server's working directory.
     project_root = _find_project_root(Path(app_dir) if app_dir else None)
-    target_dirs = _get_project_target_dirs(project_root)
+    targets = _get_project_target_dirs(project_root)
 
     symlink_blocker = _symlink_blocker(project_root, source_skills_dir / skills[0])
     if symlink_blocker is not None:
@@ -850,7 +990,7 @@ def _install_project_skills(
         )
 
     # Confirm installation
-    if not yes and not _confirm_project_installation(project_root, skills, target_dirs):
+    if not yes and not _confirm_project_installation(project_root, skills, targets):
         click.echo("Installation cancelled.")
         raise click.Abort()
 
@@ -860,9 +1000,9 @@ def _install_project_skills(
     bundled_skill_names = set(skills)
 
     for skill_name in skills:
-        for target_dir in target_dirs:
+        for target in targets:
             success = _install_skill_symlink(
-                skill_name, source_skills_dir, target_dir, result, bundled_skill_names
+                skill_name, source_skills_dir, target.path, result, bundled_skill_names
             )
             if not success:
                 symlink_failed = True
@@ -926,7 +1066,7 @@ def _install_project_skills(
         click.echo()
         click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
         gitignore_snippet = _generate_gitignore_snippet(
-            skills, target_dirs, project_root
+            skills, [target.path for target in targets], project_root
         )
         for line in gitignore_snippet.splitlines():
             click.secho(f"  {line}", fg="bright_black")
@@ -948,10 +1088,10 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
     ``discover.py`` still resolves the version-matched content skills at runtime,
     so a single global install stays correct across Streamlit versions.
     """
-    target_dirs = _get_global_target_dirs()
+    targets = _get_global_target_dirs()
 
     # Confirm installation
-    if not yes and not _confirm_global_installation(target_dirs):
+    if not yes and not _confirm_global_installation(targets):
         click.echo("Installation cancelled.")
         raise click.Abort()
 
@@ -983,27 +1123,62 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             reason="source_incomplete",
         )
 
-    # Install to each target directory
+    # Install to each target directory, keeping a per-target result so each target's
+    # outcome can be judged on its own. One shared _InstallResult cannot support
+    # that: ``write_reasons`` is a set, so two targets failing the same way are
+    # indistinguishable from one, and nothing records WHICH target failed.
     result = _InstallResult()
     # For global install, only one skill is installed but we use a set for consistency
     bundled_skill_names = {_GLOBAL_SKILL_NAME}
-    for target_dir in target_dirs:
+    failures: list[_TargetWriteFailure] = []
+    for target in targets:
+        target_result = _InstallResult()
         _install_skill_copy(
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
-            target_dir,
-            result,
+            target.path,
+            target_result,
             bundled_skill_names,
         )
+        if target_result.errored:
+            # This target installs exactly one skill, so it has at most one cause;
+            # the len check is for the type checker and for a target that somehow
+            # reported two.
+            reasons = target_result.write_reasons
+            failures.append(
+                _TargetWriteFailure(
+                    target=target,
+                    reason=next(iter(reasons)) if len(reasons) == 1 else "write_failed",
+                )
+            )
+            if not target.authoritative:
+                result.degraded_targets.append(target.telemetry_name)
+        result.installed += target_result.installed
+        result.up_to_date += target_result.up_to_date
+        result.skipped += target_result.skipped
+        result.errored += target_result.errored
+        result.write_reasons |= target_result.write_reasons
 
     # Report results
     _print_result(result)
 
-    # A write failure on ANY target is a hard failure, even if another target
-    # succeeded - otherwise a partial install (e.g. ~/.agents ok but ~/.claude
-    # denied) reports success and drops skillsNudgeInstallFailed:write_failed.
-    if result.errored:
-        raise _write_error(result)
+    # A write failure on an AUTHORITATIVE target is a hard failure: a detected
+    # harness reads that path, so the install reached no agent. A failure on a
+    # best-effort target is not, and used to be - reporting failure to a developer
+    # whose ~/.claude/skills was written and whose Claude Code therefore works
+    # perfectly. That false negative is what this replaces. The best-effort failure
+    # is not swallowed: it rides the success label via ``degraded_targets``.
+    authoritative_failures = [
+        failure for failure in failures if failure.target.authoritative
+    ]
+    if authoritative_failures:
+        raise _write_error(result, authoritative_failures)
+
+    # Nothing landed anywhere. Unreachable while _authoritative_harnesses guarantees
+    # one authoritative target, but a target added later must not be able to turn a
+    # total failure into a silent success.
+    if failures and not (result.installed or result.up_to_date):
+        raise _write_error(result, failures)
 
     if result.installed or result.up_to_date:
         click.echo()
@@ -1257,6 +1432,32 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
         return ()
 
 
+def _authoritative_skills_installed(app_dir: str | None) -> bool:
+    """Whether every harness that READS what we install actually has the skill.
+
+    :func:`detect_installed_skills` reports the skill anywhere it is found across 8
+    harnesses x 4 roots. That breadth is right for the page-profile telemetry it
+    feeds and wrong as a nudge gate: after a partial install that landed
+    ``.agents/skills`` and was denied ``.claude/skills``, it reports the skill as
+    installed and both nudges go quiet permanently - while Claude Code, which does
+    not read ``.agents/skills``, has nothing. The developer is told the install
+    failed, is never offered a retry, and holds the one copy nothing reads.
+
+    So gate on the authoritative harnesses instead. See
+    :func:`_authoritative_harnesses` for why requiring *all* of them does not nudge
+    forever at someone who deliberately keeps the skill in a single place.
+    """
+    authoritative = _authoritative_harnesses()
+    # Tokens are "<location>:<harness>:<skill>", so index 1 is the harness. Any
+    # location satisfies a harness: a project-local .claude/skills is read by Claude
+    # Code just as a global one is.
+    installed = {token.split(":")[1] for token in detect_installed_skills(app_dir)}
+    # The empty-set guard matters: ``frozenset() <= anything`` is True, so without it
+    # an authority set that somehow came back empty would read as "installed" and
+    # suppress the nudge for everyone.
+    return bool(authoritative) and authoritative <= installed
+
+
 def detect_installed_agents() -> list[str]:
     """Detect agent harnesses installed under the user's home directory.
 
@@ -1335,8 +1536,8 @@ def _one_click_install_would_be_refused(app_dir: str | None) -> bool:
         # Symlink mode installs every (skill, target) pair, so it only refuses
         # when a real file/dir blocks all of them.
         project_pairs = [
-            target_dir / skill_name
-            for target_dir in _get_project_target_dirs(project_root)
+            target.path / skill_name
+            for target in _get_project_target_dirs(project_root)
             for skill_name in skill_names
         ]
         project_all_blocked = bool(project_pairs) and all(
@@ -1346,7 +1547,7 @@ def _one_click_install_would_be_refused(app_dir: str | None) -> bool:
         # The copy fallback installs only the single global skill, and replaces a
         # real dir rather than conflicting - hence the narrower rule.
         global_pairs = [
-            target_dir / _GLOBAL_SKILL_NAME for target_dir in _get_global_target_dirs()
+            target.path / _GLOBAL_SKILL_NAME for target in _get_global_target_dirs()
         ]
         global_all_blocked = bool(global_pairs) and all(
             _copy_target_would_conflict(path) for path in global_pairs
@@ -1441,8 +1642,9 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         # installed yet.
         if not detect_installed_agents():
             return "no_agent"
-        # An agent is present; recommend installing only if our skills aren't.
-        if detect_installed_skills(app_dir):
+        # An agent is present; recommend installing only if our skills aren't
+        # already where that agent would read them.
+        if _authoritative_skills_installed(app_dir):
             return "installed"
         # No SKILL.md marker found. Withhold only on a deterministic conflict at
         # every target; the other always-fail causes (missing bundled package, a

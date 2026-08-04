@@ -197,6 +197,37 @@ describe("skillsNudge preferences", () => {
         "skillsNudgeInstallSucceeded:symlinks_no_privilege"
       )
     })
+
+    it("appends a degraded best-effort target as a third segment", () => {
+      expect(
+        skillsNudgeInstallSuccessLabel("symlink_failed", "agents_skills")
+      ).toBe("skillsNudgeInstallSucceeded:symlink_failed:agents_skills")
+    })
+
+    it("keeps segment 2 empty when a degraded install had no reroute", () => {
+      // The double colon is deliberate and load-bearing. Downstream queries read
+      // the fallback reason with `split_part(label, ':', 2)`, which returns "" here
+      // — exactly what a plain success has always yielded for that segment. Putting
+      // the target in segment 2 instead would fork the fallback-reason vocabulary
+      // and silently break every one of those queries.
+      expect(skillsNudgeInstallSuccessLabel(null, "agents_skills")).toBe(
+        "skillsNudgeInstallSucceeded::agents_skills"
+      )
+      expect(skillsNudgeInstallSuccessLabel("", "agents_skills")).toBe(
+        "skillsNudgeInstallSucceeded::agents_skills"
+      )
+    })
+
+    it("is the bare label when an older backend omits degraded targets", () => {
+      // protobuf sends "" for an unset string; neither that nor undefined may
+      // produce a dangling ":" suffix.
+      expect(skillsNudgeInstallSuccessLabel(undefined, "")).toBe(
+        "skillsNudgeInstallSucceeded"
+      )
+      expect(skillsNudgeInstallSuccessLabel(null, null)).toBe(
+        "skillsNudgeInstallSucceeded"
+      )
+    })
   })
 
   describe("skillsNudgeInstallFailureLabel", () => {

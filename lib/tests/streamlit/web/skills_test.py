@@ -46,6 +46,29 @@ def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
         )
 
 
+def _target(
+    path: Path,
+    name: str = "claude_skills",
+    *,
+    authoritative: bool = True,
+) -> skills._InstallTarget:
+    """Build an ``_InstallTarget`` for tests that stub out target resolution.
+
+    Defaults to an authoritative ``claude_skills`` target, which is what most tests
+    want: the pre-existing behavior (a failure fails the install, presence suppresses
+    the nudge) applies to authoritative targets, so a test that predates the
+    authority split keeps asserting the same thing.
+    """
+    return skills._InstallTarget(
+        path=path, telemetry_name=name, authoritative=authoritative
+    )
+
+
+def _target_paths(targets: list[skills._InstallTarget]) -> list[Path]:
+    """Extract the paths from a list of install targets, for path-only assertions."""
+    return [target.path for target in targets]
+
+
 @pytest.fixture
 def runner() -> CliRunner:
     """Create a CliRunner for testing CLI commands."""
@@ -399,7 +422,7 @@ class TestGetProjectTargetDirs:
         """Always includes .agents/skills/ in targets."""
         with patch("pathlib.Path.home", return_value=tmp_path / "home"):
             result = skills._get_project_target_dirs(tmp_path)
-        assert tmp_path / ".agents" / "skills" in result
+        assert tmp_path / ".agents" / "skills" in _target_paths(result)
 
     @pytest.mark.parametrize(
         ("claude_home_exists", "expected_in_result"),
@@ -418,7 +441,41 @@ class TestGetProjectTargetDirs:
         with patch("pathlib.Path.home", return_value=home):
             result = skills._get_project_target_dirs(tmp_path)
 
-        assert (tmp_path / ".claude" / "skills" in result) == expected_in_result
+        assert (
+            tmp_path / ".claude" / "skills" in _target_paths(result)
+        ) == expected_in_result
+
+    def test_orders_the_authoritative_target_first(self, tmp_path: Path) -> None:
+        """Writes .claude/skills before the best-effort .agents/skills.
+
+        An install interrupted partway through should already have laid the copy an
+        agent actually reads, not only the one whose readership is unverified.
+        """
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        with patch("pathlib.Path.home", return_value=home):
+            result = skills._get_project_target_dirs(tmp_path)
+
+        assert _target_paths(result) == [
+            tmp_path / ".claude" / "skills",
+            tmp_path / ".agents" / "skills",
+        ]
+
+    def test_a_file_at_claude_home_is_not_an_install(self, tmp_path: Path) -> None:
+        """A regular file at ~/.claude adds no target.
+
+        ``exists()`` would accept it and then every write to the target would fail on
+        the non-directory parent.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+        (home / ".claude").write_text("not a directory")
+
+        with patch("pathlib.Path.home", return_value=home):
+            result = skills._get_project_target_dirs(tmp_path)
+
+        assert _target_paths(result) == [tmp_path / ".agents" / "skills"]
 
 
 class TestGetGlobalTargetDirs:
@@ -432,7 +489,7 @@ class TestGetGlobalTargetDirs:
         with patch("pathlib.Path.home", return_value=home):
             result = skills._get_global_target_dirs()
 
-        assert home / ".agents" / "skills" in result
+        assert home / ".agents" / "skills" in _target_paths(result)
 
     @pytest.mark.parametrize(
         ("claude_home_exists", "expected_in_result"),
@@ -451,7 +508,51 @@ class TestGetGlobalTargetDirs:
         with patch("pathlib.Path.home", return_value=home):
             result = skills._get_global_target_dirs()
 
-        assert (home / ".claude" / "skills" in result) == expected_in_result
+        assert (
+            home / ".claude" / "skills" in _target_paths(result)
+        ) == expected_in_result
+
+
+class TestInstallTargetAuthority:
+    """Tests for which install target carries authority, and why."""
+
+    def test_claude_is_authoritative_and_agents_is_best_effort(
+        self, tmp_path: Path
+    ) -> None:
+        """With Claude Code present, only .claude/skills decides the outcome.
+
+        Claude Code reads .claude/skills and ignores .agents/skills entirely, so a
+        failure to write .agents/skills must not fail an install that reached it.
+        """
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        with patch("pathlib.Path.home", return_value=home):
+            targets = {
+                t.telemetry_name: t.authoritative
+                for t in skills._get_global_target_dirs()
+            }
+
+        assert targets == {"claude_skills": True, "agents_skills": False}
+
+    def test_agents_carries_authority_when_claude_code_is_absent(
+        self, tmp_path: Path
+    ) -> None:
+        """Without Claude Code, .agents/skills is the only target, so it must decide.
+
+        An empty authority set would make "installed" unreachable and nudge such a
+        user forever with no install that could ever satisfy the gate.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with patch("pathlib.Path.home", return_value=home):
+            targets = {
+                t.telemetry_name: t.authoritative
+                for t in skills._get_global_target_dirs()
+            }
+
+        assert targets == {"agents_skills": True}
 
 
 class TestAreSkillsInstalled:
@@ -465,11 +566,63 @@ class TestAreSkillsInstalled:
         with (
             patch.object(skills, "_find_project_root", return_value=tmp_path),
             patch.object(
-                skills, "_get_project_target_dirs", return_value=[project_dir]
+                skills, "_get_project_target_dirs", return_value=[_target(project_dir)]
             ),
-            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[_target(global_dir)]
+            ),
         ):
             assert skills.are_skills_installed() is False
+
+    def test_ignores_a_skill_that_only_sits_in_a_best_effort_target(
+        self, tmp_path: Path
+    ) -> None:
+        """A skill in a best-effort target does not count as installed.
+
+        The CLI-startup half of the partial-install trap. Nothing verified reads
+        ``.agents/skills``, so counting it would stop recommending ``streamlit
+        skills`` to a developer whose only copy sits where their agent cannot see it.
+        """
+        best_effort = tmp_path / "home" / ".agents" / "skills"
+        (best_effort / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(skills, "_get_project_target_dirs", return_value=[]),
+            patch.object(
+                skills,
+                "_get_global_target_dirs",
+                return_value=[
+                    _target(best_effort, "agents_skills", authoritative=False)
+                ],
+            ),
+        ):
+            assert skills.are_skills_installed() is False
+
+    def test_counts_a_skill_in_any_authoritative_target(self, tmp_path: Path) -> None:
+        """One authoritative target holding the skill is enough.
+
+        Requiring every authoritative *dir* would re-nudge anyone with only a global
+        install; a harness reads its project and home dirs alike, so either satisfies
+        it. Paired with the negative above, this pins the boundary.
+        """
+        authoritative = tmp_path / "home" / ".claude" / "skills"
+        (authoritative / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+        best_effort = tmp_path / "home" / ".agents" / "skills"
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(skills, "_get_project_target_dirs", return_value=[]),
+            patch.object(
+                skills,
+                "_get_global_target_dirs",
+                return_value=[
+                    _target(authoritative, "claude_skills"),
+                    _target(best_effort, "agents_skills", authoritative=False),
+                ],
+            ),
+        ):
+            assert skills.are_skills_installed() is True
 
     def test_returns_true_when_installed_in_project(self, tmp_path: Path) -> None:
         """Returns True when the bundled skill exists in a project target dir."""
@@ -480,9 +633,11 @@ class TestAreSkillsInstalled:
         with (
             patch.object(skills, "_find_project_root", return_value=tmp_path),
             patch.object(
-                skills, "_get_project_target_dirs", return_value=[project_dir]
+                skills, "_get_project_target_dirs", return_value=[_target(project_dir)]
             ),
-            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[_target(global_dir)]
+            ),
         ):
             assert skills.are_skills_installed() is True
 
@@ -499,7 +654,9 @@ class TestAreSkillsInstalled:
         with (
             patch.object(skills, "_find_project_root", return_value=tmp_path),
             patch.object(skills, "_get_project_target_dirs", return_value=[]),
-            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[_target(global_dir)]
+            ),
         ):
             assert skills.are_skills_installed() is True
 
@@ -533,7 +690,7 @@ class TestAreSkillsInstalled:
         with (
             patch.object(skills, "_find_project_root", return_value=tmp_path),
             patch.object(
-                skills, "_get_project_target_dirs", return_value=[project_dir]
+                skills, "_get_project_target_dirs", return_value=[_target(project_dir)]
             ),
             patch.object(
                 skills, "_get_global_target_dirs", side_effect=OSError("no home")
@@ -550,7 +707,9 @@ class TestAreSkillsInstalled:
 
         with (
             patch.object(skills, "_find_project_root", side_effect=OSError("no cwd")),
-            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[_target(global_dir)]
+            ),
         ):
             assert skills.are_skills_installed() is True
 
@@ -566,7 +725,9 @@ class TestAreSkillsInstalled:
             patch.object(
                 skills, "_get_project_target_dirs", side_effect=OSError("no home")
             ),
-            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[_target(global_dir)]
+            ),
         ):
             assert skills.are_skills_installed() is True
 
@@ -1145,7 +1306,7 @@ class TestConfirmProjectInstallation:
             result = skills._confirm_project_installation(
                 project_root=tmp_path,
                 skills=["test-skill"],
-                target_dirs=[tmp_path / ".agents" / "skills"],
+                targets=[_target(tmp_path / ".agents" / "skills")],
             )
         assert result is False
 
@@ -1155,7 +1316,7 @@ class TestConfirmProjectInstallation:
             result = skills._confirm_project_installation(
                 project_root=tmp_path,
                 skills=["test-skill"],
-                target_dirs=[tmp_path / ".agents" / "skills"],
+                targets=[_target(tmp_path / ".agents" / "skills")],
             )
         assert result is True
 
@@ -1170,7 +1331,7 @@ class TestConfirmGlobalInstallation:
             patch("pathlib.Path.home", return_value=tmp_path),
         ):
             result = skills._confirm_global_installation(
-                target_dirs=[tmp_path / ".agents" / "skills"],
+                targets=[_target(tmp_path / ".agents" / "skills")],
             )
         assert result is False
 
@@ -1597,16 +1758,18 @@ class TestGlobalInstallationConflicts:
 
         assert exc.value.reason == "write_denied"
 
-    def test_generalises_when_targets_fail_for_different_reasons(
+    def test_reason_follows_the_authoritative_target_when_targets_disagree(
         self, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
-        """Disagreeing targets report the generic write_failed, not a guess.
+        """Two targets failing differently report the AUTHORITATIVE target's cause.
 
-        Claiming "permission denied" when one target was denied and the other was out
-        of disk would send whoever reads the telemetry after half the problem.
+        ``.claude/skills`` is what Claude Code reads, so its cause is the one that
+        explains why nothing reached an agent. Generalising to ``write_failed`` here
+        would discard the specific, actionable cause in favour of the one target
+        whose readership is unverified.
         """
         home = tmp_path / "home"
-        # ~/.claude present -> _get_global_target_dirs yields two targets.
+        # ~/.claude present -> two targets, .claude/skills first and authoritative.
         (home / ".claude").mkdir(parents=True)
 
         with (
@@ -1626,40 +1789,156 @@ class TestGlobalInstallationConflicts:
         ):
             skills._install_global_skills(yes=True)
 
-        assert exc.value.reason == "write_failed"
+        assert exc.value.reason == "write_denied"
+        assert exc.value.telemetry_reason == "write_denied:claude_skills"
 
-    def test_partial_write_failure_reports_write_failed_not_success(
-        self, tmp_path: Path, mock_meta_skill_dir: Path
-    ) -> None:
-        """One target succeeds, another OSErrors -> hard write_failed, not success.
+    def test_generalises_when_authoritative_targets_disagree(self) -> None:
+        """Disagreeing authoritative targets report generic write_failed and no target.
 
-        ``_get_global_target_dirs`` returns TWO targets when ``~/.claude`` exists. If
-        ``~/.agents`` copies OK (result.installed non-empty) but ``~/.claude`` raises
-        OSError (result.errored), the success branch used to win over the errored
-        branch - so a half-installed system reported success and emitted no
-        write_failed telemetry for exactly the locked-down cohort under study. Any
-        errored target must fail loud.
+        Claiming "permission denied on .claude/skills" for a set that was half
+        permissions and half disk-full would send whoever reads the telemetry after
+        half the problem. Exercised directly because only one target is authoritative
+        today, so the installer cannot currently produce this pair - it must stay
+        correct for whenever a second one is added.
         """
-        home = tmp_path / "home"
-        # ~/.claude present -> _get_global_target_dirs yields both targets.
-        (home / ".claude").mkdir(parents=True)
+        result = skills._InstallResult(errored=["~/a (copy failed: x)"])
+        error = skills._write_error(
+            result,
+            [
+                skills._TargetWriteFailure(
+                    target=_target(Path("/a"), "claude_skills"),
+                    reason="write_denied",
+                ),
+                skills._TargetWriteFailure(
+                    target=_target(Path("/b"), "agents_skills"),
+                    reason="write_no_space",
+                ),
+            ],
+        )
 
+        assert error.reason == "write_failed"
+        # No target either: attributing a mixed set to one of them would be a guess.
+        assert error.target is None
+        assert error.telemetry_reason == "write_failed"
+
+
+class TestGlobalInstallPerTargetOutcomes:
+    """The four states of a two-target global install, judged per target.
+
+    ``.claude/skills`` is authoritative (Claude Code reads it) and ``.agents/skills``
+    is best-effort (nothing verified reads it - streamlit#16282), so the two targets
+    must not share a single verdict.
+    """
+
+    @staticmethod
+    def _install(
+        home: Path, meta_skill_dir: Path, copytree_side_effect: list[object]
+    ) -> skills._InstallResult:
         with (
             patch("pathlib.Path.home", return_value=home),
-            patch.object(
-                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
-            ),
-            # First target (~/.agents) copies fine; second (~/.claude) fails.
-            patch.object(
-                skills.shutil,
-                "copytree",
-                side_effect=[None, OSError("Permission denied")],
-            ),
-            pytest.raises(skills.InstallError) as exc,
+            patch.object(skills, "_get_meta_skill_dir", return_value=meta_skill_dir),
+            patch.object(skills.shutil, "copytree", side_effect=copytree_side_effect),
         ):
-            skills._install_global_skills(yes=True)
+            return skills._install_global_skills(yes=True)
 
-        assert exc.value.reason == "write_failed"
+    def test_both_targets_succeed_is_a_clean_success(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """Nothing failed, so nothing is degraded."""
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        result = self._install(home, mock_meta_skill_dir, [None, None])
+
+        assert len(result.installed) == 2
+        assert result.degraded_targets == []
+
+    def test_best_effort_failure_still_succeeds_and_is_recorded(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """.claude/skills lands, .agents/skills is denied -> SUCCESS, not failure.
+
+        This is the false negative the authority split exists to fix: the developer's
+        Claude Code works perfectly, and the old code reported a hard write failure at
+        them anyway. The best-effort failure is not swallowed - it rides the success
+        label via ``degraded_targets``, so demoting the target does not make its
+        failure rate unobservable.
+        """
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        # .claude/skills is written first, so it is the one that succeeds here.
+        result = self._install(
+            home,
+            mock_meta_skill_dir,
+            [None, OSError(errno.EACCES, "Permission denied")],
+        )
+
+        assert result.installed == ["~/.claude/skills/developing-with-streamlit"]
+        assert result.degraded_targets == ["agents_skills"]
+
+    def test_authoritative_failure_fails_and_names_its_target(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """.agents/skills lands, .claude/skills is denied -> hard failure.
+
+        The mirror of the case above, and the trap state: Claude Code got nothing, so
+        this must fail loudly *and* keep nudging. The target reaches telemetry as a
+        THIRD label segment so ``split_part(label, ':', 2)`` still yields the reason.
+        """
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        with pytest.raises(skills.InstallError) as exc:
+            self._install(
+                home,
+                mock_meta_skill_dir,
+                [OSError(errno.EACCES, "Permission denied"), None],
+            )
+
+        assert exc.value.reason == "write_denied"
+        assert exc.value.target == "claude_skills"
+        assert exc.value.telemetry_reason == "write_denied:claude_skills"
+
+    def test_both_targets_failing_is_a_failure(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """Nothing landed anywhere, so the install failed."""
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        with pytest.raises(skills.InstallError) as exc:
+            self._install(
+                home,
+                mock_meta_skill_dir,
+                [
+                    OSError(errno.EACCES, "Permission denied"),
+                    OSError(errno.EACCES, "Permission denied"),
+                ],
+            )
+
+        assert exc.value.reason == "write_denied"
+
+    def test_agents_failure_is_hard_when_claude_code_is_absent(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """Without Claude Code, .agents/skills is the sole target, so it must fail hard.
+
+        The demotion is conditional, not permanent: with no ~/.claude there is no
+        second target to have delivered, so treating this as a best-effort failure
+        would report success for an install that wrote nothing at all.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with pytest.raises(skills.InstallError) as exc:
+            self._install(
+                home,
+                mock_meta_skill_dir,
+                [OSError(errno.EACCES, "Permission denied")],
+            )
+
+        assert exc.value.telemetry_reason == "write_denied:agents_skills"
 
 
 class TestInteractiveModeSelection:
@@ -1711,6 +1990,7 @@ def _evaluate_nudge(
     installed_skills: tuple[str, ...] = (),
     marker_exists: bool = False,
     would_be_refused: bool = False,
+    claude_code_installed: bool = True,
 ) -> bool:
     """Run ``should_show_skills_nudge`` with the given conditions patched in."""
     return not _evaluate_nudge_reason(
@@ -1721,6 +2001,7 @@ def _evaluate_nudge(
         installed_skills=installed_skills,
         marker_exists=marker_exists,
         would_be_refused=would_be_refused,
+        claude_code_installed=claude_code_installed,
     )
 
 
@@ -1733,6 +2014,7 @@ def _evaluate_nudge_reason(
     installed_skills: tuple[str, ...] = (),
     marker_exists: bool = False,
     would_be_refused: bool = False,
+    claude_code_installed: bool = True,
 ) -> str:
     """Run ``nudge_suppression_reason`` with the given conditions patched in."""
     marker = tmp_path / ".skills_nudge_dismissed"
@@ -1751,6 +2033,13 @@ def _evaluate_nudge_reason(
         patch(
             "streamlit.web.skills.detect_installed_skills",
             return_value=list(installed_skills),
+        ),
+        # Which harness is authoritative is decided by whether ~/.claude exists, so
+        # pin it: unpatched, whether the runner's home has Claude Code installed
+        # would decide whether a ``home:claude:...`` token counts as installed.
+        patch(
+            "streamlit.web.skills._claude_code_installed",
+            return_value=claude_code_installed,
         ),
         # Keep the gate hermetic: otherwise the conflict-aware suppression check
         # hits the real filesystem (a dev machine's ~/.claude makes .claude/skills
@@ -1831,6 +2120,83 @@ def test_should_show_skills_nudge_hidden_when_skills_installed(tmp_path: Path) -
         )
         is False
     )
+
+
+class TestNudgeAfterAPartialInstall:
+    """The partial-install trap: a skill only where the agent cannot read it.
+
+    Both nudges used to go quiet if the skill turned up in ANY of 8 harness dirs x 4
+    roots. So after a global install that landed ``~/.agents/skills`` and was denied
+    ``~/.claude/skills``, the developer was told the install failed, both nudges went
+    silent permanently, and the copy they held was the one Claude Code does not read.
+    They were never offered the retry that would have fixed it.
+    """
+
+    def test_best_effort_only_install_keeps_nudging_claude_code_users(
+        self, tmp_path: Path
+    ) -> None:
+        """A skill in .agents/skills alone does not satisfy a Claude Code user."""
+        assert (
+            _evaluate_nudge(
+                tmp_path,
+                installed_skills=("home:agents:developing-with-streamlit",),
+                claude_code_installed=True,
+            )
+            is True
+        )
+
+    def test_best_effort_only_install_satisfies_a_user_without_claude_code(
+        self, tmp_path: Path
+    ) -> None:
+        """The mirror: with no ~/.claude, .agents/skills is all we write, so it counts.
+
+        Without this the nudge would fire forever at that cohort - no install we can
+        perform would ever satisfy the gate. This is the "two wrong answers" fork in
+        ``_authoritative_harnesses``, pinned so the choice is deliberate.
+        """
+        assert (
+            _evaluate_nudge(
+                tmp_path,
+                agents=("codex",),
+                installed_skills=("home:agents:developing-with-streamlit",),
+                claude_code_installed=False,
+            )
+            is False
+        )
+
+    def test_a_project_local_claude_install_satisfies_the_gate(
+        self, tmp_path: Path
+    ) -> None:
+        """Any location satisfies the harness: Claude Code reads project dirs too.
+
+        Authority is per harness, not per path, so a developer who deliberately keeps
+        the skill project-local is not nudged at.
+        """
+        assert (
+            _evaluate_nudge(
+                tmp_path,
+                installed_skills=("app:claude:developing-with-streamlit",),
+                claude_code_installed=True,
+            )
+            is False
+        )
+
+    def test_another_harnesss_skill_does_not_satisfy_claude_code(
+        self, tmp_path: Path
+    ) -> None:
+        """A skill under some other harness's dir says nothing about Claude Code.
+
+        ``detect_installed_skills`` scans all 8 harnesses; only the ones a detected
+        harness reads may quiet the nudge.
+        """
+        assert (
+            _evaluate_nudge(
+                tmp_path,
+                installed_skills=("home:cursor:developing-with-streamlit",),
+                claude_code_installed=True,
+            )
+            is True
+        )
 
 
 def test_should_show_skills_nudge_hidden_when_install_would_conflict(
@@ -2253,9 +2619,15 @@ class TestOneClickInstallWouldBeRefused:
             patch.object(
                 skills, "_find_project_root", return_value=project_root or source_dir
             ),
-            patch.object(skills, "_get_project_target_dirs", return_value=target_dirs),
             patch.object(
-                skills, "_get_global_target_dirs", return_value=global_target_dirs or []
+                skills,
+                "_get_project_target_dirs",
+                return_value=[_target(d) for d in target_dirs],
+            ),
+            patch.object(
+                skills,
+                "_get_global_target_dirs",
+                return_value=[_target(d) for d in global_target_dirs or []],
             ),
             patch.object(
                 skills,
@@ -2593,8 +2965,8 @@ class TestNudgeGateSideEffects:
                 skills,
                 "_get_project_target_dirs",
                 return_value=[
-                    project / ".agents" / "skills",
-                    project / ".claude" / "skills",
+                    _target(project / ".agents" / "skills"),
+                    _target(project / ".claude" / "skills"),
                 ],
             ),
             patch.object(skills, "_get_global_target_dirs", return_value=[]),
@@ -2626,7 +2998,11 @@ class TestNudgeGateSideEffects:
         with (
             patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
             patch.object(skills, "_find_project_root", return_value=project),
-            patch.object(skills, "_get_project_target_dirs", return_value=target_dirs),
+            patch.object(
+                skills,
+                "_get_project_target_dirs",
+                return_value=[_target(d) for d in target_dirs],
+            ),
             patch.object(skills, "_get_global_target_dirs", return_value=[]),
             patch.object(skills._LOGGER, "warning") as mock_warning,
         ):
@@ -2653,7 +3029,10 @@ class TestNudgeGateSideEffects:
             patch.object(
                 skills,
                 "_get_project_target_dirs",
-                return_value=[project / ".agents" / "skills", free_target],
+                return_value=[
+                    _target(project / ".agents" / "skills"),
+                    _target(free_target),
+                ],
             ),
             patch.object(skills, "_get_global_target_dirs", return_value=[]),
             patch.object(skills._LOGGER, "warning") as mock_warning,
@@ -2741,7 +3120,7 @@ class TestAreSkillsInstalledErrorHandling:
             patch.object(
                 skills,
                 "_get_project_target_dirs",
-                return_value=[first_dir, second_dir],
+                return_value=[_target(first_dir), _target(second_dir)],
             ),
             patch.object(skills, "_get_global_target_dirs", return_value=[]),
             patch("pathlib.Path.is_symlink", patched_is_symlink),
@@ -2763,7 +3142,7 @@ class TestConfirmProjectInstallationEdgeCases:
             result = skills._confirm_project_installation(
                 project_root=project_root,
                 skills=["my-skill"],
-                target_dirs=[unrelated_dir],
+                targets=[_target(unrelated_dir)],
             )
 
         assert result is True
@@ -2783,7 +3162,9 @@ class TestConfirmGlobalInstallationEdgeCases:
             patch("pathlib.Path.home", return_value=home),
             patch("click.confirm", return_value=True),
         ):
-            result = skills._confirm_global_installation(target_dirs=[unrelated_dir])
+            result = skills._confirm_global_installation(
+                targets=[_target(unrelated_dir)]
+            )
 
         assert result is True
 
@@ -2951,15 +3332,21 @@ class TestInstallProjectSkillsFallbackSignal:
 @pytest.mark.parametrize(
     "reason",
     sorted(
-        {*get_args(skills._InstallFailureReason), *get_args(skills._FallbackReason)}
+        {
+            *get_args(skills._InstallFailureReason),
+            *get_args(skills._FallbackReason),
+            *get_args(skills._InstallTargetName),
+        }
     ),
 )
 def test_every_reason_in_the_vocabulary_is_named_by_a_test(reason: str) -> None:
-    """Fail when a reason is added to either vocabulary and no test names it.
+    """Fail when a reason is added to any vocabulary and no test names it.
 
     mypy constrains raise sites to the vocabulary but says nothing about the reverse
     direction: a value can be added, shipped, and never exercised, so nobody notices
     it is unreachable or mis-tagged until an analysis query returns an empty bucket.
+    Install-target tokens are covered too - they reach telemetry as a label segment,
+    so an unexercised one is the same gap.
 
     This is a tripwire on that gap, not proof the covering assertion is a good one -
     it only checks the literal appears somewhere in this file. The classes below are

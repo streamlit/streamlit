@@ -163,6 +163,19 @@ message InstallSkillsResponsePayload {
   // then succeed, so this is where that cohort's diagnostic signal lives
   // (skillsNudgeInstallSucceeded:<fallback_reason>).
   string fallback_reason = 2;
+
+  // Best-effort install targets whose write failed while every authoritative target
+  // succeeded, comma-separated and sorted; empty when nothing was degraded. Values
+  // are install-target tokens ("agents_skills", "claude_skills").
+  //
+  // An authoritative target is one a DETECTED agent harness is known to read, so a
+  // failure there fails the install. A best-effort target has no verified reader
+  // (nothing has been shown to read ~/.agents/skills - see streamlit#16282), so its
+  // failure must NOT fail an install that reached the agent. This field is how that
+  // demotion stays measurable: it rides the SUCCESS label as a third segment
+  // (skillsNudgeInstallSucceeded:<fallback_reason>:<degraded_targets>), so segment 2
+  // keeps meaning fallback_reason for every existing query.
+  string degraded_targets = 3;
 }
 
 // Acknowledgement payload for dismissing the skills nudge. Carries no data;

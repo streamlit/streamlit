@@ -283,7 +283,7 @@ class InstallSkillsHandler(BackendOperationHandler):
             # rather than being flattened to "unknown".
             reason: str
             if isinstance(ex, skills.InstallError):
-                reason = ex.reason
+                reason = ex.telemetry_reason
             elif isinstance(ex, OSError):
                 reason = skills.classify_write_error(ex)
             else:
@@ -303,6 +303,12 @@ class InstallSkillsHandler(BackendOperationHandler):
             install_skills=InstallSkillsResponsePayload(
                 detail=skills.summarize_install(result),
                 fallback_reason=result.fallback_reason or "",
+                # A best-effort target that failed while every authoritative one
+                # landed. The install succeeded and is reported as such; this keeps
+                # the demoted target's failure rate observable instead of silent.
+                # Sorted and comma-joined so the value stays a stable, bounded
+                # string regardless of target iteration order.
+                degraded_targets=",".join(sorted(set(result.degraded_targets))),
             ),
         )
 

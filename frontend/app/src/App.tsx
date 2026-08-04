@@ -1620,7 +1620,10 @@ export class App extends PureComponent<Props, State> {
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
         this.trackSkillsNudge(
-          skillsNudgeInstallSuccessLabel(result.fallbackReason)
+          skillsNudgeInstallSuccessLabel(
+            result.fallbackReason,
+            result.degradedTargets
+          )
         )
         return result.detail ?? undefined
       })

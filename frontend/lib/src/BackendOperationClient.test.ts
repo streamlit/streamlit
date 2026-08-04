@@ -342,6 +342,49 @@ describe("BackendOperationClient", () => {
     expect(payload.fallbackReason).toBeFalsy()
   })
 
+  it("preserves degraded_targets on a successful install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: {
+          detail: "Installed to ~/.claude/skills",
+          degradedTargets: "agents_skills",
+        },
+      })
+    )
+
+    // A best-effort target failing does NOT fail the install, so this rides the
+    // success payload — it is the only signal that the demoted target went wrong.
+    const payload = await promise
+    expect(payload.degradedTargets).toBe("agents_skills")
+    expect(payload.fallbackReason).toBeFalsy()
+  })
+
+  it("leaves degradedTargets empty for a clean install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: { detail: "Installed" },
+      })
+    )
+
+    const payload = await promise
+    // Must stay falsy, or App would tag a clean install as degraded.
+    expect(payload.degradedTargets).toBeFalsy()
+  })
+
   it("sends dismiss skills nudge requests and resolves on the ack", async () => {
     const sendRequest = vi.fn()
     const client = createClient(sendRequest)

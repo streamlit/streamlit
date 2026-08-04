@@ -250,6 +250,83 @@ def test_install_skills_handler_forwards_global_fallback_flag() -> None:
     assert response.install_skills.fallback_reason == "symlink_failed"
 
 
+def test_install_skills_handler_forwards_degraded_targets() -> None:
+    """A best-effort target that failed rides the SUCCESS response, not a failure.
+
+    The install reached the agent, so it is a success - but demoting a target from
+    "fails the install" to "best effort" must not make its failure rate
+    unobservable, and an attribution never emitted cannot be backfilled.
+    """
+    install_result = skills._InstallResult(
+        installed=["~/.claude/skills/foo"], degraded_targets=["agents_skills"]
+    )
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", return_value=install_result),
+        patch.object(skills, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.install_skills.degraded_targets == "agents_skills"
+    # Still a success: no error, and the failure must not reach error_reason.
+    assert response.error_msg == ""
+    assert response.error_reason == ""
+
+
+def test_install_skills_handler_reports_no_degraded_targets_on_a_clean_install() -> (
+    None
+):
+    """A clean install leaves ``degraded_targets`` empty rather than absent-but-set."""
+    install_result = skills._InstallResult(installed=["~/.claude/skills/foo"])
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", return_value=install_result),
+        patch.object(skills, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.install_skills.degraded_targets == ""
+
+
+def test_install_skills_handler_forwards_the_failing_target() -> None:
+    """The failing target reaches ``error_reason`` as a THIRD label segment.
+
+    Downstream queries read the reason with ``split_part(label, ':', 2)``, so the
+    target has to be its own segment: folding it into the reason
+    (``write_denied_claude``) would fork the closed vocabulary and break them
+    silently. Pinned as a literal for that reason.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=skills.InstallError(
+                "Could not write ~/.claude/skills/developing-with-streamlit.",
+                reason="write_denied",
+                target="claude_skills",
+            ),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "write_denied:claude_skills"
+
+
 def test_install_skills_handler_reports_failure() -> None:
     """Install failures are returned via the response's error message."""
     with (
