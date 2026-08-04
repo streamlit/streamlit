@@ -324,6 +324,9 @@ def test_wrap_false_keeps_single_row_and_sets_title(app: Page):
     true_box = wrap_true.locator("button").bounding_box()
     assert false_box is not None
     assert true_box is not None
+    # The 4px margin absorbs sub-pixel rounding so the assertion stays robust:
+    # the wrapped (two-line) button must be clearly taller than the single-row
+    # one, not just larger by a rounding artifact.
     assert true_box["height"] > false_box["height"] + 4
 
 
@@ -332,6 +335,9 @@ def test_wrap_false_help_takes_precedence_over_title(app: Page):
     container = get_element_by_key(app, "wrap_help_button")
     expect(container.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
 
+    # Prime the interaction modality to 'pointer' before hovering so React Aria
+    # reliably opens the help tooltip (the cursor starts off-page otherwise).
+    reset_hovering(app)
     container.hover()
     expect(app.get_by_text("wrap help text")).to_be_visible()
 

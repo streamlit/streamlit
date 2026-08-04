@@ -40,8 +40,10 @@ export interface DynamicButtonLabelProps {
    */
   wrap?: boolean
   /**
-   * Native tooltip text shown on hover. Used with `wrap=false` to reveal the
-   * full label when it is ellipsized.
+   * Native browser tooltip (`title`) shown on hover. Callers set this to the
+   * full label when `wrap=false` so a label truncated with an ellipsis can
+   * still be read. Because it is a native `title`, the browser shows it on
+   * hover whenever it is set, regardless of whether the label is clipped.
    */
   title?: string
 }

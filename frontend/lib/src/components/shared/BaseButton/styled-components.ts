@@ -600,6 +600,9 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",
+  // Keep the shortcut visible when wrap=false: the markdown label absorbs the
+  // truncation, so the shortcut (like the icon) must not be compressed.
+  flexShrink: 0,
 }))
 
 // --- React Aria ToggleButtonGroup styled components ---
