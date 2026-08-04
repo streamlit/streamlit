@@ -227,32 +227,40 @@ When `wrap=False` on a single-label control:
   switches, and help icons remain visible.
 - Only the text portion of the label shrinks and renders an ellipsis.
 - The full label remains the control's accessible name.
-- When the label is actually truncated and no `help` is set, hovering the control reveals
-  the full label in a tooltip (see "Tooltip for truncated labels").
+- When `help` is not set, hovering the control reveals the full label in a tooltip (see
+  "Tooltip for the full label").
 
-### Tooltip for truncated labels
+### Tooltip for the full label
 
-When a single-label control ellipsizes its label, hovering it reveals the full label in a
-tooltip so the wording stays recoverable without changing the app. The rules:
+When a single-label control is set to `wrap=False`, its label can be ellipsized, so the
+control exposes the full label in a tooltip on hover to keep the wording recoverable
+without changing the app. The rules:
 
-- **Only when truncated.** The tooltip appears only when the label is actually clipped.
-  The frontend detects this by comparing the label's rendered width to its available
-  width (rechecked on resize); no CSS/HTML feature reveals truncated text on its own
-  (`text-overflow: ellipsis` adds no tooltip, and a static `title` would also show on
-  labels that fit).
+- **Native `title` tooltip.** The full label is attached as the element's native HTML
+  `title` attribute, which the browser shows on hover. This is a deliberate simplification
+  over measuring the label to decide when it is clipped: no width measurement, resize
+  observation, or Streamlit tooltip component is involved.
+- **Whenever `wrap=False`.** Because a native `title` cannot be conditioned on actual
+  clipping without measurement, the tooltip is present for every `wrap=False` control, not
+  only when the label is truncated. A short label that fits therefore also shows a tooltip
+  with its own text on hover. This is an accepted trade-off for the simpler implementation.
 - **Only when `help` is unset.** If `help` is passed, its tooltip takes precedence and no
-  separate label tooltip is added, so the two never compete. `help` stays the way to add
-  context beyond the label.
+  `title` is added, so the two never compete. `help` stays the way to add context beyond
+  the label.
 - **Plain text.** For Markdown labels the tooltip shows the plain-text label (the same
-  text used as the accessible name); tooltips do not render inline Markdown or icons.
-- **Reuses Streamlit's tooltip** rather than the native `title` attribute, for consistent
-  styling with `help`.
+  text used as the accessible name); the native tooltip does not render inline Markdown or
+  icons.
 
 Screen-reader users already receive the full label as the control's accessible name, so
 this tooltip is a visual aid for pointer users and, like `help`, does not apply on touch.
 It covers the button-like controls (`st.button`, `st.download_button`, `st.link_button`,
 `st.form_submit_button`, `st.popover`, `st.menu_button`) and applies the same rule to
 `st.checkbox` and `st.toggle`.
+
+The native `title` is used instead of Streamlit's styled tooltip because it removes the
+frontend truncation-measurement machinery entirely. The visible trade-offs are that the
+tooltip uses the browser's default styling (not the `help` tooltip style) and appears even
+on labels that are not clipped.
 
 ### Deterministic height
 
@@ -377,7 +385,7 @@ right.button("Export", width="stretch", wrap=False)
 
 The middle button remains the same height as its neighbors and displays a label like
 `"Regenerate the complete…"`. Because no `help` is set, hovering the button reveals the
-full label.
+full label in a native tooltip (see "Tooltip for the full label").
 
 The behavior applies consistently to:
 
@@ -419,8 +427,8 @@ with st.container(horizontal=True, wrap=False):
 
 - The checkbox indicator or toggle switch retains its size and never shrinks.
 - The label consumes the remaining width and ellipsizes when necessary.
-- When the label is truncated and no `help` is set, hovering the control reveals the full
-  label in a tooltip.
+- When no `help` is set, hovering the control reveals the full label in a native tooltip
+  (see "Tooltip for the full label").
 - The optional help icon remains visible.
 - `width="content"` and `width="stretch"` continue to determine the control's available
   width. Ellipsis appears only when that width constrains the label.
@@ -536,6 +544,15 @@ initial API. `st.radio(horizontal=True)` could technically accept `wrap` for con
 but it is left out to keep the initial surface minimal; it can adopt the same one-row
 contract in a follow-up if demand warrants.
 
+### Styled, only-when-clipped label tooltip
+
+The full-label tooltip uses the native HTML `title` for simplicity (see "Tooltip for the
+full label"), which means it uses the browser's default styling and shows even when the
+label is not actually clipped. A follow-up could replace it with Streamlit's styled
+tooltip gated on real truncation detection (measuring the label width and re-checking on
+resize) so it matches the `help` tooltip styling and appears only when the label is
+clipped. This was intentionally deferred to avoid the frontend measurement machinery.
+
 ## Documentation and testing
 
 - Add parameter documentation and a compact-toolbar example to each command.
@@ -546,8 +563,9 @@ contract in a follow-up if demand warrants.
   multiselect controls.
 - Add button tests for ellipsis, icons, shortcuts, Markdown, accessible names, and
   popover/menu expansion icons.
-- Add tests that the truncated-label tooltip appears only when the label is clipped and
-  no `help` is set, defers to `help` when present, and uses plain text for Markdown labels.
+- Add tests that the full-label `title` tooltip is set when `wrap=False` and no `help` is
+  set, is omitted when `help` is present (so `help` takes precedence), and uses plain text
+  for Markdown labels.
 - Add checkbox and toggle tests for ellipsis, fixed indicators, help icons, label
   visibility, and accessible names.
 - Add E2E coverage at desktop, intermediate, and phone widths in Chromium, Firefox, and
