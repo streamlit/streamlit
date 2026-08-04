@@ -170,6 +170,10 @@ function SingleDateInput({
   // Guards against `handleFocus` reopening the popover it's in the middle
   // of closing — see `focusLastFieldSegment` below.
   const isRestoringFocusRef = useRef(false)
+  // When an action (calendar click, paste, clear) already committed the value
+  // via onChange, the close-detection effect should skip its own commit to
+  // avoid a redundant write + backend rerun.
+  const skipCloseCommitRef = useRef(false)
 
   // --- Two-layer state (matches TimeInput/NumberInput pattern) ---
   // `displayValue` tracks what the field shows during editing.
@@ -215,22 +219,25 @@ function SingleDateInput({
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
-      const pending = displayValueRef.current
-      const hasPlaceholders =
-        triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
+      if (skipCloseCommitRef.current) {
+        skipCloseCommitRef.current = false
+      } else {
+        const pending = displayValueRef.current
+        const hasPlaceholders =
+          triggerRef.current?.querySelector('[data-placeholder="true"]') !==
+          null
 
-      if (hasPlaceholders && !datesEqual(pending, value)) {
-        // User left segments incomplete — revert display to the committed
-        // value directly. We can't go through the parent round-trip because
-        // the widget state might already be at default (segment edits were
-        // buffered), making the parent's revert a no-op.
-        setDisplayValue(value)
-        onCloseRef.current(true /* hasPlaceholderSegments */)
-      } else if (!datesEqual(pending, value)) {
-        onChangeRef.current(pending)
+        if (hasPlaceholders && !datesEqual(pending, value)) {
+          // User left segments incomplete — revert display to the committed
+          // value directly. We can't go through the parent round-trip because
+          // the widget state might already be at default (segment edits were
+          // buffered), making the parent's revert a no-op.
+          setDisplayValue(value)
+          onCloseRef.current(true /* hasPlaceholderSegments */)
+        } else if (!datesEqual(pending, value)) {
+          onChangeRef.current(pending)
+        }
       }
-      // When dates are equal (no change, or calendar/paste already committed
-      // this value), no action needed — avoid double-committing.
     }
     wasOpenRef.current = isOpen
   }, [isOpen, value])
@@ -288,6 +295,7 @@ function SingleDateInput({
     // Exclude the month/year picker popover so Escape closes it first,
     // not the whole calendar.
     excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
+    excludeEscape: true,
   })
 
   const setTriggerRef = useCallback(
@@ -316,6 +324,7 @@ function SingleDateInput({
     (date: CalendarDate): void => {
       setDisplayValue(date)
       onChange(date)
+      skipCloseCommitRef.current = true
       setIsOpen(false)
       focusLastFieldSegment()
     },

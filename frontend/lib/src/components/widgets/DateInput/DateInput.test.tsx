@@ -962,6 +962,35 @@ describe("DateInput keyboard navigation and focus management", () => {
     expect(segments.day).toHaveFocus()
   })
 
+  it("calendar selection writes to WidgetStateManager exactly once", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const { calendar } = await openCalendarAndGetGrid(user)
+
+    const otherDay = within(calendar).getByRole("button", {
+      name: /January 25, 1970/,
+    })
+    await user.click(otherDay)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["1970-01-25"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("Enter on a focused grid cell selects date and closes calendar", async () => {
     const user = userEvent.setup()
     const props = getProps()

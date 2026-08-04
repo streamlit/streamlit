@@ -26,11 +26,19 @@ interface UseOverlayDismissalOptions {
   /** floating-ui's refs.setReference — optional; the hook creates and merges its own referenceRef. */
   referenceSetFn?: (node: HTMLElement | null) => void
   /**
-   * CSS selectors whose containing elements are excluded from outside-click detection.
-   * Used to prevent ColumnMenu from closing when clicking into portal sub-menus.
-   * Stored in a ref internally to avoid dep-array churn from array literals.
+   * CSS selectors whose containing elements are excluded from outside-click
+   * and (optionally) Escape detection. Used to prevent ColumnMenu from closing
+   * when clicking into portal sub-menus. Stored in a ref internally to avoid
+   * dep-array churn from array literals.
    */
   excludeSelectors?: string[]
+  /**
+   * When true, `excludeSelectors` also applies to Escape: if focus is inside
+   * an excluded element, Escape won't dismiss this overlay (letting the nested
+   * overlay handle it). Only enable for genuinely nested overlays that have
+   * their own Escape handling (e.g. DateInput's month/year picker).
+   */
+  excludeEscape?: boolean
   /**
    * Called after onClose() when Escape is pressed, used for focus restoration.
    * Use a callback (not a ref) to avoid issues with components that can't safely
@@ -78,6 +86,7 @@ export function useOverlayDismissal({
   floatingSetFn,
   referenceSetFn,
   excludeSelectors,
+  excludeEscape = false,
   restoreFocusFn,
   closeOnTab = false,
 }: UseOverlayDismissalOptions): UseOverlayDismissalReturn {
@@ -122,12 +131,10 @@ export function useOverlayDismissal({
       const isEscape = e.key === "Escape"
       const isTab = closeOnTab && e.key === "Tab"
       if (!isEscape && !isTab) return
-      // Same exclusion as handlePointerDown: if focus is inside a nested
-      // overlay (e.g. DateInput's own month/year dropdown), let that
-      // overlay's own Escape handling close just itself instead of also
-      // dismissing this outer one. Only relevant for Escape — Tab has no
-      // such nested-overlay case among current consumers.
-      if (isEscape) {
+      // When excludeEscape is enabled: if focus is inside a nested overlay
+      // (e.g. DateInput's month/year picker), let that overlay's own Escape
+      // handling close itself instead of also dismissing this outer one.
+      if (isEscape && excludeEscape) {
         const target = e.target as Element
         if (excludeSelectorsRef.current?.some(sel => target.closest(sel)))
           return
@@ -148,7 +155,7 @@ export function useOverlayDismissal({
       document.removeEventListener("pointerdown", handlePointerDown, true)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
-  }, [isOpen, onClose, closeOnTab, restoreFocusFn])
+  }, [isOpen, onClose, closeOnTab, excludeEscape, restoreFocusFn])
 
   return { panelRef, setFloatingRef, referenceRef, setReferenceRef }
 }
