@@ -183,6 +183,37 @@ function buildPointFromIndex(
   }
 }
 
+/** Resolve the chart's current option as a plain object (or ``null``). */
+function resolveChartOption(
+  chart: EChartsSelectionInstance
+): Record<string, unknown> | null {
+  const chartOption = chart.getOption()
+  return isPlainObject(chartOption)
+    ? (chartOption as Record<string, unknown>)
+    : null
+}
+
+/**
+ * Expand ``selectchanged`` ``selected`` entries into enriched point objects and
+ * their flat data indices.
+ */
+function buildPointsFromEntries(
+  resolvedOption: Record<string, unknown> | null,
+  entries: SelectedEntry[]
+): { points: Array<Record<string, unknown>>; indices: number[] } {
+  const points: Array<Record<string, unknown>> = []
+  const indices: number[] = []
+  for (const entry of entries) {
+    for (const dataIndex of entry.dataIndex ?? []) {
+      points.push(
+        buildPointFromIndex(resolvedOption, entry.seriesIndex, dataIndex)
+      )
+      indices.push(dataIndex)
+    }
+  }
+  return { points, indices }
+}
+
 /**
  * Merge the native-selection and brush point channels into a single
  * de-duplicated union keyed by ``series_index`` + ``data_index``. Native
@@ -245,16 +276,21 @@ function dispatchPointSelection(
  * Try to convert a pixel-space brush range into data-space coordinates. Returns
  * ``null`` when the coordinate system can't be resolved so the caller can fall
  * back to raw pixels.
+ *
+ * ``gridIndex`` selects the coordinate system to convert against (derived from
+ * the brush area's ``xAxisIndex``), so multi-grid charts convert against the
+ * grid the brush was drawn on rather than always the first one.
  */
 function convertPixelRange(
   chart: EChartsSelectionInstance,
-  area: BrushArea
+  area: BrushArea,
+  gridIndex: number
 ): { x: number[]; y: number[] } | null {
   const range = area.range
   if (!Array.isArray(range)) {
     return null
   }
-  const finder = { gridIndex: 0 }
+  const finder = { gridIndex }
   try {
     if (area.brushType === "polygon") {
       const xs: number[] = []
@@ -308,7 +344,7 @@ function areaToSelectionItem(
     return { x: coordRange as number[], y: [], grid_index: gridIndex }
   }
 
-  const converted = convertPixelRange(chart, area)
+  const converted = convertPixelRange(chart, area, gridIndex)
   if (converted) {
     return { ...converted, grid_index: gridIndex }
   }
@@ -319,6 +355,30 @@ function areaToSelectionItem(
     grid_index: gridIndex,
     coordinate_system: "pixel",
   }
+}
+
+/**
+ * Split brush areas into serializable ``box`` (rect / lineX / lineY) and
+ * ``lasso`` (polygon) selection items.
+ */
+function buildBrushGeometry(
+  chart: EChartsSelectionInstance,
+  areas: BrushArea[]
+): {
+  box: Array<Record<string, unknown>>
+  lasso: Array<Record<string, unknown>>
+} {
+  const box: Array<Record<string, unknown>> = []
+  const lasso: Array<Record<string, unknown>> = []
+  for (const area of areas) {
+    const item = areaToSelectionItem(chart, area)
+    if (area.brushType === "polygon") {
+      lasso.push(item)
+    } else {
+      box.push(item)
+    }
+  }
+  return { box, lasso }
 }
 
 /**
@@ -494,6 +554,38 @@ export function useEChartsSelections(
       let latestBox: Array<Record<string, unknown>> = []
       let latestLasso: Array<Record<string, unknown>> = []
 
+      // Seed the caches from the persisted selection so that, after a remount
+      // (theme/renderer change recreates the instance), interacting with a
+      // single channel doesn't drop the other channel's state. ``restoreSelection``
+      // re-applies the visuals but intentionally runs *before* these handlers are
+      // bound, so its events don't hydrate the caches — we do it explicitly here.
+      // Brush hit-test points aren't persisted; they repopulate on the next
+      // brush event, while the box/lasso geometry is restored from the areas.
+      if (chartId) {
+        const persistedPoints = widgetMgr.getElementState<SelectedEntry[]>(
+          chartId,
+          SELECTED_POINTS_STATE_KEY
+        )
+        if (Array.isArray(persistedPoints) && persistedPoints.length > 0) {
+          const { points, indices } = buildPointsFromEntries(
+            resolveChartOption(chart),
+            persistedPoints
+          )
+          latestSelectedPoints = points
+          latestSelectedIndices = indices
+        }
+
+        const persistedAreas = widgetMgr.getElementState<BrushArea[]>(
+          chartId,
+          BRUSH_AREAS_STATE_KEY
+        )
+        if (Array.isArray(persistedAreas) && persistedAreas.length > 0) {
+          const { box, lasso } = buildBrushGeometry(chart, persistedAreas)
+          latestBox = box
+          latestLasso = lasso
+        }
+      }
+
       const emitSelection = debounce((): void => {
         const { points, pointIndices } = mergePointChannels(
           latestSelectedPoints,
@@ -513,20 +605,10 @@ export function useEChartsSelections(
         const params = raw as SelectChangedParams
         const selected = params.selected ?? []
         // Resolve the (possibly enriched) point entries from the chart's option.
-        const chartOption = chart.getOption()
-        const resolvedOption = isPlainObject(chartOption)
-          ? (chartOption as Record<string, unknown>)
-          : null
-        const points: Array<Record<string, unknown>> = []
-        const indices: number[] = []
-        for (const entry of selected) {
-          for (const dataIndex of entry.dataIndex ?? []) {
-            points.push(
-              buildPointFromIndex(resolvedOption, entry.seriesIndex, dataIndex)
-            )
-            indices.push(dataIndex)
-          }
-        }
+        const { points, indices } = buildPointsFromEntries(
+          resolveChartOption(chart),
+          selected
+        )
         latestSelectedPoints = points
         latestSelectedIndices = indices
         // Persist the raw selection so it can be re-applied visually after an
@@ -565,16 +647,7 @@ export function useEChartsSelections(
       const handleBrushEnd = (raw: unknown): void => {
         const params = raw as BrushEndParams
         const areas = params.areas ?? []
-        const box: Array<Record<string, unknown>> = []
-        const lasso: Array<Record<string, unknown>> = []
-        for (const area of areas) {
-          const item = areaToSelectionItem(chart, area)
-          if (area.brushType === "polygon") {
-            lasso.push(item)
-          } else {
-            box.push(item)
-          }
-        }
+        const { box, lasso } = buildBrushGeometry(chart, areas)
         latestBox = box
         latestLasso = lasso
         if (chartId) {

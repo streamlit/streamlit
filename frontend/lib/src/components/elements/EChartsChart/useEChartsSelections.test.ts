@@ -645,6 +645,141 @@ describe("useEChartsSelections", () => {
     })
   })
 
+  it("seeds native points on bind so a post-remount brush keeps them", () => {
+    // Simulate a remount that had a persisted native point selection: after a
+    // theme/renderer change the caches would otherwise start empty.
+    const persistedPoints = [{ seriesIndex: 0, dataIndex: [1] }]
+    widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
+      key === "selectedPoints" ? persistedPoints : undefined
+    )
+
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    chart.getOption.mockReturnValue({
+      series: [{ type: "bar", name: "Sales", data: [10, 20, 30] }],
+    })
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    // The user draws a NEW brush over point 2 only (no selectchanged fires).
+    act(() => {
+      chart.trigger("brushSelected", {
+        batch: [{ selected: [{ seriesIndex: 0, dataIndex: [2] }] }],
+      })
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "rect",
+            coordRange: [
+              [0, 2],
+              [10, 20],
+            ],
+            xAxisIndex: 0,
+          },
+        ],
+      })
+    })
+    flush()
+
+    // The persisted native point (1) is preserved in the union alongside the
+    // newly brushed point (2) rather than being dropped.
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      { id: "chart-id", formId: "" },
+      JSON.stringify({
+        selection: {
+          points: [
+            {
+              component_type: "series",
+              series_type: "bar",
+              series_index: 0,
+              series_name: "Sales",
+              data_index: 1,
+              value: 20,
+              data: 20,
+            },
+            { component_type: "series", series_index: 0, data_index: 2 },
+          ],
+          point_indices: [1, 2],
+          box: [{ x: [0, 2], y: [10, 20], grid_index: 0 }],
+          lasso: [],
+        },
+      }),
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("seeds brush geometry on bind so a post-remount point selection keeps the box", () => {
+    // Simulate a remount that had a persisted brush selection.
+    const persistedAreas = [
+      {
+        brushType: "rect",
+        coordRange: [
+          [0, 2],
+          [10, 20],
+        ],
+        xAxisIndex: 0,
+      },
+    ]
+    widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
+      key === "brushAreas" ? persistedAreas : undefined
+    )
+
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    chart.getOption.mockReturnValue({
+      series: [{ type: "bar", name: "Sales", data: [10, 20, 30] }],
+    })
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    // The user selects a NEW point (no brush event fires).
+    act(() => {
+      chart.trigger("selectchanged", {
+        fromAction: "select",
+        isFromClick: true,
+        selected: [{ seriesIndex: 0, dataIndex: [0] }],
+      })
+    })
+    flush()
+
+    // The persisted brush geometry is preserved rather than being cleared by the
+    // point-only interaction.
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      { id: "chart-id", formId: "" },
+      JSON.stringify({
+        selection: {
+          points: [
+            {
+              component_type: "series",
+              series_type: "bar",
+              series_index: 0,
+              series_name: "Sales",
+              data_index: 0,
+              value: 10,
+              data: 10,
+            },
+          ],
+          point_indices: [0],
+          box: [{ x: [0, 2], y: [10, 20], grid_index: 0 }],
+          lasso: [],
+        },
+      }),
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("resets the series cursor to default for display-only charts", () => {
     // An empty id makes the chart display-only (no selection).
     const { result } = renderHook(() =>

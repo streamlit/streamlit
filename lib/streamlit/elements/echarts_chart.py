@@ -476,8 +476,9 @@ class EChartsMixin:
             details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
-            Additionally, if ``key`` is provided, it will be used as a
-            CSS class name prefixed with ``st-key-``.
+            Additionally, when selections are activated and ``key`` is
+            provided, it is also emitted as a CSS class name prefixed with
+            ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the chart should respond to user selection events. This
