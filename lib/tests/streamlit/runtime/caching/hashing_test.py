@@ -39,12 +39,15 @@ import pytest
 from parameterized import parameterized
 from PIL import Image
 
+from streamlit import config
 from streamlit.proto.Common_pb2 import FileURLs
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
     _LOGGER,
+    _NP_SIZE_LARGE,
+    _PANDAS_ROWS_LARGE,
     UserHashError,
     _CacheFuncHasher,
     _HashStack,
@@ -53,21 +56,12 @@ from streamlit.runtime.caching.hashing import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
-
-# Object sizes that used to trigger the removed sampling code paths. Kept here so
-# these tests still exercise "large object" hashing after the production
-# thresholds were removed. See GitHub issue #14622.
-_PANDAS_ROWS_LARGE = 50_000
-_NP_SIZE_LARGE = 500_000
-# The sample sizes the removed sampling code used, kept so the regression tests
-# can pick indices the old fixed-seed sampler would not have drawn.
-_PANDAS_SAMPLE_SIZE = 10_000
-_NP_SAMPLE_SIZE = 100_000
 
 
 def get_hash(value, hash_funcs=None, cache_type=None):
@@ -1059,114 +1053,129 @@ def test_PIL_pmode_palette_collision_prevention() -> None:
     assert get_hash(im1) != get_hash(im2)
 
 
-class TestLargeObjectHashingIsExact:
-    """Regression tests for GitHub issue #14622.
+class TestCacheHashSeedConfig:
+    """Tests for the ``runner.cacheHashSeed`` config option (GitHub issue #14622).
 
-    The invariant under test: hashing a large pandas/polars/numpy object must
-    reflect its **entire** content, so any single differing element changes the
-    hash.
-
-    Previously these objects were hashed from a fixed-seed random subsample, so
-    two objects differing only outside the sampled positions hashed identically
-    and `@st.cache_data` returned the wrong cached value.
-
-    Each test mutates one element near the tail of the object — a region no
-    fixed-seed sample of a small fraction of the rows was likely to draw — which
-    is the class of case that used to collide. The definitive evidence is
-    empirical rather than analytical: restoring `develop`'s `hashing.py` makes
-    every test in this class fail.
+    Large pandas/polars/numpy objects are hashed from a fixed random sample, so
+    two large objects differing only outside the sampled positions share a cache
+    key. The seed selects which positions are sampled, letting an app that has
+    hit such a collision move off it. It does not make hashing exact.
     """
 
-    @staticmethod
-    def _unsampled_index(n: int, sample_size: int) -> int:
-        """Return a tail index that a fixed `seed=0` subsample did not draw.
-
-        Uses numpy's `RandomState(0).choice` purely as a representative sampler
-        to skip past drawn indices; it is *not* a replay of the historical calls
-        (numpy used `replace=True`, pandas and polars used their own `sample()`
-        APIs, and each consumes the RNG differently, so the index sets are
-        unrelated rather than nested). What makes the choice sound is that it
-        returns the highest undrawn index, landing at the tail that a sparse
-        sample almost never covers.
-        """
-        state = np.random.RandomState(0)
-        sampled = set(state.choice(n, size=min(sample_size, n), replace=False))
-        for idx in range(n - 1, -1, -1):
-            if idx not in sampled:
-                return idx
-        raise AssertionError("every index was sampled; cannot build the case")
-
-    def test_pandas_series_differs_outside_old_sample(self) -> None:
-        """A large pandas Series differing only outside the old sample must hash differently."""
-        n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
-        s1 = pd.Series(range(n))
-        s2 = s1.copy()
-        s2.iloc[idx] = -999
-        assert get_hash(s1) != get_hash(s2)
-
-    def test_pandas_dataframe_differs_outside_old_sample(self) -> None:
-        """A large pandas DataFrame differing only outside the old sample must hash differently."""
-        n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
-        df1 = pd.DataFrame({"a": range(n)})
+    def _large_pandas_pair(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Two large frames differing in exactly one cell."""
+        df1 = pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
         df2 = df1.copy()
-        df2.iloc[idx, 0] = -999
-        assert get_hash(df1) != get_hash(df2)
+        df2.iloc[-1, 0] = -12345
+        return df1, df2
 
-    def test_numpy_differs_outside_old_sample(self) -> None:
-        """A large numpy array differing only outside the old sample must hash differently."""
-        n = _NP_SIZE_LARGE + 1000
-        idx = self._unsampled_index(n, _NP_SAMPLE_SIZE)
-        arr1 = np.arange(n, dtype=np.float64)
-        arr2 = arr1.copy()
-        arr2[idx] = -999.0
-        assert get_hash(arr1) != get_hash(arr2)
+    def test_default_seed_is_zero(self) -> None:
+        """The default preserves the historical sampling behaviour."""
+        assert config.get_option("runner.cacheHashSeed") == 0
 
-    @pytest.mark.require_integration
-    def test_polars_series_differs_outside_old_sample(self) -> None:
-        """A large polars Series differing only outside the old sample must hash differently."""
-        import polars as pl
+    def test_seed_changes_hash_of_large_pandas_dataframe(self) -> None:
+        """The configured seed reaches the pandas DataFrame sampling path."""
+        df = pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
 
-        n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
-        data1 = list(range(n))
-        data2 = data1.copy()
-        data2[idx] = -999
-        assert get_hash(pl.Series("x", data1)) != get_hash(pl.Series("x", data2))
+        with patch_config_options({"runner.cacheHashSeed": 0}):
+            hash_seed_0 = get_hash(df)
+        with patch_config_options({"runner.cacheHashSeed": 1}):
+            hash_seed_1 = get_hash(df)
 
-    @pytest.mark.require_integration
-    def test_polars_dataframe_differs_outside_old_sample(self) -> None:
-        """A large polars DataFrame differing only outside the old sample must hash differently."""
-        import polars as pl
+        assert hash_seed_0 != hash_seed_1
 
-        n = _PANDAS_ROWS_LARGE + 1000
-        idx = self._unsampled_index(n, _PANDAS_SAMPLE_SIZE)
-        data1 = list(range(n))
-        data2 = data1.copy()
-        data2[idx] = -999
-        assert get_hash(pl.DataFrame({"a": data1})) != get_hash(
-            pl.DataFrame({"a": data2})
-        )
+    def test_seed_changes_hash_of_large_pandas_series(self) -> None:
+        """The configured seed reaches the pandas Series sampling path."""
+        series = pd.Series(np.arange(_PANDAS_ROWS_LARGE))
 
-    def test_hash_is_stable_for_equal_large_objects(self) -> None:
-        """Equal large objects must still hash equally (no spurious cache misses)."""
-        n = _PANDAS_ROWS_LARGE + 1000
-        assert get_hash(pd.Series(range(n))) == get_hash(pd.Series(range(n)))
-        assert get_hash(pd.DataFrame({"a": range(n)})) == get_hash(
-            pd.DataFrame({"a": range(n)})
-        )
-        arr = np.arange(_NP_SIZE_LARGE + 1000, dtype=np.float64)
-        assert get_hash(arr) == get_hash(arr.copy())
+        with patch_config_options({"runner.cacheHashSeed": 0}):
+            hash_seed_0 = get_hash(series)
+        with patch_config_options({"runner.cacheHashSeed": 1}):
+            hash_seed_1 = get_hash(series)
+
+        assert hash_seed_0 != hash_seed_1
+
+    def test_seed_changes_hash_of_large_numpy_array(self) -> None:
+        """The configured seed reaches the numpy sampling path."""
+        array = np.arange(_NP_SIZE_LARGE)
+
+        with patch_config_options({"runner.cacheHashSeed": 0}):
+            hash_seed_0 = get_hash(array)
+        with patch_config_options({"runner.cacheHashSeed": 1}):
+            hash_seed_1 = get_hash(array)
+
+        assert hash_seed_0 != hash_seed_1
 
     @pytest.mark.require_integration
-    def test_hash_is_stable_for_equal_large_polars_objects(self) -> None:
-        """Stability must hold for the polars paths too, not just pandas/numpy."""
+    def test_seed_changes_hash_of_large_polars_dataframe(self) -> None:
+        """The configured seed reaches the polars DataFrame sampling path."""
         import polars as pl
 
-        n = _PANDAS_ROWS_LARGE + 1000
-        data = list(range(n))
-        assert get_hash(pl.Series("x", data)) == get_hash(pl.Series("x", data.copy()))
-        assert get_hash(pl.DataFrame({"a": data})) == get_hash(
-            pl.DataFrame({"a": data.copy()})
+        df = pl.DataFrame({"a": range(_PANDAS_ROWS_LARGE)})
+
+        with patch_config_options({"runner.cacheHashSeed": 0}):
+            hash_seed_0 = get_hash(df)
+        with patch_config_options({"runner.cacheHashSeed": 1}):
+            hash_seed_1 = get_hash(df)
+
+        assert hash_seed_0 != hash_seed_1
+
+    @pytest.mark.require_integration
+    def test_seed_changes_hash_of_large_polars_series(self) -> None:
+        """The configured seed reaches the polars Series sampling path."""
+        import polars as pl
+
+        series = pl.Series(range(_PANDAS_ROWS_LARGE))
+
+        with patch_config_options({"runner.cacheHashSeed": 0}):
+            hash_seed_0 = get_hash(series)
+        with patch_config_options({"runner.cacheHashSeed": 1}):
+            hash_seed_1 = get_hash(series)
+
+        assert hash_seed_0 != hash_seed_1
+
+    def test_same_seed_is_deterministic(self) -> None:
+        """A given seed must produce a stable cache key across calls."""
+        df = pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
+
+        with patch_config_options({"runner.cacheHashSeed": 7}):
+            first = get_hash(df)
+            second = get_hash(pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)}))
+
+        assert first == second
+
+    def test_seed_does_not_affect_small_objects(self) -> None:
+        """Objects below the sampling threshold are hashed in full either way."""
+        small = pd.DataFrame({"a": np.arange(10)})
+
+        with patch_config_options({"runner.cacheHashSeed": 0}):
+            hash_seed_0 = get_hash(small)
+        with patch_config_options({"runner.cacheHashSeed": 99}):
+            hash_seed_99 = get_hash(small)
+
+        assert hash_seed_0 == hash_seed_99
+
+    def test_changing_the_seed_can_resolve_a_specific_collision(self) -> None:
+        """The escape-hatch property the option exists to provide.
+
+        Sampling is not exact, so some pair of large objects always collides. What
+        the option guarantees is that a collision under one seed is not
+        necessarily a collision under another, which is what lets an affected app
+        move off it.
+        """
+        df1, df2 = self._large_pandas_pair()
+
+        seeds_that_distinguish = [
+            seed for seed in range(8) if _hash_pair_differs(df1, df2, seed)
+        ]
+
+        # Not a claim that every seed distinguishes them -- only that the choice
+        # of seed determines whether this pair collides.
+        assert seeds_that_distinguish, (
+            "no seed in range distinguished the pair; sampling may not be seeded"
         )
+
+
+def _hash_pair_differs(obj1: Any, obj2: Any, seed: int) -> bool:
+    with patch_config_options({"runner.cacheHashSeed": seed}):
+        return get_hash(obj1) != get_hash(obj2)

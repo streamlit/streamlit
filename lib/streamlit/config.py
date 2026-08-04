@@ -824,6 +824,30 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "runner.cacheHashSeed",
+    description="""
+        Seed used when @st.cache_data / @st.cache_resource hash large pandas,
+        polars, and numpy objects.
+
+        Large objects are hashed from a fixed random sample rather than in full,
+        which keeps cache lookups fast. Because the sample positions are derived
+        from this seed, two large objects that differ only outside the sampled
+        positions produce the same cache key, and the cached value of one is
+        returned for the other.
+
+        Changing this seed moves which positions are sampled. It does not
+        eliminate collisions -- it selects a different set of them -- so it is an
+        escape hatch for an app that has hit a specific collision, not a
+        guarantee of uniqueness.
+
+        Changing this value changes the cache key of every large object and so
+        invalidates existing cached entries.
+    """,
+    default_val=0,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
