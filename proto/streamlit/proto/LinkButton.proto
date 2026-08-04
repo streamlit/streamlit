@@ -31,4 +31,7 @@ message LinkButton {
   string shortcut = 11;
   streamlit.ButtonLikeIconPosition icon_position = 12;
   bool ignore_rerun = 13;
+  // If false, the button label ellipsizes on one line instead of wrapping.
+  // Absent means the frontend keeps today's wrapping behavior (equivalent to true).
+  optional bool wrap = 14;
 }

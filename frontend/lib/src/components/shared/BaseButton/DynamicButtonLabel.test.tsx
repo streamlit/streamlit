@@ -113,4 +113,30 @@ describe("DynamicButtonLabel", () => {
     expect(screen.getByText("Ctrl + N")).toBeInTheDocument()
     spy.mockRestore()
   })
+
+  it("applies truncate styles to the label when wrap is false", () => {
+    render(<DynamicButtonLabel {...getProps({ wrap: false })} />)
+    expect(screen.getByTestId("stMarkdownContainer")).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+    })
+  })
+
+  it("does not truncate the label by default (wrap=true)", () => {
+    render(<DynamicButtonLabel {...getProps()} />)
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+      "text-overflow": "ellipsis",
+    })
+  })
+
+  it("keeps the icon and shortcut visible when wrap is false", () => {
+    render(
+      <DynamicButtonLabel {...getProps({ wrap: false, shortcut: "ctrl+k" })} />
+    )
+    expect(screen.getByTestId("stIconEmoji")).toHaveTextContent("😀")
+    expect(screen.getByText("Ctrl + K")).toBeInTheDocument()
+    expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
+      "Button Label"
+    )
+  })
 })

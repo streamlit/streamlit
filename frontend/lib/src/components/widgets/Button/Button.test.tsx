@@ -194,4 +194,74 @@ describe("Button widget", () => {
     expect(matches.length).toBeGreaterThan(0)
     expect(matches[0]).toBeVisible()
   })
+
+  describe("wrap=false truncation tooltip", () => {
+    /** Mock the label's rendered vs. available width to force overflow. */
+    const mockOverflow = (overflowing: boolean): void => {
+      vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
+        overflowing ? 200 : 100
+      )
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        100
+      )
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it("shows the full label in a tooltip when truncated and no help is set", async () => {
+      mockOverflow(true)
+      const user = userEvent.setup()
+      render(
+        <Button {...getProps({ wrap: false, label: "A very long label" })} />
+      )
+
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+      await user.hover(tooltipTarget)
+
+      const tooltipContent = await screen.findByTestId("stTooltipContent")
+      expect(tooltipContent).toHaveTextContent("A very long label")
+    })
+
+    it("does not show a label tooltip when the label is not truncated", () => {
+      mockOverflow(false)
+      render(
+        <Button {...getProps({ wrap: false, label: "A very long label" })} />
+      )
+
+      expect(
+        screen.queryByTestId("stTooltipHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+
+    it("defers to the help tooltip when help is set", async () => {
+      mockOverflow(true)
+      const user = userEvent.setup()
+      render(
+        <Button
+          {...getProps({
+            wrap: false,
+            label: "A very long label",
+            help: "Help wins",
+          })}
+        />
+      )
+
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+      await user.hover(tooltipTarget)
+
+      const tooltipContent = await screen.findByTestId("stTooltipContent")
+      expect(tooltipContent).toHaveTextContent("Help wins")
+    })
+
+    it("does not truncate or add a tooltip by default (wrap=true)", () => {
+      mockOverflow(true)
+      render(<Button {...getProps({ label: "A very long label" })} />)
+
+      expect(
+        screen.queryByTestId("stTooltipHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+  })
 })

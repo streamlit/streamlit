@@ -969,6 +969,25 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         # Default width should be "content"
         assert popover_block.add_block.width_config.use_content
 
+    def test_wrap_default(self):
+        """Test that the popover trigger defaults to wrap=True in the proto."""
+        with st.popover("label"):
+            pass
+
+        popover = self.get_delta_from_queue().add_block.popover
+        assert popover.HasField("wrap")
+        assert popover.wrap is True
+
+    def test_wrap(self):
+        """Test that the wrap parameter is forwarded to the popover proto."""
+        for wrap_value in (True, False):
+            with self.subTest(wrap=wrap_value):
+                with st.popover("label", wrap=wrap_value):
+                    pass
+
+                popover = self.get_delta_from_queue().add_block.popover
+                assert popover.wrap is wrap_value
+
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
         test_widths = [200, "content", "stretch", None]

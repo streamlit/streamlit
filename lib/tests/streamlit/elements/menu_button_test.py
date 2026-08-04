@@ -52,6 +52,22 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.menu_button
         assert c.disabled
 
+    def test_wrap_default(self):
+        """Menu button defaults to wrap=True in the proto."""
+        st.menu_button("the label", ["Option A"])
+
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert c.HasField("wrap")
+        assert c.wrap is True
+
+    @parameterized.expand([(True,), (False,)])
+    def test_wrap(self, wrap_value: bool):
+        """The wrap parameter is forwarded to the menu button proto."""
+        st.menu_button("the label", ["Option A"], wrap=wrap_value)
+
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert c.wrap is wrap_value
+
     @parameterized.expand(["primary", "secondary", "tertiary"])
     def test_button_types(self, button_type: str):
         """Test that different button types are set correctly."""

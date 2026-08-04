@@ -34,6 +34,9 @@ message Button {
   string icon = 10;
   string shortcut = 11;
   streamlit.ButtonLikeIconPosition icon_position = 12;
+  // If false, the button label ellipsizes on one line instead of wrapping.
+  // Absent means the frontend keeps today's wrapping behavior (equivalent to true).
+  optional bool wrap = 13;
 
   reserved 9;
 }

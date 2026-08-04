@@ -34,6 +34,11 @@ export interface DynamicButtonLabelProps {
   iconSize?: IconSize
   iconPosition?: "left" | "right"
   shortcut?: string | null
+  /**
+   * When false, the label stays on one line and truncates with an ellipsis
+   * instead of wrapping. Icons and shortcuts keep their intrinsic size.
+   */
+  wrap?: boolean
 }
 
 export const DynamicButtonLabel = ({
@@ -42,14 +47,20 @@ export const DynamicButtonLabel = ({
   iconSize,
   iconPosition = "left",
   shortcut,
+  wrap = true,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const displayShortcut = useMemo(() => {
     return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
   }, [shortcut])
 
+  const truncate = wrap === false
+
   return (
-    <StyledButtonLabel>
-      <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
+    <StyledButtonLabel $truncate={truncate}>
+      <StyledButtonMainLabel
+        data-has-shortcut={Boolean(displayShortcut)}
+        $truncate={truncate}
+      >
         {icon && iconPosition === "left" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
@@ -59,6 +70,7 @@ export const DynamicButtonLabel = ({
             allowHTML={false}
             isLabel
             disableLinks
+            truncate={truncate}
           />
         )}
         {icon && iconPosition === "right" && (

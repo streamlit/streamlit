@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -27,6 +27,7 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -44,6 +45,16 @@ export const FormSubmitButton = memo(function FormSubmitButton(
   const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
   const shortcut = element.shortcut ? element.shortcut : undefined
+
+  const wrap = element.wrap ?? true
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Only measure when the label can ellipsize and no help tooltip takes over.
+  const { isTruncated, labelText } = useIsTruncated(
+    containerRef,
+    !wrap && !element.help,
+    [element.label]
+  )
+  const truncatedLabel = isTruncated ? labelText : undefined
 
   const { formsData } = useRequiredContext(FormsContext)
   const hasInProgressUpload = formsData.formsWithUploads.has(formId)
@@ -77,8 +88,16 @@ export const FormSubmitButton = memo(function FormSubmitButton(
   })
 
   return (
-    <Box className="stFormSubmitButton" data-testid="stFormSubmitButton">
-      <BaseButtonTooltip help={element.help} containerWidth={true}>
+    <Box
+      className="stFormSubmitButton"
+      data-testid="stFormSubmitButton"
+      ref={containerRef}
+    >
+      <BaseButtonTooltip
+        help={element.help}
+        truncatedLabel={truncatedLabel}
+        containerWidth={true}
+      >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
@@ -91,6 +110,7 @@ export const FormSubmitButton = memo(function FormSubmitButton(
             iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
+            wrap={wrap}
           />
         </BaseButton>
       </BaseButtonTooltip>

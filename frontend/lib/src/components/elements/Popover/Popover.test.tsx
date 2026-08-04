@@ -70,6 +70,59 @@ describe("Popover container", () => {
     expect(screen.getByText(props.element.label)).toBeVisible()
   })
 
+  describe("wrap=false", () => {
+    const mockOverflow = (overflowing: boolean): void => {
+      vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
+        overflowing ? 200 : 100
+      )
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        100
+      )
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it("keeps the chevron visible when the label is truncated", () => {
+      mockOverflow(true)
+      const props = getProps({
+        label: "A very long popover label",
+        wrap: false,
+      })
+      render(
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      )
+
+      // When truncated, the tooltip duplicates the trigger (desktop + mobile).
+      expect(screen.getAllByTestId("stPopoverButton")[0]).toHaveTextContent(
+        "expand_more"
+      )
+    })
+
+    it("reveals the full label in a tooltip when truncated and no help is set", async () => {
+      mockOverflow(true)
+      const user = userEvent.setup()
+      const props = getProps({
+        label: "A very long popover label",
+        wrap: false,
+      })
+      render(
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      )
+
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+      await user.hover(tooltipTarget)
+
+      const tooltipContent = await screen.findByTestId("stTooltipContent")
+      expect(tooltipContent).toHaveTextContent("A very long popover label")
+    })
+  })
+
   it("should render the text when opened", async () => {
     const user = userEvent.setup()
     const props = getProps()

@@ -259,6 +259,7 @@ class FormMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool:
         r"""Display a form submit button.
 
@@ -421,6 +422,20 @@ class FormMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        wrap : bool
+            Whether the button label can wrap onto multiple lines. This
+            defaults to ``True``.
+
+            - ``True`` (default): If the label is too wide for the button, it
+              wraps onto additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis. If no
+              ``help`` is set, hovering the button reveals the full label in a
+              tooltip. Icons and keyboard shortcuts remain visible.
+
+            This parameter only affects layout. It doesn't change the button's
+            return value or reset any widget state.
+
         Returns
         -------
         bool
@@ -456,6 +471,7 @@ class FormMixin:
             width=width,
             key=key,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     def _form_submit_button(
@@ -474,6 +490,7 @@ class FormMixin:
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = to_key(key) or f"FormSubmitter:{form_id}-{label}"
@@ -492,6 +509,7 @@ class FormMixin:
             ctx=ctx,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     @property

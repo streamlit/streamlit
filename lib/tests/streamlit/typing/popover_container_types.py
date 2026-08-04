@@ -58,3 +58,7 @@ if TYPE_CHECKING:
 
     # Callback with key is also valid
     popover("Test", key="my_pop", on_change=lambda: None)
+
+    # wrap parameter accepts a bool and returns a PopoverContainer
+    assert_type(popover("Test", wrap=True), PopoverContainer)
+    assert_type(popover("Test", wrap=False), PopoverContainer)

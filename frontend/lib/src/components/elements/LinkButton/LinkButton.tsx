@@ -26,6 +26,7 @@ import {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -43,6 +44,16 @@ function LinkButton(props: Readonly<Props>): ReactElement {
   const shortcut = element.shortcut || undefined
   const isLinkBlocked = isDangerousLinkUri(element.url)
   const href = isLinkBlocked ? BLOCKED_LINK_URI : element.url
+
+  const wrap = element.wrap ?? true
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Only measure when the label can ellipsize and no help tooltip takes over.
+  const { isTruncated, labelText } = useIsTruncated(
+    containerRef,
+    !wrap && !element.help,
+    [element.label]
+  )
+  const truncatedLabel = isTruncated ? labelText : undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -84,9 +95,14 @@ function LinkButton(props: Readonly<Props>): ReactElement {
   })
 
   return (
-    <Box className="stLinkButton" data-testid="stLinkButton">
+    <Box
+      className="stLinkButton"
+      data-testid="stLinkButton"
+      ref={containerRef}
+    >
       <BaseButtonTooltip
         help={element.help}
+        truncatedLabel={truncatedLabel}
         // TODO(lawilby): Probably remove this once width is implemented on Popover.
         containerWidth={true}
       >
@@ -108,6 +124,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
             iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
+            wrap={wrap}
           />
         </BaseLinkButton>
       </BaseButtonTooltip>

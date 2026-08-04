@@ -47,6 +47,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -123,6 +124,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // match it when stretchWidth is true. A ResizeObserver is required because
   // the popover is portalled to document.body (no CSS parent-child sizing).
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
+
+  const wrap = element.wrap ?? true
+  // Only measure when the label can ellipsize and no help tooltip takes over.
+  const { isTruncated, labelText } = useIsTruncated(
+    elementRef,
+    !wrap && !element.help,
+    [element.label]
+  )
+  const truncatedLabel = isTruncated ? labelText : undefined
 
   // Timestamp of the last open action — used by the outside-click handler to
   // ignore clicks that occur in the same tick as opening. In production
@@ -373,7 +383,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <div ref={setReferenceRef}>
-        <BaseButtonTooltip help={element.help} containerWidth={true}>
+        <BaseButtonTooltip
+          help={element.help}
+          truncatedLabel={truncatedLabel}
+          containerWidth={true}
+        >
           <BaseButton
             data-testid="stPopoverButton"
             kind={kind}
@@ -384,8 +398,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             aria-expanded={open}
             aria-haspopup="dialog"
           >
-            <StyledPopoverLabelContainer $hideChevron={hideChevron}>
-              <DynamicButtonLabel icon={element.icon} label={element.label} />
+            <StyledPopoverLabelContainer
+              $hideChevron={hideChevron}
+              $truncate={!wrap}
+            >
+              <DynamicButtonLabel
+                icon={element.icon}
+                label={element.label}
+                wrap={wrap}
+              />
               {!hideChevron && (
                 <StyledPopoverExpansionIcon aria-hidden="true">
                   <DynamicIcon

@@ -119,6 +119,7 @@ class MenuButtonMixin:
         disabled: bool = False,
         width: Width = "content",
         format_func: Callable[[Any], str] = str,
+        wrap: bool = True,
     ) -> T | None:
         r"""Display a dropdown menu button widget.
 
@@ -247,6 +248,21 @@ class MenuButtonMixin:
             shown for that option. This has no impact on the return value of
             the menu button.
 
+        wrap : bool
+            Whether the trigger label can wrap onto multiple lines. This
+            defaults to ``True``.
+
+            - ``True`` (default): If the label is too wide for the button, it
+              wraps onto additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis. If no
+              ``help`` is set, hovering the button reveals the full label in a
+              tooltip. The icon and expansion arrow remain visible.
+
+            This parameter controls only the trigger label; menu option labels
+            are unaffected. It only affects layout and doesn't change the
+            widget's value or reset any widget state.
+
         Returns
         -------
         any or None
@@ -289,6 +305,7 @@ class MenuButtonMixin:
             disabled=disabled,
             width=width,
             format_func=format_func,
+            wrap=wrap,
             ctx=ctx,
         )
 
@@ -307,6 +324,7 @@ class MenuButtonMixin:
         disabled: bool = False,
         width: Width = "content",
         format_func: Callable[[Any], str] = str,
+        wrap: bool = True,
         ctx: ScriptRunContext | None = None,
     ) -> T | None:
         key = to_key(key)
@@ -371,6 +389,7 @@ class MenuButtonMixin:
         menu_button_proto.options[:] = formatted_options
         menu_button_proto.type = type
         menu_button_proto.disabled = disabled
+        menu_button_proto.wrap = wrap
 
         if help is not None:
             menu_button_proto.help = dedent(help)

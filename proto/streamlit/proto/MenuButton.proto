@@ -24,4 +24,7 @@ message MenuButton {
   string type = 5;
   bool disabled = 6;
   string icon = 7;
+  // If false, the trigger label ellipsizes on one line instead of wrapping.
+  // Absent means the frontend keeps today's wrapping behavior (equivalent to true).
+  optional bool wrap = 8;
 }

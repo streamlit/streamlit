@@ -73,6 +73,10 @@ if TYPE_CHECKING:
     assert_type(button("Shortcut", shortcut="Ctrl+S"), bool)
     assert_type(button("Shortcut", shortcut=None), bool)
 
+    # Button with wrap parameter
+    assert_type(button("Wrap", wrap=True), bool)
+    assert_type(button("Wrap", wrap=False), bool)
+
     # Button with on_click callback
     def my_callback() -> None:
         pass
@@ -101,6 +105,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Enter",
+            wrap=False,
         ),
         bool,
     )
@@ -164,6 +169,8 @@ if TYPE_CHECKING:
     assert_type(download_button("Download", data="content", key="dl_key"), bool)
     assert_type(download_button("Download", data="content", key=456), bool)
     assert_type(download_button("Download", data="content", shortcut="Ctrl+D"), bool)
+    assert_type(download_button("Download", data="content", wrap=True), bool)
+    assert_type(download_button("Download", data="content", wrap=False), bool)
 
     # Download button with all parameters combined
     assert_type(
@@ -182,6 +189,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Ctrl+Shift+D",
+            wrap=False,
         ),
         bool,
     )
@@ -251,6 +259,10 @@ if TYPE_CHECKING:
         link_button("Link", "https://example.com", shortcut=None), DeltaGenerator
     )
 
+    # Link button with wrap parameter
+    assert_type(link_button("Link", "https://example.com", wrap=True), DeltaGenerator)
+    assert_type(link_button("Link", "https://example.com", wrap=False), DeltaGenerator)
+
     # Link button with on_click parameter - supports "rerun", "ignore", or callable
     assert_type(
         link_button("Link", "https://example.com", on_click="ignore"), DeltaGenerator
@@ -291,6 +303,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Ctrl+Shift+S",
+            wrap=False,
         ),
         bool,
     )
@@ -395,6 +408,10 @@ if TYPE_CHECKING:
     assert_type(form_submit_button("Submit", shortcut="Ctrl+Enter"), bool)
     assert_type(form_submit_button("Submit", shortcut=None), bool)
 
+    # Form submit button with wrap
+    assert_type(form_submit_button("Submit", wrap=True), bool)
+    assert_type(form_submit_button("Submit", wrap=False), bool)
+
     # Form submit button with on_click callback
     assert_type(form_submit_button("Submit", on_click=my_callback), bool)
     assert_type(
@@ -422,6 +439,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Ctrl+Enter",
+            wrap=False,
         ),
         bool,
     )

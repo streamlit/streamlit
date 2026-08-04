@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useRef } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -26,6 +26,7 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -39,6 +40,16 @@ export interface Props {
 function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const shortcut = element.shortcut ? element.shortcut : undefined
+
+  const wrap = element.wrap ?? true
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Only measure when the label can ellipsize and no help tooltip takes over.
+  const { isTruncated, labelText } = useIsTruncated(
+    containerRef,
+    !wrap && !element.help,
+    [element.label]
+  )
+  const truncatedLabel = isTruncated ? labelText : undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -62,9 +73,10 @@ function Button(props: Props): ReactElement {
   })
 
   return (
-    <Box className="stButton" data-testid="stButton">
+    <Box className="stButton" data-testid="stButton" ref={containerRef}>
       <BaseButtonTooltip
         help={element.help}
+        truncatedLabel={truncatedLabel}
         // The element wrapper determines the width so
         // we should always expand to fill the wrapper.
         containerWidth={true}
@@ -81,6 +93,7 @@ function Button(props: Props): ReactElement {
             iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
+            wrap={wrap}
           />
         </BaseButton>
       </BaseButtonTooltip>

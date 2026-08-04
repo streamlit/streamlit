@@ -44,6 +44,7 @@ import {
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import { useIsTruncated } from "~lib/hooks/useIsTruncated"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -130,6 +131,15 @@ function MenuButton(props: Props): ReactElement {
 
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
+  const wrap = element.wrap ?? true
+  // Only measure when the label can ellipsize and no help tooltip takes over.
+  const { isTruncated, labelText } = useIsTruncated(
+    containerRef,
+    !wrap && !element.help,
+    [element.label]
+  )
+  const truncatedLabel = isTruncated ? labelText : undefined
+
   const handleItemSelect = useCallback(
     (key: Key) => {
       if (buttonDisabled) {
@@ -154,7 +164,11 @@ function MenuButton(props: Props): ReactElement {
       className="stMenuButton"
       data-testid="stMenuButton"
     >
-      <BaseButtonTooltip help={element.help} containerWidth={true}>
+      <BaseButtonTooltip
+        help={element.help}
+        truncatedLabel={truncatedLabel}
+        containerWidth={true}
+      >
         <BaseButton
           data-testid="stMenuButtonButton"
           kind={kind}
@@ -165,8 +179,15 @@ function MenuButton(props: Props): ReactElement {
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
-          <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
-            <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <StyledMenuButtonLabelContainer
+            $hideChevron={hideChevron}
+            $truncate={!wrap}
+          >
+            <DynamicButtonLabel
+              icon={element.icon}
+              label={element.label}
+              wrap={wrap}
+            />
             {!hideChevron && (
               <StyledMenuButtonExpansionIcon aria-hidden="true">
                 <DynamicIcon

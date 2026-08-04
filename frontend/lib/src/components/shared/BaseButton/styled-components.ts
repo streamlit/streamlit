@@ -565,20 +565,30 @@ export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
   })
 )
 
-export const StyledButtonLabel = styled.div(() => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-}))
+export const StyledButtonLabel = styled.div<{ $truncate?: boolean }>(
+  ({ $truncate }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    // Allow the label to shrink within a flex parent (e.g. a popover/menu
+    // trigger with a chevron) so its text can ellipsize instead of wrapping.
+    ...($truncate && { minWidth: 0 }),
+  })
+)
 
-export const StyledButtonMainLabel = styled.span(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: theme.spacing.sm,
-  minWidth: 0,
-}))
+export const StyledButtonMainLabel = styled.span<{ $truncate?: boolean }>(
+  ({ theme, $truncate }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    minWidth: 0,
+    // Constrain the label to the button width so the text portion ellipsizes
+    // while icons and shortcuts keep their intrinsic size.
+    ...($truncate && { maxWidth: "100%" }),
+  })
+)
 
 export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   display: "inline-flex",

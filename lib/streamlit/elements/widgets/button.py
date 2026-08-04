@@ -149,6 +149,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool:
         r"""Display a button widget.
 
@@ -301,6 +302,20 @@ class ButtonMixin:
             - Option and Alt are interchangeable and will display to the user
               to match their platform.
 
+        wrap : bool
+            Whether the button label can wrap onto multiple lines. This
+            defaults to ``True``.
+
+            - ``True`` (default): If the label is too wide for the button, it
+              wraps onto additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis. If no
+              ``help`` is set, hovering the button reveals the full label in a
+              tooltip. Icons and keyboard shortcuts remain visible.
+
+            This parameter only affects layout. It doesn't change the button's
+            return value or reset any widget state.
+
         Returns
         -------
         bool
@@ -395,6 +410,7 @@ class ButtonMixin:
             ctx=ctx,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     @gather_metrics("download_button")
@@ -417,6 +433,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool:
         r"""Display a download button widget.
 
@@ -629,6 +646,20 @@ class ButtonMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        wrap : bool
+            Whether the button label can wrap onto multiple lines. This
+            defaults to ``True``.
+
+            - ``True`` (default): If the label is too wide for the button, it
+              wraps onto additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis. If no
+              ``help`` is set, hovering the button reveals the full label in a
+              tooltip. Icons and keyboard shortcuts remain visible.
+
+            This parameter only affects layout. It doesn't change the button's
+            return value or reset any widget state.
+
         Returns
         -------
         bool
@@ -797,6 +828,7 @@ class ButtonMixin:
             ctx=ctx,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     @overload
@@ -817,6 +849,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -837,6 +870,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool: ...
 
     @overload
@@ -857,6 +891,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool: ...
 
     @gather_metrics("link_button")
@@ -877,6 +912,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool | DeltaGenerator:
         r"""Display a link button element.
 
@@ -1042,6 +1078,20 @@ class ButtonMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        wrap : bool
+            Whether the button label can wrap onto multiple lines. This
+            defaults to ``True``.
+
+            - ``True`` (default): If the label is too wide for the button, it
+              wraps onto additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis. If no
+              ``help`` is set, hovering the button reveals the full label in a
+              tooltip. Icons and keyboard shortcuts remain visible.
+
+            This parameter only affects layout. It doesn't change the button's
+            return value or reset any widget state.
+
         Returns
         -------
         element or bool
@@ -1089,6 +1139,7 @@ class ButtonMixin:
             icon_position=normalized_icon_position,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
             ctx=ctx,
         )
 
@@ -1329,6 +1380,7 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool:
         key = to_key(key)
 
@@ -1376,6 +1428,7 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
         download_button_proto.type = type
+        download_button_proto.wrap = wrap
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
@@ -1435,6 +1488,7 @@ class ButtonMixin:
         disabled: bool = False,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
         ctx: ScriptRunContext | None = None,
     ) -> bool | DeltaGenerator:
         key = to_key(key)
@@ -1485,6 +1539,7 @@ class ButtonMixin:
         link_button_proto.type = type
         link_button_proto.disabled = disabled
         link_button_proto.ignore_rerun = ignore_rerun
+        link_button_proto.wrap = wrap
 
         if help is not None:
             link_button_proto.help = dedent(help)
@@ -1641,6 +1696,7 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool = True,
     ) -> bool:
         key = to_key(key)
 
@@ -1699,6 +1755,7 @@ class ButtonMixin:
         button_proto.form_id = form_id
         button_proto.type = type
         button_proto.disabled = disabled
+        button_proto.wrap = wrap
 
         if help is not None:
             button_proto.help = dedent(help)
