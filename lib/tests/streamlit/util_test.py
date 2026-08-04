@@ -19,12 +19,16 @@ import hashlib
 import json
 import random
 import unittest
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
 
 from streamlit import util
 from streamlit.util import AttributeDictionary, ReadOnlyAttributeDictionary
+
+if TYPE_CHECKING:
+    from hashlib import _Hash
 
 
 class UtilTest(unittest.TestCase):
@@ -68,11 +72,13 @@ class UtilTest(unittest.TestCase):
         assert hasattr(hasher, "hexdigest")
         assert hasattr(hasher, "digest")
 
-    def test_create_fast_hasher_falls_back_for_fixed_size_blake2b(self):
+    def test_create_fast_hasher_falls_back_for_fixed_size_blake2b(self) -> None:
         """Test fallback for FIPS builds whose BLAKE2b has a fixed digest size."""
         original_blake2b = hashlib.blake2b
 
-        def openssl_blake2b(data: bytes = b"", *, usedforsecurity: bool = True):
+        def openssl_blake2b(
+            data: bytes = b"", *, usedforsecurity: bool = True
+        ) -> _Hash:
             return original_blake2b(data, usedforsecurity=usedforsecurity)
 
         data = b"test data"

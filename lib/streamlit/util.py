@@ -75,9 +75,10 @@ def create_fast_hasher() -> _Hash:
     """
     try:
         return hashlib.blake2b(digest_size=16, usedforsecurity=False)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
-    except TypeError:
+    except (TypeError, ValueError):
         # Some FIPS-enabled Python builds replace the standard BLAKE2b
-        # implementation with an OpenSSL wrapper that rejects custom digest sizes.
+        # implementation with an OpenSSL wrapper that rejects a custom digest
+        # size, raising TypeError or ValueError depending on the provider.
         return hashlib.new("md5", usedforsecurity=False)
 
 
