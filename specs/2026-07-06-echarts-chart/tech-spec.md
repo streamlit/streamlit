@@ -23,6 +23,7 @@ with (a) Streamlit theming that adapts to light/dark and honors the shared chart
 arbitrary JavaScript.
 
 Prior art in this repo:
+
 - `st.plotly_chart` — closest analog: JSON `spec` + `config`, `theme` string, `selection_mode`
   enum, widget-state serialization of selections
   (`lib/streamlit/elements/plotly_chart.py`, `frontend/lib/src/components/elements/PlotlyChart/`).
@@ -50,23 +51,20 @@ message EChartsChart {
   // Theme override; currently only "streamlit" or "" (None).
   string theme = 2;
 
-  // Widget/element ID. Populated only when selections are active.
+  // Widget/element ID. Populated only when selections are active
+  // (on_select != "ignore").
   string id = 3;
 
-  // Activated selection modes (empty = display only).
-  repeated SelectionMode selection_mode = 4;
+  // Field 4 is reserved for a future `selection_mode` (v1 activates selection
+  // via `on_select` and returns whatever the user configured in the spec).
+  reserved 4;
+  reserved "selection_mode";
 
   // Form ID, set when selections are activated inside a form.
   string form_id = 5;
 
   // Renderer passed to echarts.init.
   Renderer renderer = 6;
-
-  enum SelectionMode {
-    POINTS = 0;  // Click selection.
-    BOX = 1;     // Rectangle brush.
-    LASSO = 2;   // Polygon brush.
-  }
 
   enum Renderer {
     CANVAS = 0;
@@ -76,6 +74,7 @@ message EChartsChart {
 ```
 
 Registration:
+
 - Add `import "streamlit/proto/EChartsChart.proto";` and a field to `Element.proto`
   (`EChartsChart echarts_chart = <next_free_index>;`).
 - Run `make protobuf` to regenerate Python + TS bindings.
@@ -94,12 +93,11 @@ A new `EChartsMixin` added to `DeltaGenerator` (register in `delta_generator.py`
 
 1. **Overloads** for the return type based on `on_select` (`DeltaGenerator` vs `EChartsState`),
    exactly like `plotly_chart`'s two `@overload`s.
-2. **Validation** (*Fail Fast*):
+2. **Validation** (_Fail Fast_):
    - `validate_width(width, allow_content=True)` / `validate_height(height, allow_content=True)`.
    - `theme` must be `"streamlit"` or `None`.
    - `renderer` must be `"canvas"` or `"svg"`.
    - `on_select` must be `"ignore"`, `"rerun"`, or callable.
-   - `selection_mode` parsed/validated via a helper analogous to `parse_selection_mode`.
 3. **Options normalization** (`_normalize_options`) — input type is
    `Mapping[str, Any] | str | EChartsCompatible`, where `EChartsCompatible` is a `Protocol` with
    `dump_options() -> str`:
@@ -127,25 +125,26 @@ A new `EChartsMixin` added to `DeltaGenerator` (register in `delta_generator.py`
 4. **Proto assembly**: set `spec`, `theme`, and `renderer`. Only compute `id` and `form_id` when
    `on_select` is active. In that mode, compute `id` via
    `compute_and_register_element_id("echarts_chart", user_key=key,
-   key_as_main_identity={"selection_mode", "renderer"}, ..., spec=..., selection_mode=...,
-   theme=..., renderer=..., width=..., height=...)`.
+key_as_main_identity={"renderer"}, ..., spec=..., theme=..., renderer=..., width=...,
+height=...)`.
    When no user key is provided, the normalized option payload should participate in the ID. When
    `on_select="ignore"`, leave `id` empty and treat the chart as a display element. This follows
    the Vega-Lite chart pattern; Plotly's always-compute-ID behavior is a special case for Plotly's
    mutable browser-side figure state.
-5. **Selections**: when activated, `selection_mode.extend(parse_selection_mode(...))`, register a
-   widget with an `EChartsChartSelectionSerde` (JSON string ⇄ `EChartsState` via
-   `AttributeDictionary`), and return `widget_state.value`. Otherwise `_enqueue` and return the
+5. **Selections**: when activated, register a widget with an `EChartsChartSelectionSerde` (JSON
+   string ⇄ `EChartsState` via `AttributeDictionary`), and return `widget_state.value`. Otherwise
+   `_enqueue` and return the
    `DeltaGenerator`. This follows the existing chart widget registration pattern.
 
 **State types** (mirroring `PlotlySelectionState`/`PlotlyState`):
 
 ```python
 class EChartsSelectionState(TypedDict, total=False):
-    points: Required[list[dict[str, Any]]]      # rich items incl. series_index/data_index
-    point_indices: Required[list[int]]          # flat data indices (Plotly parity)
+    points: Required[list[dict[str, Any]]]  # rich items incl. series_index/data_index
+    point_indices: Required[list[int]]  # flat data indices (Plotly parity)
     box: Required[list[dict[str, Any]]]
     lasso: Required[list[dict[str, Any]]]
+
 
 class EChartsState(TypedDict, total=False):
     selection: Required[EChartsSelectionState]
@@ -156,7 +155,7 @@ The serde's `deserialize(None)` returns the empty selection
 `PlotlyChartSelectionSerde`. (`streamlit-echarts` additionally exposes a `series_point_indices`
 map; we fold per-series info into each `points` item instead to keep the schema Plotly-shaped.)
 
-No theme work happens in Python (per repo rule: *theming/layout is computed in the frontend*).
+No theme work happens in Python (per repo rule: _theming/layout is computed in the frontend_).
 The backend only forwards the `theme` string.
 
 ### Frontend: `frontend/lib/src/components/elements/EChartsChart/`
@@ -165,8 +164,8 @@ New lazy-loaded component registered in `ElementNodeRenderer.tsx`:
 
 ```ts
 const EChartsChart = lazy(
-  () => import("~lib/components/elements/EChartsChart/EChartsChart")
-)
+  () => import("~lib/components/elements/EChartsChart/EChartsChart"),
+);
 ```
 
 and a render branch for `node.element.echartsChart` wrapped with `withFullScreenWrapper`
@@ -179,7 +178,7 @@ whose API this design relies on. At implementation time, **confirm `6.1.0` is ac
 contains the fix** — ECharts' release cadence is irregular — and cite the upstream advisory/fix
 notes (link the GitHub Security Advisory in `package.json` and the PR description). If a patched
 `6.1.x` is not yet available, pin the specific patched `6.0.x` release that contains the fix instead
-and record the reasoning. Import the **full** bundle (`import * as echarts from "echarts"`), *not* the tree-shakable
+and record the reasoning. Import the **full** bundle (`import * as echarts from "echarts"`), _not_ the tree-shakable
 `echarts/core` registry. Tree-shaking requires statically selecting the series/components at build
 time, which is impossible for an API that accepts arbitrary user options — a chart type the user
 picks at runtime would silently fail to render. Because the component is lazy-loaded, ECharts lives
@@ -188,6 +187,7 @@ initial app bundle is unaffected. Tree-shaking could be revisited only if we lat
 supported chart types.
 
 **Component responsibilities** (`EChartsChart.tsx`):
+
 - Parse `element.spec` (`JSON.parse`) into an ECharts `EChartsOption`, memoized on the spec string
   rather than `element.id` because display-only charts intentionally do not have an ID.
 - Hold an `echarts` instance in a ref bound to a container `div`. Use
@@ -212,11 +212,11 @@ supported chart types.
   calls so unrelated widget reruns do not replay ECharts update animations. Do not require
   display-only charts to persist browser-only state through `widgetMgr.setElementState`; if the
   element is truly unmounted, ECharts can be recreated from the declarative option. When
-  selections are active and `element.id` is populated, restore the persisted widget
-  selection/brush state after chart recreation **and after any in-place
-  `setOption({ notMerge: true })`** — full replacement clears drawn `brush` areas, so re-dispatch the
-  persisted brush areas (see the Selections "State restore" step) whenever the option is replaced,
-  keeping the visible selection in sync with the persisted widget state.
+  selections are active and `element.id` is populated, restore the persisted selection after chart
+  recreation **and after any in-place `setOption({ notMerge: true })`** — full replacement clears
+  both the native `select` state and drawn `brush` areas, so `restoreSelection` re-dispatches the
+  persisted selected points _and_ brush areas (see the Selections "State restore" step) whenever
+  the option is replaced, keeping the visible selection in sync with the persisted widget state.
 - **Remount validation**: add focused manual/e2e coverage for unrelated widget reruns, fullscreen,
   tabs, and expanders. If display-only charts are commonly unmounted/remounted in those paths and
   replay visible entry animations, switch to computing a stable non-widget element ID for all
@@ -245,7 +245,7 @@ name). The theme object sets:
 - `textStyle`: `{ fontFamily: genericFonts.bodyFont, color: getGray70(theme), fontSize: ... }`.
 - `title.textStyle` / `title.subtextStyle`: heading font + `colors.headingColor`.
 - `legend.textStyle`, `tooltip` (`backgroundColor: colors.bgColor`, `borderColor:
-  colors.borderColor`, text color), and per-axis defaults
+colors.borderColor`, text color), and per-axis defaults
   (`categoryAxis`/`valueAxis`/`logAxis`/`timeAxis`): `axisLine`, `axisTick`, `axisLabel`,
   `splitLine` colored from the gray scale (`getGray30`/`getGray70`).
 - `visualMap.inRange.color`: seed from `theme.colors.chartSequentialColors` for continuous scales.
@@ -264,7 +264,7 @@ the user sets it):
    hasn't set them**.
 
 Precedence: the user's explicit `options` values must always win. The init theme applies
-*underneath* the option passed to `setOption`, and `applyStreamlitOptionDefaults` only writes keys
+_underneath_ the option passed to `setOption`, and `applyStreamlitOptionDefaults` only writes keys
 that are absent — so we **never** clobber explicit values (e.g. `series[0].itemStyle.color` or a
 top-level `color`). We do **not** deep-merge the theme into the user option. This is cleaner than
 Plotly's placeholder-replacement approach because ECharts has first-class theme support.
@@ -280,41 +280,54 @@ work, consistent with Plotly/Vega.
 #### Selections (frontend)
 
 Add a `useEChartsSelections` hook (analogous to `useVegaLiteSelections`) that, given `element`
-(`selectionMode`, `id`, `formId`) and the `widgetMgr`:
+(`id`, `formId`) and the `widgetMgr`. **Streamlit injects no selection config** — the hook only
+_listens_ for whatever selection the user enabled in their spec. `configureSelectionOption`
+therefore returns the option unchanged for selection widgets (it only resets the misleading
+`"pointer"` cursor for display-only charts). Selection is active whenever the chart has an
+`element.id` (i.e. `on_select != "ignore"`), and all handlers below are bound unconditionally in
+that case — unused ones simply never fire.
 
-- **Points**: register `chart.on("click", handler)`. The handler builds a point from the event
-  `params` (`{ component_type, series_type, series_index, series_name, data_index, name, value,
-  data }`) and writes `points` + `point_indices`. We use `click` rather than mutating every
-  series' `selectedMode` (the approach `streamlit-echarts` also takes) because it **does not
-  modify the user's option** and works across chart types that lack a `select` state (funnel,
-  gauge, etc.). Trade-off: no built-in "selected/faded" visual state — if we want Plotly-like
-  visual feedback later, we can *optionally* layer `selectedMode` + `selectchanged` for series
-  that support it, but that is not required for v1.
-- **Box/Lasso**: merge default `brush` + `toolbox.feature.brush` **only when absent** (preserving
-  any user-defined brush/toolbox), enabling `rect` (box) and/or `polygon` (lasso) per
-  `selectionMode`, and register both `chart.on("brushSelected", …)` and
-  `chart.on("brushEnd", …)`.
-  - `brushSelected` yields `params.batch[].selected` (series → `dataIndex` arrays) → resolve into
-    the shared `points`/`point_indices`.
-  - `brushEnd` yields the final brush *areas* → convert pixel ranges to axis coordinates with
+- **Points**: register `chart.on("selectchanged", handler)`. This fires only if the user's series
+  set `selectedMode` (`"single"`/`"multiple"`/`"series"`). Its `selected` array
+  (`[{ seriesIndex, dataIndex[] }]`) is the authoritative set of selected points. Each point is
+  **enriched** best-effort from `chart.getOption()` into `{ component_type, series_type,
+series_index, series_name, data_index, name, value, data }`; dataset-driven series (no inline
+  `data`) still yield the indices with the enrichment fields absent. ECharts renders the selected
+  state itself (native `select` visual + any `select` style the user set) — we do not mutate the
+  option to add a highlight.
+- **Box/Lasso**: register `chart.on("brushSelected", …)` and `chart.on("brushEnd", …)`. These fire
+  only if the user's spec includes a `brush` component.
+  - `brushSelected` yields `params.batch[].selected` (series → `dataIndex` arrays) → the brushed
+    `points`/`point_indices` (minimal `{ component_type, series_index, data_index }` items).
+  - `brushEnd` yields the final brush _areas_ → convert pixel ranges to axis coordinates with
     `chart.convertFromPixel(...)`, storing `box`/`lasso` as
     `{ x: [...], y: [...], grid_index }`; if a coordinate system can't be converted, fall back to
     raw pixel coordinates with a `coordinate_system` marker so the state stays inspectable.
   - **Event-ordering guard**: `brushSelected` and `brushEnd` can fire in either order, so cache
-    the latest batch *and* the latest areas and emit **exactly one** widget-state update per
+    the latest batch _and_ the latest areas and emit **exactly one** widget-state update per
     completed gesture. An empty batch/areas (brush "clear") emits the empty selection.
+- **Union of channels**: native point selection (`selectchanged`) and brush selection
+  (`brushSelected`/`brushEnd`) are independent and **coexist**. The hook caches each channel's
+  latest values and emits `points`/`point_indices` as the **union** of natively selected and
+  brushed points, alongside the brush `box`/`lasso` geometry — so a single combined
+  `{ selection: { points, point_indices, box, lasso } }` update reflects both.
 - Debounce writes (~150ms, as Vega does), compare against the current JSON state to **skip no-op
-  updates** (avoids needless reruns), and serialize the combined
-  `{ selection: { points, point_indices, box, lasso } }` via
+  updates** (avoids needless reruns), and serialize via
   `widgetMgr.setStringValue(widgetInfo, json, { fromUi: true }, fragmentId)`.
 - **Reset**: on double-click and on form-clear (`FormClearHelper.manageFormClearListener`), clear
-  the ECharts selection (`chart.dispatchAction({ type: "brush", areas: [] })`) and write an empty
+  the ECharts selection — `dispatchAction({ type: "brush", areas: [] })` **and**
+  `dispatchAction({ type: "unselect", … })` for the persisted selected points — and write an empty
   selection — mirroring `PlotlyChart`.
-- **State restore**: when `element.id` is populated, restore selection-related view state on
-  remount/fullscreen **and after each option-replacing `setOption({ notMerge: true })`** by
-  re-dispatching the persisted `brush` areas (`chart.dispatchAction({ type: "brush", areas })`) —
-  otherwise a full option replacement clears the drawn box/lasso and desyncs the chart from the
-  persisted widget selection. Display-only charts should not depend on `widgetMgr.setElementState`.
+- **State restore**: persist the raw selection to frontend element state — the selected points as
+  the `selectchanged` `selected` entries (key `selectedPoints`) and the brush areas (key
+  `brushAreas`). When `element.id` is populated, `restoreSelection` re-applies **both** on
+  remount/fullscreen **and after each option-replacing `setOption({ notMerge: true })`**:
+  `dispatchAction({ type: "select", seriesIndex, dataIndex })` per persisted point and
+  `dispatchAction({ type: "brush", areas })` — otherwise a full option replacement clears the
+  native `select`/`brush` state and desyncs the chart from the persisted widget selection. This
+  restore runs _before_ the event handlers are (re)bound on instance recreation, and the no-op
+  write guard absorbs the `selectchanged` a restore dispatch triggers when handlers are already
+  bound. Display-only charts should not depend on `widgetMgr.setElementState`.
 - **Display-only**: when selections are inactive (`on_select="ignore"`, i.e. no `element.id`), do not
   bind selection handlers or emit updates. (v1 does not expose a `disabled` parameter, mirroring
   `st.plotly_chart`; see the product spec's Out of Scope.)
@@ -334,7 +347,7 @@ contract as `VegaLiteState`/`PlotlyState`).
     the version floor is enforced in `package.json` (see [Dependencies](#dependencies)).
   - Under `theme="streamlit"`, `applyStreamlitOptionDefaults` **never injects a tooltip/label
     `formatter`** (or any other option) that emits raw HTML on the user's behalf, and it does **not**
-    change `tooltip.renderMode`. It relies on ECharts' built-in escaping of tooltip/label *values* in
+    change `tooltip.renderMode`. It relies on ECharts' built-in escaping of tooltip/label _values_ in
     the default formatter, so app-provided strings render as text rather than markup. (Note: ECharts'
     `tooltip.renderMode = "html"` is the default DOM tooltip mode and is safe by itself — the risk
     comes only from a `formatter` that returns unescaped HTML, which Streamlit's defaults never add.)
@@ -349,20 +362,21 @@ contract as `VegaLiteState`/`PlotlyState`).
   string input, `pyecharts` duck-typed input (via a fake object exposing `dump_options`),
   `dataset.source` dataframe → records/dimensions conversion, non-serializable/JS-callback input
   raises a helpful error, arbitrary objects are not silently stringified, `theme`/`renderer`/
-  `on_select`/`selection_mode` validation, proto fields set correctly (incl. `renderer`), selection
-  serde round-trip, no ID for display-only charts, and active-selection ID changes when
-  `selection_mode`/`renderer` change.
+  `on_select` validation, proto fields set correctly (incl. `renderer`), selection serde
+  round-trip, no ID for display-only charts, and active-selection ID changes when `renderer`/spec
+  change (and is stable with a `key`).
 - **Typing tests** (`lib/tests/streamlit/typing/echarts_chart_types.py`): `assert_type` that
   `on_select="ignore"` → `DeltaGenerator` and `on_select="rerun"` → `EChartsState`.
 - **Frontend unit tests** (`EChartsChart.test.tsx`, `CustomTheme.test.ts`,
   `useEChartsSelections.test.ts`): theme-object construction maps Emotion colors/fonts; user option
   values survive default merging; canvas default vs `renderer="svg"`; `setOption`/`resize`/`dispose`
   lifecycle; display-only charts work with an empty proto ID; theme/renderer change recreates the
-  instance; `click` → point widget state;
-  `brushSelected` + `brushEnd` (both orderings) → single box/lasso update; brush clear → empty
-  state; no-op selections skip `setStringValue`; form-clear reset behavior; display-only charts bind
-  no selection handlers; error rendering.
-  Mock `echarts.init` where a real canvas isn't needed.
+  instance; **the option is left untouched for selection widgets** (no injection); a widget binds
+  all selection listeners; `selectchanged` → enriched point widget state; `brushSelected` +
+  `brushEnd` (both orderings) → single box/lasso update; brush clear → empty state;
+  `restoreSelection` re-dispatches persisted `select` + `brush`; no-op selections skip
+  `setStringValue`; double-click/form-clear reset behavior; display-only charts bind no selection
+  handlers; error rendering. Mock `echarts.init`/`getOption` where a real canvas isn't needed.
 - **Security regression test (required).** A tooltip/label whose content contains an HTML/script
   payload (e.g. `"<img src=x onerror=alert(1)>"`) must render as **escaped text** under
   `theme="streamlit"` and must not execute. Cover this in the frontend unit tests and assert it in
@@ -374,17 +388,38 @@ contract as `VegaLiteState`/`PlotlyState`).
   required e2e/manual assertions.
 - **E2E** (`e2e_playwright/st_echarts_chart.py` + `_test.py`): basic + mixed (dataZoom) charts,
   light/dark theme snapshots, custom colors not overwritten, width/height + fullscreen,
-  `on_select="rerun"` point/box/lasso selection, SVG renderer, `pyecharts` object, download
-  toolbar, the tooltip-escaping security regression, and the remount/state-persistence scenarios
-  above. Run via `make run-e2e-test st_echarts_chart_test.py`.
+  `on_select="rerun"` point selection (enabled via `selectedMode` in the spec, with a `select`
+  style so the highlight is visible), SVG renderer, `pyecharts` object, download toolbar, the
+  tooltip-escaping security regression, and the remount/state-persistence scenarios above. Point
+  selection specifically asserts the selected point stays **visibly highlighted** (snapshot),
+  **persists across an unrelated rerun**, and **toggles off** on re-click. Run via
+  `make run-e2e-test st_echarts_chart_test.py`.
 
 ### Rollout
 
 - Guard nothing behind a feature flag — it's an additive command.
 - Add docs: API reference page, charts overview entry, and a tutorial. Update
   `lib/streamlit/__init__.py` `st` namespace export and `e2e_playwright` if listing exists.
+- **Phasing (display vs. selections).** The primary value of native ECharts is the _display_ of
+  chart types Plotly/Vega don't cover (gauge, sunburst, sankey, graph, radar, …) — that is the
+  core of #12302. v1 ships display **and** selections, but keeps the selection surface minimal:
+  `on_select` activates the widget and Streamlit returns whatever selection the user enabled in
+  their spec (`selectedMode`, `brush`), with no injected config or `selection_mode` parameter. This
+  avoids the mismatch/mutation issues of auto-enabling and works uniformly across chart types. The
+  ergonomic `selection_mode` convenience (auto-enable + theme points/box/lasso, à la
+  `st.plotly_chart`) is deferred to a follow-up and is purely additive when added.
 
 ## Alternatives Considered
+
+**Inject selection config from a `selection_mode` parameter (Plotly-style)** — deferred to a
+follow-up. Streamlit could take `selection_mode=("points","box","lasso")` and auto-enable each mode
+by injecting `selectedMode`/`select` into every series and a `brush` + `toolbox` component (and
+theming them). This gives zero-config selections, but: (a) it mutates the user's option, (b) it
+must guess which modes a chart supports — a brush toolbar on a `gauge`/pie is dead UI — and (c) it
+duplicates config ECharts users already know how to write. v1 instead **listens** to whatever the
+user enabled in the spec (`on_select` only decides _whether_ to listen), which keeps the option
+untouched, avoids the mismatch, and matches ECharts' catalog exactly. The convenience layer can be
+added later as a pure superset (a `selection_mode` that injects on top of the listen-only base).
 
 **Deep-merge Streamlit theme into the option (Plotly placeholder approach)** — rejected. ECharts
 has native `init(dom, themeObject)` support, so passing a theme object is simpler, avoids the

@@ -159,8 +159,15 @@ def test_expander_chart_renders_on_expand(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
-def test_point_selection_updates_output(app: Page):
-    """Clicking a data point on a selection chart updates the selection output."""
+def test_point_selection_persists_and_toggles(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A point selection is kept (state + visual) across reruns and toggles off.
+
+    Point selection uses ECharts' native ``selectedMode``, so the clicked point
+    keeps a visible selected state that is re-applied after a rerun. Clicking the
+    same point again deselects it.
+    """
     # Initially nothing is selected.
     expect(app.get_by_text("echarts selection points: 0")).to_be_visible()
 
@@ -174,6 +181,21 @@ def test_point_selection_updates_output(app: Page):
     expect(app.get_by_text("echarts selection points: 1")).to_be_visible()
     expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
     # Must NOT happen: selecting a point does not error.
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # The selected point keeps a visible highlight (native select state).
+    assert_snapshot(chart, name="st_echarts_chart-point_selected")
+
+    # An unrelated rerun must keep the selection (state and visual) intact.
+    click_button(app, "rerun helper")
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts selection points: 1")).to_be_visible()
+    expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
+
+    # Clicking the same point again toggles it off (multi-select behavior).
+    chart.click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts selection points: 0")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
 
 

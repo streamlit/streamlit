@@ -21,7 +21,6 @@ import { getLogger } from "loglevel"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 
-import { notNullOrUndefined } from "~lib/util/utils"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsOptionObject } from "./CustomTheme"
@@ -29,13 +28,21 @@ import { EChartsOptionObject } from "./CustomTheme"
 const LOG = getLogger("useEChartsSelections")
 
 /**
- * Debounce time (ms) for widget-state updates. Coalesces the ``brushSelected``
- * and ``brushEnd`` events of a single gesture into exactly one update.
+ * Debounce time (ms) for widget-state updates. Coalesces a single gesture's
+ * point (``selectchanged``) and box/lasso (``brushSelected`` / ``brushEnd``)
+ * events into exactly one update.
  */
 const DEBOUNCE_TIME_MS = 150
 
 /** Frontend-only element-state key under which raw brush areas are persisted. */
 const BRUSH_AREAS_STATE_KEY = "brushAreas"
+
+/**
+ * Frontend-only element-state key under which the natively selected points are
+ * persisted (as ECharts ``selectchanged`` ``selected`` entries) so they can be
+ * re-applied visually after an option-replacing ``setOption`` or a remount.
+ */
+const SELECTED_POINTS_STATE_KEY = "selectedPoints"
 
 /**
  * The shared selection-state contract serialized to the widget state. Keys are
@@ -57,17 +64,18 @@ export interface EChartsSelectionInstance {
     finder: Record<string, unknown> | string,
     value: number[]
   ): number | number[]
+  getOption(): unknown
 }
 
-interface EChartsClickParams {
-  componentType?: string
-  seriesType?: string
-  seriesIndex?: number
-  seriesName?: string
-  dataIndex?: number
-  name?: string
-  value?: unknown
-  data?: unknown
+/** A single entry of the ``selectchanged`` event's ``selected`` array. */
+interface SelectedEntry {
+  seriesIndex: number
+  dataType?: string
+  dataIndex: number[]
+}
+
+interface SelectChangedParams {
+  selected?: SelectedEntry[]
 }
 
 interface BrushSelectedItem {
@@ -91,28 +99,34 @@ interface BrushEndParams {
 }
 
 export interface UseEChartsSelectionsOutput {
-  /** Whether selections are active (a widget with at least one selection mode). */
+  /**
+   * Whether the chart is a selection widget (``on_select`` is not ``"ignore"``,
+   * i.e. the element has an ID).
+   */
   isSelectionActivated: boolean
   /**
-   * Merge default ``brush`` + ``toolbox.feature.brush`` into the option (only
-   * when box/lasso are active and the user hasn't set them). Returns the option
-   * unchanged for display-only or points-only charts.
+   * Prepare the option for rendering. Streamlit does not inject any selection
+   * config — selections are whatever the user configured in their spec
+   * (``selectedMode`` on a series, a ``brush`` component). For display-only
+   * charts this only resets the misleading ``"pointer"`` cursor; for selection
+   * widgets it returns the option unchanged.
    */
   configureSelectionOption: (
     option: EChartsOptionObject
   ) => EChartsOptionObject
   /**
-   * Bind selection handlers (click / brush / double-click) to a chart instance.
-   * Returns a cleanup function that removes the handlers. A no-op for
-   * display-only charts.
+   * Bind selection handlers (``selectchanged`` / brush / double-click) to a
+   * chart instance. Returns a cleanup function that removes the handlers. A
+   * no-op for display-only charts.
    */
   bindSelections: (chart: EChartsSelectionInstance) => () => void
   /**
-   * Re-dispatch persisted brush areas after an option-replacing ``setOption`` or
-   * a remount, keeping the visible selection in sync with the widget state.
+   * Re-apply the persisted selection (natively selected points and brush areas)
+   * after an option-replacing ``setOption`` or a remount, keeping the visible
+   * selection in sync with the widget state.
    */
-  restoreBrush: (chart: EChartsSelectionInstance) => void
-  /** Clear the selection (widget state + persisted brush areas). */
+  restoreSelection: (chart: EChartsSelectionInstance) => void
+  /** Clear the selection (widget state + persisted selection element state). */
   onFormCleared: () => void
 }
 
@@ -123,17 +137,107 @@ const EMPTY_SELECTION: EChartsSelectionState = {
   lasso: [],
 }
 
-/** Build a rich point entry from an ECharts ``click`` event's params. */
-function buildClickPoint(params: EChartsClickParams): Record<string, unknown> {
+/**
+ * Build a rich point entry for a natively selected data item.
+ *
+ * ``selectchanged`` only reports ``seriesIndex``/``dataIndex``, so the series
+ * type/name and the item's name/value/data are looked up (best effort) from the
+ * chart's resolved option. For dataset-driven series (no inline ``data``) the
+ * indices are always present while name/value stay ``undefined``.
+ */
+function buildPointFromIndex(
+  resolvedOption: Record<string, unknown> | null,
+  seriesIndex: number,
+  dataIndex: number
+): Record<string, unknown> {
+  const seriesList = resolvedOption?.series
+  const series = Array.isArray(seriesList)
+    ? seriesList[seriesIndex]
+    : undefined
+  const seriesObject = isPlainObject(series)
+    ? (series as Record<string, unknown>)
+    : undefined
+
+  const dataArray = seriesObject?.data
+  const dataItem = Array.isArray(dataArray) ? dataArray[dataIndex] : undefined
+
+  let name: unknown
+  let value: unknown
+  if (isPlainObject(dataItem)) {
+    const item = dataItem as Record<string, unknown>
+    name = item.name
+    value = item.value
+  } else if (dataItem !== undefined) {
+    value = dataItem
+  }
+
   return {
-    component_type: params.componentType,
-    series_type: params.seriesType,
-    series_index: params.seriesIndex,
-    series_name: params.seriesName,
-    data_index: params.dataIndex,
-    name: params.name,
-    value: params.value,
-    data: params.data,
+    component_type: "series",
+    series_type: seriesObject?.type,
+    series_index: seriesIndex,
+    series_name: seriesObject?.name,
+    data_index: dataIndex,
+    name,
+    value,
+    data: dataItem,
+  }
+}
+
+/**
+ * Merge the native-selection and brush point channels into a single
+ * de-duplicated union keyed by ``series_index`` + ``data_index``. Native
+ * (richer) entries win when the same item is both natively selected and inside a
+ * brushed region, so ``points`` never contains the same data item twice.
+ */
+function mergePointChannels(
+  nativePoints: Array<Record<string, unknown>>,
+  nativeIndices: number[],
+  brushPoints: Array<Record<string, unknown>>,
+  brushIndices: number[]
+): { points: Array<Record<string, unknown>>; pointIndices: number[] } {
+  const points: Array<Record<string, unknown>> = []
+  const pointIndices: number[] = []
+  const seen = new Set<string>()
+  const append = (
+    channelPoints: Array<Record<string, unknown>>,
+    channelIndices: number[]
+  ): void => {
+    channelPoints.forEach((point, index) => {
+      const key = JSON.stringify([point.series_index, point.data_index])
+      if (seen.has(key)) {
+        return
+      }
+      seen.add(key)
+      points.push(point)
+      pointIndices.push(channelIndices[index])
+    })
+  }
+  append(nativePoints, nativeIndices)
+  append(brushPoints, brushIndices)
+  return { points, pointIndices }
+}
+
+/**
+ * Dispatch a native ``select``/``unselect`` action for each persisted point
+ * entry. Used to re-apply (``select``) or clear (``unselect``) the visible point
+ * selection after an option-replacing ``setOption`` or a remount.
+ */
+function dispatchPointSelection(
+  chart: EChartsSelectionInstance,
+  entries: SelectedEntry[],
+  action: "select" | "unselect"
+): void {
+  for (const entry of entries) {
+    try {
+      chart.dispatchAction({
+        type: action,
+        seriesIndex: entry.seriesIndex,
+        dataIndex: entry.dataIndex,
+        ...(entry.dataType ? { dataType: entry.dataType } : {}),
+      })
+    } catch (error) {
+      LOG.warn(`Failed to ${action} persisted point selection`, error)
+    }
   }
 }
 
@@ -251,9 +355,15 @@ function withDefaultSeriesCursor(
 }
 
 /**
- * Hook that wires ECharts selection events (point clicks and box/lasso brush
- * gestures) into Streamlit's widget-state mechanism. Modeled on
+ * Hook that wires ECharts selection events (native point selection and box/lasso
+ * brush gestures) into Streamlit's widget-state mechanism. Modeled on
  * ``useVegaLiteSelections``.
+ *
+ * Streamlit does not inject any selection config into the option: when
+ * ``on_select`` is active, we listen for whatever selections the user has
+ * enabled in their spec (``selectedMode`` on a series, a ``brush`` component)
+ * and return them. This keeps the option untouched and works uniformly across
+ * chart types.
  */
 export function useEChartsSelections(
   element: EChartsChartProto,
@@ -262,17 +372,10 @@ export function useEChartsSelections(
 ): UseEChartsSelectionsOutput {
   const chartId = element.id
   const formId = element.formId
-  const selectionMode = element.selectionMode
 
-  const hasPoints = selectionMode.includes(
-    EChartsChartProto.SelectionMode.POINTS
-  )
-  const hasBox = selectionMode.includes(EChartsChartProto.SelectionMode.BOX)
-  const hasLasso = selectionMode.includes(
-    EChartsChartProto.SelectionMode.LASSO
-  )
-
-  const isSelectionActivated = Boolean(chartId) && selectionMode.length > 0
+  // Selection is active whenever the chart is a widget (on_select != "ignore"),
+  // which is the only case the backend assigns an element ID.
+  const isSelectionActivated = Boolean(chartId)
 
   // Keep the latest bound chart so form-clear resets can clear the visible brush.
   const chartRef = useRef<EChartsSelectionInstance | null>(null)
@@ -301,58 +404,28 @@ export function useEChartsSelections(
         // default "pointer" cursor on series items.
         return withDefaultSeriesCursor(option)
       }
-      if (!hasBox && !hasLasso) {
-        // Point-only selection is click-driven; keep ECharts' pointer cursor.
-        return option
-      }
-
-      const brushTypes: string[] = []
-      if (hasBox) {
-        brushTypes.push("rect")
-      }
-      if (hasLasso) {
-        brushTypes.push("polygon")
-      }
-
-      const result: EChartsOptionObject = { ...option }
-
-      // Add the brush component only when the user hasn't defined their own.
-      if (result.brush === undefined) {
-        result.brush = {
-          toolbox: [...brushTypes, "clear"],
-          xAxisIndex: "all",
-          yAxisIndex: "all",
-          throttleType: "debounce",
-          throttleDelay: DEBOUNCE_TIME_MS,
-        }
-      }
-
-      // Add the toolbox brush buttons only when the user hasn't defined them.
-      const brushFeature = { type: [...brushTypes, "clear"] }
-      if (result.toolbox === undefined) {
-        result.toolbox = { feature: { brush: brushFeature } }
-      } else if (isPlainObject(result.toolbox)) {
-        const toolbox = { ...(result.toolbox as Record<string, unknown>) }
-        const feature: Record<string, unknown> = isPlainObject(toolbox.feature)
-          ? { ...(toolbox.feature as Record<string, unknown>) }
-          : {}
-        if (feature.brush === undefined) {
-          feature.brush = brushFeature
-          toolbox.feature = feature
-          result.toolbox = toolbox
-        }
-      }
-
-      return result
+      // Selection widgets are left untouched: the user configures selection in
+      // their own spec (`selectedMode`, `brush`); we only listen and report.
+      return option
     },
-    [isSelectionActivated, hasBox, hasLasso]
+    [isSelectionActivated]
   )
 
-  const restoreBrush = useCallback(
+  const restoreSelection = useCallback(
     (chart: EChartsSelectionInstance): void => {
       if (!chartId) {
         return
       }
+      // Re-apply natively selected points (an option-replacing setOption clears
+      // the select state), then re-draw persisted brush areas.
+      const selectedPoints = widgetMgr.getElementState<SelectedEntry[]>(
+        chartId,
+        SELECTED_POINTS_STATE_KEY
+      )
+      if (Array.isArray(selectedPoints)) {
+        dispatchPointSelection(chart, selectedPoints, "select")
+      }
+
       const areas = widgetMgr.getElementState<BrushArea[]>(
         chartId,
         BRUSH_AREAS_STATE_KEY
@@ -376,9 +449,20 @@ export function useEChartsSelections(
       } catch (error) {
         LOG.warn("Failed to clear brush selection", error)
       }
+      // Deselect any natively selected points as well.
+      const selectedPoints = chartId
+        ? widgetMgr.getElementState<SelectedEntry[]>(
+            chartId,
+            SELECTED_POINTS_STATE_KEY
+          )
+        : undefined
+      if (Array.isArray(selectedPoints)) {
+        dispatchPointSelection(chart, selectedPoints, "unselect")
+      }
     }
     if (chartId) {
       widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, [])
+      widgetMgr.setElementState(chartId, SELECTED_POINTS_STATE_KEY, [])
     }
     writeSelection(EMPTY_SELECTION)
   }, [chartId, widgetMgr, writeSelection])
@@ -396,57 +480,65 @@ export function useEChartsSelections(
 
       chartRef.current = chart
 
-      // Latest resolved values for the current gesture. Cached so brushSelected
-      // and brushEnd (which fire in either order) produce exactly one update.
+      // Latest resolved values for each selection channel. Point selection
+      // (native ``selectchanged``) and box/lasso brush selection are
+      // independent and coexist: the emitted ``points``/``point_indices`` are
+      // the de-duplicated union of natively selected points and brushed points,
+      // while ``box``/``lasso`` carry the brush geometry. Caching lets
+      // brushSelected and brushEnd (which fire in either order) produce a single
+      // update.
+      let latestSelectedPoints: Array<Record<string, unknown>> = []
+      let latestSelectedIndices: number[] = []
       let latestBrushPoints: Array<Record<string, unknown>> = []
       let latestBrushIndices: number[] = []
       let latestBox: Array<Record<string, unknown>> = []
       let latestLasso: Array<Record<string, unknown>> = []
 
-      const emitBrushSelection = debounce((): void => {
+      const emitSelection = debounce((): void => {
+        const { points, pointIndices } = mergePointChannels(
+          latestSelectedPoints,
+          latestSelectedIndices,
+          latestBrushPoints,
+          latestBrushIndices
+        )
         writeSelection({
-          points: latestBrushPoints,
-          point_indices: latestBrushIndices,
+          points,
+          point_indices: pointIndices,
           box: latestBox,
           lasso: latestLasso,
         })
       }, DEBOUNCE_TIME_MS)
 
-      const emitClickSelection = debounce(
-        (selection: EChartsSelectionState): void => {
-          writeSelection(selection)
-        },
-        DEBOUNCE_TIME_MS
-      )
-
-      const handleClick = (raw: unknown): void => {
-        if (!hasPoints) {
-          return
+      const handleSelectChanged = (raw: unknown): void => {
+        const params = raw as SelectChangedParams
+        const selected = params.selected ?? []
+        // Resolve the (possibly enriched) point entries from the chart's option.
+        const chartOption = chart.getOption()
+        const resolvedOption = isPlainObject(chartOption)
+          ? (chartOption as Record<string, unknown>)
+          : null
+        const points: Array<Record<string, unknown>> = []
+        const indices: number[] = []
+        for (const entry of selected) {
+          for (const dataIndex of entry.dataIndex ?? []) {
+            points.push(
+              buildPointFromIndex(resolvedOption, entry.seriesIndex, dataIndex)
+            )
+            indices.push(dataIndex)
+          }
         }
-        const params = raw as EChartsClickParams
-        if (params.componentType !== "series") {
-          return
-        }
-        // A point click reports a points-only selection and supersedes any
-        // in-flight or persisted brush selection. Cancel the pending brush emit
-        // and drop persisted brush areas so a later restore doesn't resurrect a
-        // stale box/lasso that disagrees with the emitted widget state.
-        emitBrushSelection.cancel()
-        latestBrushPoints = []
-        latestBrushIndices = []
-        latestBox = []
-        latestLasso = []
+        latestSelectedPoints = points
+        latestSelectedIndices = indices
+        // Persist the raw selection so it can be re-applied visually after an
+        // option-replacing setOption or a remount.
         if (chartId) {
-          widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, [])
+          widgetMgr.setElementState(
+            chartId,
+            SELECTED_POINTS_STATE_KEY,
+            selected
+          )
         }
-        emitClickSelection({
-          points: [buildClickPoint(params)],
-          point_indices: notNullOrUndefined(params.dataIndex)
-            ? [params.dataIndex]
-            : [],
-          box: [],
-          lasso: [],
-        })
+        emitSelection()
       }
 
       const handleBrushSelected = (raw: unknown): void => {
@@ -467,7 +559,7 @@ export function useEChartsSelections(
         }
         latestBrushPoints = points
         latestBrushIndices = indices
-        emitBrushSelection()
+        emitSelection()
       }
 
       const handleBrushEnd = (raw: unknown): void => {
@@ -488,53 +580,47 @@ export function useEChartsSelections(
         if (chartId) {
           widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, areas)
         }
-        emitBrushSelection()
+        emitSelection()
       }
 
       const handleDoubleClick = (): void => {
-        emitBrushSelection.cancel()
-        emitClickSelection.cancel()
+        emitSelection.cancel()
+        latestSelectedPoints = []
+        latestSelectedIndices = []
+        latestBrushPoints = []
+        latestBrushIndices = []
+        latestBox = []
+        latestLasso = []
         clearSelection()
       }
 
-      chart.on("click", handleClick)
-      if (hasBox || hasLasso) {
-        chart.on("brushSelected", handleBrushSelected)
-        chart.on("brushEnd", handleBrushEnd)
-      }
+      // Bind all selection listeners: point selection (`selectchanged`) fires
+      // only if the user's spec sets `selectedMode`, and brush events fire only
+      // if the spec has a `brush` component, so unused listeners are harmless.
+      chart.on("selectchanged", handleSelectChanged)
+      chart.on("brushSelected", handleBrushSelected)
+      chart.on("brushEnd", handleBrushEnd)
       chart.on("dblclick", handleDoubleClick)
 
       return () => {
-        emitBrushSelection.cancel()
-        emitClickSelection.cancel()
-        chart.off("click", handleClick)
-        if (hasBox || hasLasso) {
-          chart.off("brushSelected", handleBrushSelected)
-          chart.off("brushEnd", handleBrushEnd)
-        }
+        emitSelection.cancel()
+        chart.off("selectchanged", handleSelectChanged)
+        chart.off("brushSelected", handleBrushSelected)
+        chart.off("brushEnd", handleBrushEnd)
         chart.off("dblclick", handleDoubleClick)
         if (chartRef.current === chart) {
           chartRef.current = null
         }
       }
     },
-    [
-      isSelectionActivated,
-      hasPoints,
-      hasBox,
-      hasLasso,
-      chartId,
-      widgetMgr,
-      writeSelection,
-      clearSelection,
-    ]
+    [isSelectionActivated, chartId, widgetMgr, writeSelection, clearSelection]
   )
 
   return {
     isSelectionActivated,
     configureSelectionOption,
     bindSelections,
-    restoreBrush,
+    restoreSelection,
     onFormCleared,
   }
 }

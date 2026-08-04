@@ -137,7 +137,7 @@ export function EChartsChart({
     isSelectionActivated,
     configureSelectionOption,
     bindSelections,
-    restoreBrush,
+    restoreSelection,
     onFormCleared,
   } = useEChartsSelections(element, widgetMgr, fragmentId)
 
@@ -192,7 +192,7 @@ export function EChartsChart({
   }, [containerRef, rendererStr, themeArg, hasValidSpec, hasBeenSized])
 
   // Apply the option whenever it (or the underlying instance) changes. Skips
-  // no-op setOption calls and re-dispatches persisted brush areas afterwards.
+  // no-op setOption calls and re-applies the persisted selection afterwards.
   useEffect(() => {
     // When the instance is recreated (renderer/theme change), an effect keyed on
     // the previous `chartInstance` can still run once against the just-disposed
@@ -217,17 +217,17 @@ export function EChartsChart({
       })
       setRenderError(null)
       setHasRendered(true)
-      // A full replacement clears drawn brush areas, so restore them.
-      restoreBrush(chartInstance)
+      // A full replacement clears the selected/brushed state, so restore it.
+      restoreSelection(chartInstance)
     } catch (error) {
       setRenderError(ensureError(error).message)
     }
-  }, [chartInstance, preparedOption, restoreBrush])
+  }, [chartInstance, preparedOption, restoreSelection])
 
   // Bind selection handlers to the current instance (no-op for display-only).
   // This effect is intentionally declared *after* the option-apply effect so
-  // that, when the instance is (re)created, `restoreBrush` runs before these
-  // handlers are bound and its brush dispatch does not re-emit a selection.
+  // that, when the instance is (re)created, `restoreSelection` runs before
+  // these handlers are bound and its dispatch does not re-emit a selection.
   useEffect(() => {
     if (!chartInstance || chartInstance.isDisposed()) {
       return

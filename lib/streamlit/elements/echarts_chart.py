@@ -52,15 +52,10 @@ from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     import pandas as pd
 
     from streamlit.delta_generator import DeltaGenerator
 
-
-SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
-_SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
 
 # ECharts option objects have no intrinsic dimensions, so "content" width/height
 # resolve to these fixed defaults (unless a pyecharts chart exposes its own).
@@ -189,34 +184,6 @@ class EChartsChartSelectionSerde:
         # The selection state is already JSON-clean (produced by the frontend),
         # so no ``default`` fallback is needed here.
         return json.dumps(selection_state)
-
-
-def _parse_selection_mode(
-    selection_mode: SelectionMode | Iterable[SelectionMode],
-) -> set[EChartsChartProto.SelectionMode.ValueType]:
-    """Parse and check the user provided selection modes."""
-    if isinstance(selection_mode, str):
-        # Only a single selection mode was passed
-        selection_mode_set = {selection_mode}
-    else:
-        # Multiple selection modes were passed
-        selection_mode_set = set(selection_mode)
-
-    if not selection_mode_set.issubset(_SELECTION_MODES):
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
-        )
-
-    parsed_selection_modes = []
-    for mode in selection_mode_set:
-        if mode == "points":
-            parsed_selection_modes.append(EChartsChartProto.SelectionMode.POINTS)
-        elif mode == "lasso":
-            parsed_selection_modes.append(EChartsChartProto.SelectionMode.LASSO)
-        elif mode == "box":
-            parsed_selection_modes.append(EChartsChartProto.SelectionMode.BOX)
-    return set(parsed_selection_modes)
 
 
 def _contains_js_callback(raw: str) -> bool:
@@ -396,11 +363,6 @@ class EChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
-        selection_mode: SelectionMode | Iterable[SelectionMode] = (
-            "points",
-            "box",
-            "lasso",
-        ),
         renderer: Literal["canvas", "svg"] = "canvas",
     ) -> DeltaGenerator: ...
 
@@ -414,11 +376,6 @@ class EChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
-        selection_mode: SelectionMode | Iterable[SelectionMode] = (
-            "points",
-            "box",
-            "lasso",
-        ),
         renderer: Literal["canvas", "svg"] = "canvas",
     ) -> EChartsState: ...
 
@@ -432,11 +389,6 @@ class EChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
-        selection_mode: SelectionMode | Iterable[SelectionMode] = (
-            "points",
-            "box",
-            "lasso",
-        ),
         renderer: Literal["canvas", "svg"] = "canvas",
     ) -> DeltaGenerator | EChartsState:
         r"""Display an interactive Apache ECharts chart.
@@ -545,19 +497,16 @@ class EChartsMixin:
               In this case, ``st.echarts_chart`` will return the selection data
               as a dictionary.
 
-        selection_mode : "points", "box", "lasso" or an Iterable of these
-            The selection mode of the chart. This can be one of the following:
-
-            - ``"points"``: The chart will allow selections based on individual
-              data points.
-            - ``"box"``: The chart will allow selections based on rectangular
-              areas.
-            - ``"lasso"``: The chart will allow selections based on freeform
-              areas.
-            - An ``Iterable`` of the above options: The chart will allow
-              selections based on the modes specified.
-
-            All selection modes are activated by default.
+            When ``on_select`` is not ``"ignore"``, Streamlit returns whatever
+            selections you enable in your ``options``. Enable point selection by
+            setting ``selectedMode`` on a series (for example,
+            ``{"type": "bar", "selectedMode": "multiple", "data": [...]}``), and
+            enable box/lasso selection by adding a
+            `brush <https://echarts.apache.org/en/option.html#brush>`_ component.
+            The selected points and brushed regions are returned in the
+            ``EChartsState`` and re-applied visually after reruns. If your
+            ``options`` don't enable any selection, no selection is returned even
+            when ``on_select`` is active.
 
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
@@ -598,8 +547,9 @@ class EChartsMixin:
 
         **Example 2: Point selections driving the app**
 
-        Activate selections with ``on_select="rerun"`` to make the chart behave
-        like an input widget that returns the selection state.
+        Set ``on_select="rerun"`` to make the chart behave like an input widget,
+        and enable point selection in your ``options`` by setting
+        ``selectedMode`` on the series. Streamlit returns the selected points.
 
         .. code-block:: python
            :filename: streamlit_app.py
@@ -612,7 +562,13 @@ class EChartsMixin:
                    "data": ["Mon", "Tue", "Wed", "Thu", "Fri"],
                },
                "yAxis": {"type": "value"},
-               "series": [{"type": "bar", "data": [120, 200, 150, 80, 70]}],
+               "series": [
+                   {
+                       "type": "bar",
+                       "selectedMode": "multiple",
+                       "data": [120, 200, 150, 80, 70],
+                   }
+               ],
            }
 
            event = st.echarts_chart(options, key="sales", on_select="rerun")
@@ -645,9 +601,6 @@ class EChartsMixin:
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."
             )
-
-        # Validate selection modes up front (Fail Fast), regardless of on_select.
-        parsed_selection_modes = _parse_selection_mode(selection_mode)
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -694,16 +647,14 @@ class EChartsMixin:
                 # the selection-relevant params participate. Without a key, all
                 # params (including the normalized spec) participate, so a data
                 # change resets the selection.
-                key_as_main_identity={"selection_mode", "renderer"},
+                key_as_main_identity={"renderer"},
                 dg=self.dg,
                 spec=echarts_chart_proto.spec,
-                selection_mode=selection_mode,
                 theme=theme,
                 renderer=renderer,
                 width=width,
                 height=height,
             )
-            echarts_chart_proto.selection_mode.extend(parsed_selection_modes)
 
             serde = EChartsChartSelectionSerde()
 

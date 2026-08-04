@@ -130,35 +130,6 @@ if TYPE_CHECKING:
     assert_type(echarts_chart(options, renderer="svg", on_select="rerun"), EChartsState)
 
     # =====================================================================
-    # Test selection_mode parameter - single modes
-    # =====================================================================
-
-    assert_type(
-        echarts_chart(options, on_select="rerun", selection_mode="points"), EChartsState
-    )
-    assert_type(
-        echarts_chart(options, on_select="rerun", selection_mode="box"), EChartsState
-    )
-    assert_type(
-        echarts_chart(options, on_select="rerun", selection_mode="lasso"), EChartsState
-    )
-
-    # =====================================================================
-    # Test selection_mode parameter - combined modes (Iterable)
-    # =====================================================================
-
-    assert_type(
-        echarts_chart(options, on_select="rerun", selection_mode=["points", "box"]),
-        EChartsState,
-    )
-    assert_type(
-        echarts_chart(
-            options, on_select="rerun", selection_mode=("points", "box", "lasso")
-        ),
-        EChartsState,
-    )
-
-    # =====================================================================
     # Test with all parameters combined (on_select="ignore" -> DeltaGenerator)
     # =====================================================================
 
@@ -170,7 +141,6 @@ if TYPE_CHECKING:
             theme="streamlit",
             key="full_chart",
             on_select="ignore",
-            selection_mode=("points", "box", "lasso"),
             renderer="canvas",
         ),
         DeltaGenerator,
@@ -188,7 +158,6 @@ if TYPE_CHECKING:
             theme=None,
             key="selectable_chart",
             on_select="rerun",
-            selection_mode=["points", "box"],
             renderer="svg",
         ),
         EChartsState,
@@ -208,5 +177,8 @@ if TYPE_CHECKING:
     # Invalid renderer value (only "canvas" or "svg")
     echarts_chart(options, renderer="webgl")  # type: ignore[call-overload]
 
-    # Invalid selection_mode value
-    echarts_chart(options, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]
+    # Removed parameter: selection is configured in the options spec, not via a
+    # `selection_mode` argument (reserved for future use).
+    echarts_chart(  # type: ignore[call-overload]
+        options, on_select="rerun", selection_mode="points"
+    )

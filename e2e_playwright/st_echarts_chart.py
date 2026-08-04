@@ -259,18 +259,26 @@ st.echarts_chart(
     height=_HEIGHT,
 )
 
-# 11) A selection chart (a widget). A single, chart-filling bar makes a
-#     point-click land reliably on the series item.
+# 11) A selection chart (a widget). Point selection is enabled in the spec via
+#     `selectedMode`, with a `select` style so the selection is visible. A
+#     single, chart-filling bar makes a point-click land reliably on the item.
 selection_event = st.echarts_chart(
     {
         "xAxis": {"type": "category", "data": ["Selected"]},
         "yAxis": {"type": "value", "max": 100},
-        "series": [{"type": "bar", "data": [100], "barWidth": "90%"}],
+        "series": [
+            {
+                "type": "bar",
+                "data": [100],
+                "barWidth": "90%",
+                "selectedMode": "multiple",
+                "select": {"itemStyle": {"color": "#ff4b4b"}},
+            }
+        ],
         "animation": False,
     },
     key="selection_chart",
     on_select="rerun",
-    selection_mode=["points", "box", "lasso"],
     height=_HEIGHT,
 )
 st.write(f"echarts selection points: {len(selection_event['selection']['points'])}")
@@ -319,12 +327,18 @@ with st.form("echarts_form"):
         {
             "xAxis": {"type": "category", "data": ["Selected"]},
             "yAxis": {"type": "value", "max": 100},
-            "series": [{"type": "bar", "data": [100], "barWidth": "90%"}],
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [100],
+                    "barWidth": "90%",
+                    "selectedMode": "multiple",
+                }
+            ],
             "animation": False,
         },
         key="form_selection_chart",
         on_select="rerun",
-        selection_mode=["points"],
         height=_HEIGHT,
     )
     st.form_submit_button("Submit selection")

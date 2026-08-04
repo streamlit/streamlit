@@ -176,46 +176,18 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("rerun", [0, 1, 2]),
-            ("ignore", []),
-            (lambda: None, [0, 1, 2]),
+            ("rerun", True),
+            ("ignore", False),
+            (lambda: None, True),
         ]
     )
-    def test_valid_on_select(self, on_select, proto_value):
-        """on_select controls whether selection modes are activated."""
+    def test_valid_on_select(self, on_select, is_widget):
+        """on_select controls whether the chart becomes a selection widget."""
         st.echarts_chart(_BASIC_OPTIONS, on_select=on_select)
 
         el = self.get_delta_from_queue().new_element.echarts_chart
-        assert sorted(el.selection_mode) == proto_value
-
-    def test_selection_mode_parsing(self):
-        """The selection_mode parameter is parsed into proto enum values."""
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun", selection_mode="points")
-        el = self.get_delta_from_queue().new_element.echarts_chart
-        assert list(el.selection_mode) == [EChartsChartProto.SelectionMode.POINTS]
-
-        st.echarts_chart(
-            _BASIC_OPTIONS, on_select="rerun", selection_mode=("points", "lasso")
-        )
-        el = self.get_delta_from_queue().new_element.echarts_chart
-        assert sorted(el.selection_mode) == [
-            EChartsChartProto.SelectionMode.POINTS,
-            EChartsChartProto.SelectionMode.LASSO,
-        ]
-
-        # Deactivated selections yield an empty mode list regardless of the param.
-        st.echarts_chart(
-            _BASIC_OPTIONS, on_select="ignore", selection_mode={"box", "lasso"}
-        )
-        el = self.get_delta_from_queue().new_element.echarts_chart
-        assert list(el.selection_mode) == []
-
-    def test_invalid_selection_mode(self):
-        """An invalid selection mode raises a helpful exception."""
-        with pytest.raises(StreamlitAPIException):
-            st.echarts_chart(
-                _BASIC_OPTIONS, on_select="rerun", selection_mode=["invalid", "box"]
-            )
+        # A widget gets an element ID; a display-only chart does not.
+        assert (el.id != "") is is_widget
 
     def test_on_select_initial_returns(self):
         """st.echarts_chart returns an empty selection as the initial result."""
@@ -284,16 +256,6 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         st.echarts_chart(_BASIC_OPTIONS, on_select="rerun")
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.id != ""
-
-    def test_id_changes_when_selection_mode_changes(self):
-        """The widget ID changes when selection_mode changes (no key)."""
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun", selection_mode="points")
-        id_points = self.get_delta_from_queue().new_element.echarts_chart.id
-
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun", selection_mode="box")
-        id_box = self.get_delta_from_queue().new_element.echarts_chart.id
-
-        assert id_points != id_box
 
     def test_id_changes_when_renderer_changes(self):
         """The widget ID changes when renderer changes (no key)."""

@@ -39,6 +39,7 @@ const { mockInit, mockChart } = vi.hoisted(() => {
     off: vi.fn(),
     dispatchAction: vi.fn(),
     convertFromPixel: vi.fn(),
+    getOption: vi.fn(() => ({})),
   }
   return {
     mockInit: vi.fn(
@@ -95,7 +96,6 @@ function createElement(
     theme: "streamlit",
     renderer: EChartsChartProto.Renderer.CANVAS,
     id: "",
-    selectionMode: [],
     formId: "",
     ...overrides,
   })
@@ -165,7 +165,7 @@ describe("EChartsChart", () => {
   })
 
   it("renders display-only charts (empty id) without binding selection handlers", () => {
-    render(<Wrapper element={createElement({ id: "", selectionMode: [] })} />)
+    render(<Wrapper element={createElement({ id: "" })} />)
 
     expect(mockInit).toHaveBeenCalledTimes(1)
     expect(mockChart.on).not.toHaveBeenCalled()
