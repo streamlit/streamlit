@@ -89,6 +89,24 @@ class UtilTest(unittest.TestCase):
         expected = hashlib.new("md5", data, usedforsecurity=False).hexdigest()
         assert hasher.hexdigest() == expected
 
+    def test_create_fast_hasher_falls_back_when_blake2b_raises_value_error(
+        self,
+    ) -> None:
+        """Test MD5 fallback when blake2b rejects digest_size with ValueError."""
+
+        def openssl_blake2b_rejecting_digest_size(
+            *args: object, **kwargs: object
+        ) -> _Hash:
+            raise ValueError("digest_size is invalid for openssl_blake2b()")
+
+        data = b"test data"
+        with patch.object(hashlib, "blake2b", openssl_blake2b_rejecting_digest_size):
+            hasher = util.create_fast_hasher()
+            hasher.update(data)
+
+        expected = hashlib.new("md5", data, usedforsecurity=False).hexdigest()
+        assert hasher.hexdigest() == expected
+
     def test_create_fast_hasher_produces_consistent_results(self):
         """Test that create_fast_hasher produces consistent hash results."""
         h1 = util.create_fast_hasher()
