@@ -42,6 +42,7 @@ import {
   CalendarGridHeader,
   DateField,
   I18nProvider,
+  Key,
   RangeCalendarStateContext,
 } from "react-aria-components"
 
@@ -76,10 +77,11 @@ import {
   StyledDateField,
   StyledDateFieldContainer,
   StyledDateInputWrapper,
+  StyledDropdownListBox,
+  StyledDropdownListBoxItem,
+  StyledDropdownPopover,
   StyledErrorIconContainer,
   StyledQuickSelectLabel,
-  StyledQuickSelectListBox,
-  StyledQuickSelectListBoxItem,
   StyledQuickSelectRow,
   StyledQuickSelectTrigger,
   StyledRangeCalendarRoot,
@@ -87,6 +89,8 @@ import {
   StyledVisuallyHidden,
 } from "./styled-components"
 import { getSafeLocale } from "./weekInfo"
+
+const noop = (): void => {}
 
 interface RangeDateInputProps {
   startValue: CalendarDate | null
@@ -184,12 +188,19 @@ function RangeDateInput({
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   const quickSelectPresets = useMemo(() => getQuickSelectPresets(), [])
+  const quickSelectRef = useRef<HTMLDivElement>(null)
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const skipCloseCommitRef = useRef(false)
   // Guards against `handleFocus` reopening the popover during programmatic
   // focus restoration (see `focusLastFieldSegment` below).
   const isRestoringFocusRef = useRef(false)
+  // Tracks the anchor date when transitioning from a complete range to a new
+  // selection. RAC's controlled RangeCalendar doesn't natively support this
+  // transition — after calendarValue goes null, the next click fires onChange
+  // with start===end. This ref lets us detect "second click" and complete the
+  // range with the original anchor.
+  const pendingAnchorRef = useRef<CalendarDate | null>(null)
 
   // --- Two-layer state (matches SingleDateInput pattern) ---
   const [displayStart, setDisplayStart] = useState<CalendarDate | null>(
@@ -217,6 +228,17 @@ function RangeDateInput({
     setDisplayEnd(endValue)
   }
 
+  const activePreset = useMemo(() => {
+    if (!displayStart || !displayEnd) return null
+    return (
+      quickSelectPresets.find(
+        p => datesEqual(p.start, displayStart) && datesEqual(p.end, displayEnd)
+      ) ?? null
+    )
+  }, [displayStart, displayEnd, quickSelectPresets])
+
+  const activePresetLabel = activePreset?.label ?? "Select..."
+
   const displayStartRef = useRef(displayStart)
   displayStartRef.current = displayStart
   const displayEndRef = useRef(displayEnd)
@@ -230,6 +252,7 @@ function RangeDateInput({
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
+      pendingAnchorRef.current = null
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
@@ -292,7 +315,10 @@ function RangeDateInput({
     floatingSetFn: refs.setFloating,
     referenceSetFn: refs.setReference,
     restoreFocusFn: focusLastFieldSegment,
-    excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
+    excludeSelectors: [
+      '[data-testid="stDateInputHeaderPickerPopover"]',
+      '[data-testid="stDateInputQuickSelectPopover"]',
+    ],
     excludeEscape: true,
   })
 
@@ -305,6 +331,23 @@ function RangeDateInput({
   )
 
   const [isQuickSelectOpen, setIsQuickSelectOpen] = useState(false)
+  const quickSelectTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const {
+    setFloatingRef: setQuickSelectFloatingRef,
+    setReferenceRef: setQuickSelectReferenceRef,
+  } = useOverlayDismissal({
+    isOpen: isQuickSelectOpen,
+    onClose: () => setIsQuickSelectOpen(false),
+    floatingSetFn: noop,
+  })
+
+  const setQuickSelectTrigger = useCallback(
+    (node: HTMLButtonElement | null): void => {
+      quickSelectTriggerRef.current = node
+      setQuickSelectReferenceRef(node)
+    },
+    [setQuickSelectReferenceRef]
+  )
 
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return
@@ -354,9 +397,56 @@ function RangeDateInput({
     [displayStart, displayEnd]
   )
 
-  // Second click: RangeCalendar fires with complete {start, end}
+  // RangeCalendar fires onChange when a range is completed. When a controlled
+  // value is already a complete range and the user clicks a single date, RAC
+  // fires onChange with start === end (same-day range) — treat this as the
+  // first click of a new selection (anchor) rather than a completed range.
+  //
+  // Flow for "click new date within existing complete range":
+  // 1. First click: displayEnd is set → enter anchor mode, store anchor in
+  //    pendingAnchorRef, commit [start] (partial range).
+  // 2. Second click: displayEnd is null, pendingAnchorRef is set → the
+  //    same-day range.start is the end date. Complete the range using
+  //    pendingAnchorRef as start.
   const handleCalendarChange = useCallback(
     (range: { start: CalendarDate; end: CalendarDate }): void => {
+      // Guard: once we've committed and initiated a close, ignore any
+      // additional onChange fires from RAC's internal state reconciliation.
+      if (skipCloseCommitRef.current) return
+
+      if (datesEqual(range.start, range.end)) {
+        if (displayEndRef.current) {
+          // First click while a complete range is shown — enter anchor mode
+          pendingAnchorRef.current = range.start
+          setDisplayStart(range.start)
+          setDisplayEnd(null)
+          onChange([range.start])
+          return
+        }
+        if (pendingAnchorRef.current) {
+          if (datesEqual(range.start, pendingAnchorRef.current)) {
+            // Same date as the anchor — duplicate onChange from RAC. Ignore.
+            return
+          }
+          // Second click — complete the range using the pending anchor
+          const anchor = pendingAnchorRef.current
+          pendingAnchorRef.current = null
+          const [start, end] =
+            anchor.compare(range.start) <= 0
+              ? [anchor, range.start]
+              : [range.start, anchor]
+          setDisplayStart(start)
+          setDisplayEnd(end)
+          onChange([start, end])
+          skipCloseCommitRef.current = true
+          setIsOpenState(false)
+          focusLastFieldSegment()
+          return
+        }
+      }
+      // Normal completed range (two distinct dates, or single-day when not
+      // in pending-anchor flow)
+      pendingAnchorRef.current = null
       setDisplayStart(range.start)
       setDisplayEnd(range.end)
       onChange([range.start, range.end])
@@ -399,9 +489,11 @@ function RangeDateInput({
     [focusLastFieldSegment]
   )
 
-  // First click of a new range selection
+  // First click of a new range selection (fired by AnchorDateWatcher when
+  // starting from empty/partial state — no prior complete range)
   const handleAnchorSelect = useCallback(
     (date: CalendarDate): void => {
+      pendingAnchorRef.current = date
       setDisplayStart(date)
       setDisplayEnd(null)
       onChange([date])
@@ -419,14 +511,29 @@ function RangeDateInput({
     (presetId: string): void => {
       const preset = quickSelectPresets.find(p => p.id === presetId)
       if (!preset) return
+      pendingAnchorRef.current = null
       setDisplayStart(preset.start)
       setDisplayEnd(preset.end)
       onChange([preset.start, preset.end])
-      skipCloseCommitRef.current = true
-      setIsOpenState(false)
       setIsQuickSelectOpen(false)
     },
     [quickSelectPresets, onChange]
+  )
+
+  const handleQuickSelectSelection = useCallback(
+    (keys: "all" | Set<Key>): void => {
+      if (keys === "all") return
+      const key = [...keys][0]
+      if (key) {
+        handleQuickSelect(String(key))
+      } else {
+        setDisplayStart(null)
+        setDisplayEnd(null)
+        onChange([])
+        setIsQuickSelectOpen(false)
+      }
+    },
+    [onChange, handleQuickSelect]
   )
 
   const makeHandlePaste = useCallback(
@@ -628,40 +735,50 @@ function RangeDateInput({
               </StyledRangeCalendarRoot>
             </I18nProvider>
             {enableQuickSelect && (
-              <StyledQuickSelectRow>
-                <StyledQuickSelectLabel>
-                  Choose a date range
-                </StyledQuickSelectLabel>
+              <StyledQuickSelectRow
+                ref={quickSelectRef}
+                data-testid="stDateInputQuickSelect"
+              >
+                <StyledQuickSelectLabel>Date range</StyledQuickSelectLabel>
                 <StyledQuickSelectTrigger
+                  ref={setQuickSelectTrigger}
+                  $isPlaceholder={!activePreset}
                   aria-label="Quick select a date range"
                   aria-expanded={isQuickSelectOpen}
                   aria-haspopup="listbox"
                   onPress={() => setIsQuickSelectOpen(prev => !prev)}
                 >
-                  Select...
+                  {activePresetLabel}
                   <StyledCalendarHeaderSelectChevron>
                     <KeyboardArrowDown size={theme.iconSizes.base} />
                   </StyledCalendarHeaderSelectChevron>
                 </StyledQuickSelectTrigger>
-                {isQuickSelectOpen && (
-                  <StyledQuickSelectListBox
+                <StyledDropdownPopover
+                  ref={setQuickSelectFloatingRef}
+                  triggerRef={quickSelectTriggerRef}
+                  isOpen={isQuickSelectOpen}
+                  onOpenChange={setIsQuickSelectOpen}
+                  isNonModal
+                  placement="bottom end"
+                  data-testid="stDateInputQuickSelectPopover"
+                >
+                  <StyledDropdownListBox
                     aria-label="Quick select a date range"
                     selectionMode="single"
-                    onSelectionChange={keys => {
-                      const key = [...keys][0]
-                      if (key) handleQuickSelect(String(key))
-                    }}
+                    selectedKeys={activePreset ? [activePreset.id] : []}
+                    onSelectionChange={handleQuickSelectSelection}
+                    autoFocus
                   >
                     {quickSelectPresets.map(preset => (
-                      <StyledQuickSelectListBoxItem
+                      <StyledDropdownListBoxItem
                         key={preset.id}
                         id={preset.id}
                       >
                         {preset.label}
-                      </StyledQuickSelectListBoxItem>
+                      </StyledDropdownListBoxItem>
                     ))}
-                  </StyledQuickSelectListBox>
-                )}
+                  </StyledDropdownListBox>
+                </StyledDropdownPopover>
               </StyledQuickSelectRow>
             )}
           </StyledCalendarPopover>

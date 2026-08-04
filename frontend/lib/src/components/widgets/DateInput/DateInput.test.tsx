@@ -868,6 +868,226 @@ describe("DateInput widget", () => {
         })
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
       })
+
+      it("selecting a preset keeps the calendar popover open", async () => {
+        const user = userEvent.setup()
+        const today = moment().format("YYYY-MM-DD")
+        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+        })
+
+        render(<DateInput {...props} />)
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+
+        const quickSelect = await screen.findByRole("button", {
+          name: /quick select/i,
+        })
+        await user.click(quickSelect)
+        const pastWeekOption = await screen.findByRole("option", {
+          name: "Past Week",
+        })
+        await user.click(pastWeekOption)
+
+        // Calendar should still be visible after selecting a preset
+        expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+      })
+
+      it("re-clicking the active preset deselects it and clears the range", async () => {
+        const user = userEvent.setup()
+        const today = moment().format("YYYY-MM-DD")
+        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+        })
+
+        render(<DateInput {...props} />)
+        vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+
+        // Select "Past Week"
+        const quickSelect = await screen.findByRole("button", {
+          name: /quick select/i,
+        })
+        await user.click(quickSelect)
+        const pastWeekOption = await screen.findByRole("option", {
+          name: "Past Week",
+        })
+        await user.click(pastWeekOption)
+
+        // Trigger should now show "Past Week"
+        expect(quickSelect).toHaveTextContent("Past Week")
+
+        // Re-open and click "Past Week" again to deselect
+        await user.click(quickSelect)
+        const pastWeekAgain = await screen.findByRole("option", {
+          name: "Past Week",
+        })
+        await user.click(pastWeekAgain)
+
+        // Should have cleared the range (empty array committed)
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+          expect.anything(),
+          [],
+          expect.objectContaining({ fromUi: true }),
+          undefined
+        )
+      })
+
+      it("trigger displays preset label when range matches, 'Select...' otherwise", async () => {
+        const user = userEvent.setup()
+        const today = moment().format("YYYY-MM-DD")
+        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+        })
+
+        render(<DateInput {...props} />)
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+
+        // Initially should show "Select..." since default range doesn't match a preset
+        const quickSelect = await screen.findByRole("button", {
+          name: /quick select/i,
+        })
+        expect(quickSelect).toHaveTextContent("Select...")
+
+        // Select "Past Week" - trigger should show the preset label
+        await user.click(quickSelect)
+        const pastWeekOption = await screen.findByRole("option", {
+          name: "Past Week",
+        })
+        await user.click(pastWeekOption)
+        expect(quickSelect).toHaveTextContent("Past Week")
+      })
+
+      it("Escape in the quick-select dropdown closes only the dropdown, not the calendar", async () => {
+        const user = userEvent.setup()
+        const today = moment().format("YYYY-MM-DD")
+        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+        })
+
+        render(<DateInput {...props} />)
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+
+        // Open the quick select dropdown
+        const quickSelect = await screen.findByRole("button", {
+          name: /quick select/i,
+        })
+        await user.click(quickSelect)
+        expect(
+          screen.getByRole("listbox", { name: /quick select/i })
+        ).toBeInTheDocument()
+
+        // Press Escape — should close only the dropdown
+        await user.keyboard("{Escape}")
+        await waitFor(() => {
+          expect(
+            screen.queryByRole("listbox", { name: /quick select/i })
+          ).not.toBeInTheDocument()
+        })
+
+        // Calendar should still be visible
+        expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+      })
+
+      it("clicking outside the quick-select dropdown closes it", async () => {
+        const user = userEvent.setup()
+        const today = moment().format("YYYY-MM-DD")
+        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+        })
+
+        render(<DateInput {...props} />)
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+
+        // Open the quick select dropdown
+        const quickSelect = await screen.findByRole("button", {
+          name: /quick select/i,
+        })
+        await user.click(quickSelect)
+        expect(
+          screen.getByRole("listbox", { name: /quick select/i })
+        ).toBeInTheDocument()
+
+        // Click on the calendar grid (outside the quick-select row)
+        const calendarGrid = screen.getByRole("grid")
+        await user.click(calendarGrid)
+
+        // Dropdown should close
+        await waitFor(() => {
+          expect(
+            screen.queryByRole("listbox", { name: /quick select/i })
+          ).not.toBeInTheDocument()
+        })
+      })
+
+      it("dropdown opens with all 6 preset options", async () => {
+        const user = userEvent.setup()
+        const today = moment().format("YYYY-MM-DD")
+        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+        })
+
+        render(<DateInput {...props} />)
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+
+        // Open the quick select dropdown
+        const quickSelect = await screen.findByRole("button", {
+          name: /quick select/i,
+        })
+        await user.click(quickSelect)
+
+        // All 6 presets should be listed
+        const options = screen.getAllByRole("option")
+        expect(options).toHaveLength(6)
+        expect(options[0]).toHaveTextContent("Past Week")
+        expect(options[1]).toHaveTextContent("Past Month")
+        expect(options[2]).toHaveTextContent("Past 3 Months")
+        expect(options[3]).toHaveTextContent("Past 6 Months")
+        expect(options[4]).toHaveTextContent("Past Year")
+        expect(options[5]).toHaveTextContent("Past 2 Years")
+      })
     })
   })
 
@@ -1064,6 +1284,55 @@ describe("DateInput widget", () => {
           undefined
         )
       })
+    })
+
+    it("clicking a new date in an existing complete range starts a new selection", async () => {
+      const user = userEvent.setup()
+      vi.setSystemTime(new Date(2019, 6, 15))
+
+      const props = getProps({
+        isRange: true,
+        default: ["2019-07-06", "2019-07-08"],
+        min: "2019-01-01",
+        max: "2019-12-31",
+      })
+      render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      const { year } = getRangeDateSegments(region, "start")
+      await user.click(year)
+
+      // Click July 10 — should start a new range (anchor only)
+      await user.click(
+        await screen.findByLabelText("Wednesday, July 10, 2019")
+      )
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element,
+          ["2019-07-10"],
+          { fromUi: true },
+          undefined
+        )
+      })
+
+      // Calendar should still be open
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+
+      // Click July 12 — should complete the range
+      await user.click(await screen.findByLabelText("Friday, July 12, 2019"))
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element,
+          ["2019-07-10", "2019-07-12"],
+          { fromUi: true },
+          undefined
+        )
+      })
+
+      vi.useRealTimers()
     })
 
     it("commits an empty array when the clear button is clicked", async () => {

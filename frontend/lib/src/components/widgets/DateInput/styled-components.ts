@@ -290,81 +290,88 @@ export const StyledCalendarHeaderSelect = styled(Select)({
 
 export const StyledQuickSelectRow = styled.div(({ theme }) => ({
   position: "relative",
-  paddingTop: theme.spacing.xs,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingTop: theme.spacing.twoXS,
+  marginTop: theme.spacing.sm,
+  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))
 
 export const StyledQuickSelectLabel = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
-  color: theme.colors.fadedText60,
-  paddingBottom: theme.spacing.twoXS,
+  color: theme.colors.bodyText,
 }))
 
-export const StyledQuickSelectTrigger = styled(Button)(({ theme }) => ({
+export const StyledQuickSelectTrigger = styled(Button, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{ $isPlaceholder?: boolean }>(({ theme, $isPlaceholder }) => ({
   appearance: "none",
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
-  width: "100%",
-  height: theme.sizes.minElementHeight,
-  borderWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
-  borderColor: getBorderColor(theme.colors, false),
-  borderRadius: theme.radii.default,
-  backgroundColor: theme.colors.secondaryBg,
-  color: theme.colors.bodyText,
+  gap: theme.spacing.threeXS,
+  border: "none",
+  borderRadius: theme.radii.sm,
+  backgroundColor: "transparent",
+  color: $isPlaceholder ? theme.colors.fadedText60 : theme.colors.bodyText,
   fontSize: theme.fontSizes.sm,
-  paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.sm,
+  fontWeight: theme.fontWeights.normal,
   cursor: "pointer",
+  outline: "none",
+  padding: `${theme.spacing.twoXS} ${theme.spacing.twoXS}`,
   "&[data-hovered]": {
-    borderColor: getBorderColor(theme.colors, true),
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+  "&[data-pressed]": {
+    backgroundColor: theme.colors.darkenedBgMix25,
   },
   "&[data-focus-visible]": {
-    borderColor: getBorderColor(theme.colors, true),
-    outline: "none",
+    boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
   },
 }))
 
-/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
-export const StyledQuickSelectListBox = styled(ListBox)(({ theme }) => ({
+// ---------------------------------------------------------------------------
+// Shared dropdown components (used by both quick-select and header pickers)
+// ---------------------------------------------------------------------------
+
+/** Popover shell shared by quick-select and calendar header pickers. */
+export const StyledDropdownPopover = styled(Popover)(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  // Same sidebar swap as StyledCalendarPopover — use "main panel" white.
+  backgroundColor: theme.inSidebar
+    ? theme.colors.secondaryBg
+    : theme.colors.bgColor,
+  zIndex: getOverlayZIndex(theme),
+}))
+
+/** ListBox shared by quick-select and calendar header pickers. */
+export const StyledDropdownListBox = styled(ListBox)(({ theme }) => ({
   outline: "none",
   maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
   overflowY: "auto",
   overflowX: "hidden",
   padding: theme.spacing.threeXS,
   listStyle: "none",
-  position: "absolute",
-  left: 0,
-  right: 0,
-  marginTop: theme.spacing.twoXS,
-  borderWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
-  borderColor: getBorderColor(theme.colors, false),
-  borderRadius: theme.radii.default,
-  backgroundColor: theme.colors.bgColor,
-  boxShadow: `0 4px 16px rgba(0, 0, 0, 0.12)`,
-  zIndex: 1,
+  margin: theme.spacing.none,
 }))
-/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
-export const StyledQuickSelectListBoxItem = styled(ListBoxItem)(
-  ({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    borderRadius: theme.radii.sm,
-    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
-    cursor: "pointer",
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-    outline: "none",
-    "&[data-hovered], &[data-focused]": {
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
-    "&[data-selected]": {
-      backgroundColor: theme.colors.darkenedBgMix25,
-    },
-  })
-)
+/** ListBoxItem shared by quick-select and calendar header pickers. */
+export const StyledDropdownListBoxItem = styled(ListBoxItem)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  borderRadius: theme.radii.sm,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  cursor: "pointer",
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.bodyText,
+  outline: "none",
+  "&[data-hovered], &[data-focused]": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+  "&[data-selected]": {
+    backgroundColor: theme.colors.darkenedBgMix25,
+  },
+}))
 
 export const StyledCalendarHeaderSelectTrigger = styled(Button)(
   ({ theme }) => ({
@@ -398,50 +405,6 @@ export const StyledCalendarHeaderSelectChevron = styled.div(({ theme }) => ({
   display: "flex",
   color: theme.colors.fadedText60,
 }))
-
-/** Uses RAC's own positioning (not Floating UI) to avoid nesting two
- * positioning engines inside the outer calendar popover. */
-export const StyledCalendarHeaderSelectPopover = styled(Popover)(
-  ({ theme }) => ({
-    ...getPopoverContainerStyle(theme),
-    // Same sidebar swap as StyledCalendarPopover — use "main panel" white.
-    backgroundColor: theme.inSidebar
-      ? theme.colors.secondaryBg
-      : theme.colors.bgColor,
-    zIndex: getOverlayZIndex(theme),
-  })
-)
-
-export const StyledCalendarHeaderSelectListBox = styled(ListBox)(
-  ({ theme }) => ({
-    outline: "none",
-    maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-    overflowY: "auto",
-    overflowX: "hidden",
-    padding: theme.spacing.threeXS,
-    listStyle: "none",
-    margin: theme.spacing.none,
-  })
-)
-
-export const StyledCalendarHeaderSelectListBoxItem = styled(ListBoxItem)(
-  ({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    borderRadius: theme.radii.sm,
-    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
-    cursor: "pointer",
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-    outline: "none",
-    "&[data-hovered], &[data-focused]": {
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
-    "&[data-selected]": {
-      backgroundColor: theme.colors.darkenedBgMix25,
-    },
-  })
-)
 
 export const StyledCalendarHeadingFallback = styled.div(visuallyHiddenStyle)
 
@@ -504,6 +467,7 @@ export const StyledCalendarCell = styled(CalendarCell, {
   // create the tint band (::before) and primary rounded rect (::after).
   const rangeEndpointBase = {
     width: "auto",
+    minWidth: cellSize,
     marginLeft: 0,
     marginRight: 0,
     backgroundColor: "transparent",
@@ -548,6 +512,7 @@ export const StyledCalendarCell = styled(CalendarCell, {
       "&[data-selected]:not([data-selection-start]):not([data-selection-end])":
         {
           width: "auto",
+          minWidth: cellSize,
           marginLeft: 0,
           marginRight: 0,
           borderRadius: 0,
