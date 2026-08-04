@@ -25,8 +25,14 @@ from typing_extensions import assert_type
 # Note: because the "ignore" overload has no default value, omitting on_select
 # resolves to the "rerun" overload and therefore returns EChartsState.
 if TYPE_CHECKING:
+    from typing import Any
+
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.echarts_chart import EChartsMixin, EChartsState
+    from streamlit.elements.echarts_chart import (
+        EChartsMixin,
+        EChartsSelectionState,
+        EChartsState,
+    )
 
     echarts_chart = EChartsMixin().echarts_chart
 
@@ -53,6 +59,21 @@ if TYPE_CHECKING:
     # =====================================================================
 
     assert_type(echarts_chart(options, on_select="rerun"), EChartsState)
+
+    # =====================================================================
+    # State member access: attribute and bracket notation are both typed
+    # (mirrors dataframe/plotly ReadOnlyAttributeDictionary state).
+    # =====================================================================
+
+    echarts_state = echarts_chart(options, on_select="rerun")
+    assert_type(echarts_state.selection, EChartsSelectionState)
+    assert_type(echarts_state["selection"], EChartsSelectionState)
+    assert_type(echarts_state.selection.points, list[dict[str, Any]])
+    assert_type(echarts_state["selection"]["points"], list[dict[str, Any]])
+    assert_type(echarts_state.selection.point_indices, list[int])
+    assert_type(echarts_state["selection"]["point_indices"], list[int])
+    assert_type(echarts_state.selection.box, list[dict[str, Any]])
+    assert_type(echarts_state.selection.lasso, list[dict[str, Any]])
 
     # =====================================================================
     # Return type tests with callback function -> EChartsState

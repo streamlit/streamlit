@@ -26,12 +26,9 @@ from typing import (
     Literal,
     Protocol,
     TypeAlias,
-    TypedDict,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util
 from streamlit.elements.lib.form_utils import current_form_id
@@ -49,7 +46,7 @@ from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -79,7 +76,7 @@ class EChartsCompatible(Protocol):
 EChartsOptions: TypeAlias = Mapping[str, Any] | str | EChartsCompatible
 
 
-class EChartsSelectionState(TypedDict, total=False):
+class EChartsSelectionState(ReadOnlyAttributeDictionary):
     """
     The schema for the ECharts chart selection state.
 
@@ -124,13 +121,31 @@ class EChartsSelectionState(TypedDict, total=False):
 
     """
 
-    points: Required[list[dict[str, Any]]]
-    point_indices: Required[list[int]]
-    box: Required[list[dict[str, Any]]]
-    lasso: Required[list[dict[str, Any]]]
+    points: list[dict[str, Any]]
+    point_indices: list[int]
+    box: list[dict[str, Any]]
+    lasso: list[dict[str, Any]]
+
+    @overload
+    def __getitem__(self, key: Literal["points"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["point_indices"]) -> list[int]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["box"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["lasso"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
-class EChartsState(TypedDict, total=False):
+class EChartsState(ReadOnlyAttributeDictionary):
     """
     The schema for the ECharts chart event state.
 
@@ -150,7 +165,29 @@ class EChartsState(TypedDict, total=False):
 
     """
 
-    selection: Required[EChartsSelectionState]
+    selection: EChartsSelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to return EChartsSelectionState. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> EChartsSelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, EChartsSelectionState):
+                item = EChartsSelectionState(item)
+                # Cache via dict.__setitem__ — ReadOnlyAttributeDictionary
+                # blocks normal mutation, but storing the wrapped instance
+                # keeps identity stable across accesses.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -160,7 +197,7 @@ class EChartsChartSelectionSerde:
     """
 
     def deserialize(self, ui_value: str | None) -> EChartsState:
-        empty_selection_state: EChartsState = {
+        empty_selection_state: dict[str, Any] = {
             "selection": {
                 "points": [],
                 "point_indices": [],
@@ -169,16 +206,19 @@ class EChartsChartSelectionSerde:
             },
         }
 
-        selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast("EChartsState", AttributeDictionary(json.loads(ui_value)))
+        selection_state: Any = (
+            empty_selection_state if ui_value is None else json.loads(ui_value)
         )
 
         if "selection" not in selection_state:  # pragma: no cover - defensive
-            selection_state = empty_selection_state  # type: ignore[unreachable]
+            selection_state = empty_selection_state
 
-        return cast("EChartsState", AttributeDictionary(selection_state))
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        selection_state["selection"] = EChartsSelectionState(
+            selection_state["selection"]
+        )
+        return EChartsState(selection_state)
 
     def serialize(self, selection_state: EChartsState) -> str:
         # The selection state is already JSON-clean (produced by the frontend),

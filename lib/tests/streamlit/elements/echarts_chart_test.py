@@ -25,6 +25,8 @@ import streamlit as st
 from streamlit.elements.echarts_chart import (
     EChartsChartSelectionSerde,
     EChartsMixin,
+    EChartsSelectionState,
+    EChartsState,
     _normalize_options,
     _resolve_content_height,
     _resolve_content_width,
@@ -418,8 +420,29 @@ def test_serde_round_trip() -> None:
     restored = serde.deserialize(payload)
     assert restored["selection"]["point_indices"] == [3]
     assert restored["selection"]["points"][0]["data_index"] == 3
-    # Attribute-style access is also supported (via AttributeDictionary).
+    # Attribute-style access is also supported (via ReadOnlyAttributeDictionary).
     assert restored.selection.point_indices == [3]
+
+
+def test_deserialize_returns_read_only_state() -> None:
+    """The returned state mirrors dataframe/plotly: typed, attribute-accessible,
+    and read-only ``ReadOnlyAttributeDictionary`` subclasses.
+    """
+    serde = EChartsChartSelectionSerde()
+    state = serde.deserialize(None)
+
+    # The event state and its nested selection are the dedicated state classes.
+    assert isinstance(state, EChartsState)
+    assert isinstance(state["selection"], EChartsSelectionState)
+    # Accessing "selection" repeatedly returns the same cached instance.
+    assert state["selection"] is state.selection
+
+    # Widget state is read-only; mutations must raise instead of silently
+    # editing a value that never round-trips to the frontend.
+    with pytest.raises(TypeError):
+        state["selection"] = {}  # type: ignore[index]
+    with pytest.raises(TypeError):
+        state.selection["points"] = [{"data_index": 0}]  # type: ignore[index]
 
 
 def test_resolve_content_width_passthrough() -> None:
