@@ -66,41 +66,50 @@ value = st_keyup("Search", debounce=500)
 
 We considered several parameter names for this feature:
 
-#### Option 1: `debounce` (bool or integer in milliseconds) - PREFERRED
+#### Option 1: `debounce` (bool, integer in milliseconds, or duration string) - PREFERRED
 
 ```python
-st.text_input("Search", debounce=True)  # Rerun with sensible default (300ms)
-st.text_input("Search", debounce=300)  # Rerun after 300ms of inactivity
-st.text_input("Name")  # Default: rerun on blur/enter only
+st.text_input("Search", debounce=True)     # Rerun with sensible default (300ms)
+st.text_input("Search", debounce=300)      # Rerun after 300ms of inactivity
+st.text_input("Search", debounce="0.5s")   # Same, using a duration string
+st.text_input("Search", debounce="0ms")    # Rerun on every keystroke (no debounce)
+st.text_input("Name")                        # Default: rerun on blur/enter only
 ```
+
+The parameter accepts a `bool` (on/off with a sensible default), an `int` (delay in milliseconds),
+or a duration string. Duration strings reuse the exact same parsing as `ttl` in
+`st.cache_data`/`st.cache_resource` (see `streamlit.time_util.time_to_seconds`, backed by
+`pandas.Timedelta`), so `"300ms"`, `"0.5s"`, and `"1s"` are all valid and behave consistently with
+the rest of the API.
 
 **Pros:**
 - Familiar to web developers (standard term in JavaScript/frontend)
-- Simple `debounce=True` for most use cases, custom ms when needed
-- Mirrors `streamlit-keyup` API for easy migration
+- Simple `debounce=True` for most use cases, an explicit ms int or duration string when needed
+- Mirrors `streamlit-keyup` API (which uses an integer `debounce`) for easy migration
+- Duration strings make the unit explicit (`"300ms"` reads unambiguously, unlike a bare `300`) and
+  are consistent with `ttl` in `st.cache_data`/`st.cache_resource`, so users already know the format
 - Allows fine-grained control over debounce timing when needed
 
 **Cons:**
 - Term "debounce" may be unfamiliar to data scientists. This is a deliberate trade-off against
   API Principle 8 (semantic names over geeky names), accepted here for migration parity with
   `streamlit-keyup`, which already popularized `debounce` among the exact users we are targeting.
-- Requires understanding milliseconds
-- The `int | bool` type overloads a single parameter as both an on/off switch (`True`/`False`) and
-  a numeric delay, which is in tension with API Principle 16 (prefer enums over booleans). Accepted
-  because it mirrors the existing `st.json(expanded=...)` and `st.navigation(expanded=...)` APIs,
-  which already use the `bool | int` "flag or number" shape — so the pattern is consistent with the
+- The `int | str | bool` type overloads a single parameter as both an on/off switch (`True`/`False`)
+  and a delay (numeric ms or duration string), which is in tension with API Principle 16 (prefer
+  enums over booleans). Accepted because it mirrors the existing `st.json(expanded=...)` and
+  `st.navigation(expanded=...)` APIs (the `bool | int` "flag or number" shape) and the `ttl`
+  parameter (the duration-string shape) — so every part of the pattern is consistent with the
   current API surface rather than novel.
-- **`debounce=0` vs `debounce=False` collision:** because `0 == False` in Python, the two ends of
-  the range look identical to a casual reader even though they mean the *opposite* thing — `False`
-  turns live updates off, while `0` is the *most* aggressive setting (rerun on every keystroke).
-  This is a discoverability footgun (Principle 35): a user writing `debounce=0` expecting "off" gets
-  a rerun per keystroke. Note this differs from the cited `st.json(expanded=...)` /
-  `st.navigation(expanded=...)` precedent, where `0` ≈ `False` (both collapsed) so the collision is
-  harmless. We keep `debounce=0` (rather than disallowing it) because it is a legitimate
-  "every keystroke" request, but mitigate the footgun by (a) branching on `isinstance(debounce, bool)`
-  first so the two are never conflated internally (see Implementation Notes) and (b) attaching the
-  performance warning below to `debounce=0`. The docstring should steer users toward `False` for
-  "off" and a positive delay (or `True`) for live updates.
+- **The `debounce=0` vs `debounce=False` footgun is resolved by using duration strings for the
+  "every keystroke" case.** Because `0 == False` in Python, a bare integer `0` is ambiguous with
+  `False` even though they mean the *opposite* thing (`False` = off; every-keystroke = the *most*
+  aggressive setting). Rather than mitigate this at runtime, we remove it: a bare integer `debounce=0`
+  (and any negative integer) raises a `StreamlitAPIException` that steers the user to the two
+  unambiguous spellings — `False` to turn live updates off, or the duration string `"0ms"` to rerun
+  on every keystroke. This keeps `False` as the single, obvious "off" value (Principle 35) while
+  still supporting the legitimate every-keystroke request via an explicit, self-documenting string.
+  The one migration caveat: `streamlit-keyup` users who wrote `debounce=0` must switch to
+  `debounce="0ms"`; the exception message makes this an easy, guided fix (Principle 23).
 
 #### Option 2: Dedicated on/off parameter (`keyup`/`live_update` boolean, or `update_on` string enum)
 
@@ -159,14 +168,14 @@ def text_input(
     value: str | SupportsStr | None = "",
     ...,
     *,
-    debounce: int | bool = False,  # New parameter
+    debounce: int | str | bool = False,  # New parameter
     ...,
 ) -> str | None:
 ```
 
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
-| `debounce` | `int \| bool` | `False` | Debounce delay for live updates. When `True`, uses a sensible default (300ms). When an integer, specifies the delay in milliseconds. When `False` (default), reruns occur only on blur or Enter. |
+| `debounce` | `int \| str \| bool` | `False` | Debounce delay for live updates. When `True`, uses a sensible default (300ms). When an integer, specifies the delay in milliseconds. When a duration string (e.g. `"300ms"`, `"0.5s"`), specifies the delay using the same format as `ttl` in `st.cache_data`; `"0ms"` reruns on every keystroke. When `False` (default), reruns occur only on blur or Enter. A bare integer `0` or a negative delay raises a `StreamlitAPIException`. |
 
 ### Behavior
 
@@ -174,15 +183,18 @@ def text_input(
 | ---------------- | -------- |
 | `False` (default) | Rerun on blur or Enter (current behavior) |
 | `True` | Rerun after 300ms of typing inactivity (sensible default) |
-| `0` | Rerun on every keystroke (no debounce). **Warning:** Use sparingly - can cause excessive reruns with expensive app logic. |
-| `> 0` | Rerun after N milliseconds of typing inactivity |
-| `< 0` | Raises `StreamlitAPIException` - negative values are invalid |
+| `int > 0` | Rerun after N milliseconds of typing inactivity |
+| `str` (e.g. `"300ms"`, `"0.5s"`, `"1s"`) | Rerun after the given duration of typing inactivity (same format as `ttl`) |
+| `"0ms"` (or any zero-length duration string) | Rerun on every keystroke (no debounce). **Warning:** Use sparingly - can cause excessive reruns with expensive app logic. |
+| `0` (bare integer) | Raises `StreamlitAPIException` - ambiguous with `False` (`0 == False`); use `False` to turn off or `"0ms"` for every keystroke |
+| `int < 0` or a negative duration string | Raises `StreamlitAPIException` - negative delays are invalid |
+| invalid string (e.g. `"soon"`) | Raises `StreamlitAPIException` (`StreamlitBadTimeStringError`) - same validation as `ttl` |
 
 **Rerun frequency (relation to API Principle 34):** Live updates intentionally relax Principle 34
 ("one rerun per interaction") — a single typing session can trigger multiple reruns. This exception
 is acceptable because it is the explicit purpose of the feature and the rerun rate is *bounded* by
 the debounce delay: reruns fire at most once per period of typing inactivity (e.g., `debounce=300`
-triggers at most roughly once per 300ms pause, not once per keystroke). `debounce=0` is the only
+triggers at most roughly once per 300ms pause, not once per keystroke). `debounce="0ms"` is the only
 value that removes this bound (one rerun per keystroke) and therefore carries the performance
 warning above. The default (`False`) fully preserves one-rerun-per-interaction behavior, so existing
 apps are unaffected.
@@ -193,22 +205,36 @@ apps are unaffected.
 - Because Python's `bool` is a subclass of `int` (`False == 0` and `True == 1`), the backend must
   branch on `isinstance(debounce, bool)` *before* treating `debounce` as an integer — the same
   pattern already used by `st.json(expanded=...)` and `st.navigation(expanded=...)`. Resolve the
-  `bool` case first (`True` → 300ms default, `False` → blur/Enter-only), then treat the remaining
-  values as integers (`0` → every keystroke, `> 0` → N ms, `< 0` → `StreamlitAPIException`). A naive
-  numeric or truthiness check (e.g. `if debounce:` or `if debounce > 0:`) would incorrectly treat
-  `True` as `1ms` and `False` as `0` (every keystroke) — the two most common values.
+  cases in this order:
+  1. `isinstance(debounce, bool)` → `True` = 300ms default, `False` = blur/Enter-only (off).
+  2. `isinstance(debounce, str)` → parse with the same helper as `ttl`
+     (`streamlit.time_util.time_to_seconds`, backed by `pandas.Timedelta`) and convert to
+     milliseconds. A zero-length duration (`"0ms"`) means every keystroke; a negative duration
+     raises `StreamlitAPIException`; an unparseable string raises `StreamlitBadTimeStringError`
+     (a `StreamlitAPIException` subclass), reusing the existing `ttl` validation and error message.
+  3. Remaining `int` values → `> 0` = N ms; `0` and `< 0` raise `StreamlitAPIException` (the bare-`0`
+     message steers the user to `False` for "off" or `"0ms"` for every keystroke).
+
+  A naive numeric or truthiness check (e.g. `if debounce:` or `if debounce > 0:`) would incorrectly
+  treat `True` as `1ms` and `False` as `0` — the two most common values — so the `bool` branch must
+  come first. After resolution the backend sends the frontend a single value: either "disabled" or a
+  non-negative millisecond delay (with `0` meaning every keystroke).
 
 **Frontend:**
+- The frontend receives an already-resolved numeric delay (or a "disabled" signal); all string/bool
+  parsing happens on the backend, so the frontend logic is unchanged regardless of how the user
+  spelled `debounce`.
 - When live updates are enabled (`debounce` is not `False`), use a timer that resets on each
-  keystroke. The default `debounce=False` starts no timer and keeps the current blur/Enter-only
-  behavior.
-- After the debounce period with no input, call `commitWidgetValue()` to trigger rerun (with
-  `debounce=0` the timer is effectively zero-length, so it commits on every keystroke)
+  keystroke. The disabled signal starts no timer and keeps the current blur/Enter-only behavior.
+- After the debounce period with no input, call `commitWidgetValue()` to trigger rerun (with a
+  resolved delay of `0` — i.e. `"0ms"` — the timer is effectively zero-length, so it commits on every
+  keystroke)
 
 **Recommended usage:**
 - `debounce=True` is the simplest option for most live search/validation use cases
-- `debounce=300` (or similar) when you need specific timing control
-- `debounce=0` should be used sparingly - triggers a rerun on every keystroke which can
+- `debounce=300` or `debounce="0.5s"` when you need specific timing control (bare ints are
+  milliseconds; duration strings make the unit explicit)
+- `debounce="0ms"` should be used sparingly - triggers a rerun on every keystroke which can
   overload the server for apps with expensive computations (ML inference, large data loads)
 
 ### Examples
@@ -239,7 +265,8 @@ else:
 import streamlit as st
 import re
 
-email = st.text_input("Email address", debounce=500)
+# debounce accepts a duration string (like ttl) or an int in milliseconds (debounce=500).
+email = st.text_input("Email address", debounce="500ms")
 
 if email:
     if re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
@@ -276,10 +303,10 @@ if email:
 
 5. **Password inputs**: `debounce` works with `type="password"` - no special handling needed.
 
-6. **Very fast typing**: For `debounce=True` or `debounce > 0`, the debounce timer resets on each
-   keystroke, so only the final value (after the user pauses) triggers a rerun. `debounce=0` is the
-   exception: there is no debounce window, so every keystroke triggers a rerun (see the behavior
-   table and its performance warning).
+6. **Very fast typing**: For `debounce=True`, a positive `int`, or a positive duration string, the
+   debounce timer resets on each keystroke, so only the final value (after the user pauses) triggers
+   a rerun. `debounce="0ms"` is the exception: there is no debounce window, so every keystroke
+   triggers a rerun (see the behavior table and its performance warning).
 
 7. **Blur or Enter while debounce is pending**: If the user stops typing and either blurs the field
    or presses Enter before the debounce timer fires, the pending debounce should be flushed
