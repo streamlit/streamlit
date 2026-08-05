@@ -56,7 +56,7 @@ st.text_input(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `validate` | `str \| tuple[str, str] \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation with a generic error message. If a tuple, treated as `(regex, error_message)` for client-side validation with a custom error message. If callable, executed server-side when value is submitted. If `None`, no validation is performed. |
+| `validate` | `str \| tuple[str, str] \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation with a default error message that includes the compiled regex pattern. If a tuple, treated as `(regex, error_message)` for client-side validation with a custom error message. If callable, executed server-side when value is submitted. If `None`, no validation is performed. |
 
 ### Behavior
 
@@ -95,8 +95,9 @@ st.text_input(
 1. Regex is compiled on the frontend with fixed `us` flags to match existing
    `st.column_config.TextColumn` behavior. The `u` flag enables Unicode mode, and
    the `s` flag lets `.` match newlines. We intentionally don't use `m`, `g`, or
-   `y`: validation patterns should match against the whole value, and stateful
-   regex flags can produce inconsistent results across repeated validations.
+   `y`: stateful regex flags can produce inconsistent results across repeated
+   validations. Matching uses non-anchored `.test()`, so full-string matches
+   require explicit `^` / `$` in the pattern (same as `TextColumn`).
 2. Validation does not run on initial render. It runs when the user attempts to
    commit a value (blur/Enter) or submit a form; error state is cleared when user
    types in the input field.
@@ -113,8 +114,8 @@ st.text_input(
 
 **Error messages:**
 
-Client-side regex validation shows a generic error message by default. To provide a custom error
-message, pass `validate=(regex, error_message)`:
+Client-side regex validation shows a default error message with the compiled regex pattern. To
+provide a custom error message, pass `validate=(regex, error_message)`:
 
 ```python
 st.text_input(
@@ -328,6 +329,30 @@ password = st.text_input("Create password", type="password", validate=validate_p
   the offending fields show their error state, and no rerun occurs. When all fields are valid, the
   form submits with a single rerun—server-side validation does not trigger an extra per-field
   rerun inside forms.
+
+### Why not React Aria's built-in validation?
+
+The frontend `TextInput` renders React Aria's `TextField`/`Input`, which ships its own
+validation props (`pattern`, `isInvalid`, `validate`, `validationBehavior`). We intentionally
+implement validation ourselves instead of using them:
+
+- **`pattern`** — applies the native HTML `pattern` attribute, which is implicitly anchored to
+  the whole value and uses different regex semantics (no dotAll, `v`-flag Unicode). We instead
+  compile the regex with `us` flags and match with a non-anchored `.test()` to stay consistent
+  with `st.column_config.TextColumn`. Native `pattern` also only blocks submission for native
+  HTML forms, which Streamlit forms are not.
+- **`validate`** / **`validationBehavior`** — these integrate with React Aria's `Form`
+  context and native form submission. Streamlit forms are a custom abstraction, so we gate
+  submission through our own form-submit validators (`widgetMgr.addFormSubmitValidator`) and
+  our own per-widget commit pipeline rather than React Aria's.
+- **`isInvalid`** — React Aria's controlled-invalid prop would auto-wire `aria-invalid`, but we
+  already set `aria-invalid` and `aria-describedby` ourselves and render a custom error tooltip
+  (not React Aria's `FieldError`). Adopting it would be a cosmetic refactor with no added
+  capability.
+
+In short, these props are designed around native/React-Aria form validation, whereas this
+feature needs `TextColumn`-aligned regex semantics plus Streamlit's own commit and form-submit
+gating, so the custom implementation is the right fit.
 
 ### Future extensions
 

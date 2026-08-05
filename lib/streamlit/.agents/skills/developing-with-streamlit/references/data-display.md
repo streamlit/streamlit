@@ -143,8 +143,8 @@ df = pd.DataFrame(
 
 
 def handle_action():
-    click = st.session_state.row_action  # {"row": int, "label": str}
-    st.toast(f"{click['label']} on row {click['row']}")
+    click = st.session_state.row_action  # dict-like: click.row, click.label
+    st.toast(f"{click.label} on row {click.row}")
 
 
 st.dataframe(
@@ -159,7 +159,7 @@ st.dataframe(
 
 **Key points:**
 
-- **`key` is required** to enable clicks/callbacks. Click info lives in `st.session_state[key]` as `{"row", "label"}` — only during the click rerun, then resets to `None`.
+- **`key` is required** to enable clicks/callbacks. Click info lives in `st.session_state[key]` as a dict-like object with `row` and `label` attributes (also supports key access) — only during the click rerun, then resets to `None`.
 - Use `on_click` (with optional `args`/`kwargs`) for the action; read the clicked row/label inside the callback.
 - Always **read-only** — even in `st.data_editor`, the cell values can't be edited, but clicks still fire.
 - Style with `type="primary" | "secondary" | "tertiary"` and `alignment`.

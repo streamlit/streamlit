@@ -14,13 +14,27 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _UPDATE_NAME_SCRIPT = _REPO_ROOT / "scripts" / "update_name.py"
+_LIB_PYPROJECT = _REPO_ROOT / "lib" / "pyproject.toml"
+
+
+def _current_lib_package_name() -> str:
+    """Return the package name declared in the real ``lib/pyproject.toml``."""
+    for line in _LIB_PYPROJECT.read_text(encoding="utf-8").splitlines():
+        match = re.match(r'^name = "(?P<name>[^"]+)"$', line)
+        if match:
+            return match.group("name")
+    raise AssertionError(f'No `name = "..."` entry found in {_LIB_PYPROJECT}')
+
 
 _DEFAULT_LIB_PYPROJECT = """\
 [project]
@@ -161,6 +175,15 @@ test = [
     assert b"self-reference" in result.stderr
 
 
+@pytest.mark.skipif(
+    _current_lib_package_name() != "streamlit",
+    reason=(
+        "The real repo files have already been renamed away from 'streamlit' "
+        "(e.g. by the nightly build, which renames to 'streamlit-nightly' before "
+        "running the test suite), so the rename-from-'streamlit' guard no longer "
+        "applies."
+    ),
+)
 def test_update_name_renames_actual_repo_files(tmp_path: Path) -> None:
     """Renaming the real repo files leaves no stale ``streamlit[...]`` references.
 

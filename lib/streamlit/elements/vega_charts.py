@@ -26,13 +26,10 @@ from typing import (
     Any,
     Literal,
     TypeAlias,
-    TypedDict,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util, type_util
 from streamlit.deprecation_util import (
@@ -62,7 +59,7 @@ from streamlit.proto.VegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary, calc_hash
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -87,13 +84,13 @@ AltairChart: TypeAlias = Union[
 _altair_globals_lock = threading.Lock()
 
 
-class VegaLiteState(TypedDict, total=False):
+class VegaLiteState(ReadOnlyAttributeDictionary):
     """
     The schema for the Vega-Lite event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -190,7 +187,29 @@ class VegaLiteState(TypedDict, total=False):
 
     """
 
-    selection: Required[AttributeDictionary]
+    # The selection payload is keyed by the user's Vega-Lite parameter names, so
+    # it has no fixed schema and is exposed as a plain (read-only) dictionary.
+    selection: ReadOnlyAttributeDictionary
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-wrapped nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> ReadOnlyAttributeDictionary: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, ReadOnlyAttributeDictionary):
+                item = ReadOnlyAttributeDictionary(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -200,23 +219,26 @@ class VegaLiteStateSerde:
     selection_parameters: Sequence[str]
 
     def deserialize(self, ui_value: str | None) -> VegaLiteState:
-        empty_selection_state: VegaLiteState = {
-            "selection": AttributeDictionary(
-                # Initialize the select state with empty dictionaries for each selection parameter.
-                {param: {} for param in self.selection_parameters}
-            ),
-        }
-
-        selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast("VegaLiteState", AttributeDictionary(json.loads(ui_value)))
+        empty_selection_state = VegaLiteState(
+            {
+                "selection": ReadOnlyAttributeDictionary(
+                    # Initialize the select state with empty dictionaries for each selection parameter.
+                    {param: {} for param in self.selection_parameters}
+                ),
+            }
         )
 
-        if "selection" not in selection_state:
-            selection_state = empty_selection_state  # type: ignore[unreachable]
+        if ui_value is None:
+            return empty_selection_state
 
-        return cast("VegaLiteState", AttributeDictionary(selection_state))
+        parsed = json.loads(ui_value)
+        if "selection" not in parsed:
+            return empty_selection_state
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        parsed["selection"] = ReadOnlyAttributeDictionary(parsed["selection"])
+        return VegaLiteState(parsed)
 
     def serialize(self, selection_state: VegaLiteState) -> str:
         return json.dumps(selection_state, default=str)
@@ -438,8 +460,20 @@ def _convert_altair_to_vega_lite_spec(
             with data_transformer:  # ty: ignore[invalid-context-manager]
                 chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict:
-    chart_dict["datasets"] = datasets
+    # Merge the Arrow-serialized datasets we collected with any datasets the chart
+    # already carries, letting the Arrow-serialized datasets win on key collisions.
+    #
+    # Replacing outright would discard data — charts built with alt.Chart.from_json
+    # carry their data as inline datasets keyed by name, with the spec referencing
+    # them via {"data": {"name": ...}}. Our transformer never sees a dataframe for
+    # those, so `datasets` is empty and the chart would render with axes but no
+    # data. See https://github.com/streamlit/streamlit/issues/6269.
+    existing_datasets = chart_dict.get("datasets")
+    chart_dict["datasets"] = (
+        {**existing_datasets, **datasets}
+        if isinstance(existing_datasets, dict)
+        else datasets
+    )
     return chart_dict
 
 
@@ -1930,7 +1964,7 @@ class VegaChartsMixin:
             internal placeholder for the chart element. Otherwise, this command
             returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            class.
 
         Examples
         --------
@@ -2162,7 +2196,7 @@ class VegaChartsMixin:
             internal placeholder for the chart element. Otherwise, this command
             returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            class.
 
         Examples
         --------

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 from unittest import mock
@@ -29,6 +30,8 @@ from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.deck_gl_json_chart import (
     PydeckMixin,
     PydeckSelectionSerde,
+    PydeckSelectionState,
+    PydeckState,
     _get_pydeck_width,
     parse_selection_mode,
 )
@@ -673,7 +676,33 @@ class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
         result = serde.deserialize(json_str)
 
         # Should support both dict and attribute access
+        assert isinstance(result, PydeckState)
+        assert isinstance(result.selection, PydeckSelectionState)
         assert result.selection.indices["layer1"] == [0]
+        # Nested selection must be a stable stored instance (not a per-access copy).
+        assert result["selection"] is result["selection"]
+        assert result.selection is result["selection"]
+
+    def test_state_is_read_only(self):
+        """The PyDeck event state is read-only at the top and nested levels.
+
+        It also keeps its typed classes through deepcopy, since Session State
+        deep-copies the initial widget value.
+        """
+        result = PydeckSelectionSerde().deserialize(None)
+
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["selection"] = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result.selection = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["selection"]["indices"] = {"layer1": [0]}
+
+        # Read access still works, and deepcopy preserves the concrete types.
+        assert result.selection.indices == {}
+        copied = copy.deepcopy(result)
+        assert isinstance(copied, PydeckState)
+        assert isinstance(copied.selection, PydeckSelectionState)
 
 
 class ParseSelectionModeTest(DeltaGeneratorTestCase):

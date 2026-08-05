@@ -660,6 +660,118 @@ describe("Widget State Manager", () => {
         undefined
       )
     })
+
+    it("aborts submission when a form validator fails", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      const validator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      expect(validator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).not.toHaveBeenCalled()
+      expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
+    })
+
+    it("runs all validators even when an earlier one fails", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const failingValidator = vi.fn(() => false)
+      const secondValidator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", failingValidator)
+      widgetMgr.addFormSubmitValidator(formId, "widget2", secondValidator)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      // Both validators must run (no short-circuit) so every invalid field can
+      // surface its error state.
+      expect(failingValidator).toHaveBeenCalledTimes(1)
+      expect(secondValidator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("submits the form when all validators pass", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      const validator = vi.fn(() => true)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(true)
+
+      expect(validator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton", triggerValue: true },
+            { id: "widget1", stringValue: "foo" },
+          ],
+        },
+        undefined,
+        undefined,
+        undefined
+      )
+    })
+
+    it("does not run a validator after it is removed", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const validator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+      widgetMgr.removeFormSubmitValidator(formId, "widget1")
+
+      widgetMgr.submitForm(formId, undefined)
+
+      // The removed validator must not run and must no longer block submission.
+      expect(validator).not.toHaveBeenCalled()
+      expect(sendBackMsg).toHaveBeenCalled()
+    })
+
+    it("does not resurrect a phantom FormState when removing a validator for an evicted form", () => {
+      const formId = "neverCreatedForm"
+
+      // This mirrors the widget unmount cleanup path: if the form was already
+      // evicted, removing the validator must be a no-op and must not recreate
+      // an empty, dangling FormState that is never submitted or cleaned up.
+      expect(() =>
+        widgetMgr.removeFormSubmitValidator(formId, "widget1")
+      ).not.toThrow()
+
+      // @ts-expect-error - inspect internal state: no phantom form was created
+      expect(widgetMgr.forms.get(formId)).toBeFalsy()
+    })
   })
 
   describe("allowFormEnterToSubmit", () => {

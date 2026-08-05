@@ -111,12 +111,11 @@ class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
 
 
 _READ_ONLY_ERROR_MSG = (
-    "Widget state is read-only. To programmatically update widget state, "
-    "assign a new dictionary to the session state key instead of modifying "
-    "nested values. For example, use:\n"
-    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}\n"
-    "Instead of:\n"
-    "    st.session_state.my_key.selection = {'rows': [0]}"
+    "Widget state is read-only because modifying nested values has no effect "
+    "on the app. For widget states that support programmatic updates "
+    "(e.g. st.dataframe selections), assign a new dictionary to the Session "
+    "State key instead, for example:\n"
+    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}"
 )
 
 
@@ -127,8 +126,10 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
     Used for widget state return values (e.g., dataframe selections) to prevent
     users from modifying values in ways that don't trigger proper state updates.
 
-    Modifications should be done by assigning a new dictionary to the session
-    state key, e.g., ``st.session_state['key'] = {'selection': {'rows': [0]}}``.
+    For widget states that support programmatic updates (e.g. dataframe
+    selections), assign a new dictionary to the Session State key, e.g.
+    ``st.session_state['key'] = {'selection': {'rows': [0]}}``. Other widget
+    states (e.g. chart selections) cannot be updated programmatically.
     """
 
     def __getitem__(self, key: Any) -> Any:
@@ -173,12 +174,15 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
         raise TypeError(_READ_ONLY_ERROR_MSG)
 
     def __copy__(self) -> ReadOnlyAttributeDictionary:
-        return ReadOnlyAttributeDictionary(dict.copy(self))
+        # Reconstruct via the concrete subclass (e.g. DataframeState) so copies
+        # preserve their type. Hardcoding the base class would collapse typed
+        # widget states to a plain ReadOnlyAttributeDictionary.
+        return type(self)(dict.copy(self))
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> ReadOnlyAttributeDictionary:
         import copy
 
-        return ReadOnlyAttributeDictionary(
+        return type(self)(
             {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
         )
 

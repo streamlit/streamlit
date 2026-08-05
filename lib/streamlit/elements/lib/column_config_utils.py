@@ -19,7 +19,14 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    TypeAlias,
+    overload,
+)
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import (
@@ -434,14 +441,28 @@ ColumnConfigMappingInput: TypeAlias = Mapping[
 ButtonColumnMapping: TypeAlias = dict[str, ButtonColumnResult]
 
 
-class ButtonClickState(TypedDict):
+class ButtonColumnClickState(ReadOnlyAttributeDictionary):
     """The schema for button click state in ButtonColumn.
 
-    Both fields are always present when a button click occurs.
+    Read-only dict-like click payload with attribute and key access
+    (``click.row`` / ``click["row"]``). Both fields are always present when a
+    button click occurs.
     """
 
     row: int
     label: str
+
+    @overload
+    def __getitem__(self, key: Literal["row"]) -> int: ...
+
+    @overload
+    def __getitem__(self, key: Literal["label"]) -> str: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -452,14 +473,14 @@ class ButtonClickSerde:
     The frontend sends the click state as a JSON string.
     """
 
-    def serialize(self, v: ButtonClickState | None) -> StringTriggerValue:
+    def serialize(self, v: ButtonColumnClickState | None) -> StringTriggerValue:
         from streamlit.proto.Common_pb2 import StringTriggerValue
 
         if v is None:
             return StringTriggerValue()
         return StringTriggerValue(data=json.dumps(v))
 
-    def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
+    def deserialize(self, ui_value: str | None) -> ButtonColumnClickState | None:
         if not ui_value:
             return None
 
@@ -483,10 +504,7 @@ class ButtonClickSerde:
                 f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
             )
 
-        # Wrap in ReadOnlyAttributeDictionary so the click value supports both
-        # key and attribute notation (e.g. click["row"] and click.row),
-        # matching dataframe selection state.
-        return cast("ButtonClickState", ReadOnlyAttributeDictionary(parsed))
+        return ButtonColumnClickState(parsed)
 
 
 def extract_button_column_configs(

@@ -23,7 +23,8 @@ from typing_extensions import assert_type
 # - accept_file=False and accept_audio=False (default) -> returns str | None
 # - accept_file=True/multiple/directory OR accept_audio=True -> returns ChatInputValue | None
 if TYPE_CHECKING:
-    from streamlit.elements.widgets.chat import ChatInputValue, ChatMixin
+    from streamlit.elements.widgets.chat import ChatMixin
+    from streamlit.typing import ChatInputValue, UploadedFile
 
     chat_input = ChatMixin().chat_input
 
@@ -63,6 +64,15 @@ if TYPE_CHECKING:
         chat_input("Message", accept_file="multiple", accept_audio=True),
         ChatInputValue | None,
     )
+
+    chat_value = chat_input("Message", accept_file=True, accept_audio=True)
+    if chat_value is not None:
+        assert_type(chat_value.text, str)
+        assert_type(chat_value["text"], str)
+        assert_type(chat_value.files, list[UploadedFile])
+        assert_type(chat_value["files"], list[UploadedFile])
+        assert_type(chat_value.audio, UploadedFile | None)
+        assert_type(chat_value["audio"], UploadedFile | None)
 
     # =====================================================================
     # Test key parameter (str or int)

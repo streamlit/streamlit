@@ -1419,7 +1419,7 @@ describe("TimeInput widget", () => {
       const user = userEvent.setup()
       const props = getProps({ default: "12:45", formId: "form" })
       vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
-      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {})
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => true)
       render(<TimeInput {...props} />)
 
       const [hourSegment] = screen.getAllByRole("spinbutton")

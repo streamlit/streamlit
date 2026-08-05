@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import copy
 from unittest.mock import MagicMock, patch
 
 import plotly.express as px
@@ -23,6 +24,8 @@ import streamlit as st
 from streamlit.elements.plotly_chart import (
     PlotlyChartSelectionSerde,
     PlotlyMixin,
+    PlotlySelectionState,
+    PlotlyState,
     _resolve_content_height,
     _resolve_content_width,
 )
@@ -717,3 +720,38 @@ def test_plotly_serde_serialize_returns_json_string() -> None:
 
     assert isinstance(payload, str)
     assert "selection" in payload
+
+
+def test_plotly_serde_returns_typed_state_classes() -> None:
+    """The Plotly serde returns typed classes for both state levels."""
+    result = PlotlyChartSelectionSerde().deserialize(None)
+
+    assert isinstance(result, PlotlyState)
+    assert isinstance(result.selection, PlotlySelectionState)
+    assert result.selection.points == []
+    assert result["selection"]["point_indices"] == []
+    # Nested selection must be a stable stored instance (not a per-access copy).
+    assert result["selection"] is result["selection"]
+    assert result.selection is result["selection"]
+
+
+def test_plotly_state_is_read_only() -> None:
+    """The Plotly event state is read-only at the top and nested levels.
+
+    It also keeps its typed classes through deepcopy, since Session State
+    deep-copies the initial widget value.
+    """
+    result = PlotlyChartSelectionSerde().deserialize(None)
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"] = {}
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection = {}  # type: ignore[misc]
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"]["points"] = [{"x": 1}]
+
+    # Read access still works, and deepcopy preserves the concrete types.
+    assert result.selection.points == []
+    copied = copy.deepcopy(result)
+    assert isinstance(copied, PlotlyState)
+    assert isinstance(copied.selection, PlotlySelectionState)

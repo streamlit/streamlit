@@ -24,7 +24,11 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.menu_button import MenuButtonSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.Common_pb2 import StringTriggerValue
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -51,6 +55,32 @@ class MenuButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.menu_button
         assert c.disabled
+
+    def test_wrap_default(self):
+        """By default wrap is left unset (auto) so the frontend resolves it."""
+        st.menu_button("the label", ["Option A"])
+
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert not c.HasField("wrap")
+
+    @parameterized.expand([(True,), (False,)])
+    def test_wrap(self, wrap_value: bool):
+        """The wrap parameter is forwarded to the menu button proto."""
+        st.menu_button("the label", ["Option A"], wrap=wrap_value)
+
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert c.wrap is wrap_value
+
+    def test_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the menu button element id.
+
+        Two otherwise-identical menu buttons that differ only in wrap collide on
+        the same auto-generated id, proving wrap is excluded from id computation
+        and so preserves widget state when toggled.
+        """
+        st.menu_button("same label", ["Option A"])
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.menu_button("same label", ["Option A"], wrap=False)
 
     @parameterized.expand(["primary", "secondary", "tertiary"])
     def test_button_types(self, button_type: str):

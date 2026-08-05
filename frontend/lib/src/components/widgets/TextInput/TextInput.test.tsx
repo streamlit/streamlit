@@ -16,6 +16,7 @@
 
 import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { getLogger } from "loglevel"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -33,6 +34,7 @@ const getProps = (
   widgetProps: Partial<Props> = {}
 ): Props => ({
   element: TextInputProto.create({
+    id: "text-input-id",
     label: "Label",
     default: "",
     placeholder: "Placeholder",
@@ -283,8 +285,7 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByRole("textbox")
 
-    // userEvent is necessary to simulate the full interaction chain
-    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
+    // Simulate the full interaction chain (focus → keydown → keyup).
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 
@@ -307,8 +308,7 @@ describe("TextInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    // userEvent is necessary to simulate the full interaction chain
-    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
+    // Simulate the full interaction chain (focus → keydown → keyup).
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 
@@ -604,6 +604,374 @@ describe("TextInput widget", () => {
     // Element rendering material icon
     const materialIcon = screen.getByTestId("stIconMaterial")
     expect(materialIcon).toHaveTextContent("search")
+  })
+
+  it("does not show a validation error on initial render", () => {
+    const props = getProps({ validateRegex: "^[a-z]+$" })
+    render(<TextInput {...props} />)
+
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows an error and blocks blur commits for invalid values outside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ validateRegex: "^[a-z]+$" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "123")
+    await user.click(document.body)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+    expect(textInput).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Invalid input. Must match pattern: /^[a-z]+$/su"
+    )
+  })
+
+  it("shows an error and blocks enter commits for invalid values outside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ validateRegex: "^[a-z]+$" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("123{Enter}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+  })
+
+  it("clears user errors while typing and commits valid values", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ validateRegex: "^[a-z]+$" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "123")
+    await user.click(document.body)
+
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+
+    await user.clear(textInput)
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+
+    await user.type(textInput, "abc")
+    await user.click(document.body)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "abc",
+      { fromUi: true },
+      undefined
+    )
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+    expect(textInput).not.toHaveAttribute("aria-invalid")
+  })
+
+  it("allows empty strings to bypass validation", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "abc", validateRegex: "^[a-z]+$" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.clear(textInput)
+    await user.click(document.body)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "",
+      { fromUi: true },
+      undefined
+    )
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows a custom validation message", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      validateRegex: "^[a-z]+$",
+      validateMessage: "Lowercase only",
+    })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "123")
+    await user.click(document.body)
+
+    const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
+    await user.hover(errorIcon)
+
+    const tooltip = await screen.findByTestId("stTooltipErrorContent")
+    expect(tooltip).toHaveTextContent("Lowercase only")
+    expect(tooltip).not.toHaveTextContent("^[a-z]+$")
+  })
+
+  it("keeps the shown error message in sync when only validateMessage changes", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      validateRegex: "^[a-z]+$",
+      validateMessage: "Old message",
+    })
+    const { rerender } = render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "123")
+    await user.click(document.body)
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Old message")
+
+    // Changing only the message keeps the widget identity stable (only the
+    // regex is part of the widget ID), so the component is re-rendered rather
+    // than remounted. The still-invalid input must immediately reflect the new
+    // message without the user re-triggering validation.
+    const updatedElement = TextInputProto.create({
+      ...props.element,
+      validateMessage: "New message",
+    })
+    rerender(<TextInput {...props} element={updatedElement} />)
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("New message")
+    expect(alert).not.toHaveTextContent("Old message")
+  })
+
+  it("exposes the validation message to assistive tech via aria-describedby", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      validateRegex: "^[a-z]+$",
+      validateMessage: "Lowercase only",
+    })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).not.toHaveAttribute("aria-describedby")
+
+    await user.type(textInput, "123")
+    await user.click(document.body)
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("Lowercase only")
+    expect(textInput).toHaveAttribute("aria-describedby", alert.id)
+  })
+
+  it("shows invalid regex errors immediately and logs them", async () => {
+    const user = userEvent.setup()
+    const logErrorSpy = vi.spyOn(getLogger("TextInput"), "error")
+    const props = getProps({ validateRegex: "[" })
+    render(<TextInput {...props} />)
+
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+    expect(logErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Invalid validate regex: [.")
+    )
+
+    const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
+    await user.hover(errorIcon)
+
+    const tooltip = await screen.findByTestId("stTooltipErrorContent")
+    expect(tooltip).toHaveTextContent("Invalid validate regex: [.")
+  })
+
+  it("allows clearing the input when the validate regex is invalid", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "abc", validateRegex: "[" })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    // Config error is still shown, but empty commits must not be blocked.
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+
+    const textInput = screen.getByRole("textbox")
+    await user.clear(textInput)
+    await user.click(document.body)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("does not validate on blur inside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form", validateRegex: "^[a-z]+$" })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "123")
+    await user.click(document.body)
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element,
+      "123",
+      { fromUi: true },
+      undefined
+    )
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+  })
+
+  it("blocks form submission when submit is attempted with invalid input", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { formId: "form", validateRegex: "^[a-z]+$" },
+      { widgetMgr }
+    )
+    render(<TextInput {...props} />)
+
+    await user.type(screen.getByRole("textbox"), "123")
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+  })
+
+  it("deregisters the form submit validator on unmount", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { formId: "form", validateRegex: "^[a-z]+$" },
+      { widgetMgr }
+    )
+    const { unmount } = render(<TextInput {...props} />)
+
+    // Enter an invalid value so the registered validator blocks submission.
+    await user.type(screen.getByRole("textbox"), "123")
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    // After unmount, the validator must be removed so it no longer blocks the
+    // form (otherwise a stale validator would permanently break submission).
+    unmount()
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
+
+  it("blocks enter-to-submit when the form value is invalid", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const props = getProps(
+      { formId: "form", validateRegex: "^[a-z]+$" },
+      { widgetMgr }
+    )
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("123{Enter}")
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+  })
+
+  it("commits the latest valid form value during submit validation", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { formId: "form", validateRegex: "^[a-z]+$" },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    await user.type(screen.getByRole("textbox"), "abcd")
+    setStringValueSpy.mockClear()
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element,
+      "abcd",
+      { fromUi: true },
+      undefined
+    )
+    expect(sendRerunBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [{ id: props.element.id, stringValue: "abcd" }],
+      },
+      undefined,
+      undefined,
+      undefined
+    )
+  })
+
+  it("clears validation errors when a clear-on-submit form resets", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+    })
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = getProps(
+      { formId: "form", validateRegex: "^[a-z]+$" },
+      { widgetMgr }
+    )
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "123")
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+
+    await user.clear(textInput)
+    await user.type(textInput, "abcd")
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(textInput).toHaveValue(props.element.default)
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
   })
 })
 

@@ -336,6 +336,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "disabled",
     "format_func",
     "label_visibility",
+    # wrap only controls label text wrapping, not widget identity.
+    "wrap",
     # on_change callbacks and similar/related parameters.
     "args",
     "kwargs",
@@ -458,6 +460,12 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
+
+        # `validate` only contributes to the text_input element ID when a
+        # validation regex is actually configured. Since this test calls the
+        # widget without `validate`, it isn't passed to the ID computation.
+        if widget_func == st.text_input:
+            del expected_sig["validate"]
 
         # time_input intentionally excludes format from ID computation because
         # it's a display-only setting (React Aria handles format changes without
