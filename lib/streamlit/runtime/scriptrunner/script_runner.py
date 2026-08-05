@@ -718,8 +718,8 @@ class ScriptRunner:
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states
                         )
-                        # A rerun queued from a widget callback must preempt this
-                        # run before the script body executes.
+                        # Callbacks above may have re-queued an st.rerun(). Honor it now so
+                        # we don't execute this run's script body before that rerun takes effect.
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
