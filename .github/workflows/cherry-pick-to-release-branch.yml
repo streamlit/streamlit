@@ -64,8 +64,10 @@ jobs:
 
           REL_BRANCH="release/${REL_VER}"
           SHA="$CHERRY_PICK_SHA"
-          if ! echo "${SHA}" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
-            echo "::error::cherry_pick_sha must be a valid Git commit SHA. Got '${SHA}'" >&2
+          # Require the full 40-character SHA: the targeted `git fetch origin <sha>`
+          # below needs it verbatim and does not resolve abbreviated SHAs.
+          if ! echo "${SHA}" | grep -Eq '^[0-9a-fA-F]{40}$'; then
+            echo "::error::cherry_pick_sha must be the full 40-character Git commit SHA. Got '${SHA}'" >&2
             exit 1
           fi
 
@@ -76,7 +78,9 @@ jobs:
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
           set -euo pipefail
-          if ! git fetch --no-tags --depth=1 origin "$RELEASE_BRANCH"; then
+          # Explicit refspec destination so the remote-tracking ref is created even
+          # though the initial checkout (fetch-depth: 1) only fetched the workflow ref.
+          if ! git fetch --no-tags --depth=1 origin "$RELEASE_BRANCH:refs/remotes/origin/$RELEASE_BRANCH"; then
             echo "::error::Branch '$RELEASE_BRANCH' does not exist on origin" >&2
             exit 1
           fi
