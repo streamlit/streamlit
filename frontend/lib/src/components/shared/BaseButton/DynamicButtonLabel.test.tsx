@@ -71,29 +71,25 @@ describe("DynamicButtonLabel", () => {
   })
 
   it("positions the icon to the left by default", () => {
-    const { container } = render(<DynamicButtonLabel {...getProps()} />)
-    const wrapper = container.firstElementChild as HTMLElement
-    expect(wrapper).toBeDefined()
-    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
-    expect(mainLabel).toBeDefined()
-    expect(mainLabel?.firstElementChild).not.toHaveAttribute(
-      "data-testid",
-      "stMarkdownContainer"
-    )
+    render(<DynamicButtonLabel {...getProps()} />)
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    const icon = screen.getByTestId("stIconEmoji")
+    // Icon precedes the markdown label in document order.
+    expect(
+      icon.compareDocumentPosition(markdown) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   it("renders the icon to the right when requested", () => {
-    const { container } = render(
-      <DynamicButtonLabel {...getProps({ iconPosition: "right" })} />
-    )
-    const wrapper = container.firstElementChild as HTMLElement
-    expect(wrapper).toBeDefined()
-    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
-    expect(mainLabel).toBeDefined()
-    expect(mainLabel?.firstElementChild).toHaveAttribute(
-      "data-testid",
-      "stMarkdownContainer"
-    )
+    render(<DynamicButtonLabel {...getProps({ iconPosition: "right" })} />)
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    const icon = screen.getByTestId("stIconEmoji")
+    // Markdown precedes the icon in document order when iconPosition is right.
+    // (A display:contents wrapper around the markdown means firstElementChild
+    // is not the stMarkdownContainer itself.)
+    expect(
+      markdown.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   it("renders shortcut text when provided", () => {
