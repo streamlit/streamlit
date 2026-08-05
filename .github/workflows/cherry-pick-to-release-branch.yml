@@ -30,10 +30,12 @@ jobs:
     if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
+      # Shallow checkout of the workflow ref only. A full clone (fetch-depth: 0)
+      # has taken 15–30+ minutes on this repo when runners are slow.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: true
 
       - name: Setup Python automation environment
@@ -69,7 +71,7 @@ jobs:
 
           echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
 
-      - name: Validate inputs and repository state
+      - name: Checkout release branch
         env:
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
@@ -78,14 +80,19 @@ jobs:
             echo "::error::Branch '$RELEASE_BRANCH' does not exist on origin" >&2
             exit 1
           fi
-
-      - name: Checkout release branch
-        env:
-          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
-        run: |
-          set -euo pipefail
           git checkout -B "$RELEASE_BRANCH" "origin/$RELEASE_BRANCH"
           echo "Checked out '$RELEASE_BRANCH'"
+
+      - name: Fetch commit to cherry-pick
+        env:
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
+        run: |
+          set -euo pipefail
+          # depth=2 so the parent is available for the cherry-pick patch
+          if ! git fetch --no-tags --depth=2 origin "$CHERRY_PICK_SHA"; then
+            echo "::error::Commit '$CHERRY_PICK_SHA' not found on origin" >&2
+            exit 1
+          fi
 
       - name: Attempt cherry-pick
         id: cp
