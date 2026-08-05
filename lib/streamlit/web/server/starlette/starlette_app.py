@@ -172,21 +172,32 @@ def _callable_source_candidates(obj: Any) -> list[Any]:
 
     Plain functions work with ``inspect.getsourcefile`` directly. Common
     zero-argument callables such as ``functools.partial`` and callable class
-    instances do not, so also try their underlying function / ``__call__``.
+    instances do not, so also try their underlying function / ``__call__``,
+    including nested partials and partials wrapping callable instances.
     """
-    candidates: list[Any] = [obj]
-    try:
-        unwrapped = inspect.unwrap(obj)
-    except (ValueError, TypeError):
-        unwrapped = None
-    if unwrapped is not None and unwrapped is not obj:
-        candidates.append(unwrapped)
+    candidates: list[Any] = []
+    seen: set[int] = set()
+    stack: list[Any] = [obj]
+    while stack:
+        current = stack.pop()
+        current_id = id(current)
+        if current_id in seen:
+            continue
+        seen.add(current_id)
+        candidates.append(current)
 
-    if isinstance(obj, functools.partial):
-        candidates.append(obj.func)
-    elif not inspect.isroutine(obj) and not isinstance(obj, type):
-        # Callable class instances: resolve via the type's __call__.
-        candidates.append(type(obj).__call__)
+        try:
+            unwrapped = inspect.unwrap(current)
+        except (ValueError, TypeError):
+            unwrapped = None
+        if unwrapped is not None and id(unwrapped) not in seen:
+            stack.append(unwrapped)
+
+        if isinstance(current, functools.partial):
+            stack.append(current.func)
+        elif not inspect.isroutine(current) and not isinstance(current, type):
+            # Callable class instances: resolve via the type's __call__.
+            stack.append(type(current).__call__)
     return candidates
 
 

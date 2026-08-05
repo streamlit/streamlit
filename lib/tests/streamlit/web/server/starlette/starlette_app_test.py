@@ -1429,6 +1429,31 @@ class TestAppInit:
         assert app.script_path == Path(__file__).resolve()
         assert app._script_entrypoint is entry
 
+    def test_app_accepts_nested_partial_callable(self) -> None:
+        """Nested functools.partial entrypoints resolve through all layers."""
+
+        def main(prefix: str = "hi", suffix: str = "!") -> None:
+            pass
+
+        entry = partial(partial(main, prefix="hello"), suffix="?")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_partial_of_callable_instance(self) -> None:
+        """partial wrapping a callable instance resolves via type.__call__."""
+
+        class Main:
+            def __call__(self, prefix: str = "hi") -> None:
+                pass
+
+        entry = partial(Main(), prefix="hello")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
     def test_app_accepts_callable_instance(self) -> None:
         """Callable class instances resolve via their type's __call__."""
 
