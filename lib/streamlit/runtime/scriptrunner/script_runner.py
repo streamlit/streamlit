@@ -722,14 +722,12 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:
-                        # Skip queued descendants whose ancestor already ran in this
-                        # pass. ``order_fragment_ids`` runs ancestors first, and an
-                        # ancestor re-renders its descendants as part of its own body,
-                        # so running a descendant again would re-create its widgets
-                        # within the same script run and raise
-                        # StreamlitDuplicateElementId. That is what happens when a
-                        # parent and child both use ``run_every`` and their auto-reruns
-                        # coalesce (see #10719).
+                        # Skip queued descendants whose ancestor already ran in
+                        # this pass — the ancestor re-renders them inline, so
+                        # running them again would duplicate their widgets and
+                        # raise StreamlitDuplicateElementId (for example, when
+                        # a parent and child both use ``run_every`` and their
+                        # auto-reruns coalesce; see #10719).
                         executed_fragment_ids: set[str] = set()
 
                         for fragment_id in fragment_ids_this_run:
@@ -768,10 +766,11 @@ class ScriptRunner:
                                     )
                                 continue
 
-                            # Recorded before the call so a fragment that raises still
-                            # suppresses its queued descendants: it owns their
-                            # containers either way, and rerunning them here would
-                            # render them outside the parent that just failed.
+                            # We record this before the call so a fragment
+                            # that raises still suppresses its queued
+                            # descendants: it owns their containers either way,
+                            # and rerunning them here would render them outside
+                            # the parent that just failed.
                             executed_fragment_ids.add(fragment_id)
 
                             try:

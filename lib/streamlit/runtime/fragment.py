@@ -335,15 +335,6 @@ class MemoryFragmentStorage(FragmentStorage):
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Run queued ancestors before descendants while preserving FIFO otherwise."""
         with self._lock:
-
-            def has_queued_ancestor(
-                fragment_id: str, queued_fragment_ids: set[str]
-            ) -> bool:
-                return any(
-                    ancestor_id in queued_fragment_ids
-                    for ancestor_id in self._iter_ancestor_ids(fragment_id)
-                )
-
             remaining_fragment_ids = list(fragment_ids)
             ordered_fragment_ids = []
 
@@ -351,7 +342,9 @@ class MemoryFragmentStorage(FragmentStorage):
                 queued_fragment_ids = set(remaining_fragment_ids)
 
                 for index, fragment_id in enumerate(remaining_fragment_ids):
-                    if not has_queued_ancestor(fragment_id, queued_fragment_ids):
+                    if not self._has_ancestor_in_unlocked(
+                        fragment_id, queued_fragment_ids
+                    ):
                         ordered_fragment_ids.append(fragment_id)
                         del remaining_fragment_ids[index]
                         break
@@ -364,10 +357,22 @@ class MemoryFragmentStorage(FragmentStorage):
 
     def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
         with self._lock:
-            return any(
-                ancestor_id in candidate_ids
-                for ancestor_id in self._iter_ancestor_ids(fragment_id)
-            )
+            return self._has_ancestor_in_unlocked(fragment_id, candidate_ids)
+
+    def _has_ancestor_in_unlocked(
+        self, fragment_id: str, candidate_ids: Container[str]
+    ) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``.
+
+        Callers must hold ``self._lock``; use ``has_ancestor_in`` from outside
+        the lock. Extracted so ``order_fragment_ids`` (which already holds the
+        lock while walking the queue) and ``has_ancestor_in`` can share the
+        same predicate without deadlocking or drifting apart.
+        """
+        return any(
+            ancestor_id in candidate_ids
+            for ancestor_id in self._iter_ancestor_ids(fragment_id)
+        )
 
     def delete(self, key: str) -> None:
         with self._lock:
