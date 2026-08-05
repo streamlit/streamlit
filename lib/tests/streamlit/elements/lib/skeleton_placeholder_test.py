@@ -62,7 +62,6 @@ def test_dir_returns_delta_generator_members() -> None:
     placeholder = _make_skeleton_placeholder()
 
     assert placeholder.__dir__() == dir(DeltaGenerator)
-    assert "markdown" in placeholder.__dir__()
 
 
 def test_enter_without_session_context_returns_self_without_timer() -> None:

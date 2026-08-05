@@ -748,7 +748,7 @@ def test_is_streamlit_internal_frame_returns_false_on_realpath_error() -> None:
 def test_get_value_returns_none_when_value_matches_var_name() -> None:
     """``_get_value`` returns ``None`` when the computed value merely repeats the name.
 
-    For example, ``st.help(re)`` should not render "re module re" — only the
-    name — so the redundant value slot is dropped.
+    For example, ``st.help(re)`` would only repeat the variable name in the value
+    slot, so the redundant value is dropped.
     """
     assert _get_value(re, "re") is None
