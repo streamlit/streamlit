@@ -223,9 +223,27 @@ def marshall(
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
+
+    # SVG is text, not raster bytes, so decode it to a string and let
+    # image_to_url take its SVG path instead of the PNG/PIL path, which cannot
+    # parse SVG and crashes.
+    #
+    # Sniff the buffer rather than reading kwargs["format"]: Matplotlib resolves
+    # the format itself, so format=None with rcParams["savefig.format"] = "svg"
+    # still produces SVG. No raster format collides with these prefixes (PNG
+    # starts with b"\x89PNG", JPEG with b"\xff\xd8"). An `<?xml` prolog alone is
+    # not enough because image_to_url also requires a `<svg` tag, and the search
+    # is bounded since Matplotlib emits `<svg` within the first few hundred bytes.
+    payload = image.getvalue()
+    stripped = payload.lstrip()
+    is_svg = stripped.startswith(b"<svg") or (
+        stripped.startswith(b"<?xml") and b"<svg" in stripped[:2048]
+    )
+    image_for_proto: str | io.BytesIO = payload.decode("utf-8") if is_svg else image
+
     marshall_images(
         coordinates=coordinates,
-        image=image,
+        image=image_for_proto,
         caption=None,
         layout_config=layout_config,
         proto_imgs=image_list_proto,
