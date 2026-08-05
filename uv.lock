@@ -4313,7 +4313,7 @@ wheels = [
 
 [[package]]
 name = "streamlit"
-version = "1.61.0"
+version = "1.61.1"
 source = { editable = "lib" }
 dependencies = [
     { name = "altair" },
