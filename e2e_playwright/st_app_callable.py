@@ -25,6 +25,3 @@ def main() -> None:
 
 
 app = st.App(main)
-
-if __name__ == "__main__":
-    app.run()
