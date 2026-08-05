@@ -1486,7 +1486,7 @@ class LayoutsMixin:
 
         wrap : bool or None
             Whether the popover button's label can wrap onto multiple lines.
-            This defaults to ``None``.
+            This can be one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
               layout. Inside a horizontal container, the button keeps its
