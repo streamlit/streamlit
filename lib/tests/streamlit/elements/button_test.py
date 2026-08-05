@@ -529,11 +529,11 @@ class ButtonTest(DeltaGeneratorTestCase):
         ]
     )
     def test_button_wrap_default(self, name: str, command: Callable[..., Any]):
-        """Buttons default to wrap=True in the proto."""
+        """By default wrap is left unset (auto) so the frontend can resolve it
+        based on the layout."""
         command()
         el = getattr(self.get_delta_from_queue().new_element, name)
-        assert el.HasField("wrap")
-        assert el.wrap is True
+        assert not el.HasField("wrap")
 
     @parameterized.expand(
         [

@@ -107,6 +107,7 @@ if TYPE_CHECKING:
     # Menu button with wrap parameter
     assert_type(menu_button("Actions", ["a"], wrap=True), str | None)
     assert_type(menu_button("Actions", ["a"], wrap=False), str | None)
+    assert_type(menu_button("Actions", ["a"], wrap=None), str | None)
 
     # Menu button with all parameters combined
     assert_type(

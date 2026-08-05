@@ -76,6 +76,7 @@ if TYPE_CHECKING:
     # Button with wrap parameter
     assert_type(button("Wrap", wrap=True), bool)
     assert_type(button("Wrap", wrap=False), bool)
+    assert_type(button("Wrap", wrap=None), bool)
 
     # Button with on_click callback
     def my_callback() -> None:
@@ -171,6 +172,7 @@ if TYPE_CHECKING:
     assert_type(download_button("Download", data="content", shortcut="Ctrl+D"), bool)
     assert_type(download_button("Download", data="content", wrap=True), bool)
     assert_type(download_button("Download", data="content", wrap=False), bool)
+    assert_type(download_button("Download", data="content", wrap=None), bool)
 
     # Download button with all parameters combined
     assert_type(
@@ -262,6 +264,7 @@ if TYPE_CHECKING:
     # Link button with wrap parameter
     assert_type(link_button("Link", "https://example.com", wrap=True), DeltaGenerator)
     assert_type(link_button("Link", "https://example.com", wrap=False), DeltaGenerator)
+    assert_type(link_button("Link", "https://example.com", wrap=None), DeltaGenerator)
 
     # Link button with on_click parameter - supports "rerun", "ignore", or callable
     assert_type(
@@ -411,6 +414,7 @@ if TYPE_CHECKING:
     # Form submit button with wrap
     assert_type(form_submit_button("Submit", wrap=True), bool)
     assert_type(form_submit_button("Submit", wrap=False), bool)
+    assert_type(form_submit_button("Submit", wrap=None), bool)
 
     # Form submit button with on_click callback
     assert_type(form_submit_button("Submit", on_click=my_callback), bool)

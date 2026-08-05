@@ -20,6 +20,11 @@ import { vi } from "vitest"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -195,7 +200,14 @@ describe("Button widget", () => {
     expect(matches[0]).toBeVisible()
   })
 
-  describe("wrap=false", () => {
+  describe("wrap", () => {
+    const horizontalContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
     it("sets a native title with the full label when wrap is false", () => {
       render(
         <Button {...getProps({ wrap: false, label: "A very long label" })} />
@@ -203,8 +215,26 @@ describe("Button widget", () => {
       expect(screen.getByTitle("A very long label")).toBeVisible()
     })
 
-    it("does not set a title by default (wrap=true)", () => {
+    it("does not set a title by default outside a horizontal layout", () => {
       render(<Button {...getProps({ label: "A very long label" })} />)
+      expect(screen.queryByTitle("A very long label")).not.toBeInTheDocument()
+    })
+
+    it("auto default sets a title inside a horizontal layout", () => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Button {...getProps({ label: "A very long label" })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.getByTitle("A very long label")).toBeVisible()
+    })
+
+    it("explicit wrap=true keeps wrapping inside a horizontal layout", () => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Button {...getProps({ wrap: true, label: "A very long label" })} />
+        </FlexContext.Provider>
+      )
       expect(screen.queryByTitle("A very long label")).not.toBeInTheDocument()
     })
 

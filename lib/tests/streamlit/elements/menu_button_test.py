@@ -57,12 +57,11 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         assert c.disabled
 
     def test_wrap_default(self):
-        """Menu button defaults to wrap=True in the proto."""
+        """By default wrap is left unset (auto) so the frontend resolves it."""
         st.menu_button("the label", ["Option A"])
 
         c = self.get_delta_from_queue().new_element.menu_button
-        assert c.HasField("wrap")
-        assert c.wrap is True
+        assert not c.HasField("wrap")
 
     @parameterized.expand([(True,), (False,)])
     def test_wrap(self, wrap_value: bool):

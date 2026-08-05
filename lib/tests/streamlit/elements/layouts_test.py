@@ -971,13 +971,12 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         assert popover_block.add_block.width_config.use_content
 
     def test_wrap_default(self):
-        """Test that the popover trigger defaults to wrap=True in the proto."""
+        """By default wrap is left unset (auto) so the frontend resolves it."""
         with st.popover("label"):
             pass
 
         popover = self.get_delta_from_queue().add_block.popover
-        assert popover.HasField("wrap")
-        assert popover.wrap is True
+        assert not popover.HasField("wrap")
 
     def test_wrap(self):
         """Test that the wrap parameter is forwarded to the popover proto."""

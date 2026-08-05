@@ -170,3 +170,9 @@ with st.container(key="wrap_buttons"):
         shortcut="Alt+W",
         key="wrap_icon_button",
     )
+
+# Default (auto) wrap: inside a horizontal container the label does not wrap; it
+# ellipsizes and exposes the full label via a native title. A fixed container
+# width forces the long label to overflow.
+with st.container(horizontal=True, width=260, key="wrap_auto_horizontal"):
+    st.button(_WRAP_LABEL, key="wrap_auto_button")

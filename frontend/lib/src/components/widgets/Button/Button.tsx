@@ -26,6 +26,7 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -40,9 +41,10 @@ function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const shortcut = element.shortcut ? element.shortcut : undefined
 
-  const wrap = element.wrap ?? true
-  // With wrap=false the label ellipsizes, so reveal the full label on hover via
-  // a native title. Skipped when help is set, since help provides the tooltip.
+  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
+  // the label ellipsizes, reveal the full label on hover via a native title,
+  // skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
   const title = !wrap && !element.help ? element.label : undefined
 
   let kind = BaseButtonKind.SECONDARY

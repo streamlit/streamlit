@@ -341,14 +341,13 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         assert last_delta.new_element.button.type == "secondary"
 
     def test_submit_button_wrap_default(self):
-        """Test that a submit button defaults to wrap=True in the proto."""
+        """By default wrap is left unset (auto) so the frontend resolves it."""
 
         form = st.form("foo")
         form.form_submit_button()
 
         button_proto = self.get_delta_from_queue().new_element.button
-        assert button_proto.HasField("wrap")
-        assert button_proto.wrap is True
+        assert not button_proto.HasField("wrap")
 
     @parameterized.expand([(True,), (False,)])
     def test_submit_button_wrap(self, wrap_value: bool):

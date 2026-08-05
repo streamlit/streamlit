@@ -62,3 +62,4 @@ if TYPE_CHECKING:
     # wrap parameter accepts a bool and returns a PopoverContainer
     assert_type(popover("Test", wrap=True), PopoverContainer)
     assert_type(popover("Test", wrap=False), PopoverContainer)
+    assert_type(popover("Test", wrap=None), PopoverContainer)

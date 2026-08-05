@@ -7,14 +7,19 @@ created: 2026-07-23
 
 ## Summary
 
-Add a keyword-only `wrap: bool = True` parameter to horizontal layout collections,
-multi-item controls, and wrapping button-like commands. Setting `wrap=False` keeps the
-controlled content to one row: collections use local horizontal scrolling, while a button
-keeps its standard height and ellipsizes its label.
+Add a keyword-only `wrap: bool | None = None` parameter to horizontal layout
+collections, multi-item controls, and wrapping button-like commands. Setting `wrap=False`
+keeps the controlled content to one row: collections use local horizontal scrolling, while
+a button keeps its standard height and ellipsizes its label. The default `wrap=None` is
+"auto": Streamlit picks `False` when the element is inside a horizontal container and
+`True` otherwise, so content stays on one row exactly where compact rows matter most
+(toolbars, `st.container(horizontal=True)`), following the `st.markdown(width="auto")`
+precedent.
 
-This is an opt-in layout control. Existing apps keep their current responsive behavior.
-The initial API covers `st.container`, `st.columns`, `st.multiselect`, `st.pills`,
-`st.segmented_control`, `st.button`, `st.download_button`, `st.link_button`,
+This is a layout control with an adaptive default. Existing apps keep their current
+behavior everywhere except inside horizontal containers, where the auto default now favors
+a single row. The initial API covers `st.container`, `st.columns`, `st.multiselect`,
+`st.pills`, `st.segmented_control`, `st.button`, `st.download_button`, `st.link_button`,
 `st.form_submit_button`, `st.popover`, `st.menu_button`, `st.checkbox`, and
 `st.toggle`.
 
@@ -96,7 +101,8 @@ standard buttons.
 - Keep overflow local to the element so an app does not gain a page-level horizontal
   scrollbar.
 - Let app authors keep buttons at their standard height without hiding the entire action.
-- Preserve current behavior by default.
+- Make the common compact-row case work without extra arguments via an adaptive default,
+  while preserving current behavior outside horizontal containers.
 
 ### Non-goals
 
@@ -117,7 +123,7 @@ Add `wrap` as a keyword-only parameter:
 st.container(
     ...,
     horizontal: bool = False,
-    wrap: bool = True,  # NEW
+    wrap: bool | None = None,  # NEW
     ...,
 )
 
@@ -125,7 +131,7 @@ st.columns(
     spec,
     *,
     ...,
-    wrap: bool = True,  # NEW
+    wrap: bool | None = None,  # NEW
 )
 
 st.multiselect(
@@ -134,7 +140,7 @@ st.multiselect(
     ...,
     *,
     ...,
-    wrap: bool = True,  # NEW
+    wrap: bool | None = None,  # NEW
 )
 
 st.pills(
@@ -142,7 +148,7 @@ st.pills(
     options,
     *,
     ...,
-    wrap: bool = True,  # NEW
+    wrap: bool | None = None,  # NEW
 )
 
 st.segmented_control(
@@ -150,7 +156,7 @@ st.segmented_control(
     options,
     *,
     ...,
-    wrap: bool = True,  # NEW
+    wrap: bool | None = None,  # NEW
 )
 
 st.button(
@@ -158,7 +164,7 @@ st.button(
     ...,
     *,
     ...,
-    wrap: bool = True,  # NEW
+    wrap: bool | None = None,  # NEW
 )
 
 # Add the same keyword-only parameter to:
@@ -170,17 +176,24 @@ st.menu_button(
     ...,
     *,
     ...,
-    wrap: bool = True,  # NEW
+    wrap: bool | None = None,  # NEW
 )
 
-# Add wrap: bool = True to both binary controls:
+# Add wrap: bool | None = None to both binary controls:
 # st.checkbox and st.toggle.
 ```
 
 | Value | Collections and multi-item controls | Single-label controls |
 | --- | --- | --- |
-| `True` (default) | Items move to additional rows when they cannot fit. | The label can wrap and increase the control height. |
+| `None` (default) | Auto: behaves like `False` inside a horizontal container and `True` in any other layout. | Auto: behaves like `False` inside a horizontal container and `True` in any other layout. |
+| `True` | Items move to additional rows when they cannot fit. | The label can wrap and increase the control height. |
 | `False` | Items remain in one row and the element scrolls horizontally if needed. | The control keeps its standard height and ellipsizes an overflowing label. |
+
+The auto default keeps content on one row exactly where compact rows matter most — inside
+`st.container(horizontal=True)` and other horizontal toolbars — while preserving today's
+wrapping everywhere else. An element resolves `None` from its nearest layout ancestor, so a
+button placed directly in `st.columns` (a vertical column) still defaults to wrapping; use
+an explicit `wrap=False` there.
 
 `wrap` is layout-only. Changing it must not reset a widget's value or session state.
 
@@ -294,9 +307,12 @@ with st.container(horizontal=True, wrap=False):
 The buttons stay in one row. If their combined minimum widths exceed the container, the
 container scrolls horizontally.
 
-Passing `wrap=False` with `horizontal=False` raises a `StreamlitAPIException` explaining
-that no horizontal collection exists to wrap. The default `wrap=True` remains valid for
-vertical containers so existing calls do not need to specify both parameters.
+Passing an explicit `wrap=False` with `horizontal=False` raises a `StreamlitAPIException`
+explaining that no horizontal collection exists to wrap. The default `wrap=None` (auto) is
+valid for vertical containers — it resolves to wrapping there — so existing calls do not
+need to specify both parameters. For a top-level horizontal container, `None` resolves to
+`True` (items wrap to additional rows, today's behavior); it only resolves to `False` when
+the horizontal container is itself nested inside another horizontal container.
 
 #### `st.columns`
 
@@ -435,35 +451,47 @@ with st.container(horizontal=True, wrap=False):
 - `label_visibility="hidden"` and `"collapsed"` are unchanged.
 - The boolean value, callback, query-parameter binding, and session state are unchanged.
 
-The default remains `wrap=True` because the label communicates what state is being
-changed. Truncation should require an explicit decision by the app author.
+The default is `None` (auto), matching the other controls: inside a horizontal container
+the checkbox or toggle keeps to one line and ellipsizes an overflowing label, while in
+normal vertical layouts the label wraps as it does today. Because the full label stays
+available as the accessible name and via the hover tooltip, the compact single-row default
+is safe in toolbars without hiding what state is being changed.
 
-### Why a boolean
+### Why a boolean with an auto default
 
-For the commands in scope, there are two useful modes: allow the controlled content to
-use another row or keep it to one row. A collection scrolls because clipping would make
-interactive or selected items unusable. A single-label control can stay operable while
-its visual label is ellipsized because its full accessible name remains available and a
-hover tooltip reveals the full label (or `help`, when set).
+For the commands in scope, there are two useful explicit modes: allow the controlled
+content to use another row (`True`) or keep it to one row (`False`). A collection scrolls
+because clipping would make interactive or selected items unusable. A single-label control
+can stay operable while its visual label is ellipsized because its full accessible name
+remains available and a hover tooltip reveals the full label (or `help`, when set).
 
-This is a genuinely binary choice and follows the existing `st.code(wrap_lines=...)`
-precedent. The parameter is named `wrap` rather than `wrap_lines` because it controls
-whether items flow onto additional rows in a layout, whereas `wrap_lines` controls
+The default is a third value, `None` ("auto"), rather than a fixed `True`, because the
+right choice is context-dependent: a compact single row is almost always what you want
+inside a horizontal container, whereas wrapping is the safer default elsewhere. Resolving
+`None` from the layout gives the common toolbar case the compact behavior for free while
+keeping explicit `True`/`False` for full control. This mirrors the existing
+`st.markdown(width="auto")` default, which likewise resolves to `content` inside horizontal
+containers and `stretch` otherwise.
+
+The parameter is named `wrap` rather than `wrap_lines` (the `st.code` precedent) because it
+controls whether items flow onto additional rows in a layout, whereas `wrap_lines` controls
 line wrapping of text within a code block. Breakpoint control for columns and truncation
-for text are separate behaviors, not additional values of this parameter.
+for text are separate behaviors, not additional values of this parameter. `None`/`True`/
+`False` stay layout-only; they never carry additional semantics.
 
 ## Alternatives considered
 
-### Option A: Shared `wrap: bool` parameter — preferred
+### Option A: Shared `wrap` parameter with an auto default — preferred
 
 ```python
 st.segmented_control("View", options, wrap=False)
 ```
 
-- **Pros:** Short, discoverable, and consistent; preserves current behavior by default;
-  maps directly to the user-visible one-row choice.
-- **Cons:** The different overflow treatments must be documented; adding the parameter
-  to thirteen commands increases the API surface.
+- **Pros:** Short, discoverable, and consistent; maps directly to the user-visible one-row
+  choice; the `None`/auto default gives compact toolbars the right behavior with no extra
+  arguments while preserving current behavior elsewhere.
+- **Cons:** The different overflow treatments must be documented; the adaptive default
+  must be explained; adding the parameter to thirteen commands increases the API surface.
 
 ### Option B: `overflow: Literal["wrap", "scroll"]`
 
@@ -566,6 +594,8 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
 - Add tests that the full-label `title` tooltip is set when `wrap=False` and no `help` is
   set, is omitted when `help` is present (so `help` takes precedence), and uses plain text
   for Markdown labels.
+- Add tests that the auto default (`wrap=None`) resolves to no-wrap inside a horizontal
+  container and to wrapping in other layouts.
 - Add checkbox and toggle tests for ellipsis, fixed indicators, help icons, label
   visibility, and accessible names.
 - Add E2E coverage at desktop, intermediate, and phone widths in Chromium, Firefox, and
@@ -573,14 +603,15 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
 - Test touch-style horizontal scrolling and keyboard navigation.
 - Verify light/dark themes, sidebar, dialog, form, popover, fragment, and embedded iframe
   contexts.
-- Verify old protobuf messages retain today's wrapping behavior.
+- Verify protobuf messages with an absent `wrap` field resolve via the auto default —
+  wrapping in vertical layouts and staying single-row inside horizontal containers.
 
 ## Checklist
 
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Frontend-only behavior; no platform-specific API |
-| No breaking API changes | ✅ Additive, with current behavior as the default |
+| No breaking API changes | ✅ Additive parameter; the auto default preserves current behavior except inside horizontal containers, where it favors a single row |
 | No new dependencies | ✅ Uses native flex and overflow behavior |
 | Metrics collected | ✅ Page profiling for explicit `wrap=False` |
 | Any security/legal impact? | ✅ None |

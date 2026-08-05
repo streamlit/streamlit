@@ -31,7 +31,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 36
+TOTAL_BUTTONS = 37
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
 
@@ -328,6 +328,19 @@ def test_wrap_false_keeps_single_row_and_sets_title(app: Page):
     # the wrapped (two-line) button must be clearly taller than the single-row
     # one, not just larger by a rounding artifact.
     assert true_box["height"] > false_box["height"] + 4
+
+
+def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
+    """With the default (auto) wrap, a button inside a horizontal container keeps
+    its single-row height and exposes the full label via a native title, whereas
+    the same default in a vertical container wraps and adds no title.
+    """
+    auto_horizontal = get_element_by_key(app, "wrap_auto_button")
+    expect(auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+    # Same default (auto) in a vertical container wraps and gets no title.
+    auto_vertical = get_element_by_key(app, "wrap_true_button")
+    expect(auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
 
 
 def test_wrap_false_help_takes_precedence_over_title(app: Page):
