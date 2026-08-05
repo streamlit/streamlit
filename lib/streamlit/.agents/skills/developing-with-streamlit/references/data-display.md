@@ -25,9 +25,9 @@ For scatter points on a tiled geographic map (cities, stores, events by latitude
 st.map(df, latitude="lat", longitude="lon", size="population", color="#ff4b4b")
 ```
 
-- `size=` accepts a **column name** (radius scales with that column's values — e.g. bigger dots for larger cities) or a fixed pixel value. This is how you make marker size reflect a quantity.
+- `size=` accepts a **column name** (radius scales with that column's values — e.g. bigger dots for larger cities) or a single fixed value. Sizes are **in meters**, not pixels, so markers keep their real-world footprint as the map zooms. This is how you make marker size reflect a quantity.
 - `color=` accepts a column name or a fixed color.
-- `st.map` auto-detects common lat/lon column names (`lat`/`latitude`, `lon`/`lng`/`longitude`); pass `latitude=`/`longitude=` explicitly when they differ.
+- `st.map` auto-detects only these column names: `lat`/`latitude` and `lon`/`longitude`, plus their uppercase forms (`LAT`/`LATITUDE`, `LON`/`LONGITUDE`). Any other spelling — including `lng` — needs an explicit `latitude=`/`longitude=`.
 
 
 ## Human-readable labels
