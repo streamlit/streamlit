@@ -146,6 +146,7 @@ from streamlit.user_info import (
 )
 
 import streamlit.column_config as _column_config
+import streamlit.typing as _typing
 
 # Modules that the user should have access to. These are imported with the "as" syntax
 # and the same name; note that renaming the import with "as" does not make it an
@@ -290,6 +291,7 @@ cache_resource = _cache_resource
 
 # Namespaces
 column_config = _column_config
+typing = _typing
 
 # Connection
 connection = _connection
