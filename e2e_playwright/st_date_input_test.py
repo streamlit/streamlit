@@ -33,6 +33,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     reset_focus,
     reset_hovering,
+    type_date,
 )
 
 NUM_DATE_INPUTS = 22
@@ -146,22 +147,35 @@ def test_date_input_has_correct_initial_values(app: Page):
 
 def test_handles_date_selection(app: Page):
     """Test that selection of a date on the calendar works as expected."""
-    get_date_input(app, "Single date").locator("input").click()
+    date_field = get_date_input(app, "Single date").get_by_test_id("stDateInputField")
+    date_field.get_by_role("spinbutton").first.click()
 
     # Select '1970/01/02':
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
-    ).first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Friday, January 2, 1970"
+    ).click()
 
     expect_markdown(app, "Value 1: 1970-01-02")
 
 
 def test_handle_value_changes(app: Page):
     """Test that st.date_input has the correct value after typing in a date."""
-    first_date_input_field = get_date_input(app, "Single date").locator("input")
-    first_date_input_field.fill("1970/01/02")
-    first_date_input_field.blur()
+    date_field = get_date_input(app, "Single date").get_by_test_id("stDateInputField")
+    type_date(date_field, "1970", "01", "02")
+    reset_focus(app)
     expect_markdown(app, "Value 1: 1970-01-02")
+
+
+def test_handle_value_changes_non_default_format(app: Page):
+    """Test typing in a date input with MM-DD-YYYY format."""
+    date_field = get_date_input(app, "Single date with format").get_by_test_id(
+        "stDateInputField"
+    )
+    # MM-DD-YYYY format: segments are month, day, year (left-to-right)
+    # Use a date within the widget's allowed range (1960/01/01 - 1980/01/01)
+    type_date(date_field, "03", "15", "1975")
+    reset_focus(app)
+    expect_markdown(app, "Value 9: 1975-03-15")
 
 
 def test_empty_date_input_behaves_correctly(
@@ -169,10 +183,9 @@ def test_empty_date_input_behaves_correctly(
 ):
     """Test that st.date_input behaves correctly when empty."""
     empty_date_element = get_date_input(app, "Empty value")
-    empty_data_input = empty_date_element.locator("input")
+    empty_date_field = empty_date_element.get_by_test_id("stDateInputField")
     # Since no min value set, min selectable date 10 years before today
-    empty_data_input.type("2025/01/02", delay=50)
-    empty_data_input.press("Enter")
+    type_date(empty_date_field, "2025", "01", "02")
     wait_for_app_run(app)
     expect_markdown(app, "Value 13: 2025-01-02")
 
@@ -186,12 +199,12 @@ def test_empty_date_input_behaves_correctly(
         image_threshold=0.035,
     )
 
-    # Press escape to clear value:
-    empty_number_input = get_date_input(app, "Empty value").locator("input")
-    empty_number_input.focus()
-    empty_number_input.press("Escape")
-    # Click outside to enter value:
-    reset_focus(app)
+    # Click the clear button to clear the value. (React Aria's segmented
+    # DateField doesn't support BaseWeb's "Escape clears the whole value"
+    # shortcut on a focused input, so we use the explicit clear button
+    # instead, which achieves the same outcome.)
+    empty_date_element.get_by_test_id("stDateInputClearButton").click()
+    wait_for_app_run(app)
 
     # Should be empty again:
     expect_markdown(app, "Value 13: None")
@@ -234,12 +247,15 @@ def test_handles_range_start_end_date_changes(app: Page):
 
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
-    get_element_by_key(app, "date_input_12").locator("input").click()
+    date_input_12_field = get_element_by_key(app, "date_input_12").get_by_test_id(
+        "stDateInputField"
+    )
+    date_input_12_field.get_by_role("spinbutton").first.click()
 
     # Select '1970/01/02'
-    calendar = app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
-    ).first
+    calendar = app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Friday, January 2, 1970"
+    )
     expect(calendar).to_be_visible()
     calendar.click()
     wait_for_app_run(app)
@@ -248,8 +264,10 @@ def test_calls_callback_on_change(app: Page):
     expect_prefixed_markdown(app, "Date Input Changed:", "True")
 
     # Change different date input to trigger delta path change
-    first_date_input_field = get_date_input(app, "Single date").locator("input")
-    first_date_input_field.fill("1971/01/03")
+    first_date_field = get_date_input(app, "Single date").get_by_test_id(
+        "stDateInputField"
+    )
+    type_date(first_date_field, "1971", "01", "03")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Value 1:", "1971-01-03")
@@ -263,8 +281,11 @@ def test_single_date_calendar_picker_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the single value calendar picker renders correctly via screenshots matching."""
-    get_date_input(themed_app, "Single date").locator("input").click()
-    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    date_field = get_date_input(themed_app, "Single date").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
+    calendar = themed_app.get_by_test_id("stDateInputCalendar").first
     # Wait for the calendar popup to be fully visible before taking screenshot
     expect(calendar).to_be_visible()
     assert_snapshot(
@@ -289,21 +310,30 @@ def test_range_date_calendar_picker_rendering(
 
 def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     """Test that single value is reset to default if calendar closed empty."""
-    get_date_input(app, "Single date").locator("input").click()
+    date_input = get_date_input(app, "Single date")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    date_field.get_by_role("spinbutton").first.click()
 
     # Select '1970/01/02'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
-    ).first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Friday, January 2, 1970"
+    ).click()
 
     expect_markdown(app, "Value 1: 1970-01-02")
 
-    # Close calendar without selecting a date
-    date_input_field = get_date_input(app, "Single date").locator("input")
-    date_input_field.focus()
-    date_input_field.clear()
+    # Clear every segment via the keyboard (mirrors clearing BaseWeb's
+    # free-text input) without selecting a new date. Note: the clear button
+    # isn't used here since this widget isn't clearable (it has a non-empty
+    # default), so it has no rendered clear button.
+    for segment in date_field.get_by_role("spinbutton").all():
+        segment.click()
+        # A handful of extra presses is a harmless no-op once the segment is
+        # already empty; this just needs to cover the longest segment (year).
+        for _ in range(4):
+            segment.press("Backspace")
 
-    # Click on the large markdown element at the end to submit the cleared value
+    # Click on the large markdown element at the end to close the popover and
+    # submit the cleared value
     reset_focus(app)
 
     # Value should be reset to default
@@ -348,17 +378,17 @@ def test_single_date_input_error_state(
     """Test that the single date input error state works correctly."""
     # The first date input is set to 1970/01/01 by default, with min also set to 1970/01/01
     first_date_input = get_date_input(themed_app, "Single date")
-    first_date_input_field = first_date_input.locator("input")
+    first_date_field = first_date_input.get_by_test_id("stDateInputField")
 
-    # Set date to 1960/01/01, which is outside of the allowed min date
-    first_date_input_field.fill("1960/01/01")
-    first_date_input_field.blur()
+    # Set date to 1960/01/01, which is outside of the allowed min date.
+    # commit=False: keep popover open so we can check real-time error feedback.
+    type_date(first_date_field, "1960", "01", "01", commit=False)
 
     # Check that the value update is not committed
     expect_markdown(themed_app, "Value 1: 1970-01-01")
 
-    # Click outside of the date input to exit calendar picker (reduce snapshot flakiness)
-    first_date_input_field.press("Escape")
+    # Press escape to exit calendar picker (reduce snapshot flakiness)
+    themed_app.keyboard.press("Escape")
 
     # Check that the error icon is now shown in the date input
     error_icon = first_date_input.get_by_test_id("stTooltipErrorHoverTarget")
@@ -469,12 +499,10 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     expect_help_tooltip(app, dynamic_date_input, "initial help")
 
     # Type something and submit (select same date via typing)
-    input_field = dynamic_date_input.locator("input")
-    input_field.type("2020/01/02", delay=50)
-    input_field.press("Enter")
-    input_field.press("Escape")
+    date_field = dynamic_date_input.get_by_test_id("stDateInputField")
+    type_date(date_field, "2020", "01", "02")
     wait_for_app_run(app)
-    expect(app.locator('[data-baseweb="calendar"]')).not_to_be_visible()
+    expect(app.get_by_test_id("stDateInputCalendar")).not_to_be_visible()
 
     expect_prefixed_markdown(app, "Initial date input value:", "2020-01-02")
 
@@ -500,9 +528,7 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     expect_help_tooltip(app, dynamic_date_input, "updated help")
 
     # Type something different and submit
-    input_field.type("2020/01/03")
-    input_field.press("Enter")
-    input_field.press("Escape")
+    type_date(date_field, "2020", "01", "03")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-03")
@@ -513,9 +539,7 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     expect_prefixed_markdown(app, "Initial date input value:", "2020-01-03")
 
     # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
-    input_field.type("2028/01/01")
-    input_field.press("Enter")
-    input_field.press("Escape")
+    type_date(date_field, "2028", "01", "01")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial date input value:", "2028-01-01")
 
@@ -540,8 +564,10 @@ def test_quick_select_feature_visibility(app: Page):
     app.keyboard.press("Escape")
 
     # Test single date input
-    single_date_input = get_date_input(app, "Single date")
-    single_date_input.locator("input").click()
+    single_date_field = get_date_input(app, "Single date").get_by_test_id(
+        "stDateInputField"
+    )
+    single_date_field.get_by_role("spinbutton").first.click()
 
     # Quick select should not be visible for single date inputs
     expect(quick_select).not_to_be_visible()
@@ -565,11 +591,8 @@ def test_date_input_query_param_default_cleared_from_url(page: Page, app_base_ur
 
     # Change the date back to the default via the UI
     date_input = get_element_by_key(page, "bound_date")
-    date_input_field = date_input.locator("input")
-    date_input_field.clear()
-    date_input_field.fill("2025/01/15")
-    date_input_field.press("Enter")
-    date_input_field.press("Escape")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    type_date(date_field, "2025", "01", "15")
     wait_for_app_run(page)
 
     # Default value should be removed from the URL

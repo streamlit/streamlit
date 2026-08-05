@@ -19,15 +19,15 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
-import { format } from "date-fns"
-import moment from "moment"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -50,11 +50,25 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
+  isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import {
+  calendarDateToIso,
+  createDateErrorMessage,
+  dateToCalendarDate,
+  DateValidationErrorType,
+  formatCalendarDate,
+  getMaxDate as getMaxCalendarDate,
+  getMinDate,
+  isOlderThanTwoYears,
+  isoToCalendarDate,
+  validateDate,
+} from "./dateInputUtils"
+import SingleDateInput from "./SingleDateInput"
 import { useIntlLocale } from "./useIntlLocale"
 
 export interface Props {
@@ -64,26 +78,18 @@ export interface Props {
   fragmentId?: string
 }
 
-// Date format for protobuf communication (ISO 8601)
-const DATE_FORMAT = "YYYY-MM-DD"
-
-/** Convert an array of strings to an array of dates. */
+/**
+ * Converts an array of ISO 8601 wire-format strings (the canonical widget
+ * state — see `getStateFromWidgetMgr` et al. below) to native `Date`
+ * objects, needed only to feed the still-BaseWeb-backed range mode's
+ * `Datepicker` props. Single mode (`SingleDateInput`) consumes `CalendarDate`
+ * directly and never needs this conversion.
+ */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => moment(val, DATE_FORMAT).toDate())
-}
-
-/** Convert an array of dates to an array of strings. */
-function datesToStrings(dates: Date[]): string[] {
-  if (!dates) {
-    return []
-  }
-  return dates.map((value: Date) => moment(value).format(DATE_FORMAT))
-}
-
-// Types for date validation
-type ValidationResult = {
-  errorType: "Start" | "End" | null
-  newDates: Date[]
+  return strings
+    .map(isoToCalendarDate)
+    .filter((d): d is CalendarDate => d !== null)
+    .map(d => d.toDate(getLocalTimeZone()))
 }
 
 function DateInput({
@@ -96,6 +102,12 @@ function DateInput({
   const isInSidebar = useContext(IsSidebarContext)
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Lifted here so a future single/range toggle can preserve calendar
+  // continuity across the swap.
+  const [focusedValue, setFocusedValue] = useState<CalendarDate | null>(null)
+  // Incremented on form clear to signal SingleDateInput to reset its local
+  // displayValue (which may have diverged from widget state due to buffering).
+  const [formResetKey, setFormResetKey] = useState(0)
 
   const resetError = useCallback(() => {
     setError(null)
@@ -104,11 +116,17 @@ function DateInput({
   const handleFormCleared = useCallback(() => {
     resetError()
     setIsEmpty(false)
+    setFormResetKey(k => k + 1)
   }, [resetError])
 
   /**
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
+   *
+   * Canonical state is the ISO 8601 wire format directly (`string[]`), not
+   * `Date[]` — this is what `WidgetStateManager` already stores, and what
+   * `SingleDateInput`'s `CalendarDate`-based value converts to/from cleanly
+   * via `dateInputUtils.ts`, with no `moment`/`date-fns` round-trip needed.
    */
   const queryParamBinding = element.queryParamKey
     ? {
@@ -120,7 +138,7 @@ function DateInput({
     : undefined
 
   const [value, setValueWithSource] = useBasicWidgetState<
-    Date[],
+    string[],
     DateInputProto
   >({
     getStateFromWidgetMgr,
@@ -148,12 +166,19 @@ function DateInput({
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
 
-  const minDate = useMemo(
-    () => moment(element.min, DATE_FORMAT).toDate(),
-    [element.min]
-  )
+  const minDateCalendar = useMemo(() => getMinDate(element), [element])
+  const maxDateCalendar = useMemo(() => getMaxCalendarDate(element), [element])
 
-  const maxDate = useMemo(() => getMaxDate(element), [element])
+  // Native Date form, needed only for the still-BaseWeb-backed range path's
+  // Datepicker props.
+  const minDate = useMemo(
+    () => minDateCalendar.toDate(getLocalTimeZone()),
+    [minDateCalendar]
+  )
+  const maxDate = useMemo(
+    () => maxDateCalendar?.toDate(getLocalTimeZone()),
+    [maxDateCalendar]
+  )
 
   const enableQuickSelect = useMemo(() => {
     if (!element.isRange) {
@@ -162,9 +187,8 @@ function DateInput({
 
     // Since quick select allows to select ranges up to the past 2 years,
     // we should only enable it if the min date is older than 2 years ago.
-    const twoYearsAgo = moment().subtract(2, "years").toDate()
-    return minDate < twoYearsAgo
-  }, [element.isRange, minDate])
+    return isOlderThanTwoYears(minDateCalendar)
+  }, [element.isRange, minDateCalendar])
 
   const clearable = element.default.length === 0 && !disabled
 
@@ -173,7 +197,9 @@ function DateInput({
   // one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY" and can also use a period (.) or hyphen (-) as separators.
   // We need to convert the provided format into a mask supported by the Baseweb datepicker
   // Thereby, we need to replace all letters with 9s which refers to any number.
-  // (Using useMemo to avoid recomputing every time for now reason)
+  // Pure string manipulation — no date library needed, kept for the
+  // still-BaseWeb-backed range path only.
+  // (Using useMemo to avoid recomputing every time for no reason)
   const dateMask = useMemo(
     () => element.format.replaceAll(/[a-zA-Z]/g, "9"),
     [element.format]
@@ -181,44 +207,46 @@ function DateInput({
 
   // The Baseweb datepicker supports the date-fns notation for date formatting which is
   // slightly different from the momentJS notation. Therefore, we need to
-  // convert the provided format into the date-fns notation:
-  // (Using useMemo to avoid recomputing every time for now reason)
+  // convert the provided format into the date-fns notation, for the range
+  // path's Datepicker formatString prop only:
+  // (Using useMemo to avoid recomputing every time for no reason)
   const dateFormat = useMemo(
     () => element.format.replaceAll("Y", "y").replaceAll("D", "d"),
     [element.format]
   )
 
-  // Date strings used for error messages
+  // Date strings used for error messages — computed via dateInputUtils'
+  // CalendarDate-based formatter (matching element.format's Y/M/D order)
+  // rather than date-fns, so DateInput.tsx has no date-fns import at all.
   const minDateString = useMemo(
-    () => format(minDate, dateFormat, { locale: loadedLocale }),
-    [minDate, dateFormat, loadedLocale]
+    () => formatCalendarDate(minDateCalendar, element.format),
+    [minDateCalendar, element.format]
   )
 
   const maxDateString = useMemo(
     () =>
-      maxDate ? format(maxDate, dateFormat, { locale: loadedLocale }) : "",
-    [maxDate, dateFormat, loadedLocale]
+      maxDateCalendar
+        ? formatCalendarDate(maxDateCalendar, element.format)
+        : "",
+    [maxDateCalendar, element.format]
   )
 
-  // Create tooltip error message based on validation error
-  const createErrorMessage = useCallback(
-    (errorType: string | null): string | null => {
-      if (!errorType) return null
-
-      if (element.isRange) {
-        const messageEnding =
-          errorType === "End"
-            ? `before ${maxDateString}`
-            : `after ${minDateString}`
-
-        return `**Error**: ${errorType} date set outside allowed range. Please select a date ${messageEnding}.`
-      }
-
-      return `**Error**: Date set outside allowed range. Please select a date between ${minDateString} and ${maxDateString}.`
-    },
-    [element.isRange, maxDateString, minDateString]
+  const buildErrorMessage = useCallback(
+    (errorType: DateValidationErrorType): string | null =>
+      createDateErrorMessage(
+        errorType,
+        element.isRange,
+        minDateString,
+        maxDateString
+      ),
+    [element.isRange, minDateString, maxDateString]
   )
 
+  // Range mode's change handler (still fed by BaseWeb's Datepicker). Dates
+  // arrive as native `Date`s; converting to `CalendarDate` immediately (and
+  // validating in that space) both drops the moment/date-fns dependency and
+  // is what makes the old `normalizeToStartOfDay` workaround unnecessary —
+  // see `dateToCalendarDate`'s docstring.
   const handleChange = useCallback(
     ({
       date,
@@ -233,50 +261,182 @@ function DateInput({
         return
       }
 
-      /**
-       * Normalize selected dates to start of day (00:00) to avoid time
-       * component inconsistencies. Specifically, BaseWeb quick select uses
-       * 12:00 for the selected date, which can cause validation errors.
-       *
-       * @see https://github.com/streamlit/streamlit/issues/12293
-       */
-      const normalizedDateInput: DateOrEmpty[] | DateOrEmpty = Array.isArray(
-        date
-      )
-        ? date
-            .filter((d): d is Date => Boolean(d))
-            .map(d => normalizeToStartOfDay(d))
-        : normalizeToStartOfDay(date)
+      const dates = Array.isArray(date) ? date : [date]
+      let errorType: DateValidationErrorType = null
+      const newIsoDates: string[] = []
+      dates.forEach(d => {
+        if (!d) return
+        const calendarDate = dateToCalendarDate(d)
+        const err = validateDate(
+          calendarDate,
+          minDateCalendar,
+          maxDateCalendar
+        )
+        if (err) errorType = err
+        newIsoDates.push(calendarDateToIso(calendarDate))
+      })
 
-      // Handles FE date validation
-      const { errorType, newDates } = validateDates(
-        normalizedDateInput,
-        minDate,
-        maxDate
-      )
       if (errorType) {
-        setError(createErrorMessage(errorType))
+        setError(buildErrorMessage(errorType))
       }
-      setValueWithSource({ value: newDates, fromUi: true })
-      setIsEmpty(!newDates)
+      setValueWithSource({ value: newIsoDates, fromUi: true })
+      setIsEmpty(newIsoDates.length === 0)
     },
     [
-      createErrorMessage,
-      maxDate,
-      minDate,
+      buildErrorMessage,
+      maxDateCalendar,
+      minDateCalendar,
       resetError,
       setError,
       setValueWithSource,
     ]
   )
 
-  const handleClose = useCallback((): void => {
-    if (!isEmpty) return
+  // Single mode's change handler (fed by SingleDateInput's CalendarDate).
+  const handleSingleChange = useCallback(
+    (date: CalendarDate | null): void => {
+      resetError()
 
-    const newValue = stringsToDates(element.default)
-    setValueWithSource({ value: newValue, fromUi: true })
-    setIsEmpty(!newValue)
-  }, [isEmpty, element, setValueWithSource])
+      if (!date) {
+        setValueWithSource({ value: [], fromUi: true })
+        setIsEmpty(true)
+        return
+      }
+
+      const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
+      if (errorType) {
+        setError(buildErrorMessage(errorType))
+        return
+      }
+      setValueWithSource({ value: [calendarDateToIso(date)], fromUi: true })
+      setIsEmpty(false)
+    },
+    [
+      buildErrorMessage,
+      maxDateCalendar,
+      minDateCalendar,
+      resetError,
+      setError,
+      setValueWithSource,
+    ]
+  )
+
+  // Real-time validation during segment editing — shows error tooltip
+  // without committing the value to widget state.
+  const handleValidate = useCallback(
+    (date: CalendarDate | null): void => {
+      resetError()
+      if (!date) return
+      const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
+      if (errorType) {
+        setError(buildErrorMessage(errorType))
+      }
+    },
+    [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError, setError]
+  )
+
+  // Revert to the default value if the popover closes while the field is
+  // empty or partially cleared. `element.default` is already the ISO wire
+  // format, so no conversion is needed.
+  //
+  // `hasPlaceholderSegments` is true when any date segment was in placeholder
+  // state at close time (partial clear via backspace). Reverting to default
+  // on close ensures abandoned partial edits don't persist.
+  const handleClose = useCallback(
+    (hasPlaceholderSegments?: boolean): void => {
+      if (!isEmpty && !hasPlaceholderSegments) {
+        // User made a complete edit (valid value committed, or invalid value
+        // with error shown) or just opened/closed without changing anything.
+        // Keep current state including any error indicator so the user sees
+        // why their out-of-range input was not accepted.
+        return
+      }
+      resetError()
+      setValueWithSource({ value: element.default, fromUi: true })
+      setIsEmpty(element.default.length === 0)
+    },
+    [isEmpty, element.default, setValueWithSource, resetError]
+  )
+
+  // Synchronous commit for form-submit races: when inside a form, clicking
+  // Submit causes blur before effects fire, so widget state must be written
+  // synchronously. Matches TimeInput's handleBlur dual-write pattern.
+  const inForm = isInForm({ formId: element.formId })
+  const handleFormCommit = useCallback(
+    (date: CalendarDate | null): void => {
+      if (!inForm) return
+      if (!date && !clearable) return
+      const isoValue = date ? [calendarDateToIso(date)] : []
+      updateWidgetMgrState(
+        element,
+        widgetMgr,
+        { value: isoValue, fromUi: true },
+        fragmentId
+      )
+    },
+    [inForm, clearable, element, widgetMgr, fragmentId]
+  )
+
+  const singleValue = useMemo(
+    () => isoToCalendarDate(value[0] ?? "") ?? null,
+    [value]
+  )
+
+  // Sync the calendar's visible month when the committed value changes
+  // externally (session_state update, form clear, calendar click commit).
+  // During segment typing, SingleDateInput drives focusedValue directly
+  // via its onFocusChange prop without waiting for a commit.
+  useEffect(() => {
+    if (element.isRange) return
+    if (singleValue) {
+      setFocusedValue(singleValue)
+    } else {
+      // After clear: reset to today (clamped to minDate) so the calendar
+      // shows a sensible month instead of the stale previous value.
+      const now = today(getLocalTimeZone())
+      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
+    }
+  }, [element.isRange, singleValue, minDateCalendar])
+
+  if (!element.isRange) {
+    return (
+      <div className="stDateInput" data-testid="stDateInput">
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
+          {element.help && (
+            <WidgetLabelHelpIcon
+              content={element.help}
+              label={element.label}
+            />
+          )}
+        </WidgetLabel>
+        <SingleDateInput
+          value={singleValue}
+          onChange={handleSingleChange}
+          minDate={minDateCalendar}
+          maxDate={maxDateCalendar}
+          format={element.format}
+          disabled={disabled}
+          clearable={clearable}
+          label={element.label}
+          error={error}
+          locale={locale}
+          isInSidebar={isInSidebar}
+          focusedValue={focusedValue}
+          onFocusChange={setFocusedValue}
+          onValidate={handleValidate}
+          onClose={handleClose}
+          formCommit={inForm ? handleFormCommit : undefined}
+          formResetKey={formResetKey}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="stDateInput" data-testid="stDateInput">
@@ -295,12 +455,8 @@ function DateInput({
         locale={loadedLocale}
         density={DENSITY.high}
         formatString={dateFormat}
-        mask={element.isRange ? `${dateMask} – ${dateMask}` : dateMask}
-        placeholder={
-          element.isRange
-            ? `${element.format} – ${element.format}`
-            : element.format
-        }
+        mask={`${dateMask} – ${dateMask}`}
+        placeholder={`${element.format} – ${element.format}`}
         disabled={disabled}
         onChange={handleChange}
         onClose={handleClose}
@@ -549,7 +705,7 @@ function DateInput({
             },
           },
         }}
-        value={value}
+        value={stringsToDates(value)}
         minDate={minDate}
         maxDate={maxDate}
         range={element.isRange}
@@ -562,104 +718,44 @@ function DateInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: DateInputProto
-): Date[] | undefined {
-  const storedValue = widgetMgr.getStringArrayValue(element)
-  if (storedValue === undefined) {
-    return undefined
-  }
-  return stringsToDates(storedValue)
+): string[] | undefined {
+  return widgetMgr.getStringArrayValue(element)
 }
 
-function getDefaultStateFromProto(element: DateInputProto): Date[] {
-  return stringsToDates(element.default) ?? []
+function getDefaultStateFromProto(element: DateInputProto): string[] {
+  return element.default ?? []
 }
 
-function getCurrStateFromProto(element: DateInputProto): Date[] {
-  return stringsToDates(element.value) ?? []
+function getCurrStateFromProto(element: DateInputProto): string[] {
+  return element.value ?? []
 }
 
 function updateWidgetMgrState(
   element: DateInputProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWithSource<Date[]>,
+  vws: ValueWithSource<string[]>,
   fragmentId: string | undefined
 ): void {
-  const minDate = moment(element.min, DATE_FORMAT).toDate()
-  const maxDate = getMaxDate(element)
-  let isValid = true
+  const minDate = getMinDate(element)
+  const maxDate = getMaxCalendarDate(element)
 
-  // Check if date(s) outside of allowed min/max
-  const normalizedStateValues = (vws.value || []).map(d =>
-    normalizeToStartOfDay(d)
-  )
-  const { errorType } = validateDates(normalizedStateValues, minDate, maxDate)
-  if (errorType) {
-    isValid = false
-  }
+  // Guard: invalid values must never reach the backend. This catches
+  // out-of-range dates and unparsable ISO strings (e.g. malformed
+  // query-param seeds). Empty arrays are valid (cleared input).
+  const isValid = (vws.value || []).every(iso => {
+    const calendarDate = isoToCalendarDate(iso)
+    if (!calendarDate) return false
+    return !validateDate(calendarDate, minDate, maxDate)
+  })
 
-  // Only update widget state if date(s) valid
   if (isValid) {
     widgetMgr.setStringArrayValue(
       element,
-      datesToStrings(vws.value),
+      vws.value,
       { fromUi: vws.fromUi },
       fragmentId
     )
   }
-}
-
-type DateOrEmpty = Date | null | undefined
-
-function validateDates(
-  dates: DateOrEmpty[] | DateOrEmpty,
-  minDate: Date,
-  maxDate: Date | undefined
-): ValidationResult {
-  const newDates: Date[] = []
-  let errorType: "Start" | "End" | null = null
-
-  if (isNullOrUndefined(dates)) {
-    return { errorType: null, newDates: [] }
-  }
-
-  if (Array.isArray(dates)) {
-    dates.forEach((dt: Date | null | undefined) => {
-      if (dt) {
-        if (maxDate && dt > maxDate) {
-          errorType = "End"
-        } else if (dt < minDate) {
-          errorType = "Start"
-        }
-        newDates.push(dt)
-      }
-    })
-  } else if (dates) {
-    if (maxDate && dates > maxDate) {
-      errorType = "End"
-    } else if (dates < minDate) {
-      errorType = "Start"
-    }
-    newDates.push(dates)
-  }
-
-  return {
-    errorType,
-    newDates,
-  }
-}
-
-function getMaxDate(element: DateInputProto): Date | undefined {
-  const maxDate = element.max
-
-  return maxDate && maxDate.length > 0
-    ? moment(maxDate, DATE_FORMAT).toDate()
-    : undefined
-}
-
-function normalizeToStartOfDay(date: Date): Date {
-  const normalized = new Date(date.getTime())
-  normalized.setHours(0, 0, 0, 0)
-  return normalized
 }
 
 export default memo(DateInput)
