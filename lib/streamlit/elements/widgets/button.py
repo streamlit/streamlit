@@ -318,8 +318,7 @@ class ButtonMixin:
 
             When the label is truncated and no ``help`` is set, hovering the
             button reveals the full label in a tooltip. Icons and keyboard
-            shortcuts remain visible. This parameter only affects layout; it
-            doesn't change the button's return value or reset any widget state.
+            shortcuts remain visible.
 
         Returns
         -------
@@ -667,8 +666,7 @@ class ButtonMixin:
 
             When the label is truncated and no ``help`` is set, hovering the
             button reveals the full label in a tooltip. Icons and keyboard
-            shortcuts remain visible. This parameter only affects layout; it
-            doesn't change the button's return value or reset any widget state.
+            shortcuts remain visible.
 
         Returns
         -------
@@ -1104,8 +1102,7 @@ class ButtonMixin:
 
             When the label is truncated and no ``help`` is set, hovering the
             button reveals the full label in a tooltip. Icons and keyboard
-            shortcuts remain visible. This parameter only affects layout; it
-            doesn't change the button's return value or reset any widget state.
+            shortcuts remain visible.
 
         Returns
         -------

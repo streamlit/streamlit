@@ -265,8 +265,7 @@ class MenuButtonMixin:
             When the label is truncated and no ``help`` is set, hovering the
             button reveals the full label in a tooltip. The icon and expansion
             arrow remain visible. This parameter controls only the trigger
-            label; menu option labels are unaffected. It only affects layout
-            and doesn't change the widget's value or reset any widget state.
+            label; menu option labels are unaffected.
 
         Returns
         -------

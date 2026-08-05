@@ -1500,9 +1500,7 @@ class LayoutsMixin:
 
             When the label is truncated and no ``help`` is set, hovering the
             button reveals the full label in a tooltip. The icon and chevron
-            remain visible. This parameter only affects the popover button's
-            layout. It doesn't change the popover state or reset any widget
-            state.
+            remain visible.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
