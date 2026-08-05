@@ -214,6 +214,21 @@ describe("ExceptionElement Element", () => {
       ).not.toBeInTheDocument()
     })
 
+    it("renders the callout as a sibling below the error box, not inside it", () => {
+      renderWithContexts(<ExceptionElement {...getStreamlitProps()} />, {
+        libConfigContext: { showErrorLinks: SHOW_LINKS },
+        skillsInstallContext: { enabled: true },
+      })
+      const errorBox = screen.getByTestId("stException")
+      const callout = screen.getByTestId("stSkillsInstallCallout")
+
+      // The callout is its own box after the error box (per the design), so
+      // `stException` keeps meaning "the error box" for anyone targeting it.
+      expect(errorBox).not.toContainElement(callout)
+      expect(errorBox.parentElement).toContainElement(callout)
+      expect(errorBox.nextElementSibling).toBe(callout)
+    })
+
     it("shows at most one callout when several errors are on screen", () => {
       renderWithContexts(
         <>
@@ -230,7 +245,7 @@ describe("ExceptionElement Element", () => {
       expect(screen.getAllByTestId("stSkillsInstallCallout")).toHaveLength(1)
     })
 
-    it("installs via the callout inside the error box", async () => {
+    it("installs via the callout's action", async () => {
       const user = userEvent.setup()
       const onInstall = vi
         .fn()
@@ -244,7 +259,7 @@ describe("ExceptionElement Element", () => {
       expect(onInstall).toHaveBeenCalledTimes(1)
     })
 
-    it("confirms then removes itself from the error after a successful install", async () => {
+    it("confirms then removes itself after a successful install", async () => {
       vi.useFakeTimers()
       try {
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })

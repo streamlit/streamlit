@@ -23,8 +23,8 @@ import {
   useState,
 } from "react"
 
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledSkillsInstallCallout,
@@ -65,16 +65,16 @@ export interface SkillsInstallCalloutProps {
 }
 
 /**
- * A single "Install Streamlit skills" call-to-action shown inside an error box
+ * A single "Install Streamlit skills" call-to-action shown below an error box
  * during local development. It only renders when the server has detected an AI
  * coding agent that lacks Streamlit's skills, so the copy speaks to that agent:
  * a one-click way to give it version-matched Streamlit knowledge at the moment
  * a developer hits an error.
  *
- * It deliberately reads as one more line on the error — it sits inside the error
- * box and inherits its tint and text color, with a small sparkle accent and an
- * underlined text action — rather than a dominant panel, so it coexists with the
- * existing Copy / Ask links instead of overpowering them.
+ * It sits in its own box directly under the error, sharing the error's tint,
+ * corner radius, and padding, so it reads as an attached follow-on to that error
+ * rather than a dominant panel or an unrelated block. The action is a text link,
+ * matching the error's own Copy / Ask links.
  *
  * Not dismissable by the user (no ✕ / snooze / "don't show again"): it clears
  * on a successful install (after a brief confirmation) or when the parent stops
@@ -86,7 +86,6 @@ function SkillsInstallCallout({
   onShown,
   onDismiss,
 }: Readonly<SkillsInstallCalloutProps>): ReactElement | null {
-  const theme = useEmotionTheme()
   const [status, setStatus] = useState<InstallStatus>("idle")
   const [errorMessage, setErrorMessage] = useState("")
 
@@ -135,11 +134,6 @@ function SkillsInstallCallout({
     : isError
       ? ":material/error:"
       : ":material/auto_awesome:"
-  // Idle/installing/error share the error box's text color so the callout
-  // blends into the box; success flips to green to signal the install landed.
-  const iconColor = isSuccess
-    ? theme.colors.greenColor
-    : theme.colors.redTextColor
 
   const message = isSuccess
     ? "Skills installed — your AI assistant is ready to help."
@@ -158,16 +152,21 @@ function SkillsInstallCallout({
   }
 
   return (
+    // The box takes the error tint while there's still something to act on, and
+    // flips to the success tint once the install lands — so a confirmation never
+    // reads as green text sitting in a red error box. The icon and copy inherit
+    // that colour, so the kind is the only thing that needs to change.
     <StyledSkillsInstallCallout
+      $kind={isSuccess ? Kind.SUCCESS : Kind.ERROR}
       data-testid="stSkillsInstallCallout"
       className="stSkillsInstallCallout"
       role="status"
       aria-live="polite"
     >
       <StyledSkillsInstallCalloutIcon aria-hidden="true">
-        <DynamicIcon iconValue={iconValue} size="base" color={iconColor} />
+        <DynamicIcon iconValue={iconValue} size="base" />
       </StyledSkillsInstallCalloutIcon>
-      <StyledSkillsInstallCalloutText $success={isSuccess}>
+      <StyledSkillsInstallCalloutText>
         {message}
       </StyledSkillsInstallCalloutText>
       {!isSuccess && (

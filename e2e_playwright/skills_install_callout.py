@@ -18,15 +18,23 @@ from streamlit.errors import StreamlitAPIException
 st.title("Skills install callout e2e")
 st.write("App used to e2e-test the in-error install-skills callout.")
 
+# Each error gets a keyed container so the test can assert which error the single
+# callout attached itself to. The callout renders as a sibling *below* its error
+# box, so it lands inside the same keyed container as that box.
+
 # A plain (non-Streamlit) error must NOT get the callout — installing Streamlit
 # skills won't fix a bug in the developer's own logic. Render it FIRST (before
-# any eligible error) so the "no callout in the ValueError box" assertion
-# depends on the is_streamlit_exception gate, not on the single callout slot
-# already being claimed by an earlier Streamlit error.
-st.exception(ValueError("A user-code error the skills can't help with"))
+# any eligible error) so the "no callout for the ValueError" assertion depends on
+# the is_streamlit_exception gate, not on the single callout slot already being
+# claimed by an earlier Streamlit error.
+with st.container(key="user_error"):
+    st.exception(ValueError("A user-code error the skills can't help with"))
 
 # Two Streamlit-raised exceptions (subclasses of streamlit.errors.Error) — the
 # class of mistake the skills can actually fix. Rendering two exercises the
 # single-callout dedup: both render, but the install callout appears in only one.
-st.exception(StreamlitAPIException("Something broke (first error)"))
-st.exception(StreamlitAPIException("Something else broke (second error)"))
+with st.container(key="streamlit_error_first"):
+    st.exception(StreamlitAPIException("Something broke (first error)"))
+
+with st.container(key="streamlit_error_second"):
+    st.exception(StreamlitAPIException("Something else broke (second error)"))

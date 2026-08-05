@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 import pytest
 from playwright.sync_api import expect
 
+from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.skills_install_app import start_agent_home_app_server
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ def _dismiss_proactive_toast(app: Page) -> None:
     expect(toast).not_to_be_visible()
 
 
-def test_skills_install_callout_shows_in_one_error_box(
+def test_skills_install_callout_shows_below_one_error_box(
     app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
     """In local dev (agent present, no skills) the in-error callout appears once
@@ -93,17 +94,22 @@ def test_skills_install_callout_shows_in_one_error_box(
     expect(callout).to_have_count(1)
     expect(callout).to_be_visible()
 
-    # ...and it sits inside an error box, not floating elsewhere on the page.
-    expect(app.get_by_test_id("stException").filter(has=callout)).to_have_count(1)
+    # ...and it is its OWN box below the error, not a row inside it (per the
+    # design), so `stException` still means just the error box.
+    expect(app.get_by_test_id("stException").filter(has=callout)).to_have_count(0)
 
-    # Scoping: the plain (non-Streamlit) ValueError box gets NO callout —
-    # installing skills won't fix a bug in the developer's own logic. It renders
-    # FIRST (see the app script), so this depends on the is_streamlit_exception
-    # gate, not on the single slot already being claimed by a Streamlit error.
+    # It attaches to the first Streamlit-raised error...
     expect(
-        app.get_by_test_id("stException")
-        .filter(has_text="user-code error")
-        .get_by_test_id("stSkillsInstallCallout")
+        get_element_by_key(app, "streamlit_error_first").get_by_test_id(
+            "stSkillsInstallCallout"
+        )
+    ).to_have_count(1)
+    # ...and NOT to the plain ValueError, which renders first: installing skills
+    # won't fix a bug in the developer's own logic. Because that box comes first,
+    # this depends on the is_streamlit_exception gate, not on the single slot
+    # already being claimed by a Streamlit error.
+    expect(
+        get_element_by_key(app, "user_error").get_by_test_id("stSkillsInstallCallout")
     ).to_have_count(0)
 
     # A single Install CTA — deliberately NOT dismissable: no ✕ / snooze /
@@ -115,12 +121,13 @@ def test_skills_install_callout_shows_in_one_error_box(
     # Snapshot last so the functional assertions above aren't blocked by a
     # missing baseline (new snapshots get a Linux baseline via the autofix flow).
     assert_snapshot(callout, name="skills_install_callout-idle")
-    # Also snapshot the whole error box: this shows how the (left-aligned)
-    # callout at the foot reads next to the error's existing right-aligned
-    # Copy / Ask Google / Ask ChatGPT links — they sit on separate rows.
+    # Also snapshot the error and its callout together: this is what the design
+    # is about — two boxes sharing a tint and radius, the callout's sparkle
+    # aligned with the exception type above it, and the error's own right-aligned
+    # Copy / Ask Google / Ask ChatGPT links left undisturbed.
     assert_snapshot(
-        app.get_by_test_id("stException").filter(has=callout),
-        name="skills_install_callout-in_error_box",
+        get_element_by_key(app, "streamlit_error_first"),
+        name="skills_install_callout-below_error_box",
     )
 
 

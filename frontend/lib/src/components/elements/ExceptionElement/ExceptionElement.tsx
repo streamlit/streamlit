@@ -38,6 +38,7 @@ import {
   StyledExceptionCopyButton,
   StyledExceptionLinks,
   StyledExceptionMessage,
+  StyledExceptionWithCallout,
   StyledExceptionWrapper,
   StyledMessageType,
   StyledStackTraceContent,
@@ -131,9 +132,10 @@ function ExceptionElement({
     (showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO &&
       isLocalhost())
 
-  // Offer a one-click "install Streamlit skills" CTA in local development,
-  // using the same surface as the AI help links above. Scoped tightly so the
-  // nudge is only shown where the skills would actually help:
+  // Offer a one-click "install Streamlit skills" CTA in local development, in its
+  // own box directly below this error. Reuses `shouldShowLinks` — the same
+  // localhost gate as the AI help links above — and scopes tightly so the nudge
+  // only appears where the skills would actually help:
   //   - Streamlit-raised exceptions only (`element.isStreamlitException`) —
   //     API misuse the skills can fix, not arbitrary user errors like a
   //     ZeroDivisionError. The broad startup toast (#15473) still covers those.
@@ -175,43 +177,47 @@ function ExceptionElement({
   }, [copyToClipboard, formattedExceptionFull])
 
   return (
-    <div className="stException" data-testid="stException">
-      <AlertContainer kind={element.isWarning ? Kind.WARNING : Kind.ERROR}>
-        <StyledExceptionWrapper>
-          <StyledExceptionMessage data-testid="stExceptionMessage">
-            <ExceptionMessage
-              type={element.type}
-              message={element.message}
-              messageIsMarkdown={element.messageIsMarkdown}
-            />
-          </StyledExceptionMessage>
-          {element.stackTrace && element.stackTrace.length > 0 ? (
-            <StackTrace stackTrace={element.stackTrace} />
-          ) : null}
-          {shouldShowLinks && (
-            <StyledExceptionLinks>
-              <StyledExceptionCopyButton onClick={handleCopy}>
-                Copy
-              </StyledExceptionCopyButton>
-              <a href={searchUrl} target="_blank" rel="noopener noreferrer">
-                Ask Google
-              </a>
-              <a href={chatGptUrl} target="_blank" rel="noopener noreferrer">
-                Ask ChatGPT
-              </a>
-            </StyledExceptionLinks>
-          )}
-          {showSkillsCallout && (
-            <SkillsInstallCallout
-              enabled={skillsCalloutEligible}
-              onInstall={skillsInstall.onInstall}
-              onShown={skillsInstall.onShown}
-              onDismiss={handleSkillsCalloutDismiss}
-            />
-          )}
-        </StyledExceptionWrapper>
-      </AlertContainer>
-    </div>
+    <StyledExceptionWithCallout>
+      <div className="stException" data-testid="stException">
+        <AlertContainer kind={element.isWarning ? Kind.WARNING : Kind.ERROR}>
+          <StyledExceptionWrapper>
+            <StyledExceptionMessage data-testid="stExceptionMessage">
+              <ExceptionMessage
+                type={element.type}
+                message={element.message}
+                messageIsMarkdown={element.messageIsMarkdown}
+              />
+            </StyledExceptionMessage>
+            {element.stackTrace && element.stackTrace.length > 0 ? (
+              <StackTrace stackTrace={element.stackTrace} />
+            ) : null}
+            {shouldShowLinks && (
+              <StyledExceptionLinks>
+                <StyledExceptionCopyButton onClick={handleCopy}>
+                  Copy
+                </StyledExceptionCopyButton>
+                <a href={searchUrl} target="_blank" rel="noopener noreferrer">
+                  Ask Google
+                </a>
+                <a href={chatGptUrl} target="_blank" rel="noopener noreferrer">
+                  Ask ChatGPT
+                </a>
+              </StyledExceptionLinks>
+            )}
+          </StyledExceptionWrapper>
+        </AlertContainer>
+      </div>
+      {/* Its own box below the error, not a row inside it (per the design), so
+          `stException` keeps meaning "the error box" for anyone targeting it. */}
+      {showSkillsCallout && (
+        <SkillsInstallCallout
+          enabled={skillsCalloutEligible}
+          onInstall={skillsInstall.onInstall}
+          onShown={skillsInstall.onShown}
+          onDismiss={handleSkillsCalloutDismiss}
+        />
+      )}
+    </StyledExceptionWithCallout>
   )
 }
 
