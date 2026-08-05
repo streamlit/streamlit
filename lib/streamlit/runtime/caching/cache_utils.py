@@ -239,6 +239,7 @@ class Cache(Generic[R]):
         result = self.read_result(value_key)
         return CacheReadResult(result, is_stale=self._is_stale(result))
 
+    # Positional-only so subclasses can name the parameter freely (e.g. result).
     def _is_stale(self, _result: CachedResult[R], /) -> bool:
         """Whether a present entry is past its fresh ttl.
 

@@ -1091,6 +1091,8 @@ class ChatMixin:
         else:
             chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
 
+        # Only plain str values are pushed to the frontend. ChatInputValue is the
+        # deserialized submit/return form and is not a valid programmatic set_value.
         if widget_state.value_changed and isinstance(widget_state.value, str):
             # Support for programmatically setting the text in the chat input
             # via session state. Since chat input has a trigger state,
@@ -1109,7 +1111,10 @@ class ChatMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
-        has_one_shot = widget_state.value_changed and widget_state.value is not None
+        # Match the set_value guard so one-shot only fires when a str was pushed.
+        has_one_shot = widget_state.value_changed and isinstance(
+            widget_state.value, str
+        )
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.

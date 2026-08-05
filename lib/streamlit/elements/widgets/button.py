@@ -1851,6 +1851,7 @@ def marshall_file(
             proto_download_button.url = ""
             return
 
+        # ty needs this cast; mypy already narrows via callable() above.
         data_callable = cast(  # type: ignore[redundant-cast]
             "Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]", data
         )
