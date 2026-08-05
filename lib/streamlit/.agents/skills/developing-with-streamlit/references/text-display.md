@@ -23,7 +23,7 @@ All three accept `anchor=`, `help=`, and a leading `:material/icon:`. Use senten
 ## Body text, captions, code
 
 - `st.markdown(...)` — formatted prose, the main workhorse (see [markdown.md](markdown.md)).
-- `st.text(...)` — fixed-width, unformatted text (no Markdown parsing); for raw or preformatted strings.
+- `st.text(...)` — unformatted text: no Markdown or HTML parsing. It is *not* monospace; for monospace or preformatted output use `st.code(...)`.
 - `st.caption(...)` — small, muted text for footnotes, timestamps, and help lines.
 - `st.code(body, language=...)` — a syntax-highlighted code block with a copy button. Don't hand-build a fenced block inside `st.markdown` when you want a real code box.
 
@@ -31,7 +31,7 @@ All three accept `anchor=`, `help=`, and a leading `:material/icon:`. Use senten
 st.markdown("Formatted **prose** with a [link](https://example.com).")
 st.caption("Last updated 5 minutes ago")
 st.code("SELECT * FROM sales", language="sql")
-st.text("raw\n  preformatted text")
+st.text("Plain text, no Markdown parsing")
 ```
 
 ## Badges
