@@ -958,6 +958,20 @@ class ChatInputSerdeTest(DeltaGeneratorTestCase):
         assert isinstance(result, ChatInputValueProto)
         assert result.data == "test message"
 
+    def test_serialize_chat_input_value_uses_text(self):
+        """Test serialize extracts .text from a ChatInputValue."""
+        serde = ChatInputSerde(accept_files=True, accept_audio=False)
+        value = ChatInputValue(
+            text="structured message",
+            files=[],
+            _include_files=True,
+            _include_audio=False,
+        )
+        result = serde.serialize(value)
+
+        assert isinstance(result, ChatInputValueProto)
+        assert result.data == "structured message"
+
     def test_serialize_with_none(self):
         """Test serialize handles None value - field is not set."""
         serde = ChatInputSerde(accept_files=False, accept_audio=False)

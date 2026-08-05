@@ -16,7 +16,7 @@
 import streamlit as st
 from streamlit.components.v2.bidi_component import ComponentResult
 
-# Exercise the public namespace path used by apps.
+# Alias via the public st.components.v2 path; ty cannot resolve that submodule, so ignore once here.
 component = st.components.v2.component  # ty: ignore[possibly-missing-submodule]
 
 interactive_text_input_definition = component(

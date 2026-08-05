@@ -395,8 +395,9 @@ class CachedFuncInfo(Generic[P, R]):
     def display_name(self) -> str:
         """A human-readable name for the cached function."""
         # self.func is typed as Callable, which does not expose these attributes.
-        func = cast("FunctionType", self.func)
-        return f"{func.__module__}.{func.__qualname__}"
+        module = getattr(self.func, "__module__", "?")
+        qualname = getattr(self.func, "__qualname__", "?")
+        return f"{module}.{qualname}"
 
     def get_function_cache(self, function_key: str) -> Cache[R]:
         """Get or create the function cache for the given key.

@@ -19,7 +19,7 @@ import pandas as pd
 
 import streamlit as st
 
-# Exercise the public namespace path used by apps.
+# Alias via the public st.components.v2 path; ty cannot resolve that submodule, so ignore once here.
 component = st.components.v2.component  # ty: ignore[possibly-missing-submodule]
 
 np.random.seed(0)
