@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "typesync": "^0.14.3",
-    "vite": "^8.1.5",
+    "vite": "^8.2.0",
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.10"
   },
