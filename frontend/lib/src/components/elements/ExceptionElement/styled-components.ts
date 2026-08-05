@@ -67,3 +67,62 @@ export const StyledExceptionWrapper = styled.div(({ theme }) => ({
   flexDirection: "column",
   gap: theme.spacing.lg,
 }))
+
+/**
+ * Inline "install Streamlit skills" call-to-action shown at the foot of an error
+ * box in local development. It lives *inside* the error's AlertContainer and
+ * inherits its tint and text color (no separate band, wash, or accent stripe),
+ * so it reads as one more line on the error — a peer of the Copy / Ask links —
+ * rather than a panel that overpowers them.
+ */
+export const StyledSkillsInstallCallout = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: theme.spacing.sm,
+  color: "inherit",
+}))
+
+/**
+ * Wraps the callout's decorative sparkle/status icon so it is hidden from the
+ * `role="status"` / `aria-live` region — otherwise the Material ligature (e.g.
+ * "auto_awesome") would be announced as text before the message. `display:
+ * contents` keeps the icon a direct flex child, so this adds no layout box.
+ */
+export const StyledSkillsInstallCalloutIcon = styled.span({
+  display: "contents",
+})
+
+export const StyledSkillsInstallCalloutText = styled.div<{
+  $success?: boolean
+}>(({ theme, $success }) => ({
+  // Don't grow: the action sits directly after the copy (per the design pass),
+  // not pushed to the far edge like the right-aligned Copy / Ask links.
+  flex: "0 1 auto",
+  // On success the confirmation text goes green to match the green check icon;
+  // otherwise it inherits the error box's tint so the callout blends in. (The
+  // success icon already uses greenColor.)
+  ...($success ? { color: theme.colors.greenColor } : {}),
+}))
+
+/**
+ * The callout's action: a text link-button that inherits the error box's text
+ * color and underline treatment — the same lightweight look as the sibling
+ * "Copy" / "Ask …" links — so the CTA reads as a peer action.
+ */
+export const StyledSkillsInstallCalloutButton = styled.button(({ theme }) => ({
+  all: "unset",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  color: "inherit",
+  textDecoration: "underline",
+  borderRadius: theme.radii.default,
+  "&:focus-visible": {
+    boxShadow: theme.shadows.focusRing,
+  },
+  "&:disabled": {
+    cursor: "default",
+    opacity: 0.7,
+    textDecoration: "none",
+  },
+}))

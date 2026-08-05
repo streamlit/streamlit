@@ -14,17 +14,13 @@
 
 from __future__ import annotations
 
-import shutil
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import (
-    start_app_server,
-    wait_for_app_loaded,
-)
+from e2e_playwright.conftest import wait_for_app_loaded
+from e2e_playwright.shared.skills_install_app import start_agent_home_app_server
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -34,50 +30,30 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import AsyncSubprocess, ImageCompareFunction
 
 
-@pytest.fixture(scope="module", autouse=True)
+# Function-scoped (NOT module-scoped): this test permanently dismisses the nudge
+# (writing the "don't show again" marker into the temp HOME). A shared module
+# server would let that dismissal bleed across the browser-params landing on the
+# same xdist worker — a later browser would then find the nudge already
+# suppressed and fail. A fresh server + temp HOME per test keeps each isolated.
+@pytest.fixture(autouse=True)
 def app_server(
     app_port: int,
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Generator[AsyncSubprocess, None, None]:
-    """Start the app with a temp HOME where an agent harness is present but no
-    Streamlit skills are installed, and with the welcome message enabled
-    (non-headless), so the server recommends the install-skills nudge.
-
-    This overrides the default ``app_server`` fixture from ``conftest`` so the
-    nudge gating is deterministic regardless of the developer's / CI's real
-    home directory.
-
-    The app script is copied into an ISOLATED temp project dir (its own tree:
-    no ``.git``, no ``.agents``/``.claude``, no installed skills) and run from
-    there. The nudge's skill detection scans the app's directory, its git root,
-    and the nearest agent-config ancestor — so running the script in place would
-    make this test depend on the developer's real checkout (e.g. flake/fail for
-    anyone who has the bundled skill installed in this repo). Isolation keeps
-    the only "agent present, no skills" signal coming from the temp HOME.
+    """Start the app in a temp HOME (agent present, no skills) with the welcome
+    message enabled (non-headless), so the server recommends the install-skills
+    nudge. Overrides conftest's default ``app_server`` so the gating is
+    deterministic regardless of the real home dir. See
+    ``start_agent_home_app_server`` for the shared isolation setup (also used by
+    ``skills_install_callout_test``).
     """
-    home = tmp_path_factory.mktemp("skills_nudge_home")
-    # An agent harness is considered "present" when its home config dir exists.
-    (home / ".claude").mkdir()
-    # Pre-seed empty credentials so non-headless startup never prompts.
-    streamlit_dir = home / ".streamlit"
-    streamlit_dir.mkdir()
-    (streamlit_dir / "credentials.toml").write_text('[general]\nemail = ""\n')
-
-    # Copy the app script into an isolated project dir and point a shim module
-    # at it; start_app_server resolves the script purely from ``__file__``.
-    project = tmp_path_factory.mktemp("skills_nudge_project")
-    assert request.module.__file__ is not None
-    source_script = request.module.__file__.replace("_test.py", ".py")
-    shutil.copy(source_script, project / "skills_nudge.py")
-    isolated_module = SimpleNamespace(__file__=str(project / "skills_nudge_test.py"))
-
-    proc = start_app_server(
+    proc = start_agent_home_app_server(
         app_port,
-        isolated_module,  # type: ignore[arg-type]
-        # Appended last so they override the headless default in conftest.
-        extra_args=["--server.headless", "false"],
-        extra_env={"HOME": str(home)},
+        request,
+        tmp_path_factory,
+        home_prefix="skills_nudge_home",
+        project_prefix="skills_nudge_project",
     )
     yield proc
     print(proc.terminate(), flush=True)
