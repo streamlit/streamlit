@@ -1534,6 +1534,7 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("registration_sequence", (), {}),
         ("ids_registered_after", (0,), {}),
         ("order_fragment_ids", ([],), {}),
+        ("has_ancestor_in", ("frag", set()), {}),
         ("delete", ("key",), {}),
         ("contains", ("key",), {}),
         ("register_outside_wrapper", ("frag", "container", object()), {}),

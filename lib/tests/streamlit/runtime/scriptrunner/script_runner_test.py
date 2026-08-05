@@ -640,6 +640,47 @@ class ScriptRunnerTest(unittest.TestCase):
         inner.assert_called_once()
         self._assert_no_exceptions(scriptrunner)
 
+    def test_fragment_queue_skips_descendant_when_ancestor_raises(self):
+        """A failing ancestor must still suppress its queued descendant.
+
+        The descendant is recorded as executed *before* the ancestor's body runs,
+        because the ancestor owns the descendant's container either way: if it
+        raised partway through, rerunning the descendant here would render it
+        outside the parent that just failed. Moving that bookkeeping after the
+        call would let the descendant run, so this pins the ordering.
+
+        The ancestor re-registers the descendant before raising. Without that,
+        ``clear_stale_descendants`` prunes the descendant during cleanup and the
+        lookup fails, which would make this pass for the wrong reason.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner = MagicMock()
+
+        def register_child_then_explode() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.shared.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.register(
+                "inner", inner, parent_fragment_id="outer"
+            )
+            raise RuntimeError("kaboom")
+
+        outer = MagicMock(side_effect=register_child_then_explode)
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_not_called()
+        assert scriptrunner._fragment_storage.contains("inner"), (
+            "the descendant must survive cleanup, or this test passes vacuously"
+        )
+
     def test_fragment_scoped_rerun_child_first_does_not_rerun_parent(self):
         """A child-scoped rerun must not requeue an already-run parent."""
         scriptrunner = TestScriptRunner("good_script.py")
