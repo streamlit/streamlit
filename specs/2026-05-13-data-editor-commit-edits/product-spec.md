@@ -12,8 +12,12 @@ This spec describes the next phase of the data-editor edit-preservation work.
 - **Shipped in [#15884](https://github.com/streamlit/streamlit/pull/15884):** When `key` is set
   and `num_rows="fixed"`, source value changes no longer reset compatible pending edits. Edits are
   also removed once the source catches up to the edited value.
+- **Shipped in [#16295](https://github.com/streamlit/streamlit/pull/16295):**
+  `streamlit.typing` (also available as `st.typing`) is the curated public namespace for stable,
+  Streamlit-owned types used in annotations. Its state exports are the concrete runtime classes
+  produced by Streamlit, with typed attribute and item access.
 - **Proposed here:** Add an explicit `commit_edits` API for persistence, validation, row operations,
-  and programmatic reset.
+  and programmatic reset, together with a public `DataEditorEditState` runtime type.
 
 ## Problem
 
@@ -66,26 +70,51 @@ def commit_edits(
 
 - `source_df` is the normalized dataframe passed to `st.data_editor` before pending edits.
 - `edited_df` is a copy with all pending edits already applied.
-- `edits` is the normalized edit delta:
+- `edits` is the normalized, read-only edit delta. Like Streamlit's other public state objects, it
+  supports typed attribute and item access:
 
   ```python
-  class DataEditorEditState(TypedDict):
+  class DataEditorEditState(ReadOnlyAttributeDictionary):
       edited_rows: dict[int, dict[str, Any]]
       added_rows: list[dict[str, Any]]
       deleted_rows: list[int]
+
+
+  edits.edited_rows == edits["edited_rows"]
   ```
 
 - The callback returns the new source dataframe for the current render.
 
-Expose `DataEditorEditState` through the curated public typing namespace so users can annotate
-callbacks and reusable helpers without importing from an internal implementation module:
+Expose the concrete `DataEditorEditState` class through the curated public typing namespace so
+users can annotate callbacks and reusable helpers without importing from an internal
+implementation module:
 
 ```python
+import streamlit as st
 from streamlit.typing import DataEditorEditState
+
+assert st.typing.DataEditorEditState is DataEditorEditState
 ```
 
-Keep the definition in the owning data-editor module and re-export the same object from
-`streamlit.typing`, including it in `streamlit.typing.__all__`.
+Refactor the current internal `EditingState` dictionary schema into
+`DataEditorEditState(ReadOnlyAttributeDictionary)`. Keep the definition in the owning data-editor
+module and re-export the same object from `streamlit.typing`, including it in
+`streamlit.typing.__all__`; do not create a public wrapper or a second class. The data-editor serde
+should normalize the mutable JSON payload first and wrap the completed value before returning it,
+so both `st.session_state[key]` and the `commit_edits` callback receive the same concrete runtime
+type and preserve it across Session State copies.
+
+The object is read-only because Streamlit owns the pending edit lifecycle. App code can inspect it
+with `edits.edited_rows` or `edits["edited_rows"]`, but clearing or replacing edits in place is not
+a supported reset mechanism. Returning the source dataframe from `commit_edits` is the first-class
+way to reject/revert an edit and clear the pending state. This matches the other state classes now
+exported from `streamlit.typing` and avoids publishing a `TypedDict` whose runtime value does not
+match the documented public type.
+
+Extend the `streamlit.typing` tests with `DataEditorEditState`: verify the exact `__all__`, identity
+with the owning-module class, `isinstance` behavior for the serde and callback values, preservation
+through copy/deepcopy, read-only mutation errors, and static types for both attribute and item
+access.
 
 `source_df` comes first because `edited_rows` and `deleted_rows` contain positions in the original
 source. For example, a database callback needs `source_df.iloc[row_position]` to recover a primary
@@ -132,13 +161,21 @@ exceptions must retain Streamlit's standard redaction, logging, and monitoring b
 ### Example: database-backed editing
 
 ```python
+import pandas as pd
+import streamlit as st
+
 from streamlit.errors import DataEditorValidationError
+from streamlit.typing import DataEditorEditState
 
 if "orders" not in st.session_state:
     st.session_state.orders = load_orders()
 
 
-def persist_orders(source_df, edited_df, edits):
+def persist_orders(
+    source_df: pd.DataFrame,
+    edited_df: pd.DataFrame,
+    edits: DataEditorEditState,
+) -> pd.DataFrame:
     if (edited_df["amount"] < 0).any():
         raise DataEditorValidationError("Amounts must be positive.")
 
@@ -147,13 +184,13 @@ def persist_orders(source_df, edited_df, edits):
     # mid-batch failure must roll back completely, otherwise a later retry would
     # replay already-committed operations (duplicate inserts, repeated updates).
     with begin_transaction():
-        for row_position in edits["deleted_rows"]:
+        for row_position in edits.deleted_rows:
             delete_order(source_df.iloc[row_position]["id"])
 
-        for row_position, changes in edits["edited_rows"].items():
+        for row_position, changes in edits.edited_rows.items():
             update_order(source_df.iloc[row_position]["id"], changes)
 
-        for row in edits["added_rows"]:
+        for row in edits.added_rows:
             insert_order(row)
 
     refreshed_df = load_orders()
@@ -212,8 +249,8 @@ Check the boxes or add a comment with the reason it cannot be checked.
 | Item | ✅ or comment |
 |---|---|
 | Works on SiS, Cloud, etc? | ✅ Uses existing widget, rerun, and Session State infrastructure with no platform-specific behavior |
-| No breaking API changes | ✅ Additive optional parameter; omitting `commit_edits` preserves existing behavior |
+| No breaking API changes | ✅ Additive optional parameter and public type; existing item access remains supported. In-place mutation of widget state is made explicitly unsupported because it cannot reliably synchronize the frontend. |
 | No new dependencies | ✅ Reuses existing dataframe, callback, frontend, and protobuf infrastructure |
 | Metrics collected | ✅ Track `commit_edits` parameter usage through existing `st.data_editor` metrics |
 | Any security/legal impact? | ✅ No new privileges; callbacks execute app code, and unexpected errors retain standard redaction and logging behavior |
-| Any docs changes needed? | ✅ Document `commit_edits`, `DataEditorValidationError`, and `streamlit.typing.DataEditorEditState`, with persistence and validation examples |
+| Any docs changes needed? | ✅ Document `commit_edits`, `DataEditorValidationError`, and `streamlit.typing.DataEditorEditState`, including attribute/item access, read-only state semantics, persistence, and validation examples |
