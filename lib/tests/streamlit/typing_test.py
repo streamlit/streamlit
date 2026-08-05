@@ -27,14 +27,14 @@ from streamlit.elements.lib.column_config_utils import ButtonColumnClickState
 from streamlit.elements.plotly_chart import PlotlyState
 from streamlit.elements.vega_charts import VegaLiteState
 from streamlit.elements.widgets.chat import ChatInputValue
-from streamlit.elements.widgets.data_editor import DataEditorEditState
+from streamlit.elements.widgets.data_editor import DataEditorState
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 _EXPECTED_EXPORTS = {
     "ButtonColumnClickState",
     "ChatInputValue",
-    "DataEditorEditState",
+    "DataEditorState",
     "DataframeState",
     "PlotlyState",
     "PydeckState",
@@ -76,7 +76,7 @@ def test_exports_preserve_object_identity() -> None:
     """Each export is the same runtime object as its internal definition."""
     assert streamlit.typing.UploadedFile is UploadedFile
     assert streamlit.typing.ChatInputValue is ChatInputValue
-    assert streamlit.typing.DataEditorEditState is DataEditorEditState
+    assert streamlit.typing.DataEditorState is DataEditorState
     assert streamlit.typing.DataframeState is DataframeState
     assert streamlit.typing.PlotlyState is PlotlyState
     assert streamlit.typing.VegaLiteState is VegaLiteState
@@ -100,8 +100,8 @@ def test_chat_input_value_isinstance() -> None:
 def test_state_classes_isinstance() -> None:
     """The dict-backed state classes are instances of their public exports."""
     assert isinstance(
-        DataEditorEditState({"edited_rows": {}, "added_rows": [], "deleted_rows": []}),
-        streamlit.typing.DataEditorEditState,
+        DataEditorState({"edited_rows": {}, "added_rows": [], "deleted_rows": []}),
+        streamlit.typing.DataEditorState,
     )
     assert isinstance(
         DataframeState({"selection": {}}), streamlit.typing.DataframeState

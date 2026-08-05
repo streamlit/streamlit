@@ -113,14 +113,14 @@ DataTypes: TypeAlias = Union[
 ]
 
 
-class DataEditorEditState(ReadOnlyAttributeDictionary):
-    """The schema for the data editor pending-edit state.
+class DataEditorState(ReadOnlyAttributeDictionary):
+    """The schema for the data editor state.
 
-    The edit state is stored in a read-only dictionary-like object that
+    The state is stored in a read-only dictionary-like object that
     supports both key and attribute notation. Top-level assignment and
     nested dict mutation raise ``TypeError``. List fields (``added_rows``,
-    ``deleted_rows``) are ordinary lists and are not frozen. Edit states
-    cannot be programmatically changed or set through Session State.
+    ``deleted_rows``) are ordinary lists and are not frozen. Data editor
+    states cannot be programmatically changed or set through Session State.
 
     Attributes
     ----------
@@ -162,7 +162,7 @@ class DataEditorEditState(ReadOnlyAttributeDictionary):
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: str | None) -> DataEditorEditState:
+    def deserialize(self, ui_value: str | None) -> DataEditorState:
         # Keep the payload as a plain dict until the end so missing-key and
         # row-key mutations below can still run before we wrap.
         data_editor_state: dict[str, Any] = (
@@ -184,9 +184,9 @@ class DataEditorSerde:
         data_editor_state["edited_rows"] = {
             int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
-        return DataEditorEditState(data_editor_state)
+        return DataEditorState(data_editor_state)
 
-    def serialize(self, editing_state: DataEditorEditState) -> str:
+    def serialize(self, editing_state: DataEditorState) -> str:
         return json.dumps(editing_state, default=str)
 
 
@@ -551,7 +551,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
 
 def _apply_dataframe_edits(
     df: pd.DataFrame,
-    data_editor_state: DataEditorEditState,
+    data_editor_state: DataEditorState,
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply edits to the provided dataframe (inplace).
@@ -563,7 +563,7 @@ def _apply_dataframe_edits(
     df : pd.DataFrame
         The dataframe to apply the edits to.
 
-    data_editor_state : DataEditorEditState
+    data_editor_state : DataEditorState
         The editing state of the data editor component.
 
     dataframe_schema: DataframeSchema

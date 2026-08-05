@@ -42,8 +42,8 @@ from streamlit.elements.lib.column_config_utils import (
     determine_dataframe_schema,
 )
 from streamlit.elements.widgets.data_editor import (
-    DataEditorEditState,
     DataEditorSerde,
+    DataEditorState,
     _apply_cell_edits,
     _apply_dataframe_edits,
     _apply_row_additions,
@@ -229,7 +229,7 @@ class DataEditorUtilTest(unittest.TestCase):
 
     def test_data_editor_serde_serialize_round_trips(self):
         """``DataEditorSerde.serialize`` produces JSON containing all editing-state keys."""
-        state = DataEditorEditState(
+        state = DataEditorState(
             {
                 "edited_rows": {0: {"col1": 1}},
                 "added_rows": [],
@@ -246,7 +246,7 @@ class DataEditorUtilTest(unittest.TestCase):
     def test_data_editor_serde_deserialize_none_returns_empty_state(self):
         """A None ui_value should produce an empty editing state."""
         result = DataEditorSerde().deserialize(None)
-        assert isinstance(result, DataEditorEditState)
+        assert isinstance(result, DataEditorState)
         assert result == {
             "edited_rows": {},
             "added_rows": [],
@@ -275,7 +275,7 @@ class DataEditorUtilTest(unittest.TestCase):
         assert result["edited_rows"] == {5: {"col1": 1}, 10: {"col1": 2}}
 
     def test_data_editor_serde_returns_typed_state_class(self):
-        """``deserialize`` returns a typed ``DataEditorEditState`` with attribute access."""
+        """``deserialize`` returns a typed ``DataEditorState`` with attribute access."""
         result = DataEditorSerde().deserialize(
             json.dumps(
                 {
@@ -286,12 +286,12 @@ class DataEditorUtilTest(unittest.TestCase):
             )
         )
 
-        assert isinstance(result, DataEditorEditState)
+        assert isinstance(result, DataEditorState)
         assert result.edited_rows == {0: {"col1": 1}}
         assert result["added_rows"] == [{"col1": 2}]
         assert result.deleted_rows == [1]
 
-    def test_data_editor_edit_state_is_read_only(self):
+    def test_data_editor_state_is_read_only(self):
         """Pending edit state rejects top-level and nested-dict mutation.
 
         It also keeps its typed class through deepcopy, since Session State
@@ -309,7 +309,7 @@ class DataEditorUtilTest(unittest.TestCase):
 
         # Read access still works, and deepcopy preserves the concrete type.
         assert result.edited_rows == {}
-        assert isinstance(copy.deepcopy(result), DataEditorEditState)
+        assert isinstance(copy.deepcopy(result), DataEditorState)
 
     def test_apply_cell_edits(self):
         """Test applying cell edits to a DataFrame."""
@@ -477,7 +477,7 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            DataEditorEditState(
+            DataEditorState(
                 {
                     "deleted_rows": deleted_rows,
                     "added_rows": added_rows,
@@ -511,7 +511,7 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            DataEditorEditState(
+            DataEditorState(
                 {
                     "deleted_rows": deleted_rows,
                     "added_rows": added_rows,
@@ -690,7 +690,7 @@ class DataEditorUtilTest(unittest.TestCase):
         # no longer present and the addition must not be rejected as a duplicate.
         _apply_dataframe_edits(
             df,
-            DataEditorEditState(
+            DataEditorState(
                 {
                     "deleted_rows": [0],
                     "added_rows": [
@@ -754,7 +754,7 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            DataEditorEditState(
+            DataEditorState(
                 {
                     "deleted_rows": deleted_rows,
                     "added_rows": added_rows,
@@ -791,7 +791,7 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            DataEditorEditState(
+            DataEditorState(
                 {
                     "deleted_rows": deleted_rows,
                     "added_rows": added_rows,

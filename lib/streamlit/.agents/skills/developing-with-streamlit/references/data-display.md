@@ -216,7 +216,7 @@ edited_df = st.data_editor(
 )
 ```
 
-Access pending edit details via `st.session_state.my_editor` — a read-only dict-like object with `edited_rows`, `added_rows`, and `deleted_rows` attributes (also supports key access), e.g. `st.session_state.my_editor.edited_rows`. Edit state cannot be assigned through Session State; Streamlit owns the pending-edit lifecycle.
+Access edit details via `st.session_state["my_editor"]["edited_rows"]`.
 
 **Preserving edits on data refresh** — With a `key` and `num_rows="fixed"`, edits are kept when the data's *values* change and only reset when its structure changes (columns, dtypes, row count, or index labels). An edit is dropped once its value matches the new data. Edits are matched by row position, so use a meaningful index if edits should follow specific rows when the data is reordered. Omit `key` to reset edits on every data change.
 
