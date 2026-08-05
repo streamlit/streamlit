@@ -187,7 +187,13 @@ function RangeDateInput({
   const errorId = `${id}-error`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
-  const quickSelectPresets = useMemo(() => getQuickSelectPresets(), [])
+  const quickSelectPresets = useMemo(() => {
+    const presets = getQuickSelectPresets()
+    if (!maxDate) return presets
+    return presets
+      .filter(p => p.start.compare(maxDate) <= 0)
+      .map(p => (p.end.compare(maxDate) > 0 ? { ...p, end: maxDate } : p))
+  }, [maxDate])
   const quickSelectRef = useRef<HTMLDivElement>(null)
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -412,10 +418,6 @@ function RangeDateInput({
           return
         }
         if (pendingAnchorRef.current) {
-          if (datesEqual(range.start, pendingAnchorRef.current)) {
-            // Same date as the anchor — duplicate onChange from RAC. Ignore.
-            return
-          }
           // Second click — complete the range using the pending anchor
           const anchor = pendingAnchorRef.current
           pendingAnchorRef.current = null
@@ -526,7 +528,8 @@ function RangeDateInput({
   const makeHandlePaste = useCallback(
     (
       currentValue: CalendarDate | null,
-      setDisplay: (date: CalendarDate | null) => void
+      setDisplay: (date: CalendarDate | null) => void,
+      isStartField: boolean
     ) =>
       (e: ClipboardEvent<HTMLDivElement>): void => {
         if (disabled) return
@@ -536,12 +539,10 @@ function RangeDateInput({
         if (fullDate) {
           e.preventDefault()
           setDisplay(fullDate)
-          const isStart = datesEqual(currentValue, displayStartRef.current)
-          const isEnd = datesEqual(currentValue, displayEndRef.current)
           onChange(
             compact([
-              isStart ? fullDate : displayStartRef.current,
-              isEnd ? fullDate : displayEndRef.current,
+              isStartField ? fullDate : displayStartRef.current,
+              isStartField ? displayEndRef.current : fullDate,
             ])
           )
           return
@@ -561,12 +562,10 @@ function RangeDateInput({
         const newDate = base.set({ [partial.segmentType]: partial.value })
         if (newDate[partial.segmentType] !== partial.value) return
         setDisplay(newDate)
-        const isStart = datesEqual(currentValue, displayStartRef.current)
-        const isEnd = datesEqual(currentValue, displayEndRef.current)
         onChange(
           compact([
-            isStart ? newDate : displayStartRef.current,
-            isEnd ? newDate : displayEndRef.current,
+            isStartField ? newDate : displayStartRef.current,
+            isStartField ? displayEndRef.current : newDate,
           ])
         )
       },
@@ -574,11 +573,11 @@ function RangeDateInput({
   )
 
   const handleStartPaste = useMemo(
-    () => makeHandlePaste(displayStart, setDisplayStart),
+    () => makeHandlePaste(displayStart, setDisplayStart, true),
     [makeHandlePaste, displayStart]
   )
   const handleEndPaste = useMemo(
-    () => makeHandlePaste(displayEnd, setDisplayEnd),
+    () => makeHandlePaste(displayEnd, setDisplayEnd, false),
     [makeHandlePaste, displayEnd]
   )
 

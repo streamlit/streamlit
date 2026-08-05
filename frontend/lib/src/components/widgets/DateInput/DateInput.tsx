@@ -234,6 +234,7 @@ function DateInput({
 
       if (errorType) {
         setError(buildErrorMessage(errorType))
+        return
       }
       setValueWithSource({ value: newIsoDates, fromUi: true })
       setIsEmpty(false)
@@ -336,10 +337,14 @@ function DateInput({
   }, [element.isRange, singleValue, minDateCalendar])
 
   useEffect(() => {
-    if (element.isRange && rangeStartValue) {
+    if (!element.isRange) return
+    if (rangeStartValue) {
       setFocusedValue(rangeStartValue)
+    } else {
+      const now = today(getLocalTimeZone())
+      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
     }
-  }, [element.isRange, rangeStartValue])
+  }, [element.isRange, rangeStartValue, minDateCalendar])
 
   return (
     <div className="stDateInput" data-testid="stDateInput">
