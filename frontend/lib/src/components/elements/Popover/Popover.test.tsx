@@ -70,6 +70,42 @@ describe("Popover container", () => {
     expect(screen.getByText(props.element.label)).toBeVisible()
   })
 
+  describe("wrap=false", () => {
+    it("keeps the chevron visible and sets the full label as a native title", () => {
+      const props = getProps({
+        label: "A very long popover label",
+        wrap: false,
+      })
+      render(
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      )
+
+      expect(screen.getByTestId("stPopoverButton")).toHaveTextContent(
+        "expand_more"
+      )
+      expect(screen.getByTitle("A very long popover label")).toBeVisible()
+    })
+
+    it("does not set a title when help is set (help tooltip takes over)", () => {
+      const props = getProps({
+        label: "A very long popover label",
+        wrap: false,
+        help: "Help wins",
+      })
+      render(
+        <Popover {...props}>
+          <div>test</div>
+        </Popover>
+      )
+
+      expect(
+        screen.queryByTitle("A very long popover label")
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("should render the text when opened", async () => {
     const user = userEvent.setup()
     const props = getProps()

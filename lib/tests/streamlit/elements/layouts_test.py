@@ -23,6 +23,7 @@ from streamlit.elements.dialog_decorator import dialog_decorator
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
+    StreamlitDuplicateElementId,
     StreamlitInvalidColumnGapError,
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
@@ -968,6 +969,38 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         assert popover_block.add_block.allow_empty
         # Default width should be "content"
         assert popover_block.add_block.width_config.use_content
+
+    def test_wrap_default(self):
+        """By default wrap is left unset (auto) so the frontend resolves it."""
+        with st.popover("label"):
+            pass
+
+        popover = self.get_delta_from_queue().add_block.popover
+        assert not popover.HasField("wrap")
+
+    def test_wrap(self):
+        """Test that the wrap parameter is forwarded to the popover proto."""
+        for wrap_value in (True, False):
+            with self.subTest(wrap=wrap_value):
+                with st.popover("label", wrap=wrap_value):
+                    pass
+
+                popover = self.get_delta_from_queue().add_block.popover
+                assert popover.wrap is wrap_value
+
+    def test_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the popover element id.
+
+        A stateful popover registers an element id, so two otherwise-identical
+        popovers that differ only in wrap collide on the same auto-generated id,
+        proving wrap is excluded from id computation and so preserves widget
+        state when toggled.
+        """
+        with st.popover("same label", on_change="rerun"):
+            pass
+        with pytest.raises(StreamlitDuplicateElementId):
+            with st.popover("same label", on_change="rerun", wrap=False):
+                pass
 
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""

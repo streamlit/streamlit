@@ -39,6 +39,7 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import {
   DynamicIcon,
   isMenuStyleIconLabel,
@@ -123,6 +124,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // match it when stretchWidth is true. A ResizeObserver is required because
   // the popover is portalled to document.body (no CSS parent-child sizing).
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
+
+  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
+  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
+  // skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
 
   // Timestamp of the last open action — used by the outside-click handler to
   // ignore clicks that occur in the same tick as opening. In production
@@ -384,8 +391,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             aria-expanded={open}
             aria-haspopup="dialog"
           >
-            <StyledPopoverLabelContainer $hideChevron={hideChevron}>
-              <DynamicButtonLabel icon={element.icon} label={element.label} />
+            <StyledPopoverLabelContainer
+              $hideChevron={hideChevron}
+              $truncate={!wrap}
+            >
+              <DynamicButtonLabel
+                icon={element.icon}
+                label={element.label}
+                wrap={wrap}
+                addTitleTooltip={addTitleTooltip}
+              />
               {!hideChevron && (
                 <StyledPopoverExpansionIcon aria-hidden="true">
                   <DynamicIcon
