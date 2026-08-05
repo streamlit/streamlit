@@ -16,129 +16,102 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
-from starlette.datastructures import Headers
-from starlette.middleware.gzip import (
-    DEFAULT_EXCLUDED_CONTENT_TYPES,
-    GZipMiddleware,
-    GZipResponder,
-    IdentityResponder,
+from starlette.middleware.gzip import GZipMiddleware
+
+from streamlit.web.server.starlette.starlette_routes import (
+    BASE_ROUTE_MEDIA,
+    BASE_ROUTE_STATIC,
 )
-
-from streamlit.web.server.starlette.starlette_routes import BASE_ROUTE_STATIC
 
 if TYPE_CHECKING:
-    from starlette.types import ASGIApp, Message, Receive, Scope, Send
-
-# Extended exclusion list: Starlette's default + audio/video prefixes.
-# Compressing binary media content breaks playback in browsers,
-# especially with range requests.
-_EXCLUDED_CONTENT_TYPES: Final = (
-    *DEFAULT_EXCLUDED_CONTENT_TYPES,
-    "audio/",
-    "video/",
-)
+    from starlette.types import ASGIApp, Receive, Scope, Send
 
 
-def _should_bypass_static_gzip(path: str) -> bool:
-    """Return whether a request path should skip HTTP gzip compression."""
-    if not path or path == "/":
-        return True
+def _should_bypass_gzip(path: str, base_url: str = "") -> bool:
+    """Return whether a request path should skip HTTP gzip compression.
 
-    return path.startswith(f"/{BASE_ROUTE_STATIC}/")
+    Compression is bypassed for two kinds of paths:
 
-
-def _handle_response_start(
-    responder: IdentityResponder | GZipResponder, message: Message
-) -> None:
-    """Handle http.response.start message for media-aware responders.
-
-    This function extracts headers from the response start message and determines
-    whether the content should be excluded from compression based on its type.
+    - The frontend static-asset route (``/static/...``) and the root document.
+      Local load testing showed that bypassing gzip here materially improves
+      initial load time and peak RSS.
+    - The media route (``/media/...``), which serves audio, video, images, and
+      downloads. Compressing already-compressed binary media wastes CPU and,
+      for audio/video, breaks range-request playback in some browsers.
 
     Parameters
     ----------
-    responder
-        The responder instance (either IdentityResponder or GZipResponder)
-        to update with response metadata.
-    message
-        The ASGI "http.response.start" message containing response headers.
+    path
+        The request path from the ASGI scope. May include the ``base_url``
+        prefix when ``server.baseUrlPath`` is configured.
+    base_url
+        The configured base URL path, if any. It is stripped from ``path``
+        before matching so the checks work regardless of whether a base URL is
+        configured.
     """
-    responder.initial_message = message
-    headers = Headers(raw=responder.initial_message["headers"])
-    responder.content_encoding_set = "content-encoding" in headers
-    responder.content_type_is_excluded = headers.get("content-type", "").startswith(
-        _EXCLUDED_CONTENT_TYPES
-    )
+    normalized_base = base_url.strip("/")
+    if normalized_base:
+        prefix = f"/{normalized_base}"
+        if path == prefix:
+            return True
+        if path.startswith(f"{prefix}/"):
+            path = path[len(prefix) :]
+
+    if not path or path == "/":
+        return True
+
+    return path.startswith((f"/{BASE_ROUTE_STATIC}/", f"/{BASE_ROUTE_MEDIA}/"))
 
 
-class _MediaAwareIdentityResponder(IdentityResponder):
-    """IdentityResponder that excludes audio/video from compression.
+def _is_range_request(scope: Scope) -> bool:
+    """Return whether the request carries a ``Range`` header.
 
-    This responder extends Starlette's IdentityResponder to use our extended
-    list of excluded content types that includes audio/ and video/ prefixes.
-    Used when the client does not support gzip compression.
+    Ranged responses (HTTP 206) must not be gzip-compressed: the
+    ``Content-Range`` and ``Content-Length`` headers describe the uncompressed
+    byte range, so compressing the body would corrupt range-based playback and
+    downloads (e.g. seeking in audio/video).
+    """
+    return any(name == b"range" for name, _ in scope.get("headers", ()))
+
+
+class SelectiveGZipMiddleware:
+    """GZip middleware that skips compression for static and media paths.
+
+    The actual compression is delegated to Starlette's built-in
+    ``GZipMiddleware``, so we inherit its behavior and future improvements
+    (streaming handling, header rewriting, ``text/event-stream`` exclusion,
+    worker-thread offloading, etc.) instead of subclassing its internals. This
+    wrapper only decides, per request, whether to route it through the gzip
+    layer or serve it uncompressed (see ``_should_bypass_gzip`` and the
+    range-request handling in ``__call__``).
     """
 
-    async def send_with_compression(self, message: Message) -> None:
-        """Process response messages, checking content type for exclusion."""
-        if message["type"] == "http.response.start":
-            _handle_response_start(self, message)
-        else:
-            await super().send_with_compression(message)
-
-
-class _MediaAwareGZipResponder(GZipResponder):
-    """GZipResponder that excludes audio/video from compression.
-
-    This responder extends Starlette's GZipResponder to use our extended
-    list of excluded content types that includes audio/ and video/ prefixes.
-    Used when the client supports gzip compression.
-    """
-
-    async def send_with_compression(self, message: Message) -> None:
-        """Process response messages, checking content type for exclusion."""
-        if message["type"] == "http.response.start":
-            _handle_response_start(self, message)
-        else:
-            await super().send_with_compression(message)
-
-
-class MediaAwareGZipMiddleware(GZipMiddleware):
-    """GZip middleware that excludes audio/video content from compression.
-
-    Extends Starlette's GZipMiddleware to also exclude audio/ and video/
-    content types. Avoiding compression for media content provides better
-    browser compatibility (some browsers like WebKit have issues with
-    explicit identity encoding on media).
-    """
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        minimum_size: int = 500,
+        compresslevel: int = 9,
+        base_url: str = "",
+    ) -> None:
+        self.app = app
+        self._base_url = base_url
+        # Stock, unmodified Starlette middleware does all the real work.
+        self._gzip_app = GZipMiddleware(
+            app, minimum_size=minimum_size, compresslevel=compresslevel
+        )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        headers = Headers(scope=scope)
-        responder: ASGIApp
-        if "gzip" in headers.get("Accept-Encoding", ""):
-            responder = _MediaAwareGZipResponder(
-                self.app, self.minimum_size, compresslevel=self.compresslevel
-            )
-        else:
-            responder = _MediaAwareIdentityResponder(self.app, self.minimum_size)
-
-        await responder(scope, receive, send)
-
-
-class SelectiveGZipMiddleware(MediaAwareGZipMiddleware):
-    """Skip gzip middleware for static asset-like HTTP paths."""
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and _should_bypass_static_gzip(
-            scope.get("path", "")
+        if scope["type"] == "http" and (
+            _should_bypass_gzip(scope.get("path", ""), self._base_url)
+            or _is_range_request(scope)
         ):
+            # Serve static assets, media, and partial (range) responses without
+            # compression. Compressing a range response would corrupt it, since
+            # the Content-Range/Content-Length describe the uncompressed bytes.
             await self.app(scope, receive, send)
             return
 
-        await super().__call__(scope, receive, send)
+        await self._gzip_app(scope, receive, send)

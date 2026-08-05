@@ -50,7 +50,6 @@ from streamlit.web.server.starlette.starlette_app import (
 )
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
     SelectiveGZipMiddleware,
-    _should_bypass_static_gzip,
 )
 from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
 from streamlit.web.server.starlette.starlette_server_config import (
@@ -277,30 +276,6 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     response = client.get("/_stcore/health")
     assert response.status_code == 200
     assert response.text == "ok"
-
-
-@pytest.mark.parametrize(
-    ("path", "expected"),
-    [
-        ("/", True),
-        ("/static/app.123.js", True),
-        ("/app/static/logo.svg", False),
-        ("/assets/theme.css", False),
-        ("/_stcore/metrics", False),
-        ("/media/file", False),
-    ],
-    ids=[
-        "root",
-        "static-bundle",
-        "app-static",
-        "hashed-style",
-        "api-route",
-        "media-route",
-    ],
-)
-def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
-    """Only root and `/static/...` paths should bypass the gzip middleware."""
-    assert _should_bypass_static_gzip(path) is expected
 
 
 def test_create_streamlit_middleware_uses_selective_gzip() -> None:

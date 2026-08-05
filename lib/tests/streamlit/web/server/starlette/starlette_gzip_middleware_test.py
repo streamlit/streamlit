@@ -16,66 +16,141 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import pytest
 from starlette.applications import Starlette
-from starlette.responses import Response
+from starlette.responses import Response, StreamingResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
-    _EXCLUDED_CONTENT_TYPES,
-    MediaAwareGZipMiddleware,
+    SelectiveGZipMiddleware,
+    _should_bypass_gzip,
 )
 
-
-def _create_test_app(content_type: str, body: bytes = b"x" * 1000) -> Starlette:
-    """Create a test Starlette app that returns a response with the given content type."""
-
-    async def endpoint(request):
-        return Response(content=body, media_type=content_type)
-
-    app = Starlette(routes=[Route("/", endpoint)])
-    app.add_middleware(MediaAwareGZipMiddleware, minimum_size=100)
-    return app
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
-class TestMediaAwareGZipMiddleware:
-    """Tests for MediaAwareGZipMiddleware."""
+def _build_client(
+    *routes: Route,
+    minimum_size: int = 100,
+    base_url: str = "",
+) -> TestClient:
+    """Build a TestClient for an app wrapped in SelectiveGZipMiddleware."""
+    app = Starlette(routes=list(routes))
+    app.add_middleware(
+        SelectiveGZipMiddleware,
+        minimum_size=minimum_size,
+        compresslevel=5,
+        base_url=base_url,
+    )
+    return TestClient(app)
 
-    def test_compresses_text_content(self) -> None:
-        """Test that text content is compressed when client supports gzip."""
-        app = _create_test_app("text/plain")
-        client = TestClient(app)
 
-        response = client.get("/", headers={"Accept-Encoding": "gzip"})
+def _text_route(
+    path: str, *, content_type: str = "text/plain", size: int = 1000
+) -> Route:
+    """Create a route returning a body of the given content type and size."""
+
+    async def endpoint(_: Any) -> Response:
+        return Response(content=b"x" * size, media_type=content_type)
+
+    return Route(path, endpoint)
+
+
+class TestCompression:
+    """Compression behavior delegated to Starlette's GZipMiddleware."""
+
+    def test_compresses_text_on_regular_path(self) -> None:
+        """Text responses on non-bypassed paths are gzip compressed."""
+        client = _build_client(_text_route("/_stcore/data"))
+
+        response = client.get("/_stcore/data", headers={"Accept-Encoding": "gzip"})
 
         assert response.status_code == 200
         assert response.headers.get("content-encoding") == "gzip"
 
-    def test_compresses_json_content(self) -> None:
-        """Test that JSON content is compressed when client supports gzip."""
-        app = _create_test_app("application/json")
-        client = TestClient(app)
+    def test_compresses_json_on_regular_path(self) -> None:
+        """JSON responses on non-bypassed paths are gzip compressed."""
+        client = _build_client(
+            _text_route("/_stcore/host-config", content_type="application/json")
+        )
 
-        response = client.get("/", headers={"Accept-Encoding": "gzip"})
+        response = client.get(
+            "/_stcore/host-config", headers={"Accept-Encoding": "gzip"}
+        )
 
         assert response.status_code == 200
         assert response.headers.get("content-encoding") == "gzip"
 
-    def test_does_not_compress_audio_content(self) -> None:
-        """Test that audio content is not compressed."""
-        app = _create_test_app("audio/mpeg")
-        client = TestClient(app)
+    def test_does_not_compress_without_gzip_accept_encoding(self) -> None:
+        """Responses are not compressed when the client does not accept gzip."""
+        client = _build_client(_text_route("/_stcore/data"))
 
-        response = client.get("/", headers={"Accept-Encoding": "gzip"})
+        response = client.get("/_stcore/data", headers={"Accept-Encoding": "identity"})
 
         assert response.status_code == 200
         assert response.headers.get("content-encoding") is None
 
-    def test_does_not_compress_video_content(self) -> None:
-        """Test that video content is not compressed."""
-        app = _create_test_app("video/mp4")
-        client = TestClient(app)
+    def test_does_not_compress_small_body(self) -> None:
+        """Bodies below minimum_size are not compressed."""
+        client = _build_client(_text_route("/_stcore/data", size=10))
+
+        response = client.get("/_stcore/data", headers={"Accept-Encoding": "gzip"})
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") is None
+
+    def test_does_not_compress_event_stream(self) -> None:
+        """text/event-stream is excluded by Starlette's built-in middleware."""
+        client = _build_client(
+            _text_route("/_stcore/stream", content_type="text/event-stream")
+        )
+
+        response = client.get("/_stcore/stream", headers={"Accept-Encoding": "gzip"})
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") is None
+
+    def test_compresses_streaming_response(self) -> None:
+        """Streaming responses on non-bypassed paths are still compressed."""
+
+        async def stream_endpoint(_: Any) -> StreamingResponse:
+            async def body() -> AsyncIterator[bytes]:
+                for _ in range(10):
+                    yield b"x" * 200
+
+            return StreamingResponse(body(), media_type="text/plain")
+
+        client = _build_client(Route("/_stcore/data", stream_endpoint))
+
+        response = client.get("/_stcore/data", headers={"Accept-Encoding": "gzip"})
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") == "gzip"
+        # The decompressed stream is intact.
+        assert response.content == b"x" * 2000
+
+
+class TestBypass:
+    """Path-based bypass of static assets and media."""
+
+    def test_bypasses_static_path(self) -> None:
+        """Frontend static assets are served uncompressed."""
+        client = _build_client(
+            _text_route("/static/app.123.js", content_type="application/javascript")
+        )
+
+        response = client.get("/static/app.123.js", headers={"Accept-Encoding": "gzip"})
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") is None
+
+    def test_bypasses_root_path(self) -> None:
+        """The root document is served uncompressed."""
+        client = _build_client(_text_route("/", content_type="text/html"))
 
         response = client.get("/", headers={"Accept-Encoding": "gzip"})
 
@@ -84,78 +159,108 @@ class TestMediaAwareGZipMiddleware:
 
     @pytest.mark.parametrize(
         "content_type",
+        ["audio/mpeg", "video/mp4", "image/png", "application/octet-stream"],
+    )
+    def test_bypasses_media_path(self, content_type: str) -> None:
+        """All media route responses are served uncompressed regardless of type."""
+        client = _build_client(_text_route("/media/file123", content_type=content_type))
+
+        response = client.get("/media/file123", headers={"Accept-Encoding": "gzip"})
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") is None
+
+    def test_compresses_app_static_path(self) -> None:
+        """User app-static assets (/app/static) are still compressed."""
+        client = _build_client(
+            _text_route("/app/static/data.json", content_type="application/json")
+        )
+
+        response = client.get(
+            "/app/static/data.json", headers={"Accept-Encoding": "gzip"}
+        )
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") == "gzip"
+
+    def test_bypasses_media_with_base_url(self) -> None:
+        """Media is bypassed even when a base URL prefix is configured."""
+        client = _build_client(
+            _text_route("/my-app/media/file123", content_type="video/mp4"),
+            base_url="my-app",
+        )
+
+        response = client.get(
+            "/my-app/media/file123", headers={"Accept-Encoding": "gzip"}
+        )
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") is None
+
+    def test_compresses_regular_path_with_base_url(self) -> None:
+        """Non-bypassed paths under a base URL are still compressed."""
+        client = _build_client(
+            _text_route("/my-app/_stcore/data"),
+            base_url="my-app",
+        )
+
+        response = client.get(
+            "/my-app/_stcore/data", headers={"Accept-Encoding": "gzip"}
+        )
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") == "gzip"
+
+    def test_does_not_compress_range_request(self) -> None:
+        """Range requests are served uncompressed, even on compressible paths.
+
+        Compressing a partial (206) response would corrupt it, since the
+        Content-Range/Content-Length describe the uncompressed byte range.
+        """
+        client = _build_client(_text_route("/_stcore/data"))
+
+        response = client.get(
+            "/_stcore/data",
+            headers={"Accept-Encoding": "gzip", "Range": "bytes=0-10"},
+        )
+
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") is None
+
+
+class TestShouldBypassGzip:
+    """Unit tests for the _should_bypass_gzip predicate."""
+
+    @pytest.mark.parametrize(
+        ("path", "expected"),
         [
-            "audio/mpeg",
-            "audio/wav",
-            "audio/ogg",
-            "audio/webm",
-            "video/mp4",
-            "video/webm",
-            "video/ogg",
-        ],
-        ids=[
-            "audio/mpeg",
-            "audio/wav",
-            "audio/ogg",
-            "audio/webm",
-            "video/mp4",
-            "video/webm",
-            "video/ogg",
+            ("/", True),
+            ("", True),
+            ("/static/app.123.js", True),
+            ("/media/abc123", True),
+            ("/app/static/logo.svg", False),
+            ("/assets/theme.css", False),
+            ("/_stcore/metrics", False),
+            ("/_stcore/host-config", False),
         ],
     )
-    def test_excludes_various_media_types(self, content_type: str) -> None:
-        """Test that various audio/video types are excluded from compression."""
-        app = _create_test_app(content_type)
-        client = TestClient(app)
+    def test_without_base_url(self, path: str, expected: bool) -> None:
+        """Root, static, and media paths bypass; everything else compresses."""
+        assert _should_bypass_gzip(path) is expected
 
-        response = client.get("/", headers={"Accept-Encoding": "gzip"})
-
-        assert response.status_code == 200
-        assert response.headers.get("content-encoding") is None
-
-    def test_does_not_compress_when_client_does_not_support_gzip(self) -> None:
-        """Test that content is not compressed when client doesn't support gzip."""
-        app = _create_test_app("text/plain")
-        client = TestClient(app)
-
-        # Explicitly set Accept-Encoding to something other than gzip
-        response = client.get("/", headers={"Accept-Encoding": "identity"})
-
-        assert response.status_code == 200
-        assert response.headers.get("content-encoding") is None
-
-    def test_does_not_compress_small_content(self) -> None:
-        """Test that small content is not compressed (below minimum_size)."""
-        app = _create_test_app("text/plain", body=b"small")
-        client = TestClient(app)
-
-        response = client.get("/", headers={"Accept-Encoding": "gzip"})
-
-        assert response.status_code == 200
-        # Small content should not be compressed
-        assert response.headers.get("content-encoding") is None
-
-
-class TestExcludedContentTypes:
-    """Tests for the _EXCLUDED_CONTENT_TYPES constant."""
-
-    def test_includes_audio_prefix(self) -> None:
-        """Test that audio/ prefix is in the excluded types."""
-        assert "audio/" in _EXCLUDED_CONTENT_TYPES
-
-    def test_includes_video_prefix(self) -> None:
-        """Test that video/ prefix is in the excluded types."""
-        assert "video/" in _EXCLUDED_CONTENT_TYPES
-
-    def test_includes_starlette_defaults(self) -> None:
-        """Test that Starlette default exclusions are preserved."""
-        # text/event-stream is excluded by Starlette by default (for SSE)
-        assert "text/event-stream" in _EXCLUDED_CONTENT_TYPES
-
-    def test_extends_starlette_defaults(self) -> None:
-        """Test that our exclusion list extends (not replaces) Starlette defaults."""
-        from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES
-
-        # All Starlette defaults should be included
-        for content_type in DEFAULT_EXCLUDED_CONTENT_TYPES:
-            assert content_type in _EXCLUDED_CONTENT_TYPES
+    @pytest.mark.parametrize(
+        ("path", "expected"),
+        [
+            ("/my-app", True),
+            ("/my-app/", True),
+            ("/my-app/static/app.js", True),
+            ("/my-app/media/abc123", True),
+            ("/my-app/_stcore/data", False),
+            # A path that merely starts with the base string but is not the base
+            # segment must not be treated as the base URL.
+            ("/my-application/media/abc", False),
+        ],
+    )
+    def test_with_base_url(self, path: str, expected: bool) -> None:
+        """The base URL prefix is stripped before matching bypass routes."""
+        assert _should_bypass_gzip(path, base_url="my-app") is expected
