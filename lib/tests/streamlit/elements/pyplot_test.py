@@ -38,8 +38,11 @@ class PyplotTest(DeltaGeneratorTestCase):
             plt.switch_backend("agg")
 
     def tearDown(self):
-        # Clear the global pyplot figure between tests
-        plt.clf()
+        # Close every figure between tests. ``plt.clf()`` only clears the current
+        # figure's contents and leaves it registered with pyplot, so figures
+        # created here accumulated across the session until matplotlib warned
+        # about more than 20 being open.
+        plt.close("all")
         super().tearDown()
 
     def test_st_pyplot(self):
