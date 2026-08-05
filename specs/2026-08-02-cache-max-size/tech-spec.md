@@ -55,10 +55,16 @@ class TTLCache(MutableMapping[K, V]):
 
 Key changes (all localized to `TTLCache`):
 
-- `__setitem__`: compute `size = self._getsizeof(value)`; after reaping expired entries,
-  `while self._data and self._currsize + size > self._maxsize: self.popitem()`; then store
-  value, record `self._sizes[key] = size`, and add to `self._currsize`. On overwrite,
-  subtract the old size first.
+- `__setitem__` (order matters — avoid double-subtract / self-eviction on overwrite):
+  1. Compute `size = self._getsizeof(value)` and reap expired entries.
+  2. **If `key` is already present, remove it first** (via the same size-aware removal
+     path as `__delitem__`: drop from `_data`/`_sizes`, subtract from `_currsize`). This
+     mirrors today's count-mode guard (`if key not in self._data` before the eviction
+     loop) and prevents `popitem()` from selecting the key being overwritten — which
+     would otherwise double-subtract its old size (or `KeyError` on `_sizes`) when that
+     key is the LRU victim.
+  3. Evict: `while self._data and self._currsize + size > self._maxsize: self.popitem()`.
+  4. Store the new value, record `self._sizes[key] = size`, and add to `self._currsize`.
 - `popitem` / `expire` / `__delitem__` / `pop`: subtract the removed key's size from
   `self._currsize` and drop it from `self._sizes`.
 - `currsize` property returns bytes (in size mode) instead of `len(self)`.
@@ -80,9 +86,10 @@ Parsing: add a `to_bytes(value: int | str | None) -> int | None` helper (new
 `lib/streamlit/byte_util.py`, mirroring `time_util.time_to_seconds`). It accepts an int
 (bytes) or a case-insensitive string with a unit suffix (`KB`/`MB`/`GB`/`TB`, and raw
 `B`), using base-1024 (`KiB`==`KB` accepted as aliases). This uses the binary convention
-(1 KB = 1024 bytes), matching Docker, Kubernetes, and common developer usage, even though it
-technically inverts the IEC standard (`KB` = 1000, `KiB` = 1024). Invalid unit or `<= 0` →
-`StreamlitAPIException`.
+(1 KB = 1024 bytes), matching Docker `--memory` (`k`/`m`/`g` are base-1024) and common
+developer intuition, even though it technically inverts the IEC standard (`KB` = 1000,
+`KiB` = 1024). (Kubernetes is *not* the analogy here: unsuffixed `K`/`M`/`G` are decimal
+there; only `Ki`/`Mi`/`Gi` are binary.) Invalid unit or `<= 0` → `StreamlitAPIException`.
 
 Plumbing path (all additive):
 
@@ -122,24 +129,38 @@ selection. Design:
   `(storage, key) -> size` and a running total, plus a monotonically increasing access
   tick recorded on every read/write. `InMemoryCacheStorageWrapper` reports writes, reads
   (recency bump), and deletions to it under its existing lock.
-- **Eviction**: on a write that pushes the global total over the budget, pop the
-  globally-oldest `(storage, key)` (smallest access tick) and delete it from its owning
-  storage, repeating until under budget. The entry currently being inserted is never a
-  victim, so the loop stops when the total is under budget *or* when only that entry remains
-  — a lone entry larger than the whole budget is retained and the budget is temporarily
-  exceeded, matching the product spec's "oversized single entry" rule. Leaving ≥1 entry per
-  non-empty storage is *not* guaranteed globally: the budget can shrink some other
-  function's cache to zero, which is acceptable and identical to a normal miss on next
-  access.
+- **Internal eviction/expire hook**: reporting only the wrapper's public `set`/`get`/
+  `delete` is not enough. `TTLCache.__setitem__` / `expire()` can drop entries via
+  internal `popitem` (the same path `max_entries` / `max_size` / TTL use today) without
+  going through the wrapper's public `delete`. Those drops must also notify the budget,
+  or they leave phantom bytes in the global total and force premature cross-cache
+  eviction. Wire an eviction/expire callback on the mem cache (mirror
+  `TTLCleanupCache.on_release`, or reconcile `currsize` / known keys before vs after the
+  mem write) so every in-memory removal — explicit or internal — decrements the budget.
+- **Eviction (memory-only)**: on a write that pushes the global total over the budget, pop
+  the globally-oldest `(storage, key)` (smallest access tick) and remove it from that
+  storage's **in-memory** front cache only, repeating until under budget. Do **not** call
+  the storage's public `delete` — that also wipes `_persist_storage` and would destroy
+  `persist="disk"` entries, diverging from today's `max_entries` behavior (`TTLCache`
+  `popitem` only drops the mem layer) and from the product rule that size bounds memory
+  only (disk stays unbounded). Use a dedicated memory-only eviction path (e.g.
+  `_evict_from_mem_cache(key)` that pops from `_mem_cache` and notifies the budget)
+  so disk-backed entries can reload on the next miss. The entry currently being inserted
+  is never a victim, so the loop stops when the total is under budget *or* when only that
+  entry remains — a lone entry larger than the whole budget is retained and the budget is
+  temporarily exceeded, matching the product spec's "oversized single entry" rule.
+  Leaving ≥1 entry per non-empty storage is *not* guaranteed globally: the budget can
+  shrink some other function's cache to zero, which is acceptable and identical to a
+  normal miss on next access.
 - **Ordering structure**: an `OrderedDict[(storage_id, key), size]` keyed by access order
   gives O(1) LRU bump (`move_to_end`) and O(1) oldest-pop, the same primitive `TTLCache`
   already uses.
 - **Concurrency**: the global structure has its own lock, always acquired **after** a
   storage's `_mem_cache_lock` is released (or via a lock-ordering discipline) to avoid
   deadlock between the per-cache and global locks. Cross-cache eviction calls back into a
-  *different* storage's public `delete`, which takes that storage's own lock — so the
-  global lock must not be held while calling into a storage. Detailed lock ordering is the
-  riskiest part of this change and gets dedicated tests.
+  *different* storage's memory-only eviction path, which takes that storage's own lock —
+  so the global lock must not be held while calling into a storage. Detailed lock
+  ordering is the riskiest part of this change and gets dedicated tests.
 - **Cache clearing**: `st.cache_data.clear()` and per-function `.clear()` must also report to
   the `GlobalCacheBudget` so the running total and LRU ordering are decremented for every
   dropped entry; otherwise the budget would leak phantom bytes after a clear and evict live
@@ -160,40 +181,57 @@ _create_option(
     "server.maxCachedDataSize",
     description="""
         Maximum combined serialized size of all @st.cache_data in-memory caches.
-        Accepts a number of bytes or a string like "1gb"/"500mb". When exceeded,
-        Streamlit evicts least-recently-used cached entries across functions until
-        the total fits. Set to 0 to disable the global limit (unbounded, legacy
-        behavior). This bounds serialized cache size, not process RSS.
+        Requires an explicit unit string like "1gb"/"500mb" (or "0" to disable).
+        When exceeded, Streamlit evicts least-recently-used cached entries across
+        functions until the total fits. This bounds serialized cache size, not
+        process RSS.
     """,
-    default_val=...,  # see product-spec "Default-value options"; likely "1gb" or 0
+    default_val=...,  # see product-spec "Default-value options"; likely "1gb" or "0"
     type_=str,
 )
 ```
 
-Parsed once at startup via the same `to_bytes` helper.
+Parsed once at startup via the same `to_bytes` helper, with a config-specific rule
+layered on top (see below).
 
-**Config type note:** `type_=str` is a deliberate departure from the existing size caps
-(`server.maxUploadSize`, `server.maxMessageSize`), which use `type_=int` in **megabytes**. A
-string is needed so the value carries an explicit unit (`"1gb"`, `"500mb"`) and stays
-consistent with the `max_size` parameter. The parser accepts either a unit string or a bare
-integer number of bytes, and `0` / `"0"` is a sentinel meaning "disabled" (handled before
-the `> 0` validation that `to_bytes` otherwise enforces). Because the option is `type_=str`,
-document that the disable value is written as a string in `config.toml`
-(`maxCachedDataSize = "0"`). This intentional inconsistency with the int-MB configs is called
-out in the option description.
+**Config contract (resolved):** Existing `server.*` size caps (`server.maxUploadSize`,
+`server.maxMessageSize`) use `type_=int` in **megabytes**. Reusing that pattern here would
+clash with the `max_size` parameter's unit-string UX (`"500MB"`) and with the recommended
+default (`"1gb"`). Accepting bare ints as **bytes** would be a worse footgun: a user who
+writes `maxCachedDataSize = 500` (or `1`) almost certainly expects MB-scale behavior from
+the other `server.*` size options, not 500 bytes.
+
+Therefore `server.maxCachedDataSize` **requires an explicit unit for any non-zero
+value**. Accepted forms:
+
+- Unit string: `"1gb"`, `"500mb"`, `"1024KB"`, … (same `to_bytes` grammar as `max_size`)
+- Disable sentinel only: `0` or `"0"` (unbounded / legacy behavior; handled before the
+  `> 0` validation that `to_bytes` otherwise enforces)
+
+Bare non-zero integers (`500`, `1`, …) and unit-less numeric strings (`"500"`) are
+**rejected** with a clear config error pointing at the unit requirement. Because the
+option is `type_=str`, document that values in `config.toml` are written as strings
+(`maxCachedDataSize = "1gb"`, `maxCachedDataSize = "0"`). The Python `max_size`
+parameter still accepts int-as-bytes — that is a different surface (call-site API, not
+`server.*` config) and is unaffected.
 
 ## Testing
 
 - `ttl_cache_test.py`: size-mode eviction, running-total correctness across
-  set/overwrite/delete/pop/expire, keep-≥1-oversized-entry, dual count+size limits,
+  set/overwrite/delete/pop/expire (including overwrite of the sole/LRU entry — no
+  double-subtract / self-eviction), keep-≥1-oversized-entry, dual count+size limits,
   count-mode unchanged (regression).
 - `in_memory_cache_storage_wrapper_test.py`: `max_size_bytes` wiring, once-per-storage
-  oversized warning, coexistence with `max_entries`/`ttl`/`persist`.
+  oversized warning, coexistence with `max_entries`/`ttl`/`persist`; memory-only
+  eviction leaves `persist="disk"` entries reloadable on miss; internal TTL/`max_size`
+  `popitem` paths notify `GlobalCacheBudget` (no phantom bytes).
 - `cache_data_api` tests: parameter parsing/validation (`"500MB"`, int bytes, bad unit,
   `<= 0`), cache-recreation on `max_size` change.
-- Global budget: cross-cache eviction picks the global LRU victim; concurrency/lock-order
-  stress test (many caches, concurrent read/write) with no deadlock; budget respected
-  under churn.
+- Config parsing: unit strings accepted; `0`/`"0"` disables; bare non-zero ints /
+  unit-less strings rejected.
+- Global budget: cross-cache eviction picks the global LRU victim via the memory-only
+  path; concurrency/lock-order stress test (many caches, concurrent read/write) with no
+  deadlock; budget respected under churn.
 - Global-budget warning (Option D): the one-time warning emitted when the global budget
   first starts evicting fires once per process (throttled), carries the expected copy, and
   does not fire when the budget is disabled (`0`) or never exceeded.

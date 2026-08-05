@@ -82,9 +82,9 @@ st.cache_data(
 )
 ```
 
-| Parameter  | Type                 | Default | Description                                              |
-|------------|----------------------|---------|----------------------------------------------------------|
-| `max_size` | `int`, `str`, `None` | `None`  | Maximum total serialized size of the cache. `None` = unbounded (current behavior). |
+| Parameter  | Type                 | Default | Description                                                                                                                                 |
+|------------|----------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| `max_size` | `int`, `str`, `None` | `None`  | Maximum total serialized size of the cache. `None` = no per-function cap (the process-wide `server.maxCachedDataSize` budget may still apply). |
 
 `max_size` accepts either an integer number of **bytes**, or a human-readable **string**
 with a unit (`"500MB"`, `"1.5GB"`, `"200KB"`) — mirroring how `ttl` already accepts either
