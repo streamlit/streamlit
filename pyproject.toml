@@ -475,8 +475,25 @@ ignore_missing_imports = true
 # ty Configuration
 # =============================================================================
 
+# Point the module-resolution root at ./lib (the real parent of the `streamlit`
+# package) rather than ./lib/streamlit. This ensures files resolve under their
+# true dotted paths (e.g. `streamlit.typing`), which is required so that
+# `lib/streamlit/typing.py` does NOT shadow the standard-library `typing` module
+# (a first-party top-level `typing` corrupts stdlib type resolution and panics ty).
 [tool.ty.environment]
-root = ["./lib/streamlit"]
+root = ["./lib"]
+
+[tool.ty.analysis]
+# Preserve the historically loose cross-module behavior: treat all first-party
+# `streamlit.*` imports as `Any` instead of resolving them. This keeps ty focused
+# on stdlib/third-party correctness (as it was under the previous flattened root,
+# where `streamlit.*` was unresolved and silenced) without surfacing pre-existing
+# intra-package typing debt that is out of scope here. mypy still resolves and
+# checks first-party types, so this does not reduce overall type coverage.
+# TODO(https://github.com/astral-sh/ty/issues/2443): narrow or drop this once ty
+# handles a first-party `typing.py` without shadowing the stdlib module, so ty can
+# eventually add value on first-party code too.
+replace-imports-with-any = ["streamlit.**"]
 
 [tool.ty.src]
 include = ["lib/streamlit", "e2e_playwright", "scripts"]
@@ -490,3 +507,8 @@ unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
 unused-ignore-comment = "ignore"
 unused-type-ignore-comment = "ignore"
+# `streamlit.*` imports are replaced with `Any` (see [tool.ty.analysis]), so casts
+# to those types are reported as redundant. Disable the rule to avoid false
+# positives; mypy still enforces `warn_redundant_casts = true` with real type
+# resolution, so genuine redundant casts are still caught.
+redundant-cast = "ignore"

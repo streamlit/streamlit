@@ -55,7 +55,7 @@ text = """
     following:
 
     * **Preferred:** modify your code to avoid using this type of object.
-    * Or add the argument `allow_output_mutation=True` to the `st.cache` decorator.
+    * If this object is a shared resource, cache it with `st.cache_resource`.
     """
 
 st.error(text)

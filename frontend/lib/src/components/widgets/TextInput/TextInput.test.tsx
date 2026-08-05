@@ -285,8 +285,7 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByRole("textbox")
 
-    // userEvent is necessary to simulate the full interaction chain
-    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
+    // Simulate the full interaction chain (focus → keydown → keyup).
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 
@@ -309,8 +308,7 @@ describe("TextInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    // userEvent is necessary to simulate the full interaction chain
-    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
+    // Simulate the full interaction chain (focus → keydown → keyup).
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 

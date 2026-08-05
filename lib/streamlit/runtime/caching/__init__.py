@@ -33,7 +33,6 @@ from streamlit.runtime.caching.cache_resource_api import (
 from streamlit.runtime.caching.cache_resource_api import (
     clear_session_cache as clear_session_resource_cache,
 )
-from streamlit.runtime.caching.legacy_cache_api import cache as _cache
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -98,14 +97,10 @@ def save_media_data(media_data: bytes | str, mimetype: str, media_id: str) -> No
 # Create and export public API singletons.
 cache_data = CacheDataAPI(decorator_metric_name="cache_data")
 cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
-# TODO(lukasmasuch): This is the legacy cache API name which is deprecated
-# and it should be removed in the future.
-cache = _cache
 
 
 __all__ = [
     "CACHE_DOCS_URL",
-    "cache",
     "cache_data",
     "cache_resource",
     "clear_session_data_cache",

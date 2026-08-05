@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
@@ -105,7 +105,7 @@ describe("Video Element", () => {
     const videoElement = screen.getByTestId("stVideo")
     expect(videoElement).toBeInTheDocument()
 
-    fireEvent.error(videoElement)
+    videoElement.dispatchEvent(new Event("error"))
 
     expect(sendClientErrorToHost).toHaveBeenCalledWith(
       "Video",
@@ -258,12 +258,12 @@ describe("Video Element", () => {
       const { rerender } = render(<Video {...getProps({ startTime: 12 })} />)
       const video: HTMLVideoElement = await screen.findByTestId("stVideo")
       video.currentTime = 0
-      fireEvent.loadedMetadata(video)
+      video.dispatchEvent(new Event("loadedmetadata"))
       expect(video.currentTime).toBe(12)
 
       rerender(<Video {...getProps({ startTime: 3 })} />)
       video.currentTime = 0
-      fireEvent.loadedMetadata(video)
+      video.dispatchEvent(new Event("loadedmetadata"))
       expect(video.currentTime).toBe(3)
     })
   })
@@ -278,14 +278,14 @@ describe("Video Element", () => {
 
       await user.click(video)
       video.currentTime = 9
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(pauseSpy).not.toHaveBeenCalled()
 
       video.currentTime = 10
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(pauseSpy).toHaveBeenCalledTimes(1)
 
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(pauseSpy).toHaveBeenCalledTimes(1)
     })
 
@@ -302,7 +302,7 @@ describe("Video Element", () => {
 
       await user.click(video)
       video.currentTime = 10
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(video.currentTime).toBe(4)
       expect(playSpy).toHaveBeenCalledTimes(1)
     })
@@ -316,7 +316,7 @@ describe("Video Element", () => {
 
       await user.click(video)
       video.currentTime = 99
-      fireEvent.ended(video)
+      video.dispatchEvent(new Event("ended"))
       expect(video.currentTime).toBe(7)
       expect(playSpy).toHaveBeenCalledTimes(1)
     })

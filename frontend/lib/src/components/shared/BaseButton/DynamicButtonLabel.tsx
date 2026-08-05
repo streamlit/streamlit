@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -34,6 +34,20 @@ export interface DynamicButtonLabelProps {
   iconSize?: IconSize
   iconPosition?: "left" | "right"
   shortcut?: string | null
+  /**
+   * When false, the label stays on one line and truncates with an ellipsis
+   * instead of wrapping. Icons and shortcuts keep their intrinsic size.
+   */
+  wrap?: boolean
+  /**
+   * When true, add a native browser tooltip (`title`) exposing the full label so
+   * a label truncated with an ellipsis (`wrap=false`) can still be read on hover.
+   * The tooltip uses the rendered plain text (the button's accessible name), so
+   * a Markdown label is shown without its raw syntax. Because it is a native
+   * `title`, the browser shows it on hover whenever it is set, regardless of
+   * whether the label is actually clipped.
+   */
+  addTitleTooltip?: boolean
 }
 
 export const DynamicButtonLabel = ({
@@ -42,24 +56,77 @@ export const DynamicButtonLabel = ({
   iconSize,
   iconPosition = "left",
   shortcut,
+  wrap = true,
+  addTitleTooltip = false,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const displayShortcut = useMemo(() => {
     return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
   }, [shortcut])
 
+  const truncate = !wrap
+
+  const labelRef = useRef<HTMLDivElement>(null)
+  // Wraps only the rendered Markdown label so we can read its plain text without
+  // picking up the icon or shortcut. Uses `display: contents`, so it adds no box
+  // and leaves the flex/truncation layout unchanged.
+  const labelTextRef = useRef<HTMLSpanElement>(null)
+
+  // Set the native tooltip to the rendered plain-text label (the accessible
+  // name) rather than the raw Markdown source. This reads from the DOM because
+  // Markdown can only be converted to plain text after it is rendered. Observe
+  // DOM mutations so we re-sync after async Markdown plugins (e.g. emoji)
+  // replace a loading skeleton with the real label. Skip the observer when
+  // no title is needed so most buttons do not subscribe to DOM mutations.
+  useEffect(() => {
+    const node = labelRef.current
+    if (!node) {
+      return
+    }
+
+    if (!addTitleTooltip) {
+      node.removeAttribute("title")
+      return
+    }
+
+    const syncTitle = (): void => {
+      const labelText = labelTextRef.current?.textContent ?? ""
+      if (labelText) {
+        node.title = labelText
+      } else {
+        node.removeAttribute("title")
+      }
+    }
+
+    syncTitle()
+
+    const observer = new MutationObserver(syncTitle)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [addTitleTooltip, label])
+
   return (
-    <StyledButtonLabel>
-      <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
+    <StyledButtonLabel ref={labelRef} $truncate={truncate}>
+      <StyledButtonMainLabel
+        data-has-shortcut={Boolean(displayShortcut)}
+        $truncate={truncate}
+      >
         {icon && iconPosition === "left" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {label && (
-          <StreamlitMarkdown
-            source={label}
-            allowHTML={false}
-            isLabel
-            disableLinks
-          />
+          <span ref={labelTextRef} style={{ display: "contents" }}>
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              disableLinks
+              truncate={truncate}
+            />
+          </span>
         )}
         {icon && iconPosition === "right" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />

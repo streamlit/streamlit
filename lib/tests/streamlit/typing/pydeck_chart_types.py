@@ -29,11 +29,8 @@ if TYPE_CHECKING:
     from pydeck import Deck
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.deck_gl_json_chart import (
-        PydeckMixin,
-        PydeckSelectionState,
-        PydeckState,
-    )
+    from streamlit.elements.deck_gl_json_chart import PydeckMixin, PydeckSelectionState
+    from streamlit.typing import PydeckState
 
     pydeck_chart = PydeckMixin().pydeck_chart
 

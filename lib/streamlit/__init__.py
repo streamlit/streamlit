@@ -127,7 +127,6 @@ from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_deco
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
-    cache as _cache,
 )
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
@@ -147,6 +146,7 @@ from streamlit.user_info import (
 )
 
 import streamlit.column_config as _column_config
+import streamlit.typing as _typing
 
 # Modules that the user should have access to. These are imported with the "as" syntax
 # and the same name; note that renaming the import with "as" does not make it an
@@ -288,11 +288,10 @@ context = _ContextProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
-# `st.cache` is deprecated and should be removed soon
-cache = _cache
 
 # Namespaces
 column_config = _column_config
+typing = _typing
 
 # Connection
 connection = _connection
