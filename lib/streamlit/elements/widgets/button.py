@@ -1399,7 +1399,7 @@ class ButtonMixin:
         on_click_callback: WidgetCallback | None = (
             None
             if on_click is None or on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)
+            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
         )
 
         normalized_shortcut: str | None = None
@@ -1510,7 +1510,7 @@ class ButtonMixin:
         on_click_callback: WidgetCallback | None = (
             None
             if on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)
+            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
         )
 
         link_button_proto = LinkButtonProto()
@@ -1851,9 +1851,13 @@ def marshall_file(
             proto_download_button.url = ""
             return
 
+        data_callable = cast(  # type: ignore[redundant-cast]
+            "Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]", data
+        )
+
         # Register the callable for deferred execution
         file_id = runtime.get_instance().media_file_mgr.add_deferred(
-            data,
+            data_callable,
             mimetype,
             coordinates,
             file_name=file_name,

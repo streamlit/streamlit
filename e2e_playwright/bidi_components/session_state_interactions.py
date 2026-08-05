@@ -16,7 +16,10 @@
 import streamlit as st
 from streamlit.components.v2.bidi_component import ComponentResult
 
-interactive_text_input_definition = st.components.v2.component(
+# Exercise the public namespace path used by apps.
+component = st.components.v2.component  # ty: ignore[possibly-missing-submodule]
+
+interactive_text_input_definition = component(
     "interactive_text_input",
     html="""
     <label for='txt'>Enter text:</label>

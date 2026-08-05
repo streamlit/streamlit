@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
@@ -240,8 +240,10 @@ def maybe_coerce_enum(
     the original RegisterWidgetResult.
     """
 
-    # If the value is not a Enum, return early
-    if not isinstance(register_widget_result.value, Enum):
+    value = register_widget_result.value
+
+    # If the value is not an Enum, return early
+    if not isinstance(value, Enum):
         return register_widget_result
 
     coerce_class: EnumMeta | None
@@ -251,12 +253,13 @@ def maybe_coerce_enum(
         coerce_class = _extract_common_class_from_iter(opt_sequence)
         if coerce_class is None:
             return register_widget_result
+    enum_class = cast("type[Enum]", coerce_class)
 
     # Use replace so other fields (e.g. incoming_serialized_value) are preserved
     # rather than dropped when only the value is coerced.
     return replace(
         register_widget_result,
-        value=_coerce_enum(register_widget_result.value, coerce_class),
+        value=_coerce_enum(value, enum_class),
     )
 
 
@@ -300,13 +303,15 @@ def maybe_coerce_enum_sequence(
         coerce_class = _extract_common_class_from_iter(opt_sequence)
         if coerce_class is None:
             return register_widget_result
+    enum_class = cast("type[Enum]", coerce_class)
 
     # Return a new RegisterWidgetResult with the coerced enum values sequence.
     # Use replace so other fields (e.g. incoming_serialized_value) are preserved.
     return replace(
         register_widget_result,
         value=type(register_widget_result.value)(
-            _coerce_enum(val, coerce_class) for val in register_widget_result.value
+            _coerce_enum(cast("Enum", val), enum_class)
+            for val in register_widget_result.value
         ),
     )
 

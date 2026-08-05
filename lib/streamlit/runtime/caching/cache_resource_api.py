@@ -212,8 +212,11 @@ class ResourceCaches(StatsProvider):
             cache.clear()
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self, family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
+        # StatsProvider requires family_names; this provider always returns all families.
+        del family_names
+
         function_caches: list[ResourceCache[Any]]
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
@@ -291,11 +294,6 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
     @property
     def cached_message_replay_ctx(self) -> CachedMessageReplayContext:
         return CACHE_RESOURCE_MESSAGE_REPLAY_CTX
-
-    @property
-    def display_name(self) -> str:
-        """A human-readable name for the cached function."""
-        return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache[R]:
         return _resource_caches.get_cache(
@@ -753,26 +751,26 @@ class ResourceCache(Cache[R]):
             cache_utils.TTLCACHE_TIMER() - result.stored_at
         ) >= self.fresh_ttl_seconds
 
-    def read_result(self, key: str) -> CachedResult[R]:
+    def read_result(self, value_key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.
         Raise `CacheKeyNotFoundError` if the value doesn't exist.
         """
         with self._mem_cache_lock:
-            if key not in self._mem_cache:
+            if value_key not in self._mem_cache:
                 # key does not exist in cache.
                 raise CacheKeyNotFoundError()
 
-            result = self._mem_cache[key]
+            result = self._mem_cache[value_key]
 
             if self.validate is not None and not self.validate(result.value):
                 # Validate failed: delete the entry and raise an error.
-                del self._mem_cache[key]
+                del self._mem_cache[value_key]
                 raise CacheKeyNotFoundError()
 
             return result
 
     @gather_metrics("_cache_resource_object")
-    def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:
+    def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         main_id = st._main._id
         sidebar_id = st.sidebar._id
@@ -782,7 +780,7 @@ class ResourceCache(Cache[R]):
             cache_utils.TTLCACHE_TIMER() if self.refresh_mode == "background" else None
         )
         with self._mem_cache_lock:
-            self._mem_cache[key] = CachedResult(
+            self._mem_cache[value_key] = CachedResult(
                 value, messages, main_id, sidebar_id, stored_at=stored_at
             )
 

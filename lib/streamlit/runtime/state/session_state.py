@@ -188,12 +188,12 @@ class WStates(MutableMapping[str, Any]):
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
-            value = cast("Any", value).data
+            value = value.data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
         elif value_field_name == "string_trigger_value":
             # StringTriggerValue is a message with data in a `data` field
-            value = cast("Any", value).data
+            value = value.data
 
         deserialized = metadata.deserializer(value)
 
@@ -1644,8 +1644,11 @@ class SessionState:
             return True
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self, family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
+        # StatsProvider requires family_names; this provider always returns all families.
+        del family_names
+
         if config.get_option("server.enableExpensiveMemoryStats"):
             from streamlit.runtime.stats import safe_sizeof
 
@@ -1720,8 +1723,11 @@ class SessionStateStatProvider(StatsProvider):
         return (CACHE_MEMORY_FAMILY,)
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self, family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
+        # StatsProvider requires family_names; this provider always returns all families.
+        del family_names
+
         stats: list[CacheStat] = []
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state

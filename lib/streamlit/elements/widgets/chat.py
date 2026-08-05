@@ -406,8 +406,8 @@ class ChatInputSerde:
             _include_audio=self.accept_audio,
         )
 
-    def serialize(self, v: str | None) -> ChatInputValueProto:
-        return ChatInputValueProto(data=v)
+    def serialize(self, v: str | ChatInputValue | None) -> ChatInputValueProto:
+        return ChatInputValueProto(data=v.text if isinstance(v, ChatInputValue) else v)
 
 
 class ChatMixin:
@@ -1066,7 +1066,7 @@ class ChatMixin:
             accept_audio=accept_audio,
             allowed_types=file_type,
         )
-        widget_state = register_widget(  # type: ignore[misc]
+        widget_state = register_widget(
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
@@ -1091,7 +1091,7 @@ class ChatMixin:
         else:
             chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
 
-        if widget_state.value_changed and widget_state.value is not None:
+        if widget_state.value_changed and isinstance(widget_state.value, str):
             # Support for programmatically setting the text in the chat input
             # via session state. Since chat input has a trigger state,
             # it works a bit differently to other widgets. We are not changing

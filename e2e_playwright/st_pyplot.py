@@ -84,7 +84,7 @@ kwargs = {
 
 # We need to set clear_figure=True, otherwise the global object
 # test below would not work.
-st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type]
+st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
 
 st.write("Figure using deprecated global object:")
 plot = plt.plot(data2)
