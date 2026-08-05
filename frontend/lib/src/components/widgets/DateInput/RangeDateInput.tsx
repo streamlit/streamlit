@@ -65,6 +65,7 @@ import {
   isValidSegmentValue,
   parsePartialSegmentPaste,
   parsePastedDate,
+  validateDate,
 } from "./dateInputUtils"
 import { ReorderedDateSegments } from "./ReorderedDateSegments"
 import {
@@ -366,6 +367,18 @@ function RangeDateInput({
     [handleFocus]
   )
 
+  // Validates both range display values so editing one field doesn't
+  // clear a still-invalid sibling's error.
+  const validateBothFields = useCallback(
+    (start: CalendarDate | null, end: CalendarDate | null): void => {
+      const invalidDate =
+        (start && validateDate(start, minDate, maxDate) ? start : null) ??
+        (end && validateDate(end, minDate, maxDate) ? end : null)
+      onValidate(invalidDate)
+    },
+    [minDate, maxDate, onValidate]
+  )
+
   // Segment typing: update display only, no parent commit.
   // Clearing start also clears end — a range cannot have an end without a
   // start (prevents end-promotion into the start slot on close).
@@ -375,19 +388,20 @@ function RangeDateInput({
       if (!date) {
         setDisplayEnd(null)
       }
-      onValidate(date)
+      validateBothFields(date, date ? displayEndRef.current : null)
       if (date) onFocusChange(date)
     },
-    [onFocusChange, onValidate]
+    [onFocusChange, validateBothFields]
   )
 
   const handleEndFieldChange = useCallback(
     (date: CalendarDate | null): void => {
+      if (date && !displayStartRef.current) return
       setDisplayEnd(date)
-      onValidate(date)
+      validateBothFields(displayStartRef.current, date)
       if (date) onFocusChange(date)
     },
-    [onFocusChange, onValidate]
+    [onFocusChange, validateBothFields]
   )
 
   // Calendar value for the grid — only non-null with both endpoints
@@ -533,6 +547,7 @@ function RangeDateInput({
     ) =>
       (e: ClipboardEvent<HTMLDivElement>): void => {
         if (disabled) return
+        if (!isStartField && !displayStartRef.current) return
         const text = e.clipboardData.getData("text").trim()
 
         const fullDate = parsePastedDate(text, format)
@@ -669,6 +684,7 @@ function RangeDateInput({
             data-testid="stDateInputClearButton"
             tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
+            $pushRight={!error}
           >
             <Icon content={Cancel} size="base" />
           </StyledClearButton>
@@ -716,7 +732,7 @@ function RangeDateInput({
                 </StyledCalendarGrid>
               </StyledRangeCalendarRoot>
             </I18nProvider>
-            {enableQuickSelect && (
+            {enableQuickSelect && quickSelectPresets.length > 0 && (
               <StyledQuickSelectRow
                 ref={quickSelectRef}
                 data-testid="stDateInputQuickSelect"

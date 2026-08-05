@@ -459,6 +459,7 @@ function SingleDateInput({
             // Backspace/Delete in segments. Matches TimeInput's pattern.
             tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
+            $pushRight={!error}
           >
             <Icon content={Cancel} size="base" />
           </StyledClearButton>

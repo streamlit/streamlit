@@ -158,7 +158,9 @@ export const StyledErrorIconContainer = styled.div(({ theme }) => ({
 }))
 
 /** Matches TimeInput's StyledClearButton. */
-export const StyledClearButton = styled.button(({ theme }) => ({
+export const StyledClearButton = styled("button", {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{ $pushRight?: boolean }>(({ theme, $pushRight }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -166,7 +168,7 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   border: "none",
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
-  marginLeft: "auto",
+  marginLeft: $pushRight !== false ? "auto" : undefined,
   marginRight: theme.spacing.sm,
   color: theme.colors.grayTextColor,
   flexShrink: 0,
