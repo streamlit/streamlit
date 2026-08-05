@@ -66,14 +66,11 @@ UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 
 
 class RunLocation(Enum):
-    """The execution phase of the currently running Streamlit code.
+    """Which phase of Streamlit execution is active on this thread.
 
-    Tracks which of three phases is active on the current thread:
-
-    - ``MAIN_SCRIPT`` — the top-level app script body is running.
-    - ``FRAGMENT`` — a ``@st.fragment`` body is executing.
-    - ``CALLBACK`` — a widget callback (``on_change``, ``on_click``, etc.)
-      is executing.
+    - ``MAIN_SCRIPT`` — the top-level app script body.
+    - ``FRAGMENT`` — a ``@st.fragment`` body.
+    - ``CALLBACK`` — a widget callback (``on_change``, ``on_click``, etc.).
     """
 
     MAIN_SCRIPT = "main_script"
@@ -112,10 +109,9 @@ class FragmentThreadState:
 
     @property
     def in_fragment_callback(self) -> bool:
-        """True when executing inside a widget callback for a fragment widget.
+        """True when this thread is inside a widget callback that belongs to a fragment.
 
-        Derived from ``run_location`` and ``fragment_id`` so that all existing
-        consumers of this flag keep working without change.
+        Equivalent to ``run_location is CALLBACK`` and ``fragment_id is not None``.
         """
         return (
             self.run_location is RunLocation.CALLBACK and self.fragment_id is not None

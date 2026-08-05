@@ -586,17 +586,19 @@ class PersistedWidgetTracker:
 
 @dataclass(slots=True)
 class _CallbackRerunVotes:
-    """Tallies how each callback in one interaction wants the rerun scoped.
+    """Records whether callbacks in one interaction asked for a targeted or default rerun.
 
-    ``requested_targeted`` is set when a callback asks for a fragment/keyed
-    rerun; ``kept_default`` is set when a callback returns normally (keeping the
-    interaction's default full-app/fragment rerun) or issues a plain
-    ``st.rerun()``. When both are set, the kept default wins (see
-    ``SessionState._call_callbacks``).
+    - ``requested_targeted`` — a callback asked to rerun specific fragments
+      (``fragment_id_queue`` / ``is_fragment_scoped_rerun``).
+    - ``wants_default_scope`` — a callback returned normally or called plain
+      ``st.rerun()``, i.e. did not ask for a targeted fragment rerun.
+
+    When both are set, ``SessionState._call_callbacks`` forces a full-app rerun
+    so the default scope wins over the targeted requests.
     """
 
     requested_targeted: bool = False
-    kept_default: bool = False
+    wants_default_scope: bool = False
 
 
 @dataclass(slots=True)
@@ -899,13 +901,11 @@ class SessionState:
             if metadata.value_type == "json_value":
                 self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
 
-        if votes.requested_targeted and votes.kept_default:
-            # A callback that kept its default rerun in place wins over the
-            # targeted reruns other callbacks requested, so cast that implicit
-            # vote as an explicit full-app rerun. The request layer then
-            # coalesces the queued fragment targets into a single full-app run.
-            # No widget_states are attached, so the forced rerun does not
-            # re-fire callbacks.
+        if votes.requested_targeted and votes.wants_default_scope:
+            # Default scope wins over targeted fragment requests: force an explicit
+            # full-app rerun so request coalescing collapses any queued fragment
+            # targets. Omit widget_states so this forced request does not re-fire
+            # callbacks.
             self._request_full_app_rerun()
 
     def _execute_widget_callback(
@@ -916,26 +916,10 @@ class SessionState:
         cb_args: WidgetArgs,
         cb_kwargs: dict[str, Any],
     ) -> None:
-        """Execute a widget callback in callback run context.
+        """Run a widget callback with ``run_location=CALLBACK`` and the widget's ``fragment_id``.
 
-        Sets ``run_location=RunLocation.CALLBACK`` and binds ``fragment_id``
-        from the widget's metadata for the duration of the callback. When
-        ``st.rerun()`` is called inside a widget callback, Streamlit re-queues
-        the rerun request so it takes effect after all callbacks have run and
-        the current script body has completed.
-
-        Parameters
-        ----------
-        votes : _CallbackRerunVotes
-            Accumulator recording how the fired callbacks want the rerun scoped.
-        callback_fn : WidgetCallback
-            The user-provided callback to execute.
-        cb_metadata : WidgetMetadata[Any]
-            Metadata of the widget associated with the callback.
-        cb_args : WidgetArgs
-            Positional arguments passed to the callback.
-        cb_kwargs : dict[str, Any]
-            Keyword arguments passed to the callback.
+        Delegates to ``_run_widget_callback``, which records the rerun-scope vote
+        and re-queues any ``st.rerun()`` raised during the callback.
         """
 
         def run() -> None:
@@ -950,14 +934,14 @@ class SessionState:
     def _run_widget_callback(
         self, votes: _CallbackRerunVotes, run: Callable[[], None]
     ) -> None:
-        """Run one widget callback and record how it votes on the rerun scope.
+        """Run one widget callback and record how it affects the interaction's rerun scope.
 
-        A callback that requests a fragment/keyed rerun votes to rerun only
-        those targets; one that returns normally or issues a plain
-        ``st.rerun()`` keeps the interaction's default rerun. When ``st.rerun``
-        is called inside a callback, ``on_scriptrunner_yield`` has already
-        consumed the request, so this method re-queues it here to honor the
-        caller's intent after all callbacks have run.
+        ``st.rerun()`` raises ``RerunException`` after ``on_scriptrunner_yield``
+        has already consumed the queued request, so this method re-queues it to
+        take effect after all callbacks finish.
+
+        - Fragment-scoped or queued-fragment ``st.rerun()`` → ``votes.requested_targeted``
+        - Plain ``st.rerun()`` or a normal return → ``votes.wants_default_scope``
         """
         from streamlit.runtime.scriptrunner import RerunException
 
@@ -968,15 +952,15 @@ class SessionState:
             if rerun_data.fragment_id_queue or rerun_data.is_fragment_scoped_rerun:
                 votes.requested_targeted = True
             else:
-                votes.kept_default = True
+                votes.wants_default_scope = True
             ctx = get_script_run_ctx()
             if ctx and ctx.script_requests:
                 ctx.script_requests.request_rerun(rerun_data)
         else:
-            votes.kept_default = True
+            votes.wants_default_scope = True
 
     def _request_full_app_rerun(self) -> None:
-        """Queue a full-app rerun that does not re-fire widget callbacks."""
+        """Queue a full-app rerun with no ``widget_states``, so callbacks are not re-fired."""
         from streamlit.runtime.scriptrunner import RerunData
 
         ctx = get_script_run_ctx()

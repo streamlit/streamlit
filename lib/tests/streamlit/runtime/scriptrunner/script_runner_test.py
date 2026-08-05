@@ -1718,8 +1718,8 @@ def test_log_if_error_logs_exception_and_does_not_raise() -> None:
     mock_logger.warning.assert_called_once()
 
 
-def test_callback_rerun_no_warning() -> None:
-    """st.rerun() inside a widget callback queues a rerun rather than emitting a warning."""
+def test_callback_st_rerun_queues_without_warning() -> None:
+    """st.rerun() in a widget callback queues a rerun and emits no warning."""
     from streamlit.testing.v1.app_test import AppTest
 
     def script() -> None:

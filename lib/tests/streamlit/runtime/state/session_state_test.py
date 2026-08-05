@@ -537,7 +537,7 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 
 def test_callbacks_with_rerun():
-    """st.rerun() inside a widget callback queues a real rerun instead of warning."""
+    """st.rerun() inside a widget callback queues a rerun."""
 
     def script():
         import streamlit as st
@@ -554,12 +554,11 @@ def test_callbacks_with_rerun():
     assert len(at.warning) == 0
 
 
-def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
-    """in_fragment_callback is cleared after a callback raises RerunException.
+def test_callback_run_location_resets_after_rerun_exception() -> None:
+    """ThreadState leaves CALLBACK after a callback raises RerunException.
 
-    Guards against leaving ``ThreadState.in_fragment_callback`` stuck at True
-    (run_location stuck at CALLBACK) if a callback raises, which could
-    contaminate subsequent code.
+    ``ThreadState.scoped`` must restore the prior ``run_location`` so a raised
+    rerun cannot leave later code stuck in callback context.
     """
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 
@@ -574,7 +573,7 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
         deserializer=lambda v: v,
         serializer=lambda v: v,
         value_type="int_value",
-        callback=cb,  # path 1: single callback, fires on value change
+        callback=cb,  # single on_change-style callback, fires on value change
         fragment_id="frag-1",
     )
 
@@ -596,8 +595,8 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     mock_ctx.script_requests.request_rerun.assert_called_once()
 
 
-def test_single_callback_rerun_is_queued() -> None:
-    """st.rerun() in a path-1 callback re-queues the rerun instead of warning."""
+def test_single_callback_st_rerun_is_requeued() -> None:
+    """st.rerun() in a single-callback widget re-queues the rerun."""
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     requeue_calls: list[RerunData] = []
@@ -660,13 +659,11 @@ def test_callbacks_single_default_does_not_force_rerun() -> None:
     mock_ctx.script_requests.request_rerun.assert_not_called()
 
 
-def test_callbacks_two_callbacks_one_reruns_one_normal_yields_single_rerun() -> None:
-    """Two callbacks: one calls st.rerun(), one returns normally → one rerun request.
+def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
+    """One plain st.rerun() and one normal return produce a single re-queued rerun.
 
-    When one callback calls a plain ``st.rerun()`` and another returns normally,
-    both contribute ``kept_default`` votes. The re-queued rerun is the only request;
-    the code adds no extra forced rerun since targeted and default votes don't
-    conflict.
+    Neither callback asked for a targeted fragment rerun, so no extra full-app
+    rerun is forced.
     """
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 
@@ -698,7 +695,7 @@ def test_callbacks_two_callbacks_one_reruns_one_normal_yields_single_rerun() -> 
         ss._call_callbacks()
 
     # Only the re-queued rerun from the explicit st.rerun() call. No extra forced
-    # rerun because both callbacks voted "kept_default" — no conflict.
+    # rerun because neither callback requested a targeted rerun — no conflict.
     assert mock_ctx.script_requests.request_rerun.call_count == 1
 
 
@@ -741,13 +738,11 @@ def test_fragment_callback_rerun_requeued() -> None:
 
 
 def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
-    """A targeted rerun losing to a kept default is upgraded to a forced full-app rerun.
+    """When targeted and default-scoped callbacks conflict, force a full-app rerun.
 
-    One callback requests a fragment-scoped rerun while another returns normally
-    (keeping the default). The kept default must win, so after both callbacks run
-    the code forces an explicit full-app rerun: the fragment-scoped re-queue plus
-    the forced full-app request, and the forced request carries no fragment scope
-    and no widget_states (so it does not re-fire callbacks).
+    - One callback requests a fragment-scoped rerun; another returns normally.
+    - After both run: the targeted re-queue plus one forced full-app request.
+    - The forced request has no fragment scope and no widget_states.
     """
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 
@@ -793,11 +788,10 @@ def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
 
 
 def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
-    """With no kept default, targeted reruns are re-queued as-is and none is forced.
+    """All-targeted callbacks only re-queue; no extra full-app rerun is forced.
 
     When every callback requests a fragment-scoped rerun, there is no conflicting
-    default to satisfy, so the code only re-queues each request and never adds a
-    forced full-app rerun.
+    default to satisfy, so the code only re-queues each request.
     """
     from streamlit.runtime.scriptrunner import RerunData, RerunException
 

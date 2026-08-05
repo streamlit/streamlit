@@ -84,12 +84,11 @@ class ScriptRequest:
 
 
 def _is_full_app_rerun(data: RerunData) -> bool:
-    """Return True if data represents a full-app (non-fragment) rerun.
+    """Whether ``data`` is a full-app rerun (no fragment identity or fragment scope).
 
-    A full-app rerun carries no fragment identity and is not fragment-scoped.
-    Checking all three fields makes this work uniformly for both raw incoming
-    requests (where fragment_id may still be set) and already-stored requests
-    (where fragment_id has been normalised into fragment_id_queue).
+    Checks ``fragment_id``, ``fragment_id_queue``, and ``is_fragment_scoped_rerun``
+    so this works for both raw incoming requests and stored ones (where
+    ``fragment_id`` has already been folded into ``fragment_id_queue``).
     """
     return (
         not data.fragment_id
@@ -228,7 +227,7 @@ class ScriptRequests:
                     self._rerun_data.widget_states, new_data.widget_states
                 )
 
-                # Normalise new_data the same way the CONTINUE branch does: fold a
+                # Normalize new_data the same way the CONTINUE branch does: fold a
                 # bare fragment_id into fragment_id_queue so the rest of the coalescing
                 # logic only has to deal with one field.
                 if new_data.fragment_id:
@@ -248,9 +247,9 @@ class ScriptRequests:
                     fragment_id_queue: list[str] = []
                     is_fragment_scoped_rerun = False
                 else:
-                    # No full-app rerun in play — accumulate every fragment / targeted
-                    # rerun into one ordered pass (deduped, order-preserving). Preempt
-                    # only if any part is fragment-scoped.
+                    # No full-app rerun: union the fragment IDs (deduped,
+                    # order-preserving) and keep fragment-scoped semantics if
+                    # either request was fragment-scoped.
                     fragment_id_queue = [*self._rerun_data.fragment_id_queue]
                     for fragment_id in new_data.fragment_id_queue:
                         if fragment_id not in fragment_id_queue:
