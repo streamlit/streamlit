@@ -245,9 +245,13 @@ def test_selection_state_remains_after_unmounting(
 
     chart = app.get_by_test_id("stPlotlyChart").nth(5)
     expect(chart).to_be_visible()
-    # Hover chart to show toolbar:
-    chart.hover()
+    # Hover a blank corner of the chart to show the toolbar. The chart's center
+    # sits within ~15px of a data point that also lies on the selection box, so
+    # hovering the center draws a tooltip and selection resize handles into the
+    # screenshot on whichever platforms round the layout that way.
+    chart.hover(position={"x": 20, "y": 40})
     _check_toolbar_visibility(chart)
+    expect(chart.locator(".hovertext")).not_to_be_attached()
     assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
 
 
