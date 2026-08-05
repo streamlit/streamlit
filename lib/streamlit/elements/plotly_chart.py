@@ -51,7 +51,7 @@ from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -86,13 +86,13 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
 _LOGGER: Final = get_logger(__name__)
 
 
-class PlotlySelectionState(AttributeDictionary):
+class PlotlySelectionState(ReadOnlyAttributeDictionary):
     """
     The schema for the Plotly chart selection state.
 
-    The selection state is stored in a dictionary-like object that supports both
-    key and attribute notation. Selection states cannot be programmatically
-    changed or set through Session State.
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
+    programmatically changed or set through Session State.
 
     Attributes
     ----------
@@ -192,13 +192,13 @@ class PlotlySelectionState(AttributeDictionary):
         return super().__getitem__(key)
 
 
-class PlotlyState(AttributeDictionary):
+class PlotlyState(ReadOnlyAttributeDictionary):
     """
     The schema for the Plotly chart event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -231,21 +231,12 @@ class PlotlyState(AttributeDictionary):
 
     """
 
-    # Keep selection typed as PlotlySelectionState; without this property,
-    # attribute access re-wraps the nested dict as a plain AttributeDictionary.
-    @property
-    def selection(self) -> PlotlySelectionState:
-        try:
-            return self["selection"]
-        except KeyError as err:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute 'selection'"
-            ) from err
+    selection: PlotlySelectionState
 
-    @selection.setter
-    def selection(self, value: PlotlySelectionState) -> None:
-        self["selection"] = value
-
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed as
+    # PlotlySelectionState. Use dict.__getitem__ for the selection key so the
+    # read-only base class does not re-wrap the already-typed nested instance.
     @overload
     def __getitem__(self, key: Literal["selection"]) -> PlotlySelectionState: ...
 
@@ -253,13 +244,14 @@ class PlotlyState(AttributeDictionary):
     def __getitem__(self, key: Any) -> Any: ...
 
     def __getitem__(self, key: Any) -> Any:
-        item = super().__getitem__(key)
-        if key == "selection" and not isinstance(item, PlotlySelectionState):
-            item = PlotlySelectionState(item)
-            # Cache so repeated bracket/attribute access stays identity-stable.
-            dict.__setitem__(self, key, item)
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, PlotlySelectionState):
+                item = PlotlySelectionState(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
             return item
-        return item
+        return super().__getitem__(key)
 
 
 @dataclass

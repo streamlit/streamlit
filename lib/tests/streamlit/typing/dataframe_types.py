@@ -27,11 +27,8 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.arrow import (
-        ArrowMixin,
-        DataframeSelectionState,
-        DataframeState,
-    )
+    from streamlit.elements.arrow import ArrowMixin, DataframeSelectionState
+    from streamlit.typing import DataframeState
 
     dataframe = ArrowMixin().dataframe
 

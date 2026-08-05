@@ -16,7 +16,7 @@
 
 import {
   act,
-  fireEvent,
+  createEvent,
   screen,
   waitFor,
   within,
@@ -54,6 +54,30 @@ const createFile = (
     })
   }
   return file
+}
+
+/**
+ * Dispatch a drag-and-drop of `files` onto a dropzone container. `userEvent.upload`
+ * only targets `<input>` elements, so it cannot simulate drops on arbitrary dropzone
+ * containers or multi-file selection on a non-multiple input — this helper builds the
+ * drop event manually to exercise those paths.
+ */
+const dropFiles = (dropzone: HTMLElement, files: File[]): void => {
+  const dropEvent = createEvent.drop(dropzone)
+  Object.defineProperty(dropEvent, "dataTransfer", {
+    value: {
+      types: ["Files"],
+      files,
+      items: files.map(file => ({
+        kind: "file",
+        type: file.type,
+        getAsFile: () => file,
+      })),
+    },
+  })
+  act(() => {
+    dropzone.dispatchEvent(dropEvent)
+  })
 }
 
 const buildFileUploaderStateProto = (
@@ -268,17 +292,9 @@ describe("FileUploader widget tests", () => {
       }),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: filesToUpload,
-        items: filesToUpload.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    // Drop multiple files onto a single-file dropzone; user.upload on a
+    // non-multiple input cannot exercise this rejection path.
+    dropFiles(fileDropZone, filesToUpload)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
@@ -354,11 +370,12 @@ describe("FileUploader widget tests", () => {
   })
 
   it("uploads multiple files, even if some have errors", async () => {
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({ multipleFiles: true, type: [".txt"] })
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     const filesToUpload = [
       new File(["Text in a file!"], "filename1.txt", {
@@ -375,17 +392,7 @@ describe("FileUploader widget tests", () => {
       }),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: filesToUpload,
-        items: filesToUpload.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, filesToUpload)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
@@ -419,6 +426,7 @@ describe("FileUploader widget tests", () => {
   })
 
   it("uploads directory with multiple files successfully", async () => {
+    const user = userEvent.setup()
     const props = getProps({
       multipleFiles: true,
       acceptDirectory: true,
@@ -427,7 +435,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     // Simulate directory upload with files in different folders
     const directoryFiles = [
@@ -437,17 +445,7 @@ describe("FileUploader widget tests", () => {
       createFile("project/config.txt", "project/config.txt"),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: directoryFiles,
-        items: directoryFiles.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, directoryFiles)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(4)
@@ -464,6 +462,7 @@ describe("FileUploader widget tests", () => {
   })
 
   it("filters directory upload files by type restrictions", async () => {
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({
       multipleFiles: true,
       acceptDirectory: true,
@@ -472,7 +471,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     // Mix of valid and invalid files for directory upload
     const mixedFiles = [
@@ -482,17 +481,7 @@ describe("FileUploader widget tests", () => {
       createFile("docs/document.pdf", "docs/document.pdf", "application/pdf"),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: mixedFiles,
-        items: mixedFiles.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, mixedFiles)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
@@ -579,14 +568,9 @@ describe("FileUploader widget tests", () => {
 
     const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
 
-    // Simulate empty directory
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: [],
-        items: [],
-      },
-    })
+    // Simulate empty directory. userEvent.upload no-ops on an empty selection,
+    // so dispatch the drop directly to actually exercise the empty-drop path.
+    dropFiles(fileDropZone, [])
 
     await waitFor(() => {
       // No upload calls should be made
@@ -774,11 +758,11 @@ describe("FileUploader widget tests", () => {
   })
 
   it("can delete file with ErrorStatus", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({ multipleFiles: false, type: [".txt"] })
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     const filesToUpload = [
       new File(["Another PDF file"], "anotherpdffile.pdf", {
@@ -788,17 +772,7 @@ describe("FileUploader widget tests", () => {
     ]
 
     // Drop a file with an error (wrong extension)
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: filesToUpload,
-        items: filesToUpload.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, filesToUpload)
 
     await waitFor(() =>
       expect(screen.getAllByTestId("stFileChip").length).toBe(1)
@@ -837,10 +811,11 @@ describe("FileUploader widget tests", () => {
   })
 
   it("shows an ErrorStatus when File extension is not allowed", async () => {
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({ multipleFiles: false, type: [".png"] })
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     const filesToUpload = [
       new File(["TXT file"], "txtfile.txt", {
@@ -850,17 +825,7 @@ describe("FileUploader widget tests", () => {
     ]
 
     // Drop a file with an error (wrong extension)
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: filesToUpload,
-        items: filesToUpload.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, filesToUpload)
 
     await waitFor(() =>
       expect(screen.getAllByTestId("stFileChip").length).toBe(1)

@@ -31,7 +31,9 @@ from streamlit.errors import (
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -1440,6 +1442,159 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         """Test that invalid type values raise StreamlitValueError."""
         with pytest.raises(StreamlitValueError):
             st.status("label", type="invalid")
+
+
+class StatusContainerDeltaPathTest(DeltaGeneratorTestCase):
+    """Tests that `st.status` re-sends its block proto at the block's real path.
+
+    `update()` enqueues the `expandable` block proto again at the path that `_create()`
+    stored. If that stored path points at the wrapper instead of the block, the frontend
+    replaces the wrong node and drops the status contents (see issue #16281).
+    """
+
+    def _enter_fragment(
+        self, fragment_id: str = "frag", delta_path: tuple[int, ...] = (0, 99)
+    ) -> None:
+        """Make the current thread look like a running fragment."""
+        ThreadState.update(fragment_id=fragment_id, delta_path=delta_path)
+        self.addCleanup(lambda: ThreadState.update(fragment_id=None, delta_path=None))
+
+    def _add_block_paths(self, block_type: str) -> list[list[int]]:
+        """Return the delta paths of every queued `add_block` of one block type."""
+        return [
+            list(msg.metadata.delta_path)
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+            and msg.delta.WhichOneof("type") == "add_block"
+            and msg.delta.add_block.WhichOneof("type") == block_type
+        ]
+
+    def _new_element_paths(self) -> list[list[int]]:
+        """Return the delta paths of every queued `new_element` message."""
+        return [
+            list(msg.metadata.delta_path)
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta") and msg.delta.WhichOneof("type") == "new_element"
+        ]
+
+    def test_update_targets_status_block_without_fragment(self) -> None:
+        """Baseline: with no fragment, the update lands on the status block."""
+        st.title("head")
+        outside = st.container()
+
+        with outside.status("label"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.MAIN, 1, 0]
+        assert status_paths[-1] == status_paths[0]
+        # No fragment runs, so no transparent wrapper is created at all.
+        assert self._add_block_paths("transparent") == []
+
+    def test_update_targets_status_block_for_outside_container_write(self) -> None:
+        """A fragment status on an outside container updates at the block's real path.
+
+        This reproduces the reported crash: two separate `with` blocks write an
+        element after the update message.
+        """
+        st.title("head")
+        outside = st.container()
+        self._enter_fragment()
+
+        status = outside.status("query")
+        with status:
+            st.code("first")
+        with status:
+            st.text("second")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.MAIN, 1, 0, 0]
+        assert status_paths[-1] == status_paths[0]
+        # The write after the update must still resolve inside the status block.
+        second_element_path = self._new_element_paths()[-1]
+        assert second_element_path[: len(status_paths[0])] == status_paths[0]
+
+    def test_update_targets_status_block_for_single_with_block(self) -> None:
+        """One `with` block sends an update too, so its path must be right as well.
+
+        `__exit__` calls `update(state="complete")` and nothing writes afterwards, so
+        a wrong path corrupts the tree without a visible crash.
+        """
+        st.title("head")
+        outside = st.container()
+        self._enter_fragment()
+
+        with outside.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        wrapper_paths = self._add_block_paths("transparent")
+        assert len(status_paths) == 2
+        assert len(wrapper_paths) == 1
+        assert status_paths[-1] == status_paths[0]
+        assert status_paths[-1] != wrapper_paths[0]
+
+    def test_update_targets_status_block_with_two_wrapper_levels(self) -> None:
+        """Two nested wrapper levels still produce the correct update path.
+
+        A parent fragment creates a container inside an outside container, then a
+        child fragment creates a status on that container. Each fragment registers
+        its own wrapper, so the status sits two wrapper levels deep.
+        """
+        st.title("head")
+        outside = st.container()
+
+        self._enter_fragment(fragment_id="parent_frag")
+        inside = outside.container()
+
+        self._enter_fragment(fragment_id="child_frag")
+        with inside.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        wrapper_paths = self._add_block_paths("transparent")
+        assert len(wrapper_paths) == 2
+        assert len(status_paths) == 2
+        # The status lands at [MAIN, outside container, parent wrapper, inner container,
+        # child wrapper, status], so the path holds six entries.
+        assert len(status_paths[0]) == 6
+        assert status_paths[-1] == status_paths[0]
+        # A mis-stored path lands on a wrapper, so name both wrappers directly instead
+        # of trusting the length check to separate them.
+        for wrapper_path in wrapper_paths:
+            assert status_paths[-1] != wrapper_path
+
+    def test_update_targets_status_block_for_empty_outside_container(self) -> None:
+        """The update lands on the status block for an `st.empty()` outside container.
+
+        `st.empty()` gives the wrapper a locked cursor instead of a running one, so
+        this covers the second of the two wrapper cursor types.
+        """
+        st.title("head")
+        outside = st.empty()
+        self._enter_fragment()
+
+        with outside.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.MAIN, 1, 0]
+        assert status_paths[-1] == status_paths[0]
+
+    def test_update_targets_status_block_in_sidebar(self) -> None:
+        """A fragment status in the sidebar updates at the block's real path."""
+        self._enter_fragment()
+
+        with st.sidebar.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.SIDEBAR, 0, 0]
+        assert status_paths[-1] == status_paths[0]
 
 
 class TabsTest(DeltaGeneratorTestCase):

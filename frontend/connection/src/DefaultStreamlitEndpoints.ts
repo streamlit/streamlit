@@ -379,10 +379,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    * CSRF headers if client has CSRF protection enabled.
    * Uses dynamic import to load axios only when needed (file upload/delete operations).
    */
-  private async csrfRequest<T = unknown, R = AxiosResponse<T>>(
+  private async csrfRequest<T = unknown>(
     url: string,
     params: AxiosRequestConfig
-  ): Promise<R> {
+  ): Promise<AxiosResponse<T>> {
     params.url = url
 
     if (this.csrfEnabled) {
@@ -398,6 +398,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     // Dynamic import to avoid loading axios in the entry bundle
     const { default: axios } = await import("axios")
-    return axios.request<T, R>(params)
+    return axios.request<T>(params)
   }
 }
