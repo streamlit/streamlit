@@ -92,6 +92,21 @@ class ForwardMsgCacheTest(unittest.TestCase):
         assert msg.metadata == ref_msg.metadata
         assert not ref_msg.metadata.cacheable
 
+    def test_reference_msg_without_hash_returns_original_and_warns(self):
+        """Fall back to the original message (with a warning) when it has no hash."""
+        from unittest.mock import patch
+
+        from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+        msg = ForwardMsg()
+        assert msg.hash == ""
+
+        with patch("streamlit.runtime.forward_msg_cache._LOGGER") as mock_logger:
+            result = create_reference_msg(msg)
+
+        assert result is msg
+        mock_logger.warning.assert_called_once()
+
     def test_no_hash_for_reference_msg(self):
         """Test that reference message doesn't get a hash."""
         with patch_config_options({"global.minCachedMessageSize": 0}):

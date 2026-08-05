@@ -332,3 +332,28 @@ class DeprecationUtilTest(unittest.TestCase):
             show_deprecation_warning(message)
             assert mock_logger.warning.call_count == 3
             assert mock_warning.call_count == 3
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_obj_name_getattr_delegates_and_warns(
+        self, mock_show_warning: Mock
+    ):
+        """Accessing a non-magic attribute delegates to the wrapped object and warns.
+
+        Regular attribute and method access goes through the wrapper's
+        ``__getattr__`` (unlike the dunder methods, which are proxied as
+        properties), so this exercises the delegation path.
+        """
+
+        class Thing:
+            def __init__(self) -> None:
+                self.value = 42
+
+            def greet(self) -> str:
+                return "hi"
+
+        wrapped = deprecate_obj_name(Thing(), "beta_thing", "thing", "1980-01-01")
+
+        assert wrapped.value == 42
+        assert wrapped.greet() == "hi"
+        # The warning is only shown a single time for a given object.
+        mock_show_warning.assert_called_once()
