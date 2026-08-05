@@ -168,7 +168,7 @@ def _mpa_v1(main_script_path: str) -> None:
     page.run()
 
 
-def _exec_script(code: str | None, module: types.ModuleType | None) -> None:
+def _exec_script(code: types.CodeType | None, module: types.ModuleType | None) -> None:
     """Execute compiled bytecode for a path-based entrypoint."""
     if code is None or module is None:  # pragma: no cover - defensive
         raise RuntimeError(
@@ -723,7 +723,7 @@ class ScriptRunner:
                 module.__dict__["__file__"] = script_path
 
             def code_to_exec(
-                code: str | None = code,
+                code: types.CodeType | None = code,
                 module: types.ModuleType | None = module,
                 ctx: ScriptRunContext = ctx,
                 rerun_data: RerunData = rerun_data,

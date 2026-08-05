@@ -20,6 +20,7 @@ import json
 import os
 import sys
 from contextlib import asynccontextmanager
+from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1416,6 +1417,31 @@ class TestAppInit:
         assert app.script_path == Path(__file__).resolve()
         assert app._script_entrypoint is main
 
+    def test_app_accepts_partial_callable(self) -> None:
+        """functools.partial entrypoints resolve via the wrapped function."""
+
+        def main(prefix: str = "hi") -> None:
+            pass
+
+        entry = partial(main, prefix="hello")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_callable_instance(self) -> None:
+        """Callable class instances resolve via their type's __call__."""
+
+        class Main:
+            def __call__(self) -> None:
+                pass
+
+        entry = Main()
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
     def test_app_rejects_async_callable(self) -> None:
         """st.App rejects async function callables."""
 
@@ -1424,6 +1450,15 @@ class TestAppInit:
 
         with pytest.raises(StreamlitAPIException, match="does not support async"):
             App(main)
+
+    def test_app_rejects_async_partial_callable(self) -> None:
+        """st.App rejects functools.partial wrapping an async callable."""
+
+        async def main() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match="does not support async"):
+            App(partial(main))
 
     def test_app_rejects_async_generator_callable(self) -> None:
         """st.App rejects async generator callables."""

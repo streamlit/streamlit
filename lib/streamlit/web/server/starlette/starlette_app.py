@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import copy
+import functools
 import inspect
 import sys
 from collections.abc import Mapping as MappingABC
@@ -131,6 +132,8 @@ def _set_anyio_thread_limiter() -> None:
 
 def _is_async_callable(obj: Any) -> bool:
     """Return True if ``obj`` is an async function or async callable instance."""
+    if isinstance(obj, functools.partial):
+        return _is_async_callable(obj.func)
     if inspect.iscoroutinefunction(obj) or inspect.isasyncgenfunction(obj):
         return True
     if inspect.isroutine(obj):
@@ -141,6 +144,8 @@ def _is_async_callable(obj: Any) -> bool:
 
 def _is_generator_callable(obj: Any) -> bool:
     """Return True if ``obj`` is a sync generator function or generator callable."""
+    if isinstance(obj, functools.partial):
+        return _is_generator_callable(obj.func)
     if inspect.isgeneratorfunction(obj):
         return True
     if inspect.isroutine(obj):
@@ -162,12 +167,39 @@ def _require_zero_arg_callable(obj: Any) -> None:
         pass
 
 
+def _callable_source_candidates(obj: Any) -> list[Any]:
+    """Return objects to try when resolving a callable's source file.
+
+    Plain functions work with ``inspect.getsourcefile`` directly. Common
+    zero-argument callables such as ``functools.partial`` and callable class
+    instances do not, so also try their underlying function / ``__call__``.
+    """
+    candidates: list[Any] = [obj]
+    try:
+        unwrapped = inspect.unwrap(obj)
+    except (ValueError, TypeError):
+        unwrapped = None
+    if unwrapped is not None and unwrapped is not obj:
+        candidates.append(unwrapped)
+
+    if isinstance(obj, functools.partial):
+        candidates.append(obj.func)
+    elif not inspect.isroutine(obj) and not isinstance(obj, type):
+        # Callable class instances: resolve via the type's __call__.
+        candidates.append(type(obj).__call__)
+    return candidates
+
+
 def _resolve_callable_source_path(obj: Any) -> Path:
     """Resolve the filesystem source path for a callable entrypoint."""
-    try:
-        source_file = inspect.getsourcefile(obj) or inspect.getfile(obj)
-    except (OSError, TypeError):
-        source_file = None
+    source_file: str | None = None
+    for candidate in _callable_source_candidates(obj):
+        try:
+            source_file = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
+        except (OSError, TypeError):
+            continue
+        if source_file is not None:
+            break
 
     if source_file is None:
         raise StreamlitAPIException(
@@ -354,15 +386,18 @@ class App:
         - Path: absolute or relative. Relative paths resolve against the main
           script when started via ``streamlit run``, otherwise against the
           current working directory.
-        - Callable: invoked once per full rerun. Locals are fresh each run;
-          closures and module globals are shared across reruns and sessions.
-          Use ``st.session_state`` for per-session values. The callable's
-          source file anchors Runtime script path, secrets, static files, and
-          source watching. Under ``streamlit run``, script-level config comes
-          from the launched file; when that path is unset (for example under
-          uvicorn), the source file also pins config. Streamlit retains the
-          callable object for the lifetime of the ``App``; restart the process
-          after changing its definition.
+        - Callable:
+
+          - Invoked once per full rerun. Locals are fresh each run; closures
+            and module globals are shared across reruns and sessions. Use
+            ``st.session_state`` for per-session values.
+          - The callable's source file anchors Runtime script path, secrets,
+            static files, and source watching.
+          - Under ``streamlit run``, script-level config comes from the
+            launched file; when that path is unset (for example under
+            uvicorn), the source file also pins config.
+          - Streamlit retains the callable object for the lifetime of the
+            ``App``; restart the process after changing its definition.
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
         value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested
