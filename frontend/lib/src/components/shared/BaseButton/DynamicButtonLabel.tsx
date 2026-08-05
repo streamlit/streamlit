@@ -66,6 +66,10 @@ export const DynamicButtonLabel = ({
   const truncate = !wrap
 
   const labelRef = useRef<HTMLDivElement>(null)
+  // Wraps only the rendered Markdown label so we can read its plain text without
+  // picking up the icon or shortcut. Uses `display: contents`, so it adds no box
+  // and leaves the flex/truncation layout unchanged.
+  const labelTextRef = useRef<HTMLSpanElement>(null)
 
   // Set the native tooltip to the rendered plain-text label (the accessible
   // name) rather than the raw Markdown source. This reads from the DOM because
@@ -79,9 +83,7 @@ export const DynamicButtonLabel = ({
     }
 
     const syncTitle = (): void => {
-      const labelText =
-        node.querySelector('[data-testid="stMarkdownContainer"]')
-          ?.textContent ?? ""
+      const labelText = labelTextRef.current?.textContent ?? ""
       if (addTitleTooltip && labelText) {
         node.title = labelText
       } else {
@@ -110,13 +112,15 @@ export const DynamicButtonLabel = ({
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {label && (
-          <StreamlitMarkdown
-            source={label}
-            allowHTML={false}
-            isLabel
-            disableLinks
-            truncate={truncate}
-          />
+          <span ref={labelTextRef} style={{ display: "contents" }}>
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              disableLinks
+              truncate={truncate}
+            />
+          </span>
         )}
         {icon && iconPosition === "right" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
