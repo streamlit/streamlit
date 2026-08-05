@@ -149,6 +149,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         r"""Display a button widget.
 
@@ -301,6 +302,24 @@ class ButtonMixin:
             - Option and Alt are interchangeable and will display to the user
               to match their platform.
 
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
+
         Returns
         -------
         bool
@@ -395,6 +414,7 @@ class ButtonMixin:
             ctx=ctx,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     @gather_metrics("download_button")
@@ -417,6 +437,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         r"""Display a download button widget.
 
@@ -629,6 +650,24 @@ class ButtonMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
+
         Returns
         -------
         bool
@@ -797,6 +836,7 @@ class ButtonMixin:
             ctx=ctx,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     @overload
@@ -817,6 +857,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -837,6 +878,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool: ...
 
     @overload
@@ -857,6 +899,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool: ...
 
     @gather_metrics("link_button")
@@ -877,6 +920,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool | DeltaGenerator:
         r"""Display a link button element.
 
@@ -1042,6 +1086,24 @@ class ButtonMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
+
         Returns
         -------
         element or bool
@@ -1089,6 +1151,7 @@ class ButtonMixin:
             icon_position=normalized_icon_position,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
             ctx=ctx,
         )
 
@@ -1329,6 +1392,7 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
 
@@ -1376,6 +1440,8 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
         download_button_proto.type = type
+        if wrap is not None:
+            download_button_proto.wrap = wrap
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
@@ -1435,6 +1501,7 @@ class ButtonMixin:
         disabled: bool = False,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
         ctx: ScriptRunContext | None = None,
     ) -> bool | DeltaGenerator:
         key = to_key(key)
@@ -1485,6 +1552,8 @@ class ButtonMixin:
         link_button_proto.type = type
         link_button_proto.disabled = disabled
         link_button_proto.ignore_rerun = ignore_rerun
+        if wrap is not None:
+            link_button_proto.wrap = wrap
 
         if help is not None:
             link_button_proto.help = dedent(help)
@@ -1641,6 +1710,7 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
 
@@ -1699,6 +1769,8 @@ class ButtonMixin:
         button_proto.form_id = form_id
         button_proto.type = type
         button_proto.disabled = disabled
+        if wrap is not None:
+            button_proto.wrap = wrap
 
         if help is not None:
             button_proto.help = dedent(help)
