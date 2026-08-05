@@ -7,10 +7,10 @@ created: 2026-06-26
 
 ## Summary
 
-Adds a one-click **"Install skills"** call-to-action **inside the error box**
+Adds a one-click **"Install skills"** call-to-action **attached to the error box**
 (`ExceptionElement`) during local development. When a developer hits an error that
 **Streamlit itself raised** (e.g. a `StreamlitAPIException`), has an AI coding agent,
-but hasn't installed Streamlit's agent skills, a small "tip" band at the foot of the
+but hasn't installed Streamlit's agent skills, a small callout directly below the
 error offers a one-click install right at the moment of pain. The callout is
 deliberately **not** shown for arbitrary user/runtime errors (a `ZeroDivisionError`
 in the developer's own logic won't be fixed by installing Streamlit skills) — see
@@ -65,28 +65,26 @@ the needle.
 
 ### Design
 
-A tasteful "tip" band at the foot of the error box: a brand-accent left stripe + faint
-accent wash, a sparkle icon, one line of copy, and a lightweight text-style action. It
-reads as a peer of the error's existing **Copy / Ask Google / Ask ChatGPT** links — not
-a panel that overwhelms them.
+Its **own box directly below the error box**, sharing that box's tint, corner radius,
+and padding: a sparkle icon, one line of copy, and a lightweight underlined text action.
+The two boxes are separated by one gap step tighter than Streamlit's normal spacing
+between elements, so they read as an attached pair — the callout belongs to *this* error.
+The action is a text link, matching the error's own **Copy / Ask Google / Ask ChatGPT**
+links, so the CTA reads as a peer rather than a panel that overwhelms them.
 
-The specific styling shown in the mocks below (the left accent stripe, the red tones,
-and the current alignment) is **not final** — it needs the design pass with Jessi called
-out in the blocking note after the copy table before this ships.
+**Idle** — the error and its callout. (The startup toast from #15473 is a separate
+surface and is mutually exclusive with this one — see *Behavior*.)
 
-**Idle** — shown at the foot of the error box. (The toast in the top-right is the
-separate startup nudge from #15473, included here to show how the two surfaces relate;
-in practice they are mutually exclusive — see *Behavior*.)
+![Idle: the error box with the install-skills callout in its own box directly below it](./state-idle-below-error.png)
 
-![Idle: in-error callout at the foot of the error box, with the startup toast top-right](./overview-toast-and-callout.png)
+**Success** — the box takes the success tint for a brief confirmation, then removes
+itself. Switching the whole box (rather than just the text) keeps a confirmation from
+reading as green text sitting inside a red error box.
 
-**Error** — install failed; shows the server's reason and a **Retry** action.
+![Success state: a green box reading "Skills installed — your AI assistant is ready to help."](./state-success.png)
 
-![Error state: "Couldn't install skills … already exist. Remove them and try again." with Retry](./state-error.png)
-
-**Success** — brief confirmation, then the callout removes itself.
-
-![Success state: "Skills installed — your AI assistant is ready to help."](./state-success.png)
+**Error** — install failed; the box keeps the error tint and shows the server's reason
+plus a **Retry** action (copy below).
 
 Copy:
 
@@ -96,16 +94,12 @@ Copy:
 | Success | ✓ Skills installed — your AI assistant is ready to help.                  | _(auto-dismiss)_ |
 | Error   | Couldn't install skills. _\<server reason\>_ (e.g. "… already exist. Remove them and try again.") | **Retry** |
 
-> **Design pass with Jessi required before ship — blocking.** Raised by Johannes in
-> review (2026-06-29); still open. The current mock's styling does not yet match our
-> design system and must be reworked with Jessi (design) before this ships:
->
-> - **Red tones don't match** the design system — retone to the system's error/accent palette.
-> - **Remove or replace the left red bar** — the accent left stripe doesn't fit our design system.
-> - **Fix the alignment** — the callout's alignment is currently a bit off.
->
-> Copy, spacing, and icon treatment across both surfaces (toast + callout) may also
-> shift as part of this pass.
+> **Design pass with Jessi — done.** Raised by Johannes in review (2026-06-29) as a
+> pre-ship gate on the original mock (brand-accent left stripe, faint accent wash,
+> off design-system red tones, uncertain alignment). Resolved with design: the accent
+> stripe and wash are gone, all colour comes from the shared alert tokens the error box
+> already uses, and the callout became its own box below the error rather than a band
+> inside it. The images above are renders of the implementation, not mocks.
 
 ### Behavior
 
@@ -168,9 +162,6 @@ removes itself on success; the permanent opt-out lives on the toast.
 
 - **`SCRIPT_COMPILE_ERROR` modal (syntax errors).** The full-screen compile-error modal
   is a separate surface; adding the callout there is a documented follow-up.
-- **Design pass with Jessi — pre-ship gate, not a follow-up.** Red tones, the left red
-  bar, and alignment must be fixed with design before this ships; details in the
-  blocking note under *Proposal → Design*.
 - Non-localhost / hosted environments — intentionally excluded; the skills target a
   local coding agent.
 
