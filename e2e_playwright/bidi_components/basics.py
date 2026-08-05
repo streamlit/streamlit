@@ -20,8 +20,7 @@ import pandas as pd
 
 import streamlit as st
 
-# Alias via the public st.components.v2 path; ty cannot resolve that submodule, so ignore once here.
-component = st.components.v2.component  # ty: ignore[possibly-missing-submodule]
+component = st.components.v2.component
 
 if TYPE_CHECKING:
     from streamlit.components.v2.bidi_component import ComponentResult

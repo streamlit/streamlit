@@ -19,8 +19,7 @@ import pandas as pd
 
 import streamlit as st
 
-# Alias via the public st.components.v2 path; ty cannot resolve that submodule, so ignore once here.
-component = st.components.v2.component  # ty: ignore[possibly-missing-submodule]
+component = st.components.v2.component
 
 np.random.seed(0)
 data = np.random.randint(low=0, high=20, size=(20, 3))

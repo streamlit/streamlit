@@ -19,10 +19,6 @@
 
 import streamlit as st
 
-st.components.v1.html(  # ty: ignore[possibly-missing-submodule]
-    "<div>This import and usage worked!</div>"
-)
-st.write(str(st.components.v1.iframe))  # ty: ignore[possibly-missing-submodule]
-st.write(
-    str(st.components.v1.declare_component)  # ty: ignore[possibly-missing-submodule]
-)
+st.components.v1.html("<div>This import and usage worked!</div>")
+st.write(str(st.components.v1.iframe))
+st.write(str(st.components.v1.declare_component))

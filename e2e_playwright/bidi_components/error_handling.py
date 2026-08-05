@@ -17,8 +17,7 @@ from pathlib import Path
 
 import streamlit as st
 
-# Alias via the public st.components.v2 path; ty cannot resolve that submodule, so ignore once here.
-component = st.components.v2.component  # ty: ignore[possibly-missing-submodule]
+component = st.components.v2.component
 
 st.header("Custom Components v2 - Error Handling")
 
