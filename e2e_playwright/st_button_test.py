@@ -310,25 +310,25 @@ def test_markdown_syntax_in_labels(app: Page):
 
 def test_wrap_false_keeps_single_row_and_sets_title(app: Page):
     """wrap=False keeps the button on one row and exposes the full label via a
-    native title, while the default wrap=True button wraps and grows taller and
-    adds no title.
+    native title, while the auto default (``wrap=None``) in a vertical layout
+    wraps, grows taller, and adds no title.
     """
     wrap_false = get_element_by_key(app, "wrap_false_button")
-    wrap_true = get_element_by_key(app, "wrap_true_button")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
 
-    # wrap=False exposes the full label via a native title; wrap=True does not.
+    # wrap=False exposes the full label via a native title; auto vertical does not.
     expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
-    expect(wrap_true.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
 
-    # Same long label: wrap=True wraps onto another line and is clearly taller.
+    # Same long label: auto vertical wraps onto another line and is clearly taller.
     false_box = wrap_false.locator("button").bounding_box()
-    true_box = wrap_true.locator("button").bounding_box()
+    auto_box = wrap_auto_vertical.locator("button").bounding_box()
     assert false_box is not None
-    assert true_box is not None
+    assert auto_box is not None
     # The 4px margin absorbs sub-pixel rounding so the assertion stays robust:
     # the wrapped (two-line) button must be clearly taller than the single-row
     # one, not just larger by a rounding artifact.
-    assert true_box["height"] > false_box["height"] + 4
+    assert auto_box["height"] > false_box["height"] + 4
 
 
 def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
@@ -342,7 +342,7 @@ def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
     expect(auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
     # Same default (auto) in a vertical container wraps and gets no title.
-    auto_vertical = get_element_by_key(app, "wrap_true_button")
+    auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
     expect(auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
 
 

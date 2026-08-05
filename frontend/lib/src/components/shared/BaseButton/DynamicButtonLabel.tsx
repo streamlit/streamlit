@@ -75,16 +75,22 @@ export const DynamicButtonLabel = ({
   // name) rather than the raw Markdown source. This reads from the DOM because
   // Markdown can only be converted to plain text after it is rendered. Observe
   // DOM mutations so we re-sync after async Markdown plugins (e.g. emoji)
-  // replace a loading skeleton with the real label.
+  // replace a loading skeleton with the real label. Skip the observer when
+  // no title is needed so most buttons do not subscribe to DOM mutations.
   useEffect(() => {
     const node = labelRef.current
     if (!node) {
       return
     }
 
+    if (!addTitleTooltip) {
+      node.removeAttribute("title")
+      return
+    }
+
     const syncTitle = (): void => {
       const labelText = labelTextRef.current?.textContent ?? ""
-      if (addTitleTooltip && labelText) {
+      if (labelText) {
         node.title = labelText
       } else {
         node.removeAttribute("title")

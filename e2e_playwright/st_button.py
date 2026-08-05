@@ -149,12 +149,13 @@ st.button("1. Something", key="markdown_numbered_label")
 
 # wrap=False keeps the button on one row and ellipsizes an overflowing label,
 # exposing the full label via a native title (skipped when help is set). A
-# narrow fixed width forces the long label to overflow so wrap=True wraps and
-# grows taller while wrap=False stays single-row.
+# narrow fixed width forces the long label to overflow so the auto default
+# (wrap=None) wraps and grows taller in a vertical layout, while wrap=False
+# stays single-row.
 _WRAP_LABEL = "Regenerate the complete quarterly report now"
 with st.container(key="wrap_buttons"):
     st.button(_WRAP_LABEL, width=150, wrap=False, key="wrap_false_button")
-    st.button(_WRAP_LABEL, width=150, key="wrap_true_button")
+    st.button(_WRAP_LABEL, width=150, key="wrap_auto_vertical_button")
     st.button(
         _WRAP_LABEL,
         width=150,
