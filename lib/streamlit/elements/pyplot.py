@@ -224,21 +224,16 @@ def marshall(
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
 
-    # SVG output is text, not raster bytes. Decode to string so image_to_url
-    # routes it through the existing SVG-string path (returns a base64 data URI)
-    # rather than the PNG/PIL path, which cannot parse SVG and crashes.
+    # SVG is text, not raster bytes, so decode it to a string and let
+    # image_to_url take its SVG path instead of the PNG/PIL path, which cannot
+    # parse SVG and crashes.
     #
-    # Sniff the serialized bytes rather than reading kwargs["format"]: Matplotlib
-    # resolves the real format itself, so `format=None` with
-    # rcParams["savefig.format"] = "svg" produces SVG that the kwarg alone would
-    # not reveal. No raster format can collide with these prefixes (PNG starts
-    # with b"\x89PNG", JPEG with b"\xff\xd8").
-    #
-    # An `<?xml` prolog alone is not enough: image_to_url only treats a string as
-    # SVG when a `<svg` tag is present too, so require that here as well. Otherwise
-    # a non-SVG XML payload would be decoded and then rejected downstream. The
-    # search is bounded because Matplotlib emits `<svg` within the first few
-    # hundred bytes, so an unbounded scan of a large payload would be wasted work.
+    # Sniff the buffer rather than reading kwargs["format"]: Matplotlib resolves
+    # the format itself, so format=None with rcParams["savefig.format"] = "svg"
+    # still produces SVG. No raster format collides with these prefixes (PNG
+    # starts with b"\x89PNG", JPEG with b"\xff\xd8"). An `<?xml` prolog alone is
+    # not enough because image_to_url also requires a `<svg` tag, and the search
+    # is bounded since Matplotlib emits `<svg` within the first few hundred bytes.
     payload = image.getvalue()
     stripped = payload.lstrip()
     is_svg = stripped.startswith(b"<svg") or (
