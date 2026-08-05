@@ -72,7 +72,7 @@ start = st.date_input("Start date")
 start, end = st.date_input("Reporting period", value=(date(2026, 1, 1), date(2026, 3, 31)))
 ```
 
-`st.time_input` returns a `datetime.time` (use `step` to set the granularity). `st.datetime_input` (recent — Streamlit 1.57+) collects a date and time together and returns a single `datetime`, replacing the old two-widget pattern.
+`st.time_input` returns a `datetime.time` (use `step` to set the granularity). `st.datetime_input` collects a date and time together and returns a single `datetime`, replacing the old two-widget pattern.
 
 **Gotcha — `st.datetime_input`'s `format` is DATE-ONLY.** It accepts exactly `"YYYY/MM/DD"` (default), `"DD/MM/YYYY"`, or `"MM/DD/YYYY"`, optionally using `.` or `-` as the separator. It does NOT take a time component: `format="YYYY-MM-DD HH:mm"` raises `StreamlitAPIException`. To change the time granularity use `step=` (a `datetime.timedelta` or an int number of seconds, between 60s and 23h), not `format`. If you don't need a custom date display, omit `format` entirely.
 
@@ -95,7 +95,7 @@ A masked text input is *not* authentication — it only hides characters on scre
 
 ## Actions and triggers
 
-For buttons and button-like trigger widgets — `st.button`, action/toolbar menus (`st.menu_button`), file downloads (`st.download_button`), and URL links (`st.link_button`) — see [trigger-widgets.md](trigger-widgets.md). They fire an action on click rather than holding a value, so they live in their own reference.
+For buttons and button-like trigger widgets — `st.button`, action/toolbar menus (`st.menu_button`), file downloads (`st.download_button`), and URL links (`st.link_button`) — see [trigger-widgets.md](trigger-widgets.md).
 
 ## Batching inputs
 
