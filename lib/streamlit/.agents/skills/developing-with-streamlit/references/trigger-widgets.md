@@ -9,7 +9,7 @@ Buttons and button-like widgets are **trigger** widgets: they fire an action on 
 | `st.button` | Fire an action or flip state on click | `bool` (transient — `True` only on the click rerun) |
 | `st.menu_button` | A toolbar / action menu: one button that opens a dropdown of choices and returns the pick once | the chosen option once, then `None` |
 | `st.download_button` | Send a file (CSV, image, report) to the user | `bool` (`True` on the download click) |
-| `st.link_button` | Navigate to a URL (external or internal) | nothing — it's a link, not a rerun trigger |
+| `st.link_button` | Navigate to a URL (external or internal) | nothing by default; a `bool` when `on_click="rerun"` or a callable is passed |
 
 ## st.button — the basic trigger
 
@@ -75,15 +75,20 @@ If building the file is expensive, gate the work behind the click or wrap it in 
 
 ## st.link_button — navigate to a URL
 
-Use `st.link_button` to send the user to a URL (external site, docs, or another route). Unlike `st.button` it doesn't trigger a rerun or return a value — it's a styled link.
+Use `st.link_button` to send the user to a URL (external site, docs, or another route). By default (`on_click="ignore"`) it's a styled link: Streamlit opens the URL in a new tab, doesn't rerun, and there's no return value to handle.
+
+It can also act as a widget. Pass `on_click="rerun"` and Streamlit opens the link *and* reruns, with `st.link_button` returning a `bool` like `st.button`. Pass a callable and it opens the link, reruns, and runs the callable at the start of that rerun — so "navigate **and** do something" is one widget, not two.
 
 ```python
-# GOOD: a styled link that navigates away; no rerun, no return value to handle.
+# GOOD: the default — a styled link that navigates away; no rerun, nothing to handle.
 st.link_button("Open docs", "https://docs.streamlit.io")
 
-# BAD: st.button can't navigate on its own — it just reruns the script.
+# GOOD: navigate and record it, in one widget.
+st.link_button("Open docs", "https://docs.streamlit.io", on_click=log_docs_click)
+
+# BAD: st.button can't navigate on its own — it only reruns the script.
 if st.button("Open docs"):
-    ...  # no built-in way to open a URL from here
+    ...  # reach for st.link_button instead
 ```
 
 For in-app navigation between pages of a multi-page app, prefer `st.page_link` / `st.switch_page` (see [multipage-apps.md](multipage-apps.md)); use `st.link_button` for external URLs.
