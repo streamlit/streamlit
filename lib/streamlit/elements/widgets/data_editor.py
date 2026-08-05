@@ -124,12 +124,12 @@ class DataEditorState(ReadOnlyAttributeDictionary):
 
     Attributes
     ----------
-    edited_rows : dict[int, dict[str, Any]]
+    edited_rows : dict[int, dict[str, str | int | float | bool | list[str] | None]]
         A hierarchical mapping of edited cells based on row position ->
         column name -> value. Row positions refer to the original source
         dataframe before pending edits are applied.
 
-    added_rows : list[dict[str, Any]]
+    added_rows : list[dict[str, str | int | float | bool | list[str] | None]]
         A list of added rows, where each row is a mapping from column name to
         the cell value.
 
@@ -138,15 +138,19 @@ class DataEditorState(ReadOnlyAttributeDictionary):
         the deleted row in the original source dataframe.
     """
 
-    edited_rows: dict[int, dict[str, Any]]
-    added_rows: list[dict[str, Any]]
+    edited_rows: dict[int, dict[str, str | int | float | bool | list[str] | None]]
+    added_rows: list[dict[str, str | int | float | bool | list[str] | None]]
     deleted_rows: list[int]
 
     @overload
-    def __getitem__(self, key: Literal["edited_rows"]) -> dict[int, dict[str, Any]]: ...
+    def __getitem__(
+        self, key: Literal["edited_rows"]
+    ) -> dict[int, dict[str, str | int | float | bool | list[str] | None]]: ...
 
     @overload
-    def __getitem__(self, key: Literal["added_rows"]) -> list[dict[str, Any]]: ...
+    def __getitem__(
+        self, key: Literal["added_rows"]
+    ) -> list[dict[str, str | int | float | bool | list[str] | None]]: ...
 
     @overload
     def __getitem__(self, key: Literal["deleted_rows"]) -> list[int]: ...

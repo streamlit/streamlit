@@ -62,10 +62,22 @@ if TYPE_CHECKING:
     # =====================================================================
 
     data_editor_state = cast("DataEditorState", object())
-    assert_type(data_editor_state.edited_rows, dict[int, dict[str, Any]])
-    assert_type(data_editor_state["edited_rows"], dict[int, dict[str, Any]])
-    assert_type(data_editor_state.added_rows, list[dict[str, Any]])
-    assert_type(data_editor_state["added_rows"], list[dict[str, Any]])
+    assert_type(
+        data_editor_state.edited_rows,
+        dict[int, dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        data_editor_state["edited_rows"],
+        dict[int, dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        data_editor_state.added_rows,
+        list[dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        data_editor_state["added_rows"],
+        list[dict[str, str | int | float | bool | list[str] | None]],
+    )
     assert_type(data_editor_state.deleted_rows, list[int])
     assert_type(data_editor_state["deleted_rows"], list[int])
 
