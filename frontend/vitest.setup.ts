@@ -155,9 +155,12 @@ console.error = (...args) => {
 }
 
 // Add fake animate method to Elements
-Element.prototype.animate = vi
-  .fn()
-  .mockImplementation(() => ({ addEventListener: vi.fn(), cancel: vi.fn() }))
+Element.prototype.animate = vi.fn().mockImplementation(() => ({
+  addEventListener: vi.fn(),
+  cancel: vi.fn(),
+  finish: vi.fn(),
+  playState: "running",
+}))
 
 // JSDOM does not implement the Web Animations API. RAC's SelectionIndicator uses
 // SharedElementTransition which calls getAnimations() in an async cleanup callback.

@@ -459,6 +459,26 @@ class DeltaGenerator(
         return self._provided_cursor is None
 
     @property
+    def _block_delta_path(self) -> list[int]:
+        """The absolute delta path where `_block()` placed this block.
+
+        Only read this on a DeltaGenerator that `_block()` returned, whose cursor
+        `parent_path` is the block's own path. On a DeltaGenerator that `_enqueue()`
+        returned, the same expression gives the parent block's path instead.
+
+        `_block()` can redirect the write into layout-transparent wrapper blocks, which
+        places the block deeper than the parent cursor points to (see issue #16281).
+        Elements that re-send their own block proto later (`st.status`, `st.dialog`)
+        must therefore store this path instead of deriving it from the parent cursor.
+
+        The path is empty when there is no cursor, for example in bare mode.
+        """
+        own_cursor = self._cursor
+        if own_cursor is None:
+            return []
+        return [own_cursor.root_container, *own_cursor.parent_path]
+
+    @property
     def _id(self) -> str:
         return str(id(self))
 

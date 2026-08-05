@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit import runtime, url_util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     validate_height,
@@ -35,6 +36,11 @@ if TYPE_CHECKING:
 # File extensions that are treated as HTML and embedded via srcdoc
 _HTML_EXTENSIONS: Final = frozenset({".html", ".htm", ".xhtml"})
 
+_STRING_FILE_PATH_WARNING: Final = (
+    "Passing a local file path as a string to `st.iframe` is no longer supported. "
+    "To load a local file, pass a `pathlib.Path` object instead."
+)
+
 # Maximum path length to check - skip filesystem calls for obviously long strings
 # that are likely HTML content. Most OS path limits are 256-4096 characters.
 _MAX_PATH_LENGTH: Final = 4096
@@ -44,7 +50,7 @@ def _is_file(obj: str) -> bool:
     """Check if obj is a file path, without throwing if not."""
 
     # Skip filesystem check for long strings (likely HTML content) or strings
-    # containing '<' (likely HTML tags) to avoid unnecessary I/O
+    # containing '<' (likely HTML tags) to avoid unnecessary I/O.
     if len(obj) > _MAX_PATH_LENGTH or "<" in obj:
         return False
 
@@ -263,7 +269,7 @@ class IframeMixin:
         """Embed content in an iframe.
 
         ``st.iframe`` embeds external URLs, HTML content, or local files in an
-        iframe. It auto-detects the input type and handles it appropriately.
+        iframe. It handles the input based on its type and URL pattern.
 
         .. warning::
             HTML strings, local HTML files, and same-origin relative URLs are
@@ -285,11 +291,12 @@ class IframeMixin:
               ``/app/static/report.html``. Useful for referencing files served
               via Streamlit's `static file serving
               <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
-            - **Local file path**: A path to a local file, either as a string
-              or ``Path`` object. HTML files (``.html``, ``.htm``, ``.xhtml``)
-              are read and embedded directly. Other files (PDF, images, SVG,
-              etc.) are uploaded to Streamlit's media storage and rendered
-              using the browser's native viewer.
+            - **Local file path**: A ``pathlib.Path`` object pointing to a
+              local file. HTML files (``.html``, ``.htm``, ``.xhtml``) are read
+              and embedded directly. Other files (PDF, images, SVG, etc.) are
+              uploaded to Streamlit's media storage and rendered using the
+              browser's native viewer. Strings are interpreted only as URLs or
+              HTML content, never as local file paths.
             - **HTML string**: If ``src`` doesn't match any of the above
               patterns, it's treated as raw HTML and embedded directly in the
               iframe.
@@ -361,7 +368,8 @@ class IframeMixin:
         # Track whether content can be measured (srcdoc) or not (URL)
         uses_srcdoc = False
 
-        # Determine input type: Path object > absolute URL > existing file > relative URL > HTML string
+        # Determine input type: Path object > absolute URL > deprecated string
+        # file path > relative URL > HTML string.
         src_str = str(src) if isinstance(src, Path) else src
 
         if isinstance(src, Path):
@@ -371,10 +379,11 @@ class IframeMixin:
         elif url_util.is_url(src_str, allowed_schemas=("http", "https", "data")):
             iframe_proto.src = src_str
         elif _is_file(src_str):
-            # Check for existing file before relative URL to handle Unix paths
-            uses_srcdoc = self._process_local_file(
-                iframe_proto, src_str, self.dg._get_delta_path_str()
-            )
+            # Keep the filesystem lookup temporarily so existing string paths
+            # receive a migration warning, but never read from a string path.
+            show_deprecation_warning(_STRING_FILE_PATH_WARNING)
+            iframe_proto.srcdoc = src_str
+            uses_srcdoc = True
         elif src_str.startswith("/"):
             # Relative URL - /-prefixed strings that aren't existing files
             iframe_proto.src = src_str

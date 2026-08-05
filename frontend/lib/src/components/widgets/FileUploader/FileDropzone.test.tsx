@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  createEvent,
-  fireEvent,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { act, createEvent, screen, waitFor } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -123,6 +118,17 @@ describe("FileDropzone widget", () => {
     expect(input).not.toHaveAttribute("webkitdirectory")
   })
 
+  it("keeps the hidden input out of flow so it adds no layout gap", () => {
+    // react-dropzone renders the hidden input in-flow (display: block), which
+    // would make it an extra flex item in the dropzone and add a spurious gap
+    // above the content. We override it to position: absolute to avoid that.
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).toHaveStyle({ position: "absolute" })
+  })
+
   it("disables directory upload button when disabled", () => {
     const props = getProps({
       acceptDirectory: true,
@@ -184,7 +190,9 @@ describe("FileDropzone widget", () => {
         items: [{ kind: "file", type: "text/plain" }],
       },
     })
-    fireEvent(dropzone, dragEvent)
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
 
     await waitFor(() => {
       expect(screen.getByText("Drag and drop files here")).toBeInTheDocument()
@@ -204,7 +212,9 @@ describe("FileDropzone widget", () => {
         items: [{ kind: "file", type: "text/plain" }],
       },
     })
-    fireEvent(dropzone, dragEvent)
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
 
     await waitFor(() => {
       expect(screen.getByText("Drag and drop a file here")).toBeInTheDocument()
@@ -224,7 +234,9 @@ describe("FileDropzone widget", () => {
         items: [{ kind: "file", type: "text/plain" }],
       },
     })
-    fireEvent(dropzone, dragEvent)
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
 
     await waitFor(() => {
       expect(

@@ -541,6 +541,7 @@ class SelectSliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Select sliders always have a value (no empty/cleared state in

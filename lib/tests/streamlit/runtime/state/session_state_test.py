@@ -134,6 +134,7 @@ def _create_persist_state_metadata(
 
 class WStateTests(unittest.TestCase):
     def setUp(self):
+        ThreadState.initialize()
         wstates = WStates()
         self.wstates = wstates
         # WStates.call_callback uses ThreadState.scoped, which requires ThreadState to
@@ -582,6 +583,8 @@ def test_callback_run_location_resets_after_rerun_exception() -> None:
     ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
 
     mock_ctx = MagicMock()
+    # Self-contained: initialize ThreadState so this test doesn't depend on
+    # test ordering or another fixture having seeded the ContextVar.
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
     with patch(
@@ -3885,3 +3888,415 @@ class SanitizeUrlArrayTest(unittest.TestCase):
             max_length=2,
         )
         assert result == ["Red", "Blue"]
+
+
+def _create_disabled_test_metadata(
+    widget_id: str,
+    *,
+    disabled: bool,
+    callback: Any = None,
+    bind: BindOption = None,
+) -> WidgetMetadata:
+    """Create simple string-widget metadata for `disabled` enforcement tests."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=lambda x: x if x is not None else "default",
+        serializer=lambda x: x,
+        value_type="string_value",
+        callback=callback,
+        disabled=disabled,
+        bind=bind,
+    )
+
+
+class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
+    """Server-side enforcement of the ``disabled`` widget parameter.
+
+    A disabled widget cannot be interacted with in the browser, so any value
+    arriving from the frontend (e.g. from a stale UI or a forged BackMsg) must
+    be ignored while resolving the widget's value during registration.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_discards_incoming_value_for_disabled_widget(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A frontend value for a disabled widget is dropped, keeping the
+        widget's previous value, and the frontend is flagged for re-sync."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        # Run 1: register (seeds default), then a legit user value is stored.
+        self.session_state.register_widget(metadata, user_key="cb")
+        self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
+        self.session_state._compact_state()
+
+        # Run 2: the frontend sends a (forged) value while the widget is disabled.
+        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "user_value"
+        assert result.value_changed is True
+        # The forged value must not linger in the current widget state.
+        assert widget_id not in self.session_state._new_widget_state.states
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_accepts_incoming_value_for_enabled_widget(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """An enabled widget still accepts frontend values (anti-regression)."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=False)
+
+        self.session_state.register_widget(metadata, user_key="cb")
+        self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "forged_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_widget_first_run_uses_default(self, mock_ctx: MagicMock) -> None:
+        """On first registration a disabled widget falls back to its default,
+        even if a value is already present (e.g. from a reconnecting client)."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_widget_respects_programmatic_session_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A programmatic st.session_state assignment is honored for a disabled
+        widget; only frontend-provided values are discarded."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        self.session_state.register_widget(metadata, user_key="cb")
+        self.session_state._compact_state()
+
+        # App sets the value programmatically, and the frontend also sends one.
+        self.session_state._new_session_state["cb"] = "programmatic"
+        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "programmatic"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_widget_drops_forged_value_alongside_programmatic_set(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A forged frontend value must not linger in widget state (or expose its
+        wire label) when a programmatic st.session_state assignment coexists. The
+        programmatic value still wins resolution, but the discarded frontend value
+        is removed from ``_new_widget_state`` rather than lingering until the next
+        compaction."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        self.session_state.register_widget(metadata, user_key="cb")
+        self.session_state._compact_state()
+
+        # App sets the value programmatically; the frontend also submits a forged
+        # value (delivered as a proto so its wire label is captured).
+        self.session_state._new_session_state["cb"] = "programmatic"
+        forged_proto = WidgetStateProto()
+        forged_proto.id = widget_id
+        forged_proto.string_value = "forged_value"
+        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "programmatic"
+        assert result.incoming_serialized_value is None
+        # The forged frontend value must not linger in the current widget state.
+        assert widget_id not in self.session_state._new_widget_state.states
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_keyless_widget_discards_incoming_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Keyless disabled widgets also drop frontend values."""
+        widget_id = "$$ID-hash-None"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        self.session_state.register_widget(metadata, user_key=None)
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        result = self.session_state.register_widget(metadata, user_key=None)
+
+        assert result.value == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_url_bound_widget_keeps_seeded_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A URL-seeded value for a disabled ``bind='query-params'`` widget is
+        preserved, not discarded. URL seeding writes into both widget state and
+        session state, so it counts as a programmatic (app-driven) assignment
+        rather than a frontend interaction — the enforcement guard must not fire
+        (and must not raise) in this case."""
+        ThreadState.update(active_script_hash="main_hash")
+        self.session_state.query_params.set_initial_query_params("cb=url_value")
+
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=True, bind="query-params"
+        )
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "url_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_url_bound_widget_url_wins_over_forged_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A disabled ``bind='query-params'`` widget seeds from the URL even when
+        the frontend also submits a (forged) value on first registration. URL
+        seeding normally yields to a frontend value, but a disabled widget can't
+        be interacted with, so the URL must win instead of the widget falling back
+        to its default."""
+        ThreadState.update(active_script_hash="main_hash")
+        self.session_state.query_params.set_initial_query_params("cb=url_value")
+
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=True, bind="query-params"
+        )
+        # The frontend also submits a value for the disabled, URL-bound widget.
+        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "url_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_widget_clears_incoming_serialized_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When a disabled widget's forged frontend value is discarded, the
+        captured wire label must not leak to the caller. Otherwise an
+        option-based widget (e.g. st.selectbox) could reconcile options against
+        the attacker-controlled label via ``resolve_value_against_options``,
+        handing back an option that differs from the preserved value."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=True)
+
+        # Run 1: register (seeds default), then a legit user value is stored.
+        self.session_state.register_widget(metadata, user_key="cb")
+        self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
+        self.session_state._compact_state()
+
+        # Run 2: the frontend sends a (forged) value while the widget is
+        # disabled. Deliver it as a serialized proto, mirroring the real
+        # frontend flow so the wire label is actually captured.
+        forged_proto = WidgetStateProto()
+        forged_proto.id = widget_id
+        forged_proto.string_value = "forged_value"
+        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "user_value"
+        assert result.incoming_serialized_value is None
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_enabled_widget_exposes_incoming_serialized_value(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """An enabled widget still exposes the incoming wire label so callers
+        can reconcile options against it (anti-regression for the disabled
+        wire-label fix, which must not affect the enabled path)."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(widget_id, disabled=False)
+
+        incoming_proto = WidgetStateProto()
+        incoming_proto.id = widget_id
+        incoming_proto.string_value = "incoming_value"
+        self.session_state._new_widget_state.set_widget_from_proto(incoming_proto)
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.incoming_serialized_value == "incoming_value"
+
+
+class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
+    """A disabled widget's on-change callback must not fire for frontend
+    changes, guarding against forged values triggering side effects."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+
+    def _stage_changed_widget(self, *, disabled: bool, callback: Any) -> None:
+        widget_id = "$$ID-hash-w"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=disabled, callback=callback
+        )
+        self.session_state._old_state[widget_id] = "old"
+        self.session_state._new_widget_state.set_from_value(widget_id, "new")
+        self.session_state._new_widget_state.set_widget_metadata(metadata)
+
+    def test_disabled_widget_callback_is_suppressed(self) -> None:
+        """The callback of a changed but disabled widget is not invoked."""
+        callback = MagicMock()
+        self._stage_changed_widget(disabled=True, callback=callback)
+
+        self.session_state._call_callbacks()
+
+        callback.assert_not_called()
+
+    def test_enabled_widget_callback_is_called(self) -> None:
+        """A changed enabled widget still invokes its callback (control)."""
+        callback = MagicMock()
+        self._stage_changed_widget(disabled=False, callback=callback)
+
+        self.session_state._call_callbacks()
+
+        callback.assert_called_once()
+
+    def test_disabled_widget_multi_callback_is_suppressed(self) -> None:
+        """Per-key (multi) callbacks are also suppressed for a disabled widget."""
+        calls: list[str] = []
+        widget_id = "$$ID-hash-json"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="json_value",
+            callbacks={
+                "a": lambda: calls.append("a"),
+                "b": lambda: calls.append("b"),
+            },
+            disabled=True,
+        )
+        self.session_state._set_widget_metadata(metadata)
+        self.session_state._old_state[widget_id] = {"value": {"a": 1, "b": 2}}
+        self.session_state._new_widget_state.set_from_value(
+            widget_id, {"value": {"a": 1, "b": 3}}
+        )
+
+        self.session_state._call_callbacks()
+
+        assert calls == []
+
+
+class DisabledWidgetAppTest(unittest.TestCase):
+    """End-to-end server-side enforcement of ``disabled`` via AppTest."""
+
+    def test_disabled_checkbox_ignores_forged_value_and_callback(self) -> None:
+        """A disabled checkbox ignores a frontend value and skips its callback."""
+
+        def script() -> None:
+            import streamlit as st
+
+            def _on_change() -> None:
+                st.session_state["callback_ran"] = True
+
+            st.checkbox(
+                "cb", value=False, disabled=True, key="cb", on_change=_on_change
+            )
+
+        at = AppTest.from_function(script).run()
+        assert at.checkbox[0].value is False
+
+        # Simulate the frontend sending a value for the disabled widget, as a
+        # stale UI or a forged BackMsg would.
+        at.checkbox[0].set_value(True).run()
+
+        assert at.checkbox[0].value is False
+        assert "callback_ran" not in at.session_state
+
+    def test_enabled_checkbox_accepts_value_and_callback(self) -> None:
+        """An enabled checkbox accepts the value and runs its callback."""
+
+        def script() -> None:
+            import streamlit as st
+
+            def _on_change() -> None:
+                st.session_state["callback_ran"] = True
+
+            st.checkbox(
+                "cb", value=False, disabled=False, key="cb", on_change=_on_change
+            )
+
+        at = AppTest.from_function(script).run()
+        at.checkbox[0].set_value(True).run()
+
+        assert at.checkbox[0].value is True
+        assert at.session_state["callback_ran"] is True
+
+    def test_disabled_button_ignores_forged_click_and_callback(self) -> None:
+        """A disabled button (trigger widget) ignores a forged click and does
+        not invoke its on_click callback."""
+
+        def script() -> None:
+            import streamlit as st
+
+            def _on_click() -> None:
+                st.session_state["clicked"] = True
+
+            st.button("btn", disabled=True, key="btn", on_click=_on_click)
+
+        at = AppTest.from_function(script).run()
+
+        # Simulate the frontend reporting a click for the disabled button.
+        at.button[0].click().run()
+
+        assert at.button[0].value is False
+        assert "clicked" not in at.session_state
+
+    def test_enabled_button_click_runs_callback(self) -> None:
+        """An enabled button reports the click and runs its callback (control)."""
+
+        def script() -> None:
+            import streamlit as st
+
+            def _on_click() -> None:
+                st.session_state["clicked"] = True
+
+            st.button("btn", disabled=False, key="btn", on_click=_on_click)
+
+        at = AppTest.from_function(script).run()
+        at.button[0].click().run()
+
+        assert at.session_state["clicked"] is True

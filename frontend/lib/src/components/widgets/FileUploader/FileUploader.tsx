@@ -18,7 +18,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
-import { FileRejection } from "react-dropzone"
 
 import {
   FileUploader as FileUploaderProto,
@@ -43,6 +42,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
+  type FileRejection,
   FileSize,
   getRejectedFileInfo,
   isFileTypeAllowed,

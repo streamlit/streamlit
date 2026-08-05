@@ -671,6 +671,7 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Multiselect is always clearable: users can always remove all

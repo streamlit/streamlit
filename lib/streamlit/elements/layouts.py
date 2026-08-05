@@ -1357,6 +1357,7 @@ class LayoutsMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1482,6 +1483,24 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
+
+        wrap : bool or None
+            Whether the popover button's label can wrap onto multiple lines.
+            This can be one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. The icon and chevron remain
+            visible.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -1675,6 +1694,7 @@ class LayoutsMixin:
                 on_change_handler=on_change if callable(on_change) else None,
                 args=args if callable(on_change) else None,
                 kwargs=kwargs if callable(on_change) else None,
+                disabled=disabled,
             )
 
             current_open = popover_state.value
@@ -1691,6 +1711,8 @@ class LayoutsMixin:
         popover_proto.disabled = disabled
         popover_proto.type = type
         popover_proto.open = current_open
+        if wrap is not None:
+            popover_proto.wrap = wrap
         if help:
             popover_proto.help = str(help)
         if icon is not None:

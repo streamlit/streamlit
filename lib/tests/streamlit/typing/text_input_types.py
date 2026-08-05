@@ -120,6 +120,15 @@ if TYPE_CHECKING:
     assert_type(text_input("Search", value=None, icon=":material/search:"), str | None)
 
     # =====================================================================
+    # Test validate parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_input("Label", validate="^x$"), str)
+    assert_type(text_input("Label", value=None, validate="^x$"), str | None)
+    assert_type(text_input("Label", validate=("^x$", "msg")), str)
+    assert_type(text_input("Label", value=None, validate=("^x$", "msg")), str | None)
+
+    # =====================================================================
     # Test width parameter (keyword-only)
     # =====================================================================
 

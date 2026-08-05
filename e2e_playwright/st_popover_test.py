@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -39,7 +40,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(29)
+    expect(popover_elements).to_have_count(30)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -480,12 +481,12 @@ def test_popover_menu_style_icons_hide_chevron(
 
 
 def test_multiselect_dropdown_renders_above_popover_body(app: Page):
-    """A BaseWeb dropdown (multiselect) opened inside a popover must render above
+    """A multiselect dropdown opened inside a popover must render above
     the popover body, not behind it.
 
     Regression test for https://github.com/streamlit/streamlit/issues/15959: the
-    floating-ui popover body and the BaseWeb overlay layer host both resolved to
-    the `popup` z-index, so the popover body (mounted later) painted over the
+    floating-ui popover body and the dropdown overlay both resolved to the
+    `popup` z-index, so the popover body (mounted later) painted over the
     dropdown and hid the options.
     """
     popover_container = open_popover(app, "popover 20 (multiselect stacking)")
@@ -519,7 +520,7 @@ def test_multiselect_dropdown_renders_above_popover_body(app: Page):
     # Selecting the option must work (would fail the click hit-test if occluded).
     first_option.click()
     wait_for_app_run(app)
-    expect(multiselect.locator('span[data-baseweb="tag"]')).to_have_count(1)
+    expect(multiselect.locator("[data-tag]")).to_have_count(1)
 
 
 def test_date_input_selection_does_not_dismiss_popover(app: Page):
@@ -617,3 +618,17 @@ def test_programmatic_close_does_not_reopen_other_popover(app: Page):
     # Popover A must NOT have reopened (the bug from #14943).
     # If it did, "Close A" would be visible in a second popover body.
     expect(app.get_by_text("Close A")).not_to_be_visible()
+
+
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
+    """
+    container = get_element_by_key(app, "wrap_false_popover")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()
+    expect(container.get_by_test_id("stPopoverButton")).to_contain_text("expand_more")

@@ -99,6 +99,23 @@ _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFF
 # where empty charts need x, y encodings set in order to take up space.
 _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
 
+# Prefix for internal aliases used when a user column name contains characters that
+# Vega-Lite treats as special in field strings (e.g. `.` for nested access, `[`/`]`
+# for property access, and `\` used as an escape). See GitHub issue #7714.
+_COLUMN_ALIAS_PREFIX: Final = "col" + _PROTECTION_SUFFIX + "-"
+
+# Characters that Vega-Lite treats as special in a field string. When any of these
+# appear in a user column name we rename the column to a safe alias to avoid Vega-Lite
+# interpreting the name as nested-object or property access.
+_VEGA_LITE_FIELD_SPECIAL_CHARS: Final = (".", "[", "]", "\\")
+
+
+def _needs_field_alias(name: str) -> bool:
+    """Return True if ``name`` contains characters that Vega-Lite treats as special
+    inside a field string.
+    """
+    return any(ch in name for ch in _VEGA_LITE_FIELD_SPECIAL_CHARS)
+
 
 def maybe_raise_stack_warning(
     stack: bool | ChartStackType | None, command: str | None, docs_link: str
@@ -155,9 +172,16 @@ def generate_chart(
 
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
-    df, x_column, y_column, color_column, size_column, sort_column = _prep_data(
-        df, x_column, y_column_list, color_column, size_column, sort_column
-    )
+    (
+        df,
+        x_column,
+        y_column,
+        y_column_list,
+        color_column,
+        size_column,
+        sort_column,
+        alias_to_original,
+    ) = _prep_data(df, x_column, y_column_list, color_column, size_column, sort_column)
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
 
@@ -173,6 +197,7 @@ def generate_chart(
         y_axis_label,
         stack,
         sort_from_user,
+        alias_to_original,
     )
 
     chart_width = width if isinstance(width, int) else None
@@ -204,13 +229,20 @@ def generate_chart(
 
     # Set up color encoding.
     color_enc = _get_color_encoding(
-        df, color_value, color_column, y_column_list, color_from_user
+        df,
+        color_value,
+        color_column,
+        y_column_list,
+        color_from_user,
+        alias_to_original,
     )
     if color_enc is not None:
         chart = chart.encode(color=color_enc)
 
     # Set up size encoding.
-    size_enc = _get_size_encoding(chart_type, size_column, size_value)
+    size_enc = _get_size_encoding(
+        chart_type, size_column, size_value, alias_to_original
+    )
     if size_enc is not None:
         chart = chart.encode(size=size_enc)
 
@@ -223,6 +255,7 @@ def generate_chart(
                 size_column,
                 color_column,
                 color_enc,
+                alias_to_original,
             )
         )
 
@@ -369,11 +402,22 @@ def _prep_data(
     color_column: str | None,
     size_column: str | None,
     sort_column: str | None = None,
-) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None, str | None]:
+) -> tuple[
+    pd.DataFrame,
+    str | None,
+    str | None,
+    list[str],
+    str | None,
+    str | None,
+    str | None,
+    dict[str, str],
+]:
     """Prepares the data for charting.
 
     Returns the prepared dataframe and the new names of the x column (taking the index
-    reset into consideration) and y, color, and size columns.
+    reset into consideration), the y, color, and size columns, the aliased y column
+    list, and a mapping from any internal column aliases back to the original
+    user-facing column names.
     """
 
     # If y is provided, but x is not, we'll use the index as x.
@@ -388,13 +432,15 @@ def _prep_data(
     # Maybe convert color to Vega colors.
     _maybe_convert_color_column_in_place(selected_data, color_column)
 
-    # Make sure all columns have string names.
+    # Make sure all columns have string names, and rename any that contain
+    # Vega-Lite-special characters (see #7714).
     (
         x_column,
         y_column_list,
         color_column,
         size_column,
         sort_column,
+        alias_to_original,
     ) = _convert_col_names_to_str_in_place(
         selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
@@ -404,8 +450,35 @@ def _prep_data(
         selected_data, x_column, y_column_list, color_column, size_column, sort_column
     )
 
-    # Return the data, but also the new names to use for x, y, and color.
-    return melted_data, x_column, y_column, color_column, size_column, sort_column
+    # If the melt produced a melted-color column and any y columns were aliased,
+    # rewrite the melted-color values back to the original user-facing names.
+    # This makes the color legend and tooltip display the original column names
+    # without needing a Vega-Lite ``labelExpr`` remap. The y encoding still
+    # references the alias columns via ``y_column`` for the actual value lookup.
+    if (
+        color_column == _MELTED_COLOR_COLUMN_NAME
+        and alias_to_original
+        and color_column in melted_data.columns
+    ):
+        melted_data[color_column] = melted_data[color_column].map(
+            lambda v: alias_to_original.get(v, v)
+        )
+        # Also swap ``y_column_list`` entries back to originals so any downstream
+        # scale domain lines up with the values now stored in the data.
+        y_column_list = [alias_to_original.get(c, c) for c in y_column_list]
+
+    # Return the data, the new names to use for x, y, and color, the (possibly
+    # user-facing) y column list, and the alias-to-original title map.
+    return (
+        melted_data,
+        x_column,
+        y_column,
+        y_column_list,
+        color_column,
+        size_column,
+        sort_column,
+        alias_to_original,
+    )
 
 
 def _is_date_column(df: pd.DataFrame, name: str | None) -> bool:
@@ -588,20 +661,91 @@ def _convert_col_names_to_str_in_place(
     color_column: str | None,
     size_column: str | None,
     sort_column: str | None,
-) -> tuple[str | None, list[str], str | None, str | None, str | None]:
-    """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
+) -> tuple[str | None, list[str], str | None, str | None, str | None, dict[str, str]]:
+    r"""Converts column names to strings, since Vega-Lite does not accept ints, etc.
+
+    Additionally, if any column name contains characters that Vega-Lite treats as
+    special in a field string (``.``, ``[``, ``]``, ``\``), the column is renamed
+    to an internal alias so the chart still renders correctly. The mapping from
+    alias to the original (user-facing) name is returned so encodings can surface
+    the original name as the title, tooltip, and legend label.
+    """
     import pandas as pd
 
     column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
     str_column_names = [str(c) for c in column_names]
-    df.columns = pd.Index(str_column_names)
+
+    # Set of stringified names that must not collide with generated aliases. This
+    # covers plain user columns (which we never rename) so an alias like
+    # ``col -- streamlit-generated-0`` cannot silently shadow a user column that
+    # happens to already be named that.
+    reserved_names: set[str] = {
+        name for name in str_column_names if not _needs_field_alias(name)
+    }
+    # Map from original stringified name to the *first* safe alias assigned to
+    # that name. Used to remap single-column user arguments (x, color, size,
+    # sort) that reference columns by name — for those, first-occurrence-wins
+    # matches pandas' behavior when selecting by a duplicated column label.
+    original_to_alias: dict[str, str] = {}
+    # Map from alias back to the original name, for user-facing titles.
+    alias_to_original: dict[str, str] = {}
+    # FIFO queue of aliases per original column name. When ``y_column_list`` has
+    # duplicate labels (e.g. two columns both named ``"a.b"``), each entry
+    # consumes a distinct alias in column order (see #7714 follow-up).
+    per_name_aliases: dict[str, list[str]] = {}
+    final_column_names: list[str] = []
+    for idx, name in enumerate(str_column_names):
+        if _needs_field_alias(name):
+            # Every column that needs aliasing gets its own alias keyed on the
+            # column index, so two columns whose stringified names collide (e.g.
+            # tuple columns ``('a.b', 0)`` and ``('a.b', 1)`` both -> ``"a.b"``)
+            # still map to distinct DataFrame columns. The trailing counter is
+            # only needed on the extremely rare occasion that a user column
+            # literally matches the default form.
+            alias = f"{_COLUMN_ALIAS_PREFIX}{idx}"
+            counter = 0
+            while alias in reserved_names or alias in alias_to_original:
+                counter += 1
+                alias = f"{_COLUMN_ALIAS_PREFIX}{idx}-{counter}"
+            alias_to_original[alias] = name
+            original_to_alias.setdefault(name, alias)
+            per_name_aliases.setdefault(name, []).append(alias)
+            final_column_names.append(alias)
+        else:
+            final_column_names.append(name)
+
+    df.columns = pd.Index(final_column_names)
+
+    def _remap(name: str | None) -> str | None:
+        if name is None:
+            return None
+        name = str(name)
+        return original_to_alias.get(name, name)
+
+    def _remap_y(name: str) -> str:
+        # Position-aware: consume aliases in df-column order so duplicate y
+        # entries (e.g. ``list(df.columns)`` on a df with duplicate labels) each
+        # address a distinct DataFrame column instead of collapsing to the first
+        # alias. If a caller passes more duplicates than the DataFrame actually
+        # has, fall back to the first alias for that name so the reference still
+        # points at an aliased column (never the pre-rename original).
+        name = str(name)
+        aliases = per_name_aliases.get(name)
+        if aliases:
+            # Intentionally destructive: each queue entry is consumed once,
+            # matching one DataFrame column occurrence.
+            return aliases.pop(0)
+        return original_to_alias.get(name, name)
+
+    remapped_y = [_remap_y(c) for c in y_column_list]
 
     return (
-        None if x_column is None else str(x_column),
-        [str(c) for c in y_column_list],
-        None if color_column is None else str(color_column),
-        None if size_column is None else str(size_column),
-        None if sort_column is None else str(sort_column),
+        _remap(x_column),
+        remapped_y,
+        _remap(color_column),
+        _remap(size_column),
+        _remap(sort_column),
+        alias_to_original,
     )
 
 
@@ -775,25 +919,26 @@ def _get_axis_encodings(
     y_axis_label: str | None,
     stack: bool | ChartStackType | None,
     sort_from_user: bool | str,
+    alias_to_original: dict[str, str],
 ) -> tuple[alt.X, alt.Y]:
     stack_encoding: alt.X | alt.Y
     sort_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data and labels:
         x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
+            df, y_column, y_from_user, y_axis_label, chart_type, alias_to_original
         )
         y_encoding = _get_y_encoding(
-            df, x_column, x_from_user, x_axis_label, chart_type
+            df, x_column, x_from_user, x_axis_label, chart_type, alias_to_original
         )
         stack_encoding = x_encoding
         sort_encoding = y_encoding
     else:
         x_encoding = _get_x_encoding(
-            df, x_column, x_from_user, x_axis_label, chart_type
+            df, x_column, x_from_user, x_axis_label, chart_type, alias_to_original
         )
         y_encoding = _get_y_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
+            df, y_column, y_from_user, y_axis_label, chart_type, alias_to_original
         )
         stack_encoding = y_encoding
         sort_encoding = x_encoding
@@ -803,7 +948,7 @@ def _get_axis_encodings(
 
     # Handle sorting - only relevant for bar charts
     if chart_type in {ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR}:
-        _update_encoding_with_sort(sort_from_user, sort_encoding)
+        _update_encoding_with_sort(sort_from_user, sort_encoding, alias_to_original)
 
     return x_encoding, y_encoding
 
@@ -814,6 +959,7 @@ def _get_x_encoding(
     x_from_user: str | Sequence[str] | None,
     x_axis_label: str | None,
     chart_type: ChartType,
+    alias_to_original: dict[str, str],
 ) -> alt.X:
     import altair as alt
 
@@ -834,8 +980,10 @@ def _get_x_encoding(
 
         # Only show a label in the x axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
-        # behavior.
-        x_title = "" if x_from_user is None else x_column
+        # behavior. Show the original (user-facing) name if we renamed the column.
+        x_title = (
+            "" if x_from_user is None else alias_to_original.get(x_column, x_column)
+        )
 
     # User specified x-axis label takes precedence
     if x_axis_label is not None:
@@ -859,6 +1007,7 @@ def _get_y_encoding(
     y_from_user: str | Sequence[str] | None,
     y_axis_label: str | None,
     chart_type: ChartType,
+    alias_to_original: dict[str, str],
 ) -> alt.Y:
     import altair as alt
 
@@ -879,8 +1028,10 @@ def _get_y_encoding(
 
         # Only show a label in the y axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
-        # behavior.
-        y_title = "" if y_from_user is None else y_column
+        # behavior. Show the original (user-facing) name if we renamed the column.
+        y_title = (
+            "" if y_from_user is None else alias_to_original.get(y_column, y_column)
+        )
 
     # User specified y-axis label takes precedence
     if y_axis_label is not None:
@@ -914,6 +1065,7 @@ def _update_encoding_with_stack(
 def _update_encoding_with_sort(
     sort_from_user: bool | str,
     encoding: alt.X | alt.Y,
+    alias_to_original: dict[str, str],
 ) -> None:
     """Apply sort to the given encoding in-place.
 
@@ -940,6 +1092,15 @@ def _update_encoding_with_sort(
         else:
             sort_order = "ascending"
         sort_field = sort_from_user.removeprefix("-")
+        # If the sort column was renamed to a safe alias (e.g. because its name
+        # contained ".", "[", "]", or "\"), use the alias here so Vega-Lite finds
+        # the actual field. See #7714. When multiple df columns share the same
+        # original name, use the first alias assigned to that name so this stays
+        # consistent with ``_remap`` (which also picks the first alias).
+        sort_field = next(
+            (alias for alias, orig in alias_to_original.items() if orig == sort_field),
+            sort_field,
+        )
         encoding["sort"] = alt.SortField(field=sort_field, order=sort_order)
 
 
@@ -949,6 +1110,7 @@ def _get_color_encoding(
     color_column: str | None,
     y_column_list: list[str],
     color_from_user: str | Color | list[Color] | None,
+    alias_to_original: dict[str, str],
 ) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
@@ -996,6 +1158,11 @@ def _get_color_encoding(
                 else:
                     resolved_colors.append(to_css_color(c))
 
+            # After ``_prep_data`` the melted `color` column contains the
+            # original user-facing y column names (aliases are only used as the
+            # underlying data-column identifiers). ``y_column_list`` is likewise
+            # in user-facing form here, so the scale domain lines up naturally
+            # and no ``labelExpr`` remap is needed for the legend.
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
                 scale=alt.Scale(domain=y_column_list, range=resolved_colors),
@@ -1015,6 +1182,10 @@ def _get_color_encoding(
             else _infer_vegalite_type(df[color_column])
         )
 
+        # When the melted `color` column is in play its values are the original
+        # (user-facing) y column names — ``_prep_data`` rewrites them from
+        # aliases before we get here — so the legend labels come out correct
+        # without any extra remapping. See #7714.
         color_enc = alt.Color(
             field=color_column, legend=_COLOR_LEGEND_SETTINGS, type=column_type
         )
@@ -1025,21 +1196,27 @@ def _get_color_encoding(
             # full y-axis disappears (maybe a bug in vega-lite)?
             color_enc["title"] = " "
 
-        # If the 0th element in the color column looks like a color, we'll use the color
-        # column's values as the colors in our chart.
-        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):  # type: ignore[arg-type]
-            color_range = [to_css_color(c) for c in df[color_column].unique()]
-            color_enc["scale"] = alt.Scale(range=color_range)
-            # Don't show the color legend, because it will just show text with the
-            # color values, like #f00, #00f, etc, which are not user-readable.
-            color_enc["legend"] = None
-
-        # Otherwise, let Vega-Lite auto-assign colors.
-        # This codepath is typically reached when the color column contains numbers
-        # (in which case Vega-Lite uses a color gradient to represent them) or strings
-        # (in which case Vega-Lite assigns one color for each unique value).
         else:
-            pass
+            # If the color column was renamed to a safe alias, show the original
+            # name as the legend title so the user sees their column name.
+            if color_column in alias_to_original:
+                color_enc["title"] = alias_to_original[color_column]
+
+            # If the 0th element in the color column looks like a color, we'll use
+            # the color column's values as the colors in our chart.
+            if len(df[color_column]) and is_color_like(df[color_column].iat[0]):  # type: ignore[arg-type]
+                color_range = [to_css_color(c) for c in df[color_column].unique()]
+                color_enc["scale"] = alt.Scale(range=color_range)
+                # Don't show the color legend, because it will just show text with
+                # the color values, like #f00, #00f, etc, which are not
+                # user-readable.
+                color_enc["legend"] = None
+
+            # Otherwise, let Vega-Lite auto-assign colors.
+            # This codepath is typically reached when the color column contains
+            # numbers (in which case Vega-Lite uses a color gradient to represent
+            # them) or strings (in which case Vega-Lite assigns one color for each
+            # unique value).
 
         return color_enc
 
@@ -1050,13 +1227,18 @@ def _get_size_encoding(
     chart_type: ChartType,
     size_column: str | None,
     size_value: str | float | None,
+    alias_to_original: dict[str, str],
 ) -> alt.Size | alt.SizeValue | None:
     import altair as alt
 
     if chart_type == ChartType.SCATTER:
         if size_column is not None:
+            # Show the original (user-facing) name in the legend if the size column
+            # was renamed to a safe alias.
+            size_title = alias_to_original.get(size_column, size_column)
             return alt.Size(
                 size_column,
+                title=size_title,
                 legend=_SIZE_LEGEND_SETTINGS,
             )
 
@@ -1085,6 +1267,7 @@ def _get_tooltip_encoding(
     size_column: str | None,
     color_column: str | None,
     color_enc: alt.Color | alt.ColorValue | None,
+    alias_to_original: dict[str, str],
 ) -> list[alt.Tooltip]:
     import altair as alt
 
@@ -1094,6 +1277,8 @@ def _get_tooltip_encoding(
     # up a tooltip title so we never show the crazy name to the user.
     if x_column == _SEPARATED_INDEX_COLUMN_NAME:
         tooltip.append(alt.Tooltip(x_column, title=_SEPARATED_INDEX_COLUMN_TITLE))
+    elif x_column in alias_to_original:
+        tooltip.append(alt.Tooltip(x_column, title=alias_to_original[x_column]))
     else:
         tooltip.append(alt.Tooltip(x_column))
 
@@ -1108,6 +1293,8 @@ def _get_tooltip_encoding(
                 type="quantitative",
             )
         )
+    elif y_column in alias_to_original:
+        tooltip.append(alt.Tooltip(y_column, title=alias_to_original[y_column]))
     else:
         tooltip.append(alt.Tooltip(y_column))
 
@@ -1124,11 +1311,20 @@ def _get_tooltip_encoding(
                     type="nominal",
                 )
             )
+        elif color_column in alias_to_original:
+            tooltip.append(
+                alt.Tooltip(color_column, title=alias_to_original[color_column])
+            )
         else:
             tooltip.append(alt.Tooltip(color_column))
 
     if size_column:
-        tooltip.append(alt.Tooltip(size_column))
+        if size_column in alias_to_original:
+            tooltip.append(
+                alt.Tooltip(size_column, title=alias_to_original[size_column])
+            )
+        else:
+            tooltip.append(alt.Tooltip(size_column))
 
     return tooltip
 

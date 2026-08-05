@@ -19,12 +19,12 @@ from __future__ import annotations
 import asyncio
 import string
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from starlette.applications import Starlette
-from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException
+from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
 from starlette.testclient import TestClient
 
@@ -98,6 +98,59 @@ def _upload_routes() -> list[BaseRoute]:
     return create_upload_routes(
         runtime, MemoryUploadedFileManager("/_stcore/upload_file"), ""
     )
+
+
+def _multipart_body(
+    file_bytes: bytes,
+    *,
+    field_name: str = "file",
+    filename: str = "foo.txt",
+    boundary: str = "testboundary",
+) -> tuple[bytes, str]:
+    """Build a minimal multipart/form-data body carrying a single file part."""
+    body = b"".join(
+        [
+            f"--{boundary}\r\n".encode(),
+            (
+                f'Content-Disposition: form-data; name="{field_name}"; '
+                f'filename="{filename}"\r\n'
+            ).encode(),
+            b"Content-Type: application/octet-stream\r\n\r\n",
+            file_bytes,
+            f"\r\n--{boundary}--\r\n".encode(),
+        ]
+    )
+    return body, boundary
+
+
+def _make_upload_request(
+    body_messages: list[dict[str, Any]],
+    *,
+    boundary: str,
+    session_id: str = "session123",
+    file_id: str = "fileid",
+    on_receive: Callable[[], None] | None = None,
+) -> StarletteRequest:
+    """Build a real PUT Request whose ASGI ``receive`` yields the given body
+    messages one at a time (optionally invoking ``on_receive`` per call)."""
+    scope = {
+        "type": "http",
+        "method": "PUT",
+        "path": f"/_stcore/upload_file/{session_id}/{file_id}",
+        "headers": [
+            (b"content-type", f"multipart/form-data; boundary={boundary}".encode())
+        ],
+        "query_string": b"",
+        "path_params": {"session_id": session_id, "file_id": file_id},
+    }
+    messages = iter(body_messages)
+
+    async def receive() -> dict[str, Any]:
+        if on_receive is not None:
+            on_receive()
+        return next(messages)
+
+    return StarletteRequest(scope, receive)
 
 
 class TestWithBase:
@@ -622,23 +675,37 @@ def test_upload_put_invalid_content_length_returns_400() -> None:
     assert "Invalid Content-Length" in exc_info.value.detail
 
 
-def test_upload_put_oversized_body_returns_413() -> None:
-    """A body that exceeds the configured max upload size is rejected with 413."""
+def test_upload_put_oversized_content_length_returns_413() -> None:
+    """A Content-Length header exceeding the max upload size is rejected early."""
     endpoint = _endpoint_for(_upload_routes(), "PUT")
 
-    upload = MagicMock(spec=UploadFile)
-    upload.read = AsyncMock(return_value=b"x" * 100)
-    upload.file = MagicMock()
-    upload.filename = "foo.txt"
-    upload.content_type = "text/plain"
-    form = MagicMock()
-    form.values.return_value = [upload]
-
     request = MagicMock()
-    request.headers = {}
+    request.headers = {"content-length": str(500 * 1024 * 1024)}
     request.cookies = {}
     request.path_params = {"session_id": "session123", "file_id": "fileid"}
-    request.form = AsyncMock(return_value=form)
+
+    with patch_config_options(
+        {"server.enableXsrfProtection": False, "server.maxUploadSize": 200}
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.run(endpoint(request))
+
+    assert exc_info.value.status_code == 413
+
+
+def test_upload_put_oversized_body_returns_413() -> None:
+    """A parsed file larger than the configured max upload size is rejected 413.
+
+    Uses a body with no Content-Length so the fast-fail header check is skipped
+    and the post-parse size check is exercised.
+    """
+    endpoint = _endpoint_for(_upload_routes(), "PUT")
+
+    body, boundary = _multipart_body(b"x" * 100)
+    request = _make_upload_request(
+        [{"type": "http.request", "body": body, "more_body": False}],
+        boundary=boundary,
+    )
 
     with patch_config_options(
         {"server.enableXsrfProtection": False, "server.maxUploadSize": 0}
@@ -647,7 +714,136 @@ def test_upload_put_oversized_body_returns_413() -> None:
             asyncio.run(endpoint(request))
 
     assert exc_info.value.status_code == 413
-    upload.file.close.assert_called_once()
+
+
+def test_upload_put_chunked_body_capped_before_full_read() -> None:
+    """A chunked upload without Content-Length is aborted mid-stream once it
+    exceeds the size limit, instead of being fully buffered first.
+
+    Regression test for SNOW-3688979: a chunked PUT bypasses the Content-Length
+    gate, so the handler must enforce the limit while streaming rather than
+    buffering the whole (potentially multi-GB) body into RAM before checking.
+    """
+    endpoint = _endpoint_for(_upload_routes(), "PUT")
+
+    boundary = "boundary"
+    part_header = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="file"; filename="big.bin"\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+    ).encode()
+    chunk = b"x" * 1024
+    num_chunks = 100
+
+    messages: list[dict[str, Any]] = [
+        {"type": "http.request", "body": part_header, "more_body": True}
+    ]
+    messages += [
+        {"type": "http.request", "body": chunk, "more_body": True}
+        for _ in range(num_chunks)
+    ]
+    messages.append(
+        {
+            "type": "http.request",
+            "body": f"\r\n--{boundary}--\r\n".encode(),
+            "more_body": False,
+        }
+    )
+
+    receive_calls = 0
+
+    def _count_receive() -> None:
+        nonlocal receive_calls
+        receive_calls += 1
+
+    request = _make_upload_request(
+        messages, boundary=boundary, on_receive=_count_receive
+    )
+
+    with (
+        patch_config_options(
+            {"server.enableXsrfProtection": False, "server.maxUploadSize": 0}
+        ),
+        patch(
+            "streamlit.web.server.starlette.starlette_routes"
+            "._MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES",
+            4096,
+        ),
+        patch("streamlit.web.server.starlette.starlette_routes._LOGGER") as mock_logger,
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.run(endpoint(request))
+
+    assert exc_info.value.status_code == 413
+    # The handler must abort well before consuming the entire body, proving the
+    # body is not fully buffered before the size check runs. With a 4 KiB cap and
+    # ~1 KiB chunks, the limit is crossed after the part header plus ~4 chunks, so
+    # only a handful of the 102 messages are ever read.
+    assert receive_calls < len(messages)
+    assert receive_calls <= 6
+    # The streaming cap logs a warning so operators can diagnose whether a
+    # misconfigured maxUploadSize is rejecting legitimate uploads.
+    mock_logger.warning.assert_called_once()
+
+
+def test_upload_put_stores_file_and_returns_204() -> None:
+    """A valid single-file upload is stored and the handler returns 204."""
+    runtime = MagicMock()
+    runtime.is_active_session.return_value = True
+    upload_mgr = MemoryUploadedFileManager("/_stcore/upload_file")
+    routes = create_upload_routes(runtime, upload_mgr, "")
+
+    with patch_config_options({"server.enableXsrfProtection": False}):
+        response = _client_for(routes).put(
+            "/_stcore/upload_file/session123/fileid",
+            files={"file": ("foo.txt", b"hello world", "text/plain")},
+        )
+
+    assert response.status_code == 204
+    stored = upload_mgr.get_files("session123", ["fileid"])
+    assert len(stored) == 1
+    assert stored[0].data == b"hello world"
+    assert stored[0].name == "foo.txt"
+
+
+def test_upload_put_max_size_file_succeeds() -> None:
+    """A file of exactly ``maxUploadSize`` is accepted, not rejected by the cap.
+
+    The streaming cap allows ``maxUploadSize`` plus a framing margin so that the
+    multipart overhead of a legitimate max-size file does not trip the limit. This
+    patches the margin down to a small value (proving the margin - not a large
+    default - is what lets the framing through) and sends no Content-Length so the
+    header fast-fail is skipped and the streaming cap is the gate under test.
+    """
+    runtime = MagicMock()
+    runtime.is_active_session.return_value = True
+    upload_mgr = MemoryUploadedFileManager("/_stcore/upload_file")
+    endpoint = _endpoint_for(create_upload_routes(runtime, upload_mgr, ""), "PUT")
+
+    max_size_bytes = 1024 * 1024  # server.maxUploadSize is in megabytes
+    file_bytes = b"x" * max_size_bytes
+    body, boundary = _multipart_body(file_bytes, filename="big.bin")
+    request = _make_upload_request(
+        [{"type": "http.request", "body": body, "more_body": False}],
+        boundary=boundary,
+    )
+
+    with (
+        patch_config_options(
+            {"server.enableXsrfProtection": False, "server.maxUploadSize": 1}
+        ),
+        patch(
+            "streamlit.web.server.starlette.starlette_routes"
+            "._MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES",
+            4096,
+        ),
+    ):
+        response = asyncio.run(endpoint(request))
+
+    assert response.status_code == 204
+    stored = upload_mgr.get_files("session123", ["fileid"])
+    assert len(stored) == 1
+    assert stored[0].data == file_bytes
 
 
 def test_component_endpoint_empty_path_returns_404() -> None:

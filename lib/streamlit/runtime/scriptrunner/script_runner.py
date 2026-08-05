@@ -132,7 +132,7 @@ def _mpa_v1(main_script_path: str) -> None:
     from pathlib import Path
 
     from streamlit.commands.navigation import PageType, _navigation
-    from streamlit.navigation.page import StreamlitPage
+    from streamlit.navigation.page import _create_page
 
     # Select the folder that should be used for the pages:
     resolved_main_script_path: Final = Path(main_script_path).resolve()
@@ -151,10 +151,8 @@ def _mpa_v1(main_script_path: str) -> None:
     )
 
     # Use this script as the main page and
-    main_page = StreamlitPage(resolved_main_script_path, default=True)
-    all_pages = [main_page] + [
-        StreamlitPage(pages_folder / page.name) for page in pages
-    ]
+    main_page = _create_page(resolved_main_script_path, default=True)
+    all_pages = [main_page] + [_create_page(pages_folder / page.name) for page in pages]
     # Initialize the navigation with all the pages:
     position: Literal["sidebar", "hidden", "top"] = (
         "hidden"
@@ -727,7 +725,20 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:
+                        # Skip queued descendants whose ancestor already ran in
+                        # this pass — the ancestor re-renders them inline, so
+                        # running them again would duplicate their widgets and
+                        # raise StreamlitDuplicateElementId (for example, when
+                        # a parent and child both use ``run_every`` and their
+                        # auto-reruns coalesce; see #10719).
+                        executed_fragment_ids: set[str] = set()
+
                         for fragment_id in fragment_ids_this_run:
+                            if self._fragment_storage.has_ancestor_in(
+                                fragment_id, executed_fragment_ids
+                            ):
+                                continue
+
                             registration_sequence_before = (
                                 self._fragment_storage.registration_sequence()
                             )
@@ -757,6 +768,13 @@ class ScriptRunner:
                                         fragment_id,
                                     )
                                 continue
+
+                            # We record this before the call so a fragment
+                            # that raises still suppresses its queued
+                            # descendants: it owns their containers either way,
+                            # and rerunning them here would render them outside
+                            # the parent that just failed.
+                            executed_fragment_ids.add(fragment_id)
 
                             try:
                                 wrapped_fragment()

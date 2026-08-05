@@ -15,6 +15,9 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
+
+import pytest
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import (
@@ -321,3 +324,62 @@ class ScriptRequestsTest(unittest.TestCase):
         result = reqs.on_scriptrunner_ready()
         assert ScriptRequest(ScriptRequestType.RERUN, RerunData()) == result
         assert reqs._state == ScriptRequestType.CONTINUE
+
+
+def test_rerun_data_repr_contains_class_name() -> None:
+    """RerunData.__repr__ renders a non-empty string naming the class."""
+    assert "RerunData" in repr(RerunData())
+
+
+def test_script_request_repr_contains_class_name() -> None:
+    """ScriptRequest.__repr__ renders a non-empty string naming the class."""
+    assert "ScriptRequest" in repr(ScriptRequest(type=ScriptRequestType.STOP))
+
+
+def test_script_request_rerun_data_returns_data_for_rerun() -> None:
+    """The rerun_data property returns the attached data for RERUN requests."""
+    rerun_data = RerunData(query_string="q")
+    request = ScriptRequest(type=ScriptRequestType.RERUN, _rerun_data=rerun_data)
+    assert request.rerun_data is rerun_data
+
+
+def test_script_request_rerun_data_raises_for_non_rerun() -> None:
+    """Accessing rerun_data on a non-RERUN request raises RuntimeError."""
+    request = ScriptRequest(type=ScriptRequestType.STOP)
+    with pytest.raises(RuntimeError, match="only set for RERUN requests"):
+        _ = request.rerun_data
+
+
+def test_request_rerun_unrecognized_state_raises() -> None:
+    """request_rerun raises RuntimeError when the internal state is unrecognized."""
+    reqs = ScriptRequests()
+    # Force an out-of-range state so none of the STOP/CONTINUE/RERUN branches
+    # match and the final defensive raise is reached.
+    reqs._state = "BOGUS_STATE"  # type: ignore[assignment]
+    with pytest.raises(RuntimeError, match="Unrecognized ScriptRunnerState"):
+        reqs.request_rerun(RerunData())
+
+
+def test_on_scriptrunner_yield_returns_none_when_state_changes_under_lock() -> None:
+    """on_scriptrunner_yield re-checks the preempt condition under the lock.
+
+    The fast path avoids the lock, but the rerun data can change before the lock
+    is acquired. When the re-check inside the lock reports that the fragment run
+    should not preempt the script, the method returns None without consuming the
+    request.
+    """
+    reqs = ScriptRequests()
+    reqs.request_rerun(
+        RerunData(fragment_id_queue=["frag"], is_fragment_scoped_rerun=True)
+    )
+
+    # First call (fast path) returns False so we skip the early return and take
+    # the lock; second call (under the lock) returns True so we bail with None.
+    with patch(
+        "streamlit.runtime.scriptrunner_utils.script_requests._fragment_run_should_not_preempt_script",
+        side_effect=[False, True],
+    ):
+        result = reqs.on_scriptrunner_yield()
+
+    assert result is None
+    assert reqs._state == ScriptRequestType.RERUN

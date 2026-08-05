@@ -15,7 +15,7 @@ on:
         description: "Model to use for documentation review"
         required: false
         type: string
-        default: "claude-opus-4-8-thinking-xhigh"
+        default: "cursor-grok-4.5-high"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -23,7 +23,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'claude-opus-4-8-thinking-xhigh' }}
+  MODEL: ${{ inputs.model || 'cursor-grok-4.5-high' }}
   PR_NUMBER: ${{ inputs.pr_number || '' }}
 
 jobs:
@@ -92,7 +92,7 @@ jobs:
           fi
 
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Use PR head SHA if pr_number specified, otherwise default branch
           ref: ${{ steps.pr-info.outputs.head_sha || '' }}
@@ -107,7 +107,7 @@ jobs:
         uses: ./.github/actions/build_info
 
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_MAX_VERSION }}
 
@@ -230,7 +230,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Use the exact SHA from the ai-update-docs job to ensure patch applies cleanly
           ref: ${{ needs.ai-update-docs.outputs.checkout_sha }}

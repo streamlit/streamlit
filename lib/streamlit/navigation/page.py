@@ -19,7 +19,9 @@ import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from streamlit import env_util
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
@@ -49,23 +51,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-@gather_metrics("Page")
-def Page(  # noqa: N802
-    page: str | Path | Callable[[], None],
-    *,
-    title: str | None = None,
-    icon: str | None = None,
-    url_path: str | None = None,
-    default: bool = False,
-    visibility: Literal["visible", "hidden"] = "visible",
-) -> StreamlitPage:
+class Page:
     """Configure a page for ``st.navigation`` in a multipage app.
 
-    Call ``st.Page`` to initialize a ``StreamlitPage`` object, and pass it to
+    Call ``st.Page`` to initialize a ``Page`` object, and pass it to
     ``st.navigation`` to declare a page in your app.
 
     When a user navigates to a page, ``st.navigation`` returns the selected
-    ``StreamlitPage`` object. Call ``.run()`` on the returned ``StreamlitPage``
+    ``Page`` object. Call ``.run()`` on the returned ``Page``
     object to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
@@ -172,47 +165,6 @@ def Page(  # noqa: N802
            ``st.navigation`` during the new session's initial script
            run. The page can be visible or hidden.
 
-    Returns
-    -------
-    StreamlitPage
-        The page object associated to the given script.
-
-    Example
-    -------
-    .. code-block:: python
-        :filename: streamlit_app.py
-
-        import streamlit as st
-
-        def page2():
-            st.title("Second page")
-
-        pg = st.navigation([
-            st.Page("page1.py", title="First page", icon="🔥"),
-            st.Page(page2, title="Second page", icon=":material/favorite:"),
-            st.Page(
-                "https://docs.streamlit.io",
-                title="Streamlit Docs",
-                icon=":material/open_in_new:"
-            ),
-        ])
-        pg.run()
-    """
-    return StreamlitPage(
-        page,
-        title=title,
-        icon=icon,
-        url_path=url_path,
-        default=default,
-        visibility=visibility,
-    )
-
-
-class StreamlitPage:
-    """A page within a multipage Streamlit app.
-
-    Use ``st.Page`` to initialize a ``StreamlitPage`` object.
-
     Attributes
     ----------
     icon : str
@@ -259,8 +211,29 @@ class StreamlitPage:
            to ``st.navigation`` during the new session's initial script
            run.
 
+    Example
+    -------
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        def page2():
+            st.title("Second page")
+
+        pg = st.navigation([
+            st.Page("page1.py", title="First page", icon="🔥"),
+            st.Page(page2, title="Second page", icon=":material/favorite:"),
+            st.Page(
+                "https://docs.streamlit.io",
+                title="Streamlit Docs",
+                icon=":material/open_in_new:"
+            ),
+        ])
+        pg.run()
     """
 
+    @gather_metrics("Page", _positional_arg_offset=1)
     def __init__(
         self,
         page: str | Path | Callable[[], None],
@@ -326,6 +299,22 @@ class StreamlitPage:
 
             self._can_be_called: bool = False
             return
+
+        if isinstance(page, (str, Path)):
+            page_path = str(page)
+            if "\x00" in page_path:
+                raise StreamlitAPIException(
+                    "Unable to create Page. Page paths must not contain null bytes."
+                )
+
+            # Reject UNC paths before resolve/is_file can initiate an SMB connection
+            # and disclose the server process's Windows credentials. Absolute and
+            # drive-local paths (e.g. "C:\\...") are intentionally still allowed, as
+            # passing an absolute page path is part of the public st.Page contract.
+            if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
+                raise StreamlitAPIException(
+                    "Unable to create Page. Network paths are not supported."
+                )
 
         main_path = ctx.pages_manager.main_script_parent
         if isinstance(page, str):
@@ -498,11 +487,27 @@ class StreamlitPage:
         return calc_hash(self._url_path)
 
 
-def _validate_registered_page(page: StreamlitPage) -> None:
-    """Validate that a ``StreamlitPage`` matches what was registered with
+# Keep this alias for backward compatibility with existing imports and
+# isinstance checks.
+StreamlitPage = Page
+
+
+def _create_page(page: str | Path, *, default: bool = False) -> Page:
+    """Create an internal Page without recording public-command telemetry."""
+    page_object = Page.__new__(Page)
+    # ``gather_metrics`` wraps ``__init__``, so ``__wrapped__`` is the original
+    # initializer; calling it directly skips the telemetry recorded for st.Page.
+    Page.__init__.__wrapped__(  # type: ignore[attr-defined]
+        page_object, page, default=default
+    )
+    return page_object
+
+
+def _validate_registered_page(page: Page) -> None:
+    """Validate that a ``Page`` matches what was registered with
     ``st.navigation``.
 
-    Page hashes are derived solely from ``url_path``, so two ``StreamlitPage``
+    Page hashes are derived solely from ``url_path``, so two ``Page``
     objects sharing a ``url_path`` collide even when their underlying source
     differs. Without this check, ``st.switch_page`` and ``st.page_link`` would
     silently route to the registered page rather than surfacing the mismatch.

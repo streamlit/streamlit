@@ -131,7 +131,7 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 
 | Subagent | When to use |
 |----------|-------------|
-| `reviewing-local-changes` | When you want a code review of the current branch's changes |
+| `reviewing-local-changes` | When you want a code review of the current branch's changes for quality, security, best practices, and product/API alignment |
 | `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
 | `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
 | `qa-testing-feature` | After implementing a feature to perform comprehensive QA testing before finalizing a PR |
@@ -249,13 +249,26 @@ git checkout -b ${BRANCH_NAME}
 
 ### 3. Create a new Python environment
 
-We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. If you don't have uv installed, you can install it with:
+We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. Use a version allowed by `[tool.uv].required-version` in `pyproject.toml`. If you don't have uv installed, you can install it with:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+The committed `uv.lock` is the source of truth for development and normal CI environments. It does not lock dependencies for users installing the published Streamlit wheel; those remain governed by the ranges in `lib/pyproject.toml`.
+
 The virtual environment and dependencies will be automatically created and managed when you run `make all-dev` in the next step. uv creates a `.venv` directory in the repository root.
+
+You can also install one explicit final environment:
+
+| Environment | Command |
+|---|---|
+| Runtime only | `PYTHON_DEPENDENCY_GROUP=runtime make python-init` |
+| Unit/E2E tests | `PYTHON_DEPENDENCY_GROUP=test make python-init` |
+| Development (tests plus lint, types, and release tools) | `make python-init` |
+| Integration tests | `PYTHON_DEPENDENCY_GROUP=integration make python-init` |
+
+These commands exact-sync the same `.venv`, so switching selections mutates it. Set a distinct `UV_PROJECT_ENVIRONMENT` path for each selection if you need simultaneous environments.
 
 ## How to develop Streamlit
 
@@ -322,6 +335,8 @@ make init
 
 > [!IMPORTANT]
 > If your change updates `frontend/yarn.lock` (for example, after adding or upgrading dependencies), run `cd frontend && yarn dedupe` before committing. Our `scripts/check_yarn_dedupe.sh` hook enforces this locally (via pre-commit) and in CI, so handling it upfront keeps your PR green.
+
+For Python dependencies, edit the relevant `pyproject.toml`, run `uv lock`, review the generated lock diff, and commit both files. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `uv lock --upgrade` for a full compatible upgrade, and `uv lock --check` to verify manifest consistency. Do not hand-edit `uv.lock`.
 
 ### 6. Running tests
 
@@ -485,49 +500,30 @@ def test_streamlit_version(self):
       ?      ^
 ```
 
-To fix this make sure your Python environment is set up correctly. Try running `uv sync --group dev` to reinstall dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
+To fix this make sure your Python environment is set up correctly. Try running `make python-init` to reinstall locked development dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
-#### `protoc` command fails because of version mismatch
+#### `protoc` command fails because the compiler is too old
 
-If the `protoc` command fails and there is a version mismatch reported, try to install the correct version.
+If `make protobuf` reports that the installed compiler is too old, install protoc 3.20 or
+newer using the [official installation instructions](https://protobuf.dev/installation/).
+The compiler does not need to exactly match the Python protobuf runtime version.
 
-- Go to [Protobuf releases](https://github.com/protocolbuffers/protobuf/releases)
-- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `uv run pip show protobuf` or equivalent to find this out.
-- Download zip containing protoc for your system, example: [protoc-3.20.0-osx-x86_64.zip](https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip)
-
-<details>
-<summary>Example for macOS</summary>
-
-```bash
-curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip
-sudo unzip -o protoc-3.20.0-osx-x86_64.zip -d /usr/local bin/protoc
-sudo unzip -o protoc-3.20.0-osx-x86_64.zip -d /usr/local 'include/*'
-# Print out your System's Protoc version
-protoc --version
-```
-
-</details>
-
-<details>
-<summary>Example for Linux (ARM)</summary>
-
-```bash
-curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-linux-aarch_64.zip
-sudo unzip -o protoc-3.20.0-linux-aarch_64.zip -d /usr/local bin/protoc
-sudo unzip -o protoc-3.20.0-linux-aarch_64.zip -d /usr/local 'include/*'
-
-# (optional) remove old version
-rm /usr/bin/protoc
-ln -s /usr/local/bin/protoc /usr/bin/protoc
-
-# Print out your System's Protoc version
-protoc --version
-```
-
-</details>
+To reproduce CI or release-generated output, use the compiler version configured in
+[`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
 
 ## Introducing dependencies
 
 We aim to only introduce dependencies in this project that have reasonable restrictions and comply with various laws.
+
+Normal validation uses `uv.lock` for deterministic dependencies. CI separately tests the published minimum runtime versions without project synchronization, and the weekly `update-python-lock.yml` workflow upgrades the complete compatible graph and opens a PR when it changes. This preserves explicit minimum- and newest-compatible coverage without making unrelated PRs depend on upstream release timing.
+
+If `uv.lock` conflicts during a merge, regenerate it instead of hand-merging:
+
+```bash
+git checkout origin/develop -- uv.lock
+uv lock
+```
+
+Package name or version changes in `lib/pyproject.toml` also require `uv lock`, because the editable package identity is recorded in the lock.
 
 ![Views](https://api.views-badge.org/badge/st-wiki-contributing)
