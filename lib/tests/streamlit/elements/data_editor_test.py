@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import copy
 import datetime
 import json
 import unittest
@@ -41,6 +42,7 @@ from streamlit.elements.lib.column_config_utils import (
     determine_dataframe_schema,
 )
 from streamlit.elements.widgets.data_editor import (
+    DataEditorEditState,
     DataEditorSerde,
     _apply_cell_edits,
     _apply_dataframe_edits,
@@ -227,11 +229,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
     def test_data_editor_serde_serialize_round_trips(self):
         """``DataEditorSerde.serialize`` produces JSON containing all editing-state keys."""
-        state = {
-            "edited_rows": {0: {"col1": 1}},
-            "added_rows": [],
-            "deleted_rows": [],
-        }
+        state = DataEditorEditState(
+            {
+                "edited_rows": {0: {"col1": 1}},
+                "added_rows": [],
+                "deleted_rows": [],
+            }
+        )
         decoded = json.loads(DataEditorSerde().serialize(state))
         assert decoded == {
             "edited_rows": {"0": {"col1": 1}},
@@ -241,7 +245,9 @@ class DataEditorUtilTest(unittest.TestCase):
 
     def test_data_editor_serde_deserialize_none_returns_empty_state(self):
         """A None ui_value should produce an empty editing state."""
-        assert DataEditorSerde().deserialize(None) == {
+        result = DataEditorSerde().deserialize(None)
+        assert isinstance(result, DataEditorEditState)
+        assert result == {
             "edited_rows": {},
             "added_rows": [],
             "deleted_rows": [],
@@ -267,6 +273,42 @@ class DataEditorUtilTest(unittest.TestCase):
         )
         result = DataEditorSerde().deserialize(payload)
         assert result["edited_rows"] == {5: {"col1": 1}, 10: {"col1": 2}}
+
+    def test_data_editor_serde_returns_typed_state_class(self):
+        """``deserialize`` returns a typed ``DataEditorEditState`` with attribute access."""
+        result = DataEditorSerde().deserialize(
+            json.dumps(
+                {
+                    "edited_rows": {"0": {"col1": 1}},
+                    "added_rows": [{"col1": 2}],
+                    "deleted_rows": [1],
+                }
+            )
+        )
+
+        assert isinstance(result, DataEditorEditState)
+        assert result.edited_rows == {0: {"col1": 1}}
+        assert result["added_rows"] == [{"col1": 2}]
+        assert result.deleted_rows == [1]
+
+    def test_data_editor_edit_state_is_read_only(self):
+        """Pending edit state is read-only at the top and nested levels.
+
+        It also keeps its typed class through deepcopy, since Session State
+        deep-copies widget values.
+        """
+        result = DataEditorSerde().deserialize(None)
+
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["edited_rows"] = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result.edited_rows = {}  # type: ignore[misc]
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["edited_rows"][0] = {"col1": 1}
+
+        # Read access still works, and deepcopy preserves the concrete type.
+        assert result.edited_rows == {}
+        assert isinstance(copy.deepcopy(result), DataEditorEditState)
 
     def test_apply_cell_edits(self):
         """Test applying cell edits to a DataFrame."""
@@ -434,11 +476,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorEditState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -466,11 +510,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorEditState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -643,13 +689,15 @@ class DataEditorUtilTest(unittest.TestCase):
         # no longer present and the addition must not be rejected as a duplicate.
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": [0],
-                "added_rows": [
-                    {"_index": "victim@corp.com", "role": "admin", "balance": 0},
-                ],
-                "edited_rows": {},
-            },
+            DataEditorEditState(
+                {
+                    "deleted_rows": [0],
+                    "added_rows": [
+                        {"_index": "victim@corp.com", "role": "admin", "balance": 0},
+                    ],
+                    "edited_rows": {},
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -705,11 +753,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorEditState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -740,11 +790,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorEditState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
