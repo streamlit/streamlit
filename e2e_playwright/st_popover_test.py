@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -39,7 +40,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(29)
+    expect(popover_elements).to_have_count(30)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -617,3 +618,17 @@ def test_programmatic_close_does_not_reopen_other_popover(app: Page):
     # Popover A must NOT have reopened (the bug from #14943).
     # If it did, "Close A" would be visible in a second popover body.
     expect(app.get_by_text("Close A")).not_to_be_visible()
+
+
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
+    """
+    container = get_element_by_key(app, "wrap_false_popover")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()
+    expect(container.get_by_test_id("stPopoverButton")).to_contain_text("expand_more")
