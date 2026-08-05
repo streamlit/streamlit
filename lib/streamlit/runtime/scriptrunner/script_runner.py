@@ -722,12 +722,12 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:
-                        # Fragment ids already executed during this run. Because
-                        # ``order_fragment_ids`` puts ancestors first, running an
-                        # ancestor also re-renders its descendants as part of its own
-                        # body. Executing such a descendant again from the queue would
-                        # re-create its widgets within the same script run and raise
-                        # StreamlitDuplicateElementId, which is what happens when a
+                        # Skip queued descendants whose ancestor already ran in this
+                        # pass. ``order_fragment_ids`` runs ancestors first, and an
+                        # ancestor re-renders its descendants as part of its own body,
+                        # so running a descendant again would re-create its widgets
+                        # within the same script run and raise
+                        # StreamlitDuplicateElementId. That is what happens when a
                         # parent and child both use ``run_every`` and their auto-reruns
                         # coalesce (see #10719).
                         executed_fragment_ids: set[str] = set()

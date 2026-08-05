@@ -643,11 +643,12 @@ class ScriptRunnerTest(unittest.TestCase):
     def test_fragment_queue_skips_descendant_when_ancestor_raises(self):
         """A failing ancestor must still suppress its queued descendant.
 
-        The descendant is recorded as executed *before* the ancestor's body runs,
-        because the ancestor owns the descendant's container either way: if it
-        raised partway through, rerunning the descendant here would render it
-        outside the parent that just failed. Moving that bookkeeping after the
-        call would let the descendant run, so this pins the ordering.
+        The ancestor is added to ``executed_fragment_ids`` *before* its own body
+        runs, so a descendant reached later in the queue is skipped by
+        ``has_ancestor_in`` even when that body raised. The ancestor owns the
+        descendant's container either way: rerunning the descendant here would
+        render it outside the parent that just failed. Moving that bookkeeping
+        after the call would let the descendant run, so this pins the ordering.
 
         The ancestor re-registers the descendant before raising. Without that,
         ``clear_stale_descendants`` prunes the descendant during cleanup and the
