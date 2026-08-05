@@ -436,9 +436,9 @@ class FormMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the label is truncated and no ``help`` is set, hovering the
-            button reveals the full label in a tooltip. Icons and keyboard
-            shortcuts remain visible.
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
 
         Returns
         -------

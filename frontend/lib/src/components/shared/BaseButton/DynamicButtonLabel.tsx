@@ -69,20 +69,35 @@ export const DynamicButtonLabel = ({
 
   // Set the native tooltip to the rendered plain-text label (the accessible
   // name) rather than the raw Markdown source. This reads from the DOM because
-  // Markdown can only be converted to plain text after it is rendered.
+  // Markdown can only be converted to plain text after it is rendered. Observe
+  // DOM mutations so we re-sync after async Markdown plugins (e.g. emoji)
+  // replace a loading skeleton with the real label.
   useEffect(() => {
     const node = labelRef.current
     if (!node) {
       return
     }
-    const labelText =
-      node.querySelector('[data-testid="stMarkdownContainer"]')?.textContent ??
-      ""
-    if (addTitleTooltip && labelText) {
-      node.title = labelText
-    } else {
-      node.removeAttribute("title")
+
+    const syncTitle = (): void => {
+      const labelText =
+        node.querySelector('[data-testid="stMarkdownContainer"]')
+          ?.textContent ?? ""
+      if (addTitleTooltip && labelText) {
+        node.title = labelText
+      } else {
+        node.removeAttribute("title")
+      }
     }
+
+    syncTitle()
+
+    const observer = new MutationObserver(syncTitle)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
   }, [addTitleTooltip, label])
 
   return (

@@ -262,10 +262,10 @@ class MenuButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the label is truncated and no ``help`` is set, hovering the
-            button reveals the full label in a tooltip. The icon and expansion
-            arrow remain visible. This parameter controls only the trigger
-            label; menu option labels are unaffected.
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. The icon and expansion arrow
+            remain visible. This parameter controls only the trigger label;
+            menu option labels are unaffected.
 
         Returns
         -------

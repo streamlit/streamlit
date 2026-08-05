@@ -21,7 +21,7 @@ from typing import Literal, Protocol, cast
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run, wait_until
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
@@ -1087,9 +1087,12 @@ def expect_label_truncated(element: Locator) -> None:
     """
     label = element.get_by_test_id("stMarkdownContainer").locator("p").first
     expect(label).to_be_visible()
-    # The ellipsized <p> overflows its clip box when the label does not fit.
-    is_truncated = label.evaluate("el => el.scrollWidth > el.clientWidth")
-    assert is_truncated, "Expected the label to be truncated with an ellipsis"
+    # Retry until layout is stable — a one-shot evaluate can race with flex
+    # sizing even after the label is visible.
+    wait_until(
+        element.page,
+        lambda: label.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
 
 
 def reset_hovering(locator: LocatorContext) -> None:

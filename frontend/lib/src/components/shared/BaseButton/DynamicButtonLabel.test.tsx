@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { vi } from "vitest"
 
 import { render } from "~lib/test_util"
@@ -154,6 +154,26 @@ describe("DynamicButtonLabel", () => {
     // The title is the rendered plain text, not the raw Markdown source.
     expect(screen.getByTitle("Bold report")).toBeVisible()
     expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
+  })
+
+  it("re-syncs the title when markdown DOM content changes asynchronously", async () => {
+    render(
+      <DynamicButtonLabel
+        {...getProps({ label: "First label", addTitleTooltip: true })}
+      />
+    )
+    expect(screen.getByTitle("First label")).toBeVisible()
+
+    // Simulate a late Markdown plugin paint (e.g. emoji shortcodes) that
+    // replaces skeleton/empty content without changing React props.
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    const textHost = markdown.querySelector("p") ?? markdown
+    textHost.textContent = "Updated plain text"
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Updated plain text")).toBeVisible()
+    })
+    expect(screen.queryByTitle("First label")).not.toBeInTheDocument()
   })
 
   it("does not set a title by default", () => {

@@ -126,7 +126,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
   // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
-  // the label ellipsizes, reveal the full label on hover via a native title,
+  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
   // skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
