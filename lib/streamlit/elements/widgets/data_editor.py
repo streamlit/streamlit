@@ -117,8 +117,10 @@ class DataEditorEditState(ReadOnlyAttributeDictionary):
     """The schema for the data editor pending-edit state.
 
     The edit state is stored in a read-only dictionary-like object that
-    supports both key and attribute notation. Edit states cannot be
-    programmatically changed or set through Session State.
+    supports both key and attribute notation. Top-level assignment and
+    nested dict mutation raise ``TypeError``. List fields (``added_rows``,
+    ``deleted_rows``) are ordinary lists and are not frozen. Edit states
+    cannot be programmatically changed or set through Session State.
 
     Attributes
     ----------

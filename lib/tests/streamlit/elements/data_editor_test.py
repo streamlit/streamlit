@@ -292,10 +292,11 @@ class DataEditorUtilTest(unittest.TestCase):
         assert result.deleted_rows == [1]
 
     def test_data_editor_edit_state_is_read_only(self):
-        """Pending edit state is read-only at the top and nested levels.
+        """Pending edit state rejects top-level and nested-dict mutation.
 
         It also keeps its typed class through deepcopy, since Session State
-        deep-copies widget values.
+        deep-copies widget values. List fields are ordinary lists and are not
+        frozen (same as other list-bearing widget states).
         """
         result = DataEditorSerde().deserialize(None)
 
