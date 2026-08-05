@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       cherry_pick_sha:
-        description: "Commit SHA to cherry-pick"
+        description: "Full 40-character commit SHA to cherry-pick"
         required: true
         type: string
       dry_run:
@@ -92,7 +92,7 @@ jobs:
           CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
         run: |
           set -euo pipefail
-          # depth=2 so the parent is available for the cherry-pick patch
+          # Include the parent commit so cherry-pick can build the patch (depth=2).
           if ! git fetch --no-tags --depth=2 origin "$CHERRY_PICK_SHA"; then
             echo "::error::Commit '$CHERRY_PICK_SHA' not found on origin" >&2
             exit 1
