@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import os
 import sys
@@ -1398,6 +1399,79 @@ class TestAppInit:
         app = App(Path("main.py"))
         assert app.script_path == Path("main.py")
 
+    def test_app_preserves_script_path_keyword(self) -> None:
+        """The script_path constructor keyword still accepts path strings."""
+        app = App(script_path="main.py")
+
+        assert app.script_path == Path("main.py")
+
+    def test_app_accepts_callable_and_infers_source_path(self) -> None:
+        """A callable entrypoint uses its source file as the script anchor."""
+
+        def main() -> None:
+            pass
+
+        app = App(main)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is main
+
+    def test_app_rejects_async_callable(self) -> None:
+        """st.App rejects async function callables."""
+
+        async def main() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match="does not support async"):
+            App(main)
+
+    def test_app_rejects_async_generator_callable(self) -> None:
+        """st.App rejects async generator callables."""
+
+        async def main() -> AsyncIterator[None]:
+            yield
+
+        with pytest.raises(StreamlitAPIException, match="does not support async"):
+            App(main)  # type: ignore[arg-type]
+
+    def test_app_rejects_generator_callable(self) -> None:
+        """st.App rejects sync generator callables."""
+
+        def main() -> Iterator[None]:
+            yield
+
+        with pytest.raises(StreamlitAPIException, match="does not support generator"):
+            App(main)  # type: ignore[arg-type]
+
+    def test_app_rejects_callable_that_requires_arguments(self) -> None:
+        """st.App rejects callables that require arguments."""
+
+        def main(required: str) -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match="without arguments"):
+            App(main)
+
+    def test_app_rejects_callable_without_source_file(self) -> None:
+        """st.App rejects callables that are not backed by a source file."""
+
+        def main() -> None:
+            pass
+
+        with (
+            patch.object(inspect, "getsourcefile", return_value=None),
+            patch.object(inspect, "getfile", return_value=None),
+            pytest.raises(StreamlitAPIException, match="filesystem-backed"),
+        ):
+            App(main)
+
+    def test_app_rejects_unsupported_entrypoint_type(self) -> None:
+        """Non-path, non-callable entrypoints raise StreamlitAPIException."""
+        with pytest.raises(
+            StreamlitAPIException, match=r"path string, pathlib\.Path, or"
+        ):
+            App(42)  # type: ignore[arg-type]
+
     def test_app_state_is_empty_initially(self) -> None:
         """Test that App state is empty on initialization."""
         app = App("main.py")
@@ -1518,6 +1592,29 @@ class TestAppRun:
             {"server.port": 8502},
             server_mode="starlette-app-direct",
         )
+        runner_cls.assert_called_once_with(app)
+        runner_cls.return_value.run.assert_called_once()
+
+    def test_run_uses_existing_callable_app_instance(
+        self, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """Direct callable launch passes the already-created App to Uvicorn."""
+
+        def main() -> None:
+            pass
+
+        monkeypatch.setattr(sys, "argv", [__file__])
+        app = App(main)
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+        ):
+            app.run()
+
         runner_cls.assert_called_once_with(app)
         runner_cls.return_value.run.assert_called_once()
 
@@ -2003,6 +2100,20 @@ class TestAppScriptPathResolution:
         # Error message should include the path and be descriptive
         assert "does_not_exist.py" in str(exc_info.value)
         assert "not found" in str(exc_info.value).lower()
+
+    def test_create_runtime_passes_callable_entrypoint(
+        self, reset_runtime: None
+    ) -> None:
+        """RuntimeConfig receives the callable entrypoint from App."""
+
+        def main() -> None:
+            pass
+
+        app = App(main)
+        runtime = app._create_runtime()
+
+        assert runtime._main_script_path == str(Path(__file__).resolve())
+        assert runtime._script_entrypoint is main
 
     def test_init_sets_main_script_path_when_unset(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

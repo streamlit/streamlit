@@ -58,7 +58,7 @@ from streamlit.runtime.stats import (
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -123,6 +123,10 @@ class RuntimeConfig:
 
     # Callback to invoke when an uncaught exception occurs in user script code.
     on_script_error: OnScriptErrorHandler | None = None
+
+    # Optional callable executed instead of compiling the main script path.
+    # The script path remains the filesystem anchor for the app.
+    script_entrypoint: Callable[[], None] | None = None
 
     # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code
     # creating a new Streamlit Runtime to configure the FragmentStorage instances
@@ -209,6 +213,7 @@ class Runtime:
         self._loop_coroutine_task: asyncio.Task[None] | None = None
 
         self._main_script_path = config.script_path
+        self._script_entrypoint = config.script_entrypoint
         self._is_hello = config.is_hello
 
         self._state = RuntimeState.INITIAL
@@ -432,7 +437,11 @@ class Runtime:
 
         session_id = self._session_mgr.connect_session(
             client=client,
-            script_data=ScriptData(self._main_script_path, self._is_hello),
+            script_data=ScriptData(
+                self._main_script_path,
+                is_hello=self._is_hello,
+                script_entrypoint=self._script_entrypoint,
+            ),
             user_info=user_info,
             existing_session_id=existing_session_id,
             session_id_override=session_id_override,
@@ -625,7 +634,11 @@ class Runtime:
         # SessionManager intentionally. This isn't a "real" session and is only being
         # used to test that the script runs without error.
         session = AppSession(
-            script_data=ScriptData(self._main_script_path, self._is_hello),
+            script_data=ScriptData(
+                self._main_script_path,
+                is_hello=self._is_hello,
+                script_entrypoint=self._script_entrypoint,
+            ),
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,

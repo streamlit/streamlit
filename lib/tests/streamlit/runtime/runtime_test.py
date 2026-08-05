@@ -77,6 +77,7 @@ class RuntimeConfigTests(unittest.TestCase):
         assert isinstance(config.cache_storage_manager, LocalDiskCacheStorageManager)
         assert config.session_manager_class is WebsocketSessionManager
         assert isinstance(config.session_storage, MemorySessionStorage)
+        assert config.script_entrypoint is None
 
 
 class RuntimeSingletonTest(unittest.TestCase):
@@ -159,6 +160,23 @@ class RuntimeTest(RuntimeTestCase):
 
         self.runtime.disconnect_session(session_id)
         assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+
+    async def test_connect_session_propagates_script_entrypoint(self):
+        """The Runtime retains the callable on each session's ScriptData."""
+
+        def main() -> None:
+            pass
+
+        self.runtime._script_entrypoint = main
+        await self.runtime.start()
+
+        self.runtime._session_mgr.connect_session = MagicMock(return_value="session-id")
+        self.runtime.connect_session(client=MockSessionClient(), user_info=MagicMock())
+        script_data = self.runtime._session_mgr.connect_session.call_args.kwargs[
+            "script_data"
+        ]
+
+        assert script_data.script_entrypoint is main
 
     async def test_connect_session_error_if_both_session_id_args(self):
         """Test that setting both existing_session_id and session_id_override is an error."""

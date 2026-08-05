@@ -361,6 +361,11 @@ class AppSessionTest(unittest.TestCase):
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
         """Test that _create_scriptrunner does what it should."""
         session = _create_test_session()
+        script_entrypoint = MagicMock()
+        session._script_data = ScriptData(
+            session._script_data.main_script_path,
+            script_entrypoint=script_entrypoint,
+        )
         assert session._scriptrunner is None
 
         session._create_scriptrunner(initial_rerun_data=RerunData())
@@ -378,6 +383,7 @@ class AppSessionTest(unittest.TestCase):
             pages_manager=session._pages_manager,
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
+            script_entrypoint=script_entrypoint,
         )
 
         assert session._scriptrunner is not None

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import copy
+import inspect
 import sys
 from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
@@ -126,6 +127,61 @@ def _set_anyio_thread_limiter() -> None:
     to_thread.current_default_thread_limiter().total_tokens = (
         ANYIO_STATIC_FILE_THREAD_TOKENS
     )
+
+
+def _is_async_callable(obj: Any) -> bool:
+    """Return True if ``obj`` is an async function or async callable instance."""
+    if inspect.iscoroutinefunction(obj) or inspect.isasyncgenfunction(obj):
+        return True
+    if inspect.isroutine(obj):
+        return False
+    call = type(obj).__call__
+    return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
+
+
+def _is_generator_callable(obj: Any) -> bool:
+    """Return True if ``obj`` is a sync generator function or generator callable."""
+    if inspect.isgeneratorfunction(obj):
+        return True
+    if inspect.isroutine(obj):
+        return False
+    return inspect.isgeneratorfunction(type(obj).__call__)
+
+
+def _require_zero_arg_callable(obj: Any) -> None:
+    """Raise if ``obj`` requires arguments when its signature is inspectable."""
+    try:
+        inspect.signature(obj).bind()
+    except TypeError as ex:
+        raise StreamlitAPIException(
+            "The st.App callable entrypoint must be callable without arguments."
+        ) from ex
+    except ValueError:
+        # Some callables do not expose a signature. Argument mismatches then
+        # surface as normal user-code exceptions at invocation time.
+        pass
+
+
+def _resolve_callable_source_path(obj: Any) -> Path:
+    """Resolve the filesystem source path for a callable entrypoint."""
+    try:
+        source_file = inspect.getsourcefile(obj) or inspect.getfile(obj)
+    except (OSError, TypeError):
+        source_file = None
+
+    if source_file is None:
+        raise StreamlitAPIException(
+            "The st.App callable entrypoint must be defined in a "
+            "filesystem-backed Python source file."
+        )
+
+    script_path = Path(source_file).resolve()
+    if not script_path.is_file():
+        raise StreamlitAPIException(
+            "The source file for the st.App callable entrypoint could not "
+            f"be found: '{script_path}'."
+        )
+    return script_path
 
 
 def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
@@ -279,23 +335,34 @@ class App:
     """ASGI-compatible Streamlit application.
 
     .. warning::
-        Hosting multiple ``App`` instances with different ``script_path`` values
-        in the same process is not supported. The first ``App`` constructed in a
-        process pins the script-level config directory (via the process-global
+        Hosting multiple ``App`` instances with different source paths in the
+        same process is not supported. The first ``App`` constructed in a process
+        pins the script-level config directory (via the process-global
         ``config._main_script_path``), and subsequent ``App`` instances will
-        resolve relative ``script_path`` values against that first directory
-        rather than the current working directory.
+        resolve relative paths against that first directory rather than the
+        current working directory.
 
     This class provides a way to configure and run Streamlit applications
     with custom routes, middleware, lifespan hooks, and exception handlers.
 
     Parameters
     ----------
-    script_path : str | Path
-        Path to the main Streamlit script. Can be absolute or relative. Relative
-        paths are resolved based on context: when started via ``streamlit run``,
-        they resolve relative to the main script; when started directly via uvicorn
-        or another ASGI server, they resolve relative to the current working directory.
+    script_path : str | Path | Callable[[], None]
+        The app entrypoint: a script path, or a zero-argument synchronous
+        callable defined in a filesystem-backed Python source file.
+
+        - Path: absolute or relative. Relative paths resolve against the main
+          script when started via ``streamlit run``, otherwise against the
+          current working directory.
+        - Callable: invoked once per full rerun. Locals are fresh each run;
+          closures and module globals are shared across reruns and sessions.
+          Use ``st.session_state`` for per-session values. The callable's
+          source file anchors Runtime script path, secrets, static files, and
+          source watching. Under ``streamlit run``, script-level config comes
+          from the launched file; when that path is unset (for example under
+          uvicorn), the source file also pins config. Streamlit retains the
+          callable object for the lifetime of the ``App``; restart the process
+          after changing its definition.
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
         value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested
@@ -347,6 +414,15 @@ class App:
 
     >>> import streamlit as st
     >>> app = st.App("main.py")
+
+    Use a callable to keep the app and launcher in one file:
+
+    >>> import streamlit as st
+    >>> def main():
+    ...     st.title("My app")
+    >>> app = st.App(main)
+    >>> if __name__ == "__main__":
+    ...     app.run()
 
     With lifespan hooks:
 
@@ -413,7 +489,7 @@ class App:
 
     def __init__(
         self,
-        script_path: str | Path,
+        script_path: str | Path | Callable[[], None],
         *,
         secrets: Mapping[str, SecretsValue] | None = None,
         lifespan: (
@@ -427,7 +503,28 @@ class App:
     ) -> None:
         from streamlit.runtime.secrets import _validate_secrets_value
 
-        self._script_path = Path(script_path)
+        self._script_entrypoint: Callable[[], None] | None = None
+        if isinstance(script_path, (str, Path)):
+            self._script_path = Path(script_path)
+        elif callable(script_path):
+            if _is_async_callable(script_path):
+                raise StreamlitAPIException(
+                    "st.App does not support async callable entrypoints. "
+                    "Pass a synchronous callable instead."
+                )
+            if _is_generator_callable(script_path):
+                raise StreamlitAPIException(
+                    "st.App does not support generator callable entrypoints. "
+                    "Pass a synchronous non-generator callable instead."
+                )
+            _require_zero_arg_callable(script_path)
+            self._script_path = _resolve_callable_source_path(script_path)
+            self._script_entrypoint = script_path
+        else:
+            raise StreamlitAPIException(
+                "st.App script_path must be a path string, pathlib.Path, or "
+                f"zero-argument callable. Got {type(script_path).__name__}."
+            )
         self._user_lifespan = lifespan
         self._user_routes = list(routes) if routes else []
         self._user_middleware = list(middleware) if middleware else []
@@ -501,7 +598,7 @@ class App:
 
     @property
     def script_path(self) -> Path:
-        """The entry point script path."""
+        """The resolved filesystem path of the app script or callable source."""
         return self._script_path
 
     @property
@@ -520,6 +617,10 @@ class App:
         ``uv run app.py`` is useful for shareable launcher scripts that declare
         their dependencies inline with PEP 723 script metadata.
 
+        When the app uses a callable entrypoint, Streamlit retains that callable
+        object for the lifetime of this ``App``. Source changes can trigger a
+        rerun, but changes to the callable definition require a process restart.
+
         Parameters
         ----------
         config : Mapping[str, Any] or None
@@ -531,11 +632,13 @@ class App:
 
         Examples
         --------
-        Launch a launcher module directly with ``python app.py``:
+        Launch a callable app directly with ``python app.py``:
 
         >>> import streamlit as st
         >>>
-        >>> app = st.App("dashboard.py")
+        >>> def main():
+        ...     st.title("My app")
+        >>> app = st.App(main)
         >>>
         >>> if __name__ == "__main__":
         ...     app.run()
@@ -555,7 +658,10 @@ class App:
         # ///
         import streamlit as st
 
-        app = st.App("dashboard.py")
+        def main():
+            st.title("My app")
+
+        app = st.App(main)
 
         if __name__ == "__main__":
             app.run()
@@ -702,6 +808,7 @@ class App:
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
                 is_hello=False,
+                script_entrypoint=self._script_entrypoint,
                 session_storage=MemorySessionStorage(
                     ttl_seconds=config.get_option("server.disconnectedSessionTTL")
                 ),

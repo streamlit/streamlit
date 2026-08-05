@@ -128,6 +128,85 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_control_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
         self._assert_text_deltas(scriptrunner, [])
 
+    def test_callable_entrypoint_runs_on_full_rerun(self):
+        """Callable entrypoints run on full reruns without compiling the script path."""
+        call_count = 0
+        original_main_module = sys.modules["__main__"]
+
+        def main() -> None:
+            nonlocal call_count
+            call_count += 1
+            st.text(f"call {call_count}")
+            if call_count == 1:
+                st.rerun()
+
+        scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+        scriptrunner._script_cache.get_bytecode = MagicMock(
+            side_effect=AssertionError("callable entrypoint must not be compiled")
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert call_count == 2
+        self._assert_text_deltas(scriptrunner, ["call 2"])
+        scriptrunner._script_cache.get_bytecode.assert_not_called()
+        assert sys.modules["__main__"] is original_main_module
+
+    def test_callable_entrypoint_uses_normal_error_handling(self):
+        """Exceptions from callable entrypoints use the standard script error path."""
+        error_handler = MagicMock(return_value=None)
+        error = ValueError("callable failed")
+
+        def main() -> None:
+            raise error
+
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            script_entrypoint=main,
+            on_script_error=error_handler,
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        error_handler.assert_called_once_with(error)
+        assert any(
+            element.WhichOneof("type") == "exception"
+            for element in scriptrunner.elements()
+        )
+
+    def test_fragment_rerun_does_not_call_callable_entrypoint(self):
+        """Fragment-only reruns invoke the fragment, not the callable entrypoint."""
+        main = MagicMock()
+        fragment = MagicMock()
+        scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+        scriptrunner._fragment_storage.register("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        main.assert_not_called()
+        fragment.assert_called_once()
+
+    def test_callable_entrypoint_takes_precedence_over_pages_directory(self):
+        """A callable entrypoint runs instead of the pages-directory MPA path."""
+        main = MagicMock()
+        scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+
+        with (
+            patch.object(PagesManager, "uses_pages_directory", True),
+            patch.object(script_runner_module, "_mpa_v1") as mpa_v1,
+        ):
+            scriptrunner.start()
+            scriptrunner.join()
+
+        main.assert_called_once_with()
+        mpa_v1.assert_not_called()
+
     def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever
         our _enqueue_forward_msg function is called.
@@ -1486,7 +1565,13 @@ class TestScriptRunner(ScriptRunner):
     # To prevent PytestCollectionWarning we set __test__ property to False
     __test__ = False
 
-    def __init__(self, script_name: str):
+    def __init__(
+        self,
+        script_name: str,
+        *,
+        script_entrypoint: Callable[[], None] | None = None,
+        on_script_error: Callable[[Exception], bool | None] | None = None,
+    ):
         """Initializes the ScriptRunner for the given script_name"""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
@@ -1506,6 +1591,8 @@ class TestScriptRunner(ScriptRunner):
             user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path, script_cache),
+            on_script_error=on_script_error,
+            script_entrypoint=script_entrypoint,
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.

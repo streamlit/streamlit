@@ -33,7 +33,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | API | Summary |
 |-----|---------|
 | **Top-level commands** | |
-| `st.App` | ASGI-compatible Streamlit application. Use it for advanced server configuration, including custom routes, startup and shutdown lifecycle hooks, custom middleware, custom exception handlers, FastAPI integration, and programmatic secrets. |
+| `st.App` | ASGI-compatible Streamlit application. Accepts a UI script path or a synchronous callable entrypoint. Use it for advanced server configuration, including custom routes, startup and shutdown lifecycle hooks, custom middleware, custom exception handlers, FastAPI integration, and programmatic secrets. |
 | `st.Page` | Configure a page for `st.navigation` in a multipage app. It creates a page object from a Python file or callable with optional title, icon, URL path, default status, and visibility. |
 | `st.altair_chart` | Display a chart using the Vega-Altair library. Use it when native charts are not expressive enough and you need Altair's encodings, layers, tooltips, or interactions. |
 | `st.area_chart` | Display an area chart. Use it for common area-chart cases with Streamlit-managed rendering. |

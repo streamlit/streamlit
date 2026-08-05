@@ -69,11 +69,19 @@ This ordering explains why `connect_session()` alone does not start user code ex
 
 Executes user scripts in isolated thread.
 
+`ScriptData` / `RuntimeConfig` carry `main_script_path` (filesystem anchor for
+config, secrets, static files, and watching) and an optional
+`script_entrypoint` callable. When `script_entrypoint` is set (via
+`st.App(callable)`), ScriptRunner invokes that callable instead of compiling and
+`exec()`-ing the main script file; the path still anchors the app on disk.
+
 **Execution flow**:
-1. Compile script to bytecode (cached via ScriptCache)
-2. Create fake `__main__` module
-3. Attach `ScriptRunContext` to thread
-4. Execute with `exec()` in modified sys.path
+1. Prepare the app entrypoint: compile a script to bytecode (cached via
+   `ScriptCache`) or retain the callable supplied to `st.App`
+2. Create a fake `__main__` module for file-based entrypoints
+3. Attach `ScriptRunContext` to the script thread
+4. Execute file bytecode with `exec()` or invoke the callable inside the same
+   rerun and error-handling envelope
 5. Process widget callbacks before execution
 6. Handle fragments for partial reruns
 

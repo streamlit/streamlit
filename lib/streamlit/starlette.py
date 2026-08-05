@@ -20,13 +20,27 @@ applications with any ASGI server (uvicorn, hypercorn, etc.).
 Example
 -------
 >>> import streamlit as st
->>> app = st.App("main.py")
+>>> def main():
+...     st.title("My app")
+>>> app = st.App(main)
+>>> if __name__ == "__main__":
+...     app.run()
 
-Run with uvicorn:
+Run the same file with Streamlit or Python (using ``uv`` here):
+
+.. code-block:: bash
+
+    streamlit run myapp.py
+    uv run myapp.py
+
+Or serve the ASGI app with uvicorn:
 
 .. code-block:: bash
 
     uvicorn myapp:app --host 0.0.0.0 --port 8501
+
+The callable object is retained for the lifetime of the app. Restart the
+process after changing its definition.
 """
 
 from streamlit.web.server.starlette.starlette_app import App
