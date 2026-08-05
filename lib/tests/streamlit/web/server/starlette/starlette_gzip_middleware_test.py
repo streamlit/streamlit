@@ -212,9 +212,12 @@ class TestBypass:
         assert response.headers.get("content-encoding") == "gzip"
 
     def test_does_not_compress_range_request(self) -> None:
-        """Range requests are served uncompressed, even on compressible paths.
+        """A request carrying a Range header is served uncompressed.
 
-        Compressing a partial (206) response would corrupt it, since the
+        This verifies the request-level bypass: the endpoint here ignores the
+        Range header and returns a full 200, but the presence of the Range
+        header alone must still disable compression. That bypass is what keeps
+        real partial (206) responses intact, since their
         Content-Range/Content-Length describe the uncompressed byte range.
         """
         client = _build_client(_text_route("/_stcore/data"))
@@ -264,3 +267,22 @@ class TestShouldBypassGzip:
     def test_with_base_url(self, path: str, expected: bool) -> None:
         """The base URL prefix is stripped before matching bypass routes."""
         assert _should_bypass_gzip(path, base_url="my-app") is expected
+
+    @pytest.mark.parametrize(
+        ("path", "expected"),
+        [
+            ("/my-app", True),
+            ("/my-app/", True),
+            ("/my-app/static/app.js", True),
+            ("/my-app/media/abc123", True),
+            ("/my-app/_stcore/data", False),
+        ],
+    )
+    def test_with_slash_wrapped_base_url(self, path: str, expected: bool) -> None:
+        """A slash-wrapped base URL (the shape from server.baseUrlPath) is normalized.
+
+        ``config.get_option("server.baseUrlPath")`` can return a value with
+        surrounding slashes (e.g. ``"/my-app/"``); the ``strip("/")`` in
+        ``_should_bypass_gzip`` must handle it the same as ``"my-app"``.
+        """
+        assert _should_bypass_gzip(path, base_url="/my-app/") is expected

@@ -86,6 +86,14 @@ class SelectiveGZipMiddleware:
     wrapper only decides, per request, whether to route it through the gzip
     layer or serve it uncompressed (see ``_should_bypass_gzip`` and the
     range-request handling in ``__call__``).
+
+    The bypass is path-based rather than content-type-based, so audio/video
+    served from routes other than ``/media/`` (e.g. custom-component assets or
+    ``/app/static/``) may now be compressed on full 200 responses. This is an
+    intentional trade-off: the universal ``Range``-request bypass still applies,
+    and browsers issue range requests for seeking, so media playback and seeking
+    stay safe while the built-in ``st.audio``/``st.video``/``st.image`` path
+    (served from ``/media/``) remains fully bypassed.
     """
 
     def __init__(

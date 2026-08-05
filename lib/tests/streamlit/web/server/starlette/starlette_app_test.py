@@ -285,6 +285,20 @@ def test_create_streamlit_middleware_uses_selective_gzip() -> None:
     assert middleware_list[2].cls is SelectiveGZipMiddleware
 
 
+def test_create_streamlit_middleware_forwards_base_url() -> None:
+    """The gzip middleware receives server.baseUrlPath so its path bypass works.
+
+    Guards against a refactor silently dropping ``base_url``, which would break
+    the static/media bypass whenever a base URL path is configured.
+    """
+    with patch_config_options({"server.baseUrlPath": "my-app"}):
+        middleware_list = create_streamlit_middleware()
+
+    gzip_middleware = middleware_list[2]
+    assert gzip_middleware.cls is SelectiveGZipMiddleware
+    assert gzip_middleware.kwargs["base_url"] == "my-app"
+
+
 def test_selective_gzip_skips_static_like_paths() -> None:
     """Only `/static/...` paths should bypass gzip while API paths compress."""
 
