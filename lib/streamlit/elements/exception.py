@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Final, TypeVar, cast
 from streamlit import config
 from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.errors import (
+    Error,
     MarkdownFormattedException,
     StreamlitAPIWarning,
 )
@@ -143,6 +144,12 @@ def marshall(
 
     exception_proto.stack_trace.extend(stack_trace)
     exception_proto.is_warning = isinstance(exception, Warning)
+
+    # Flag exceptions Streamlit itself raised (subclasses of streamlit.errors.Error)
+    # so the frontend can scope the in-error "Install skills" callout to Streamlit
+    # API misuse — the class of mistake the agent skills can actually fix — rather
+    # than arbitrary user/runtime errors like ZeroDivisionError.
+    exception_proto.is_streamlit_exception = isinstance(exception, Error)
 
     width_config = WidthConfig()
 
