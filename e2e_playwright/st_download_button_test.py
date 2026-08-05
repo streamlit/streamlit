@@ -27,6 +27,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_element_by_key,
@@ -347,11 +348,12 @@ def test_download_button_shortcut_triggers(app: Page):
     expect_markdown(app, "Shortcut download triggered!")
 
 
-def test_wrap_false_sets_native_title(app: Page):
-    """wrap=False exposes the full label via a native title so an ellipsized
-    label stays recoverable on hover.
+def test_wrap_false_truncates_and_sets_native_title(app: Page):
+    """wrap=False ellipsizes an overflowing label and exposes the full label via
+    a native title so it stays recoverable on hover.
     """
     container = get_element_by_key(app, "wrap_false_download_button")
+    expect_label_truncated(container)
     expect(
         container.get_by_title(
             "Regenerate the complete quarterly report now", exact=True

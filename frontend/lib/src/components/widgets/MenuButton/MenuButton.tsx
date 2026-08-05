@@ -135,7 +135,7 @@ function MenuButton(props: Props): ReactElement {
   // the label ellipsizes, reveal the full label on hover via a native title,
   // skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
-  const title = !wrap && !element.help ? element.label : undefined
+  const addTitleTooltip = !wrap && !element.help
 
   const handleItemSelect = useCallback(
     (key: Key) => {
@@ -180,7 +180,7 @@ function MenuButton(props: Props): ReactElement {
               icon={element.icon}
               label={element.label}
               wrap={wrap}
-              title={title}
+              addTitleTooltip={addTitleTooltip}
             />
             {!hideChevron && (
               <StyledMenuButtonExpansionIcon aria-hidden="true">

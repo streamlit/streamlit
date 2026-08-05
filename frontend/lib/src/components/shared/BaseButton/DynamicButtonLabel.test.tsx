@@ -140,9 +140,20 @@ describe("DynamicButtonLabel", () => {
     )
   })
 
-  it("sets the native title on the label when provided", () => {
-    render(<DynamicButtonLabel {...getProps({ title: "Full label text" })} />)
-    expect(screen.getByTitle("Full label text")).toBeVisible()
+  it("adds a native title tooltip with the full label when enabled", () => {
+    render(<DynamicButtonLabel {...getProps({ addTitleTooltip: true })} />)
+    expect(screen.getByTitle("Button Label")).toBeVisible()
+  })
+
+  it("uses the plain text of a Markdown label for the title", () => {
+    render(
+      <DynamicButtonLabel
+        {...getProps({ label: "**Bold** report", addTitleTooltip: true })}
+      />
+    )
+    // The title is the rendered plain text, not the raw Markdown source.
+    expect(screen.getByTitle("Bold report")).toBeVisible()
+    expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
   })
 
   it("does not set a title by default", () => {

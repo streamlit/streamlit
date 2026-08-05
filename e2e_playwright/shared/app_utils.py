@@ -1071,6 +1071,27 @@ def expect_help_tooltip(
     expect(tooltip_content).not_to_be_attached()
 
 
+def expect_label_truncated(element: Locator) -> None:
+    """Expect the markdown label inside ``element`` to be ellipsized.
+
+    Verifies the rendered label is actually clipped (its content is wider than the
+    space available for it), rather than only checking that a ``wrap``/``title``
+    attribute was set. Use this together with a fixed width narrower than the
+    label so the truncation is deterministic.
+
+    Parameters
+    ----------
+    element : Locator
+        A locator whose subtree contains a single label markdown container
+        (e.g. a button, popover trigger, or menu-button trigger).
+    """
+    label = element.get_by_test_id("stMarkdownContainer").locator("p").first
+    expect(label).to_be_visible()
+    # The ellipsized <p> overflows its clip box when the label does not fit.
+    is_truncated = label.evaluate("el => el.scrollWidth > el.clientWidth")
+    assert is_truncated, "Expected the label to be truncated with an ellipsis"
+
+
 def reset_hovering(locator: LocatorContext) -> None:
     """Reset the hovering of the app.
 

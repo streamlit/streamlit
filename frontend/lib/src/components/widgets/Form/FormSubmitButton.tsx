@@ -50,7 +50,7 @@ export const FormSubmitButton = memo(function FormSubmitButton(
   // the label ellipsizes, reveal the full label on hover via a native title,
   // skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
-  const title = !wrap && !element.help ? element.label : undefined
+  const addTitleTooltip = !wrap && !element.help
 
   const { formsData } = useRequiredContext(FormsContext)
   const hasInProgressUpload = formsData.formsWithUploads.has(formId)
@@ -99,7 +99,7 @@ export const FormSubmitButton = memo(function FormSubmitButton(
             label={element.label}
             shortcut={shortcut}
             wrap={wrap}
-            title={title}
+            addTitleTooltip={addTitleTooltip}
           />
         </BaseButton>
       </BaseButtonTooltip>

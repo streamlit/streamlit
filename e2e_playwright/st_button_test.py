@@ -23,6 +23,7 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_button,
@@ -336,6 +337,8 @@ def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
     the same default in a vertical container wraps and adds no title.
     """
     auto_horizontal = get_element_by_key(app, "wrap_auto_button")
+    # The label is actually ellipsized (not just given a title attribute).
+    expect_label_truncated(auto_horizontal)
     expect(auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
     # Same default (auto) in a vertical container wraps and gets no title.

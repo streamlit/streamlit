@@ -129,7 +129,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // the label ellipsizes, reveal the full label on hover via a native title,
   // skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
-  const title = !wrap && !element.help ? element.label : undefined
+  const addTitleTooltip = !wrap && !element.help
 
   // Timestamp of the last open action — used by the outside-click handler to
   // ignore clicks that occur in the same tick as opening. In production
@@ -399,7 +399,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                 icon={element.icon}
                 label={element.label}
                 wrap={wrap}
-                title={title}
+                addTitleTooltip={addTitleTooltip}
               />
               {!hideChevron && (
                 <StyledPopoverExpansionIcon aria-hidden="true">

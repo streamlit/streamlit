@@ -289,7 +289,7 @@ with st.popover("Multi pop B", key="multi_pop_b", on_change="rerun"):
 # exposing the full label via a native title while keeping the chevron visible.
 with st.popover(
     "Regenerate the complete quarterly report now",
-    width="stretch",
+    width=200,
     wrap=False,
     key="wrap_false_popover",
 ):

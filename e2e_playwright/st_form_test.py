@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_prefixed_markdown,
     get_element_by_key,
     reset_hovering,
@@ -427,9 +428,12 @@ def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction)
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
-def test_wrap_false_submit_button_sets_native_title(app: Page):
-    """wrap=False exposes the full submit-button label via a native title."""
+def test_wrap_false_submit_button_truncates_and_sets_native_title(app: Page):
+    """wrap=False ellipsizes the submit-button label and exposes the full label
+    via a native title.
+    """
     container = get_element_by_key(app, "wrap_false_submit_button")
+    expect_label_truncated(container)
     expect(
         container.get_by_title(
             "Regenerate the complete quarterly report now", exact=True

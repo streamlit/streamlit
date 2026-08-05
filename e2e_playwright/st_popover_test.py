@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -619,11 +620,12 @@ def test_programmatic_close_does_not_reopen_other_popover(app: Page):
     expect(app.get_by_text("Close A")).not_to_be_visible()
 
 
-def test_wrap_false_sets_title_and_keeps_chevron(app: Page):
-    """wrap=False exposes the full trigger label via a native title while keeping
-    the expansion chevron visible.
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
     """
     container = get_element_by_key(app, "wrap_false_popover")
+    expect_label_truncated(container)
     expect(
         container.get_by_title(
             "Regenerate the complete quarterly report now", exact=True

@@ -60,7 +60,7 @@ function DownloadButton(props: Props): ReactElement {
   // the label ellipsizes, reveal the full label on hover via a native title,
   // skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
-  const title = !wrap && !help ? label : undefined
+  const addTitleTooltip = !wrap && !help
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -208,7 +208,7 @@ function DownloadButton(props: Props): ReactElement {
             label={label}
             shortcut={shortcut}
             wrap={wrap}
-            title={title}
+            addTitleTooltip={addTitleTooltip}
           />
         </BaseButton>
       </BaseButtonTooltip>

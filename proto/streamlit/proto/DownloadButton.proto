@@ -34,6 +34,6 @@ message DownloadButton {
   string shortcut = 13;
   streamlit.ButtonLikeIconPosition icon_position = 14;
   // If false, the button label ellipsizes on one line instead of wrapping.
-  // Absent means the frontend keeps today's wrapping behavior (equivalent to true).
+  // Absent means the frontend decides the optimal wrapping behavior based on the layout.
   optional bool wrap = 15;
 }

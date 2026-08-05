@@ -45,7 +45,7 @@ function Button(props: Props): ReactElement {
   // the label ellipsizes, reveal the full label on hover via a native title,
   // skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
-  const title = !wrap && !element.help ? element.label : undefined
+  const addTitleTooltip = !wrap && !element.help
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -89,7 +89,7 @@ function Button(props: Props): ReactElement {
             label={element.label}
             shortcut={shortcut}
             wrap={wrap}
-            title={title}
+            addTitleTooltip={addTitleTooltip}
           />
         </BaseButton>
       </BaseButtonTooltip>

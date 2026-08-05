@@ -20,6 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
     reset_hovering,
@@ -297,11 +298,12 @@ def test_menu_button_menu_style_icons_hide_chevron(
     assert_snapshot(container, name="st_menu_button-menu_style_icons")
 
 
-def test_wrap_false_sets_title_and_keeps_chevron(app: Page):
-    """wrap=False exposes the full trigger label via a native title while keeping
-    the expansion chevron visible.
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
     """
     container = get_element_by_key(app, "wrap_false_menu_button")
+    expect_label_truncated(container)
     expect(
         container.get_by_title(
             "Regenerate the complete quarterly report now", exact=True

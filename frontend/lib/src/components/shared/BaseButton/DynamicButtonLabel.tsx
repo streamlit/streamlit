@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -40,12 +40,14 @@ export interface DynamicButtonLabelProps {
    */
   wrap?: boolean
   /**
-   * Native browser tooltip (`title`) shown on hover. Callers set this to the
-   * full label when `wrap=false` so a label truncated with an ellipsis can
-   * still be read. Because it is a native `title`, the browser shows it on
-   * hover whenever it is set, regardless of whether the label is clipped.
+   * When true, add a native browser tooltip (`title`) exposing the full label so
+   * a label truncated with an ellipsis (`wrap=false`) can still be read on hover.
+   * The tooltip uses the rendered plain text (the button's accessible name), so
+   * a Markdown label is shown without its raw syntax. Because it is a native
+   * `title`, the browser shows it on hover whenever it is set, regardless of
+   * whether the label is actually clipped.
    */
-  title?: string
+  addTitleTooltip?: boolean
 }
 
 export const DynamicButtonLabel = ({
@@ -55,7 +57,7 @@ export const DynamicButtonLabel = ({
   iconPosition = "left",
   shortcut,
   wrap = true,
-  title,
+  addTitleTooltip = false,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const displayShortcut = useMemo(() => {
     return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
@@ -63,8 +65,28 @@ export const DynamicButtonLabel = ({
 
   const truncate = !wrap
 
+  const labelRef = useRef<HTMLDivElement>(null)
+
+  // Set the native tooltip to the rendered plain-text label (the accessible
+  // name) rather than the raw Markdown source. This reads from the DOM because
+  // Markdown can only be converted to plain text after it is rendered.
+  useEffect(() => {
+    const node = labelRef.current
+    if (!node) {
+      return
+    }
+    const labelText =
+      node.querySelector('[data-testid="stMarkdownContainer"]')?.textContent ??
+      ""
+    if (addTitleTooltip && labelText) {
+      node.title = labelText
+    } else {
+      node.removeAttribute("title")
+    }
+  }, [addTitleTooltip, label])
+
   return (
-    <StyledButtonLabel $truncate={truncate} title={title}>
+    <StyledButtonLabel ref={labelRef} $truncate={truncate}>
       <StyledButtonMainLabel
         data-has-shortcut={Boolean(displayShortcut)}
         $truncate={truncate}

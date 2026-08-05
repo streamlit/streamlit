@@ -174,7 +174,7 @@ st.menu_button(
 st.menu_button(
     "Regenerate the complete quarterly report now",
     options=["CSV", "JSON"],
-    width="stretch",
+    width=200,
     wrap=False,
     key="wrap_false_menu_button",
 )
