@@ -57,6 +57,41 @@ import {
   StyledPopoverLabelContainer,
 } from "./styled-components"
 
+/** Padding kept between the popover and the boundary edge, in px. */
+const SHIFT_PADDING = 8
+
+/**
+ * Fit the popover inside the available space without exceeding the design caps,
+ * and stop CSS `min-width` from defeating that.
+ *
+ * `designMaxWidthPx` and `cssMinWidthPx` mirror StyledPopoverBody; see the call
+ * site for how they are derived.
+ */
+function clampPopoverSize({
+  availableWidth,
+  availableHeight,
+  designMaxWidthPx,
+  cssMinWidthPx,
+}: {
+  availableWidth: number
+  availableHeight: number
+  designMaxWidthPx: number
+  cssMinWidthPx: number
+}): { maxWidth: string; maxHeight: string; minWidth: string } {
+  const maxWidthPx = Math.min(
+    Math.max(Math.floor(availableWidth), 0),
+    designMaxWidthPx
+  )
+  return {
+    maxWidth: `${maxWidthPx}px`,
+    maxHeight: `min(${Math.max(Math.floor(availableHeight), 0)}px, 70vh)`,
+    // CSS prefers min-width over max-width when they conflict, so lower it.
+    // Compared against the capped width, not the raw available space, so a
+    // stretch popover sized between the design cap and the viewport is caught.
+    minWidth: cssMinWidthPx > maxWidthPx ? `${maxWidthPx}px` : "",
+  }
+}
+
 export interface PopoverProps {
   element: BlockProto.Popover
   empty: boolean
@@ -195,32 +230,25 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // keyboard activation, which can dispatch a `click` with no prior pointerdown.
   const interactionInsideRef = useRef(false)
 
-  // Keep the popover inside the viewport for both narrow embeds (#9340) and
-  // sidebar `overflow: auto` clipping (#9387). Two middleware adjustments,
-  // split by scope:
+  // Keep the popover inside the viewport for narrow embeds (#9340) and
+  // sidebar overflow clipping (#9387). Two middleware adjustments by scope:
   //
-  // - **Always** (applies to every popover): a `size` middleware that clamps
-  //   `max-height` AND `max-width` to Floating UI's measured available space
-  //   at the chosen placement, and caps `min-width` when the intrinsic value
-  //   would exceed the clamp. Without the height clamp, a popover taller
-  //   than the space on either side of the trigger extends off-screen (bug
-  //   in #9387). Without the width clamp, the popover's baseline
-  //   `maxWidth: contentMaxWidth` (~704px) can exceed a narrow oEmbed
-  //   iframe's width, so `shift` shoves it against an edge and the far side
-  //   is clipped (bug in #9340). `size` sits after `flip` so it constrains
-  //   dimensions relative to whichever side `flip` landed on; the internal
-  //   `overflow: auto` on StyledPopoverBody handles scrolling when clamped.
+  // - **Always**: `size` clamps max-height/max-width to available space at the
+  //   chosen placement, and lowers min-width when the CSS min would exceed
+  //   that clamp.
+  //   - Without the height clamp, a tall popover extends off-screen (#9387).
+  //   - Without the width clamp, the ~704px design max-width overflows a
+  //     narrow oEmbed iframe: `shift` pins one edge and the host clips the
+  //     other (#9340).
+  //   - `size` runs after `flip` so it measures against the final side;
+  //     `StyledPopoverBody`'s `overflow: auto` scrolls when clamped.
   //
   // - **Sidebar only**: override the shift/flip `boundary` to
-  //   `document.documentElement` so the popover (portalled to document.body
-  //   with `position: fixed`) is bounded by the viewport rather than the
-  //   sidebar or any `.stApp` clipping ancestor. `document.documentElement`
-  //   (the <html> element) is used rather than `document.body` because
-  //   Streamlit's `.stApp` uses `position: absolute; inset: 0`, which leaves
-  //   document.body sized 0x0 — a body boundary would always report overflow.
-  //   Without this override, shift squishes a sidebar popover against the
-  //   sidebar's edge.
-  const shiftPadding = 8
+  //   `document.documentElement` so Floating UI uses the viewport, not the
+  //   sidebar's `overflow: auto` rect. Prefer `<html>` over `document.body`
+  //   because `.stApp`'s `position: absolute; inset: 0` leaves body at 0x0 —
+  //   a body boundary would always report overflow. Without this override,
+  //   shift squishes the popover against the sidebar edge.
   const overlayOptions = useMemo(() => {
     const base = {
       open,
@@ -231,66 +259,42 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return base
     }
     const boundary = document.documentElement
-    // Match StyledPopoverBody's stretch-mode `min-width: max($calculatedWidth,
-    // 10rem)` from styled-components.ts. Kept in sync manually because the
-    // middleware needs to know the intrinsic min-width without reading it
-    // back from the DOM (which would force a style recomputation on every
-    // position update).
-    const stretchMinWidthPx = convertRemToPx("10rem")
-    const minPopupWidthPx = convertRemToPx(theme.sizes.minPopupWidth)
-    // StyledPopoverBody's design cap on width: `calc(contentMaxWidth - 2 *
-    // spacing.lg)` (~704px). Preserved as a ceiling for the inline `max-width`
-    // so wide viewports still respect the design cap rather than growing to
-    // the full available viewport width. `contentMaxWidth` is a px token
-    // (e.g. "736px") while `spacing.lg` is a rem token.
-    const baselineMaxWidthPx =
+    // Mirrors StyledPopoverBody — keep in sync with styled-components.ts.
+    // Reading these back from the DOM would force a style recomputation on
+    // every position update. `contentMaxWidth` is a px token; `spacing.lg` is
+    // rem — hence parseFloat vs convertRemToPx.
+    const designMaxWidthPx =
       parseFloat(theme.sizes.contentMaxWidth) -
       2 * convertRemToPx(theme.spacing.lg)
-    // Intrinsic min-width from StyledPopoverBody: non-stretch uses
-    // `theme.sizes.minPopupWidth`; stretch uses `max($calculatedWidth,
-    // 10rem)`.
-    const intrinsicMinWidth = stretchWidth
-      ? Math.max(calculatedWidth, stretchMinWidthPx)
-      : minPopupWidthPx
+    const cssMinWidthPx = stretchWidth
+      ? Math.max(calculatedWidth, convertRemToPx("10rem"))
+      : convertRemToPx(theme.sizes.minPopupWidth)
     const sizeMiddleware: Middleware = size({
-      padding: shiftPadding,
+      padding: SHIFT_PADDING,
       boundary,
       apply({ availableHeight, availableWidth, elements }) {
-        // Clamp strictly to Floating UI's measured space so the popover never
-        // extends past the viewport, even in very small viewports where both
-        // sides of the trigger have limited room. The internal `overflow:
-        // auto` on StyledPopoverBody handles the scroll. `Math.min` against
-        // the styled-component's design caps (`baselineMaxWidthPx` and the
-        // CSS `70vh` cap on max-height) preserves those caps on large
-        // viewports so the inline clamp doesn't accidentally allow the
-        // popover to grow past them.
-        const clampedHeight = Math.max(Math.floor(availableHeight), 0)
-        const clampedWidth = Math.max(Math.floor(availableWidth), 0)
-        const appliedMaxWidth = Math.min(clampedWidth, baselineMaxWidthPx)
-        elements.floating.style.maxHeight = `min(${clampedHeight}px, 70vh)`
-        elements.floating.style.maxWidth = `${appliedMaxWidth}px`
-        // When the intrinsic `min-width` from StyledPopoverBody exceeds the
-        // applied `max-width` (which now folds in both the viewport clamp
-        // and the ~704px design cap), CSS resolves the conflict in favor of
-        // `min-width` and the popover overflows the cap. Compare against
-        // `appliedMaxWidth`, not raw `clampedWidth`, so a stretch popover
-        // whose `calculatedWidth` sits between the design cap and the
-        // viewport clamp still gets its min-width capped.
-        elements.floating.style.minWidth =
-          intrinsicMinWidth > appliedMaxWidth ? `${appliedMaxWidth}px` : ""
+        const { maxWidth, maxHeight, minWidth } = clampPopoverSize({
+          availableWidth,
+          availableHeight,
+          designMaxWidthPx,
+          cssMinWidthPx,
+        })
+        Object.assign(elements.floating.style, {
+          maxWidth,
+          maxHeight,
+          minWidth,
+        })
       },
     })
     if (!isInSidebar) {
-      // Outside the sidebar we still need `size` to prevent overflow of a
-      // narrow embed viewport, but we don't need to override flip/shift
-      // boundaries — the defaults already resolve to the viewport for
-      // `position: fixed` floating elements.
+      // Still apply `size` for narrow embeds, but skip the flip/shift boundary
+      // override — defaults already use the viewport for `position: fixed`.
       return { ...base, extraMiddleware: [sizeMiddleware] }
     }
     return {
       ...base,
       flipOptions: { boundary },
-      shiftOptions: { padding: shiftPadding, boundary },
+      shiftOptions: { padding: SHIFT_PADDING, boundary },
       extraMiddleware: [sizeMiddleware],
     }
   }, [

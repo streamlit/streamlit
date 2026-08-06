@@ -179,33 +179,25 @@ def test_popover_in_sidebar_stays_within_viewport(app: Page):
 
 
 def test_popover_stays_within_narrow_viewport(app: Page):
-    """A popover must render fully within a narrow viewport (e.g. an app
-    embedded via oEmbed inside a narrow host iframe). Regression test for
+    """Popover content must stay fully within a narrow viewport (e.g. an
+    oEmbed host iframe). Regression for
     https://github.com/streamlit/streamlit/issues/9340.
 
-    Before the fix, the popover body's baseline `max-width` (~704px) exceeded
-    a narrow embed viewport's width. `shift` would push the popover against
-    an edge, but the far side stayed off-screen and was clipped by the host
-    iframe. The `size` middleware now clamps `max-width` (and `min-width`,
-    when the intrinsic CSS min-width would exceed the clamp) to the available
-    space at the chosen placement so the popover always fits.
+    Without `size` middleware, the ~704px design max-width (and, under
+    320px, the CSS min-width) overflow a narrow embed: `shift` pins one
+    edge and the host clips the other.
 
-    Three scenarios are exercised in one app load to keep browser runs cheap
-    (per `e2e_playwright/AGENTS.md`):
+    Three cases in one app load (see e2e_playwright/AGENTS.md):
 
-    - **640px viewport** — inside the #9340 bug window: wider than the
-      styled-component's `@media (max-width: 576px)` CSS clamp but narrower
-      than the popover's baseline ~704px max-width. Pre-fix, `size` middleware
-      wasn't wired here and the popover overflowed horizontally.
-    - **300px viewport** — narrower than the popover's 320px baseline
-      `min-width` (`theme.sizes.minPopupWidth`). Without the matching
-      `min-width` cap in the `size` middleware, CSS resolves the `min-width`
-      vs `max-width` conflict in favor of `min-width` and the popover
-      overflows again.
-    - **Stretch popover at 640px** — a `width="stretch"` popover uses
-      `min-width: max($calculatedWidth, 10rem)`, exercising the middleware's
-      stretch-aware intrinsic-min-width path (compares against the applied
-      max-width, which folds in the ~704px design cap).
+    - **640px** — between the 576px CSS media-query clamp and the ~704px
+      design max-width, so only JS `size` keeps the popover in bounds.
+      Also checks vertical overflow.
+    - **300px** — narrower than the 320px baseline min-width; exercises the
+      middleware's min-width cap (horizontal only — flip can pick a tight
+      vertical side at this width).
+    - **Stretch at 640px** — `width="stretch"` uses
+      `min-width: max($calculatedWidth, 10rem)`; exercises the
+      stretch-aware min-width path against the applied max-width.
     """
     # 1px epsilon guards against subpixel layout differences across browsers.
     epsilon = 1
@@ -233,11 +225,8 @@ def test_popover_stays_within_narrow_viewport(app: Page):
                 f"viewport={viewport}"
             )
 
-    # Case 1: viewport inside the #9340 bug window (577-704px). Chosen to
-    # exceed the 576px CSS media-query clamp so the JS `size` middleware is
-    # actually the thing keeping the popover within the viewport. Also asserts
-    # vertical bounds since a narrow viewport at 800px height is tall enough
-    # to catch a top/bottom overflow regression.
+    # Case 1: 640px — past the 576px CSS clamp so JS `size` constrains width.
+    # Assert vertical bounds too (800px height catches top/bottom overflow).
     app.set_viewport_size({"width": 640, "height": 800})
     popover_body = open_popover(app, "popover 3 (with widgets)")
     expect_markdown(popover_body, "Hello World 👋")
@@ -245,16 +234,15 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     assert viewport is not None, "viewport_size must be set for this test"
     assert_within_viewport(popover_body, viewport, check_vertical=True)
 
-    # Close the popover by clicking outside so we can re-open it fresh at the
-    # next viewport size (avoids relying on Floating UI's autoUpdate reflow).
-    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    # Re-open fresh at each viewport rather than relying on Floating UI's
+    # autoUpdate reflow. Dismiss with Escape, not an outside click at a fixed
+    # position: at 300px the layout can put that point on the trigger itself,
+    # which made this step intermittently fail to close the popover.
+    app.keyboard.press("Escape")
     expect(popover_body).not_to_be_visible()
 
-    # Case 2: viewport narrower than the popover's 320px baseline min-width.
-    # Without the intrinsic-min-width cap in the `size` middleware the popover
-    # would still overflow at this width. Horizontal bounds only — the trigger
-    # placement at 300px wide can force `flip` to pick a vertically-tight
-    # side, and vertical bounds are already covered by case 1.
+    # Case 2: 300px — below the 320px CSS min-width; needs the min-width cap.
+    # Horizontal only — flip may pick a tight vertical side.
     app.set_viewport_size({"width": 300, "height": 800})
     popover_body = open_popover(app, "popover 3 (with widgets)")
     expect_markdown(popover_body, "Hello World 👋")
@@ -262,16 +250,12 @@ def test_popover_stays_within_narrow_viewport(app: Page):
     assert viewport is not None, "viewport_size must be set for this test"
     assert_within_viewport(popover_body, viewport, check_vertical=False)
 
-    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    app.keyboard.press("Escape")
     expect(popover_body).not_to_be_visible()
 
-    # Case 3: stretch popover (popover 11, `width="stretch"`) in a narrow
-    # viewport. Its `min-width` is `max($calculatedWidth, 10rem)`, so the
-    # size middleware's stretch-aware intrinsic-min-width computation is what
-    # keeps this popover from overflowing when the trigger's calculated width
-    # would otherwise push past the viewport clamp. `expect_markdown` waits
-    # for the popover body to render its content so the bounding box has
-    # stabilized past any ResizeObserver-driven `$calculatedWidth` update.
+    # Case 3: stretch popover (`min-width: max($calculatedWidth, 10rem)`).
+    # `expect_markdown` waits until content (and any ResizeObserver-driven
+    # `$calculatedWidth` update) has settled before we measure the box.
     app.set_viewport_size({"width": 640, "height": 800})
     popover_body = open_popover(app, "popover 11 (width=stretch)")
     expect_markdown(popover_body, "Stretch width")
