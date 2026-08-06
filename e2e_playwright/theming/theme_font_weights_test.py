@@ -18,6 +18,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
+from playwright.sync_api import expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -39,32 +40,6 @@ if TYPE_CHECKING:
 def app_server():
     """Override to disable the default module-scoped app_server fixture."""
     return
-
-
-@pytest.fixture
-def app(
-    page: Page,
-    app_base_url: str,
-    app_port: int,
-    request: pytest.FixtureRequest,
-    theme_env: dict[str, str],
-) -> Generator[Page, None, None]:
-    """Start a fresh server with the per-test theme_env, yield the page, then stop."""
-    streamlit_proc = start_app_server(app_port, request.module, extra_env=theme_env)
-    try:
-        response = page.goto(build_app_url(app_base_url, path="/"))
-        if response is None or response.status != 200:
-            raise RuntimeError("Unable to load page")
-        wait_for_app_loaded(page)
-        yield page
-    finally:
-        streamlit_proc.terminate()
-
-
-@pytest.fixture
-def theme_env() -> dict[str, str]:
-    """Default theme env — overridden per test via indirect parametrization or override."""
-    return {}
 
 
 _CUSTOM_WEIGHTS_ENV = {
@@ -148,20 +123,15 @@ def test_50_step_font_weights_applied(fifty_step_weights_app: Page):
     """
     expect_no_skeletons(fifty_step_weights_app, timeout=25000)
 
-    h1_weight = fifty_step_weights_app.locator("h1").first.evaluate(
-        "el => getComputedStyle(el).fontWeight"
-    )
-    h2_weight = fifty_step_weights_app.locator("h2").first.evaluate(
-        "el => getComputedStyle(el).fontWeight"
-    )
+    # Scope to the main content area. The app also renders headings and markdown
+    # in the sidebar, and the sidebar theme keeps default weights, so unscoped
+    # `.first` locators could bind to sidebar elements instead of the main theme.
+    main = fifty_step_weights_app.get_by_test_id("stMain")
 
     # baseFontWeight=550 should produce normal=550, semiBold=650, bold=750, extrabold=850
     # headingFontWeights=[550, 650, ...] should produce h1=550, h2=650
-    assert h1_weight == "550", f"Expected h1 font-weight 550, got {h1_weight}"
-    assert h2_weight == "650", f"Expected h2 font-weight 650, got {h2_weight}"
+    expect(main.locator("h1").first).to_have_css("font-weight", "550")
+    expect(main.locator("h2").first).to_have_css("font-weight", "650")
 
     # Verify body text uses the 50-step base weight
-    body_weight = fifty_step_weights_app.locator(".stMarkdown p").first.evaluate(
-        "el => getComputedStyle(el).fontWeight"
-    )
-    assert body_weight == "550", f"Expected body font-weight 550, got {body_weight}"
+    expect(main.locator(".stMarkdown p").first).to_have_css("font-weight", "550")
