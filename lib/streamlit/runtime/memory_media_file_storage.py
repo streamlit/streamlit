@@ -208,11 +208,9 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
             raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
-        # StatsProvider requires family_names; this provider always returns all families.
-        del family_names
-
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.
         files_by_id = self._files_by_id.copy()

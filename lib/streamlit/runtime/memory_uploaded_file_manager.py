@@ -148,15 +148,13 @@ class MemoryUploadedFileManager(UploadedFileManager):
         return result
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
         """Return the manager's CacheStats.
 
         Safe to call from any thread.
         """
-        # StatsProvider requires family_names; this provider always returns all families.
-        del family_names
-
         with self._lock:
             total_bytes = self._total_bytes
             file_count = self._file_count

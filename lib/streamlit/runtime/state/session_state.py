@@ -1644,11 +1644,9 @@ class SessionState:
             return True
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
-        # StatsProvider requires family_names; this provider always returns all families.
-        del family_names
-
         if config.get_option("server.enableExpensiveMemoryStats"):
             from streamlit.runtime.stats import safe_sizeof
 
@@ -1723,11 +1721,9 @@ class SessionStateStatProvider(StatsProvider):
         return (CACHE_MEMORY_FAMILY,)
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
-        # StatsProvider requires family_names; this provider always returns all families.
-        del family_names
-
         stats: list[CacheStat] = []
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state

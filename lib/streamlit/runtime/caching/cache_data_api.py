@@ -318,11 +318,9 @@ class DataCaches(StatsProvider):
             self._function_caches = {}
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
-        # StatsProvider requires family_names; this provider always returns all families.
-        del family_names
-
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
