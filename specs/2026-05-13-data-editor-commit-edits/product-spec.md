@@ -135,7 +135,7 @@ The callback result is the baseline for the **current render only**. The app rem
 persisting it to session state, a database, or an updated/invalidated cache. A later rerun with no
 pending edits does not invoke the callback and uses whatever `data` evaluates to at that time.
 
-### Example: database-backed editing
+### Example: database-backed editing with session state
 
 ```python
 import pandas as pd
@@ -174,16 +174,7 @@ def persist_orders(
         for row in edits.added_rows:
             insert_order(row)
 
-    # Prefer refreshing inside the success path. If refresh fails after the
-    # writes committed, catch and return edited_df (or another post-write
-    # baseline) so Streamlit clears edit state instead of replaying durable
-    # ops on the next edit-triggered retry.
-    try:
-        refreshed_df = load_orders()
-    except Exception:
-        st.session_state.orders = edited_df
-        return edited_df
-
+    refreshed_df = load_orders()
     st.session_state.orders = refreshed_df
     return refreshed_df
 
@@ -191,6 +182,60 @@ def persist_orders(
 st.data_editor(
     st.session_state.orders,
     key="orders_editor",
+    num_rows="dynamic",
+    commit_edits=persist_orders,
+)
+```
+
+### Example: database-backed editing with cached load
+
+When `data` comes from `@st.cache_data`, clear only the affected cache entry after a successful
+write and reload so later reruns (with no pending edits) see the new baseline instead of a stale
+entry. A TTL still bounds how long an unchanged cache entry can live between commits.
+
+```python
+import pandas as pd
+import streamlit as st
+
+from streamlit.typing import DataEditorState
+
+
+@st.cache_data(ttl="1h")
+def load_orders(customer_id: str) -> pd.DataFrame:
+    return fetch_orders_from_db(customer_id)
+
+
+customer_id = st.selectbox("Customer", ["acme", "globex"])
+
+
+def persist_orders(
+    source_df: pd.DataFrame,
+    edited_df: pd.DataFrame,
+    edits: DataEditorState,
+) -> pd.DataFrame:
+    if (edited_df["amount"] < 0).any():
+        st.toast("Amounts must be positive.", icon=":material/error:")
+        return source_df
+
+    with begin_transaction():
+        for row_position in edits.deleted_rows:
+            delete_order(source_df.iloc[row_position]["id"])
+
+        for row_position, changes in edits.edited_rows.items():
+            update_order(source_df.iloc[row_position]["id"], changes)
+
+        for row in edits.added_rows:
+            insert_order(row)
+
+    # Clear only this customer_id entry, then refill. Other customers' cached
+    # orders stay intact.
+    load_orders.clear(customer_id)
+    return load_orders(customer_id)
+
+
+st.data_editor(
+    load_orders(customer_id),
+    key=f"orders_editor_{customer_id}",
     num_rows="dynamic",
     commit_edits=persist_orders,
 )
