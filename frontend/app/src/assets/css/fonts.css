@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+/*
+ * Keep these global font definitions in a dedicated CSS file so Vite can
+ * resolve and bundle the font assets directly without a CSS preprocessor.
+ */
+
 /* Mono, regular */
 
 @font-face {
@@ -77,5 +82,17 @@
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
   src: url("../fonts/Source_Serif/SourceSerifVariable-Italic.ttf.woff2")
+    format("woff2");
+}
+
+/* Icons */
+
+@font-face {
+  font-family: "Material Symbols Rounded";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/MaterialSymbols/MaterialSymbols-Rounded.woff2")
     format("woff2");
 }
