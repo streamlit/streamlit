@@ -763,6 +763,11 @@ describe("ButtonGroup wrap", () => {
     isInContentWidthContainer: false,
   }
 
+  const originalScrollIntoView = Element.prototype.scrollIntoView
+  afterEach(() => {
+    Element.prototype.scrollIntoView = originalScrollIntoView
+  })
+
   it("uses nowrap and overflow-x when wrap is false", () => {
     render(
       <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
@@ -773,6 +778,15 @@ describe("ButtonGroup wrap", () => {
     // Content-width + wrap=False stays intrinsic (not stretched to 100%).
     expect(group).toHaveStyle("width: auto")
     expect(group).toHaveStyle("max-width: 100%")
+  })
+
+  it("keeps fit-content max-width when wrapping at content width", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: true, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("flex-wrap: wrap")
+    expect(group).toHaveStyle("max-width: fit-content")
   })
 
   it("stretches to parent width when wrap is false and width is stretch", () => {

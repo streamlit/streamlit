@@ -620,9 +620,9 @@ export const StyledToggleButtonGroup = styled(ToggleButtonGroup)<{
 }>(({ theme, $isPills, $containerWidth, $wrap }) => ({
   display: "flex",
   flexWrap: $wrap ? ("wrap" as const) : ("nowrap" as const),
-  // Stretch fills the parent; content-width stays intrinsic. Always cap at
-  // parent width so wrap=False scrolls locally instead of growing the page.
-  maxWidth: "100%",
+  // Content-width wraps with maxWidth:fit-content (prior behavior).
+  // wrap=False caps at the parent so overflow scrolls locally, not on the page.
+  maxWidth: $wrap ? ($containerWidth ? "100%" : "fit-content") : "100%",
   width: $containerWidth ? "100%" : "auto",
   margin: 0,
   columnGap: $isPills ? theme.spacing.twoXS : theme.spacing.none,
