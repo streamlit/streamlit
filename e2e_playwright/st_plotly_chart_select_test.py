@@ -248,10 +248,16 @@ def test_selection_state_remains_after_unmounting(
     expect(chart).to_be_visible()
     # Clear hover so the modebar and plotly hoverlabels stay out of the
     # snapshot; this test only asserts selection state after remount.
+    # Moving the mouse off-chart alone is not enough on WebKit — Plotly can
+    # keep the last hoverlabel — so also force an unhover and wait for it.
     reset_hovering(app)
+    chart.locator(".js-plotly-plot").evaluate(
+        "el => { if (window.Plotly?.Fx?.unhover) window.Plotly.Fx.unhover(el) }"
+    )
     expect(chart.locator(".modebar-group:has([data-title='Fullscreen'])")).to_have_css(
         "opacity", "0"
     )
+    expect(chart.locator(".hovertext")).to_have_count(0)
     assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
 
 
