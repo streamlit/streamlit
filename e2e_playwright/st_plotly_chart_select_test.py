@@ -258,7 +258,14 @@ def test_selection_state_remains_after_unmounting(
     expect(modebar).to_be_visible()
     expect(modebar).to_have_css("opacity", "1")
     expect(chart.locator(".hovertext")).not_to_be_attached()
-    assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
+    # WebKit can differ by a few hundred pixels on selection handles / AA under
+    # Playwright 1.62 (~0.22%); keep the default elsewhere but allow a small
+    # cushion here so we don't flaky-fail on that noise.
+    assert_snapshot(
+        chart,
+        name="st_plotly_chart-unmounted_still_has_selection",
+        image_threshold=0.005,
+    )
 
 
 def test_supports_points_and_box_if_activated(app: Page):
