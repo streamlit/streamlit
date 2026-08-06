@@ -203,10 +203,10 @@ work** (the merged `validate` feature, [#15714](https://github.com/streamlit/str
 already is a regex channel). A user-supplied `validate` *replaces* the type default (single channel;
 the user's rule must be a complete check).
 
-**Email strictness:** accept normal emails including intranet-style `user@host` (no dotted TLD
-required). Reject clearly malformed values (missing `@`, empty local/host parts, etc.). Apps that
-need a stricter rule (e.g. require a public domain) pass their own `validate`. Exact regexes are an
-implementation detail to finalize during build.
+**Email strictness:** require a dotted domain (accept `user@host.tld`, reject intranet-style
+`user@host`). That matches the emails almost all Streamlit apps collect (contact, signup, settings).
+Apps that need to allow bare hosts can pass their own `validate` (or `validate=""` to turn the
+default off). Exact regexes are an implementation detail to finalize during build.
 
 We considered browser-native `ValidityState.typeMismatch` instead: zero regex maintenance and exact
 native `type` semantics, but it would require a *second* frontend validation channel (shipped
