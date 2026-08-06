@@ -52,7 +52,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.checkbox` | Display a checkbox widget. It returns a boolean value. |
 | `st.code` | Display a code block with optional syntax highlighting. Use it for source code, commands, logs, and other preformatted text. |
 | `st.color_picker` | Display a color picker widget. It returns the selected color as a hex string. |
-| `st.columns` | Insert containers laid out as side-by-side columns. Use it for horizontal layouts and place elements into returned column containers. |
+| `st.columns` | Insert containers laid out as side-by-side columns. Use it for horizontal layouts and place elements into returned column containers. Pass `wrap=False` to keep columns in one row on narrow viewports (they scroll horizontally instead of stacking). |
 | `st.connection` | Create or retrieve a connection to a data store or API. Use connection classes and secrets to centralize external service access. |
 | `st.container` | Insert a multi-element container. Use it to group elements, control layout, or append content to a specific location. |
 | `st.data_editor` | Display a data editor widget. Use it when users need to edit rows or cells and the app needs the edited data back in Python. |

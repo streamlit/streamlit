@@ -49,7 +49,9 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows.
+Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric
+rows. Use `st.columns(..., wrap=False)` only when a fixed grid must stay in one row
+(for example a thumbnail strip) and horizontal scrolling is acceptable.
 
 ## Metrics with sparklines
 
