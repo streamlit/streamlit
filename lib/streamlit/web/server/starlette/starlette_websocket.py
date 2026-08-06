@@ -447,6 +447,23 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         subprotocol, xsrf_token, existing_session_id = _parse_subprotocols(
             websocket.headers
         )
+
+        # Browser WebSocket handshakes include an Origin header. When XSRF
+        # protection is enabled, require a valid double-submit token before
+        # accepting the connection - matching HTTP upload/delete routes which
+        # hard-reject on missing or invalid XSRF. Non-browser clients that omit
+        # Origin are left unrestricted here so programmatic connectors keep
+        # working.
+        origin_header = websocket.headers.get("Origin")
+        if is_xsrf_enabled() and origin_header:
+            xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
+            if not starlette_app_utils.validate_xsrf_token(xsrf_token, xsrf_cookie):
+                _LOGGER.warning(
+                    "Rejecting WebSocket connection with missing or invalid XSRF token"
+                )
+                await websocket.close(code=1008)  # 1008 = Policy Violation
+                return
+
         await websocket.accept(subprotocol=subprotocol)
 
         client = StarletteSessionClient(websocket)
@@ -454,52 +471,41 @@ def create_websocket_handler(runtime: Runtime) -> Any:
 
         try:
             user_info: dict[str, Any] = {}
-            if is_xsrf_enabled():
-                xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
-                origin_header = websocket.headers.get("Origin")
+            if is_xsrf_enabled() and origin_header:
+                # XSRF was validated above. Read expose_tokens lazily on connect
+                # (rather than once at handler creation) so programmatic secrets
+                # from ``st.App(secrets=...)``, which are merged during the ASGI
+                # lifespan after routes are built, are honored. Resolve it
+                # outside the defensive cookie-parsing block below so an
+                # invalid ``expose_tokens`` config surfaces as a clear error
+                # instead of being silently swallowed as a cookie-parsing
+                # failure.
+                expose_tokens = get_expose_tokens_config()
 
-                # Validate XSRF token before parsing auth cookie:
-                if origin_header and starlette_app_utils.validate_xsrf_token(
-                    xsrf_token, xsrf_cookie
-                ):
-                    # Read expose_tokens lazily on connect (rather than once at
-                    # handler creation) so programmatic secrets from
-                    # ``st.App(secrets=...)``, which are merged during the ASGI
-                    # lifespan after routes are built, are honored. Resolve it
-                    # outside the defensive cookie-parsing block below so an
-                    # invalid ``expose_tokens`` config surfaces as a clear error
-                    # instead of being silently swallowed as a cookie-parsing
-                    # failure.
-                    expose_tokens = get_expose_tokens_config()
-
-                    try:
-                        raw_auth_cookie = _get_signed_cookie_with_chunks(
-                            websocket.cookies, USER_COOKIE_NAME
+                try:
+                    raw_auth_cookie = _get_signed_cookie_with_chunks(
+                        websocket.cookies, USER_COOKIE_NAME
+                    )
+                    if raw_auth_cookie:
+                        user_info.update(
+                            _parse_decoded_user_cookie(raw_auth_cookie, origin_header)
                         )
-                        if raw_auth_cookie:
-                            user_info.update(
-                                _parse_decoded_user_cookie(
-                                    raw_auth_cookie, origin_header
-                                )
-                            )
 
-                            raw_token_cookie = _get_signed_cookie_with_chunks(
-                                websocket.cookies, TOKENS_COOKIE_NAME
-                            )
-                            if raw_token_cookie:
-                                all_tokens = json.loads(raw_token_cookie)
+                        raw_token_cookie = _get_signed_cookie_with_chunks(
+                            websocket.cookies, TOKENS_COOKIE_NAME
+                        )
+                        if raw_token_cookie:
+                            all_tokens = json.loads(raw_token_cookie)
 
-                                filtered_tokens: dict[str, str] = {}
-                                for token_type in expose_tokens:
-                                    token_key = f"{token_type}_token"
-                                    if token_key in all_tokens:
-                                        filtered_tokens[token_type] = all_tokens[
-                                            token_key
-                                        ]
+                            filtered_tokens: dict[str, str] = {}
+                            for token_type in expose_tokens:
+                                token_key = f"{token_type}_token"
+                                if token_key in all_tokens:
+                                    filtered_tokens[token_type] = all_tokens[token_key]
 
-                                user_info["tokens"] = filtered_tokens
-                    except Exception:  # pragma: no cover - defensive
-                        _LOGGER.exception("Error parsing auth cookie for websocket")
+                            user_info["tokens"] = filtered_tokens
+                except Exception:  # pragma: no cover - defensive
+                    _LOGGER.exception("Error parsing auth cookie for websocket")
 
             # Map in any user-configured headers. Note that these override anything
             # coming from the auth cookie.

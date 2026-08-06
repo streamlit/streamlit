@@ -773,6 +773,143 @@ class TestWebsocketHandlerTokenExposure:
         mock_runtime.connect_session.assert_not_called()
 
 
+class TestWebsocketHandlerXsrfAdmission:
+    """Tests that XSRF is admission control for browser WebSocket handshakes."""
+
+    @staticmethod
+    def _make_websocket(
+        *,
+        origin: str | None,
+        xsrf_token: str | None = None,
+        xsrf_cookie: str | None = None,
+    ) -> MagicMock:
+        """Build a mock websocket for XSRF admission tests."""
+        from starlette.websockets import WebSocketDisconnect
+
+        protocol = "streamlit"
+        if xsrf_token is not None:
+            protocol = f"streamlit, {xsrf_token}"
+
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.side_effect = lambda key: {
+            "Origin": origin,
+            "Host": "localhost:8501",
+            "sec-websocket-protocol": protocol,
+        }.get(key)
+        mock_websocket.headers.getlist.return_value = []
+        mock_websocket.cookies = (
+            {"_streamlit_xsrf": xsrf_cookie} if xsrf_cookie is not None else {}
+        )
+        mock_websocket.accept = AsyncMock()
+        mock_websocket.close = AsyncMock()
+        mock_websocket.receive_bytes = AsyncMock(side_effect=WebSocketDisconnect())
+        return mock_websocket
+
+    @staticmethod
+    def _make_runtime() -> MagicMock:
+        """Build a mock runtime that records ``connect_session`` calls."""
+        mock_runtime = MagicMock()
+        mock_runtime.connect_session = MagicMock(return_value="test-session-id")
+        mock_runtime.disconnect_session = MagicMock()
+        return mock_runtime
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.enableCORS": False,
+        }
+    )
+    def test_rejects_browser_handshake_without_xsrf_token(self) -> None:
+        """Browser Origin without a valid XSRF token must not open a session."""
+        mock_websocket = self._make_websocket(origin="http://localhost:8501")
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.enableCORS": False,
+        }
+    )
+    def test_rejects_browser_handshake_with_mismatched_xsrf_token(self) -> None:
+        """Browser Origin with a non-matching XSRF token must not open a session."""
+        cookie_token = starlette_app_utils.generate_xsrf_token_string()
+        other_token = starlette_app_utils.generate_xsrf_token_string()
+        mock_websocket = self._make_websocket(
+            origin="http://localhost:8501",
+            xsrf_token=other_token,
+            xsrf_cookie=cookie_token,
+        )
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.enableCORS": False,
+        }
+    )
+    def test_accepts_browser_handshake_with_valid_xsrf_token(self) -> None:
+        """Browser Origin with a matching XSRF token may connect."""
+        xsrf_token = starlette_app_utils.generate_xsrf_token_string()
+        mock_websocket = self._make_websocket(
+            origin="http://localhost:8501",
+            xsrf_token=xsrf_token,
+            xsrf_cookie=xsrf_token,
+        )
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+        ) as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+            asyncio.run(handler(mock_websocket))
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.enableCORS": False,
+        }
+    )
+    def test_allows_non_browser_handshake_without_xsrf_token(self) -> None:
+        """No Origin means a non-browser client; XSRF is not required to connect."""
+        mock_websocket = self._make_websocket(origin=None)
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+        ) as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+            asyncio.run(handler(mock_websocket))
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+
 class TestWebsocketHandlerMessageSize:
     """Tests for inbound WebSocket message size enforcement."""
 

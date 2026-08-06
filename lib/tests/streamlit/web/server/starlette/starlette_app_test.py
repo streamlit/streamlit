@@ -1205,7 +1205,14 @@ def test_static_files_apply_cache_headers(tmp_path: Path) -> None:
     }
 )
 def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> None:
-    """Test that auth cookies are not parsed without valid XSRF token."""
+    """Browser handshakes without a valid XSRF token must be rejected entirely.
+
+    Previously an invalid XSRF token only skipped auth-cookie parsing and still
+    opened an anonymous session. Admission control now matches HTTP upload
+    routes and closes the socket before ``connect_session``.
+    """
+    from starlette.websockets import WebSocketDisconnect
+
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -1237,17 +1244,17 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
     client.cookies.set("_streamlit_user", cookie_value.decode("utf-8"))
 
     # Connect without providing XSRF token in subprotocol
-    with client.websocket_connect(
-        "/_stcore/stream",
-        headers={"Origin": "http://testserver"},
-        subprotocols=["streamlit"],  # No XSRF token in second position
-    ) as websocket:
-        websocket.close(code=1000)
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect(
+            "/_stcore/stream",
+            headers={"Origin": "http://testserver"},
+            subprotocols=["streamlit"],  # No XSRF token in second position
+        ):
+            pass
 
-    # User info should NOT include auth data because XSRF validation failed
-    assert runtime.last_user_info is not None
-    assert runtime.last_user_info.get("is_logged_in") is not True
-    assert runtime.last_user_info.get("email") is None
+    assert exc_info.value.code == 1008
+    # No session should have been created when XSRF admission fails.
+    assert runtime.last_user_info is None
 
     monkeypatch.undo()
 
