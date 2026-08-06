@@ -22,7 +22,8 @@ import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdow
 import type { EmotionTheme } from "~lib/theme/types"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.md,
+  // Match st.dataframe / widgets (fontSizes.sm = 14px at default root).
+  fontSize: theme.fontSizes.sm,
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.small,
   captionSide: "bottom",
@@ -139,6 +140,15 @@ const styleCellFunction = (
     paddingLeft: border === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
+  // Always inherit table font size for cell markdown. StreamlitMarkdown defaults
+  // to body size (md), and global `p { font-size: 1rem }` would otherwise keep
+  // paragraphs at 16px even when the container uses sm (including truncate mode).
+  [`${StyledStreamlitMarkdown}`]: {
+    fontSize: "inherit",
+  },
+  [`${StyledStreamlitMarkdown} p`]: {
+    fontSize: "inherit",
+  },
   ...(truncateContent
     ? {
         // Apply truncation only for fixed-width tables to avoid clipping
@@ -157,7 +167,9 @@ const styleCellFunction = (
         // StreamlitMarkdown defaults to width: 100% and aggressive word
         // breaking. Override this in table cells so columns size by content,
         // and wrapping only happens at the max column width.
+        // Spread previous fontSize inherit so this object replace still keeps it.
         [`${StyledStreamlitMarkdown}`]: {
+          fontSize: "inherit",
           display: "inline-block",
           width: "fit-content",
           maxWidth: theme.sizes.tableColumnMaxWidth,
@@ -178,6 +190,7 @@ const styleCellFunction = (
           maxWidth: "none",
         },
         [`${StyledStreamlitMarkdown} p`]: {
+          fontSize: "inherit",
           whiteSpace: "normal",
           overflowWrap: "normal",
           wordBreak: "normal",
@@ -277,6 +290,6 @@ export const StyledEmptyTableCell = styled(StyledTableCell)<{
 }>(({ theme }) => ({
   color: theme.colors.gray70,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.md,
+  fontSize: theme.fontSizes.sm,
   textAlign: "center",
 }))

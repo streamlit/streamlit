@@ -54,8 +54,8 @@ export interface TableProps {
 // Fallback offset value (in rem) used for sticky positioning when multiple header rows
 // exist. This approximates typical row height to ensure sticky headers don't overlap.
 // The actual size may vary based on content, but this default works reasonably well.
-// Header row: fontSize (1rem) * lineHeight (1.5) + vertical padding (0.5rem) = 2rem
-const FALLBACK_HEADER_ROW_OFFSET_REM = "2rem"
+// Header row: fontSize (0.875rem) * lineHeight (1.5) + vertical padding (0.5rem) = 1.8125rem
+const FALLBACK_HEADER_ROW_OFFSET_REM = "1.8125rem"
 
 function getStickyOffset(index: number, stepPx: number): number {
   return index * stepPx
@@ -281,6 +281,7 @@ function generateTableHeader(
                 <StreamlitMarkdown
                   source={header.name || "\u00A0"}
                   allowHTML={false}
+                  inheritFont
                 />
               </StyledTableCellHeader>
             )
@@ -387,6 +388,7 @@ function generateTableCell(
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
+            inheritFont
           />
         </StyledTableCellHeader>
       )
@@ -405,6 +407,7 @@ function generateTableCell(
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
+            inheritFont
           />
         </StyledTableCell>
       )
