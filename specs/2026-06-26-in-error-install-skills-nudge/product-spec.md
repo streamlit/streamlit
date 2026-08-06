@@ -84,7 +84,19 @@ reading as green text sitting inside a red error box.
 ![Success state: a green box reading "Skills installed — your AI assistant is ready to help."](./state-success.png)
 
 **Error** — install failed; the box keeps the error tint and shows the server's reason
-plus a **Retry** action (copy below).
+plus a **Retry** action. The reason is server-supplied and can run to several lines (it
+names the paths that blocked the install), so the icon is bound to the copy rather than
+sitting in the wrapping flex row on its own.
+
+![Error state: "Couldn't install skills. .agents/skills/developing-with-streamlit, .claude/skills/developing-with-streamlit already exist. Remove them and try again." with a Retry action](./state-error.png)
+
+This state is deliberately hard to reach. `nudge_suppression_reason()` withholds the
+recommendation entirely (reason `conflict`, via `_one_click_install_would_be_refused()`)
+whenever an install would be blocked at *every* target, so the server never offers an
+install that can only fail. A conflict at only some targets installs the rest and reports
+a partial success instead. What remains are races (a target becomes blocked between the
+offer and the click), write failures, and a dropped connection — so the render above was
+produced by forcing that gate open locally.
 
 Copy:
 

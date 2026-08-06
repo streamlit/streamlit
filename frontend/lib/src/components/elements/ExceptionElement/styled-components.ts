@@ -58,11 +58,25 @@ export const StyledExceptionLinks = styled.div(({ theme }) => ({
   justifyContent: "flex-end",
 }))
 
-export const StyledExceptionCopyButton = styled.button({
+/**
+ * A button that reads as one of the error box's text links (Copy, and the
+ * skills callout's action) rather than as a control: no chrome, inheriting the
+ * surrounding font and color, underlined like the `Ask …` anchors beside it.
+ *
+ * `all: unset` also drops the focus outline, so the ring is restored explicitly
+ * — see the a11y guidance in `frontend/AGENTS.md` about never removing a focus
+ * indicator without replacing it.
+ */
+export const StyledExceptionLinkButton = styled.button(({ theme }) => ({
   all: "unset",
   font: "inherit",
+  cursor: "pointer",
   textDecoration: "underline",
-})
+  borderRadius: theme.radii.default,
+  "&:focus-visible": {
+    boxShadow: theme.shadows.focusRing,
+  },
+}))
 
 export const StyledExceptionWrapper = styled.div(({ theme }) => ({
   display: "flex",
@@ -109,11 +123,32 @@ export const StyledSkillsInstallCallout = styled(StyledAlertContainer)(
  * Wraps the callout's decorative sparkle/status icon so it is hidden from the
  * `role="status"` / `aria-live` region — otherwise the Material ligature (e.g.
  * "auto_awesome") would be announced as text before the message. `display:
- * contents` keeps the icon a direct flex child, so this adds no layout box.
+ * contents` keeps the icon a direct flex child of the group below, so this adds
+ * no layout box.
  */
 export const StyledSkillsInstallCalloutIcon = styled.span({
   display: "contents",
 })
+
+/**
+ * Binds the icon to the copy so a wrapping message can't strand the icon on a
+ * line of its own.
+ *
+ * The callout is a wrapping flex row of icon / copy / action. Flex breaks lines
+ * on whole items using each item's max-content width, so a long message — the
+ * server's install-failure reason embeds target paths and runs to several lines
+ * — doesn't fit beside the icon and gets pushed to the next flex line, leaving
+ * the icon alone above it. Grouping the two makes them one unbreakable item that
+ * shrinks and wraps internally instead.
+ */
+export const StyledSkillsInstallCalloutMessage = styled.div(({ theme }) => ({
+  display: "flex",
+  // Matches the outer container, so single-line content (idle / success, and the
+  // group's own inner alignment) renders exactly as it did before the grouping.
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  flex: "0 1 auto",
+}))
 
 /**
  * The callout's copy. Deliberately doesn't grow: the action sits directly after
@@ -126,24 +161,19 @@ export const StyledSkillsInstallCalloutText = styled.div({
 })
 
 /**
- * The callout's action: a text link-button that inherits the box's text color and
- * underline treatment — the same lightweight look as the error box's "Copy" /
- * "Ask …" links — so the CTA reads as a peer action rather than a filled button.
+ * The callout's action. Built on the same link-button as the error box's own
+ * `Copy` so the two stay visually identical by construction — the CTA reads as a
+ * peer of those links rather than a filled button. Adds only what's specific to
+ * this callout: the label never wraps mid-phrase, and the disabled
+ * ("Installing…") state stops looking clickable.
  */
-export const StyledSkillsInstallCalloutButton = styled.button(({ theme }) => ({
-  all: "unset",
-  font: "inherit",
-  cursor: "pointer",
+export const StyledSkillsInstallCalloutButton = styled(
+  StyledExceptionLinkButton
+)({
   whiteSpace: "nowrap",
-  color: "inherit",
-  textDecoration: "underline",
-  borderRadius: theme.radii.default,
-  "&:focus-visible": {
-    boxShadow: theme.shadows.focusRing,
-  },
   "&:disabled": {
     cursor: "default",
     opacity: 0.7,
     textDecoration: "none",
   },
-}))
+})

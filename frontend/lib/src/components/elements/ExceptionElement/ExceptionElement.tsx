@@ -35,7 +35,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import SkillsInstallCallout from "./SkillsInstallCallout"
 import {
-  StyledExceptionCopyButton,
+  StyledExceptionLinkButton,
   StyledExceptionLinks,
   StyledExceptionMessage,
   StyledExceptionWithCallout,
@@ -193,9 +193,9 @@ function ExceptionElement({
             ) : null}
             {shouldShowLinks && (
               <StyledExceptionLinks>
-                <StyledExceptionCopyButton onClick={handleCopy}>
+                <StyledExceptionLinkButton onClick={handleCopy}>
                   Copy
-                </StyledExceptionCopyButton>
+                </StyledExceptionLinkButton>
                 <a href={searchUrl} target="_blank" rel="noopener noreferrer">
                   Ask Google
                 </a>

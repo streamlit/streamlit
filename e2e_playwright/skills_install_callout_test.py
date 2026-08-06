@@ -161,8 +161,15 @@ def test_skills_install_callout_installs_end_to_end(
     )
     # Snapshot the success confirmation (green check + text) while it's up, before
     # it auto-dismisses. Captured here rather than in the render test because only
-    # this test drives a real install through to the success state. (The failure
-    # state can't be reached deterministically in E2E — the callout only shows
-    # when skills aren't installed, and the real install then succeeds — so the
-    # error UI is covered by the SkillsInstallCallout unit test instead.)
+    # this test drives a real install through to the success state.
+    #
+    # The failure state has no E2E coverage by construction, not by omission: the
+    # server withholds the recommendation whenever an install would be blocked at
+    # every target (``nudge_suppression_reason`` -> "conflict", via
+    # ``_one_click_install_would_be_refused``), precisely so it never offers an
+    # install that can only fail — and a conflict at only *some* targets installs
+    # the rest and succeeds. What's left are races, write failures, and dropped
+    # connections, none of which a test can force deterministically here. The error
+    # UI is covered by the SkillsInstallCallout unit test instead; the spec carries
+    # a render of it.
     assert_snapshot(callout, name="skills_install_callout-success")
