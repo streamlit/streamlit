@@ -1089,49 +1089,41 @@ def _large_polars_series() -> Any:
     return pl.Series(range(_PANDAS_ROWS_LARGE))
 
 
-def test_cache_hash_seed_default_is_unset() -> None:
-    """An unset option must keep the historical sample positions."""
-    assert config.get_option("runner.cacheHashSeed") == ""
+def test_cache_hash_seed_defaults_to_zero() -> None:
+    """The default must keep the historical sample positions."""
+    assert config.get_option("runner.cacheHashSeed") == 0
     assert _sample_seed() == 0
 
 
-def test_cache_hash_seed_is_derived_by_hashing_so_any_string_works() -> None:
-    """Arbitrary strings, including secrets, map to a usable numeric seed."""
-    with patch_config_options({"runner.cacheHashSeed": "a-deployment-secret"}):
-        seed = _sample_seed()
-
-    # RandomState and the polars/pandas samplers require a 32-bit seed.
-    assert 0 <= seed < 2**32
-    assert seed != 0
-
-
-def test_cache_hash_seed_accepts_a_non_string_config_value() -> None:
-    """An unquoted ``cacheHashSeed = 5`` in config.toml parses as an int.
+@pytest.mark.parametrize("value", [7, "7"], ids=["int", "numeric_string"])
+def test_cache_hash_seed_accepts_any_whole_number_representation(
+    value: object,
+) -> None:
+    """``cacheHashSeed = 7`` and ``cacheHashSeed = "7"`` must mean the same thing.
 
     ``config.get_option`` returns the raw parsed value rather than coercing it to
-    the declared type, so the seed derivation must tolerate a non-string here or
-    it raises ``AttributeError`` at hash time.
-    """
-    with patch_config_options({"runner.cacheHashSeed": 5}):
-        seed = _sample_seed()
-
-    assert 0 <= seed < 2**32
-    assert seed != 0
-
-
-@pytest.mark.parametrize("value", [0, 5], ids=["zero", "nonzero"])
-def test_cache_hash_seed_does_not_depend_on_toml_quoting(value: int) -> None:
-    """``cacheHashSeed = 0`` and ``cacheHashSeed = "0"`` must mean the same thing.
-
-    The unquoted form parses as an int, so an emptiness test applied before
-    normalizing would treat ``0`` as unset while ``"0"`` hashed to a real seed.
+    the declared type, so an unquoted TOML value arrives as an int and a quoted
+    one as a str.
     """
     with patch_config_options({"runner.cacheHashSeed": value}):
-        from_int = _sample_seed()
-    with patch_config_options({"runner.cacheHashSeed": str(value)}):
-        from_str = _sample_seed()
+        assert _sample_seed() == 7
 
-    assert from_int == from_str
+
+@pytest.mark.parametrize(
+    "value", ["not-a-number", "", None], ids=["text", "empty", "none"]
+)
+def test_cache_hash_seed_falls_back_to_zero_for_unusable_values(
+    value: object,
+) -> None:
+    """A malformed value must leave cache keys unchanged, not raise from hashing."""
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 0
+
+
+def test_cache_hash_seed_truncates_a_fractional_value() -> None:
+    """A float is converted rather than rejected; only the seed changes."""
+    with patch_config_options({"runner.cacheHashSeed": 1.5}):
+        assert _sample_seed() == 1
 
 
 @pytest.mark.parametrize(
@@ -1162,9 +1154,9 @@ def test_cache_hash_seed_reaches_every_sampling_path(
     """Changing the seed must change the cache key of a large object."""
     obj = make_obj()
 
-    with patch_config_options({"runner.cacheHashSeed": ""}):
+    with patch_config_options({"runner.cacheHashSeed": 0}):
         hash_default = get_hash(obj)
-    with patch_config_options({"runner.cacheHashSeed": "other"}):
+    with patch_config_options({"runner.cacheHashSeed": 1}):
         hash_other = get_hash(obj)
 
     assert hash_default != hash_other
@@ -1172,7 +1164,7 @@ def test_cache_hash_seed_reaches_every_sampling_path(
 
 def test_cache_hash_seed_is_deterministic_for_pandas_dataframe() -> None:
     """A given seed must produce a stable cache key across calls."""
-    with patch_config_options({"runner.cacheHashSeed": "stable-secret"}):
+    with patch_config_options({"runner.cacheHashSeed": 7}):
         first = get_hash(_large_pandas_dataframe())
         second = get_hash(_large_pandas_dataframe())
 
@@ -1183,9 +1175,9 @@ def test_cache_hash_seed_does_not_affect_small_objects() -> None:
     """Objects below the sampling threshold are hashed in full either way."""
     small = pd.DataFrame({"a": np.arange(10)})
 
-    with patch_config_options({"runner.cacheHashSeed": ""}):
+    with patch_config_options({"runner.cacheHashSeed": 0}):
         hash_default = get_hash(small)
-    with patch_config_options({"runner.cacheHashSeed": "another"}):
+    with patch_config_options({"runner.cacheHashSeed": 99}):
         hash_other = get_hash(small)
 
     assert hash_default == hash_other
@@ -1214,10 +1206,10 @@ def test_cache_hash_seed_moves_off_a_real_collision() -> None:
     mutated = base.copy()
     mutated[never_drawn] = -1
 
-    with patch_config_options({"runner.cacheHashSeed": ""}):
+    with patch_config_options({"runner.cacheHashSeed": 0}):
         assert get_hash(base) == get_hash(mutated), (
             "expected a collision under the default seed"
         )
 
-    with patch_config_options({"runner.cacheHashSeed": "moved-off-the-collision"}):
+    with patch_config_options({"runner.cacheHashSeed": 12345}):
         assert get_hash(base) != get_hash(mutated)

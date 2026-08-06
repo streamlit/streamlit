@@ -21,7 +21,6 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
-import hashlib
 import inspect
 import io
 import os
@@ -62,27 +61,20 @@ _NP_SAMPLE_SIZE: Final = 100_000
 def _sample_seed() -> int:
     """Return the RNG seed used when sampling large objects for cache hashing.
 
-    Derived from ``runner.cacheHashSeed`` by hashing, so the option can hold any
-    string -- including a deployment secret, which keeps the sampled positions
-    unpredictable to someone trying to construct a collision. An unset option
-    yields ``0``, the seed used before the option existed, so cache keys are
-    unchanged by default.
+    Reads ``runner.cacheHashSeed``, converting to an int so a quoted TOML value
+    works the same as an unquoted one. A value that cannot be converted falls
+    back to ``0`` -- the seed used before the option existed -- so a malformed
+    value leaves cache keys unchanged instead of raising from the hashing path.
 
     Read per call rather than cached at import so the value stays correct after
     ``config`` is (re)parsed, and so tests can vary it.
     """
     from streamlit import config
 
-    configured = config.get_option("runner.cacheHashSeed")
-    # Normalize before the emptiness test rather than after. ``get_option`` returns
-    # the raw parsed value, so an unquoted ``cacheHashSeed = 0`` arrives as int 0 --
-    # testing truthiness first would collapse that to the default while the quoted
-    # ``"0"`` hashed to something else, making the seed depend on TOML quoting.
-    text = "" if configured is None else str(configured)
-    if not text:
+    try:
+        return int(config.get_option("runner.cacheHashSeed"))
+    except (TypeError, ValueError):
         return 0
-    digest = hashlib.sha256(text.encode("utf-8")).digest()[:4]
-    return int.from_bytes(digest, "big")
 
 
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
