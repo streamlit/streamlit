@@ -1,6 +1,6 @@
 ---
 author: lukasmasuch
-created: 2026-05-13
+created: 2026-08-06
 ---
 
 # `commit_edits` callback for st.data_editor
