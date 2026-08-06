@@ -206,9 +206,7 @@ def marshall(
     """
 
     if type_util.is_graphviz_chart(figure_or_dot):
-        chart = cast(
-            "graphviz.Graph | graphviz.Digraph | graphviz.Source", figure_or_dot
-        )
+        chart = figure_or_dot
         dot = chart.source
         engine = chart.engine
     elif isinstance(figure_or_dot, str):

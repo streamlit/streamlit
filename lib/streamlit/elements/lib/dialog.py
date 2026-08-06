@@ -197,7 +197,7 @@ class Dialog(DeltaGenerator):
     def close(self) -> None:
         self._update(False)
 
-    def __enter__(self) -> Self:  # type: ignore[override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
@@ -206,8 +206,8 @@ class Dialog(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> Literal[False]:
-        return super().__exit__(exc_type, exc_val, exc_tb)
+        return super().__exit__(typ, exc, tb)

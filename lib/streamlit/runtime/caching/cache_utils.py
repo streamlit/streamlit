@@ -239,7 +239,8 @@ class Cache(Generic[R]):
         result = self.read_result(value_key)
         return CacheReadResult(result, is_stale=self._is_stale(result))
 
-    def _is_stale(self, _result: CachedResult[R]) -> bool:
+    # Positional-only so subclasses can name the parameter freely (e.g. result).
+    def _is_stale(self, _result: CachedResult[R], /) -> bool:
         """Whether a present entry is past its fresh ttl.
 
         Always ``False`` for foreground caches. Background-mode caches override this to
@@ -390,6 +391,14 @@ class CachedFuncInfo(Generic[P, R]):
     @property
     def cached_message_replay_ctx(self) -> CachedMessageReplayContext:
         raise NotImplementedError
+
+    @property
+    def display_name(self) -> str:
+        """A human-readable name for the cached function."""
+        # self.func is typed as Callable, which does not expose these attributes.
+        module = getattr(self.func, "__module__", "?")
+        qualname = getattr(self.func, "__qualname__", "?")
+        return f"{module}.{qualname}"
 
     def get_function_cache(self, function_key: str) -> Cache[R]:
         """Get or create the function cache for the given key.

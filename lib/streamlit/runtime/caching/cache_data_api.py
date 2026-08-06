@@ -134,11 +134,6 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
     def cached_message_replay_ctx(self) -> CachedMessageReplayContext:
         return CACHE_DATA_MESSAGE_REPLAY_CTX
 
-    @property
-    def display_name(self) -> str:
-        """A human-readable name for the cached function."""
-        return f"{self.func.__module__}.{self.func.__qualname__}"
-
     def get_function_cache(self, function_key: str) -> Cache[R]:
         return _data_caches.get_cache(
             key=function_key,
@@ -157,8 +152,10 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         When called, this method could log warnings if cache params are invalid
         for current storage.
         """
+        # self.func is typed as Callable, which does not expose __name__.
+        function_name = getattr(self.func, "__name__", "?")
         _data_caches.validate_cache_params(
-            function_name=self.func.__name__,
+            function_name=function_name,
             persist=self.persist,
             max_entries=self.max_entries,
             ttl=self.ttl,
@@ -321,7 +318,8 @@ class DataCaches(StatsProvider):
             self._function_caches = {}
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
@@ -813,13 +811,13 @@ class DataCache(Cache[R]):
             return cast("dict[str, list[CacheStat]]", self.storage.get_stats())
         return {}
 
-    def read_result(self, key: str) -> CachedResult[R]:
+    def read_result(self, value_key: str) -> CachedResult[R]:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
         if the value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
         """
         try:
-            pickled_entry = self.storage.get(key)
+            pickled_entry = self.storage.get(value_key)
         except CacheStorageKeyNotFoundError as e:
             raise CacheKeyNotFoundError(str(e)) from e
         except CacheStorageError as e:
@@ -830,11 +828,11 @@ class DataCache(Cache[R]):
             if not isinstance(entry, CachedResult):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.
-                self.storage.delete(key)
+                self.storage.delete(value_key)
                 raise CacheKeyNotFoundError()
             return entry
         except pickle.UnpicklingError as exc:
-            raise CacheError(f"Failed to unpickle {key}") from exc
+            raise CacheError(f"Failed to unpickle {value_key}") from exc
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
         """Whether a present entry is in the stale grace window ``[ttl, 2*ttl)``."""
@@ -849,7 +847,7 @@ class DataCache(Cache[R]):
         ) >= self.fresh_ttl_seconds
 
     @gather_metrics("_cache_data_object")
-    def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:
+    def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
@@ -869,8 +867,8 @@ class DataCache(Cache[R]):
             )
             pickled_entry = pickle.dumps(entry)
         except (pickle.PicklingError, TypeError) as exc:
-            raise CacheError(f"Failed to pickle {key}") from exc
-        self.storage.set(key, pickled_entry)
+            raise CacheError(f"Failed to pickle {value_key}") from exc
+        self.storage.set(value_key, pickled_entry)
 
     def write_background_refresh_result(
         self,
