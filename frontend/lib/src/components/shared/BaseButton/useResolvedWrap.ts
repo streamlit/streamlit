@@ -24,8 +24,8 @@ import { FlexContext } from "~lib/components/core/Layout/FlexContext"
  *
  * - `true` / `false`: use the explicit value.
  * - `null` / `undefined` (auto, the default): don't wrap inside a horizontal
- *   container — so the control keeps its single-row height and stays aligned
- *   with its neighbors — and wrap in any other layout.
+ *   container — so the control stays on one row and stays aligned with its
+ *   neighbors — and wrap in any other layout.
  *
  * @param wrap The `wrap` value from the element proto (nullable).
  * @returns Whether wrapping is allowed.
