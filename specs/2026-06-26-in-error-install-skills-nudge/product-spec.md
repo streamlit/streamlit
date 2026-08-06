@@ -85,8 +85,9 @@ reading as green text sitting inside a red error box.
 
 **Error** — install failed; the box keeps the error tint and shows the server's reason
 plus a **Retry** action. The reason is server-supplied and can run to several lines (it
-names the paths that blocked the install), so the icon is bound to the copy rather than
-sitting in the wrapping flex row on its own.
+names the paths that blocked the install), so the reason wraps within the row while the
+icon and **Retry** hold their places — **Retry** stays at the right, vertically centered
+against however many lines the reason takes.
 
 ![Error state: "Couldn't install skills. .agents/skills/developing-with-streamlit, .claude/skills/developing-with-streamlit already exist. Remove them and try again." with a Retry action](./state-error.png)
 

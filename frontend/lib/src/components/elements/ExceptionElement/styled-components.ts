@@ -113,8 +113,14 @@ export const StyledExceptionWithCallout = styled.div(({ theme }) => ({
 export const StyledSkillsInstallCallout = styled(StyledAlertContainer)(
   ({ theme }) => ({
     display: "flex",
+    // Icon, copy and action stay on one row and never wrap onto flex lines of
+    // their own. A long message — the server's install-failure reason embeds the
+    // blocking target paths and runs to several lines — is absorbed by the copy
+    // shrinking and wrapping internally, so the icon stays beside it and the
+    // action stays at the end of the row. With `flex-wrap: wrap` the copy's
+    // max-content width would instead push it to the next flex line, stranding
+    // the icon above it and the action below.
     alignItems: "center",
-    flexWrap: "wrap",
     gap: theme.spacing.sm,
   })
 )
@@ -122,54 +128,46 @@ export const StyledSkillsInstallCallout = styled(StyledAlertContainer)(
 /**
  * Wraps the callout's decorative sparkle/status icon so it is hidden from the
  * `role="status"` / `aria-live` region — otherwise the Material ligature (e.g.
- * "auto_awesome") would be announced as text before the message. `display:
- * contents` keeps the icon a direct flex child of the group below, so this adds
- * no layout box.
+ * "auto_awesome") would be announced as text before the message.
+ *
+ * A real flex item rather than `display: contents`, so `flex-shrink: 0` applies
+ * to it: the copy beside it is the only thing that should give way when the
+ * message is long.
  */
 export const StyledSkillsInstallCalloutIcon = styled.span({
-  display: "contents",
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
 })
 
 /**
- * Binds the icon to the copy so a wrapping message can't strand the icon on a
- * line of its own.
- *
- * The callout is a wrapping flex row of icon / copy / action. Flex breaks lines
- * on whole items using each item's max-content width, so a long message — the
- * server's install-failure reason embeds target paths and runs to several lines
- * — doesn't fit beside the icon and gets pushed to the next flex line, leaving
- * the icon alone above it. Grouping the two makes them one unbreakable item that
- * shrinks and wraps internally instead.
- */
-export const StyledSkillsInstallCalloutMessage = styled.div(({ theme }) => ({
-  display: "flex",
-  // Matches the outer container, so single-line content (idle / success, and the
-  // group's own inner alignment) renders exactly as it did before the grouping.
-  alignItems: "center",
-  gap: theme.spacing.sm,
-  flex: "0 1 auto",
-}))
-
-/**
- * The callout's copy. Deliberately doesn't grow: the action sits directly after
- * the text (per the design), not pushed to the far edge like the error box's
- * right-aligned Copy / Ask links. Colour comes from the box's kind, so the
- * success confirmation needs no override here.
+ * The callout's copy, and the only item that flexes. It doesn't grow, so a short
+ * message (idle / success) leaves the action sitting directly after the text
+ * rather than pushed to the far edge like the error box's right-aligned Copy /
+ * Ask links. It does shrink, which is what lets a long message wrap to several
+ * lines inside the row instead of reflowing the row. Colour comes from the box's
+ * kind, so the success confirmation needs no override here.
  */
 export const StyledSkillsInstallCalloutText = styled.div({
   flex: "0 1 auto",
+  // Shrink past min-content if it must, breaking a long unbroken path rather
+  // than overflowing the box on a narrow viewport.
+  minWidth: 0,
+  overflowWrap: "break-word",
 })
 
 /**
  * The callout's action. Built on the same link-button as the error box's own
  * `Copy` so the two stay visually identical by construction — the CTA reads as a
  * peer of those links rather than a filled button. Adds only what's specific to
- * this callout: the label never wraps mid-phrase, and the disabled
- * ("Installing…") state stops looking clickable.
+ * this callout: it holds its width at the end of the row while the copy beside it
+ * wraps, its label never breaks mid-phrase, and the disabled ("Installing…")
+ * state stops looking clickable.
  */
 export const StyledSkillsInstallCalloutButton = styled(
   StyledExceptionLinkButton
 )({
+  flexShrink: 0,
   whiteSpace: "nowrap",
   "&:disabled": {
     cursor: "default",

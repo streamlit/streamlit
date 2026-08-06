@@ -30,7 +30,6 @@ import {
   StyledSkillsInstallCallout,
   StyledSkillsInstallCalloutButton,
   StyledSkillsInstallCalloutIcon,
-  StyledSkillsInstallCalloutMessage,
   StyledSkillsInstallCalloutText,
 } from "./styled-components"
 
@@ -164,14 +163,12 @@ function SkillsInstallCallout({
       role="status"
       aria-live="polite"
     >
-      <StyledSkillsInstallCalloutMessage>
-        <StyledSkillsInstallCalloutIcon aria-hidden="true">
-          <DynamicIcon iconValue={iconValue} size="base" />
-        </StyledSkillsInstallCalloutIcon>
-        <StyledSkillsInstallCalloutText>
-          {message}
-        </StyledSkillsInstallCalloutText>
-      </StyledSkillsInstallCalloutMessage>
+      <StyledSkillsInstallCalloutIcon aria-hidden="true">
+        <DynamicIcon iconValue={iconValue} size="base" />
+      </StyledSkillsInstallCalloutIcon>
+      <StyledSkillsInstallCalloutText>
+        {message}
+      </StyledSkillsInstallCalloutText>
       {!isSuccess && (
         <StyledSkillsInstallCalloutButton
           onClick={handleInstall}

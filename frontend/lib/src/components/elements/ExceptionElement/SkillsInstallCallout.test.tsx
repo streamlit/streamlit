@@ -171,7 +171,7 @@ describe("SkillsInstallCallout", () => {
     expect(screen.queryByText(/Skills installed/)).not.toBeInTheDocument()
   })
 
-  it("keeps the status icon grouped with the message, hidden from the live region", async () => {
+  it("lays a long failure reason out as one row, action last, icon hidden from the live region", async () => {
     const user = userEvent.setup()
     let rejectInstall: (error: Error) => void = () => {}
     const onInstall = vi.fn(
@@ -182,10 +182,9 @@ describe("SkillsInstallCallout", () => {
     )
     render(<SkillsInstallCallout {...getProps({ onInstall })} />)
 
-    // A long, server-supplied failure reason is the case that matters: the
-    // callout is a wrapping flex row, so if the icon were a sibling of the copy
-    // the copy would be pushed to the next flex line and strand the icon on a
-    // line of its own. They must share one parent to wrap together.
+    // A long, server-supplied failure reason is the case that matters. The row
+    // must not wrap: the copy absorbs the length by wrapping inside itself, so
+    // the icon stays beside it and the action stays at the end of the row.
     await user.click(screen.getByRole("button", { name: "Install skills" }))
     await act(async () => {
       rejectInstall(
@@ -198,17 +197,20 @@ describe("SkillsInstallCallout", () => {
       await Promise.resolve()
     })
 
-    const message = screen.getByText(/already exist/)
+    const row = screen.getByTestId("stSkillsInstallCallout")
     const icon = screen.getByTestId("stIconMaterial")
-    const group = message.parentElement
-    expect(group).toContainElement(icon)
-    // Specifically a group *inside* the flex row, not the row itself — sharing
-    // the row is what let them wrap onto separate lines.
-    expect(group).not.toBe(screen.getByTestId("stSkillsInstallCallout"))
-    // ...and the action stays outside that group, so it can wrap independently.
-    expect(group).not.toContainElement(
-      screen.getByRole("button", { name: "Retry" })
-    )
+    const retry = screen.getByRole("button", { name: "Retry" })
+
+    // Icon, copy and action are all direct children of the one row, in that
+    // order — the action last, so it lands at the row's end.
+    expect(screen.getByText(/already exist/).parentElement).toBe(row)
+    expect(row.lastElementChild).toBe(retry)
+    expect(icon.closest("[aria-hidden='true']")?.parentElement).toBe(row)
+
+    // Only the copy may flex; the icon and action hold their width while it
+    // wraps. Without this the long reason squashes them instead.
+    expect(getComputedStyle(row).flexWrap).not.toBe("wrap")
+    expect(getComputedStyle(retry).flexShrink).toBe("0")
 
     // The Material ligature ("error") is text in the DOM, so it must be hidden
     // from the role="status" live region or it gets announced before the message.
