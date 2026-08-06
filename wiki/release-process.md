@@ -124,7 +124,7 @@ serving them locally.
 
 Follow the Snowflake-internal
 [Static Assets Workflow for SiS instructions](https://docs.google.com/document/d/1iyvW4mWsUvt3G9W9CbuhvrOkNAoKsRi7yfBoZzQI6dw/edit?tab=t.0#heading=h.hgtyabu854x3)
-(skip if you do not have access; the high-level steps are below):
+before continuing:
 
 1. Run the workflow in preprod.
 2. Verify that the static assets load and render correctly.
