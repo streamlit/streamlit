@@ -30,6 +30,8 @@ from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
 from streamlit.runtime.dataframe_source_manager import (
     DataframeSourceError,
     DataframeSourceManager,
+    _get_fragment_id,
+    _get_session_id,
 )
 
 
@@ -285,3 +287,50 @@ def test_clear_all_for_session() -> None:
     _register(mgr, session_id="s1")
     mgr.clear_all_for_session("s1")
     assert mgr.get_source_count() == 0
+
+
+def test_get_session_id_without_context_returns_dontcare() -> None:
+    """_get_session_id returns "dontcare" when there is no script run context."""
+    with patch(
+        "streamlit.runtime.scriptrunner_utils.script_run_context.get_script_run_ctx",
+        return_value=None,
+    ):
+        assert _get_session_id() == "dontcare"
+
+
+def test_get_fragment_id_without_thread_state_returns_none() -> None:
+    """_get_fragment_id returns None when ThreadState.get raises RuntimeError."""
+    with patch(
+        "streamlit.runtime.scriptrunner_utils.script_run_context.ThreadState.get",
+        side_effect=RuntimeError("FragmentThreadState not initialized"),
+    ):
+        assert _get_fragment_id() is None
+
+
+def test_clear_session_refs_fragment_ids_unknown_session_is_noop() -> None:
+    """Passing fragment_ids for a session with no refs leaves other sources intact."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, session_id="s1", coordinates="frag-a", fragment_id="a")
+
+    # "unknown" was never registered, so it has no coordinate map and the call
+    # returns early without touching the registered "s1" source.
+    mgr.clear_session_refs("unknown", fragment_ids=["a"])
+
+    assert mgr.get_source_count() == 1
+    mgr.load_chunk(reg.session_id, reg.source_id, 0, 5, None)
+
+
+def test_clear_session_refs_fragment_removes_emptied_session_entry() -> None:
+    """Clearing a session's only fragment ref drops the session's coordinate map."""
+    mgr = DataframeSourceManager()
+    reg = _register(mgr, session_id="s1", coordinates="frag-a", fragment_id="a")
+
+    mgr.clear_session_refs("s1", fragment_ids=["a"])
+
+    # The session's single coordinate was fragment-owned, so after removing it
+    # the now-empty coordinate map is popped entirely.
+    assert "s1" not in mgr._sources_by_session_and_coord
+
+    mgr.remove_orphaned_sources()
+    with pytest.raises(DataframeSourceError):
+        mgr.load_chunk(reg.session_id, reg.source_id, 0, 5, None)

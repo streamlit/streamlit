@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  createEvent,
-  fireEvent,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { act, createEvent, screen, waitFor } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -195,7 +190,9 @@ describe("FileDropzone widget", () => {
         items: [{ kind: "file", type: "text/plain" }],
       },
     })
-    fireEvent(dropzone, dragEvent)
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
 
     await waitFor(() => {
       expect(screen.getByText("Drag and drop files here")).toBeInTheDocument()
@@ -215,7 +212,9 @@ describe("FileDropzone widget", () => {
         items: [{ kind: "file", type: "text/plain" }],
       },
     })
-    fireEvent(dropzone, dragEvent)
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
 
     await waitFor(() => {
       expect(screen.getByText("Drag and drop a file here")).toBeInTheDocument()
@@ -235,7 +234,9 @@ describe("FileDropzone widget", () => {
         items: [{ kind: "file", type: "text/plain" }],
       },
     })
-    fireEvent(dropzone, dragEvent)
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
 
     await waitFor(() => {
       expect(

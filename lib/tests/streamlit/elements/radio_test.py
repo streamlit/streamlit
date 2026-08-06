@@ -24,6 +24,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.widgets.radio import RadioSerde
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -782,3 +783,55 @@ class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.query_param_key == "my_key"
         assert not c.HasField("default")
+
+
+def _radio_format_func_raises(_: Any) -> str:
+    """format_func stub that always raises to exercise the fallback path."""
+    raise ValueError("format_func failed")
+
+
+def test_radio_serde_serialize_returns_none_without_options() -> None:
+    """serialize returns None when the serde has no options.
+
+    Covers both the ``v is None`` short-circuit and the empty-options guard.
+    """
+    serde: RadioSerde[Any] = RadioSerde(
+        [],
+        formatted_options=[],
+        formatted_option_to_option_index={},
+    )
+    assert serde.serialize("anything") is None
+    assert serde.serialize(None) is None
+
+
+def test_radio_serde_serialize_falls_back_to_str_when_format_func_raises() -> None:
+    """serialize returns ``str(v)`` when ``format_func`` raises an exception."""
+    serde: RadioSerde[str] = RadioSerde(
+        ["a", "b"],
+        formatted_options=["a", "b"],
+        formatted_option_to_option_index={"a": 0, "b": 1},
+        format_func=_radio_format_func_raises,
+    )
+    assert serde.serialize(123) == "123"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # Value maps to an existing option.
+        ("a", "A"),
+        # Value is not among the options; the formatted string is still returned.
+        ("z", "Z"),
+    ],
+)
+def test_radio_serde_serialize_returns_formatted_value(
+    value: str, expected: str
+) -> None:
+    """serialize returns the formatted value for both known and unknown inputs."""
+    serde: RadioSerde[str] = RadioSerde(
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=str.upper,
+    )
+    assert serde.serialize(value) == expected

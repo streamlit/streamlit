@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import asyncio
 import errno
+import os
 import socket
 import sys
 from typing import TYPE_CHECKING, Any, Final
@@ -243,7 +244,8 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
 
     1. Detect port conflicts before creating the uvicorn.Server instance
     2. Enable port retry logic when the configured port is already in use
-    3. Have explicit control over socket options (SO_REUSEADDR, IPV6_V6ONLY)
+    3. Have explicit control over socket options (IPV6_V6ONLY, and SO_REUSEADDR
+       everywhere except Windows)
 
     Parameters
     ----------
@@ -268,7 +270,14 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
 
     sock = socket.socket(family=family)
     try:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Skip SO_REUSEADDR on Windows: there it lets a socket bind a port that
+        # another live socket is already listening on, so bind() never reports a
+        # conflict and the caller's free-port search keeps handing back the same
+        # port (see #16296). Windows' default bind already rejects the conflict.
+        # Tornado's bind_sockets skipped it too, so this restores the behavior
+        # Streamlit had before the Starlette migration.
+        if os.name != "nt":
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         if family == socket.AF_INET6:
             # Allow both IPv4 and IPv6 clients when binding to "::".

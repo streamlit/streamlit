@@ -14,6 +14,7 @@
 
 """Arrow DataFrame tests."""
 
+import copy
 import enum
 import json
 from typing import Any
@@ -1334,6 +1335,19 @@ def test_dataframe_selection_serde_deserialize_returns_attribute_dictionary() ->
     # The dict is read-only; mutating the top-level mapping must raise.
     with pytest.raises(TypeError):
         result["selection"] = {"rows": [99], "columns": [], "cells": []}  # type: ignore[index]
+
+
+def test_dataframe_selection_serde_deserialize_survives_deepcopy() -> None:
+    """A deep-copied state keeps its typed classes.
+
+    Session State deep-copies the initial widget value, so a copy that collapsed
+    to the base ``ReadOnlyAttributeDictionary`` would make ``st.session_state[key]``
+    fail ``isinstance(..., DataframeState)`` checks (regression).
+    """
+    copied = copy.deepcopy(DataframeSelectionSerde().deserialize(None))
+
+    assert isinstance(copied, DataframeState)
+    assert isinstance(copied.selection, DataframeSelectionState)
 
 
 def test_dataframe_selection_serde_returns_empty_when_no_default() -> None:

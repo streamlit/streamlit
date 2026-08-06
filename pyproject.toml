@@ -90,7 +90,7 @@ dev = [
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.63",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.16.0",
+  "ruff==0.16.1",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy==2.3.0",
@@ -475,8 +475,13 @@ ignore_missing_imports = true
 # ty Configuration
 # =============================================================================
 
+# Point the module-resolution root at ./lib (the real parent of the `streamlit`
+# package) rather than ./lib/streamlit. This ensures files resolve under their
+# true dotted paths (e.g. `streamlit.typing`), which is required so that
+# `lib/streamlit/typing.py` does NOT shadow the standard-library `typing` module
+# (a first-party top-level `typing` corrupts stdlib type resolution and panics ty).
 [tool.ty.environment]
-root = ["./lib/streamlit"]
+root = ["./lib"]
 
 [tool.ty.src]
 include = ["lib/streamlit", "e2e_playwright", "scripts"]

@@ -1066,7 +1066,9 @@ class ArrowMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,

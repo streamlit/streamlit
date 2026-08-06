@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.60.0"
+version = "1.61.1"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -87,7 +87,10 @@ dependencies = [
   # ASGI web-framework. 0.46.0 is the first version exposing
   # `DEFAULT_EXCLUDED_CONTENT_TYPES` from `starlette.middleware.gzip`, which our
   # gzip middleware imports.
-  "starlette>=0.46.0,<2",
+  # Starlette 1.4.0 changed GZipResponder's constructor (added required
+  # thread_minimum_size), which breaks our custom gzip middleware.
+  # See: https://github.com/streamlit/streamlit/issues/16341
+  "starlette>=0.46.0,<1.4.0",
   # ASGI server:
   "uvicorn>=0.30.0,<1",
   # Faster http parsing for Starlette server:

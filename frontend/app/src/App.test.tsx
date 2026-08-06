@@ -16,13 +16,7 @@
 
 import { act } from "react"
 
-import {
-  fireEvent,
-  render,
-  RenderResult,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { render, RenderResult, screen, waitFor } from "@testing-library/react"
 import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event"
@@ -463,17 +457,8 @@ function sendForwardMessage(
 }
 
 async function openCacheModal(): Promise<void> {
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyDown(document.body, {
-    key: "c",
-    which: 67,
-  })
-
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyUp(document.body, {
-    key: "c",
-    which: 67,
-  })
+  const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
+  await user.keyboard("c")
 
   expect(
     screen.getByText(
@@ -484,6 +469,16 @@ async function openCacheModal(): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(0)
   })
+}
+
+/**
+ * Advances fake timers when active so userEvent delays don't hang under
+ * vi.useFakeTimers(). Passed as userEvent.setup({ advanceTimers }).
+ */
+function advanceUserEventTimers(delay: number): void {
+  if (vi.isFakeTimers()) {
+    vi.advanceTimersByTime(delay)
+  }
 }
 
 describe("App", () => {
@@ -725,7 +720,8 @@ describe("App", () => {
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
 
-  it("reruns when the user presses 'r'", () => {
+  it("reruns when the user presses 'r'", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
 
     getMockConnectionManager(true)
@@ -734,11 +730,7 @@ describe("App", () => {
       getStoredValue<WidgetStateManager>(WidgetStateManager)
     expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82,
-    })
+    await user.keyboard("r")
 
     expect(widgetStateManager.sendUpdateWidgetsMessage).toHaveBeenCalled()
   })
@@ -4182,16 +4174,13 @@ describe("App", () => {
   })
 
   describe("Test Main Menu shortcut functionality", () => {
-    it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
+    it("Tests dev menu shortcuts cannot be accessed as a viewer", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
 
       getMockConnectionManager(true)
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyPress(screen.getByTestId("stApp"), {
-        key: "c",
-        which: 67,
-      })
+      await user.keyboard("c")
 
       expect(
         screen.queryByText(
@@ -4447,7 +4436,8 @@ describe("App", () => {
       expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
     })
 
-    it("requests script rerun if wasRerunRequested is true", () => {
+    it("requests script rerun if wasRerunRequested is true", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
@@ -4462,11 +4452,7 @@ describe("App", () => {
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyDown(document.body, {
-        key: "r",
-        which: 82,
-      })
+      await user.keyboard("r")
 
       act(() => {
         getMockConnectionManagerProp("connectionStateChanged")(
@@ -5586,7 +5572,11 @@ describe("App", () => {
       )
     })
 
-    it("retains embed query params even if the page hash is different", () => {
+    it("retains embed query params even if the page hash is different", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
       const embedParams =
         "embed=true&embed_options=disable_scrolling&embed_options=show_padding"
       window.history.pushState({}, "", `/?${embedParams}`)
@@ -5632,8 +5622,7 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- navLinks have pointer-events:none which userEvent.click respects but the real browser click works
-      fireEvent.click(navLinks[1])
+      await user.click(navLinks[1])
 
       expect(
         // @ts-expect-error
@@ -5896,6 +5885,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
   })
 
   it("ensures incrementMessageCacheRunCount is NOT called when hasReceivedNewSession is false", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
     const connectionManager = getMockConnectionManager(true) // isConnected = true
     const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
@@ -5929,11 +5919,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       scriptIsRunning: false,
     })
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82, // Key code for 'r'
-    })
+    await user.keyboard("r")
 
     // Wait for state updates from rerunScript to propagate if any were async.
     // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
@@ -6118,7 +6104,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         ).toBeVisible()
       })
 
-      it("does not display error dialog if already dismissed", () => {
+      it("does not display error dialog if already dismissed", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6131,10 +6118,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6196,7 +6180,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     })
 
     describe("connection state transitions with error dismissal", () => {
-      it("resets dismissal state when reconnected", () => {
+      it("resets dismissal state when reconnected", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6209,10 +6194,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6359,7 +6341,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         expect(screen.queryByText(/Error 2/)).toBeNull()
       })
 
-      it("maintains dismissal state across multiple disconnections", () => {
+      it("maintains dismissal state across multiple disconnections", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6370,10 +6353,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 

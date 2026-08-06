@@ -443,7 +443,7 @@ def _convert_color_arg_or_column(
 
     if color_col_name is not None:
         # Convert color column to the right format.
-        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):  # type: ignore[arg-type]
+        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):
             # Convert to object dtype first to support tuple values (pandas 3.x infers
             # string columns as StringDtype which can't hold tuples).
             data[color_col_name] = data[color_col_name].astype(object)

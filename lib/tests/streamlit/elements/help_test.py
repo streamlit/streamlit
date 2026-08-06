@@ -17,8 +17,10 @@
 from __future__ import annotations
 
 import inspect
+import re
 import sys
 import unittest
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -26,10 +28,15 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.help import (
+    _get_caller_frame,
+    _get_current_line_of_code_as_str,
     _get_first_line,
     _get_signature,
+    _get_value,
+    _get_variable_name,
     _get_variable_name_from_code_str,
     _is_computed_property,
+    _is_streamlit_internal_frame,
 )
 from streamlit.errors import StreamlitInvalidWidthError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -680,3 +687,68 @@ def test_get_signature_handles_pep649_annotations() -> None:
     # Our _get_signature should handle this gracefully by returning "(...)
     signature = _get_signature(func)
     assert signature == "(...)"
+
+
+def test_get_variable_name_returns_none_without_code_line() -> None:
+    """``_get_variable_name`` returns ``None`` when the source line is unavailable."""
+    with patch(
+        "streamlit.elements.help._get_current_line_of_code_as_str",
+        return_value=None,
+    ):
+        assert _get_variable_name() is None
+
+
+def test_get_current_line_of_code_returns_none_without_caller_frame() -> None:
+    """``_get_current_line_of_code_as_str`` returns ``None`` when no caller frame is found."""
+    with patch("streamlit.elements.help._get_caller_frame", return_value=None):
+        assert _get_current_line_of_code_as_str() is None
+
+
+def test_get_current_line_of_code_returns_none_for_empty_code_context() -> None:
+    """``_get_current_line_of_code_as_str`` returns ``None`` for a frame with empty code context.
+
+    Some frames (e.g. inside ``exec()``) expose an empty ``code_context``, so no
+    source line can be recovered.
+    """
+    frame = MagicMock(code_context=[])
+    with patch("streamlit.elements.help._get_caller_frame", return_value=frame):
+        assert _get_current_line_of_code_as_str() is None
+
+
+def test_get_caller_frame_returns_none_when_frame_has_no_code_context() -> None:
+    """``_get_caller_frame`` returns ``None`` when a stack frame has ``code_context is None``."""
+    frame = MagicMock(code_context=None)
+    with patch("streamlit.elements.help.inspect.stack", return_value=[frame]):
+        assert _get_caller_frame() is None
+
+
+def test_get_caller_frame_returns_none_when_all_frames_internal() -> None:
+    """``_get_caller_frame`` returns ``None`` when every frame is streamlit-internal."""
+    frame = MagicMock(code_context=["x"])
+    with (
+        patch("streamlit.elements.help.inspect.stack", return_value=[frame]),
+        patch(
+            "streamlit.elements.help._is_streamlit_internal_frame",
+            return_value=True,
+        ),
+    ):
+        assert _get_caller_frame() is None
+
+
+def test_is_streamlit_internal_frame_returns_false_on_realpath_error() -> None:
+    """``_is_streamlit_internal_frame`` returns ``False`` when the path cannot be resolved."""
+    frame = MagicMock(filename="some_file.py")
+    with patch(
+        "streamlit.elements.help.os.path.realpath",
+        side_effect=OSError("bad path"),
+    ):
+        assert _is_streamlit_internal_frame(frame) is False
+
+
+def test_get_value_returns_none_when_value_matches_var_name() -> None:
+    """``_get_value`` returns ``None`` when the computed value merely repeats the name.
+
+    For example, ``st.help(re)`` would only repeat the variable name in the value
+    slot, so the redundant value is dropped.
+    """
+    assert _get_value(re, "re") is None

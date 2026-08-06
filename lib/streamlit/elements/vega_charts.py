@@ -59,7 +59,7 @@ from streamlit.proto.VegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary, calc_hash
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -84,13 +84,13 @@ AltairChart: TypeAlias = Union[
 _altair_globals_lock = threading.Lock()
 
 
-class VegaLiteState(AttributeDictionary):
+class VegaLiteState(ReadOnlyAttributeDictionary):
     """
     The schema for the Vega-Lite event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -187,33 +187,29 @@ class VegaLiteState(AttributeDictionary):
 
     """
 
-    # Keep selection typed as AttributeDictionary; without this property,
-    # __getattr__ re-wraps the value in a plain AttributeDictionary, losing
-    # the eagerly constructed instance.
-    @property
-    def selection(self) -> AttributeDictionary:
-        try:
-            return self["selection"]
-        except KeyError as err:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute 'selection'"
-            ) from err
+    # The selection payload is keyed by the user's Vega-Lite parameter names, so
+    # it has no fixed schema and is exposed as a plain (read-only) dictionary.
+    selection: ReadOnlyAttributeDictionary
 
-    @selection.setter
-    def selection(self, value: AttributeDictionary) -> None:
-        self["selection"] = value
-
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-wrapped nested instance.
     @overload
-    def __getitem__(self, key: Literal["selection"]) -> AttributeDictionary: ...
+    def __getitem__(self, key: Literal["selection"]) -> ReadOnlyAttributeDictionary: ...
 
     @overload
     def __getitem__(self, key: Any) -> Any: ...
 
     def __getitem__(self, key: Any) -> Any:
-        item = super().__getitem__(key)
-        if key == "selection" and not isinstance(item, AttributeDictionary):
-            return AttributeDictionary(item)
-        return item
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, ReadOnlyAttributeDictionary):
+                item = ReadOnlyAttributeDictionary(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -225,7 +221,7 @@ class VegaLiteStateSerde:
     def deserialize(self, ui_value: str | None) -> VegaLiteState:
         empty_selection_state = VegaLiteState(
             {
-                "selection": AttributeDictionary(
+                "selection": ReadOnlyAttributeDictionary(
                     # Initialize the select state with empty dictionaries for each selection parameter.
                     {param: {} for param in self.selection_parameters}
                 ),
@@ -241,7 +237,7 @@ class VegaLiteStateSerde:
 
         # Eagerly wrap selection so bracket access returns a stable typed
         # instance instead of creating a shallow copy on every access.
-        parsed["selection"] = AttributeDictionary(parsed["selection"])
+        parsed["selection"] = ReadOnlyAttributeDictionary(parsed["selection"])
         return VegaLiteState(parsed)
 
     def serialize(self, selection_state: VegaLiteState) -> str:
@@ -464,8 +460,20 @@ def _convert_altair_to_vega_lite_spec(
             with data_transformer:  # ty: ignore[invalid-context-manager]
                 chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict:
-    chart_dict["datasets"] = datasets
+    # Merge the Arrow-serialized datasets we collected with any datasets the chart
+    # already carries, letting the Arrow-serialized datasets win on key collisions.
+    #
+    # Replacing outright would discard data — charts built with alt.Chart.from_json
+    # carry their data as inline datasets keyed by name, with the spec referencing
+    # them via {"data": {"name": ...}}. Our transformer never sees a dataframe for
+    # those, so `datasets` is empty and the chart would render with axes but no
+    # data. See https://github.com/streamlit/streamlit/issues/6269.
+    existing_datasets = chart_dict.get("datasets")
+    chart_dict["datasets"] = (
+        {**existing_datasets, **datasets}
+        if isinstance(existing_datasets, dict)
+        else datasets
+    )
     return chart_dict
 
 
@@ -2308,7 +2316,9 @@ class VegaChartsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -2317,7 +2327,7 @@ class VegaChartsMixin:
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)
         if isinstance(data, dict) and spec is None:
-            spec = data
+            spec = cast("VegaLiteSpec", data)
             data = None
 
         if spec is None:

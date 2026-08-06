@@ -248,6 +248,9 @@ export const StyledStreamlitMarkdown =
           whiteSpace: "nowrap",
           textOverflow: "ellipsis",
           lineHeight: inheritFont ? "inherit" : "normal",
+          // Allow the label to shrink below its content size within a flex
+          // parent so the ellipsis can appear.
+          minWidth: 0,
 
           "& p": {
             overflow: "hidden",

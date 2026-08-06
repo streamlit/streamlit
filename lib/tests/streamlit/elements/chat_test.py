@@ -220,6 +220,15 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.value == "Foo"
         assert c.set_value is True
 
+    def test_rejects_non_str_programmatic_value_assignment(self):
+        """Non-str session-state values must not trigger set_value."""
+        st.session_state.my_key = ChatInputValue(text="Foo", files=[])
+        st.chat_input(key="my_key")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.set_value is False
+        assert c.value == ""
+
     def test_chat_input_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.chat_input("the label"))()
@@ -957,6 +966,20 @@ class ChatInputSerdeTest(DeltaGeneratorTestCase):
 
         assert isinstance(result, ChatInputValueProto)
         assert result.data == "test message"
+
+    def test_serialize_chat_input_value_uses_text(self):
+        """Test serialize extracts .text from a ChatInputValue."""
+        serde = ChatInputSerde(accept_files=True, accept_audio=False)
+        value = ChatInputValue(
+            text="structured message",
+            files=[],
+            _include_files=True,
+            _include_audio=False,
+        )
+        result = serde.serialize(value)
+
+        assert isinstance(result, ChatInputValueProto)
+        assert result.data == "structured message"
 
     def test_serialize_with_none(self):
         """Test serialize handles None value - field is not set."""
