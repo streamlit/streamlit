@@ -166,6 +166,16 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
+  // Proto default when unset is false (CSS nowrap). Columns always set wrap
+  // explicitly (True unless wrap=False).
+  const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
+  // Horizontal nowrap rows (e.g. st.columns(wrap=False)) scroll locally
+  // instead of overflowing the page.
+  const overflow =
+    direction === Direction.HORIZONTAL && !wrap
+      ? "auto"
+      : layout_styles.overflow
+
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
@@ -174,10 +184,8 @@ export const FlexBoxContainer = (
         gapSize: streamlit.GapSize.SMALL,
       },
     direction: direction,
-    // This is also backwards compatible since previously wrap was not added
-    // to the flex container.
-    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
-    overflow: layout_styles.overflow,
+    $wrap: wrap,
+    overflow,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // We need the height on the container for scrolling.
     height: layout_styles.height,
@@ -203,6 +211,7 @@ export const FlexBoxContainer = (
   return (
     <FlexContextProvider
       direction={direction}
+      wrap={wrap}
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
@@ -215,6 +224,7 @@ export const FlexBoxContainer = (
           convertKeyToClassName(userKey)
         )}
         data-testid={getClassnamePrefix(direction)}
+        data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
@@ -239,6 +249,7 @@ export const BlockNodeRenderer = (
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
+  const flexContext = useContext(FlexContext)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
@@ -400,6 +411,8 @@ export const BlockNodeRenderer = (
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
         showBorder={node.deltaBlock.column.showBorder ?? false}
+        // Inherit parent row wrap; default true when FlexContext is absent.
+        $wrap={flexContext?.wrap ?? true}
         className="stColumn"
         data-testid="stColumn"
       >

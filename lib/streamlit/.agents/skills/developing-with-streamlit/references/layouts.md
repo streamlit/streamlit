@@ -1,26 +1,25 @@
-
 # Streamlit layout
 
 How you structure your app affects usability more than you think.
 
 ## Layout container overview
 
-| Container | Use when |
-|-----------|----------|
-| `st.container` | You need a general-purpose group of elements, a bordered section, a horizontal row, custom alignment, fixed height, scrolling, or out-of-order insertion of multiple elements. |
-| `st.columns` | You need a simple proportional grid, such as two-column comparisons or up to four KPI cards. |
-| `st.sidebar` | You need app-level navigation, global filters, settings, or small app metadata that should stay separate from the main content. |
-| `st.tabs` | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) and check each tab's `.open` property. |
-| `st.expander` | You need optional details, advanced settings, explanations, or diagnostic output that should not dominate the main view. |
-| `st.status` | You need to show progress, logs, or multi-step work in a collapsible status block that can update from running to complete or error. |
-| `st.popover` | You need compact on-demand controls, filters, or secondary actions without changing page layout. |
-| `@st.dialog` | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page. |
-| `st.form` | You need to batch multiple widget inputs and rerun only when the user submits. |
-| `st.empty` | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order. |
-| `st.skeleton` | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager like `st.spinner` (auto-clears when the block exits). |
-| `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns. |
-| `st.bottom` | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls. |
-| `st.space` | You need explicit vertical or horizontal spacing inside the current layout direction. |
+| Container         | Use when                                                                                                                                                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `st.container`    | You need a general-purpose group of elements, a bordered section, a horizontal row, custom alignment, fixed height, scrolling, or out-of-order insertion of multiple elements.                                                                                                              |
+| `st.columns`      | You need a simple proportional grid, such as two-column comparisons or up to four KPI cards.                                                                                                                                                                                                |
+| `st.sidebar`      | You need app-level navigation, global filters, settings, or small app metadata that should stay separate from the main content.                                                                                                                                                             |
+| `st.tabs`         | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) and check each tab's `.open` property. |
+| `st.expander`     | You need optional details, advanced settings, explanations, or diagnostic output that should not dominate the main view.                                                                                                                                                                    |
+| `st.status`       | You need to show progress, logs, or multi-step work in a collapsible status block that can update from running to complete or error.                                                                                                                                                        |
+| `st.popover`      | You need compact on-demand controls, filters, or secondary actions without changing page layout.                                                                                                                                                                                            |
+| `@st.dialog`      | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page.                                                                                                                                                            |
+| `st.form`         | You need to batch multiple widget inputs and rerun only when the user submits.                                                                                                                                                                                                              |
+| `st.empty`        | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order.                                                                                                                                                                           |
+| `st.skeleton`     | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager like `st.spinner` (auto-clears when the block exits).                                                           |
+| `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns.                                                                                                                                                                          |
+| `st.bottom`       | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls.                                                                                                                                                                       |
+| `st.space`        | You need explicit vertical or horizontal spacing inside the current layout direction.                                                                                                                                                                                                       |
 
 ## Sidebar: navigation + global filters only
 
@@ -43,15 +42,21 @@ with st.sidebar:
 ```
 
 **What goes in sidebar:**
+
 - Global filters (date range, user selection, region)
 - App info (version, feedback link)
 
 **What stays out:**
+
 - Main content, charts, tables, results
 
 ## Columns: max 4, set alignment
 
-Don't use too many columns—they get cramped.
+Don't use too many columns for content layouts—they get cramped. By default
+(`wrap=None` or `wrap=True`), columns stack vertically when the viewport is at
+most `640px` wide. Pass `wrap=False` to keep columns in one row: they shrink to a
+usable minimum width, then the column group scrolls horizontally instead of
+stacking.
 
 ```python
 # GOOD
@@ -60,7 +65,10 @@ col1, col2 = st.columns(2)
 # OK with alignment
 cols = st.columns(4, vertical_alignment="center")
 
-# BAD: Too many, cramped
+# OK: Compact grid that must stay in one row (e.g. thumbnails)
+thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
+
+# BAD: Too many content columns (cramped on desktop, awkward when stacked)
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 ```
 
@@ -175,6 +183,7 @@ if st.button("Delete item"):
 ```
 
 **When to use dialogs:**
+
 - Confirmation prompts
 - Settings panels
 - Forms that don't need to be always visible

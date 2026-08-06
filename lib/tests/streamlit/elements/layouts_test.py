@@ -352,6 +352,39 @@ class ColumnsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.columns(3, width=invalid_width)
 
+    @parameterized.expand(
+        [
+            (None, True),
+            (True, True),
+            (False, False),
+        ]
+    )
+    def test_columns_wrap(self, wrap: bool | None, expected_wrap: bool):
+        """Test that wrap maps correctly onto flex_container.wrap."""
+        st.columns(3, wrap=wrap)
+
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.flex_container.wrap is expected_wrap
+
+    def test_columns_wrap_default_omitted(self):
+        """Omitting wrap keeps today's responsive stacking (proto wrap=True)."""
+        st.columns(3)
+
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.flex_container.wrap is True
+
+    @parameterized.expand(
+        [
+            ("no",),
+            (1,),
+            ("true",),
+        ]
+    )
+    def test_columns_with_invalid_wrap(self, invalid_wrap):
+        """Test that invalid wrap values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.columns(3, wrap=invalid_wrap)
+
 
 class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):

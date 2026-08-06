@@ -38,7 +38,10 @@ function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   )
 }
 
-function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
+function makeHorizontalBlockWithColumns(
+  numColumns: number,
+  wrap = true
+): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
@@ -51,6 +54,7 @@ function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
           gapSize: streamlit.GapSize.SMALL,
         },
         direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap,
       },
     })
   )
@@ -281,6 +285,43 @@ describe("FlexBoxContainer layout props", () => {
     })
     renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+
+  it("should apply horizontal overflow when wrap is false", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(4, false),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: nowrap;")
+    expect(horizontalBlock).toHaveStyle("overflow: auto;")
+    expect(horizontalBlock).toHaveAttribute("data-test-wrap", "false")
+  })
+
+  it("should not force horizontal overflow when wrap is true", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(4, true),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: wrap;")
+    expect(horizontalBlock).toHaveAttribute("data-test-wrap", "true")
+    expect(horizontalBlock).not.toHaveStyle("overflow: auto;")
+  })
+
+  it("should set min-width on columns when wrap is false", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(3, false),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const columns = screen.getAllByTestId("stColumn")
+    expect(columns).toHaveLength(3)
+    for (const column of columns) {
+      expect(column).toHaveStyle("min-width: 8rem;")
+    }
   })
 })
 

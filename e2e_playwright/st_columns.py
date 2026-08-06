@@ -169,3 +169,19 @@ with st.expander("Columns with width configuration", expanded=True):
     col4.write("column four")
     col5.write("column five")
     col6.write("column six")
+
+with st.container(key="columns_wrap_false"):
+    wrap_false_cols = st.columns(6, gap="xsmall", wrap=False, border=True)
+    for i, col in enumerate(wrap_false_cols):
+        col.write(f"Col {i + 1}")
+
+with st.container(key="columns_wrap_false_relative"):
+    relative_cols = st.columns([3, 1, 2], wrap=False, border=True)
+    relative_cols[0].write("Wide")
+    relative_cols[1].write("Narrow")
+    relative_cols[2].write("Medium")
+
+with st.container(key="columns_wrap_true"):
+    wrap_true_cols = st.columns(3, wrap=True, border=True)
+    for i, col in enumerate(wrap_true_cols):
+        col.write(f"Wrap true {i + 1}")
