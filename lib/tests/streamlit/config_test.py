@@ -41,6 +41,11 @@ SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 
 
+def _warning_text(mock_logger: MagicMock) -> str:
+    """Join every `warning` call on a mock logger into one searchable string."""
+    return " ".join(str(call) for call in mock_logger.warning.call_args_list)
+
+
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
@@ -836,12 +841,76 @@ class ConfigTest(unittest.TestCase):
             config._check_conflicts()
 
     @patch("streamlit.logger.get_logger")
-    def test_check_conflicts_server_csrf(self, get_logger):
+    def test_check_conflicts_cors_disabled_does_not_claim_an_override(self, get_logger):
+        """Disabling CORS protection must warn without claiming an override.
+
+        No code path flips server.enableCORS back to true, so the warning must
+        not say it does and _check_conflicts must not mutate the option.
+        """
         config._set_option("server.enableXsrfProtection", True, "test")
-        config._set_option("server.enableCORS", True, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", False, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        mock_logger.warning.assert_called_once()
+        assert mock_logger.warning.call_count == 1
+        warnings = _warning_text(mock_logger)
+        assert "server.enableCORS" in warnings
+        assert "overrid" not in warnings.lower()
+        assert config.get_option("server.enableCORS") is False
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_cors_disabled_warns_once_in_development_mode(
+        self, get_logger
+    ):
+        """Development mode must not add a second cross-origin warning."""
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", True, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        assert mock_logger.warning.call_count == 1
+        assert "server.enableCORS" in _warning_text(mock_logger)
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_cors_disabled_without_xsrf_is_silent(self, get_logger):
+        """Disabling both CORS and XSRF protection is a deliberate choice."""
+        config._set_option("server.enableXsrfProtection", False, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_development_mode_logs_a_debug_note(self, get_logger):
+        """Development mode only relaxes the CORS header, so it must not warn.
+
+        Development mode is on by default in a source checkout, and it leaves
+        the WebSocket origin check in place, so this is a contributor-facing
+        note rather than an operator-facing warning.
+        """
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", True, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
+        debug_messages = " ".join(
+            str(call) for call in mock_logger.debug.call_args_list
+        )
+        assert "global.developmentMode" in debug_messages
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_no_warning_when_xsrf_and_cors_both_enabled(
+        self, get_logger
+    ):
+        """XSRF and CORS protection both enabled is not a conflict."""
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
 
     @parameterized.expand(["lax", "strict", "none", "Lax", "STRICT", "None"])
     def test_check_conflicts_xsrf_cookie_same_site_valid(self, value):
@@ -879,7 +948,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.sslCertFile", None, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        warnings = _warning_text(mock_logger)
         assert "xsrfCookieSameSite" in warnings
         assert "HTTPS" in warnings
 
@@ -893,7 +962,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.enableXsrfProtection", False, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        warnings = _warning_text(mock_logger)
         assert "xsrfCookieSameSite" in warnings
         assert "no effect" in warnings
 
@@ -913,7 +982,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.sslCertFile", None, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        warnings = _warning_text(mock_logger)
         assert "no effect" not in warnings
         # It should still warn about the HTTPS/Secure requirement.
         assert "HTTPS" in warnings
