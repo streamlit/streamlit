@@ -25,6 +25,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit import config
+from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -1292,6 +1293,69 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
             handle_clear_cache_request.assert_called_once()
             handle_backmsg_exception.assert_called_once_with(error)
+
+    @parameterized.expand(
+        [
+            ("full", "boom", "RuntimeError", True),
+            (True, "boom", "RuntimeError", True),
+            ("true", "boom", "RuntimeError", True),
+            ("stacktrace", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", True),
+            (False, _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", True),
+            ("type", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", False),
+            ("none", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "", False),
+        ]
+    )
+    async def test_handle_backmsg_exception_redacts_per_show_error_details(
+        self,
+        show_error_details: str | bool,
+        expected_message: str,
+        expected_type: str,
+        expect_stack_trace: bool,
+    ):
+        """Test that client.showErrorDetails redacts the Exception ForwardMsg
+        that a BackMsg failure produces.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+
+        enqueued_msgs: list[ForwardMsg] = []
+        mock_queue = MagicMock(spec=ForwardMsgQueue)
+        mock_queue.enqueue = MagicMock(side_effect=enqueued_msgs.append)
+        session._browser_queue = mock_queue
+
+        with patch_config_options({"client.showErrorDetails": show_error_details}):
+            # Raise the error inside handle_backmsg. The traceback then contains
+            # Streamlit-internal frames, as it does in production.
+            with patch.object(
+                session,
+                "_handle_clear_cache_request",
+                side_effect=RuntimeError("boom"),
+            ):
+                msg = BackMsg()
+                msg.clear_cache = True
+                session.handle_backmsg(msg)
+
+            # An eventloop callback enqueues the Exception ForwardMsg.
+            await asyncio.sleep(0)
+
+        exception_msgs = [
+            msg
+            for msg in enqueued_msgs
+            if msg.WhichOneof("type") == "delta"
+            and msg.delta.new_element.WhichOneof("type") == "exception"
+        ]
+        assert len(exception_msgs) == 1
+        exception_proto = exception_msgs[0].delta.new_element.exception
+
+        assert exception_proto.message == expected_message
+        assert exception_proto.type == expected_type
+        assert bool(exception_proto.stack_trace) == expect_stack_trace
+
+        # No other field of the payload leaks the error.
+        serialized = exception_msgs[0].SerializeToString()
+        if expected_message != "boom":
+            assert b"boom" not in serialized
+        if not expect_stack_trace:
+            assert b"app_session.py" not in serialized
 
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner", MagicMock())
     async def test_handle_backmsg_handles_debug_ids(self):
