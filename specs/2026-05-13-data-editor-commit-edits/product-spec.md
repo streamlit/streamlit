@@ -5,23 +5,14 @@ created: 2026-05-13
 
 # `commit_edits` callback for st.data_editor
 
-## Status
+## Summary
 
-This spec describes the next phase of the data-editor edit-preservation work.
-
-- **Shipped in [#15884](https://github.com/streamlit/streamlit/pull/15884):** When `key` is set
-  and `num_rows="fixed"`, source value changes no longer reset compatible pending edits. Edits are
-  also removed once the source catches up to the edited value.
-- **Shipped in [#16295](https://github.com/streamlit/streamlit/pull/16295):**
-  `streamlit.typing` (also available as `st.typing`) is the curated public namespace for stable,
-  Streamlit-owned types used in annotations. Its state exports are the concrete runtime classes
-  produced by Streamlit, with typed attribute and item access.
-- **Shipped in [#16351](https://github.com/streamlit/streamlit/pull/16351):** Pending data-editor
-  edits are a `DataEditorState(ReadOnlyAttributeDictionary)` exposed through `streamlit.typing`.
-  `DataEditorSerde` returns that concrete runtime type for `st.session_state[key]`, preserves it
-  across Session State copies, and rejects in-place mutation.
-- **Proposed here:** Add an explicit `commit_edits` API for persistence, validation, row operations,
-  and programmatic reset. The callback receives the already-public `DataEditorState`.
+Add an optional `commit_edits` callback to `st.data_editor` that simplifies write-back with a
+transactional commit mode: apps persist, validate, or reject a batch of edits in one place, then
+return the new source for the current render. The callback receives the source dataframe, the
+edited dataframe, and the public `DataEditorState` edit delta. Related edit-preservation
+improvements for keyed, fixed-row editors already shipped in
+[#15884](https://github.com/streamlit/streamlit/pull/15884).
 
 ## Problem
 
