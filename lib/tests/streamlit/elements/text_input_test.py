@@ -140,7 +140,7 @@ class TextInputTest(DeltaGeneratorTestCase):
             ),
             (
                 "url",
-                r"^(https?://)?[^\s.]+\.[^\s]+$",
+                r"^([Hh][Tt][Tt][Pp][Ss]?://)?[^\s/.]+\.[^\s]+$",
                 "Enter a valid URL.",
             ),
         ]
@@ -162,8 +162,16 @@ class TextInputTest(DeltaGeneratorTestCase):
             ("www.example.co.uk/path?q=1", True),
             ("https://example.com", True),
             ("http://sub.example.com", True),
+            # The scheme is case-insensitive, matching native `type="url"`.
+            ("HTTPS://example.com", True),
             ("not a url", False),
             ("localhost", False),
+            # The first host label excludes `/`, so a bare filesystem-like path
+            # and malformed schemes are rejected even though a path after the
+            # host (see `www.example.co.uk/path?q=1` above) is accepted.
+            ("path/to/file.txt", False),
+            ("https://.example.com", False),
+            ("https:/example.com", False),
         ]
     )
     def test_url_type_default_validation_scheme_is_optional(
