@@ -20,6 +20,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     get_element_by_key,
+    reset_hovering,
 )
 
 
@@ -245,9 +246,18 @@ def test_selection_state_remains_after_unmounting(
 
     chart = app.get_by_test_id("stPlotlyChart").nth(5)
     expect(chart).to_be_visible()
-    # Hover chart to show toolbar:
-    chart.hover()
-    _check_toolbar_visibility(chart)
+    # Clear hover so the modebar and plotly hoverlabels stay out of the
+    # snapshot; this test only asserts selection state after remount.
+    # Moving the mouse off-chart alone is not enough on WebKit — Plotly can
+    # keep the last hoverlabel — so also force an unhover and wait for it.
+    reset_hovering(app)
+    chart.locator(".js-plotly-plot").evaluate(
+        "el => { if (window.Plotly?.Fx?.unhover) window.Plotly.Fx.unhover(el) }"
+    )
+    expect(chart.locator(".modebar-group:has([data-title='Fullscreen'])")).to_have_css(
+        "opacity", "0"
+    )
+    expect(chart.locator(".hovertext")).to_have_count(0)
     assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
 
 
