@@ -245,12 +245,16 @@ def test_selection_state_remains_after_unmounting(
 
     chart = app.get_by_test_id("stPlotlyChart").nth(5)
     expect(chart).to_be_visible()
-    # Reveal the toolbar by hovering the modebar itself. Hovering the chart
-    # (center or "blank" corners) can still fall within Plotly's point hover
-    # radius on WebKit 26.5 / Playwright 1.62, which draws a tooltip and
-    # selection resize handles into the screenshot.
+    # Move the cursor to the modebar (top-right) via absolute coordinates.
+    # Hovering the chart center or a "blank" corner can still fall within
+    # Plotly's point hover radius, and locator.hover(force=True) on the
+    # opacity:0 modebar does not reliably move the cursor on WebKit — leaving
+    # it on a data point from the selection drag and drawing a tooltip into
+    # the screenshot.
+    box = chart.bounding_box()
+    assert box is not None
+    app.mouse.move(box["x"] + box["width"] - 40, box["y"] + 20)
     modebar = chart.locator(".modebar-group:has([data-title='Fullscreen'])")
-    modebar.hover(force=True)
     expect(modebar).to_be_visible()
     expect(modebar).to_have_css("opacity", "1")
     expect(chart.locator(".hovertext")).not_to_be_attached()
