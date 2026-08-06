@@ -87,6 +87,7 @@ import {
   StyledQuickSelectTrigger,
   StyledRangeCalendarRoot,
   StyledRangeSeparator,
+  StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
 import { getSafeLocale } from "./weekInfo"
@@ -110,7 +111,6 @@ interface RangeDateInputProps {
   focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
   onValidate: (date: CalendarDate | null) => void
-  onClose: () => void
   formCommit?: (dates: CalendarDate[]) => void
   formResetKey: number
 }
@@ -180,7 +180,6 @@ function RangeDateInput({
   focusedValue,
   onFocusChange,
   onValidate,
-  onClose,
   formCommit,
   formResetKey,
 }: RangeDateInputProps): ReactElement {
@@ -276,9 +275,6 @@ function RangeDateInput({
 
         let pending: CalendarDate[]
         if (allCleared) {
-          // Fully cleared → commit empty (matches BaseWeb behavior where
-          // range mode always commits () on close-empty, even with a
-          // non-empty default).
           pending = []
         } else {
           pending = compact([displayStartRef.current, displayEndRef.current])
@@ -289,10 +285,9 @@ function RangeDateInput({
           onChangeRef.current(pending)
         }
       }
-      onClose()
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, startValue, endValue, onClose])
+  }, [isOpen, startValue, endValue])
 
   const overlayOptions = useMemo(() => {
     const base = {
@@ -421,7 +416,6 @@ function RangeDateInput({
     [onFocusChange, validateBothFields]
   )
 
-  // Calendar value for the grid — only non-null with both endpoints
   const calendarValue = useMemo(
     () =>
       displayStart && displayEnd
@@ -499,8 +493,6 @@ function RangeDateInput({
     [isOpen]
   )
 
-  // If focus lands in the calendar (mouse click on a header control), Tab
-  // closes the popover and returns focus to the field.
   const handleCalendarKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab") return
@@ -682,31 +674,34 @@ function RangeDateInput({
             </div>
           </StyledDateField>
         </I18nProvider>
-        {error && (
-          <StyledErrorIconContainer data-testid="stDateInputError">
-            <Tooltip
-              content={<StreamlitMarkdown source={error} allowHTML={false} />}
-              placement={Placement.TOP_RIGHT}
-              error
+        <StyledTrailingIcons>
+          {error && (
+            <StyledErrorIconContainer data-testid="stDateInputError">
+              <Tooltip
+                content={
+                  <StreamlitMarkdown source={error} allowHTML={false} />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="base" />
+              </Tooltip>
+            </StyledErrorIconContainer>
+          )}
+          {clearable && hasValue && (
+            <StyledClearButton
+              ref={clearButtonRef}
+              type="button"
+              onClick={handleClear}
+              aria-label="Clear dates"
+              data-testid="stDateInputClearButton"
+              tabIndex={-1}
+              onMouseDown={e => e.preventDefault()}
             >
-              <Icon content={ErrorOutline} size="base" />
-            </Tooltip>
-          </StyledErrorIconContainer>
-        )}
-        {clearable && hasValue && (
-          <StyledClearButton
-            ref={clearButtonRef}
-            type="button"
-            onClick={handleClear}
-            aria-label="Clear dates"
-            data-testid="stDateInputClearButton"
-            tabIndex={-1}
-            onMouseDown={e => e.preventDefault()}
-            $pushRight={!error}
-          >
-            <Icon content={Cancel} size="base" />
-          </StyledClearButton>
-        )}
+              <Icon content={Cancel} size="base" />
+            </StyledClearButton>
+          )}
+        </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
             {error.replace(/\*\*/g, "")}

@@ -151,16 +151,19 @@ export const StyledErrorIconContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   color: theme.colors.redTextColor,
-  marginLeft: "auto",
   paddingLeft: theme.spacing.twoXS,
   paddingRight: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
   flexShrink: 0,
 }))
 
-/** Matches TimeInput's StyledClearButton. */
-export const StyledClearButton = styled("button", {
-  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $pushRight?: boolean }>(({ theme, $pushRight }) => ({
+export const StyledTrailingIcons = styled.div({
+  display: "flex",
+  alignItems: "center",
+  marginLeft: "auto",
+  flexShrink: 0,
+})
+
+export const StyledClearButton = styled.button(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -168,7 +171,6 @@ export const StyledClearButton = styled("button", {
   border: "none",
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
-  marginLeft: $pushRight !== false ? "auto" : undefined,
   marginRight: theme.spacing.sm,
   color: theme.colors.grayTextColor,
   flexShrink: 0,
@@ -465,9 +467,6 @@ export const StyledCalendarCell = styled(CalendarCell, {
     pointerEvents: "none" as const,
   }
 
-  // Shared base for range start/end endpoints: td stretches to full
-  // column width, gradient background shows the tint band, ::after
-  // draws the primary indicator.
   const rangeEndpointBase = {
     width: "auto",
     minWidth: cellSize,
@@ -530,7 +529,6 @@ export const StyledCalendarCell = styled(CalendarCell, {
             color: theme.colors.fadedText40,
           },
         },
-      // Start endpoint: tint band on right half, primary indicator centered.
       "&[data-selection-start]:not([data-selection-end])": {
         ...rangeEndpointBase,
         backgroundImage: `linear-gradient(to right, transparent 50%, ${rangeTint} 50%)`,
@@ -546,7 +544,6 @@ export const StyledCalendarCell = styled(CalendarCell, {
           "&::after": { display: "none" },
         },
       },
-      // End endpoint: tint band on left half, primary indicator centered
       "&[data-selection-end]:not([data-selection-start])": {
         ...rangeEndpointBase,
         backgroundImage: `linear-gradient(to left, transparent 50%, ${rangeTint} 50%)`,
@@ -562,7 +559,6 @@ export const StyledCalendarCell = styled(CalendarCell, {
           "&::after": { display: "none" },
         },
       },
-      // Single-day range: just the rounded rect (same as single mode)
       "&[data-selection-start][data-selection-end]": {
         backgroundColor: primary,
         color: selectedTextColor,

@@ -41,12 +41,7 @@ export function ReorderedDateSegments({
   return (
     <StyledDateFieldInput $isRange={isRange}>
       {segments.map((segment, i) => (
-        // Index is safe here: `segments` is a fixed-length, fixed-order
-        // array derived from `format` (which doesn't change across
-        // re-renders of a given DateInput instance), so there's no
-        // reordering/insertion for React to misreconcile. A stable key is
-        // needed only to disambiguate the (otherwise identical) literal
-        // separator segments, since `segment.type` alone repeats for those.
+        // Index key is safe: segments is a fixed-length, fixed-order array derived from format.
         // eslint-disable-next-line @eslint-react/no-array-index-key
         <StyledDateSegment key={`${segment.type}-${i}`} segment={segment} />
       ))}

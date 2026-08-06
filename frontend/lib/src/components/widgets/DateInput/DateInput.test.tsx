@@ -53,10 +53,6 @@ const getProps = (
   ...widgetProps,
 })
 
-/**
- * Helpers to interact with `DateField`'s `role="spinbutton"` segments the
- * way a real user would (click, type/backspace digits).
- */
 const getSingleDateSegments = (
   region: HTMLElement
 ): { year: HTMLElement; month: HTMLElement; day: HTMLElement } => ({
@@ -65,10 +61,6 @@ const getSingleDateSegments = (
   day: within(region).getByRole("spinbutton", { name: /day/i }),
 })
 
-/** Same as `getSingleDateSegments`, but scoped to the "start" or "end"
- * `DateField` of a range-mode `RangeDateInput` — each segment's accessible
- * name is `"<type>, <label> <start|end> date"` (see `RangeDateInput.tsx`'s
- * `aria-label={`${label} start date`}`/`${label} end date``). */
 const getRangeDateSegments = (
   region: HTMLElement,
   part: "start" | "end"
@@ -115,7 +107,7 @@ const clearSegment = async (
   }
 }
 
-describe("DateInput widget", () => {
+describe("DateInput", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<DateInput {...props} />)
@@ -703,12 +695,7 @@ describe("DateInput widget", () => {
       const { year } = getRangeDateSegments(region, "start")
       await user.click(year)
 
-      // Calendar should be open (otherwise this test would trivially pass by
-      // never rendering the popover at all), with its month/year pickers
-      // (RAC `Select`s, rendered as buttons with `aria-haspopup="listbox"`,
-      // not native `<select>`s — see `CalendarPopoverHeader.tsx`), but its
-      // own quick-select `<select>` (which *does* carry the native
-      // `combobox` role) should not be present.
+      // Verify calendar is open but quick-select is absent.
       await screen.findByTestId("stDateInputCalendar")
       const pickerNames = screen
         .queryAllByRole("button")
@@ -1134,7 +1121,7 @@ describe("DateInput widget", () => {
     })
   })
 
-  describe("range mode", () => {
+  describe("range mode selection and commit", () => {
     afterEach(() => {
       vi.useRealTimers()
     })
@@ -1178,13 +1165,7 @@ describe("DateInput widget", () => {
       await clearSegment(user, end.month)
       await clearSegment(user, end.day)
 
-      // Unlike SingleDateInput's onClose (which reverts to `element.default`
-      // — see "resets its value to default when it's closed with empty
-      // input" above), RangeDateInput's onClose is a no-op when
-      // `element.isRange` — BaseWeb's original range picker committed `()`
-      // on close-empty regardless of a non-empty default (see
-      // test_range_is_empty_if_calendar_closed_empty in the e2e suite), so
-      // DateInput.tsx's handleClose must special-case range mode.
+      // Range mode commits empty on close-empty (unlike single mode which reverts to default).
       await user.click(document.body)
 
       await waitFor(() => {
@@ -1300,11 +1281,8 @@ describe("DateInput widget", () => {
         await screen.findByLabelText("Wednesday, March 6, 2024")
       )
 
-      // First click only sets the anchor — RangeCalendar's own onChange
-      // doesn't fire until a second click completes the range (see
-      // RangeDateInput.tsx's AnchorDateWatcher docstring), so this must
-      // come from the anchor-click path, matching BaseWeb's immediate
-      // one-element commit.
+      // First click sets the anchor; RangeCalendar's onChange fires only on
+      // the second click, so this commit comes from the anchor-click path.
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
           props.element,
@@ -1467,7 +1445,7 @@ describe("DateInput widget", () => {
   })
 })
 
-describe("DateInput keyboard navigation and focus management", () => {
+describe("DateInput single-mode keyboard navigation", () => {
   const openCalendarAndGetGrid = async (
     user: ReturnType<typeof userEvent.setup>
   ): Promise<{
@@ -1793,7 +1771,7 @@ describe("DateInput keyboard navigation and focus management", () => {
   })
 })
 
-describe("DateInput paste handling", () => {
+describe("DateInput single-mode paste handling", () => {
   it("pasting a full date string updates the value", async () => {
     const user = userEvent.setup()
     const props = getProps()
@@ -1872,7 +1850,7 @@ describe("DateInput paste handling", () => {
   })
 })
 
-describe("DateInput range paste handling", () => {
+describe("DateInput range-mode paste handling", () => {
   it("pasting a full date into the start field updates the value", async () => {
     const user = userEvent.setup()
     const props = getProps({
@@ -1979,7 +1957,7 @@ describe("DateInput range paste handling", () => {
   })
 })
 
-describe("DateInput range keyboard navigation", () => {
+describe("DateInput range-mode keyboard navigation", () => {
   it("Tab from last end-date segment closes calendar", async () => {
     const user = userEvent.setup()
     render(
@@ -2106,7 +2084,7 @@ describe("DateInput range keyboard navigation", () => {
   })
 })
 
-describe("DateInput range form commit-on-blur", () => {
+describe("DateInput range-mode form commit-on-blur", () => {
   it("commits pending range value on blur when inside a form", async () => {
     const user = userEvent.setup()
     const props = getProps({
@@ -2179,7 +2157,7 @@ describe("DateInput range form commit-on-blur", () => {
   })
 })
 
-describe("DateInput excludeEscape (month/year picker)", () => {
+describe("DateInput month/year picker escape handling", () => {
   it("Escape closes the month picker without closing the calendar (single mode)", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)

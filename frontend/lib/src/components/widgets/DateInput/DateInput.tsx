@@ -88,11 +88,7 @@ function DateInput({
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
    *
-   * Canonical state is the ISO 8601 wire format directly (`string[]`), not
-   * `Date[]` — this is what `WidgetStateManager` already stores, and what
-   * `SingleDateInput`/`RangeDateInput`'s `CalendarDate`-based values convert
-   * to/from cleanly via `dateInputUtils.ts`, with no `moment`/`date-fns`
-   * round-trip needed.
+   * Canonical state is the ISO 8601 wire format directly (`string[]`).
    */
   const queryParamBinding = element.queryParamKey
     ? {
@@ -136,16 +132,11 @@ function DateInput({
       return false
     }
 
-    // Since quick select allows to select ranges up to the past 2 years,
-    // we should only enable it if the min date is older than 2 years ago.
     return isOlderThanTwoYears(minDateCalendar)
   }, [element.isRange, minDateCalendar])
 
   const clearable = element.default.length === 0 && !disabled
 
-  // Date strings used for error messages — computed via dateInputUtils'
-  // CalendarDate-based formatter (matching element.format's Y/M/D order)
-  // rather than date-fns/moment, so DateInput.tsx has no such dependency.
   const minDateString = useMemo(
     () => formatCalendarDate(minDateCalendar, element.format),
     [minDateCalendar, element.format]
@@ -220,7 +211,6 @@ function DateInput({
 
       if (dates.length === 0) {
         setValueWithSource({ value: [], fromUi: true })
-        setIsEmpty(true)
         return
       }
 
@@ -237,7 +227,6 @@ function DateInput({
         return
       }
       setValueWithSource({ value: newIsoDates, fromUi: true })
-      setIsEmpty(false)
     },
     [
       buildErrorMessage,
@@ -249,28 +238,17 @@ function DateInput({
     ]
   )
 
-  // Revert to the default value if the popover closes while the field is
-  // empty or partially cleared. `element.default` is already the ISO wire
-  // format, so no conversion is needed.
-  //
-  // `hasPlaceholderSegments` is true when any date segment was in placeholder
-  // state at close time (partial clear via backspace). Reverting to default
-  // on close ensures abandoned partial edits don't persist.
+  // Revert to default on close when field is empty or partially cleared.
   const handleClose = useCallback(
     (hasPlaceholderSegments?: boolean): void => {
-      if (element.isRange) return
       if (!isEmpty && !hasPlaceholderSegments) {
-        // User made a complete edit (valid value committed, or invalid value
-        // with error shown) or just opened/closed without changing anything.
-        // Keep current state including any error indicator so the user sees
-        // why their out-of-range input was not accepted.
         return
       }
       resetError()
       setValueWithSource({ value: element.default, fromUi: true })
       setIsEmpty(element.default.length === 0)
     },
-    [element.isRange, isEmpty, element.default, setValueWithSource, resetError]
+    [isEmpty, element.default, setValueWithSource, resetError]
   )
 
   // Synchronous commit for form-submit races: when inside a form, clicking
@@ -377,7 +355,6 @@ function DateInput({
           focusedValue={focusedValue}
           onFocusChange={setFocusedValue}
           onValidate={handleValidate}
-          onClose={handleClose}
           formCommit={inForm ? handleRangeFormCommit : undefined}
           formResetKey={formResetKey}
         />

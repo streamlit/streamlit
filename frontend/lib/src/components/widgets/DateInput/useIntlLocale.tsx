@@ -28,9 +28,8 @@ import { getWeekInfoForLocale } from "./weekInfo"
  * This is used as a stop-gap solution since date-fns is a large library and we
  * don't want to include all locales in the wheel file.
  *
- * Note: this hook is consumed only by `DateTimeInput.tsx` (which still uses
- * BaseWeb's datepicker). The react-aria-based `DateInput` components use
- * `I18nProvider` for locale-aware week start instead.
+ * Note: this hook is consumed only by `DateTimeInput.tsx`. The `DateInput`
+ * components use `I18nProvider` for locale-aware week start instead.
  *
  * @param locale  The locale for which to retrieve week information.
  * @returns The augmented locale, or en-US if the week information could not be
@@ -43,11 +42,7 @@ export const useIntlLocale = (locale: string): Locale => {
     return enUS
   }
 
-  /**
-   * Customize the start of week day.
-   * Intl API starts with Monday on 1, but BaseWeb starts with Sunday on 0
-   * @see https://date-fns.org/v2.30.0/docs/Locale
-   */
+  // Intl API starts with Monday=1; date-fns expects Sunday=0.
   const normalizedFirstDay =
     weekInfo.firstDay >= 1 && weekInfo.firstDay <= 7 ? weekInfo.firstDay : 7
   const firstDay: Day =

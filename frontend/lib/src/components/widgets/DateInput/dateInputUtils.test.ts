@@ -361,7 +361,7 @@ describe("getQuickSelectPresets", () => {
     globalThis.Date = RealDate
   })
 
-  it("rebuilds BaseWeb's exact six default options, verbatim labels", () => {
+  it("returns the six default presets with expected labels", () => {
     const presets = getQuickSelectPresets()
     expect(presets.map(p => p.label)).toEqual([
       "Past Week",
@@ -373,7 +373,7 @@ describe("getQuickSelectPresets", () => {
     ])
   })
 
-  it("always ends at today, matching BaseWeb's endDate-less fallback", () => {
+  it("always ends at today", () => {
     const presets = getQuickSelectPresets()
     const today = new CalendarDate(2024, 3, 15)
     presets.forEach(p => expect(p.end).toEqual(today))

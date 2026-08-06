@@ -72,6 +72,7 @@ import {
   StyledDateFieldContainer,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
+  StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
 import { getSafeLocale } from "./weekInfo"
@@ -213,8 +214,7 @@ function SingleDateInput({
   // In the sidebar, flip/shift are bounded to the viewport
   // (document.documentElement) rather than the sidebar's overflow:auto
   // clipping rect. Otherwise the calendar cannot flip up when the trigger
-  // sits near the bottom and overflows the viewport instead (issue #16181).
-  // Matches the pattern established in Selectbox (PR #16199).
+  // sits near the bottom and overflows the viewport instead.
   const overlayOptions = useMemo(() => {
     const base = {
       open: isOpen,
@@ -234,7 +234,6 @@ function SingleDateInput({
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
-  // Restores focus to the last date segment when the popover closes.
   // isRestoringFocusRef prevents handleFocus from reopening the popover
   // in response to this programmatic focus. Reset via rAF to guarantee
   // the synthetic focus event has been processed before re-enabling.
@@ -437,33 +436,34 @@ function SingleDateInput({
             </DateField>
           </StyledDateField>
         </I18nProvider>
-        {error && (
-          <StyledErrorIconContainer data-testid="stDateInputError">
-            <Tooltip
-              content={<StreamlitMarkdown source={error} allowHTML={false} />}
-              placement={Placement.TOP_RIGHT}
-              error
+        <StyledTrailingIcons>
+          {error && (
+            <StyledErrorIconContainer data-testid="stDateInputError">
+              <Tooltip
+                content={
+                  <StreamlitMarkdown source={error} allowHTML={false} />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="base" />
+              </Tooltip>
+            </StyledErrorIconContainer>
+          )}
+          {clearable && !isNullOrUndefined(displayValue) && (
+            <StyledClearButton
+              ref={clearButtonRef}
+              type="button"
+              onClick={handleClear}
+              aria-label="Clear date"
+              data-testid="stDateInputClearButton"
+              tabIndex={-1}
+              onMouseDown={e => e.preventDefault()}
             >
-              <Icon content={ErrorOutline} size="base" />
-            </Tooltip>
-          </StyledErrorIconContainer>
-        )}
-        {clearable && !isNullOrUndefined(displayValue) && (
-          <StyledClearButton
-            ref={clearButtonRef}
-            type="button"
-            onClick={handleClear}
-            aria-label="Clear date"
-            data-testid="stDateInputClearButton"
-            // Removed from tab order: keyboard users clear via
-            // Backspace/Delete in segments. Matches TimeInput's pattern.
-            tabIndex={-1}
-            onMouseDown={e => e.preventDefault()}
-            $pushRight={!error}
-          >
-            <Icon content={Cancel} size="base" />
-          </StyledClearButton>
-        )}
+              <Icon content={Cancel} size="base" />
+            </StyledClearButton>
+          )}
+        </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
             {error.replace(/\*\*/g, "")}
