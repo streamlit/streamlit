@@ -465,18 +465,19 @@ export const StyledCalendarCell = styled(CalendarCell, {
     pointerEvents: "none" as const,
   }
 
-  // Shared base for range start/end endpoints: cell fills td, pseudos
-  // create the tint band (::before) and primary rounded rect (::after).
+  // Shared base for range start/end endpoints: td stretches to full
+  // column width, gradient background shows the tint band, ::after
+  // draws the primary indicator.
   const rangeEndpointBase = {
     width: "auto",
     minWidth: cellSize,
     marginLeft: 0,
     marginRight: 0,
+    borderRadius: 0,
     backgroundColor: "transparent",
     color: selectedTextColor,
     position: "relative" as const,
     isolation: "isolate" as const,
-    // Primary rounded rect (same shape as single-mode selected cell)
     "&::after": {
       content: '""',
       position: "absolute" as const,
@@ -523,43 +524,42 @@ export const StyledCalendarCell = styled(CalendarCell, {
           // Hover/focus: centered rounded ring via ::after
           "&[data-hovered]::after, &[data-focus-visible]::after":
             rangeFocusRing,
+          // Outside-month in-range: no tint
+          "&[data-outside-month]": {
+            backgroundColor: "transparent",
+            color: theme.colors.fadedText40,
+          },
         },
-      // Start endpoint: tint band on right half, primary rounded rect centered
+      // Start endpoint: tint band on right half, primary indicator centered.
       "&[data-selection-start]:not([data-selection-end])": {
         ...rangeEndpointBase,
-        "&::before": {
-          content: '""',
-          position: "absolute" as const,
-          top: 0,
-          bottom: 0,
-          left: "50%",
-          right: 0,
-          backgroundColor: rangeTint,
-          zIndex: -2,
-        },
-        // Focus ring: outline on the ::after (which is already cellSize/rounded)
+        backgroundImage: `linear-gradient(to right, transparent 50%, ${rangeTint} 50%)`,
         "&[data-hovered]::after, &[data-focus-visible]::after": {
           outline: `${borderWidth} solid ${primary}`,
           outlineOffset: `-${borderWidth}`,
+        },
+        // Outside-month start: no indicator, no tint — just grey text
+        "&[data-outside-month]": {
+          backgroundColor: "transparent",
+          backgroundImage: "none",
+          color: theme.colors.fadedText40,
+          "&::after": { display: "none" },
         },
       },
-      // End endpoint: tint band on left half, primary rounded rect centered
+      // End endpoint: tint band on left half, primary indicator centered
       "&[data-selection-end]:not([data-selection-start])": {
         ...rangeEndpointBase,
-        "&::before": {
-          content: '""',
-          position: "absolute" as const,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: "50%",
-          backgroundColor: rangeTint,
-          zIndex: -2,
-        },
-        // Focus ring: outline on the ::after (which is already cellSize/rounded)
+        backgroundImage: `linear-gradient(to left, transparent 50%, ${rangeTint} 50%)`,
         "&[data-hovered]::after, &[data-focus-visible]::after": {
           outline: `${borderWidth} solid ${primary}`,
           outlineOffset: `-${borderWidth}`,
+        },
+        // Outside-month end: no indicator, no tint — just grey text
+        "&[data-outside-month]": {
+          backgroundColor: "transparent",
+          backgroundImage: "none",
+          color: theme.colors.fadedText40,
+          "&::after": { display: "none" },
         },
       },
       // Single-day range: just the rounded rect (same as single mode)
