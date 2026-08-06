@@ -422,3 +422,13 @@ st.segmented_control(
     width=220,
     key="sc_wrap_selected_into_view",
 )
+
+_sc_wrap_toggle = st.toggle("Enable SC wrap", value=False, key="sc_wrap_toggle")
+_sc_wrap_val = st.segmented_control(
+    "Wrap toggle preserves selection",
+    ["Alpha", "Beta", "Gamma"],
+    default="Beta",
+    wrap=_sc_wrap_toggle,
+    key="sc_wrap_preserve",
+)
+st.text(f"sc_wrap_preserve: {_sc_wrap_val}")

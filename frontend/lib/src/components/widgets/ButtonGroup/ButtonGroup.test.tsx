@@ -847,6 +847,34 @@ describe("ButtonGroup wrap", () => {
     }
   )
 
+  it("does not re-scroll on rerender with a new options array reference", () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+
+    const props = getProps({
+      wrap: false,
+      options: simpleOptions,
+      default: [2],
+    })
+    const { rerender } = render(<ButtonGroup {...props} />)
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+
+    // Proto options are a new array on every ForwardMsg even when unchanged.
+    const sameOptionsNewRef = simpleOptions.map(option =>
+      ButtonGroupProto.Option.create(option)
+    )
+    rerender(
+      <ButtonGroup
+        {...props}
+        element={ButtonGroupProto.create({
+          ...props.element,
+          options: sameOptionsNewRef,
+        })}
+      />
+    )
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+
   it("still updates selection when wrap is false", async () => {
     const user = userEvent.setup()
     const props = getProps({

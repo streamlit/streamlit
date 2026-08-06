@@ -570,7 +570,7 @@ def test_segmented_control_wrap_behavior(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """wrap=False scrolls in one row; auto in a horizontal container stays one
-    row; selected option scrolls into view.
+    row; selected option scrolls into view; toggling wrap preserves selection.
     """
     false_group = get_button_group_options(app, "sc_wrap_false")
     auto_h_group = get_button_group_options(app, "sc_wrap_auto_h")
@@ -588,3 +588,9 @@ def test_segmented_control_wrap_behavior(
         get_element_by_key(app, "sc_wrap_false"),
         name="st_segmented_control-wrap_false_scroll",
     )
+
+    # Changing wrap must not reset widget state
+    expect_text(app, "sc_wrap_preserve: Beta")
+    click_toggle(app, "Enable SC wrap")
+    wait_for_app_run(app)
+    expect_text(app, "sc_wrap_preserve: Beta")

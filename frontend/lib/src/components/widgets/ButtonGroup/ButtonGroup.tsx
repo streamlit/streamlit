@@ -186,8 +186,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     }
   }, [required])
 
-  // Scroll the selected option into the local scrollport when wrap is false.
-  // Defaults that are selected but not focused aren't covered by focus scrolling.
+  // Scroll a selected option into view when wrap is false (defaults aren't
+  // focused, so focus-based scrolling doesn't cover them). block/inline
+  // "nearest" avoid unnecessary page scroll; honor prefers-reduced-motion.
+  // Depend on selection only — not `options` — so unrelated script reruns
+  // (new proto array refs) don't reset the user's horizontal scroll.
   useEffect(() => {
     if (wrap || !groupRef.current || value.length === 0) return
     const selectedOption = groupRef.current.querySelector("[data-selected]")
@@ -200,7 +203,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       block: "nearest",
       inline: "nearest",
     })
-  }, [wrap, value, options])
+  }, [wrap, value])
 
   // When options change and the currently stored value no longer matches any
   // option (e.g. because format_func changed dynamically due to a language
