@@ -8,10 +8,10 @@ created: 2026-05-13
 ## Summary
 
 Add an optional `commit_edits` callback to `st.data_editor` that simplifies write-back with a
-transactional commit mode: apps persist, validate, or reject a batch of edits in one place, then
-return the new source for the current render. The callback receives the source dataframe, the
-edited dataframe, and the public `DataEditorState` edit delta. Related edit-preservation
-improvements for keyed, fixed-row editors already shipped in
+transactional commit mode: apps persist or reject a batch of edits in one place, then return the
+new source for the current render. The callback receives the source dataframe, the edited
+dataframe, and the public `DataEditorState` edit delta. Related edit-preservation improvements for
+keyed, fixed-row editors already shipped in
 [#15884](https://github.com/streamlit/streamlit/pull/15884).
 
 ## Problem
@@ -30,7 +30,7 @@ Users need an explicit commit boundary that:
 - works for cell edits, additions, and deletions;
 - maps positional edit metadata back to the original source rows;
 - can persist edits and return refreshed server data;
-- can reject invalid edits without losing the user's work; and
+- can reject or revert an edit batch without fragile post-hoc coordination; and
 - can clear accepted or reverted edits in both backend and frontend state.
 
 ## Proposal
@@ -105,9 +105,16 @@ commit-time handling beyond what `st.data_editor` already does when converting e
 |-----------|----------|
 | No pending edits | Do not call `commit_edits`; render `data` normally |
 | Callback succeeds (returns a dataframe) | Validate the return value for editing compatibility **before** clearing pending edit state. On success: display the return value in the current render and clear pending edits. If validation raises `StreamlitAPIException`: preserve pending edits, display Streamlit's normal exception UI, and the `st.data_editor(...)` call returns the last committed baseline (`data` / `source_df`) — not the rejected callback result |
-| Callback raises `StreamlitDataEditorValidationError` | Display the exception message inline (app-authored text; not redacted like unexpected exceptions), preserve edits for correction, and the `st.data_editor(...)` call returns the last committed baseline (`data` / `source_df`) so downstream Python does not see uncommitted edits |
-| Callback raises any other exception | Preserve edit state and use Streamlit's normal exception handling; the `st.data_editor(...)` call returns the last committed baseline. No automatic retry control: the user must make another edit (or otherwise trigger an edit-driven rerun) to invoke `commit_edits` again |
+| Callback raises any exception | Preserve edit state and use Streamlit's normal exception handling; the `st.data_editor(...)` call returns the last committed baseline. No automatic retry control: the user must make another edit (or otherwise trigger an edit-driven rerun) to invoke `commit_edits` again |
 | Callback calls `st.rerun()` or `st.stop()` | Preserve pending edit state (no successful return) and keep normal Streamlit control-flow behavior. Apps that persist externally before `st.rerun()`/`st.stop()` risk replaying the same batch; return the new dataframe instead of calling `st.rerun()` |
+
+To reject without writing, return `source_df` (or another acceptable baseline) from `commit_edits` —
+that is a successful return, so pending edits clear. Because the callback runs during the script
+render (unlike fire-and-forget `on_change`), apps can already surface feedback with normal Streamlit
+commands such as `st.toast` or `st.warning` before returning. Raising preserves pending edits but
+currently uses the normal exception UI. A dedicated validation rejection path that preserves edits
+*and* shows designed inline messaging on the editor (for example a
+`StreamlitDataEditorValidationError`) is deferred; see Out of scope.
 
 ### Slow callbacks and in-flight edits
 
@@ -117,10 +124,10 @@ follows `st.chat_input(submit_mode="disable")`, including closing the brief wind
 reports that the run has started. While disabled, the editor does not accept or queue additional
 cell edits or row operations.
 
-After the run, success clears the committed edits, while validation and other failures preserve
-them for correction before the editor is re-enabled. This prevents overlapping user-driven
-commits, but does not provide an exactly-once guarantee against unrelated reruns or concurrent
-external writers; callbacks should still use atomic writes and conflict detection where needed.
+After the run, success clears the committed edits, while failures preserve them for correction
+before the editor is re-enabled. This prevents overlapping user-driven commits, but does not
+provide an exactly-once guarantee against unrelated reruns or concurrent external writers;
+callbacks should still use atomic writes and conflict detection where needed.
 
 ### Persisting the callback result
 
@@ -128,20 +135,12 @@ The callback result is the baseline for the **current render only**. The app rem
 persisting it to session state, a database, or an updated/invalidated cache. A later rerun with no
 pending edits does not invoke the callback and uses whatever `data` evaluates to at that time.
 
-Add `StreamlitDataEditorValidationError` to `streamlit.errors` for expected, user-fixable validation
-failures from `commit_edits`. Only this explicit exception is rendered inline; database, network,
-and other unexpected exceptions must retain Streamlit's standard redaction, logging, and monitoring
-behavior. A narrower, feature-scoped name is intentional for the first release (principle #4); if
-other widgets later need the same inline validation pattern, a shared `StreamlitValidationError`
-base can be introduced without changing this subclass's public name.
-
 ### Example: database-backed editing
 
 ```python
 import pandas as pd
 import streamlit as st
 
-from streamlit.errors import StreamlitDataEditorValidationError
 from streamlit.typing import DataEditorState
 
 if "orders" not in st.session_state:
@@ -153,8 +152,13 @@ def persist_orders(
     edited_df: pd.DataFrame,
     edits: DataEditorState,
 ) -> pd.DataFrame:
+    # Reject without writing: returning source_df clears pending edits.
+    # Surface feedback with normal Streamlit commands (toast, warning, …).
+    # A follow-up may add a dedicated validation exception with designed
+    # inline UI that preserves edits for correction.
     if (edited_df["amount"] < 0).any():
-        raise StreamlitDataEditorValidationError("Amounts must be positive.")
+        st.toast("Amounts must be positive.", icon=":material/error:")
+        return source_df
 
     # Commit the whole batch in one transaction. Streamlit preserves the full
     # edit batch when the callback raises, so the writes must be atomic: a
@@ -208,7 +212,8 @@ in the same render that accepts the edit.
 | Callback result | Must be a pandas dataframe with an editing-compatible schema. Pending edits clear only after this validation succeeds. |
 | Async callbacks | Not supported. |
 | Commit granularity | All pending edits are delivered as one batch; success is all-or-nothing. Streamlit keeps the full batch on failure, so the callback must commit it atomically (e.g. one transaction) to keep retries safe. |
-| Retry after non-validation failure | No dedicated retry control in the first release. After a preserved failure, the user must make another edit (or otherwise cause an edit-triggered rerun) to invoke `commit_edits` again. |
+| Retry after failure | No dedicated retry control in the first release. After a preserved failure, the user must make another edit (or otherwise cause an edit-triggered rerun) to invoke `commit_edits` again. |
+| User-facing validation rejection | Deferred. Initial release has no dedicated validation exception or designed inline error UI on the editor.
 
 An editing-compatible result may change values, row count, and index values, but must preserve the
 column order, index structure, Arrow field types/nullability, and parsing data kinds used by the
@@ -268,7 +273,10 @@ st.data_editor(df, key="orders", on_change=persist_orders)
 - Schema-changing callback results
 - Partial per-row success and per-cell error UI
 - Native async callbacks or automatic retries
-- Dedicated retry control after non-validation failures (user must edit again to re-invoke)
+- Dedicated retry control after failures (user must edit again to re-invoke)
+- Dedicated validation rejection UX (for example `StreamlitDataEditorValidationError` with
+  designed inline messaging on the editor that preserves edits for correction). Needs design
+  work; initial release rejects via returning a baseline or raising a normal exception.
 
 ## Checklist
 
@@ -283,4 +291,4 @@ Check the boxes or add a comment with the reason it cannot be checked.
 | No new dependencies | ✅ Reuses existing dataframe, callback, frontend, and protobuf infrastructure |
 | Metrics collected | ✅ Track `commit_edits` parameter usage through existing `st.data_editor` metrics |
 | Any security/legal impact? | ✅ No new privileges; callbacks execute app code, and unexpected errors retain standard redaction and logging behavior |
-| Any docs changes needed? | ✅ Document `commit_edits` and `StreamlitDataEditorValidationError`, and show how they use the existing `streamlit.typing.DataEditorState` (attribute/item access, read-only semantics, persistence, validation) |
+| Any docs changes needed? | ✅ Document `commit_edits`, including attribute/item access on `DataEditorState`, read-only semantics, persistence, and reject-by-return. Dedicated validation-exception UX is a follow-up. |
