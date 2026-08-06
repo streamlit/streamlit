@@ -133,22 +133,23 @@ function AnchorDateWatcher({
   onAnchorSelect: (date: CalendarDate) => void
 }): null {
   const state = useContext(RangeCalendarStateContext)
+  const anchorDate = state?.anchorDate ?? null
+  const setAnchorDate = state?.setAnchorDate
   const prevAnchorRef = useRef<CalendarDate | null>(null)
   const hasSeededRef = useRef(false)
 
   useEffect(() => {
-    if (!hasSeededRef.current && seedAnchor && !state?.anchorDate) {
+    if (!hasSeededRef.current && seedAnchor && !anchorDate) {
       hasSeededRef.current = true
       prevAnchorRef.current = seedAnchor
-      state?.setAnchorDate(seedAnchor)
+      setAnchorDate?.(seedAnchor)
       return
     }
-    const anchor = state?.anchorDate ?? null
-    if (anchor && !prevAnchorRef.current) {
-      onAnchorSelect(anchor)
+    if (anchorDate && !prevAnchorRef.current) {
+      onAnchorSelect(anchorDate)
     }
-    prevAnchorRef.current = anchor
-  }, [state?.anchorDate, onAnchorSelect, seedAnchor, state])
+    prevAnchorRef.current = anchorDate
+  }, [anchorDate, setAnchorDate, onAnchorSelect, seedAnchor])
 
   return null
 }
@@ -261,12 +262,28 @@ function RangeDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        // Range mode commits current state on close (never reverts to
-        // default, unlike single mode). Null displayStart = cleared → [].
-        const pending = compact([
-          displayStartRef.current,
-          displayEndRef.current,
-        ])
+        // React Aria may revert ref values during blur (DateField onChange
+        // fires with a non-null value before this effect reads them). Use
+        // the DOM as ground truth: if EVERY spinbutton segment shows a
+        // placeholder, the user cleared the entire widget.
+        const segments = triggerRef.current?.querySelectorAll(
+          '[role="spinbutton"]'
+        )
+        const allCleared =
+          segments &&
+          segments.length > 0 &&
+          Array.from(segments).every(s => s.hasAttribute("data-placeholder"))
+
+        let pending: CalendarDate[]
+        if (allCleared) {
+          // Fully cleared → commit empty (matches BaseWeb behavior where
+          // range mode always commits () on close-empty, even with a
+          // non-empty default).
+          pending = []
+        } else {
+          pending = compact([displayStartRef.current, displayEndRef.current])
+        }
+
         const committed = compact([startValue, endValue])
         if (!rangeEqual(pending, committed)) {
           onChangeRef.current(pending)
@@ -424,7 +441,8 @@ function RangeDateInput({
 
       if (datesEqual(range.start, range.end)) {
         if (displayEndRef.current) {
-          // First click while a complete range is shown — enter anchor mode
+          // First click while a complete range is shown — enter anchor mode.
+          // Calendar stays open for the second click (core two-click UX).
           pendingAnchorRef.current = range.start
           setDisplayStart(range.start)
           setDisplayEnd(null)
@@ -705,7 +723,7 @@ function RangeDateInput({
           >
             <I18nProvider locale={safeLocale}>
               <StyledRangeCalendarRoot
-                aria-label="Choose date"
+                aria-label="Choose date range"
                 value={calendarValue}
                 onChange={handleCalendarChange}
                 minValue={minDate}
@@ -763,6 +781,7 @@ function RangeDateInput({
                   <StyledDropdownListBox
                     aria-label="Quick select a date range"
                     selectionMode="single"
+                    disallowEmptySelection={!clearable}
                     selectedKeys={activePreset ? [activePreset.id] : []}
                     onSelectionChange={handleQuickSelectSelection}
                     autoFocus

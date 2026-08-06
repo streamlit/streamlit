@@ -892,7 +892,7 @@ describe("DateInput widget", () => {
         expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
       })
 
-      it("re-clicking the active preset deselects it and clears the range", async () => {
+      it("re-clicking the active preset deselects it and clears the range on a clearable widget", async () => {
         const user = userEvent.setup()
         const today = frozenToday
         const minDate = frozen800DaysAgo
@@ -901,7 +901,7 @@ describe("DateInput widget", () => {
           isRange: true,
           min: minDate,
           max: today,
-          default: [minDate, today],
+          default: [],
         })
 
         render(<DateInput {...props} />)
@@ -937,6 +937,56 @@ describe("DateInput widget", () => {
           [],
           expect.objectContaining({ fromUi: true }),
           undefined
+        )
+      })
+
+      it("does not allow deselecting a preset on a non-clearable widget", async () => {
+        const user = userEvent.setup()
+        const today = frozenToday
+        const minDate = frozen800DaysAgo
+
+        const props = getProps({
+          isRange: true,
+          min: minDate,
+          max: today,
+          default: [minDate, today],
+        })
+
+        render(<DateInput {...props} />)
+        vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+
+        // Select "Past Week"
+        const quickSelect = await screen.findByRole("button", {
+          name: /quick select/i,
+        })
+        await user.click(quickSelect)
+        const pastWeekOption = await screen.findByRole("option", {
+          name: "Past Week",
+        })
+        await user.click(pastWeekOption)
+
+        expect(quickSelect).toHaveTextContent("Past Week")
+
+        // Re-open and click "Past Week" again — should NOT deselect
+        await user.click(quickSelect)
+        const pastWeekAgain = await screen.findByRole("option", {
+          name: "Past Week",
+        })
+        await user.click(pastWeekAgain)
+
+        // Preset should remain selected (not cleared to empty)
+        expect(quickSelect).toHaveTextContent("Past Week")
+        expect(
+          props.widgetMgr.setStringArrayValue
+        ).not.toHaveBeenLastCalledWith(
+          expect.anything(),
+          [],
+          expect.anything(),
+          expect.anything()
         )
       })
 
@@ -1277,6 +1327,42 @@ describe("DateInput widget", () => {
           undefined
         )
       })
+    })
+
+    it("renders and commits a single-day range correctly (start === end)", async () => {
+      const user = userEvent.setup()
+
+      const props = getProps({
+        isRange: true,
+        default: [],
+        value: ["2019-07-06", "2019-07-06"],
+        setValue: true,
+      })
+      render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+
+      // Single-day range displays the same date in both fields
+      const start = getRangeDateSegments(region, "start")
+      const end = getRangeDateSegments(region, "end")
+      expect(start.year).toHaveTextContent("2019")
+      expect(start.month).toHaveTextContent("07")
+      expect(start.day).toHaveTextContent("06")
+      expect(end.year).toHaveTextContent("2019")
+      expect(end.month).toHaveTextContent("07")
+      expect(end.day).toHaveTextContent("06")
+
+      // Clear button commits empty array (same as multi-day range)
+      const clearButton = await screen.findByTestId("stDateInputClearButton")
+      await user.click(clearButton)
+
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        [],
+        { fromUi: true },
+        undefined
+      )
     })
 
     it("clicking a new date in an existing complete range starts a new selection", async () => {
