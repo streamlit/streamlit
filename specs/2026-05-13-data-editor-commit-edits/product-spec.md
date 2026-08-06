@@ -93,17 +93,20 @@ source. For example, a database callback needs `source_df.iloc[row_position]` to
 key for a deleted row.
 
 The callback always receives and returns `pd.DataFrame`, even when the original input is another
-supported dataframe type. Streamlit converts the final result back to the original input format.
-This keeps the callback contract uniform at the cost of a conversion when edits are present.
+supported type. On success, Streamlit converts the validated result back to the original input
+format using the same path as today's `st.data_editor` return-type preservation (Pandas, Polars,
+PyArrow, NumPy, lists/tuples/sets/dicts, and other dataframe-likes). Ordering and dedup semantics
+for set/dict inputs follow that existing conversion; the first release does not add special
+commit-time handling beyond what `st.data_editor` already does when converting edited frames back.
 
 ### User-visible behavior
 
 | Situation | Behavior |
 |-----------|----------|
 | No pending edits | Do not call `commit_edits`; render `data` normally |
-| Callback succeeds (returns a dataframe) | Validate and display the return value in the current render; clear pending edit state |
-| Callback raises `StreamlitDataEditorValidationError` | Display the exception message inline (app-authored text; not redacted like unexpected exceptions), preserve edits for correction, and return `edited_df` |
-| Callback raises any other exception | Preserve edit state and use Streamlit's normal exception handling |
+| Callback succeeds (returns a dataframe) | Validate the return value for editing compatibility **before** clearing pending edit state. On success: display the return value in the current render and clear pending edits. If validation raises `StreamlitAPIException`: preserve pending edits, display Streamlit's normal exception UI, and the `st.data_editor(...)` call returns the last committed baseline (`data` / `source_df`) — not the rejected callback result |
+| Callback raises `StreamlitDataEditorValidationError` | Display the exception message inline (app-authored text; not redacted like unexpected exceptions), preserve edits for correction, and the `st.data_editor(...)` call returns the last committed baseline (`data` / `source_df`) so downstream Python does not see uncommitted edits |
+| Callback raises any other exception | Preserve edit state and use Streamlit's normal exception handling; the `st.data_editor(...)` call returns the last committed baseline. No automatic retry control: the user must make another edit (or otherwise trigger an edit-driven rerun) to invoke `commit_edits` again |
 | Callback calls `st.rerun()` or `st.stop()` | Preserve pending edit state (no successful return) and keep normal Streamlit control-flow behavior. Apps that persist externally before `st.rerun()`/`st.stop()` risk replaying the same batch; return the new dataframe instead of calling `st.rerun()` |
 
 ### Slow callbacks and in-flight edits
@@ -126,8 +129,11 @@ persisting it to session state, a database, or an updated/invalidated cache. A l
 pending edits does not invoke the callback and uses whatever `data` evaluates to at that time.
 
 Add `StreamlitDataEditorValidationError` to `streamlit.errors` for expected, user-fixable validation
-failures. Only this explicit exception is rendered inline; database, network, and other unexpected
-exceptions must retain Streamlit's standard redaction, logging, and monitoring behavior.
+failures from `commit_edits`. Only this explicit exception is rendered inline; database, network,
+and other unexpected exceptions must retain Streamlit's standard redaction, logging, and monitoring
+behavior. A narrower, feature-scoped name is intentional for the first release (principle #4); if
+other widgets later need the same inline validation pattern, a shared `StreamlitValidationError`
+base can be introduced without changing this subclass's public name.
 
 ### Example: database-backed editing
 
@@ -164,7 +170,16 @@ def persist_orders(
         for row in edits.added_rows:
             insert_order(row)
 
-    refreshed_df = load_orders()
+    # Prefer refreshing inside the success path. If refresh fails after the
+    # writes committed, catch and return edited_df (or another post-write
+    # baseline) so Streamlit clears edit state instead of replaying durable
+    # ops on the next edit-triggered retry.
+    try:
+        refreshed_df = load_orders()
+    except Exception:
+        st.session_state.orders = edited_df
+        return edited_df
+
     st.session_state.orders = refreshed_df
     return refreshed_df
 
@@ -190,13 +205,14 @@ in the same render that accepts the edit.
 | Forms | Not supported until ordering with `st.form_submit_button` is designed. Raise `StreamlitAPIException` at call time when `commit_edits` is used inside a form (for example: `"st.data_editor: commit_edits is not supported inside forms."`). |
 | Fragments | Supported; callback execution and state clearing must work on fragment reruns. |
 | `pandas.Styler` | Not supported because styles are derived before the callback may replace rows. Raise `StreamlitAPIException` at call time when `data` is a `Styler` and `commit_edits` is set (for example: `"st.data_editor: commit_edits does not support pandas.Styler input."`). |
-| Callback result | Must be a pandas dataframe with an editing-compatible schema. |
+| Callback result | Must be a pandas dataframe with an editing-compatible schema. Pending edits clear only after this validation succeeds. |
 | Async callbacks | Not supported. |
 | Commit granularity | All pending edits are delivered as one batch; success is all-or-nothing. Streamlit keeps the full batch on failure, so the callback must commit it atomically (e.g. one transaction) to keep retries safe. |
+| Retry after non-validation failure | No dedicated retry control in the first release. After a preserved failure, the user must make another edit (or otherwise cause an edit-triggered rerun) to invoke `commit_edits` again. |
 
 An editing-compatible result may change values, row count, and index values, but must preserve the
 column order, index structure, Arrow field types/nullability, and parsing data kinds used by the
-editor. Incompatible results raise `StreamlitAPIException`.
+editor. Incompatible results raise `StreamlitAPIException` (edits preserved; see behavior table).
 
 While edits are pending, `data` must remain the last committed baseline. Independently reordering
 or replacing source rows is out of scope because edit metadata is positional and carries neither
@@ -236,7 +252,7 @@ st.data_editor(df, key="orders", on_change=persist_orders)
 - Cons: Overloads `on_change` (today fire-and-forget, no return value, no supplied edit args) into a
   transformation hook; would make `st.data_editor`'s `on_change` differ from every other widget;
   still needs new arguments (`source_df`, `edited_df`, `edits`). Rejected in favor of a distinct
-  parameter, consistent with other non-`on_*` hooks such as `format_func` and `validate`.
+  parameter, consistent with other non-`on_*` callable hooks such as `format_func`.
 
 ### Option 4: `on_commit` / other `on_*` names
 
@@ -252,6 +268,7 @@ st.data_editor(df, key="orders", on_change=persist_orders)
 - Schema-changing callback results
 - Partial per-row success and per-cell error UI
 - Native async callbacks or automatic retries
+- Dedicated retry control after non-validation failures (user must edit again to re-invoke)
 
 ## Checklist
 
