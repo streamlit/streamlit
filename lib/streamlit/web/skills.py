@@ -274,16 +274,35 @@ def _find_project_root(start: Path | None = None) -> Path:
     return start_dir
 
 
+def _is_claude_code_present() -> bool:
+    """Best-effort check for whether Claude Code is installed.
+
+    Claude Code only reads skills from ``.claude/skills/``, never from
+    ``.agents/skills/``, so this decides whether the installer also writes a
+    ``.claude`` target. Getting it wrong in the negative direction silently
+    costs the user the whole skill, so this checks several signals rather than
+    just ``~/.claude``: that directory is created lazily and may not exist yet
+    on a fresh install, even though the CLI is on PATH.
+    """
+    try:
+        home = Path.home()
+    except RuntimeError:
+        return False
+
+    if (home / ".claude").exists() or (home / ".claude.json").exists():
+        return True
+    return shutil.which("claude") is not None
+
+
 def _get_project_target_dirs(project_root: Path) -> list[Path]:
     """Get target directories for project skill installation.
 
     Always targets .agents/skills/. Also targets .claude/skills/
-    when ~/.claude exists (Claude Code is installed).
+    when Claude Code appears to be installed.
     """
     targets = [project_root / ".agents" / "skills"]
 
-    claude_home = Path.home() / ".claude"
-    if claude_home.exists():
+    if _is_claude_code_present():
         targets.append(project_root / ".claude" / "skills")
 
     return targets
@@ -293,14 +312,13 @@ def _get_global_target_dirs() -> list[Path]:
     """Get target directories for global skill installation.
 
     Always targets ~/.agents/skills/. Also targets ~/.claude/skills/
-    when ~/.claude exists (Claude Code is installed).
+    when Claude Code appears to be installed.
     """
     home = Path.home()
     targets = [home / ".agents" / "skills"]
 
-    claude_home = home / ".claude"
-    if claude_home.exists():
-        targets.append(claude_home / "skills")
+    if _is_claude_code_present():
+        targets.append(home / ".claude" / "skills")
 
     return targets
 
@@ -309,11 +327,15 @@ def are_skills_installed() -> bool:
     """Check whether Streamlit agent skills appear to be installed.
 
     Returns ``True`` if the bundled skill is present (as a symlink, copied
-    directory, or regular directory) in any of the project-local or global
-    target directories. This is a best-effort check used to decide whether to
-    recommend installing skills; it does not validate skill contents.
+    directory, or regular directory) in *every* target directory for the scope
+    the user installed into. A partial install counts as not installed, so the
+    nudge fires again and fills in the missing agent directory -- this matters
+    when an agent is installed after ``streamlit skills`` last ran. This is a
+    best-effort check used to decide whether to recommend installing skills; it
+    does not validate skill contents.
     """
-    candidate_dirs: list[Path] = []
+    project_dirs: list[Path] = []
+    global_dirs: list[Path] = []
     try:
         project_root = _find_project_root()
     except (OSError, RuntimeError):
@@ -322,26 +344,56 @@ def are_skills_installed() -> bool:
         pass
     else:
         try:
-            candidate_dirs.extend(_get_project_target_dirs(project_root))
+            project_dirs.extend(_get_project_target_dirs(project_root))
         except (OSError, RuntimeError):
             # Same reasoning as above; still check global dirs.
             pass
 
     try:
-        candidate_dirs.extend(_get_global_target_dirs())
+        global_dirs.extend(_get_global_target_dirs())
     except (OSError, RuntimeError):
         # Keep any project dirs already collected above instead of discarding
         # them; still a best-effort check, so just skip the global dirs.
         pass
 
-    for target_dir in candidate_dirs:
-        skill_path = target_dir / _GLOBAL_SKILL_NAME
-        try:
-            if skill_path.is_symlink() or skill_path.exists():
-                return True
-        except OSError:
+    # Project scope first: a project-local install is the more specific choice.
+    scoped_dirs = (project_dirs, global_dirs)
+
+    for scope_dirs in scoped_dirs:
+        if not scope_dirs:
             continue
+        # Directories we could not read are dropped rather than treated as
+        # missing: an unreadable path means "unknown", and reporting the skill
+        # as uninstalled because of a permissions error would nudge users who
+        # are in fact set up correctly.
+        known = [
+            present
+            for present in (_skill_present_in(target_dir) for target_dir in scope_dirs)
+            if present is not None
+        ]
+        if any(known):
+            # This scope has been installed into before, so it is the scope the
+            # user chose. Report installed only if *every* readable target dir for
+            # it has the skill. A partial install -- typically .agents/skills
+            # present but .claude/skills missing, because Claude Code was not
+            # detected the last time `streamlit skills` ran -- leaves the skill
+            # invisible to that agent. Returning True there would suppress the
+            # nudge permanently and strand the user with a skill nothing loads.
+            return all(known)
     return False
+
+
+def _skill_present_in(target_dir: Path) -> bool | None:
+    """Whether the bundled skill exists in ``target_dir``, as link or directory.
+
+    Returns ``None`` when the filesystem check itself fails, so callers can tell
+    "not there" apart from "could not look".
+    """
+    skill_path = target_dir / _GLOBAL_SKILL_NAME
+    try:
+        return skill_path.is_symlink() or skill_path.exists()
+    except OSError:
+        return None
 
 
 def _is_streamlit_owned_symlink(link_path: Path, bundled_skill_names: set[str]) -> bool:

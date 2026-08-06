@@ -402,20 +402,17 @@ class TestGetProjectTargetDirs:
         assert tmp_path / ".agents" / "skills" in result
 
     @pytest.mark.parametrize(
-        ("claude_home_exists", "expected_in_result"),
+        ("claude_present", "expected_in_result"),
         [(True, True), (False, False)],
-        ids=["claude-exists", "claude-missing"],
+        ids=["claude-present", "claude-absent"],
     )
-    def test_claude_skills_conditional_on_claude_home(
-        self, tmp_path: Path, claude_home_exists: bool, expected_in_result: bool
+    def test_claude_skills_conditional_on_claude_code(
+        self, tmp_path: Path, claude_present: bool, expected_in_result: bool
     ) -> None:
-        """Includes .claude/skills/ only when ~/.claude exists."""
-        home = tmp_path / "home"
-        home.mkdir(parents=True)
-        if claude_home_exists:
-            (home / ".claude").mkdir()
-
-        with patch("pathlib.Path.home", return_value=home):
+        """Includes .claude/skills/ only when Claude Code appears installed."""
+        with patch.object(
+            skills, "_is_claude_code_present", return_value=claude_present
+        ):
             result = skills._get_project_target_dirs(tmp_path)
 
         assert (tmp_path / ".claude" / "skills" in result) == expected_in_result
@@ -435,23 +432,68 @@ class TestGetGlobalTargetDirs:
         assert home / ".agents" / "skills" in result
 
     @pytest.mark.parametrize(
-        ("claude_home_exists", "expected_in_result"),
+        ("claude_present", "expected_in_result"),
         [(True, True), (False, False)],
-        ids=["claude-exists", "claude-missing"],
+        ids=["claude-present", "claude-absent"],
     )
-    def test_claude_skills_conditional_on_claude_home(
-        self, tmp_path: Path, claude_home_exists: bool, expected_in_result: bool
+    def test_claude_skills_conditional_on_claude_code(
+        self, tmp_path: Path, claude_present: bool, expected_in_result: bool
     ) -> None:
-        """Includes ~/.claude/skills/ only when ~/.claude exists."""
+        """Includes ~/.claude/skills/ only when Claude Code appears installed."""
         home = tmp_path / "home"
         home.mkdir(parents=True)
-        if claude_home_exists:
-            (home / ".claude").mkdir()
 
-        with patch("pathlib.Path.home", return_value=home):
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_is_claude_code_present", return_value=claude_present
+            ),
+        ):
             result = skills._get_global_target_dirs()
 
         assert (home / ".claude" / "skills" in result) == expected_in_result
+
+
+class TestIsClaudeCodePresent:
+    """Tests for _is_claude_code_present."""
+
+    @pytest.mark.parametrize(
+        ("marker", "expected"),
+        [(".claude", True), (".claude.json", True), (None, False)],
+        ids=["claude-dir", "claude-json", "neither"],
+    )
+    def test_detects_home_markers(
+        self, tmp_path: Path, marker: str | None, expected: bool
+    ) -> None:
+        """~/.claude or ~/.claude.json both count as Claude Code being present."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+        if marker == ".claude":
+            (home / marker).mkdir()
+        elif marker:
+            (home / marker).write_text("{}")
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills.shutil, "which", return_value=None),
+        ):
+            assert skills._is_claude_code_present() is expected
+
+    def test_detects_cli_on_path_without_home_dir(self, tmp_path: Path) -> None:
+        """The CLI being on PATH counts even before ~/.claude is created.
+
+        This is the case that used to strand users: they install the skill on a
+        fresh machine where Claude Code has not yet created ~/.claude, so the
+        installer skipped .claude/skills entirely.
+        """
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills.shutil, "which", return_value="/usr/local/bin/claude"),
+        ):
+            assert skills._is_claude_code_present() is True
 
 
 class TestAreSkillsInstalled:
@@ -470,6 +512,66 @@ class TestAreSkillsInstalled:
             patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
         ):
             assert skills.are_skills_installed() is False
+
+    def test_partial_install_in_scope_counts_as_not_installed(
+        self, tmp_path: Path
+    ) -> None:
+        """A scope with .agents but not .claude is not installed.
+
+        This is the wedged state: the user ran `streamlit skills` before Claude
+        Code existed, so only .agents/skills was written. Once ~/.claude appears,
+        Claude Code cannot see the skill -- and if this returned True the nudge
+        would never fire again, stranding them permanently.
+        """
+        agents_dir = tmp_path / "home" / ".agents" / "skills"
+        (agents_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+        claude_dir = tmp_path / "home" / ".claude" / "skills"
+
+        with (
+            patch.object(skills, "_find_project_root", side_effect=OSError),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[agents_dir, claude_dir]
+            ),
+        ):
+            assert skills.are_skills_installed() is False
+
+    def test_complete_install_in_scope_counts_as_installed(
+        self, tmp_path: Path
+    ) -> None:
+        """Every target dir for the scope having the skill is a complete install."""
+        agents_dir = tmp_path / "home" / ".agents" / "skills"
+        claude_dir = tmp_path / "home" / ".claude" / "skills"
+        for target in (agents_dir, claude_dir):
+            (target / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", side_effect=OSError),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[agents_dir, claude_dir]
+            ),
+        ):
+            assert skills.are_skills_installed() is True
+
+    def test_global_install_does_not_nudge_in_every_project(
+        self, tmp_path: Path
+    ) -> None:
+        """A deliberate global-only install is not reported as missing.
+
+        The completeness check is per scope, so someone who installed globally is
+        not nudged just because the current project has no local copy.
+        """
+        project_dir = tmp_path / "project" / ".agents" / "skills"
+        global_dir = tmp_path / "home" / ".agents" / "skills"
+        (global_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(
+                skills, "_get_project_target_dirs", return_value=[project_dir]
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+        ):
+            assert skills.are_skills_installed() is True
 
     def test_returns_true_when_installed_in_project(self, tmp_path: Path) -> None:
         """Returns True when the bundled skill exists in a project target dir."""
@@ -1197,6 +1299,9 @@ class TestInstallProjectSkillsConflicts:
             ),
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            # Pin Claude Code as absent so .agents/skills is the only target and
+            # "all skills skipped" is actually what this exercises.
+            patch.object(skills, "_is_claude_code_present", return_value=False),
         ):
             result = runner.invoke(cli.main, ["skills", "--yes"])
 
@@ -1532,6 +1637,9 @@ class TestGlobalInstallationConflicts:
             patch.object(
                 skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
+            # Pin Claude Code as absent so .agents/skills is the only target and
+            # "all targets skipped" is actually what this exercises.
+            patch.object(skills, "_is_claude_code_present", return_value=False),
         ):
             result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
 
