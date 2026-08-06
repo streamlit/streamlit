@@ -83,9 +83,16 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     def test_input_types(self):
         # Test valid input types.
-        type_strings = ["default", "password"]
-        type_values = [TextInput.DEFAULT, TextInput.PASSWORD]
-        for type_string, type_value in zip(type_strings, type_values, strict=False):
+        type_strings = ["default", "password", "email", "url", "phone", "search"]
+        type_values = [
+            TextInput.DEFAULT,
+            TextInput.PASSWORD,
+            TextInput.EMAIL,
+            TextInput.URL,
+            TextInput.PHONE,
+            TextInput.SEARCH,
+        ]
+        for type_string, type_value in zip(type_strings, type_values, strict=True):
             st.text_input("label", type=type_string)
 
             c = self.get_delta_from_queue().new_element.text_input
@@ -97,8 +104,166 @@ class TextInputTest(DeltaGeneratorTestCase):
 
         assert (
             str(exc.value)
-            == "'bad_type' is not a valid text_input type. Valid types are 'default' and 'password'."
+            == "'bad_type' is not a valid text_input type. Valid types are "
+            "'default', 'password', 'email', 'url', 'phone', 'search'."
         )
+
+    @parameterized.expand(
+        [
+            ("email", ":material/mail:", "you@example.com", "email"),
+            ("url", ":material/link:", "https://example.com", "url"),
+            ("phone", ":material/call:", "+1 234 567 8900", "tel"),
+            ("search", ":material/search:", "Search", "off"),
+        ]
+    )
+    def test_specialized_type_smart_defaults(
+        self,
+        type_string: str,
+        expected_icon: str,
+        expected_placeholder: str,
+        expected_autocomplete: str,
+    ):
+        """Test that specialized types apply their icon/placeholder/autocomplete defaults."""
+        st.text_input("label", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == expected_icon
+        assert c.placeholder == expected_placeholder
+        assert c.autocomplete == expected_autocomplete
+
+    @parameterized.expand(
+        [
+            (
+                "email",
+                r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
+                "Enter a valid email address.",
+            ),
+            (
+                "url",
+                r"^https?://[^\s/.]+\.[^\s]+$",
+                "Enter a valid URL starting with http:// or https://.",
+            ),
+        ]
+    )
+    def test_specialized_type_default_validation(
+        self, type_string: str, expected_regex: str, expected_message: str
+    ):
+        """Test that email/url types default to Streamlit-maintained validation."""
+        st.text_input("label", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.validate_regex == expected_regex
+        assert c.validate_message == expected_message
+
+    @parameterized.expand([("phone",), ("search",)])
+    def test_specialized_type_without_default_validation(self, type_string: str):
+        """Test that phone/search types don't apply any default validation."""
+        st.text_input("label", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert not c.HasField("validate_regex")
+        assert not c.HasField("validate_message")
+
+    def test_password_type_has_no_smart_defaults(self):
+        """Test that type='password' is unchanged: no icon/placeholder/validation."""
+        st.text_input("label", type="password")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == ""
+        assert c.placeholder == ""
+        assert not c.HasField("validate_regex")
+        assert c.autocomplete == "new-password"
+
+    def test_specialized_type_icon_opt_out(self):
+        """Test that icon='' turns the icon off (and does not raise) for a type default."""
+        st.text_input("label", type="email", icon="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == ""
+
+    def test_specialized_type_placeholder_opt_out(self):
+        """Test that placeholder='' turns the placeholder off for a specialized type."""
+        st.text_input("label", type="email", placeholder="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.placeholder == ""
+
+    def test_specialized_type_validate_opt_out(self):
+        """Test that validate='' turns the default validation off for a specialized type."""
+        st.text_input("label", type="email", validate="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.validate_regex == ""
+        assert not c.HasField("validate_message")
+
+    def test_specialized_type_autocomplete_opt_out(self):
+        """Test that autocomplete='' turns autocomplete off for a specialized type."""
+        st.text_input("label", type="email", autocomplete="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.autocomplete == ""
+
+    def test_specialized_type_explicit_overrides_win(self):
+        """Test that explicit values override the type-derived defaults."""
+        st.text_input(
+            "label",
+            type="email",
+            icon=":material/work:",
+            placeholder="name@company.com",
+            validate=("^a$", "custom message"),
+            autocomplete="on",
+        )
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == ":material/work:"
+        assert c.placeholder == "name@company.com"
+        assert c.validate_regex == "^a$"
+        assert c.validate_message == "custom message"
+        assert c.autocomplete == "on"
+
+    def test_validate_none_semantics_depends_on_type(self):
+        """Test that validate=None uses the email default but stays off for default."""
+        st.text_input("email", type="email", validate=None)
+        email_proto = self.get_delta_from_queue().new_element.text_input
+        assert email_proto.validate_regex == r"^[^\s@]+@[^\s@]+\.[^\s@]+$"
+
+        st.text_input("default", type="default", validate=None)
+        default_proto = self.get_delta_from_queue().new_element.text_input
+        assert not default_proto.HasField("validate_regex")
+
+    def test_specialized_type_identity_stable_with_defaults(self):
+        """Test that a keyed email input keeps a stable ID whether the enhanced
+        params are omitted or explicitly None.
+
+        The type-derived defaults must not enter the widget identity, otherwise
+        switching between omitting and passing ``None`` would reset the widget.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("label", key="email_key", type="email")
+            id1 = self.get_delta_from_queue().new_element.text_input.id
+
+            st.text_input(
+                "label",
+                key="email_key",
+                type="email",
+                icon=None,
+                placeholder=None,
+                validate=None,
+                autocomplete=None,
+            )
+            id2 = self.get_delta_from_queue().new_element.text_input.id
+            assert id1 == id2
+
+    @parameterized.expand([("email",), ("url",), ("phone",), ("search",)])
+    def test_bind_query_params_allowed_for_specialized_types(self, type_string: str):
+        """Test that bind='query-params' is allowed for non-password specialized types."""
+        st.text_input("label", key="my_text", bind="query-params", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_text"
 
     def test_placeholder(self):
         """Test that it can be called with placeholder"""

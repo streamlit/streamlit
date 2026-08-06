@@ -126,6 +126,58 @@ describe("TextInput widget", () => {
     expect(showButton).toBeInTheDocument()
   })
 
+  it.each([
+    [TextInputProto.Type.DEFAULT, "text"],
+    [TextInputProto.Type.PASSWORD, "password"],
+    [TextInputProto.Type.EMAIL, "email"],
+    [TextInputProto.Type.URL, "url"],
+    [TextInputProto.Type.PHONE, "tel"],
+    [TextInputProto.Type.SEARCH, "search"],
+  ])(
+    "maps proto type %s to the correct native input type",
+    (protoType, expectedDomType) => {
+      const props = getProps({ type: protoType })
+      render(<TextInput {...props} />)
+      // Password inputs don't have the textbox role, so query by placeholder.
+      const input = screen.getByPlaceholderText("Placeholder")
+      expect(input).toHaveAttribute("type", expectedDomType)
+    }
+  )
+
+  it("sets enterKeyHint='search' only for the search type", () => {
+    const searchProps = getProps({ type: TextInputProto.Type.SEARCH })
+    const { unmount } = render(<TextInput {...searchProps} />)
+    expect(screen.getByRole("searchbox")).toHaveAttribute(
+      "enterkeyhint",
+      "search"
+    )
+    unmount()
+
+    const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
+    render(<TextInput {...defaultProps} />)
+    expect(screen.getByRole("textbox")).not.toHaveAttribute("enterkeyhint")
+  })
+
+  it("does not mark email inputs invalid via native constraint validation", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    render(<TextInput {...props} />)
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "not-an-email")
+    await user.click(document.body)
+
+    // `validationBehavior="aria"` keeps React Aria from reflecting the native
+    // `typeMismatch` into `data-invalid`; the regex `validate` mechanism is the
+    // single source of the invalid state. Without a `validateRegex`, no error
+    // treatment should appear at all.
+    expect(input).not.toHaveAttribute("data-invalid")
+    expect(input).not.toHaveAttribute("aria-invalid")
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+  })
+
   it("toggles password visibility when show/hide button is clicked", async () => {
     const user = userEvent.setup()
     const props = getProps({ type: TextInputProto.Type.PASSWORD })

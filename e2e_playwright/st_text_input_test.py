@@ -36,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 28
+TEXT_INPUT_ELEMENTS = 33
 
 
 def test_text_input_widget_rendering(
@@ -101,6 +101,26 @@ def test_text_input_widget_rendering(
     assert_snapshot(
         get_text_input(themed_app, "text input 16 - material icon"),
         name="st_text_input-material_icon",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "email_input"),
+        name="st_text_input-type_email",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "url_input"),
+        name="st_text_input-type_url",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "phone_input"),
+        name="st_text_input-type_phone",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "search_input"),
+        name="st_text_input-type_search",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "email_override_input"),
+        name="st_text_input-type_email_overrides",
     )
     assert_snapshot(
         get_text_input(themed_app, "text input 17 (width=200px)"),
@@ -310,6 +330,64 @@ def test_text_input_validation_error_state_rendering(
     expect(error_icon).to_be_visible()
 
     assert_snapshot(validated_widget, name="st_text_input-validation_error")
+
+
+def test_text_input_specialized_types_attributes(app: Page):
+    """Specialized types set the native input type and their smart defaults."""
+    email_input = get_element_by_key(app, "email_input").locator("input").first
+    expect(email_input).to_have_attribute("type", "email")
+    expect(email_input).to_have_attribute("placeholder", "you@example.com")
+    expect(email_input).to_have_attribute("autocomplete", "email")
+    expect(
+        get_element_by_key(app, "email_input").get_by_test_id("stTextInputIcon")
+    ).to_be_visible()
+
+    url_input = get_element_by_key(app, "url_input").locator("input").first
+    expect(url_input).to_have_attribute("type", "url")
+    expect(url_input).to_have_attribute("placeholder", "https://example.com")
+
+    phone_input = get_element_by_key(app, "phone_input").locator("input").first
+    expect(phone_input).to_have_attribute("type", "tel")
+    expect(phone_input).to_have_attribute("placeholder", "+1 234 567 8900")
+
+    search_input = get_element_by_key(app, "search_input").locator("input").first
+    expect(search_input).to_have_attribute("type", "search")
+    expect(search_input).to_have_attribute("placeholder", "Search")
+
+    # Explicit overrides win over the type defaults.
+    override_input = (
+        get_element_by_key(app, "email_override_input").locator("input").first
+    )
+    expect(override_input).to_have_attribute("type", "email")
+    expect(override_input).to_have_attribute("placeholder", "name@company.com")
+    expect(override_input).to_have_attribute("autocomplete", "off")
+
+
+def test_text_input_email_default_validation(app: Page):
+    """The email type validates by default: it blocks invalid and commits valid values."""
+    email_widget = get_element_by_key(app, "email_input")
+    email_field = email_widget.locator("input").first
+
+    # An invalid value is blocked from committing and surfaces an error. The
+    # committed value stays empty, so the invalid text must not appear in the
+    # `st.write` output.
+    email_field.fill("abc")
+    email_field.blur()
+    expect(app.get_by_text("email value: abc", exact=True)).to_have_count(0)
+
+    error_icon = email_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    # Only a single error treatment is shown (no duplicate/native bubble on top
+    # of the regex tooltip).
+    expect(email_widget.get_by_test_id("stTextInputErrorIcon")).to_have_count(1)
+
+    # A valid value commits and clears the error.
+    email_field.fill("a@b.co")
+    email_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "email value: a@b.co")
+    expect(error_icon).not_to_be_visible()
 
 
 def test_text_input_validation_blocks_form_submit_and_recovers(app: Page):

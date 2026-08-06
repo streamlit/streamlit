@@ -391,7 +391,16 @@ function TextInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <TextField isDisabled={disabled}>
+      {/*
+       * `validationBehavior="aria"` disables React Aria's native constraint
+       * validation. A native `type="email"`/`"url"` can otherwise flip the
+       * input's `ValidityState` (`typeMismatch`) into `aria-invalid`/
+       * `data-invalid`, producing a second (browser) error state on top of our
+       * regex `validate` tooltip. We deliberately do NOT set `isInvalid` here:
+       * TextInput drives its own `aria-invalid` on the input element and its
+       * own error UI, so React Aria's validation must stay out of the way.
+       */}
+      <TextField isDisabled={disabled} validationBehavior="aria">
         <StyledInputRoot
           data-testid="stTextInputRootElement"
           $isFocused={focused}
@@ -416,6 +425,14 @@ function TextInput({
             value={uiValue ?? ""}
             placeholder={placeholder}
             type={showPassword ? "text" : getTypeString(element)}
+            // Label the mobile keyboard's return key for search inputs. This is
+            // the one type-aligned keyboard hint we set; other types rely on
+            // the native input `type` alone.
+            enterKeyHint={
+              element.type === TextInputProto.Type.SEARCH
+                ? "search"
+                : undefined
+            }
             autoComplete={element.autocomplete}
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -511,8 +528,21 @@ function updateWidgetMgrState(
   )
 }
 
+/**
+ * Maps each `TextInputProto.Type` enum value to its native DOM `<input type>`.
+ * `PHONE` is the only entry whose DOM type (`"tel"`) differs from its name.
+ */
+const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
+  [TextInputProto.Type.DEFAULT]: "text",
+  [TextInputProto.Type.PASSWORD]: "password",
+  [TextInputProto.Type.EMAIL]: "email",
+  [TextInputProto.Type.URL]: "url",
+  [TextInputProto.Type.PHONE]: "tel",
+  [TextInputProto.Type.SEARCH]: "search",
+}
+
 function getTypeString(element: TextInputProto): string {
-  return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
+  return DOM_INPUT_TYPE_BY_PROTO[element.type] ?? "text"
 }
 
 // Prevents the toggle button from stealing focus from the input on mousedown,
