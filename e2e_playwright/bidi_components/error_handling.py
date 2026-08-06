@@ -17,8 +17,6 @@ from pathlib import Path
 
 import streamlit as st
 
-component = st.components.v2.component
-
 st.header("Custom Components v2 - Error Handling")
 
 st.divider()
@@ -26,7 +24,7 @@ with st.container():
     st.subheader("Errors (intentionally broken components)")
 
     # Incorrect JS (no default export)
-    _incorrect_js = component(
+    _incorrect_js = st.components.v2.component(
         "incorrectJsComponent",
         html="""<h1>The JS is incorrect</h1>""",
         js="""
@@ -38,7 +36,7 @@ with st.container():
     _incorrect_js()
 
     # Incorrect CSS path
-    _incorrect_css = component(
+    _incorrect_css = st.components.v2.component(
         "incorrectCssPathComponent",
         html="""<h1>The CSS path is incorrect</h1>""",
         css=Path(__file__).parent / "incorrect_css_path.css",  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]

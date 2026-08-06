@@ -20,8 +20,6 @@ import pandas as pd
 
 import streamlit as st
 
-component = st.components.v2.component
-
 if TYPE_CHECKING:
     from streamlit.components.v2.bidi_component import ComponentResult
     from streamlit.elements.lib.layout_utils import Height, Width
@@ -34,7 +32,7 @@ st.header("Custom Components v2 - Basics")
 # ---------------------------------------------------------------------------
 # Empty content: component with no HTML/CSS/JS should not error
 # ---------------------------------------------------------------------------
-_EMPTY_CMP = component("bidi_empty_content", isolate_styles=False)
+_EMPTY_CMP = st.components.v2.component("bidi_empty_content", isolate_styles=False)
 
 with st.container(key="empty_component_container"):
     st.subheader("Empty content")
@@ -93,7 +91,7 @@ _STATEFUL_HTML = """
 </div>
 """
 
-_STATEFUL_CMP = component(
+_STATEFUL_CMP = st.components.v2.component(
     "bidi_stateful",
     js=_STATEFUL_JS,
     html=_STATEFUL_HTML,
@@ -156,7 +154,9 @@ _TRIGGER_HTML = """
 </div>
 """
 
-_TRIGGER_CMP = component("bidi_trigger", js=_TRIGGER_JS, html=_TRIGGER_HTML)
+_TRIGGER_CMP = st.components.v2.component(
+    "bidi_trigger", js=_TRIGGER_JS, html=_TRIGGER_HTML
+)
 
 
 def trigger_component(
@@ -215,7 +215,7 @@ _CTX_HTML = """
 </div>
 """
 
-_CTX_CMP = component(
+_CTX_CMP = st.components.v2.component(
     name="bidi_ctx",
     js=_CTX_JS,
     html=_CTX_HTML,
@@ -482,7 +482,7 @@ div {
 }
 """
 
-    _BASIC_CMP = component(
+    _BASIC_CMP = st.components.v2.component(
         name="bidi_basic",
         js=_BASIC_JS,
         html=_BASIC_HTML,
@@ -564,7 +564,7 @@ export default function(component) {
 </form>
 """
 
-    _HOTKEY_CMP = component(
+    _HOTKEY_CMP = st.components.v2.component(
         name="bidi_hotkey_regression",
         js=_HOTKEY_JS,
         html=_HOTKEY_HTML,
@@ -605,7 +605,7 @@ export default function(component) {
 <div id="my-arrow-component"></div>
 """
 
-    _ARROW_CMP = component(
+    _ARROW_CMP = st.components.v2.component(
         name="my_arrow_component",
         js=_ARROW_JS,
         html=_ARROW_HTML,

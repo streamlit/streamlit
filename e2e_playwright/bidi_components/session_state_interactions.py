@@ -16,9 +16,7 @@
 import streamlit as st
 from streamlit.components.v2.bidi_component import ComponentResult
 
-component = st.components.v2.component
-
-interactive_text_input_definition = component(
+interactive_text_input_definition = st.components.v2.component(
     "interactive_text_input",
     html="""
     <label for='txt'>Enter text:</label>

@@ -19,8 +19,6 @@ import pandas as pd
 
 import streamlit as st
 
-component = st.components.v2.component
-
 np.random.seed(0)
 data = np.random.randint(low=0, high=20, size=(20, 3))
 
@@ -100,7 +98,7 @@ _POPOVER_HTML = """
 </div>
 """
 
-_POPOVER_CMP = component(
+_POPOVER_CMP = st.components.v2.component(
     name="sidebar_popover_test",
     js=_POPOVER_JS,
     html=_POPOVER_HTML,
