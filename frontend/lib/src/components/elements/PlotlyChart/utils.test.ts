@@ -29,6 +29,7 @@ import {
   handleSelection,
   parseBoxSelection,
   parseLassoPath,
+  preserveFigureInteractionState,
   sendEmptySelection,
 } from "./utils"
 
@@ -127,6 +128,112 @@ describe("PlotlyChart utils", () => {
       applyTheming(mockPlotlyFigure, chartTheme, mockTheme.emotion)
 
       expect(layoutWithThemeDefaults).toHaveBeenCalled()
+    })
+  })
+
+  describe("preserveFigureInteractionState", () => {
+    it("preserves selection modes, dimensions, axis ranges, and selected points", () => {
+      const rethemed = {
+        data: [
+          { type: "scatter", marker: { color: "#00ff00" } },
+          { type: "scatter", marker: { color: "#0000ff" } },
+        ],
+        layout: {
+          paper_bgcolor: "#111111",
+          xaxis: { gridcolor: "#222222", title: "x" },
+          yaxis: { gridcolor: "#333333", title: "y" },
+          xaxis2: { gridcolor: "#444444" },
+        },
+        frames: [],
+      }
+      const previous = {
+        data: [
+          {
+            type: "scatter",
+            marker: { color: "#ff0000" },
+            selectedpoints: [0, 2],
+          },
+          { type: "scatter", marker: { color: "#00ffff" } },
+        ],
+        layout: {
+          width: 800,
+          height: 400,
+          clickmode: "event+select",
+          hovermode: "closest",
+          dragmode: "select",
+          selections: [{ type: "rect", x0: 0, x1: 1, y0: 0, y1: 1 }],
+          paper_bgcolor: "#ffffff",
+          xaxis: {
+            range: [1, 5],
+            autorange: false,
+            gridcolor: "#aaaaaa",
+            rangeslider: { range: [1, 3] },
+          },
+          yaxis: { range: [10, 20], gridcolor: "#bbbbbb" },
+          xaxis2: { range: [0, 1], gridcolor: "#cccccc" },
+        },
+        frames: [],
+      }
+
+      const result = preserveFigureInteractionState(
+        rethemed as never,
+        previous as never
+      )
+
+      // Themed styling comes from the rethemed figure.
+      expect(result.layout.paper_bgcolor).toBe("#111111")
+      expect(result.layout.xaxis?.gridcolor).toBe("#222222")
+      expect(result.layout.yaxis?.gridcolor).toBe("#333333")
+      expect(result.data[0]).toEqual(
+        expect.objectContaining({ marker: { color: "#00ff00" } })
+      )
+
+      // Interactive state comes from the previous figure.
+      expect(result.layout.width).toBe(800)
+      expect(result.layout.height).toBe(400)
+      expect(result.layout.clickmode).toBe("event+select")
+      expect(result.layout.hovermode).toBe("closest")
+      expect(result.layout.dragmode).toBe("select")
+      // `selections` exists at runtime but is not in Plotly's Layout type
+      expect((result.layout as Record<string, unknown>).selections).toEqual([
+        { type: "rect", x0: 0, x1: 1, y0: 0, y1: 1 },
+      ])
+      expect(result.layout.xaxis?.range).toEqual([1, 5])
+      expect(result.layout.xaxis?.autorange).toBe(false)
+      expect(result.layout.xaxis?.rangeslider).toEqual({ range: [1, 3] })
+      expect(result.layout.yaxis?.range).toEqual([10, 20])
+      expect(result.layout.xaxis2?.range).toEqual([0, 1])
+      expect(result.data[0]).toEqual(
+        expect.objectContaining({ selectedpoints: [0, 2] })
+      )
+      // Traces without selectedpoints are left alone.
+      expect(
+        (result.data[1] as { selectedpoints?: unknown }).selectedpoints
+      ).toBeUndefined()
+    })
+
+    it("does not invent interactive state when the previous figure has none", () => {
+      const rethemed = {
+        data: [{ type: "scatter" }],
+        layout: { xaxis: { title: "x" } },
+        frames: [],
+      }
+      const previous = {
+        data: [{ type: "scatter" }],
+        layout: {},
+        frames: [],
+      }
+
+      const result = preserveFigureInteractionState(
+        rethemed as never,
+        previous as never
+      )
+
+      expect(result.layout.clickmode).toBeUndefined()
+      expect(result.layout.xaxis).toEqual({ title: "x" })
+      expect(
+        (result.data[0] as { selectedpoints?: unknown }).selectedpoints
+      ).toBeUndefined()
     })
   })
 

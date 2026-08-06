@@ -43,15 +43,23 @@ vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
   }),
 }))
 
+// Mutable holder so individual tests can simulate a theme change (e.g. a
+// light<->dark toggle) by swapping the value returned by useEmotionTheme.
+const themeHolder = vi.hoisted<{ current: unknown }>(() => ({ current: null }))
+
 vi.mock("~lib/hooks/useEmotionTheme", () => ({
-  useEmotionTheme: () => mockTheme.emotion,
+  useEmotionTheme: () => themeHolder.current,
 }))
 
-vi.mock("./utils", () => ({
-  applyTheming: vi.fn(spec => spec),
-  handleSelection: vi.fn(),
-  sendEmptySelection: vi.fn(),
-}))
+vi.mock("./utils", async importOriginal => {
+  const actual = await importOriginal<typeof import("./utils")>()
+  return {
+    ...actual,
+    applyTheming: vi.fn(spec => spec),
+    handleSelection: vi.fn(),
+    sendEmptySelection: vi.fn(),
+  }
+})
 
 vi.mock("~lib/components/widgets/Form/FormClearHelper", () => {
   return {
@@ -126,7 +134,9 @@ describe("PlotlyChart Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(applyTheming).mockImplementation(spec => spec)
     widgetMgr = createWidgetManager()
+    themeHolder.current = mockTheme.emotion
   })
 
   it("renders without crashing", () => {
@@ -154,6 +164,146 @@ describe("PlotlyChart Component", () => {
 
     const lastCallProps = getLastPlotProps()
     expect(lastCallProps.layout.title).toBe("Recovered")
+  })
+
+  it("re-themes from the original spec when the theme changes", () => {
+    const buildTree = (): React.ReactElement => (
+      <ElementFullscreenContext.Provider
+        value={{
+          expanded: false,
+          width: 600,
+          height: 500,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }}
+      >
+        <PlotlyChart
+          element={DEFAULT_ELEMENT}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={600}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    const { rerender } = render(buildTree())
+    // Ignore the initial theming from the useState initializer; we only care
+    // about what happens on the subsequent theme change.
+    vi.mocked(applyTheming).mockClear()
+
+    // Simulate a theme change (e.g. light -> dark) and re-render.
+    const newTheme = { ...mockTheme.emotion }
+    themeHolder.current = newTheme
+    act(() => {
+      rerender(buildTree())
+    })
+
+    // The figure must be re-themed from the pristine spec (which still holds
+    // the categorical/sequential/diverging palette placeholders) using the new
+    // theme - not from the already-themed figure, whose placeholders were
+    // consumed on the previous render.
+    expect(applyTheming).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layout: expect.objectContaining({ title: "Test Chart" }),
+      }),
+      "streamlit",
+      newTheme
+    )
+
+    // The pristine spec has no runtime dimensions baked into its layout, which
+    // confirms we re-themed the original spec rather than the current figure.
+    const rethemeCall = vi
+      .mocked(applyTheming)
+      .mock.calls.find(call => call[2] === newTheme)
+    expect(
+      (rethemeCall?.[0] as { layout?: { width?: number } })?.layout?.width
+    ).toBeUndefined()
+  })
+
+  it("preserves selection modes and axis ranges across theme changes", () => {
+    const selectableElement = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [
+        PlotlyChartProto.SelectionMode.POINTS,
+        PlotlyChartProto.SelectionMode.BOX,
+      ],
+    })
+
+    // Seed recovered figure state with interactive fields that would otherwise
+    // be wiped by re-theming from the pristine spec.
+    const interactiveFigure = {
+      data: [{ type: "scatter", x: [1, 2], y: [1, 2], selectedpoints: [1] }],
+      layout: {
+        title: "Recovered",
+        width: 600,
+        height: 450,
+        clickmode: "event+select",
+        hovermode: "closest",
+        dragmode: "pan",
+        xaxis: { range: [0, 10], autorange: false, gridcolor: "#old" },
+        yaxis: { range: [0, 20], gridcolor: "#old" },
+      },
+    }
+    vi.mocked(widgetMgr.getElementState).mockReturnValue(interactiveFigure)
+
+    // applyTheming is mocked as identity-ish, so re-theme returns the pristine
+    // spec plus fresh themed axis styling. preserveFigureInteractionState must
+    // carry interactive fields back from the previous figure.
+    vi.mocked(applyTheming).mockImplementation(spec => {
+      const figure = spec as {
+        data: unknown[]
+        layout?: Record<string, unknown>
+        frames?: unknown
+      }
+      return {
+        ...figure,
+        layout: {
+          ...figure.layout,
+          xaxis: { gridcolor: "#new" },
+          yaxis: { gridcolor: "#new" },
+        },
+      } as typeof spec
+    })
+
+    const buildTree = (): React.ReactElement => (
+      <ElementFullscreenContext.Provider
+        value={{
+          expanded: false,
+          width: 600,
+          height: 500,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }}
+      >
+        <PlotlyChart
+          element={selectableElement}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={600}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    const { rerender } = render(buildTree())
+
+    const newTheme = { ...mockTheme.emotion }
+    themeHolder.current = newTheme
+    act(() => {
+      rerender(buildTree())
+    })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.layout.clickmode).toBe("event+select")
+    expect(lastCallProps.layout.hovermode).toBe("closest")
+    expect(lastCallProps.layout.dragmode).toBe("pan")
+    expect(lastCallProps.layout.xaxis?.range).toEqual([0, 10])
+    expect(lastCallProps.layout.yaxis?.range).toEqual([0, 20])
+    // Themed styling comes from the rethemed figure, not the previous theme.
+    expect(lastCallProps.layout.xaxis?.gridcolor).toBe("#new")
+    expect(lastCallProps.layout.yaxis?.gridcolor).toBe("#new")
+    expect(lastCallProps.data[0]).toEqual(
+      expect.objectContaining({ selectedpoints: [1] })
+    )
   })
 
   it("updates dimensions based on context", () => {
@@ -387,5 +537,132 @@ describe("PlotlyChart Component", () => {
     })
 
     expect(expandMock).toHaveBeenCalled()
+  })
+
+  it("does not preserve interaction state when element id changes", () => {
+    const firstElement = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      id: "chart_A",
+      spec: JSON.stringify({
+        data: [{ type: "scatter", x: [1, 2], y: [1, 2] }],
+        layout: { title: "Chart A" },
+      }),
+    })
+
+    const secondElement = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      id: "chart_B",
+      spec: JSON.stringify({
+        data: [{ type: "bar", x: [3, 4], y: [3, 4] }],
+        layout: { title: "Chart B" },
+      }),
+    })
+
+    const buildTree = (element: PlotlyChartProto): React.ReactElement => (
+      <ElementFullscreenContext.Provider
+        value={{
+          expanded: false,
+          width: 600,
+          height: 500,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }}
+      >
+        <PlotlyChart
+          element={element}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={600}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    const { rerender } = render(buildTree(firstElement))
+
+    vi.mocked(applyTheming).mockClear()
+
+    act(() => {
+      rerender(buildTree(secondElement))
+    })
+
+    // applyTheming should be called with the new element's pristine spec
+    expect(applyTheming).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layout: expect.objectContaining({ title: "Chart B" }),
+      }),
+      "streamlit",
+      expect.anything()
+    )
+
+    const lastCallProps = getLastPlotProps()
+    // The new chart should not carry over interactive state from the old one
+    expect(lastCallProps.layout.clickmode).toBeUndefined()
+    expect(lastCallProps.layout.dragmode).toBeUndefined()
+    expect(lastCallProps.layout.xaxis?.range).toBeUndefined()
+  })
+
+  it("onUpdate does not revert theme when Plotly fires with the rethemed figure", () => {
+    const buildTree = (): React.ReactElement => (
+      <ElementFullscreenContext.Provider
+        value={{
+          expanded: false,
+          width: 600,
+          height: 500,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }}
+      >
+        <PlotlyChart
+          element={DEFAULT_ELEMENT}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={600}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    const { rerender } = render(buildTree())
+
+    // Simulate a theme change that produces visibly different output.
+    vi.mocked(applyTheming).mockImplementation(spec => {
+      const figure = spec as {
+        data: unknown[]
+        layout?: Record<string, unknown>
+        frames?: unknown
+      }
+      return {
+        ...figure,
+        layout: {
+          ...figure.layout,
+          paper_bgcolor: "#new_theme_bg",
+        },
+      } as typeof spec
+    })
+
+    const newTheme = { ...mockTheme.emotion }
+    themeHolder.current = newTheme
+    act(() => {
+      rerender(buildTree())
+    })
+
+    // Verify theme was applied
+    let lastCallProps = getLastPlotProps()
+    expect(lastCallProps.layout.paper_bgcolor).toBe("#new_theme_bg")
+
+    // Simulate Plotly's onUpdate firing with the correctly themed figure
+    // (this is what happens after Plotly processes the new props).
+    const themedFigure = {
+      data: lastCallProps.data,
+      layout: { ...lastCallProps.layout, paper_bgcolor: "#new_theme_bg" },
+      frames: null,
+    }
+
+    act(() => {
+      lastCallProps.onUpdate?.(themedFigure, document.createElement("div"))
+    })
+
+    lastCallProps = getLastPlotProps()
+    // The theme colors should persist after onUpdate
+    expect(lastCallProps.layout.paper_bgcolor).toBe("#new_theme_bg")
   })
 })

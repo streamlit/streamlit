@@ -21,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -45,6 +46,7 @@ import {
   applyTheming,
   handleClickEvent,
   handleSelection,
+  preserveFigureInteractionState,
   sendEmptySelection,
 } from "./utils"
 
@@ -217,12 +219,66 @@ export function PlotlyChart({
     expand,
   ])
 
+  // Tracks the theme inputs that were last applied to the figure so we can
+  // distinguish a genuine theme change from the initial render (or a React
+  // StrictMode double-invocation), where the figure is already themed by the
+  // useState initializer above.
+  const lastAppliedThemeRef = useRef<{
+    theme: typeof theme
+    chartTheme: string
+    id: string
+  } | null>(null)
+
   useEffect(() => {
-    // If the theme changes, we need to reapply the theming to the figure
+    const previous = lastAppliedThemeRef.current
+    lastAppliedThemeRef.current = {
+      theme,
+      chartTheme: element.theme,
+      id: element.id,
+    }
+
+    if (
+      previous === null ||
+      (previous.theme === theme &&
+        previous.chartTheme === element.theme &&
+        previous.id === element.id)
+    ) {
+      // First application for this mount, or nothing relevant changed. The
+      // figure was already themed by the useState initializer, so there's
+      // nothing to redo (and re-theming here would clobber any figure state
+      // recovered from the widget manager on mount).
+      return
+    }
+
+    // Re-theme from the pristine spec rather than the current figure. The
+    // categorical/sequential/diverging palette placeholders are consumed the
+    // first time they're replaced, so re-theming the already-themed figure
+    // would leave the previous theme's chart colors in place.
     setPlotlyFigure((prevState: PlotlyFigureType) => {
-      return applyTheming(prevState, element.theme, theme)
+      const rethemedFigure = applyTheming(
+        initialFigureSpec,
+        element.theme,
+        theme
+      )
+
+      // Element id changed => this is a different chart; don't carry over
+      // zoom/selection from the previous one. Theme-only changes preserve
+      // interaction so selection modes and axis ranges survive the palette
+      // refresh.
+      if (previous.id !== element.id) {
+        return {
+          ...rethemedFigure,
+          layout: {
+            ...rethemedFigure.layout,
+            width: prevState.layout?.width ?? rethemedFigure.layout?.width,
+            height: prevState.layout?.height ?? rethemedFigure.layout?.height,
+          },
+        }
+      }
+
+      return preserveFigureInteractionState(rethemedFigure, prevState)
     })
-  }, [element.id, theme, element.theme])
+  }, [element.id, theme, element.theme, initialFigureSpec])
 
   useEffect(() => {
     let updatedClickMode: typeof initialFigureSpec.layout.clickmode =

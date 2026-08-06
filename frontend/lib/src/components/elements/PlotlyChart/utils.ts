@@ -204,6 +204,113 @@ export function applyTheming(
   return spec
 }
 
+const AXIS_KEY_PATTERN = /^(x|y)axis\d*$/
+
+/**
+ * Interactive axis fields that should survive a theme re-derivation.
+ * Deliberately excludes themed styling (gridcolor, tickfont, etc.) so we
+ * don't reintroduce colors from the previous theme.
+ */
+const AXIS_INTERACTIVE_KEYS = ["range", "autorange"] as const
+
+/**
+ * Layout fields that reflect user interaction or Streamlit selection-mode
+ * configuration, not theme styling.
+ */
+const LAYOUT_INTERACTIVE_KEYS = [
+  "width",
+  "height",
+  "clickmode",
+  "hovermode",
+  "dragmode",
+  "selections",
+] as const
+
+function preserveAxisInteraction(
+  nextAxis: Record<string, unknown> | undefined,
+  prevAxis: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined {
+  if (!prevAxis) {
+    return nextAxis
+  }
+
+  const preserved: Record<string, unknown> = { ...nextAxis }
+  for (const key of AXIS_INTERACTIVE_KEYS) {
+    if (prevAxis[key] !== undefined) {
+      preserved[key] = prevAxis[key]
+    }
+  }
+
+  const prevSlider = prevAxis.rangeslider
+  if (
+    prevSlider !== null &&
+    typeof prevSlider === "object" &&
+    "range" in prevSlider &&
+    prevSlider.range !== undefined
+  ) {
+    const existingSlider =
+      preserved.rangeslider !== null &&
+      typeof preserved.rangeslider === "object"
+        ? preserved.rangeslider
+        : {}
+    preserved.rangeslider = { ...existingSlider, range: prevSlider.range }
+  }
+
+  return preserved
+}
+
+/**
+ * After re-theming from the pristine figure spec (required so categorical /
+ * sequential / diverging palette placeholders can be re-applied), restore
+ * interactive state from the previously rendered figure.
+ *
+ * Only copies known interaction fields — never themed styling — so previous
+ * theme colors cannot leak back into the chart.
+ */
+export function preserveFigureInteractionState(
+  rethemedFigure: PlotlyFigureType,
+  previousFigure: PlotlyFigureType
+): PlotlyFigureType {
+  const prevLayout = (previousFigure.layout ?? {}) as Record<string, unknown>
+  const nextLayout: Record<string, unknown> = {
+    ...rethemedFigure.layout,
+  }
+
+  for (const key of LAYOUT_INTERACTIVE_KEYS) {
+    if (prevLayout[key] !== undefined) {
+      nextLayout[key] = prevLayout[key]
+    }
+  }
+
+  for (const key of Object.keys(prevLayout)) {
+    if (AXIS_KEY_PATTERN.test(key)) {
+      nextLayout[key] = preserveAxisInteraction(
+        nextLayout[key] as Record<string, unknown> | undefined,
+        prevLayout[key] as Record<string, unknown> | undefined
+      )
+    }
+  }
+
+  const nextData = rethemedFigure.data.map((trace, index) => {
+    const prevTrace = previousFigure.data[index] as
+      | (Plotly.Data & { selectedpoints?: unknown })
+      | undefined
+    if (prevTrace?.selectedpoints === undefined) {
+      return trace
+    }
+    return {
+      ...trace,
+      selectedpoints: prevTrace.selectedpoints,
+    }
+  })
+
+  return {
+    ...rethemedFigure,
+    data: nextData,
+    layout: nextLayout,
+  }
+}
+
 /**
  * Handles the selection event from Plotly and sends the selection state to the backend.
  * The selection state is sent as a stringified JSON object.
