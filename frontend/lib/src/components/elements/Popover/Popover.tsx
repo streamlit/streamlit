@@ -46,7 +46,10 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -57,9 +60,6 @@ import {
   StyledPopoverLabelContainer,
 } from "./styled-components"
 
-/** Padding kept between the popover and the boundary edge, in px. */
-const SHIFT_PADDING = 8
-
 /**
  * Fit the popover inside the available space without exceeding the design caps,
  * and stop CSS `min-width` from defeating that.
@@ -67,7 +67,7 @@ const SHIFT_PADDING = 8
  * `designMaxWidthPx` and `cssMinWidthPx` mirror StyledPopoverBody; see the call
  * site for how they are derived.
  */
-function clampPopoverSize({
+export function clampPopoverSize({
   availableWidth,
   availableHeight,
   designMaxWidthPx,
@@ -270,7 +270,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       ? Math.max(calculatedWidth, convertRemToPx("10rem"))
       : convertRemToPx(theme.sizes.minPopupWidth)
     const sizeMiddleware: Middleware = size({
-      padding: SHIFT_PADDING,
+      padding: SHIFT_VIEWPORT_PADDING,
       boundary,
       apply({ availableHeight, availableWidth, elements }) {
         const { maxWidth, maxHeight, minWidth } = clampPopoverSize({
@@ -294,7 +294,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     return {
       ...base,
       flipOptions: { boundary },
-      shiftOptions: { padding: SHIFT_PADDING, boundary },
+      shiftOptions: { padding: SHIFT_VIEWPORT_PADDING, boundary },
       extraMiddleware: [sizeMiddleware],
     }
   }, [

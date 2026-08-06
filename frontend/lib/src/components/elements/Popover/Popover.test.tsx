@@ -22,7 +22,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Popover, { PopoverProps } from "./Popover"
+import Popover, { clampPopoverSize, PopoverProps } from "./Popover"
 
 const createWidgetMgr = (): WidgetStateManager =>
   new WidgetStateManager({
@@ -661,5 +661,92 @@ describe("Popover chevron visibility", () => {
 
     const button = screen.getByTestId("stPopoverButton")
     expect(button).toHaveTextContent("expand_more")
+  })
+})
+
+describe("clampPopoverSize", () => {
+  // The e2e test covers user-visible overflow; these lock the arithmetic.
+  const designMaxWidthPx = 704
+  const cssMinWidthPx = 320
+
+  it("clamps max-width to the available space when space is the tighter bound", () => {
+    const { maxWidth } = clampPopoverSize({
+      availableWidth: 500,
+      availableHeight: 800,
+      designMaxWidthPx,
+      cssMinWidthPx,
+    })
+
+    expect(maxWidth).toBe("500px")
+  })
+
+  it("caps max-width at the design width on wide viewports", () => {
+    const { maxWidth } = clampPopoverSize({
+      availableWidth: 5000,
+      availableHeight: 800,
+      designMaxWidthPx,
+      cssMinWidthPx,
+    })
+
+    expect(maxWidth).toBe("704px")
+  })
+
+  it("keeps the 70vh ceiling alongside the available-height clamp", () => {
+    const { maxHeight } = clampPopoverSize({
+      availableWidth: 500,
+      availableHeight: 640.7,
+      designMaxWidthPx,
+      cssMinWidthPx,
+    })
+
+    expect(maxHeight).toBe("min(640px, 70vh)")
+  })
+
+  it("lowers min-width when CSS would otherwise overflow the clamp", () => {
+    const { minWidth } = clampPopoverSize({
+      availableWidth: 300,
+      availableHeight: 800,
+      designMaxWidthPx,
+      cssMinWidthPx,
+    })
+
+    expect(minWidth).toBe("300px")
+  })
+
+  it("leaves min-width alone when CSS already fits", () => {
+    const { minWidth } = clampPopoverSize({
+      availableWidth: 500,
+      availableHeight: 800,
+      designMaxWidthPx,
+      cssMinWidthPx,
+    })
+
+    expect(minWidth).toBe("")
+  })
+
+  it("lowers a stretch min-width that sits between the design cap and the viewport", () => {
+    // The case the applied-max comparison exists for: available space exceeds
+    // the design cap, and the stretch min-width falls in between.
+    const { maxWidth, minWidth } = clampPopoverSize({
+      availableWidth: 900,
+      availableHeight: 800,
+      designMaxWidthPx,
+      cssMinWidthPx: 800,
+    })
+
+    expect(maxWidth).toBe("704px")
+    expect(minWidth).toBe("704px")
+  })
+
+  it("floors fractional space and never goes negative", () => {
+    const { maxWidth, maxHeight } = clampPopoverSize({
+      availableWidth: 499.9,
+      availableHeight: -20,
+      designMaxWidthPx,
+      cssMinWidthPx,
+    })
+
+    expect(maxWidth).toBe("499px")
+    expect(maxHeight).toBe("min(0px, 70vh)")
   })
 })
