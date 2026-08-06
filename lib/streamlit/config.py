@@ -2445,7 +2445,14 @@ _create_theme_options(
 
 _create_theme_options(
     "chartCategoricalColors",
-    categories=["theme"],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         An array of colors to use for categorical chart data.
 
@@ -2456,6 +2463,10 @@ _create_theme_options(
         Invalid colors are skipped, and colors repeat cyclically if there are
         more categories than colors. If no chart categorical colors are set,
         Streamlit uses a default set of colors.
+
+        This option can be set in ``[theme]``, ``[theme.light]``,
+        ``[theme.dark]``, and the corresponding sidebar sections. Unset
+        sections inherit from ``[theme]``.
 
         For light themes, the following colors are the default:
         [
@@ -2488,7 +2499,14 @@ _create_theme_options(
 
 _create_theme_options(
     "chartSequentialColors",
-    categories=["theme"],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         An array of ten colors to use for sequential or continuous chart data.
 
@@ -2497,6 +2515,10 @@ _create_theme_options(
 
         Invalid color strings are skipped. If there are not exactly ten
         valid colors specified, Streamlit uses a default set of colors.
+
+        This option can be set in ``[theme]``, ``[theme.light]``,
+        ``[theme.dark]``, and the corresponding sidebar sections. Unset
+        sections inherit from ``[theme]``.
 
          For light themes, the following colors are the default:
         [
@@ -2529,7 +2551,14 @@ _create_theme_options(
 
 _create_theme_options(
     "chartDivergingColors",
-    categories=["theme"],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         An array of ten colors to use for diverging chart data.
 
@@ -2539,6 +2568,10 @@ _create_theme_options(
 
         Invalid color strings are skipped. If there are not exactly ten
         valid colors specified, Streamlit uses a default set of colors.
+
+        This option can be set in ``[theme]``, ``[theme.light]``,
+        ``[theme.dark]``, and the corresponding sidebar sections. Unset
+        sections inherit from ``[theme]``.
 
         The default colors are:
         [
