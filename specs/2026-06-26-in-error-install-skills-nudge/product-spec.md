@@ -83,6 +83,10 @@ reading as green text sitting inside a red error box.
 
 ![Success state: a green box reading "Skills installed — your AI assistant is ready to help."](./state-success.png)
 
+The render above is the fallback wording, shown when the server reports no detail. A real
+install usually does report one ("Installed to .agents/skills."), and that takes its place
+— see the copy table below.
+
 **Error** — install failed; the box keeps the error tint and shows the server's reason
 plus a **Retry** action. The reason is server-supplied and can run to several lines (it
 names the paths that blocked the install), so the reason wraps within the row while the
@@ -104,8 +108,27 @@ Copy:
 | State   | Copy                                                                      | Action          |
 |---------|---------------------------------------------------------------------------|-----------------|
 | Idle    | Install Streamlit's skills so your AI assistant can fix errors like this. | **Install skills** |
-| Success | ✓ Skills installed — your AI assistant is ready to help.                  | _(auto-dismiss)_ |
+| Installing | Installing Streamlit's skills…                                         | Installing… _(unavailable)_ |
+| Success | ✓ _\<server detail\>_ (e.g. "Installed to .agents/skills."), else "Skills installed — your AI assistant is ready to help." | _(auto-dismiss)_ |
 | Error   | Couldn't install skills. _\<server reason\>_ (e.g. "… already exist. Remove them and try again.") | **Retry** |
+
+The installing state gets its own sentence rather than reusing the idle pitch, because
+the copy is the polite live region and is therefore the only thing that tells a screen
+reader user the click landed. Success prefers the server's detail: it reports where the
+skills landed and, more importantly, names any it had to skip, so a partial install is
+never confirmed as a complete one (the toast surface already does this).
+
+**Keyboard and assistive tech.** The action reports unavailability with `aria-disabled`,
+never the `disabled` attribute — a disabled button is not a focusable area, so the browser
+blurs it mid-interaction and a developer who just pressed Enter is returned to the top of
+the document, with **Retry** (the same element, re-enabled) unreachable without tabbing
+the page again. The live region is scoped to the copy: `role="status"` implies
+`aria-atomic`, so a region spanning the action would re-read the whole pitch on every
+label change. The callout's *arrival* is deliberately silent — a live region inserted with
+its content already in place doesn't fire — so an unsolicited CTA never interrupts
+mid-sentence; it is reachable in linear reading and in the tab order. The focus ring is
+`currentColor` rather than the app's `focusRing` token, which is tuned for the page
+background and falls under the 3:1 minimum on a red-tinted alert.
 
 > **Design pass with Jessi — done.** Raised by Johannes in review (2026-06-29) as a
 > pre-ship gate on the original mock (brand-accent left stripe, faint accent wash,

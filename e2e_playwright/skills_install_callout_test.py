@@ -155,8 +155,11 @@ def test_skills_install_callout_installs_end_to_end(
     # One click → the real installer runs and the callout confirms success.
     # (The success confirmation is transient — it auto-dismisses — but the
     # install is a fast local symlink, so it's observable well within that.)
+    # The confirmation shows the server's own detail (where the skills landed,
+    # and any it had to skip) in preference to the generic wording, so match on
+    # the "Installed to" the real installer reports here.
     callout.get_by_role("button", name="Install skills").click()
-    expect(callout.get_by_text("Skills installed", exact=False)).to_be_visible(
+    expect(callout.get_by_text("Installed to", exact=False)).to_be_visible(
         timeout=30000
     )
     # Snapshot the success confirmation (green check + text) while it's up, before

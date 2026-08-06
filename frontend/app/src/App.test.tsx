@@ -7816,7 +7816,7 @@ describe("Skills install nudge", () => {
     })
     // The success confirmation lingers, then the callout removes itself.
     act(() => {
-      vi.advanceTimersByTime(2500)
+      vi.advanceTimersByTime(3000)
     })
     expect(
       screen.queryByTestId("stSkillsInstallCallout")

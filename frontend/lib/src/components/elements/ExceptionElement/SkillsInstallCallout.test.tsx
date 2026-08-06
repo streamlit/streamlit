@@ -107,9 +107,7 @@ describe("SkillsInstallCallout", () => {
     })
     // The success confirmation still shows even though disabled — only its own
     // timer removes it; the hide-while-idle rule doesn't touch a confirmation.
-    expect(
-      screen.getByText(/Skills installed/, { exact: false })
-    ).toBeVisible()
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
   })
 
   it("installs and shows the success confirmation", async () => {
@@ -125,20 +123,28 @@ describe("SkillsInstallCallout", () => {
 
     await user.click(screen.getByRole("button", { name: "Install skills" }))
     expect(onInstall).toHaveBeenCalledTimes(1)
-    // While installing, the button shows progress and is disabled.
+    // While installing the button reports progress and is unavailable — but via
+    // aria-disabled, so it KEEPS FOCUS. The `disabled` attribute would make the
+    // browser blur it, dumping a keyboard user back to the top of the document
+    // and putting the Retry it may become out of reach.
     const installingButton = screen.getByRole("button", {
       name: "Installing…",
     })
-    expect(installingButton).toBeDisabled()
+    expect(installingButton).toHaveAttribute("aria-disabled", "true")
+    expect(installingButton).not.toBeDisabled()
+    expect(installingButton).toHaveFocus()
+    // A second click while in flight must not start another install.
+    await user.click(installingButton)
+    expect(onInstall).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       resolveInstall("Installed to .agents/skills")
       await Promise.resolve()
     })
 
-    expect(
-      screen.getByText(/Skills installed/, { exact: false })
-    ).toBeVisible()
+    // The server's detail wins: it says where the skills landed, and names any
+    // it had to skip, so a partial install isn't confirmed as a complete one.
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
     // The button is gone once installed (nothing left to do).
     expect(
       screen.queryByRole("button", { name: /install/i })
@@ -217,6 +223,46 @@ describe("SkillsInstallCallout", () => {
     expect(icon.closest("[aria-hidden='true']")).not.toBeNull()
   })
 
+  it("keeps the action mounted across a failure, so Retry is one keypress away", async () => {
+    const user = userEvent.setup()
+    let rejectInstall: (error: Error) => void = () => {}
+    const onInstall = vi.fn(
+      () =>
+        new Promise<string | undefined>((_resolve, reject) => {
+          rejectInstall = reject
+        })
+    )
+    render(<SkillsInstallCallout {...getProps({ onInstall })} />)
+
+    // Reach the action by keyboard, the way the affected user does.
+    await user.tab()
+    const action = screen.getByRole("button", { name: "Install skills" })
+    expect(action).toHaveFocus()
+    await user.keyboard("{Enter}")
+
+    await act(async () => {
+      rejectInstall(new Error("Permission denied"))
+      await Promise.resolve()
+    })
+
+    // Retry is the SAME element relabelled, never a remounted one, so focus
+    // survives the round trip and Retry is reachable without tabbing the whole
+    // document again.
+    //
+    // Scope note: the focus assertion here only catches an unmount/remount of
+    // the action. It canNOT catch a regression to the `disabled` attribute —
+    // jsdom doesn't run the browser's unfocusing steps for a disabled element,
+    // so focus would appear to survive here while really being lost in a browser.
+    // The assertions guarding that are the aria-disabled/not-disabled pair in
+    // "installs and shows the success confirmation"; keep them.
+    const retry = screen.getByRole("button", { name: "Retry" })
+    expect(retry).toBe(action)
+    expect(retry).toHaveFocus()
+    expect(retry).not.toHaveAttribute("aria-disabled")
+    await user.keyboard("{Enter}")
+    expect(onInstall).toHaveBeenCalledTimes(2)
+  })
+
   it("auto-dismisses shortly after a successful install", async () => {
     vi.useFakeTimers()
     try {
@@ -230,12 +276,23 @@ describe("SkillsInstallCallout", () => {
       await act(async () => {
         await Promise.resolve()
       })
-      expect(screen.getByText(/Skills installed/)).toBeVisible()
+      // With no detail from the server, the generic confirmation stands in.
+      expect(
+        screen.getByText(
+          "Skills installed — your AI assistant is ready to help."
+        )
+      ).toBeVisible()
       // The confirmation lingers briefly before asking to be dismissed.
       expect(onDismiss).not.toHaveBeenCalled()
 
       act(() => {
-        vi.advanceTimersByTime(2500)
+        vi.advanceTimersByTime(2999)
+      })
+      // Matches the nudge toast's 3s, so the same message doesn't get less
+      // reading time here than there.
+      expect(onDismiss).not.toHaveBeenCalled()
+      act(() => {
+        vi.advanceTimersByTime(1)
       })
       expect(onDismiss).toHaveBeenCalledTimes(1)
     } finally {

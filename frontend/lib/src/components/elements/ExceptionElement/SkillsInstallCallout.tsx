@@ -35,8 +35,12 @@ import {
 
 type InstallStatus = "idle" | "installing" | "success" | "error"
 
-/** How long the success confirmation lingers before the callout auto-dismisses. */
-const SUCCESS_AUTO_DISMISS_MS = 2500
+/**
+ * How long the success confirmation lingers before the callout auto-dismisses.
+ * Matches the nudge toast's confirmation so the same message doesn't get less
+ * reading time on one surface than the other.
+ */
+const SUCCESS_AUTO_DISMISS_MS = 3000
 
 export interface SkillsInstallCalloutProps {
   /**
@@ -79,6 +83,12 @@ export interface SkillsInstallCalloutProps {
  * Not dismissable by the user (no ✕ / snooze / "don't show again"): it clears
  * on a successful install (after a brief confirmation) or when the parent stops
  * recommending it. On failure it offers a "Retry", mirroring the nudge toast.
+ *
+ * Its arrival is deliberately not announced: the copy is a polite live region,
+ * and a live region inserted with its content already in place doesn't fire, so
+ * an unsolicited CTA never interrupts a screen reader user mid-sentence. They
+ * reach it in linear reading and in the tab order; only the transitions they
+ * themselves trigger are announced.
  */
 function SkillsInstallCallout({
   enabled,
@@ -88,6 +98,7 @@ function SkillsInstallCallout({
 }: Readonly<SkillsInstallCalloutProps>): ReactElement | null {
   const [status, setStatus] = useState<InstallStatus>("idle")
   const [errorMessage, setErrorMessage] = useState("")
+  const [successDetail, setSuccessDetail] = useState("")
 
   // Fire the impression exactly once when the callout mounts (it only mounts
   // when it's actually shown). Guarded so a re-render can't double-count.
@@ -110,11 +121,22 @@ function SkillsInstallCallout({
     return () => clearTimeout(timeoutId)
   }, [status, onDismiss])
 
+  const isInstalling = status === "installing"
+  const isSuccess = status === "success"
+  const isError = status === "error"
+
   const handleInstall = useCallback(() => {
+    // The button reports unavailability via aria-disabled rather than the
+    // disabled attribute (which would blur it mid-interaction), so it stays
+    // clickable and has to reject a second click itself.
+    if (isInstalling) {
+      return
+    }
     setStatus("installing")
     setErrorMessage("")
     onInstall()
-      .then(() => {
+      .then(detail => {
+        setSuccessDetail(detail ?? "")
         setStatus("success")
       })
       .catch((error: unknown) => {
@@ -123,11 +145,7 @@ function SkillsInstallCallout({
           error instanceof Error ? error.message : "Failed to install skills."
         )
       })
-  }, [onInstall])
-
-  const isInstalling = status === "installing"
-  const isSuccess = status === "success"
-  const isError = status === "error"
+  }, [isInstalling, onInstall])
 
   const iconValue = isSuccess
     ? ":material/check_circle:"
@@ -135,11 +153,20 @@ function SkillsInstallCallout({
       ? ":material/error:"
       : ":material/auto_awesome:"
 
+  // The installing state gets its own sentence rather than reusing the idle
+  // pitch: it's the only thing that tells a screen reader user the click landed,
+  // since the live region is scoped to this copy and so no longer re-reads the
+  // button's label.
   const message = isSuccess
-    ? "Skills installed — your AI assistant is ready to help."
-    : isError
-      ? `Couldn’t install skills. ${errorMessage}`
-      : "Install Streamlit’s skills so your AI assistant can fix errors like this."
+    ? // Prefer the server's detail — it reports WHERE skills landed and, more
+      // importantly, names any skill it had to skip. A partial install must not
+      // be confirmed as an unqualified success.
+      successDetail || "Skills installed — your AI assistant is ready to help."
+    : isInstalling
+      ? "Installing Streamlit’s skills…"
+      : isError
+        ? `Couldn’t install skills. ${errorMessage}`
+        : "Install Streamlit’s skills so your AI assistant can fix errors like this."
 
   // Hide (don't permanently dismiss) an idle callout while it isn't eligible —
   // the mutually exclusive toast is up, the server stopped recommending, or
@@ -160,19 +187,20 @@ function SkillsInstallCallout({
       $kind={isSuccess ? Kind.SUCCESS : Kind.ERROR}
       data-testid="stSkillsInstallCallout"
       className="stSkillsInstallCallout"
-      role="status"
-      aria-live="polite"
     >
       <StyledSkillsInstallCalloutIcon aria-hidden="true">
         <DynamicIcon iconValue={iconValue} size="base" />
       </StyledSkillsInstallCalloutIcon>
-      <StyledSkillsInstallCalloutText>
+      {/* The live region is the copy alone, not the whole box. `role="status"`
+          implies aria-atomic, so including the button would re-announce the
+          entire pitch on every label change. */}
+      <StyledSkillsInstallCalloutText role="status">
         {message}
       </StyledSkillsInstallCalloutText>
       {!isSuccess && (
         <StyledSkillsInstallCalloutButton
           onClick={handleInstall}
-          disabled={isInstalling}
+          aria-disabled={isInstalling || undefined}
         >
           {isInstalling ? "Installing…" : isError ? "Retry" : "Install skills"}
         </StyledSkillsInstallCalloutButton>

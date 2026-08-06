@@ -278,7 +278,7 @@ describe("ExceptionElement Element", () => {
           await Promise.resolve()
         })
         // The success confirmation shows (and the install action is gone)...
-        expect(screen.getByText(/Skills installed/)).toBeVisible()
+        expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
         expect(
           screen.queryByRole("button", { name: "Install skills" })
         ).not.toBeInTheDocument()
@@ -286,7 +286,7 @@ describe("ExceptionElement Element", () => {
         // ...then the whole callout removes itself from the error box, even
         // though it's still on screen (it isn't yanked mid-confirmation).
         act(() => {
-          vi.advanceTimersByTime(2500)
+          vi.advanceTimersByTime(3000)
         })
         expect(
           screen.queryByTestId("stSkillsInstallCallout")

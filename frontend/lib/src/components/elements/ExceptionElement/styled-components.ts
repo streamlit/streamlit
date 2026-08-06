@@ -66,6 +66,13 @@ export const StyledExceptionLinks = styled.div(({ theme }) => ({
  * `all: unset` also drops the focus outline, so the ring is restored explicitly
  * — see the a11y guidance in `frontend/AGENTS.md` about never removing a focus
  * indicator without replacing it.
+ *
+ * The ring is `currentColor`, not `theme.shadows.focusRing`. That token is
+ * `primary` at 50% alpha, tuned for the app background; on the red-tinted alert
+ * these buttons live in it lands around 1.8:1 — under WCAG 1.4.11's 3:1 for a
+ * focus indicator, i.e. a pink halo on a pink box. Inheriting the box's own text
+ * colour gets the ~4.5:1 that colour is already chosen for, and follows the box
+ * when its kind flips to success or a user re-themes the alert palette.
  */
 export const StyledExceptionLinkButton = styled.button(({ theme }) => ({
   all: "unset",
@@ -74,7 +81,7 @@ export const StyledExceptionLinkButton = styled.button(({ theme }) => ({
   textDecoration: "underline",
   borderRadius: theme.radii.default,
   "&:focus-visible": {
-    boxShadow: theme.shadows.focusRing,
+    boxShadow: `0 0 0 ${theme.sizes.focusRingWidth} currentColor`,
   },
 }))
 
@@ -106,9 +113,9 @@ export const StyledExceptionWithCallout = styled.div(({ theme }) => ({
  * up with the exception type above it, and a theme change moves both together.
  *
  * Deliberately *not* wrapped in `AlertContainer` itself: that component hardcodes
- * `role="alert"` for error-kind content, which is assertive and wrong for a
- * dismissable-by-success CTA. `SkillsInstallCallout` sets `role="status"` and
- * `aria-live="polite"` instead.
+ * `role="alert"` for error-kind content, which is assertive and wrong for an
+ * unsolicited CTA. The polite live region lives on the copy instead (see
+ * `StyledSkillsInstallCalloutText`).
  */
 export const StyledSkillsInstallCallout = styled(StyledAlertContainer)(
   ({ theme }) => ({
@@ -127,7 +134,7 @@ export const StyledSkillsInstallCallout = styled(StyledAlertContainer)(
 
 /**
  * Wraps the callout's decorative sparkle/status icon so it is hidden from the
- * `role="status"` / `aria-live` region — otherwise the Material ligature (e.g.
+ * live region on the copy — otherwise the Material ligature (e.g.
  * "auto_awesome") would be announced as text before the message.
  *
  * A real flex item rather than `display: contents`, so `flex-shrink: 0` applies
@@ -147,6 +154,11 @@ export const StyledSkillsInstallCalloutIcon = styled.span({
  * Ask links. It does shrink, which is what lets a long message wrap to several
  * lines inside the row instead of reflowing the row. Colour comes from the box's
  * kind, so the success confirmation needs no override here.
+ *
+ * This — not the whole box — carries `role="status"`. `status` implies
+ * `aria-atomic="true"`, so a region spanning the action too would re-read the
+ * entire pitch every time the button's label changed, just to convey one word.
+ * Scoped to the copy, each transition announces only the sentence that changed.
  */
 export const StyledSkillsInstallCalloutText = styled.div({
   flex: "0 1 auto",
@@ -161,17 +173,24 @@ export const StyledSkillsInstallCalloutText = styled.div({
  * `Copy` so the two stay visually identical by construction — the CTA reads as a
  * peer of those links rather than a filled button. Adds only what's specific to
  * this callout: it holds its width at the end of the row while the copy beside it
- * wraps, its label never breaks mid-phrase, and the disabled ("Installing…")
- * state stops looking clickable.
+ * wraps, and its label never breaks mid-phrase.
+ *
+ * Unavailability is `aria-disabled`, never the `disabled` attribute: a disabled
+ * button is not a focusable area, so the browser blurs it mid-interaction and
+ * whoever just pressed Enter is dumped back to the top of the document — with
+ * `Retry` (the same element, re-enabled) now unreachable without tabbing through
+ * the whole page. Styling therefore keys off the attribute. No `opacity` here
+ * either: WCAG only exempts *inactive* controls from contrast, and this one stays
+ * active, so "Installing…" must stay legible. Losing the underline and the
+ * pointer carries the state instead.
  */
 export const StyledSkillsInstallCalloutButton = styled(
   StyledExceptionLinkButton
 )({
   flexShrink: 0,
   whiteSpace: "nowrap",
-  "&:disabled": {
+  '&[aria-disabled="true"]': {
     cursor: "default",
-    opacity: 0.7,
     textDecoration: "none",
   },
 })
