@@ -392,13 +392,11 @@ function TextInput({
         )}
       </WidgetLabel>
       {/*
-       * `validationBehavior="aria"` disables React Aria's native constraint
-       * validation. A native `type="email"`/`"url"` can otherwise flip the
-       * input's `ValidityState` (`typeMismatch`) into `aria-invalid`/
-       * `data-invalid`, producing a second (browser) error state on top of our
-       * regex `validate` tooltip. We deliberately do NOT set `isInvalid` here:
-       * TextInput drives its own `aria-invalid` on the input element and its
-       * own error UI, so React Aria's validation must stay out of the way.
+       * Keep React Aria out of native constraint validation so a native
+       * `type="email"`/`"url"` `typeMismatch` does not create a second invalid
+       * state alongside our regex `validate` tooltip. TextInput already owns
+       * `aria-invalid` and the error UI, so we also deliberately do NOT set
+       * `isInvalid` here.
        */}
       <TextField isDisabled={disabled} validationBehavior="aria">
         <StyledInputRoot

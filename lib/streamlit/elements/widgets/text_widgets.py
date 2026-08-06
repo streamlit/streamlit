@@ -379,8 +379,12 @@ class TextWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
 
         placeholder : str or None
-            An optional string displayed when the text input is empty. If None,
-            no text is displayed.
+            An optional string displayed when the text input is empty. If
+            ``placeholder`` is ``None`` (default), the placeholder is derived
+            from ``type`` (for example, ``you@example.com`` for
+            ``type="email"``); for ``type="default"`` and ``type="password"``,
+            no placeholder is displayed. Pass ``placeholder=""`` to force no
+            placeholder even for a specialized type.
 
         disabled : bool
             An optional boolean that disables the text input if set to

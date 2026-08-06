@@ -345,14 +345,17 @@ def test_text_input_specialized_types_attributes(app: Page):
     url_input = get_element_by_key(app, "url_input").locator("input").first
     expect(url_input).to_have_attribute("type", "url")
     expect(url_input).to_have_attribute("placeholder", "https://example.com")
+    expect(url_input).to_have_attribute("autocomplete", "url")
 
     phone_input = get_element_by_key(app, "phone_input").locator("input").first
     expect(phone_input).to_have_attribute("type", "tel")
     expect(phone_input).to_have_attribute("placeholder", "+1 234 567 8900")
+    expect(phone_input).to_have_attribute("autocomplete", "tel")
 
     search_input = get_element_by_key(app, "search_input").locator("input").first
     expect(search_input).to_have_attribute("type", "search")
     expect(search_input).to_have_attribute("placeholder", "Search")
+    expect(search_input).to_have_attribute("autocomplete", "off")
 
     # Explicit overrides win over the type defaults.
     override_input = (
