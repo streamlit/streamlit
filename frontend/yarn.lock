@@ -3492,7 +3492,7 @@ __metadata:
     re-resizable: "npm:^6.11.2"
     react-aria-components: "npm:^1.20.0"
     react-color: "npm:^2.18.1"
-    react-dropzone: "npm:^19.1.1"
+    react-dropzone: "npm:^19.2.0"
     react-feather: "npm:^2.0.10"
     react-map-gl: "npm:^5.3.21"
     react-markdown: "npm:^10.1.0"
@@ -9561,10 +9561,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-selector@npm:^4.0.1":
-  version: 4.0.2
-  resolution: "file-selector@npm:4.0.2"
-  checksum: 10c0/41c099650b097315dcd34c2082cf2fae5846d57fd37cd56b4068f75bce40915bc5a16d19b8c55eeeb4c629f71daa60a631fa02b0ab3f18e79fbff8ddb8810426
+"file-selector@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "file-selector@npm:4.1.0"
+  checksum: 10c0/231bee6b42cd984f8b176f765a173a2ac6f9aca5554c154118441bc4dcbb768bafb36afb564101b288a8ded14f6c26e2aedac7ffc6bfd06f589c3d95e20058dd
   languageName: node
   linkType: hard
 
@@ -14982,19 +14982,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dropzone@npm:^19.1.1":
-  version: 19.1.1
-  resolution: "react-dropzone@npm:19.1.1"
+"react-dropzone@npm:^19.2.0":
+  version: 19.2.0
+  resolution: "react-dropzone@npm:19.2.0"
   dependencies:
     attr-accept: "npm:^2.2.5"
-    file-selector: "npm:^4.0.1"
+    file-selector: "npm:^4.1.0"
   peerDependencies:
     "@types/react": "*"
     react: ">= 18"
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10c0/af91f9d866cf9df55217a7541af0f8e3b237b3495a2db59e2817eccb33d3d2e2a48831f99d0ed371adb80d3564d7022f1ae2f0255c96a9d4b11735dd877c0f3e
+  checksum: 10c0/3c14c84643ed16a01618488ffce386521a0a07410d8bc642b75fe48e2682521d985c22d6447505ee6dd9de3844419b1aacec8c14c9aeb17fd319f8cd165567e1
   languageName: node
   linkType: hard
 
