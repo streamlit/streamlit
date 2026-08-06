@@ -27,12 +27,14 @@ from streamlit.elements.lib.column_config_utils import ButtonColumnClickState
 from streamlit.elements.plotly_chart import PlotlyState
 from streamlit.elements.vega_charts import VegaLiteState
 from streamlit.elements.widgets.chat import ChatInputValue
+from streamlit.elements.widgets.data_editor import DataEditorState
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 _EXPECTED_EXPORTS = {
     "ButtonColumnClickState",
     "ChatInputValue",
+    "DataEditorState",
     "DataframeState",
     "PlotlyState",
     "PydeckState",
@@ -50,7 +52,7 @@ def test_import_surfaces_resolve_to_same_module() -> None:
 
 
 def test_all_matches_expected_exports() -> None:
-    """``__all__`` contains exactly the 7 curated public exports."""
+    """``__all__`` contains exactly the curated public exports."""
     assert set(streamlit.typing.__all__) == _EXPECTED_EXPORTS
 
 
@@ -74,6 +76,7 @@ def test_exports_preserve_object_identity() -> None:
     """Each export is the same runtime object as its internal definition."""
     assert streamlit.typing.UploadedFile is UploadedFile
     assert streamlit.typing.ChatInputValue is ChatInputValue
+    assert streamlit.typing.DataEditorState is DataEditorState
     assert streamlit.typing.DataframeState is DataframeState
     assert streamlit.typing.PlotlyState is PlotlyState
     assert streamlit.typing.VegaLiteState is VegaLiteState
@@ -96,6 +99,10 @@ def test_chat_input_value_isinstance() -> None:
 
 def test_state_classes_isinstance() -> None:
     """The dict-backed state classes are instances of their public exports."""
+    assert isinstance(
+        DataEditorState({"edited_rows": {}, "added_rows": [], "deleted_rows": []}),
+        streamlit.typing.DataEditorState,
+    )
     assert isinstance(
         DataframeState({"selection": {}}), streamlit.typing.DataframeState
     )

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from streamlit.typing import (
         ButtonColumnClickState,
         ChatInputValue,
+        DataEditorState,
         DataframeState,
         PlotlyState,
         PydeckState,
@@ -55,6 +56,30 @@ if TYPE_CHECKING:
     assert_type(chat_input_value["files"], list[UploadedFile])
     assert_type(chat_input_value.audio, UploadedFile | None)
     assert_type(chat_input_value["audio"], UploadedFile | None)
+
+    # =====================================================================
+    # DataEditorState: attribute and item access on pending edits
+    # =====================================================================
+
+    data_editor_state = cast("DataEditorState", object())
+    assert_type(
+        data_editor_state.edited_rows,
+        dict[int, dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        data_editor_state["edited_rows"],
+        dict[int, dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        data_editor_state.added_rows,
+        list[dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        data_editor_state["added_rows"],
+        list[dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(data_editor_state.deleted_rows, list[int])
+    assert_type(data_editor_state["deleted_rows"], list[int])
 
     # =====================================================================
     # DataframeState: attribute and item access on the selection payload

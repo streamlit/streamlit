@@ -46,6 +46,7 @@ from streamlit.runtime.runtime_util import (
     get_max_widget_state_size_bytes,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ThreadState,
     get_script_run_ctx,
 )
@@ -341,11 +342,10 @@ class WStates(MutableMapping[str, Any]):
         args = metadata.callback_args or ()
         kwargs = metadata.callback_kwargs or {}
 
-        ctx = get_script_run_ctx()
-        if ctx and metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                callback(*args, **kwargs)
-        else:
+        with ThreadState.scoped(
+            run_location=RunLocation.CALLBACK,
+            fragment_id=metadata.fragment_id,
+        ):
             callback(*args, **kwargs)
 
 
@@ -905,36 +905,22 @@ class SessionState:
         cb_args: WidgetArgs,
         cb_kwargs: dict[str, Any],
     ) -> None:
-        """Execute a widget callback with fragment-aware context.
+        """Execute a widget callback in callback run context.
 
-        If the widget belongs to a fragment, temporarily marks the current
-        script context as being inside a fragment callback to adapt rerun
-        semantics. Attempts to call ``st.rerun()`` inside a widget callback are
-        converted to a user-visible warning and treated as a no-op.
+        Sets ``run_location=RunLocation.CALLBACK`` and binds ``fragment_id``
+        from the widget's metadata for the duration of the callback. The
+        derived ``in_fragment_callback`` property gates fragment-specific
+        behavior when ``fragment_id`` is non-None.
 
-        Parameters
-        ----------
-        callback_fn : WidgetCallback
-            The user-provided callback to execute.
-        cb_metadata : WidgetMetadata[Any]
-            Metadata of the widget associated with the callback.
-        cb_args : WidgetArgs
-            Positional arguments passed to the callback.
-        cb_kwargs : dict[str, Any]
-            Keyword arguments passed to the callback.
+        Attempts to call ``st.rerun()`` inside a widget callback are converted
+        to a user-visible warning and treated as a no-op.
         """
         from streamlit.runtime.scriptrunner import RerunException
 
-        ctx = get_script_run_ctx()
-        if ctx and cb_metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                try:
-                    callback_fn(*cb_args, **cb_kwargs)
-                except RerunException:
-                    get_dg_singleton_instance().main_dg.warning(
-                        "Calling st.rerun() within a callback is a no-op."
-                    )
-        else:
+        with ThreadState.scoped(
+            run_location=RunLocation.CALLBACK,
+            fragment_id=cb_metadata.fragment_id,
+        ):
             try:
                 callback_fn(*cb_args, **cb_kwargs)
             except RerunException:

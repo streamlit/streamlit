@@ -38,11 +38,13 @@ from streamlit.elements.lib.column_config_utils import ButtonColumnClickState
 from streamlit.elements.plotly_chart import PlotlyState
 from streamlit.elements.vega_charts import VegaLiteState
 from streamlit.elements.widgets.chat import ChatInputValue
+from streamlit.elements.widgets.data_editor import DataEditorState
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 __all__ = [
     "ButtonColumnClickState",
     "ChatInputValue",
+    "DataEditorState",
     "DataframeState",
     "PlotlyState",
     "PydeckState",
