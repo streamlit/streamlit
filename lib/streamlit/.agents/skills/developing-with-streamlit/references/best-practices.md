@@ -73,7 +73,7 @@ st.dataframe(df)
 st.dataframe(df, width="content")
 ```
 
-Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios. When a column grid must stay horizontal on narrow screens, pass `wrap=False` so columns shrink and scroll instead of stacking.
+Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios.
 
 ```python
 # BAD: Columns for a simple button row
@@ -85,9 +85,6 @@ right.button("Save", type="primary")
 with st.container(horizontal=True, horizontal_alignment="right"):
     st.button("Cancel")
     st.button("Save", type="primary")
-
-# OK: Compact grid that must stay in one row
-thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
 ```
 
 Use bordered containers for visual grouping.
