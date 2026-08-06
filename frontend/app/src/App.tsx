@@ -164,7 +164,7 @@ import {
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Import @font-face rules for app and icon fonts
-import "@streamlit/app/src/assets/css/theme.css"
+import "@streamlit/app/src/assets/css/fonts.css"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 import {
   includeIfDefined,
