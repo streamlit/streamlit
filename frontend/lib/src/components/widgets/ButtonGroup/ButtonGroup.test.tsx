@@ -889,6 +889,32 @@ describe("ButtonGroup wrap", () => {
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
+  it("scrolls the focused selected option in multi-select, not the leftmost", async () => {
+    const user = userEvent.setup()
+    const scrolledElements: Element[] = []
+    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
+      scrolledElements.push(this)
+    })
+
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [0],
+          clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+        })}
+      />
+    )
+    scrolledElements.length = 0
+
+    const buttons = getButtonGroupButtons()
+    await user.click(buttons[2])
+
+    expect(scrolledElements.length).toBeGreaterThan(0)
+    expect(scrolledElements.at(-1)).toBe(buttons[2])
+  })
+
   it("still updates selection when wrap is false", async () => {
     const user = userEvent.setup()
     const props = getProps({

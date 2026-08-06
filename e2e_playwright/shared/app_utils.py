@@ -1541,6 +1541,7 @@ def expect_selected_option_in_view(options: Locator) -> None:
               if (!selected) return false;
               const group = el.getBoundingClientRect();
               const sel = selected.getBoundingClientRect();
+              // ±1px absorbs sub-pixel rounding across browsers.
               return sel.left >= group.left - 1 && sel.right <= group.right + 1;
             }"""
             )

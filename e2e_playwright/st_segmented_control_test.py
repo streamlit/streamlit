@@ -569,8 +569,13 @@ def test_required_segmented_control_behavior(app: Page):
 def test_segmented_control_wrap_behavior(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """wrap=False scrolls in one row; auto in a horizontal container stays one
-    row; selected option scrolls into view; toggling wrap preserves selection.
+    """Test wrap layout and state behavior for segmented control.
+
+    Covers:
+    - wrap=False stays one row with local horizontal overflow
+    - auto inside a horizontal container stays one row
+    - selected option scrolls into view when wrap=False
+    - toggling wrap preserves selection
     """
     false_group = get_button_group_options(app, "sc_wrap_false")
     auto_h_group = get_button_group_options(app, "sc_wrap_auto_h")

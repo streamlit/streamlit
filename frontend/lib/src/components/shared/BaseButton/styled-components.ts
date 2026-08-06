@@ -562,10 +562,9 @@ export const StyledElementToolbarButton = styled(
 export const StyledButtonGroup = styled.div<{
   containerWidth: boolean
 }>(({ containerWidth }) => ({
-  // Stretch fills the parent; content-width stays intrinsic. Always cap at
-  // parent width so wrap=False can scroll locally when options overflow.
+  // Stretch fills the parent; content-width stays intrinsic. Local overflow
+  // for wrap=False is handled by StyledToggleButtonGroup's maxWidth.
   width: containerWidth ? "100%" : "auto",
-  maxWidth: "100%",
 }))
 
 export const StyledButtonLabel = styled.div<{ $truncate?: boolean }>(

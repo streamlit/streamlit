@@ -187,13 +187,21 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   }, [required])
 
   // Scroll a selected option into view when wrap is false (defaults aren't
-  // focused, so focus-based scrolling doesn't cover them). block/inline
-  // "nearest" avoid unnecessary page scroll; honor prefers-reduced-motion.
-  // Depend on selection only — not `options` — so unrelated script reruns
-  // (new proto array refs) don't reset the user's horizontal scroll.
+  // focused, so focus-based scrolling doesn't cover them). Prefer the focused
+  // selected option so multi-select clicks don't jump back to the leftmost
+  // selection. block/inline "nearest" avoid unnecessary page scroll; honor
+  // prefers-reduced-motion. Depend on selection only — not `options` — so
+  // unrelated script reruns don't reset the user's horizontal scroll.
   useEffect(() => {
     if (wrap || !groupRef.current || value.length === 0) return
-    const selectedOption = groupRef.current.querySelector("[data-selected]")
+    const group = groupRef.current
+    const active = document.activeElement
+    const selectedOption =
+      active instanceof Element &&
+      group.contains(active) &&
+      active.hasAttribute("data-selected")
+        ? active
+        : group.querySelector("[data-selected]")
     if (!selectedOption) return
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"

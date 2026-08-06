@@ -712,9 +712,14 @@ def test_required_pills_behavior(app: Page):
 
 
 def test_pills_wrap_behavior(app: Page, assert_snapshot: ImageCompareFunction):
-    """wrap=False scrolls in one row; wrap=True/auto vertical wrap; auto in a
-    horizontal container stays one row; selected option scrolls into view;
-    toggling wrap preserves selection.
+    """Test wrap layout and state behavior for pills.
+
+    Covers:
+    - wrap=False stays one row with local horizontal overflow
+    - wrap=True / auto in vertical layout wrap to multiple rows
+    - auto inside a horizontal container stays one row
+    - selected option scrolls into view when wrap=False
+    - toggling wrap preserves selection
     """
     false_group = get_button_group_options(app, "pills_wrap_false")
     true_group = get_button_group_options(app, "pills_wrap_true")
