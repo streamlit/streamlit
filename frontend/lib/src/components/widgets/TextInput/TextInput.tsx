@@ -28,6 +28,7 @@ import {
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 import { getLogger } from "loglevel"
 import { TextField } from "react-aria-components"
 
@@ -56,6 +57,7 @@ import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledClearButton,
   StyledEndEnhancers,
   StyledErrorEnhancer,
   StyledInputElement,
@@ -158,6 +160,11 @@ function TextInput({
   const inForm = isInForm({ formId })
 
   const isPassword = element.type === TextInputProto.Type.PASSWORD
+  const isSearch = element.type === TextInputProto.Type.SEARCH
+  // Show a Streamlit-styled clear (×) button for search inputs holding a value,
+  // replacing the browser's native (and visually inconsistent) search-clear
+  // control, which we hide via CSS.
+  const showClearButton = isSearch && !disabled && Boolean(uiValue)
 
   const compiledValidationResult = useMemo(
     () => compileTextInputValidationRegex(element.validateRegex),
@@ -296,6 +303,15 @@ function TextInput({
   const handleToggleShowPassword = useCallback((): void => {
     setShowPassword(prev => !prev)
   }, [])
+
+  // Clear the search input and commit the empty value so results update
+  // immediately (empty values bypass validation).
+  const handleClear = useCallback((): void => {
+    setDirty(false)
+    setUiValue("")
+    setHasUserError(false)
+    setValueWithSource({ value: "", fromUi: true })
+  }, [setValueWithSource])
 
   const onChange = useOnInputChange({
     formId,
@@ -449,6 +465,21 @@ function TextInput({
                 </Tooltip>
               </StyledErrorEnhancer>
             )}
+            {showClearButton && (
+              <StyledClearButton
+                type="button"
+                data-testid="stTextInputClearButton"
+                aria-label="Clear entry"
+                tabIndex={-1}
+                // Prevent mousedown from moving focus off the input before the
+                // click fires, which would otherwise commit the dirty value via
+                // handleBlur and cause a spurious extra rerun.
+                onMouseDown={preventFocusLoss}
+                onClick={handleClear}
+              >
+                <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+              </StyledClearButton>
+            )}
             {isPassword && (
               <StyledPasswordToggle
                 type="button"
@@ -482,6 +513,7 @@ function TextInput({
       {shouldShowInstructions && (
         <StyledInputInstructionsContainer
           $hasErrorIcon={Boolean(displayedError)}
+          $hasClearButton={showClearButton}
           $hasPasswordToggle={isPassword}
         >
           <InputInstructions

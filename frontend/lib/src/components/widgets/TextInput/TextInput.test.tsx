@@ -178,6 +178,75 @@ describe("TextInput widget", () => {
     ).not.toBeInTheDocument()
   })
 
+  describe("search clear button", () => {
+    it("shows the clear button only for search inputs holding a value", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ type: TextInputProto.Type.SEARCH })
+      render(<TextInput {...props} />)
+
+      // Empty search input: no clear button yet.
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+
+      await user.type(screen.getByRole("searchbox"), "laptops")
+      expect(screen.getByTestId("stTextInputClearButton")).toBeVisible()
+    })
+
+    it("does not show the clear button for non-search types", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ type: TextInputProto.Type.DEFAULT })
+      render(<TextInput {...props} />)
+
+      await user.type(screen.getByRole("textbox"), "laptops")
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("clears the value and hides the button when clicked", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ type: TextInputProto.Type.SEARCH })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+
+      const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
+      await user.type(searchbox, "laptops")
+
+      await user.click(screen.getByTestId("stTextInputClearButton"))
+
+      expect(searchbox.value).toBe("")
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+      // The cleared (empty) value is committed so the app updates immediately.
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element,
+        "",
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("does not show the clear button when disabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps(
+        { type: TextInputProto.Type.SEARCH, default: "laptops" },
+        { disabled: true }
+      )
+      render(<TextInput {...props} />)
+
+      // Even with a value present, a disabled search input has no clear button.
+      expect(screen.getByRole<HTMLInputElement>("searchbox").value).toBe(
+        "laptops"
+      )
+      await user.click(document.body)
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("toggles password visibility when show/hide button is clicked", async () => {
     const user = userEvent.setup()
     const props = getProps({ type: TextInputProto.Type.PASSWORD })

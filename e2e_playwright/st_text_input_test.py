@@ -366,6 +366,25 @@ def test_text_input_specialized_types_attributes(app: Page):
     expect(override_input).to_have_attribute("autocomplete", "off")
 
 
+def test_text_input_search_clear_button(app: Page):
+    """The search type shows a clear (x) button that empties the input on click."""
+    search_widget = get_element_by_key(app, "search_input")
+    search_field = search_widget.locator("input").first
+
+    clear_button = search_widget.get_by_test_id("stTextInputClearButton")
+    # Empty search input: no clear button yet.
+    expect(clear_button).not_to_be_visible()
+
+    search_field.fill("laptops")
+    expect(clear_button).to_be_visible()
+
+    clear_button.click()
+    wait_for_app_run(app)
+
+    expect(search_field).to_have_value("")
+    expect(clear_button).not_to_be_visible()
+
+
 def test_text_input_email_default_validation(app: Page):
     """The email type validates by default: it blocks invalid and commits valid values."""
     email_widget = get_element_by_key(app, "email_input")
