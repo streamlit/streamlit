@@ -112,15 +112,18 @@ def _parse_text_input_validate(
 # The regexes are JS-flavored (compiled with the "us" flags on the frontend) and
 # anchored, so they flow through the same `validate` channel as a user-supplied
 # rule. The email regex requires a dotted domain (accepts `user@host.tld`,
-# rejects `user@host`); the url regex requires an `http(s)://` scheme and a
-# dotted host.
+# rejects `user@host`). The url regex requires a dotted host but makes the
+# `http(s)://` scheme optional, so both `example.com` and `https://example.com`
+# pass while obvious non-URLs (plain words, values with spaces) are rejected. It
+# stays intentionally permissive since it only needs to catch clear mistakes;
+# users who want stricter rules can pass their own `validate`.
 _EMAIL_VALIDATE: Final = (
     r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
     "Enter a valid email address.",
 )
 _URL_VALIDATE: Final = (
-    r"^https?://[^\s/.]+\.[^\s]+$",
-    "Enter a valid URL starting with http:// or https://.",
+    r"^(https?://)?[^\s.]+\.[^\s]+$",
+    "Enter a valid URL.",
 )
 
 

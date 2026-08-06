@@ -140,8 +140,8 @@ class TextInputTest(DeltaGeneratorTestCase):
             ),
             (
                 "url",
-                r"^https?://[^\s/.]+\.[^\s]+$",
-                "Enter a valid URL starting with http:// or https://.",
+                r"^(https?://)?[^\s.]+\.[^\s]+$",
+                "Enter a valid URL.",
             ),
         ]
     )
@@ -154,6 +154,28 @@ class TextInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.text_input
         assert c.validate_regex == expected_regex
         assert c.validate_message == expected_message
+
+    @parameterized.expand(
+        [
+            # (value, should_match) — the URL scheme is optional.
+            ("example.com", True),
+            ("www.example.co.uk/path?q=1", True),
+            ("https://example.com", True),
+            ("http://sub.example.com", True),
+            ("not a url", False),
+            ("localhost", False),
+        ]
+    )
+    def test_url_type_default_validation_scheme_is_optional(
+        self, value: str, should_match: bool
+    ):
+        """Test that the default URL validation accepts URLs with or without a
+        scheme while still rejecting obvious non-URLs."""
+        st.text_input("label", type="url")
+        proto = self.get_delta_from_queue().new_element.text_input
+
+        matched = re.match(proto.validate_regex, value) is not None
+        assert matched is should_match
 
     @parameterized.expand([("phone",), ("search",)])
     def test_specialized_type_without_default_validation(self, type_string: str):
