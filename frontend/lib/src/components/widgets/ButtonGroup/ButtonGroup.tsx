@@ -39,6 +39,7 @@ import {
   StyledSegmentedControlToggleButton,
   StyledToggleButtonGroup,
 } from "~lib/components/shared/BaseButton/styled-components"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
@@ -170,6 +171,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)
+  const wrap = useResolvedWrap(element.wrap)
 
   // React Aria's ToggleButtonGroup does not forward aria-required to the DOM
   // element. Imperatively set it on the group root so screen readers can
@@ -183,6 +185,22 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       groupRef.current.removeAttribute("aria-required")
     }
   }, [required])
+
+  // Scroll the selected option into the local scrollport when wrap is false.
+  // Defaults that are selected but not focused aren't covered by focus scrolling.
+  useEffect(() => {
+    if (wrap || !groupRef.current || value.length === 0) return
+    const selectedOption = groupRef.current.querySelector("[data-selected]")
+    if (!selectedOption) return
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches
+    selectedOption.scrollIntoView({
+      behavior: reduceMotion ? "instant" : "smooth",
+      block: "nearest",
+      inline: "nearest",
+    })
+  }, [wrap, value, options])
 
   // When options change and the currently stored value no longer matches any
   // option (e.g. because format_func changed dynamically due to a language
@@ -268,6 +286,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         id={buttonId(index)}
         data-variant={dataVariant}
         $containerWidth={containerWidth}
+        $wrap={wrap}
       >
         <DynamicButtonLabel
           icon={option.contentIcon ?? undefined}
@@ -276,7 +295,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         />
       </ButtonEl>
     ))
-  }, [options, isPills, containerWidth, buttonId])
+  }, [options, isPills, containerWidth, wrap, buttonId])
 
   return (
     <StyledButtonGroup
@@ -310,6 +329,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         aria-label={element.label}
         $isPills={isPills}
         $containerWidth={containerWidth}
+        $wrap={wrap}
       >
         {optionElements}
       </StyledToggleButtonGroup>

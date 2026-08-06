@@ -379,3 +379,46 @@ not_required_sc = st.segmented_control(
     key="sc_not_required",
 )
 st.text(f"not_required_sc: {not_required_sc}")
+
+# --- Wrap parameter ---
+
+st.header("Segmented control - wrap")
+
+_WRAP_OPTIONS = [
+    "Today",
+    "7 days",
+    "30 days",
+    "Quarter",
+    "Year",
+    "All time",
+    "Custom range",
+    "Last 90 days",
+    "Last 180 days",
+    "Year to date",
+    "Previous year",
+    "Lifetime",
+]
+
+st.segmented_control(
+    "Wrap false scroll",
+    _WRAP_OPTIONS,
+    wrap=False,
+    width=220,
+    key="sc_wrap_false",
+)
+
+with st.container(horizontal=True, width=260, key="sc_wrap_auto_horizontal"):
+    st.segmented_control(
+        "Wrap auto horizontal",
+        _WRAP_OPTIONS,
+        key="sc_wrap_auto_h",
+    )
+
+st.segmented_control(
+    "Wrap false selected into view",
+    _WRAP_OPTIONS,
+    default="Lifetime",
+    wrap=False,
+    width=220,
+    key="sc_wrap_selected_into_view",
+)

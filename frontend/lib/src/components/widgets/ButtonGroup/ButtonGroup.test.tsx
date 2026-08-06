@@ -22,6 +22,11 @@ import {
   LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -741,5 +746,125 @@ describe("ButtonGroup required parameter", () => {
     const buttonGroup = screen.getByRole("radiogroup")
     expect(buttonGroup).toBeInTheDocument()
     expect(buttonGroup).toHaveAttribute("aria-required", "true")
+  })
+})
+
+describe("ButtonGroup wrap", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "apple" }),
+    ButtonGroupProto.Option.create({ content: "banana" }),
+    ButtonGroupProto.Option.create({ content: "cherry" }),
+  ]
+
+  const horizontalContext: IFlexContext = {
+    direction: Direction.HORIZONTAL,
+    isInHorizontalLayout: true,
+    isInRoot: false,
+    isInContentWidthContainer: false,
+  }
+
+  it("uses nowrap and overflow-x when wrap is false", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("flex-wrap: nowrap")
+    expect(group).toHaveStyle("overflow-x: auto")
+    // Content-width + wrap=False stays intrinsic (not stretched to 100%).
+    expect(group).toHaveStyle("width: auto")
+    expect(group).toHaveStyle("max-width: 100%")
+  })
+
+  it("stretches to parent width when wrap is false and width is stretch", () => {
+    render(
+      <ButtonGroup
+        {...getProps(
+          { wrap: false, options: simpleOptions },
+          { widthConfig: { useStretch: true } }
+        )}
+      />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("width: 100%")
+    expect(group).toHaveStyle("overflow-x: auto")
+  })
+
+  it("does not shrink option buttons when wrap is false", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
+    )
+    // Keep content width so the group scrolls instead of crushing labels.
+    const button = getButtonGroupButtons()[0]
+    expect(button).toHaveStyle("flex-shrink: 0")
+    expect(button).toHaveStyle("min-width: fit-content")
+  })
+
+  it("allows wrapping by default outside a horizontal layout", () => {
+    render(<ButtonGroup {...getProps({ options: simpleOptions })} />)
+    expect(screen.getByRole("radiogroup")).toHaveStyle("flex-wrap: wrap")
+  })
+
+  it("auto default does not wrap inside a horizontal layout", () => {
+    render(
+      <FlexContext.Provider value={horizontalContext}>
+        <ButtonGroup {...getProps({ options: simpleOptions })} />
+      </FlexContext.Provider>
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("flex-wrap: nowrap")
+    expect(group).toHaveStyle("overflow-x: auto")
+  })
+
+  it("explicit wrap=true wraps inside a horizontal layout", () => {
+    render(
+      <FlexContext.Provider value={horizontalContext}>
+        <ButtonGroup {...getProps({ wrap: true, options: simpleOptions })} />
+      </FlexContext.Provider>
+    )
+    expect(screen.getByRole("radiogroup")).toHaveStyle("flex-wrap: wrap")
+  })
+
+  it.each([
+    { wrap: false, expectedCalls: 1 },
+    { wrap: true, expectedCalls: 0 },
+  ] as const)(
+    "scrolls selected option into view only when wrap is false (wrap=$wrap)",
+    ({ wrap, expectedCalls }) => {
+      const scrollIntoView = vi.fn()
+      Element.prototype.scrollIntoView = scrollIntoView
+
+      render(
+        <ButtonGroup
+          {...getProps({
+            wrap,
+            options: simpleOptions,
+            default: [2],
+          })}
+        />
+      )
+
+      expect(scrollIntoView).toHaveBeenCalledTimes(expectedCalls)
+    }
+  )
+
+  it("still updates selection when wrap is false", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      wrap: false,
+      options: simpleOptions,
+      default: [0],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    await user.click(getButtonGroupButtons()[1])
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["banana"],
+      { fromUi: true },
+      undefined
+    )
   })
 })

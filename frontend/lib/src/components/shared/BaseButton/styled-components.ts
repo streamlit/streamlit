@@ -559,11 +559,14 @@ export const StyledElementToolbarButton = styled(
   }
 })
 
-export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
-  ({ containerWidth }) => ({
-    width: containerWidth ? "100%" : "auto",
-  })
-)
+export const StyledButtonGroup = styled.div<{
+  containerWidth: boolean
+}>(({ containerWidth }) => ({
+  // Stretch fills the parent; content-width stays intrinsic. Always cap at
+  // parent width so wrap=False can scroll locally when options overflow.
+  width: containerWidth ? "100%" : "auto",
+  maxWidth: "100%",
+}))
 
 export const StyledButtonLabel = styled.div<{ $truncate?: boolean }>(
   ({ $truncate }) => ({
@@ -613,29 +616,36 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
 export const StyledToggleButtonGroup = styled(ToggleButtonGroup)<{
   $isPills: boolean
   $containerWidth: boolean
-}>(({ theme, $isPills, $containerWidth }) => {
-  const baseStyle = {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    maxWidth: $containerWidth ? "100%" : "fit-content",
-    margin: 0,
-  }
-  const width = $containerWidth ? "100%" : "auto"
-  if ($isPills) {
-    return {
-      ...baseStyle,
-      columnGap: theme.spacing.twoXS,
-      rowGap: theme.spacing.twoXS,
-      width,
-    }
+  $wrap: boolean
+}>(({ theme, $isPills, $containerWidth, $wrap }) => ({
+  display: "flex",
+  flexWrap: $wrap ? ("wrap" as const) : ("nowrap" as const),
+  // Stretch fills the parent; content-width stays intrinsic. Always cap at
+  // parent width so wrap=False scrolls locally instead of growing the page.
+  maxWidth: "100%",
+  width: $containerWidth ? "100%" : "auto",
+  margin: 0,
+  columnGap: $isPills ? theme.spacing.twoXS : theme.spacing.none,
+  rowGap: theme.spacing.twoXS,
+  ...(!$wrap && {
+    overflowX: "auto" as const,
+    overflowY: "hidden" as const,
+  }),
+}))
+
+/** Option flex sizing: when wrap is false, never shrink below content width. */
+function getToggleOptionFlex(
+  wrap: boolean,
+  containerWidth: boolean
+): CSSObject {
+  if (wrap) {
+    return { flex: containerWidth ? "1 1 fit-content" : undefined }
   }
   return {
-    ...baseStyle,
-    columnGap: theme.spacing.none,
-    rowGap: theme.spacing.twoXS,
-    width,
+    flex: containerWidth ? "1 0 fit-content" : "0 0 auto",
+    minWidth: "fit-content",
   }
-})
+}
 
 const StyledBaseToggleButton = styled(ToggleButton)(({ theme }) => ({
   display: "inline-flex",
@@ -682,10 +692,11 @@ const StyledBaseToggleButton = styled(ToggleButton)(({ theme }) => ({
 
 export const StyledPillsToggleButton = styled(StyledBaseToggleButton)<{
   $containerWidth: boolean
-}>(({ theme, $containerWidth }) => ({
+  $wrap: boolean
+}>(({ theme, $containerWidth, $wrap }) => ({
   borderRadius: theme.radii.full,
   padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
-  flex: $containerWidth ? "1 1 fit-content" : undefined,
+  ...getToggleOptionFlex($wrap, $containerWidth),
   "&[data-selected]:not([data-disabled])": {
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
@@ -740,11 +751,13 @@ export const StyledSegmentedControlToggleButton = styled(
   StyledBaseToggleButton
 )<{
   $containerWidth: boolean
-}>(({ theme, $containerWidth }) => ({
+  $wrap: boolean
+}>(({ theme, $containerWidth, $wrap }) => ({
   padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
   borderRadius: "0",
-  flex: $containerWidth ? "1 1 fit-content" : undefined,
-  maxWidth: "100%",
+  ...getToggleOptionFlex($wrap, $containerWidth),
+  // Cap segment width only when wrapping; scroll mode keeps natural widths.
+  maxWidth: $wrap ? "100%" : undefined,
   marginRight: `-${theme.sizes.borderWidth}`,
 
   "&:first-child": {

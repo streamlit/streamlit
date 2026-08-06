@@ -98,7 +98,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.page_link` | Display a link to another page in a multipage app or to an external page. Use it for explicit navigation elements. |
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
 | `st.pdf` | Display a PDF viewer. Use it to render PDF files or bytes directly in the app. |
-| `st.pills` | Display a pills widget. Use it for compact single- or multi-select choices with pill-shaped options. |
+| `st.pills` | Display a pills widget. Use it for compact single- or multi-select choices with pill-shaped options. Supports `wrap` to keep options on one scrollable row. |
 | `st.plotly_chart` | Display an interactive Plotly chart. Use it when Plotly is already available or chart interactions/customization require Plotly. |
 | `st.popover` | Insert a popover container. Use it for compact controls or details that should appear on demand without occupying page space. |
 | `st.progress` | Display a progress bar. Use it to communicate completion state for running tasks or staged workflows. |
@@ -107,7 +107,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.radio` | Display a radio button widget. Use it when users should choose exactly one option from a small visible set. |
 | `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. |
 | `st.scatter_chart` | Display a scatterplot chart. Use it for relationships between numeric variables, optionally with size and color encodings. |
-| `st.segmented_control` | Display a segmented control widget. Use it for compact mutually exclusive choices, especially mode or view switching. |
+| `st.segmented_control` | Display a segmented control widget. Use it for compact mutually exclusive choices, especially mode or view switching. Supports `wrap` to keep options on one scrollable row. |
 | `st.select_slider` | Display a slider widget to select items from a list. Use it when options are ordered but not necessarily numeric. |
 | `st.selectbox` | Display a select widget. Use it for selecting one item from a medium or large set. |
 | `st.set_option` | Set a configuration option. Use sparingly because not all options are safe or meaningful to change after startup. |

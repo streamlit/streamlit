@@ -28,11 +28,14 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     click_form_button,
     click_toggle,
+    expect_button_group_overflows,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_selected_option_in_view,
     expect_text,
     get_button_group,
+    get_button_group_options,
     get_element_by_key,
 )
 
@@ -706,3 +709,54 @@ def test_required_pills_behavior(app: Page):
 
     # Value should be None - deselection is allowed
     expect_text(app, "not_required: None")
+
+
+def test_pills_wrap_behavior(app: Page, assert_snapshot: ImageCompareFunction):
+    """wrap=False scrolls in one row; wrap=True/auto vertical wrap; auto in a
+    horizontal container stays one row; selected option scrolls into view;
+    toggling wrap preserves selection.
+    """
+    false_group = get_button_group_options(app, "pills_wrap_false")
+    true_group = get_button_group_options(app, "pills_wrap_true")
+    auto_v_group = get_button_group_options(app, "pills_wrap_auto_vertical")
+    auto_h_group = get_button_group_options(app, "pills_wrap_auto_h")
+    selected_group = get_button_group_options(app, "pills_wrap_selected_into_view")
+    stretch_group = get_button_group_options(app, "pills_wrap_false_stretch")
+
+    # wrap=False: single row with local horizontal overflow
+    false_box = false_group.bounding_box()
+    true_box = true_group.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert false_box["height"] < true_box["height"]
+
+    expect_button_group_overflows(false_group)
+    # Overflow is local — the page must not gain horizontal scroll
+    assert app.evaluate("() => document.documentElement.scrollWidth") <= app.evaluate(
+        "() => document.documentElement.clientWidth"
+    )
+
+    # Default (auto) in vertical layout wraps like wrap=True
+    auto_v_box = auto_v_group.bounding_box()
+    assert auto_v_box is not None
+    assert auto_v_box["height"] > false_box["height"]
+
+    # Default (auto) inside horizontal container stays one row and scrolls
+    auto_h_box = auto_h_group.bounding_box()
+    assert auto_h_box is not None
+    assert auto_h_box["height"] < true_box["height"]
+    expect_button_group_overflows(auto_h_group)
+
+    expect_selected_option_in_view(selected_group)
+    expect_button_group_overflows(stretch_group)
+
+    assert_snapshot(
+        get_element_by_key(app, "pills_wrap_false"),
+        name="st_pills-wrap_false_scroll",
+    )
+
+    # Changing wrap must not reset widget state
+    expect_text(app, "pills_wrap_preserve: Beta")
+    click_toggle(app, "Enable wrap")
+    wait_for_app_run(app)
+    expect_text(app, "pills_wrap_preserve: Beta")

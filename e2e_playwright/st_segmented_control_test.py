@@ -28,11 +28,14 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     click_form_button,
     click_toggle,
+    expect_button_group_overflows,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_selected_option_in_view,
     expect_text,
     get_button_group,
+    get_button_group_options,
     get_element_by_key,
     get_markdown,
     get_segment_button,
@@ -561,3 +564,27 @@ def test_required_segmented_control_behavior(app: Page):
 
     # Value should be None - deselection is allowed
     expect_text(app, "not_required_sc: None")
+
+
+def test_segmented_control_wrap_behavior(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False scrolls in one row; auto in a horizontal container stays one
+    row; selected option scrolls into view.
+    """
+    false_group = get_button_group_options(app, "sc_wrap_false")
+    auto_h_group = get_button_group_options(app, "sc_wrap_auto_h")
+    selected_group = get_button_group_options(app, "sc_wrap_selected_into_view")
+
+    expect_button_group_overflows(false_group)
+    assert app.evaluate("() => document.documentElement.scrollWidth") <= app.evaluate(
+        "() => document.documentElement.clientWidth"
+    )
+
+    expect_button_group_overflows(auto_h_group)
+    expect_selected_option_in_view(selected_group)
+
+    assert_snapshot(
+        get_element_by_key(app, "sc_wrap_false"),
+        name="st_segmented_control-wrap_false_scroll",
+    )

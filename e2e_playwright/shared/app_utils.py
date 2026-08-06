@@ -1495,6 +1495,60 @@ def get_button_group(app: Page, key: str) -> Locator:
     return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
 
 
+def get_button_group_options(app: Page, key: str) -> Locator:
+    """Get the option list inside a button group (pills / segmented control).
+
+    This is the horizontal scrollport when ``wrap`` is false.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the button group.
+
+    key : str
+        The key of the button group.
+
+    Returns
+    -------
+    Locator
+        The option list (``group`` or ``radiogroup`` role).
+    """
+    button_group = get_button_group(app, key)
+    return (
+        button_group.get_by_role("group")
+        .or_(button_group.get_by_role("radiogroup"))
+        .first
+    )
+
+
+def expect_button_group_overflows(options: Locator) -> None:
+    """Wait until the option list has local horizontal overflow."""
+    wait_until(
+        options.page,
+        lambda: options.evaluate("el => el.scrollWidth > el.clientWidth") is True,
+    )
+
+
+def expect_selected_option_in_view(options: Locator) -> None:
+    """Wait until the selected option is fully visible in the option list."""
+    expect(options.locator("button[data-selected]").first).to_be_visible()
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              const selected = el.querySelector('[data-selected]');
+              if (!selected) return false;
+              const group = el.getBoundingClientRect();
+              const sel = selected.getBoundingClientRect();
+              return sel.left >= group.left - 1 && sel.right <= group.right + 1;
+            }"""
+            )
+            is True
+        ),
+    )
+
+
 def get_feedback(app: Page, key: str) -> Locator:
     """Get a feedback widget with the given key.
 
