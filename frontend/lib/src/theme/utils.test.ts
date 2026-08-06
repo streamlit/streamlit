@@ -4080,6 +4080,21 @@ describe("Custom theme creation", () => {
 
       expect(result.chartCategoricalColors).toEqual(["#111"])
     })
+
+    it("replaces partial headingFontSizes atomically instead of inheriting tail from parent", () => {
+      const themeInput = new CustomThemeConfig({
+        headingFontSizes: ["2.0", "1.5", "1.25", "1.0", "0.875", "0.75"],
+        dark: new CustomThemeConfig({
+          headingFontSizes: ["1.8", "1.3"],
+        }),
+      })
+
+      const result = handleSectionInheritance(themeInput, "dark")
+
+      // The dark section's partial array replaces wholesale — unspecified
+      // sizes fall back to Streamlit defaults, not the [theme] tail.
+      expect(result.headingFontSizes).toEqual(["1.8", "1.3"])
+    })
   })
 
   describe("createCustomThemes", () => {
