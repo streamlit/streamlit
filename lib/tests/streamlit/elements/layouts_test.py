@@ -354,12 +354,11 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (None, True),
             (True, True),
             (False, False),
         ]
     )
-    def test_columns_wrap(self, wrap: bool | None, expected_wrap: bool):
+    def test_columns_wrap(self, wrap: bool, expected_wrap: bool):
         """Test that wrap maps correctly onto flex_container.wrap."""
         st.columns(3, wrap=wrap)
 
@@ -378,6 +377,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
             ("no",),
             (1,),
             ("true",),
+            (None,),
         ]
     )
     def test_columns_with_invalid_wrap(self, invalid_wrap):

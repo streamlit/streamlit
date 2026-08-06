@@ -405,7 +405,7 @@ class LayoutsMixin:
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
-        wrap: bool | None = None,
+        wrap: bool = True,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -470,15 +470,13 @@ class LayoutsMixin:
               the parent container, the width of the column group matches the
               width of the parent container.
 
-        wrap : bool or None
-            Whether columns may stack vertically on narrow viewports. This can
-            be one of the following:
-
-            - ``None`` (default) or ``True``: Columns stack vertically when the
-              viewport is at most ``640px`` wide.
-            - ``False``: Disable stacking and keep columns in a single row.
-              Columns shrink until a usable minimum width, then the column
-              group scrolls horizontally instead of overflowing the page.
+        wrap : bool
+            Whether columns may stack vertically on narrow viewports. If this
+            is ``True`` (default), columns stack when the viewport is at most
+            ``640px`` wide. If this is ``False``, stacking is disabled and
+            columns stay in a single row. Columns shrink until a usable
+            minimum width, then the column group scrolls horizontally instead
+            of overflowing the page.
 
         Returns
         -------
@@ -618,8 +616,8 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise StreamlitInvalidColumnSpecError()
 
-        if wrap is not None and not isinstance(wrap, bool):
-            raise StreamlitValueError("wrap", ["True", "False", "None"])
+        if not isinstance(wrap, bool):
+            raise StreamlitValueError("wrap", ["True", "False"])
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -652,8 +650,7 @@ class LayoutsMixin:
         block_proto.flex_container.direction = (
             BlockProto.FlexContainer.Direction.HORIZONTAL
         )
-        # Only False disables responsive stacking; None/True keep it enabled.
-        block_proto.flex_container.wrap = wrap is not False
+        block_proto.flex_container.wrap = wrap
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
         block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH

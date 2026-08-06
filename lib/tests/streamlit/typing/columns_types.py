@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     assert_type(columns(3, gap=100), list[DeltaGenerator])
 
     # st.columns accepts wrap for controlling responsive stacking.
-    assert_type(columns(3, wrap=None), list[DeltaGenerator])
     assert_type(columns(3, wrap=True), list[DeltaGenerator])
     assert_type(columns(3, wrap=False), list[DeltaGenerator])
 

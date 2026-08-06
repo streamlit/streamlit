@@ -53,10 +53,9 @@ with st.sidebar:
 ## Columns: max 4, set alignment
 
 Don't use too many columns for content layouts—they get cramped. By default
-(`wrap=None` or `wrap=True`), columns stack vertically when the viewport is at
-most `640px` wide. Pass `wrap=False` to keep columns in one row: they shrink to a
-usable minimum width, then the column group scrolls horizontally instead of
-stacking.
+(`wrap=True`), columns stack vertically when the viewport is at most `640px`
+wide. Pass `wrap=False` to keep columns in one row: they shrink to a usable
+minimum width, then the column group scrolls horizontally instead of stacking.
 
 ```python
 # GOOD
