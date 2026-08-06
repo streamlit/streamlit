@@ -97,29 +97,12 @@ Each specialized type:
 2. **Applies overridable defaults** for `icon`, `placeholder`, `validate`, and `autocomplete` (see
    below).
 
-#### Naming `tel` vs `phone`
+#### Naming: `"phone"` (not `"tel"`)
 
-The issue says "phone", but the value maps to HTML's `type="tel"`. This is the single most
-contentious decision in the spec, and it's a genuine toss-up — whichever we pick, we render
-`<input type="tel">` and ship only one public name.
-
-**Option A — `"tel"`**
-- Pros: Matches the HTML standard exactly (principle 5, "Consistency Over Novelty"); mirrors
-  `"email"`/`"url"`/`"search"`, which all match HTML 1:1 — using one "friendly" name among four
-  standard ones is itself inconsistent. Notably, the API-design guide's own example for this exact
-  pattern reaches for `st.text_input("Phone", type="tel")` (principle 16).
-- Cons: A mild abbreviation; less obvious to non-web developers (principle 8 favors semantic names).
-
-**Option B — `"phone"`** ✅ PREFERRED
-- Pros: More human-readable for typical users (principle 8, "Semantic Names Over Geeky Names"); the
-  label most app authors would reach for. This is what the alternative (codex) draft of this spec
-  recommends.
-- Cons: Diverges from the underlying HTML attribute and from the other three values.
-
-**Decision: `"phone"`.** `tel` reads poorly and Streamlit deliberately avoids terse HTML-derived
-names elsewhere, and few users know the raw HTML values. (`"telephone"` was floated as a compromise,
-but `"phone"` is the common term.) Either way we render `<input type="tel">`; only the public value
-name changes.
+**Decision: `"phone"`.** The public value is `"phone"`; we still render `<input type="tel">`.
+`"phone"` is more human-readable for typical users (principle 8, "Semantic Names Over Geeky Names")
+than the HTML abbreviation `"tel"`. (`"telephone"` was floated as a compromise, but `"phone"` is the
+common term.)
 
 #### Why only these types?
 
@@ -180,10 +163,9 @@ existing Enter-to-submit logic and is deferred (see [Out of scope](#out-of-scope
 
 When a specialized type is selected and the user hasn't supplied a value for `icon`,
 `placeholder`, `validate`, or `autocomplete`, the type fills in a sensible default. Any explicit
-value the user passes overrides that default — how an *omitted* argument, `None`, and an empty
-value (`""`) are distinguished (use-the-default vs. opt-out) is the subject of
-[Decision: "use the type default" vs. "no value"](#decision-use-the-type-default-vs-no-value)
-below.
+value the user passes overrides that default. Opt-out uses the same rule as today's
+`autocomplete`: **`None` (or omission) = use the type default**, **`""` = off** — see
+[Decision: "use the type default" vs. "no value"](#decision-use-the-type-default-vs-no-value).
 
 | `type` | Default `icon` | Default validation | Default `placeholder` | Default `autocomplete` |
 |--------|----------------|--------------------|-----------------------|------------------------|
@@ -200,9 +182,9 @@ Notes:
   validity exists. We deliberately **do not** default-validate `phone` (no universal phone format) or
   `search` (free text). It reuses the companion `validate` feature's now-shipped frontend error UI
   and submit-blocking behavior (error on blur/Enter/submit; invalid values blocked without a rerun;
-  empty values skip validation). Because the shipped `validate` is a **regex** channel, the *source*
-  of the email/url check is a design decision — see
-  [Validation source](#validation-source-native-validity-vs-regex) below.
+  empty values skip validation). The email/url defaults are Streamlit-maintained regexes passed
+  through `validate` — see
+  [Validation source](#validation-source-streamlit-regex-via-validate) below.
 - **`placeholder`** examples are intentionally conservative format hints. This is the most debatable
   default (see Out of scope); it can be dropped without affecting the rest. The `phone` example above
   is US-formatted and illustrative only — final values (including a locale-neutral phone format) are
@@ -212,45 +194,24 @@ Notes:
   `"new-password"`. `search` defaults to `"off"` so private search terms don't leak into the
   browser's shared autofill history; pass `autocomplete=""` if you prefer plain-text behavior.
 
-#### Validation source: native validity vs. regex
+#### Validation source: Streamlit regex via `validate`
 
-For `email`/`url`, there are two ways to implement the default check. This affects how it composes
-with a user-supplied `validate`, so it's worth deciding deliberately:
+**Decision: Streamlit-maintained regex through the shipped `validate` channel.** The type default
+is literally a `validate=(EMAIL_REGEX, "...")` / `validate=(URL_REGEX, "...")` value — one
+validation channel, inspectable and overridable like any other `validate`, with **no new frontend
+work** (the merged `validate` feature, [#15714](https://github.com/streamlit/streamlit/pull/15714),
+already is a regex channel). A user-supplied `validate` *replaces* the type default (single channel;
+the user's rule must be a complete check).
 
-**Option A — Streamlit-maintained regex** ✅ PREFERRED
-- The type default is literally a `validate=(EMAIL_REGEX, "...")` value, reusing the `validate`
-  channel end-to-end.
-- Pros: one validation channel; the effective rule is inspectable and overridable like any other
-  `validate`; nothing new to build on the frontend; stricter than the browser (can require a dotted
-  domain).
-- Cons: Streamlit owns and must maintain the regexes, which are famously easy to get subtly wrong
-  (over-strict regexes reject valid addresses; over-loose ones admit junk). The exact regexes are an
-  implementation detail to finalize during build.
+**Email strictness:** accept normal emails including intranet-style `user@host` (no dotted TLD
+required). Reject clearly malformed values (missing `@`, empty local/host parts, etc.). Apps that
+need a stricter rule (e.g. require a public domain) pass their own `validate`. Exact regexes are an
+implementation detail to finalize during build.
 
-**Option B — Browser-native validity** (the codex draft's recommendation)
-- Use the browser's `ValidityState.typeMismatch` on the native `<input type="email"/"url">`, surfaced
-  through the same error UI.
-- Pros: zero regex maintenance; exactly matches native `type` semantics and stays correct as
-  browsers evolve.
-- Cons: requires a *second* validation channel in the frontend (the shipped `validate` feature only
-  knows regex), and native email validity is lenient (e.g. `a@b` passes — no TLD required), which
-  can surprise developers expecting "real" email validation.
-
-**Composition with user `validate`** — the two options imply different behavior, so we should pick
-consciously:
-- With Option A, a user-supplied `validate` *replaces* the type default (single channel; the user's
-  rule must be a complete check). Simpler mental model.
-- With Option B, the native type check and the user's `validate` *layer*: native format runs first,
-  then the user rule adds app-specific constraints (e.g. a corporate domain) without re-stating the
-  base format. More ergonomic, but it's a two-stage model users must understand.
-
-We recommend **Option A** for MVP: it keeps a single, inspectable validation channel, and since the
-now-merged `validate` ([#15714](https://github.com/streamlit/streamlit/pull/15714)) *is already a
-regex channel*, the email/url defaults drop in today as a pure default value
-(`validate=(EMAIL_REGEX, ...)`) with **no new frontend work**. If reviewers prefer to avoid
-maintaining regexes, the native-validity + layering model (Option B) is a clean alternative — but it
-requires building a *second* validation channel that the shipped feature doesn't have (it currently
-only understands regex).
+We considered browser-native `ValidityState.typeMismatch` instead: zero regex maintenance and exact
+native `type` semantics, but it would require a *second* frontend validation channel (shipped
+`validate` only knows regex) and a two-stage composition model with user `validate`. Rejected in
+favor of the single-channel regex approach above.
 
 #### Default precedence
 
@@ -258,63 +219,33 @@ For each enhanced property, the resolved value is: **user value → type default
 A real user value always wins; otherwise the type default (from the table) applies; `"default"` and
 `"password"` define no enhanced defaults, so they're unchanged.
 
-The one genuinely open design question — and worth a deliberate decision — is the next subsection.
-
 #### Decision: "use the type default" vs. "no value"
 
 When a type defines a default (e.g. `email` → mail icon), a user needs three distinct intents per
 parameter: **(1)** use the type's default, **(2)** use my explicit value, **(3)** force it *off*
-(keep `type="email"` for the keyboard/autofill, but no icon / no auto-validation). The hard part is
-distinguishing (1) from (3), since neither is a "real" value. Three ways to encode this:
+(keep `type="email"` for the keyboard/autofill, but no icon / no auto-validation).
 
-**Option A — Internal sentinel (`_UNSET`)**
-- Param default becomes an internal `_UNSET`; **omission → type default**, explicit **`None` → off**,
-  any value → use it.
-- Pros: `None` keeps its conventional Streamlit meaning ("none of this"); one uniform rule across all
-  params; `validate=None` to disable reads perfectly.
-- Cons: makes `text_input(...)` and `text_input(..., icon=None)` behave *differently*, which is
-  surprising in Python where callers treat omission and `=None` as equivalent (borderline "clever but
-  too clever", principle 35); needs sentinel plumbing; not an established pattern in our public API.
+**Decision: `None` = derive, `""` = off.** Extends the rule `text_input` *already* uses for
+`autocomplete` (`autocomplete=None` derives from the type; `autocomplete=""` opts out) to
+`icon` / `placeholder` / `validate`:
 
-**Option B — `None` = use default, `""` (empty) = off** ✅ leaning
-- **`None` (or omission) → type default**; an **empty value (`icon=""`, `placeholder=""`,
-  `validate=""`) → off**; any real value → use it.
-- Pros: this is **exactly how `text_input.autocomplete` already works today** —
-  `autocomplete=None` derives from the type (`"new-password"` for password) and `autocomplete=""`
-  opts out. Generalizing that single existing rule to `icon`/`placeholder`/`validate` is the most
-  consistent choice and removes the omit-vs-`None` trap (`None` ≡ omission). For `placeholder`, `""`
-  already renders as "no placeholder" today, so it's zero surprise. Backward compatible (plain
-  `default`/`password` inputs have no type default, so `None` still means "nothing").
-- Cons: `""` is less self-documenting as "off" than `None`. **Crucially, this collides with the
-  now-merged validation feature ([#15714](https://github.com/streamlit/streamlit/pull/15714)), which
-  already defines `validate=None` as *no validation* — and, as shipped, an empty `validate=""`
-  compiles to no regex and is likewise treated as no validation.** So `validate=""` already means
-  "off" (compatible with Option B), but Option B would still have to redefine `validate=None` for a
-  specialized type from "off" to "use the type default" — reversing already-shipped behavior. This is
-  exactly why the `autocomplete` precedent doesn't transfer cleanly to `validate`: `autocomplete=None`
-  means "derive", but `validate=None` already means "off". So `validate` is the one param where Option
-  B fights an existing, shipped definition. Minor: `icon=""` currently raises, so we'd map it to "no
-  icon" before validation.
+| Intent | Encoding |
+|--------|----------|
+| Use the type default | `None` or omit the argument |
+| Use my value | Pass an explicit non-empty value |
+| Force off | Pass `""` (`icon=""`, `placeholder=""`, `validate=""`) |
 
-**Option C — `None` = use default, no opt-out**
-- Simplest, but you can't remove a type's icon or auto-validation. Rejected — don't ship
-  type-derived defaults users can't turn off.
+This keeps `None` ≡ omission (no Python surprise), is backward compatible for plain
+`default`/`password` inputs (no type default → `None` still means "nothing"), and for `placeholder`
+`""` already renders as "no placeholder" today. Minor: `icon=""` currently raises, so map it to
+"no icon" before validation.
 
-**Decision: Option B** (ruling out Option C — there must be a way to turn the defaults off). It
-extends the rule `text_input` *already* uses for `autocomplete` (`None` = derive, `""` = off) to the
-other type-derived params instead of inventing a new mechanism, and it avoids the surprising
-"omission ≠ `None`" behavior of the sentinel. The one rough edge to settle during implementation is
-`validate`: the now-merged `validate` feature already defines `validate=None` as "no validation" (and
-treats `validate=""` the same way), so Option B has to flip `None` to "use the type default" — a
-redefinition of shipped behavior. If that proves too disruptive, **Option A (sentinel)** is the clean
-fallback, and it keeps `validate=None` meaning "off", consistent with the shipped `validate` feature,
-at the cost of the omit-vs-`None` subtlety.
-
-Either way, the **guiding principle holds**: never ship a type-derived default that users can't turn
-off. If no opt-out mechanism is in scope for the MVP, ship only the defaults that need none — the
-native `type` and `autocomplete` (which already carries its own `""` opt-out) — and add every
-opt-out-requiring default (`icon`, `placeholder`, and the email/url `validate` default) once an
-opt-out mechanism exists.
+**`validate` nuance:** the shipped `validate` feature
+([#15714](https://github.com/streamlit/streamlit/pull/15714)) already treats both `validate=None`
+and `validate=""` as no validation. For specialized types we redefine **`validate=None` → use the
+type default** while **`validate=""` stays "off"**. For `type="default"` / `"password"` (no type
+default), `None` continues to mean no validation. Never ship a type-derived default users can't
+turn off.
 
 ### Examples
 
@@ -377,11 +308,10 @@ email = st.text_input(
 - **`type="password"` defaults:** unchanged — no icon, no default validation, `autocomplete`
   remains `"new-password"`. We do not retrofit password defaults in this spec.
 - **Native vs. Streamlit validation:** the native HTML `type` (e.g. `email`) can trigger the
-  browser's own `:invalid` state. Under Option A (regex), Streamlit forms don't perform native form
-  submits, so error *display* comes entirely from the `validate` mechanism and we must suppress the
-  native constraint-validation styling to avoid double error UI. Under Option B, native validity *is*
-  the source but is still surfaced through Streamlit's error UI. Either way, the user sees exactly one
-  error treatment; the frontend suppresses the browser's native constraint-validation styling.
+  browser's own `:invalid` state. Error *display* comes entirely from the `validate` regex
+  mechanism (Streamlit forms don't perform native form submits), so the frontend suppresses the
+  browser's native constraint-validation styling to avoid double error UI. The user sees exactly one
+  error treatment.
 - **Empty values:** consistent with the shipped `validate` feature, empty strings / `None` skip
   validation, so an optional `type="email"` field doesn't error until the user types something.
 - **`bind="query-params"`:** allowed for `email`, `url`, `phone`, and `search` (only `password` is
@@ -389,12 +319,9 @@ email = st.text_input(
   search URLs.
 - **Relationship to the merged `validate` feature:** the client-side regex `validate` parameter has
   now shipped ([#15714](https://github.com/streamlit/streamlit/pull/15714)), so the email/url default
-  validation can be implemented today as a regex default value — there is no longer any need to stage
-  it behind a future `validate` release. The remaining gate is the
-  [opt-out decision](#decision-use-the-type-default-vs-no-value) (how a user turns a type's default
-  validation *off*): native `type` and `autocomplete` can ship first, while the opt-out-requiring
-  defaults (`icon`, `placeholder`, and the email/url validation) all follow once an opt-out mechanism
-  is chosen.
+  validation is implemented as a regex default value. Users turn a type's default validation *off*
+  with `validate=""` (see
+  [opt-out decision](#decision-use-the-type-default-vs-no-value)).
 
 ### Out of scope (future work)
 
@@ -422,23 +349,6 @@ email = st.text_input(
   other client-side widget constraints — on the server is tracked separately in
   [#16203](https://github.com/streamlit/streamlit/issues/16203); until it lands, security-relevant
   checks must live in the user's own app code.
-
-## Open questions
-
-1. **`tel` vs `phone`** for the public value name — **Resolved: `"phone"`**; see
-   [naming](#naming-tel-vs-phone).
-2. **Validation source** for `email`/`url`: Streamlit-maintained regex (single channel, overridable)
-   vs. browser-native validity (no regex maintenance, but lenient and a second channel). Recommended:
-   regex — and since the now-merged `validate` is already a regex channel, this drops in with no new
-   frontend work; see [Validation source](#validation-source-native-validity-vs-regex).
-3. **Opt-out encoding** for type-derived defaults (see
-   [the decision section](#decision-use-the-type-default-vs-no-value)): `None` = derive + `""` = off
-   (Option B, generalizes today's `autocomplete` behavior) vs. an internal sentinel (Option A).
-   **Resolved: Option B**; Option C (no opt-out) is rejected — there must be a way to turn defaults
-   off. The exact opt-out values still need finalizing against the shipped `validate=None` semantics
-   (see decision section).
-4. **`email` strictness**: accept lenient browser-style addresses (e.g. intranet `user@host`), or a
-   stricter dotted-domain regex? Either way, custom `validate` covers app-specific rules.
 
 ## References
 
