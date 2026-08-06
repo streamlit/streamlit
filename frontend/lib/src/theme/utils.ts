@@ -497,12 +497,12 @@ const isValidFontWeight = (
   // If the font weight config is set, validate it (log warning if invalid)
   if (notNullOrUndefined(fontWeight)) {
     const isInteger = Number.isInteger(fontWeight)
-    const isIncrementOf100 = fontWeight % 100 === 0
+    const isIncrementOf50 = fontWeight % 50 === 0
     const isInRange = fontWeight >= minWeight && fontWeight <= maxWeight
 
-    if (!isInteger || !isIncrementOf100 || !isInRange) {
+    if (!isInteger || !isIncrementOf50 || !isInRange) {
       LOG.warn(
-        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 100. Falling back to default font weight.`
+        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 50. Falling back to default font weight.`
       )
       return false
     }
@@ -1011,15 +1011,12 @@ export const createEmotionTheme = (
   )
 
   // Conditional Overrides - Metric Value Font Weight
-  if (metricValueFontWeight) {
-    if (metricValueFontWeight >= 100 && metricValueFontWeight <= 900) {
-      conditionalOverrides.fontWeights.metricValueFontWeight =
-        metricValueFontWeight
-    } else {
-      LOG.warn(
-        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
-      )
-    }
+  if (
+    metricValueFontWeight &&
+    isValidFontWeight("metricValueFontWeight", metricValueFontWeight, 100, 900)
+  ) {
+    conditionalOverrides.fontWeights.metricValueFontWeight =
+      metricValueFontWeight
   }
 
   // Font Overrides
