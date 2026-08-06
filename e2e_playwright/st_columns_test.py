@@ -281,11 +281,15 @@ def test_columns_wrap_false_keeps_single_row_and_scrolls(
     expect(columns).to_have_count(6)
 
     # All columns stay on one row (aligned tops) instead of stacking.
-    first_box = columns.nth(0).bounding_box()
-    last_box = columns.nth(5).bounding_box()
-    assert first_box is not None
-    assert last_box is not None
-    assert abs(first_box["y"] - last_box["y"]) < 2
+    # wait_until guards against layout races right after viewport resize.
+    def _columns_share_row() -> bool:
+        first_box = columns.nth(0).bounding_box()
+        last_box = columns.nth(5).bounding_box()
+        if first_box is None or last_box is None:
+            return False
+        return abs(first_box["y"] - last_box["y"]) < 2
+
+    wait_until(app, _columns_share_row)
 
     # Overflow is contained by the column group, not the page.
     def _has_horizontal_overflow() -> bool:
@@ -316,13 +320,21 @@ def test_columns_wrap_false_relative_widths_at_desktop(
     expect(column_group.get_by_test_id("stMarkdownContainer").last).to_be_visible()
 
     # Relative [3, 1, 2] weights: wide > medium > narrow.
-    wide_box = columns.nth(0).bounding_box()
-    narrow_box = columns.nth(1).bounding_box()
-    medium_box = columns.nth(2).bounding_box()
-    assert wide_box is not None
-    assert narrow_box is not None
-    assert medium_box is not None
-    assert wide_box["width"] > medium_box["width"] > narrow_box["width"]
+    def _relative_widths_preserved() -> bool:
+        wide_box = columns.nth(0).bounding_box()
+        narrow_box = columns.nth(1).bounding_box()
+        medium_box = columns.nth(2).bounding_box()
+        if wide_box is None or narrow_box is None or medium_box is None:
+            return False
+        return wide_box["width"] > medium_box["width"] > narrow_box["width"]
+
+    wait_until(app, _relative_widths_preserved)
+
+    # At desktop width, wrap=False should not introduce unnecessary overflow.
+    def _no_horizontal_overflow() -> bool:
+        return bool(column_group.evaluate("el => el.scrollWidth <= el.clientWidth + 1"))
+
+    wait_until(app, _no_horizontal_overflow)
 
     assert_snapshot(column_group, name="st_columns-wrap_false_relative_widths")
 
@@ -336,9 +348,12 @@ def test_columns_wrap_true_still_stacks_at_narrow_viewport(app: Page):
     columns = column_group.get_by_test_id("stColumn")
     expect(columns).to_have_count(3)
 
-    first_box = columns.nth(0).bounding_box()
-    second_box = columns.nth(1).bounding_box()
-    assert first_box is not None
-    assert second_box is not None
-    # Stacked columns sit below each other.
-    assert second_box["y"] > first_box["y"] + first_box["height"] / 2
+    # wait_until guards against layout races right after viewport resize.
+    def _columns_are_stacked() -> bool:
+        first_box = columns.nth(0).bounding_box()
+        second_box = columns.nth(1).bounding_box()
+        if first_box is None or second_box is None:
+            return False
+        return second_box["y"] > first_box["y"] + first_box["height"] / 2
+
+    wait_until(app, _columns_are_stacked)

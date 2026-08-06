@@ -135,6 +135,8 @@ export const ContainerContentsWrapper = (
     <FlexContextProvider
       direction={Direction.VERTICAL}
       isRoot={props.isRoot}
+      // Inherit wrap from the parent flex row (e.g. st.columns(wrap=False)).
+      wrap={parentContext?.wrap ?? true}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -166,8 +168,8 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
-  // Proto default when unset is false (CSS nowrap). Columns always set wrap
-  // explicitly (True unless wrap=False).
+  // Missing wrap means nowrap (protobuf default). Columns always send an
+  // explicit value (True unless wrap=False).
   const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
   // Horizontal nowrap rows (e.g. st.columns(wrap=False)) scroll locally
   // instead of overflowing the page.
