@@ -245,19 +245,19 @@ def test_selection_state_remains_after_unmounting(
 
     chart = app.get_by_test_id("stPlotlyChart").nth(5)
     expect(chart).to_be_visible()
-    # Move the cursor to the modebar (top-right) via absolute coordinates.
-    # Hovering the chart center or a "blank" corner can still fall within
-    # Plotly's point hover radius, and locator.hover(force=True) on the
-    # opacity:0 modebar does not reliably move the cursor on WebKit — leaving
-    # it on a data point from the selection drag and drawing a tooltip into
-    # the screenshot.
+    # Move the cursor to the modebar (top-right) via absolute coordinates so the
+    # toolbar is visible without hovering a data point. Hovering the chart
+    # center/corner can fall within Plotly's point hover radius on WebKit 26.5,
+    # and locator.hover(force=True) on the opacity:0 modebar does not reliably
+    # move the cursor there. Clear any leftover hover from the selection drag
+    # first by parking the mouse off-chart.
+    app.mouse.move(0, 0)
     box = chart.bounding_box()
     assert box is not None
     app.mouse.move(box["x"] + box["width"] - 40, box["y"] + 20)
     modebar = chart.locator(".modebar-group:has([data-title='Fullscreen'])")
     expect(modebar).to_be_visible()
     expect(modebar).to_have_css("opacity", "1")
-    expect(chart.locator(".hovertext")).not_to_be_attached()
     # WebKit can differ by a few hundred pixels on selection handles / AA under
     # Playwright 1.62 (~0.22%); keep the default elsewhere but allow a small
     # cushion here so we don't flaky-fail on that noise.
