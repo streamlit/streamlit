@@ -127,11 +127,25 @@ Copy:
   `streamlit.errors.Error`); arbitrary user/runtime errors like `ZeroDivisionError` or
   `KeyError` do **not** trigger the callout. The backend flags this on the exception
   proto (see *Implementation notes*); rationale in *Problem → Which errors?*.
+- The error is **not fully redacted.** `client.showErrorDetails="none"` withholds the
+  type, message and trace, so the flag is withheld with them — the callout never offers
+  to fix an error the box refused to describe.
 - An **AI coding agent is detected** and skills are **not already installed** this
   session.
 - The **startup toast is not currently showing** (mutual exclusion).
 - The user has **not permanently dismissed** the nudge ("Don't show again" on the
   toast).
+
+**`streamlit.errors.Error` is a close, not exact, proxy for "the skills can help".**
+It errs toward showing nothing rather than showing the wrong thing:
+
+- A few Streamlit-raised errors don't subclass `Error` (`MediaFileStorageError` from a
+  missing `st.image` path, `CacheError` from an unreadable `persist="disk"` entry), so
+  they get no callout even though the skills might have helped. Re-basing those classes
+  is worth doing, but not here.
+- Conversely a few `Error` subclasses aren't skills-fixable — `MessageSizeError` wants a
+  `server.maxMessageSize` bump, not better Streamlit knowledge — so the callout can
+  appear where it won't help. The cost is one extra CTA on localhost.
 
 **Mutual exclusion with the toast.** The callout never appears alongside the toast.
 It *does* still appear if the toast was snoozed (the 24h snooze is intentionally **not**

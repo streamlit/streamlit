@@ -344,6 +344,48 @@ def test_marshall_with_alternate_name() -> None:
 
 
 @pytest.mark.parametrize(
+    ("show_error_details", "expected_type", "expected_flag"),
+    [
+        ("full", "streamlit.errors.StreamlitAPIException", True),
+        ("stacktrace", "streamlit.errors.StreamlitAPIException", True),
+        ("type", "streamlit.errors.StreamlitAPIException", True),
+        # "none" withholds the type as well, leaving nothing to offer help about.
+        ("none", "", False),
+    ],
+)
+def test_marshall_is_streamlit_exception_follows_type_redaction(
+    show_error_details: str, expected_type: str, expected_flag: bool
+) -> None:
+    """The provenance flag is withheld exactly when the type is.
+
+    ``client.showErrorDetails="none"`` redacts the type, message and trace, so a
+    surface keyed off this flag would otherwise offer to fix an error the box
+    refused to describe. Every less-strict level keeps the flag, so redaction
+    must not over-clear it either.
+    """
+    with testutil.patch_config_options({"client.showErrorDetails": show_error_details}):
+        proto = ExceptionProto()
+        exception.marshall(
+            proto, StreamlitAPIException("boom"), is_uncaught_app_exception=True
+        )
+        assert proto.type == expected_type
+        assert proto.is_streamlit_exception is expected_flag
+
+
+def test_marshall_is_streamlit_exception_survives_redaction_for_direct_calls() -> None:
+    """``st.exception()`` is not an uncaught app exception, so redaction is moot.
+
+    ``showErrorDetails`` only governs errors Streamlit caught itself; a direct
+    call is the developer choosing to display something, so the flag stands even
+    at the strictest level.
+    """
+    with testutil.patch_config_options({"client.showErrorDetails": "none"}):
+        proto = ExceptionProto()
+        exception.marshall(proto, StreamlitAPIException("boom"))
+        assert proto.is_streamlit_exception is True
+
+
+@pytest.mark.parametrize(
     ("err", "expected"),
     [
         (errors.Error("base"), True),

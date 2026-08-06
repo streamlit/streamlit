@@ -223,6 +223,11 @@ Traceback:
             exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         if not show_type:
             exception_proto.ClearField("type")
+            # Provenance is only meaningful beside a visible type. With the type,
+            # message and trace all withheld, the frontend has nothing to offer
+            # help *about* — so don't let the in-error "install skills" callout
+            # claim it can fix an error the box just refused to describe.
+            exception_proto.ClearField("is_streamlit_exception")
         else:
             type_str = str(type(exception))
             exception_proto.type = type_str.replace("<class '", "").replace("'>", "")
