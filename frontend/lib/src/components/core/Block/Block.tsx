@@ -168,8 +168,8 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
-  // Missing wrap means nowrap (protobuf default). Columns always send an
-  // explicit value (True unless wrap=False).
+  // Missing wrap means nowrap (protobuf default). Layout containers send an
+  // explicit value; st.columns uses True unless wrap=False.
   const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
   // Horizontal nowrap rows (e.g. st.columns(wrap=False)) scroll locally
   // instead of overflowing the page.

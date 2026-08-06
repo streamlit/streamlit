@@ -323,6 +323,19 @@ describe("FlexBoxContainer layout props", () => {
       expect(column).toHaveStyle("min-width: 8rem;")
     }
   })
+
+  it("should not set the nowrap min-width floor when wrap is true", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(3, true),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const columns = screen.getAllByTestId("stColumn")
+    expect(columns).toHaveLength(3)
+    for (const column of columns) {
+      expect(column).not.toHaveStyle("min-width: 8rem;")
+    }
+  })
 })
 
 describe("BlockNodeRenderer CSS key class placement", () => {
