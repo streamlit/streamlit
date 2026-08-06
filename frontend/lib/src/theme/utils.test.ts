@@ -4067,6 +4067,19 @@ describe("Custom theme creation", () => {
       // theme.sidebar.textColor="sidebar-text" (no override in theme.dark.sidebar)
       expect(result.sidebar?.textColor).toBe("sidebar-text") // theme.sidebar wins (no override)
     })
+
+    it("replaces chart color arrays atomically instead of merging by index", () => {
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: ["#aaa", "#bbb", "#ccc"],
+        light: new CustomThemeConfig({
+          chartCategoricalColors: ["#111"],
+        }),
+      })
+
+      const result = handleSectionInheritance(themeInput, "light")
+
+      expect(result.chartCategoricalColors).toEqual(["#111"])
+    })
   })
 
   describe("createCustomThemes", () => {

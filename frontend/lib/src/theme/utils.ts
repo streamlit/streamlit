@@ -1392,6 +1392,10 @@ const skipProtobufDefaults = (
   ) {
     return objValue
   }
+  // Non-empty arrays replace atomically (e.g. chart color palettes)
+  if (Array.isArray(srcValue)) {
+    return srcValue
+  }
   // Let mergeWith handle all other cases normally
   return undefined
 }
