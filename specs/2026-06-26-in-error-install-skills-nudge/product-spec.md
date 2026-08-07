@@ -154,8 +154,13 @@ background and falls under the 3:1 minimum on a red-tinted alert.
 - The error is **not fully redacted.** `client.showErrorDetails="none"` withholds the
   type, message and trace, so the flag is withheld with them — the callout never offers
   to fix an error the box refused to describe.
+- The error is **visible.** A collapsed `st.expander` or an inactive `st.tabs` panel keeps
+  its errors mounted; one of those must not take the single slot from an error the
+  developer can actually see.
 - An **AI coding agent is detected** and skills are **not already installed** this
-  session.
+  session, and **no install has already failed** this session — the cause of a failure is
+  environmental, so re-offering it would put a fresh un-dismissable box under every later
+  error.
 - The **startup toast is not currently showing** (mutual exclusion).
 - The user has **not permanently dismissed** the nudge ("Don't show again" on the
   toast).
@@ -174,7 +179,16 @@ It errs toward showing nothing rather than showing the wrong thing:
 **Mutual exclusion with the toast.** The callout never appears alongside the toast.
 It *does* still appear if the toast was snoozed (the 24h snooze is intentionally **not**
 checked) — an error is a higher-intent moment than a proactively-snoozed startup nudge.
-A permanent "Don't show again" is honored immediately for both surfaces.
+The proactive toast is the surface that should respect a "not now"; hitting an error is a
+different moment, and the developer is in it.
+
+A permanent **"Don't show again"** is honored immediately for both surfaces — the callout's
+gate reads the dismissal marker on every render — but it lives only on the toast. So within
+a 24h snooze window the callout has no off switch of its own; the toast returns when the
+snooze lapses and offers the permanent opt-out again. Accepted deliberately: the callout is
+scoped to errors Streamlit raised, which is the moment the offer is most likely to be
+wanted, and it does not stack or re-announce (one sticky slot, and the exception element
+persists across reruns rather than remounting).
 
 **One callout at a time.** When several errors are on screen, a single sticky claim
 slot dedupes to exactly one callout. The claim isn't yanked mid-confirmation by the
