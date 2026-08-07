@@ -780,6 +780,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.level",
                 "logger.messageFormat",
                 "runner.cacheBackgroundRefreshMaxWorkers",
+                "runner.cacheHashSeed",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",

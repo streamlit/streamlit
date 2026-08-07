@@ -824,6 +824,38 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "runner.cacheHashSeed",
+    description="""
+        Escape hatch for an app whose @st.cache_data / @st.cache_resource cache
+        returns the wrong value for a large pandas, polars, or numpy object.
+
+        Large objects are hashed from a fixed random sample rather than in full,
+        which keeps cache lookups fast. Because the sample positions are derived
+        from this seed, two large objects that differ only outside the sampled
+        positions produce the same cache key, and the cached value of one is
+        returned for the other.
+
+        Set an integer from 0 to 4294967295 (2**32 - 1) to move which positions
+        are sampled. This does not eliminate collisions -- it selects a different
+        set of them -- so it resolves a collision an app has actually hit rather
+        than guaranteeing uniqueness. A value that cannot be converted to an
+        integer, or that falls outside that range, is ignored with a warning and
+        the default is used instead. A float is truncated toward zero, so 1.5
+        becomes 1.
+
+        Changing this value changes the cache key of every large object and so
+        invalidates existing cached entries. Keep it stable across restarts and
+        across replicas, or a shared/persisted cache will miss.
+
+        If you need hashing to be exact rather than a different sample, pass your
+        own function for the type via the ``hash_funcs`` argument of
+        @st.cache_data / @st.cache_resource, which bypasses sampling entirely.
+    """,
+    default_val=0,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
