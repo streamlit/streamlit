@@ -55,7 +55,6 @@ from streamlit.web.server.starlette.starlette_gzip_middleware import (
 )
 from streamlit.web.server.starlette.starlette_routes import (
     _ExpensiveStatsCache,
-    _METRICS_EXPENSIVE_STATS_TTL_SECONDS,
     _stats_to_proto,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
@@ -547,7 +546,9 @@ class _InstrumentedStatsManager:
         self, family_names: list[str] | None = None
     ) -> dict[str, list[CacheStat | GaugeStat]]:
         result: dict[str, list[CacheStat | GaugeStat]] = {}
-        families = family_names if family_names is not None else self.registered_families()
+        families = (
+            family_names if family_names is not None else self.registered_families()
+        )
         for family in families:
             if family == "cache_memory_bytes":
                 self.expensive_call_count += 1
