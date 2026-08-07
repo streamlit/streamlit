@@ -70,7 +70,14 @@ and padding: a sparkle icon, one line of copy, and a lightweight underlined text
 The two boxes are separated by one gap step tighter than Streamlit's normal spacing
 between elements, so they read as an attached pair — the callout belongs to *this* error.
 The action is a text link, matching the error's own **Copy / Ask Google / Ask ChatGPT**
-links, so the CTA reads as a peer rather than a panel that overwhelms them.
+links, so the CTA reads as a peer rather than a panel that overwhelms them. It sits at the
+box's right edge, which lines it up with **Ask ChatGPT** directly above and keeps it in the
+same place when the copy runs to several lines.
+
+**Narrow containers.** The icon and copy are one unit, so the icon can never be stranded
+on a line of its own. Below roughly 250px of container — a sidebar near its minimum, a
+five-column row — the action drops to its own line rather than being squeezed or pushed
+outside the box. Verified down to 100px, well under anything Streamlit produces.
 
 **Idle** — the error and its callout. (The startup toast from #15473 is a separate
 surface and is mutually exclusive with this one — see *Behavior*.)

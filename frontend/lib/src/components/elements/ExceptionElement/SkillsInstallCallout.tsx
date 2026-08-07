@@ -30,6 +30,7 @@ import {
   StyledSkillsInstallCallout,
   StyledSkillsInstallCalloutButton,
   StyledSkillsInstallCalloutIcon,
+  StyledSkillsInstallCalloutMessage,
   StyledSkillsInstallCalloutText,
 } from "./styled-components"
 
@@ -193,15 +194,17 @@ function SkillsInstallCallout({
       data-testid="stSkillsInstallCallout"
       className="stSkillsInstallCallout"
     >
-      <StyledSkillsInstallCalloutIcon aria-hidden="true">
-        <DynamicIcon iconValue={iconValue} size="base" />
-      </StyledSkillsInstallCalloutIcon>
-      {/* The live region is the copy alone, not the whole box. `role="status"`
-          implies aria-atomic, so including the button would re-announce the
-          entire pitch on every label change. */}
-      <StyledSkillsInstallCalloutText role="status">
-        {message}
-      </StyledSkillsInstallCalloutText>
+      <StyledSkillsInstallCalloutMessage>
+        <StyledSkillsInstallCalloutIcon aria-hidden="true">
+          <DynamicIcon iconValue={iconValue} size="base" />
+        </StyledSkillsInstallCalloutIcon>
+        {/* The live region is the copy alone, not the whole box. `role="status"`
+            implies aria-atomic, so including the button would re-announce the
+            entire pitch on every label change. */}
+        <StyledSkillsInstallCalloutText role="status">
+          {message}
+        </StyledSkillsInstallCalloutText>
+      </StyledSkillsInstallCalloutMessage>
       {!isSuccess && (
         <StyledSkillsInstallCalloutButton
           onClick={handleInstall}

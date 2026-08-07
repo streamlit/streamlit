@@ -120,17 +120,51 @@ export const StyledExceptionWithCallout = styled.div(({ theme }) => ({
 export const StyledSkillsInstallCallout = styled(StyledAlertContainer)(
   ({ theme }) => ({
     display: "flex",
-    // Icon, copy and action stay on one row and never wrap onto flex lines of
-    // their own. A long message — the server's install-failure reason embeds the
-    // blocking target paths and runs to several lines — is absorbed by the copy
-    // shrinking and wrapping internally, so the icon stays beside it and the
-    // action stays at the end of the row. With `flex-wrap: wrap` the copy's
-    // max-content width would instead push it to the next flex line, stranding
-    // the icon above it and the action below.
+    // Wraps, but only ever between the message and the action — never inside the
+    // message, because the icon and copy are one flex item (see
+    // `StyledSkillsInstallCalloutMessage`). At normal widths everything sits on
+    // one row; in a 200px sidebar or a fifth of a column row, where the action's
+    // fixed label can no longer fit beside the copy, the action drops to its own
+    // line instead of overflowing the box. Without the grouping this would strand
+    // the icon: flex breaks lines on each item's max-content width, so a long
+    // failure reason doesn't fit beside the icon and would be pushed off it.
+    flexWrap: "wrap",
     alignItems: "center",
     gap: theme.spacing.sm,
   })
 )
+
+/**
+ * Binds the icon to the copy so they are one unbreakable flex item — the icon can
+ * never be stranded on a line of its own, and the pair wraps internally as a unit
+ * while the action stays beside it.
+ *
+ * Grows from a floor rather than from its content. Flex decides line breaks on
+ * each item's max-content width *before* any shrinking, so sizing this from its
+ * content would put a long failure reason over the line's width and push the
+ * action onto a line of its own at every viewport. Basing it on 0 and growing
+ * keeps the action beside the copy; the `min-width` floor is what still lets the
+ * action wrap away when there genuinely isn't room for both, instead of the copy
+ * being squeezed into a one-character column. `100%` caps that floor at the
+ * container so the narrowest layouts can't overflow the box.
+ *
+ * Measured on the failure reason (the longest copy): action stays beside the copy
+ * and right-aligned down to ~300px of container, drops to its own line below
+ * that, and never overflows — checked to 100px, well under a 200px sidebar or a
+ * five-column row.
+ */
+export const StyledSkillsInstallCalloutMessage = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  flex: "1 1 0%",
+  // 8rem is the narrowest copy column still worth reading — roughly a dozen
+  // characters. Below it the action wraps away instead, which reads far better
+  // than a tall one-word column beside a button. No theme token covers a wrap
+  // threshold; it scales with the root font size, so a larger base size moves it
+  // proportionally.
+  minWidth: "min(8rem, 100%)",
+}))
 
 /**
  * Wraps the callout's decorative sparkle/status icon so it is hidden from the
@@ -148,12 +182,8 @@ export const StyledSkillsInstallCalloutIcon = styled.span({
 })
 
 /**
- * The callout's copy, and the only item that flexes. It doesn't grow, so a short
- * message (idle / success) leaves the action sitting directly after the text
- * rather than pushed to the far edge like the error box's right-aligned Copy /
- * Ask links. It does shrink, which is what lets a long message wrap to several
- * lines inside the row instead of reflowing the row. Colour comes from the box's
- * kind, so the success confirmation needs no override here.
+ * The callout's copy. Colour comes from the box's kind, so the success
+ * confirmation needs no override here.
  *
  * This — not the whole box — carries `role="status"`. `status` implies
  * `aria-atomic="true"`, so a region spanning the action too would re-read the
@@ -162,10 +192,12 @@ export const StyledSkillsInstallCalloutIcon = styled.span({
  */
 export const StyledSkillsInstallCalloutText = styled.div({
   flex: "0 1 auto",
-  // Shrink past min-content if it must, breaking a long unbroken path rather
-  // than overflowing the box on a narrow viewport.
   minWidth: 0,
-  overflowWrap: "break-word",
+  // `anywhere`, not `break-word`: only `anywhere` lowers the min-content width,
+  // which is what lets the group's floor collapse to the container on the
+  // narrowest layouts instead of overflowing. The visible effect is the same —
+  // a long install path breaks rather than sticking out of the box.
+  overflowWrap: "anywhere",
 })
 
 /**

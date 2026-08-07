@@ -207,18 +207,23 @@ describe("SkillsInstallCallout", () => {
     const icon = screen.getByTestId("stIconMaterial")
     const retry = screen.getByRole("button", { name: "Retry" })
 
-    // Icon, copy and action are all direct children of the one row, in that
-    // order — the action last, so it lands at the row's end.
-    expect(screen.getByText(/already exist/).parentElement).toBe(row)
+    // The row has exactly two children: the icon+copy group, then the action.
+    // Grouping is what stops flex stranding the icon on a line of its own when
+    // the copy is long, and the action being outside that group is what lets it
+    // wrap away on its own in a narrow container.
+    const group = screen.getByText(/already exist/).parentElement
+    expect(row.children).toHaveLength(2)
+    expect(row.firstElementChild).toBe(group)
     expect(row.lastElementChild).toBe(retry)
-    expect(icon.closest("[aria-hidden='true']")?.parentElement).toBe(row)
+    expect(group).toContainElement(icon)
+    expect(group).not.toContainElement(retry)
 
-    // Structure is all this test can honestly claim. The layout itself — that
-    // the row doesn't wrap, that the copy is the only item that gives way, that
-    // a long path breaks instead of overflowing — depends on five declarations
-    // interacting under real line-breaking, and jsdom does no layout. Asserting
-    // the CSS here only pins the literal inverse of whichever declaration you
-    // thought of. The guard is the E2E snapshot of this exact state in
+    // Structure is all this test can honestly claim. The layout itself — where
+    // the action sits, when it wraps away, that a long path breaks instead of
+    // overflowing — depends on several declarations interacting under real
+    // line-breaking, and jsdom does no layout. Asserting the CSS here only pins
+    // the literal inverse of whichever declaration you thought of. The guard is
+    // the E2E snapshot of this exact state in
     // `skills_install_callout_test.py::test_skills_install_callout_reports_a_failed_install`.
 
     // The Material ligature ("error") is text in the DOM, so it must be hidden
