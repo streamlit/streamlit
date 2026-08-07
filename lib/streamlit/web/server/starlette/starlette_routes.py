@@ -83,6 +83,9 @@ class _ExpensiveStatsCache:
     - The event-loop thread exclusively owns this state, so no locks are needed.
     - ``get`` must not ``await`` between reading ``_inflight`` and assigning it,
       or more than one task could start per expired window.
+    - Waiters ``await asyncio.shield(_inflight)`` so cancelling one request
+      (client disconnect, scraper timeout) does not cancel the shared task or
+      other waiters. A done callback owns caching and clearing ``_inflight``.
     """
 
     def __init__(self, stats_mgr: StatsManager) -> None:
@@ -99,21 +102,35 @@ class _ExpensiveStatsCache:
             return self._result
         # Join an in-flight computation instead of starting another. Do not await
         # between this check and the assignment below.
-        if self._inflight is not None:
-            return await self._inflight
-        self._inflight = asyncio.ensure_future(
-            run_in_threadpool(
-                self._stats_mgr.get_stats,
-                family_names=[CACHE_MEMORY_FAMILY],
+        if self._inflight is None:
+            task: asyncio.Task[Mapping[str, Sequence[Stat]]] = asyncio.ensure_future(
+                run_in_threadpool(
+                    self._stats_mgr.get_stats,
+                    family_names=[CACHE_MEMORY_FAMILY],
+                )
             )
-        )
-        try:
-            result = await self._inflight
-            self._result = result
-            self._expiry = time.monotonic() + _METRICS_EXPENSIVE_STATS_TTL_SECONDS
-            return result
-        finally:
-            self._inflight = None
+
+            def _on_done(
+                done: asyncio.Task[Mapping[str, Sequence[Stat]]],
+            ) -> None:
+                # Clear and cache only when *this* shared task settles, so a
+                # cancelled waiter cannot drop the single-flight marker while
+                # the worker is still running.
+                if self._inflight is done:
+                    self._inflight = None
+                if done.cancelled():
+                    return
+                if done.exception() is not None:
+                    return
+                self._result = done.result()
+                self._expiry = time.monotonic() + _METRICS_EXPENSIVE_STATS_TTL_SECONDS
+
+            self._inflight = task
+            task.add_done_callback(_on_done)
+
+        # Shield so cancelling this waiter does not cancel the shared task
+        # (or other waiters coalesced onto it).
+        return await asyncio.shield(self._inflight)
 
 
 # Route path constants (without base URL prefix)

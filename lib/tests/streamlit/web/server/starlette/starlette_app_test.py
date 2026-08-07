@@ -587,6 +587,39 @@ async def test_metrics_expensive_cache_single_flight() -> None:
 
 
 @pytest.mark.anyio
+async def test_metrics_expensive_cache_survives_waiter_cancellation() -> None:
+    """Cancelling one waiter must not cancel the shared computation or other waiters.
+
+    Bare ``await`` of a shared task propagates cancellation to that task and every
+    other waiter. The cache must shield the shared task so a client disconnect or
+    scraper timeout cannot collapse single-flight protection under a flood.
+    """
+    mgr = _InstrumentedStatsManager(delay=0.1)
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    first = asyncio.create_task(cache.get())
+    # Yield so first starts the shared computation before the second joins.
+    await asyncio.sleep(0)
+    second = asyncio.create_task(cache.get())
+    await asyncio.sleep(0)
+    first.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    result = await second
+
+    assert "cache_memory_bytes" in result
+    assert mgr.expensive_call_count == 1, (
+        f"Expected 1 get_stats call after waiter cancel, got {mgr.expensive_call_count}"
+    )
+    # The shared result must still be cached for subsequent callers.
+    await cache.get()
+    assert mgr.expensive_call_count == 1, (
+        f"Expected cached result after cancel, got {mgr.expensive_call_count} calls"
+    )
+
+
+@pytest.mark.anyio
 async def test_metrics_expensive_cache_runs_off_event_loop() -> None:
     """Assert the expensive get_stats call runs on a worker thread, not the event loop."""
     event_loop_thread = threading.get_ident()
