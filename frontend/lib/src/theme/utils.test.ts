@@ -2886,16 +2886,25 @@ describe("createEmotionTheme", () => {
   // == Theme font weight properties ==
 
   it.each([
-    // Test valid font weights
-    [100, 100, 300, 400],
-    [200, 200, 400, 500],
-    [300, 300, 500, 600],
-    [400, 400, 600, 700],
-    [500, 500, 700, 800],
-    [600, 600, 800, 900],
+    // Test valid font weights (base, normal, semiBold, bold, extrabold)
+    [100, 100, 200, 300, 400],
+    [150, 150, 250, 350, 450],
+    [200, 200, 300, 400, 500],
+    [300, 300, 400, 500, 600],
+    [350, 350, 450, 550, 650],
+    [400, 400, 500, 600, 700],
+    [500, 500, 600, 700, 800],
+    [550, 550, 650, 750, 850],
+    [600, 600, 700, 800, 900],
   ])(
     "sets the font weights based on the baseFontWeight config '%s'",
-    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+    (
+      baseFontWeight,
+      expectedNormal,
+      expectedSemiBold,
+      expectedBold,
+      expectedExtrabold
+    ) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
         baseFontWeight,
@@ -2905,6 +2914,7 @@ describe("createEmotionTheme", () => {
 
       expect(logWarningSpy).not.toHaveBeenCalled()
       expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.semiBold).toBe(expectedSemiBold)
       expect(theme.fontWeights.bold).toBe(expectedBold)
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
     }
@@ -2912,7 +2922,8 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test invalid font weights
-    [150, 400, 600, 700], // Not an increment of 100
+    [125, 400, 600, 700], // Not an increment of 50
+    [575, 400, 600, 700], // Not an increment of 50
     [700, 400, 600, 700], // Not between 100 and 600
     [400.5, 400, 600, 700], // Not an integer
   ])(
@@ -2926,7 +2937,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid baseFontWeight: ${baseFontWeight} in theme. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weight.`
+        `Invalid baseFontWeight: ${baseFontWeight} in theme. The baseFontWeight must be an integer 100-600, and an increment of 50. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
@@ -2938,10 +2949,13 @@ describe("createEmotionTheme", () => {
   it.each([
     // Test valid font weights
     [100, 400, 600, 700, 100, 300, 400],
+    [150, 400, 600, 700, 150, 350, 450],
     [200, 400, 600, 700, 200, 400, 500],
     [300, 400, 600, 700, 300, 500, 600],
+    [350, 400, 600, 700, 350, 550, 650],
     [400, 400, 600, 700, 400, 600, 700],
     [500, 400, 600, 700, 500, 700, 800],
+    [550, 400, 600, 700, 550, 750, 850],
     [600, 400, 600, 700, 600, 800, 900],
   ])(
     "sets the font weights based on the codeFontWeight config '%s'",
@@ -2978,7 +2992,8 @@ describe("createEmotionTheme", () => {
     [700, 400, 600, 700, 400], // Not between 100 and 600
     [800, 400, 600, 700, 400], // Not between 100 and 600
     [900, 400, 600, 700, 400], // Not between 100 and 600
-    [150, 400, 600, 700, 400], // Not an increment of 100
+    [125, 400, 600, 700, 400], // Not an increment of 50
+    [575, 400, 600, 700, 400], // Not an increment of 50
     [1000, 400, 600, 700, 400], // Not between 100 and 900
     [400.5, 400, 600, 700, 400], // Not an integer
   ])(
@@ -2998,7 +3013,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weight.`
+        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-600, and an increment of 50. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
@@ -3013,13 +3028,17 @@ describe("createEmotionTheme", () => {
   it.each([
     // Test valid headingFontWeights for h1-h6
     [[100, 100, 100, 100, 100, 100]],
+    [[150, 150, 150, 150, 150, 150]],
     [[200, 200, 200, 200, 200, 200]],
     [[300, 300, 300, 300, 300, 300]],
+    [[350, 350, 350, 350, 350, 350]],
     [[400, 400, 400, 400, 400, 400]],
     [[500, 500, 500, 500, 500, 500]],
+    [[550, 550, 550, 550, 550, 550]],
     [[600, 600, 600, 600, 600, 600]],
     [[700, 700, 700, 700, 700, 700]],
     [[800, 800, 800, 800, 800, 800]],
+    [[850, 850, 850, 850, 850, 850]],
     [[900, 900, 900, 900, 900, 900]],
   ])(
     "sets the font weights based on the headingFontWeights configs '%s'",
@@ -3044,8 +3063,8 @@ describe("createEmotionTheme", () => {
   it.each([
     // Test invalid font weights for h1-h6
     {
-      headingFontWeights: [150, 200, 300, 400, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [125, 200, 300, 400, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h1FontWeight",
       expectedWeights: [
         baseTheme.emotion.fontWeights.h1FontWeight,
@@ -3083,8 +3102,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 150, 300, 400, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 125, 300, 400, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h2FontWeight",
       expectedWeights: [
         200,
@@ -3122,8 +3141,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 150, 400, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 125, 400, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h3FontWeight",
       expectedWeights: [
         200,
@@ -3161,8 +3180,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 400, 150, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 400, 125, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h4FontWeight",
       expectedWeights: [
         200,
@@ -3200,8 +3219,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 400, 500, 150, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 400, 500, 125, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h5FontWeight",
       expectedWeights: [
         200,
@@ -3239,8 +3258,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 400, 500, 600, 150],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 400, 500, 600, 125],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h6FontWeight",
       expectedWeights: [
         200,
@@ -3293,7 +3312,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid ${invalidFontWeightConfig} in headingFontWeights: ${invalidFontWeight} in theme. The ${invalidFontWeightConfig} in headingFontWeights must be an integer 100-900, and an increment of 100. Falling back to default font weight.`
+        `Invalid ${invalidFontWeightConfig} in headingFontWeights: ${invalidFontWeight} in theme. The ${invalidFontWeightConfig} in headingFontWeights must be an integer 100-900, and an increment of 50. Falling back to default font weight.`
       )
 
       // Check that the heading font weights are set correctly
@@ -3396,11 +3415,40 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+        `Invalid metricValueFontWeight: ${metricValueFontWeight} in theme. The metricValueFontWeight must be an integer 100-900, and an increment of 50. Falling back to default font weight.`
       )
       expect(theme.fontWeights.metricValueFontWeight).toBe(400)
     }
   )
+
+  it.each([125, 575])(
+    "logs a warning and uses default metricValueFontWeight if value is not an increment of 50: %s",
+    metricValueFontWeight => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight} in theme. The metricValueFontWeight must be an integer 100-900, and an increment of 50. Falling back to default font weight.`
+      )
+      expect(theme.fontWeights.metricValueFontWeight).toBe(400)
+    }
+  )
+
+  it("accepts a 50-step metricValueFontWeight (550)", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontWeight: 550,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(logWarningSpy).not.toHaveBeenCalled()
+    expect(theme.fontWeights.metricValueFontWeight).toBe(550)
+  })
 
   // == Theme font properties ==
 

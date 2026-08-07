@@ -483,7 +483,19 @@ export const parseFontSize = (
 }
 
 /**
- * Validate a font weight config
+ * Validates a font weight config value against three rules:
+ *   1. Must be an integer.
+ *   2. Must be an integer multiple of 50.
+ *   3. Must be within [`minWeight`, `maxWeight`] (inclusive).
+ *
+ * @param weightConfigName - Name of the config option, used in the warning message.
+ * @param fontWeight - The value to validate; null/undefined means "not configured".
+ * @param minWeight - Lower bound (inclusive).
+ * @param maxWeight - Upper bound (inclusive).
+ * @param inSidebar - When true, the warning message cites "theme.sidebar" instead of "theme".
+ * @returns `true` if the value is set and passes all three rules.
+ *   Returns `false` and logs a warning when the value is set but fails any rule.
+ *   Returns `false` silently when the value is null or undefined.
  */
 const isValidFontWeight = (
   weightConfigName: string,
@@ -497,12 +509,12 @@ const isValidFontWeight = (
   // If the font weight config is set, validate it (log warning if invalid)
   if (notNullOrUndefined(fontWeight)) {
     const isInteger = Number.isInteger(fontWeight)
-    const isIncrementOf100 = fontWeight % 100 === 0
+    const isIncrementOf50 = fontWeight % 50 === 0
     const isInRange = fontWeight >= minWeight && fontWeight <= maxWeight
 
-    if (!isInteger || !isIncrementOf100 || !isInRange) {
+    if (!isInteger || !isIncrementOf50 || !isInRange) {
       LOG.warn(
-        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 100. Falling back to default font weight.`
+        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 50. Falling back to default font weight.`
       )
       return false
     }
@@ -1011,15 +1023,12 @@ export const createEmotionTheme = (
   )
 
   // Conditional Overrides - Metric Value Font Weight
-  if (metricValueFontWeight) {
-    if (metricValueFontWeight >= 100 && metricValueFontWeight <= 900) {
-      conditionalOverrides.fontWeights.metricValueFontWeight =
-        metricValueFontWeight
-    } else {
-      LOG.warn(
-        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
-      )
-    }
+  if (
+    metricValueFontWeight &&
+    isValidFontWeight("metricValueFontWeight", metricValueFontWeight, 100, 900)
+  ) {
+    conditionalOverrides.fontWeights.metricValueFontWeight =
+      metricValueFontWeight
   }
 
   // Font Overrides

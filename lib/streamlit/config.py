@@ -2103,7 +2103,10 @@ _create_theme_options(
         The root font weight for the app.
 
         This determines the overall weight of text and UI elements. This is an
-        integer multiple of 100. Values can be between 100 and 600, inclusive.
+        integer multiple of 50. Values can be between 100 and 600, inclusive.
+
+        Streamlit derives heavier weights from this base (+100 / +200 / +300).
+        The maximum is 600 so the heaviest derived weight never exceeds 900.
 
         If this isn't set, the font weight will be set to 400 (normal weight).
     """,
@@ -2131,7 +2134,7 @@ _create_theme_options(
     description="""
         The font weight for st.metric value text.
 
-        This is an integer multiple of 100. Values can be between 100 and 900,
+        This is an integer multiple of 50. Values can be between 100 and 900,
         inclusive.
 
         If this isn't set, the font weight will inherit from the parent element.
@@ -2218,6 +2221,9 @@ _create_theme_options(
     description="""
         One or more font weights for h1-h6 headings.
 
+        Each weight must be an integer multiple of 50, between 100 and 900
+        inclusive. Invalid values are ignored and the default weight is used.
+
         If no weights are set, Streamlit will use the default weights for h1-h6
         headings. Heading font weights set in [theme] are not inherited by
         [theme.sidebar]. The following weights are used by default:
@@ -2238,7 +2244,7 @@ _create_theme_options(
 
         Setting a single value (not in an array) will set the font weight for
         all h1-h6 headings to that value:
-            headingFontWeights = 500
+            headingFontWeights = 550
     """,
 )
 
@@ -2301,8 +2307,11 @@ _create_theme_options(
         The font weight for code blocks and code text.
 
         This applies to font in inline code, code blocks, `st.json`, and
-        `st.help`. This is an integer multiple of 100. Values can be between
+        `st.help`. This is an integer multiple of 50. Values can be between
         100 and 600, inclusive.
+
+        Streamlit derives heavier code weights from this base (+200 / +300).
+        The maximum is 600 so the heaviest derived weight never exceeds 900.
 
         If this isn't set, the code font weight will be 400 (normal weight).
     """,
