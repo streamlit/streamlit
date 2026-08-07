@@ -143,9 +143,8 @@ const styleCellFunction = (
   // Always inherit the table font size for cell markdown. StreamlitMarkdown
   // defaults to body size (md), and the global `p, ol, ul, dl { font-size: 1rem }`
   // rule (theme/globalStyles.ts) would otherwise keep these text containers at
-  // 16px even when the container uses sm (including truncate mode). This selector
-  // covers all of them and is not redefined in the branches below, so it applies
-  // in every mode.
+  // 16px even when the container uses sm. Defined outside the truncate/
+  // non-truncate branches so both modes inherit it.
   [`${StyledStreamlitMarkdown}, ${StyledStreamlitMarkdown} :is(p, ol, ul, dl)`]:
     {
       fontSize: "inherit",
