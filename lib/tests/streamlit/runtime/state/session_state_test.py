@@ -51,7 +51,7 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime import runtime_util
 from streamlit.runtime.runtime_util import WidgetStateSizeError
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
@@ -134,11 +134,10 @@ def _create_persist_state_metadata(
 
 class WStateTests(unittest.TestCase):
     def setUp(self):
-        ThreadState.initialize()
         wstates = WStates()
         self.wstates = wstates
         # WStates.call_callback uses ThreadState.scoped, which requires ThreadState to
-        # be initialised on the current thread.
+        # be initialized on the current thread.
         ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
         widget_state = WidgetStateProto()
@@ -538,21 +537,40 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 
 def test_callbacks_with_rerun():
-    """st.rerun() inside a widget callback queues a rerun."""
+    """st.rerun() in a widget callback interrupts that callback and reruns the script once.
+
+    Product behavior for the interaction:
+    1. Callbacks run (``st.rerun()`` stops the callback it is in — later statements
+       in that callback do not run).
+    2. The widget-driven run's script body is preempted.
+    3. The re-queued ``st.rerun()`` performs one main-script body execution.
+
+    Without post-callback preemption, the stale widget-driven body would also run,
+    so ``body_runs`` would be 3 after the interaction sequence below.
+    """
 
     def script():
         import streamlit as st
 
+        st.session_state["body_runs"] = st.session_state.get("body_runs", 0) + 1
+
         def callback():
             st.session_state["message"] = "ran callback"
             st.rerun()
+            # Unreachable: st.rerun() interrupts this callback immediately.
+            st.session_state["after_rerun"] = True
 
         st.checkbox("cb", on_change=callback)
 
     at = AppTest.from_function(script).run()
+    assert at.session_state["body_runs"] == 1
+
     at.checkbox[0].check().run()
     assert at.session_state["message"] == "ran callback"
+    assert "after_rerun" not in at.session_state
     assert len(at.warning) == 0
+    # Initial body + one body from st.rerun() — not an extra stale widget-driven body.
+    assert at.session_state["body_runs"] == 2
 
 
 def test_callback_run_location_resets_after_rerun_exception() -> None:
@@ -561,7 +579,6 @@ def test_callback_run_location_resets_after_rerun_exception() -> None:
     ``ThreadState.scoped`` must restore the prior ``run_location`` so a raised
     rerun cannot leave later code stuck in callback context.
     """
-    from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     ss = SessionState()
     wid = "w-frag"
@@ -600,7 +617,6 @@ def test_callback_run_location_resets_after_rerun_exception() -> None:
 
 def test_single_callback_st_rerun_is_requeued() -> None:
     """st.rerun() in a single-callback widget re-queues the rerun."""
-    from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     requeue_calls: list[RerunData] = []
 
@@ -668,7 +684,6 @@ def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
     Neither callback asked for a targeted fragment rerun, so no extra full-app
     rerun is forced.
     """
-    from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     ss = SessionState()
     wid1, wid2 = "w1", "w2"
@@ -704,7 +719,6 @@ def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
 
 def test_fragment_callback_rerun_requeued() -> None:
     """A fragment widget callback calling st.rerun() re-queues the rerun."""
-    from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     requeue_calls: list[RerunData] = []
 
@@ -747,7 +761,6 @@ def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
     - After both run: the targeted re-queue plus one forced full-app request.
     - The forced request has no fragment scope and no widget_states.
     """
-    from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     requeue_calls: list[RerunData] = []
 
@@ -796,7 +809,6 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
     When every callback requests a fragment-scoped rerun, there is no conflicting
     default to satisfy, so the code only re-queues each request.
     """
-    from streamlit.runtime.scriptrunner import RerunData, RerunException
 
     requeue_calls: list[RerunData] = []
 

@@ -1839,22 +1839,3 @@ def test_log_if_error_logs_exception_and_does_not_raise() -> None:
         _log_if_error(raises)
 
     mock_logger.warning.assert_called_once()
-
-
-def test_callback_st_rerun_queues_without_warning() -> None:
-    """st.rerun() in a widget callback queues a rerun and emits no warning."""
-    from streamlit.testing.v1.app_test import AppTest
-
-    def script() -> None:
-        import streamlit as st
-
-        def callback() -> None:
-            st.session_state["cb_ran"] = True
-            st.rerun()
-
-        st.checkbox("trigger", on_change=callback)
-
-    at = AppTest.from_function(script).run()
-    at.checkbox[0].check().run()
-    assert at.session_state["cb_ran"] is True
-    assert len(at.warning) == 0
