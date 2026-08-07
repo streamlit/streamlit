@@ -363,14 +363,7 @@ class StatsManager:
             self._providers_by_family[family].append(provider)
 
     def registered_families(self) -> Sequence[str]:
-        """Return the names of all registered metric families.
-
-        Returns
-        -------
-        Sequence[str]
-            The metric family names that have been registered via
-            ``register_provider``, in registration order.
-        """
+        """Return registered metric family names in registration order."""
         return list(self._providers_by_family.keys())
 
     def get_stats(

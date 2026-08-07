@@ -65,25 +65,24 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-# Seconds before the cached cache_memory_bytes result is considered stale and
-# recomputed. A few seconds of staleness is invisible to scrape-based monitoring
-# (Prometheus default scrape interval is 15 s), and the TTL collapses request
-# floods to one computation per window.
+# TTL for the cached cache_memory_bytes result. Short enough that scrapers
+# (Prometheus default interval is 15 s) still see fresh data; long enough to
+# collapse request floods to one computation per window.
 _METRICS_EXPENSIVE_STATS_TTL_SECONDS: Final = 5.0
 
 
 class _ExpensiveStatsCache:
     """Single-flight, short-TTL cache for the ``cache_memory_bytes`` metric family.
 
-    This family fans out across session state, data/resource caches, media files,
-    and uploaded files, making it the only CPU-heavy family in the metrics
-    endpoint. The cache prevents an unauthenticated request flood from sustaining
-    a continuous blocking computation on the asyncio event loop.
+    That family is the only CPU-heavy metrics family (it walks session state,
+    caches, media files, and uploads). Caching collapses request floods to one
+    computation per TTL window; single-flight coalesces concurrent callers onto
+    the same in-flight task.
 
-    All state is read and mutated exclusively on the event-loop thread, so no
-    locks are required. The check-then-set inside ``get`` must not ``await``
-    between reading ``_inflight`` and assigning it so that only one task is ever
-    started per expired window.
+    Concurrency notes:
+    - The event-loop thread exclusively owns this state, so no locks are needed.
+    - ``get`` must not ``await`` between reading ``_inflight`` and assigning it,
+      or more than one task could start per expired window.
     """
 
     def __init__(self, stats_mgr: StatsManager) -> None:
@@ -93,26 +92,13 @@ class _ExpensiveStatsCache:
         self._inflight: asyncio.Task[Mapping[str, Sequence[Stat]]] | None = None
 
     async def get(self) -> Mapping[str, Sequence[Stat]]:
-        """Return cached or freshly computed ``cache_memory_bytes`` stats.
-
-        Returns the cached result when it is still within the TTL. When the
-        cache is stale, a single background computation is started and all
-        concurrent callers share the same in-flight task (single-flight
-        coalescing). The computation runs in a thread pool so it does not block
-        the event loop.
-
-        Returns
-        -------
-        Mapping[str, Sequence[Stat]]
-            Stats for the ``cache_memory_bytes`` family.
-        """
+        """Return cached ``cache_memory_bytes`` stats, or compute them once for all waiters."""
         from starlette.concurrency import run_in_threadpool
 
         if self._result is not None and time.monotonic() < self._expiry:
             return self._result
-        # If a computation is already in flight, join it instead of starting a
-        # duplicate. The check and assignment below must not be separated by an
-        # await so that exactly one task is created per expired window.
+        # Join an in-flight computation instead of starting another. Do not await
+        # between this check and the assignment below.
         if self._inflight is not None:
             return await self._inflight
         self._inflight = asyncio.ensure_future(
@@ -527,7 +513,7 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
         requested: list[str] | None = request.query_params.getlist("families") or None
         wants_expensive = requested is None or CACHE_MEMORY_FAMILY in requested
 
-        # Determine which cheap families to compute live on this request.
+        # Cheap families stay live; only cache_memory_bytes uses the TTL cache.
         all_registered = runtime.stats_mgr.registered_families()
         if requested is None:
             cheap_families = [f for f in all_registered if f != CACHE_MEMORY_FAMILY]
@@ -536,6 +522,7 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
 
         cheap_result: Mapping[str, Sequence[Stat]] = {}
         if cheap_families:
+            # Offload even cheap get_stats so sync work stays off the event loop.
             cheap_result = await run_in_threadpool(
                 runtime.stats_mgr.get_stats,
                 family_names=cheap_families,
@@ -545,9 +532,8 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
         if wants_expensive:
             expensive_result = await expensive_cache.get()
 
-        # Merge in registered family order so the serialized output is deterministic.
-        # Families that appear in the request but are not registered will be absent
-        # from the result (get_stats already ignores unknown names).
+        # Merge in registration order so the serialized output is deterministic.
+        # Unknown requested families are omitted (same as get_stats).
         stats: dict[str, Sequence[Stat]] = {}
         for family in all_registered:
             if family == CACHE_MEMORY_FAMILY:

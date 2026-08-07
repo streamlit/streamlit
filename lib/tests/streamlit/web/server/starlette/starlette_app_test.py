@@ -588,11 +588,7 @@ async def test_metrics_expensive_cache_single_flight() -> None:
 
 @pytest.mark.anyio
 async def test_metrics_expensive_cache_runs_off_event_loop() -> None:
-    """The expensive get_stats computation runs on a non-event-loop thread.
-
-    This proves that the handler offloads the CPU-heavy work via run_in_threadpool
-    and does not block the asyncio event loop during the computation.
-    """
+    """Assert the expensive get_stats call runs on a worker thread, not the event loop."""
     event_loop_thread = threading.get_ident()
     mgr = _InstrumentedStatsManager()
     cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
@@ -638,18 +634,12 @@ async def test_metrics_expensive_cache_ttl_expiry() -> None:
 def test_metrics_cheap_families_stay_live(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
-    """Cheap families reflect the current value on every request, even within the TTL.
-
-    This verifies that cheap families (e.g. active_sessions) are computed live
-    and are not served from the expensive cache that only covers cache_memory_bytes.
-    """
+    """Assert cheap families stay live and are not served from the expensive-family cache."""
     client, runtime = starlette_client
 
-    # Record the initial value.
     response = client.get("/_stcore/metrics?families=active_sessions")
     assert "active_sessions 3" in response.text
 
-    # Mutate the live value in the stub.
     runtime.stats_mgr._stats["active_sessions"] = [
         GaugeStat(
             family_name="active_sessions",
@@ -658,7 +648,6 @@ def test_metrics_cheap_families_stay_live(
         )
     ]
 
-    # The next request must reflect the updated value, proving no stale caching.
     response2 = client.get("/_stcore/metrics?families=active_sessions")
     assert "active_sessions 99" in response2.text
     assert "active_sessions 3" not in response2.text
