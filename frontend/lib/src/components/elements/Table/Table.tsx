@@ -56,8 +56,7 @@ export interface TableProps {
 // The actual size may vary based on content, but this default works reasonably well.
 // Header row height ≈ fontSize.sm (0.875rem) × lineHeights.small (1.5)
 // + vertical padding (twoXS top and bottom = 0.5rem) → 1.8125rem
-// Kept as a constant (not theme-derived) for a simple rem→px conversion at sticky
-// setup time; Table.test.tsx pins the derivation against theme tokens to catch drift.
+// Table.test.tsx pins the derivation against theme tokens to catch drift.
 export const FALLBACK_HEADER_ROW_OFFSET_REM = "1.8125rem"
 
 function getStickyOffset(index: number, stepPx: number): number {
