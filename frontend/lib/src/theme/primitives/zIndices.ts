@@ -25,16 +25,27 @@ const headerDecoration = balloons - 1
 // Used for popup menus, chart tooltips, and other aspects
 // that need to be shown above the fullscreen wrapper
 const popup = fullscreenWrapper + 10
-// Used for rendering the cell overlay editor of the
-// dataframe component:
-const tablePortal = fullscreenWrapper + 60
+// Used for the shared BaseWeb overlay layer host (legacy dropdowns/calendars for
+// widgets such as multiselect, date_input, time_input). Anchored just above popup
+// so a BaseWeb dropdown opened inside a floating-ui popover (which sits at popup)
+// paints above the popover body, while staying below toast and tablePortal so
+// toasts and dataframe overlays remain on top.
+const basewebOverlay = popup + 1
+// Used for modal dialog backdrops and surfaces. Keep this below popup so
+// nested overlays opened from dialogs render above the modal surface.
+const modal = popup - 1
+// Used for rendering the cell overlay editor and column menus of the
+// dataframe component. Anchored above popup so that dataframe overlays
+// render above both BaseWeb popups and the modal surface (modal < popup).
+const tablePortal = popup + 50
 // Used for Vega chart tooltips in the dataframe statistics submenu.
 // Must be above tablePortal so tooltips appear over the column menu portal.
 const tablePortalTooltip = tablePortal + 10
 const cacheSpinner = sidebar + 1
-// Toasts should overlap chatInput container
-// should also show above dialog
-const toast = popup + 1
+// Toasts should overlap chatInput container and show above dialog. Kept above
+// basewebOverlay so notifications stay visible even while a BaseWeb dropdown or
+// calendar is open.
+const toast = popup + 2
 
 export const zIndices = {
   hide: -1,
@@ -48,7 +59,9 @@ export const zIndices = {
   balloons,
   header,
   sidebarMobile,
+  modal,
   popup,
+  basewebOverlay,
   fullscreenWrapper,
   tablePortal,
   tablePortalTooltip,

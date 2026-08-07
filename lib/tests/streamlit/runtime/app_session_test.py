@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
@@ -57,6 +58,10 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SessionState
+from streamlit.runtime.state.query_params import (
+    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+)
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadFileUrlInfo,
@@ -678,6 +683,34 @@ class AppSessionTest(unittest.TestCase):
         assert rerun_data.query_string == "test_query"
         assert rerun_data.page_script_hash == "test_hash"
         assert rerun_data.is_auto_rerun is False
+
+    @parameterized.expand(
+        [
+            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            (
+                "too_many_fields",
+                "&".join(
+                    f"key_{idx}=value"
+                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                ),
+            ),
+        ]
+    )
+    def test_manual_rerun_ignores_unsafe_query_string(
+        self, _name: str, query_string: str
+    ):
+        """Test manual reruns drop query strings that exceed safe limits."""
+        session = _create_test_session()
+        self.addCleanup(session.shutdown)
+
+        client_state = ClientState()
+        client_state.query_string = query_string
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+        assert rerun_data.query_string == ""
 
     def test_context_info_preserved_in_client_state_on_shutdown(self):
         """Test that context_info is preserved in client_state during SHUTDOWN event."""
@@ -2445,8 +2478,8 @@ def test_create_new_session_message_recommends_skills_install() -> None:
 
     with (
         patch(
-            "streamlit.web.skills.should_show_skills_nudge", return_value=True
-        ) as mock_should_show,
+            "streamlit.web.skills.nudge_suppression_reason", return_value=""
+        ) as mock_reason,
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="loopback",
@@ -2456,8 +2489,8 @@ def test_create_new_session_message_recommends_skills_install() -> None:
 
     assert msg.new_session.initialize.recommend_skills_install is True
     # No suppression telemetry when the nudge is actually recommended.
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
-    mock_should_show.assert_called_once_with("/fake")
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
+    mock_reason.assert_called_once_with("/fake")
 
 
 def test_create_new_session_message_skips_skills_install_when_not_recommended() -> None:
@@ -2465,11 +2498,14 @@ def test_create_new_session_message_skips_skills_install_when_not_recommended() 
     frontend does not show the nudge."""
     session = _create_test_session()
 
-    with patch("streamlit.web.skills.should_show_skills_nudge", return_value=False):
+    with patch(
+        "streamlit.web.skills.nudge_suppression_reason", return_value="installed"
+    ):
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
+    # "installed" is an uninteresting reason, so it is not reported.
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
 
 
 def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
@@ -2479,7 +2515,7 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
     session = _create_test_session()
 
     with (
-        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
+        patch("streamlit.web.skills.nudge_suppression_reason", return_value=""),
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="private",
@@ -2488,7 +2524,45 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == "private"
+    assert (
+        msg.new_session.initialize.skills_nudge_suppressed_reason
+        == "non_loopback_private"
+    )
+
+
+@pytest.mark.parametrize("reason", ["conflict", "check_failed"])
+def test_create_new_session_message_reports_informative_suppression(
+    reason: str,
+) -> None:
+    """A withheld nudge that tells us something actionable is reported, so
+    suppression is measurable rather than silent. ``conflict`` shares the
+    install-failure reason name for the same cause, so "we withheld the nudge"
+    and "we nudged and the install conflicted anyway" compare in one query."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == reason
+
+
+@pytest.mark.parametrize(
+    "reason", ["headless", "welcome_hidden", "dismissed", "no_agent", "installed"]
+)
+def test_create_new_session_message_drops_high_volume_suppression(
+    reason: str,
+) -> None:
+    """The uninteresting reasons are deliberately NOT reported. ``headless``
+    especially: it fires for every deployed app, so reporting it would swamp the
+    metric with sessions that were never nudge candidates."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
 
 
 def test_create_new_session_message_recomputes_skills_recommendation() -> None:
@@ -2504,9 +2578,9 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
 
     with (
         patch(
-            "streamlit.web.skills.should_show_skills_nudge",
-            side_effect=[True, False],
-        ) as mock_should_show,
+            "streamlit.web.skills.nudge_suppression_reason",
+            side_effect=["", "installed"],
+        ) as mock_reason,
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="loopback",
@@ -2515,7 +2589,7 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
         first = session._create_new_session_message(page_script_hash="")
         second = session._create_new_session_message(page_script_hash="")
 
-    assert mock_should_show.call_count == 2
+    assert mock_reason.call_count == 2
     assert first.new_session.initialize.recommend_skills_install is True
     # The second NewSession reflects the updated detection (e.g. post-install),
     # not a stale memoized True.
@@ -2530,13 +2604,13 @@ def test_create_new_session_message_skips_skills_install_for_hello_app() -> None
     session = _create_test_session(is_hello=True)
 
     with patch(
-        "streamlit.web.skills.should_show_skills_nudge", return_value=True
-    ) as mock_should_show:
+        "streamlit.web.skills.nudge_suppression_reason", return_value=""
+    ) as mock_reason:
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
     # Short-circuited on is_hello before the (would-recommend) detection ran.
-    mock_should_show.assert_not_called()
+    mock_reason.assert_not_called()
 
 
 # ---- Tests for _handle_git_information_request ----
@@ -2818,3 +2892,109 @@ def test_populate_config_msg_sidebar_navigation(
         app_session._populate_config_msg(msg)
 
     assert msg.hide_sidebar_nav is expected_hide_sidebar_nav
+
+
+@pytest.mark.parametrize("disable_data_export", [True, False])
+def test_populate_config_msg_disable_data_export(disable_data_export: bool) -> None:
+    """disable_data_export mirrors client.disableDataExport."""
+    with patch_config_options({"client.disableDataExport": disable_data_export}):
+        msg = Config()
+        app_session._populate_config_msg(msg)
+
+    assert msg.disable_data_export is disable_data_export
+
+
+# ---- Tests for handle_backmsg dispatch and small handlers ----
+
+
+@pytest.mark.parametrize(
+    ("field", "handler_name"),
+    [
+        ("load_git_info", "_handle_git_information_request"),
+        ("set_run_on_save", "_handle_set_run_on_save_request"),
+        ("stop_script", "_handle_stop_script_request"),
+    ],
+)
+def test_handle_backmsg_dispatches_bool_requests(field: str, handler_name: str) -> None:
+    """Test that handle_backmsg routes each boolean BackMsg to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    setattr(msg, field, True)
+
+    with patch.object(session, handler_name) as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_dispatches_file_urls_request() -> None:
+    """Test that handle_backmsg routes a file_urls_request to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    msg.file_urls_request.request_id = "some_request_id"
+
+    with patch.object(session, "_handle_file_urls_request") as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_unknown_type_logs_warning() -> None:
+    """Test that an unrecognized BackMsg type logs a warning instead of raising."""
+    session = _create_test_session()
+
+    with patch.object(app_session, "_LOGGER") as patched_logger:
+        # An empty BackMsg has no oneof "type" set, so no handler matches.
+        session.handle_backmsg(BackMsg())
+
+    patched_logger.warning.assert_called_once()
+
+
+def test_handle_stop_script_request_forwards_to_scriptrunner() -> None:
+    """Test that _handle_stop_script_request delegates to request_script_stop."""
+    session = _create_test_session()
+
+    with patch.object(session, "request_script_stop") as request_stop:
+        session._handle_stop_script_request()
+
+    request_stop.assert_called_once()
+
+
+def test_request_rerun_after_shutdown_is_discarded() -> None:
+    """Test that a rerun request is ignored once shutdown has been requested."""
+    session = _create_test_session()
+    session._state = AppSessionState.SHUTDOWN_REQUESTED
+
+    with patch.object(session, "_create_scriptrunner") as create_scriptrunner:
+        session.request_rerun(None)
+
+    create_scriptrunner.assert_not_called()
+
+
+def test_clear_user_info_empties_user_info() -> None:
+    """Test that clear_user_info removes all stored user info."""
+    session = _create_test_session()
+    assert session._user_info != {}
+
+    session.clear_user_info()
+
+    assert session._user_info == {}
+
+
+def test_on_secrets_file_changed_triggers_source_change() -> None:
+    """Test that a secrets file change is handled like a source file change."""
+    session = _create_test_session()
+
+    with patch.object(session, "_on_source_file_changed") as on_source_changed:
+        session._on_secrets_file_changed(None)
+
+    on_source_changed.assert_called_once_with()
+
+
+def test_create_file_change_message_marks_script_changed() -> None:
+    """Test that _create_file_change_message flags a script change on disk."""
+    session = _create_test_session()
+
+    msg = session._create_file_change_message()
+
+    assert msg.session_event.script_changed_on_disk is True

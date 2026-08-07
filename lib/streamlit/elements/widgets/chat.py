@@ -23,6 +23,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    TypeAlias,
     cast,
     overload,
 )
@@ -89,9 +90,11 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
     }
 )
 
+_ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
+
 
 @dataclass
-class ChatInputValue(MutableMapping[str, Any]):
+class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
 
     This dataclass contains the user's input text, any files uploaded, and optionally
@@ -146,7 +149,19 @@ class ChatInputValue(MutableMapping[str, Any]):
             return False
         return key in self._get_included_keys()
 
-    def __getitem__(self, item: str) -> str | list[UploadedFile] | UploadedFile | None:
+    @overload
+    def __getitem__(self, item: Literal["text"]) -> str: ...
+
+    @overload
+    def __getitem__(self, item: Literal["files"]) -> list[UploadedFile]: ...
+
+    @overload
+    def __getitem__(self, item: Literal["audio"]) -> UploadedFile | None: ...
+
+    @overload
+    def __getitem__(self, item: str) -> _ChatInputValueItem: ...
+
+    def __getitem__(self, item: str) -> _ChatInputValueItem:
         if item not in self._get_included_keys():
             raise KeyError(f"Invalid key: {item}")
         try:
@@ -181,10 +196,8 @@ class ChatInputValue(MutableMapping[str, Any]):
         except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {key}") from None
 
-    def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
-        result: dict[str, str | list[UploadedFile] | UploadedFile | None] = {
-            "text": self.text
-        }
+    def to_dict(self) -> dict[str, _ChatInputValueItem]:
+        result: dict[str, _ChatInputValueItem] = {"text": self.text}
         if self._include_files:
             result["files"] = self.files
         if self._include_audio:
@@ -393,8 +406,8 @@ class ChatInputSerde:
             _include_audio=self.accept_audio,
         )
 
-    def serialize(self, v: str | None) -> ChatInputValueProto:
-        return ChatInputValueProto(data=v)
+    def serialize(self, v: str | ChatInputValue | None) -> ChatInputValueProto:
+        return ChatInputValueProto(data=v.text if isinstance(v, ChatInputValue) else v)
 
 
 class ChatMixin:
@@ -1053,7 +1066,7 @@ class ChatMixin:
             accept_audio=accept_audio,
             allowed_types=file_type,
         )
-        widget_state = register_widget(  # type: ignore[misc]
+        widget_state = register_widget(
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
@@ -1062,6 +1075,7 @@ class ChatMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="chat_input_value",
+            disabled=disabled,
         )
 
         layout_config = create_layout_config(
@@ -1077,7 +1091,9 @@ class ChatMixin:
         else:
             chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
 
-        if widget_state.value_changed and widget_state.value is not None:
+        # Only plain str values are pushed to the frontend. ChatInputValue is the
+        # deserialized submit/return form and is not a valid programmatic set_value.
+        if widget_state.value_changed and isinstance(widget_state.value, str):
             # Support for programmatically setting the text in the chat input
             # via session state. Since chat input has a trigger state,
             # it works a bit differently to other widgets. We are not changing
@@ -1095,7 +1111,10 @@ class ChatMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
-        has_one_shot = widget_state.value_changed and widget_state.value is not None
+        # Match the set_value guard so one-shot only fires when a str was pushed.
+        has_one_shot = widget_state.value_changed and isinstance(
+            widget_state.value, str
+        )
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.

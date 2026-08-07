@@ -280,6 +280,8 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
                 st.button("foo")
 
         assert "`st.button()` can't be used in an `st.form()`" in str(ctx.value)
+        # The error should point users to the correct alternative.
+        assert "`st.form_submit_button()`" in str(ctx.value)
 
     def test_form_block_data(self):
         """Test that a form creates a block element with correct data."""
@@ -337,6 +339,25 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
 
         last_delta = self.get_delta_from_queue()
         assert last_delta.new_element.button.type == "secondary"
+
+    def test_submit_button_wrap_default(self):
+        """By default wrap is left unset (auto) so the frontend resolves it."""
+
+        form = st.form("foo")
+        form.form_submit_button()
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert not button_proto.HasField("wrap")
+
+    @parameterized.expand([(True,), (False,)])
+    def test_submit_button_wrap(self, wrap_value: bool):
+        """Test that the wrap parameter is forwarded to the submit button proto."""
+
+        form = st.form("foo")
+        form.form_submit_button(wrap=wrap_value)
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert button_proto.wrap is wrap_value
 
     def test_submit_button_with_key(self):
         """Test that a submit button can have a custom key."""

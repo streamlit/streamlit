@@ -170,6 +170,16 @@ class ConfigTest(unittest.TestCase):
                 "client.showErrorDetails", ShowErrorDetailsConfigOptions.FULL
             )
 
+    def test_set_user_option_disable_data_export_scriptable(self):
+        """Test that client.disableDataExport can be set from API."""
+        assert config.get_option("client.disableDataExport") is False
+
+        try:
+            config.set_user_option("client.disableDataExport", True)
+            assert config.get_option("client.disableDataExport") is True
+        finally:
+            config.set_user_option("client.disableDataExport", False)
+
     def test_set_user_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
         # This is set in lib/tests/conftest.py to off
@@ -739,6 +749,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverAddress",
                 "browser.serverPort",
                 "client.allowedOrigins",
+                "client.disableDataExport",
                 "client.showErrorDetails",
                 "client.showErrorLinks",
                 "client.showSidebarNavigation",
@@ -768,6 +779,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.hideWelcomeMessage",
                 "logger.level",
                 "logger.messageFormat",
+                "runner.cacheBackgroundRefreshMaxWorkers",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",
@@ -779,13 +791,13 @@ class ConfigTest(unittest.TestCase):
                 "mapbox.token",
                 "secrets.files",
                 "server.address",
+                "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
                 "server.cookieSecret",
                 "server.corsAllowedOrigins",
                 "server.customComponentBaseUrlPath",
                 "server.disconnectedSessionTTL",
-                "server.enableArrowTruncation",
                 "server.enableCORS",
                 "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
@@ -799,6 +811,7 @@ class ConfigTest(unittest.TestCase):
                 "server.headless",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
+                "server.maxWidgetStateSize",
                 "server.port",
                 "server.runOnSave",
                 "server.scriptHealthCheckEnabled",
@@ -1074,6 +1087,12 @@ class ConfigTest(unittest.TestCase):
 
         config._set_option("browser.gatherUsageStats", "test", "test")
         assert config.get_option("browser.gatherUsageStats") == "test"
+
+    def test_set_user_option_raises_for_unrecognized_key(self):
+        """set_user_option raises for an unknown config option key."""
+        with pytest.raises(StreamlitAPIException) as e:
+            config.set_user_option("not.a.real.option", "value")
+        assert "Unrecognized config option: not.a.real.option" in str(e.value)
 
     def test_is_manually_set(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
@@ -1678,6 +1697,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
     def test_max_message_size_default_values(self):
         assert config.get_option("server.maxMessageSize") == 200
+
+    def test_max_widget_state_size_default_values(self):
+        assert config.get_option("server.maxWidgetStateSize") == 25
 
     def test_config_options_removed_on_reparse(self):
         """Test that config options that are removed in a file are also removed

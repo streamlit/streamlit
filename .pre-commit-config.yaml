@@ -21,7 +21,7 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with pyproject.toml:
-    rev: v0.15.19
+    rev: v0.16.1
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -30,6 +30,11 @@ repos:
       # Run the formatter.
       - id: ruff-format
         types_or: [python, pyi]
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.1
+    hooks:
+      - id: uv-lock
+        files: ^(pyproject\.toml|lib/pyproject\.toml|uv\.lock)$
   - repo: local
     hooks:
       - id: oxlint-frontend
@@ -37,7 +42,10 @@ repos:
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings
         files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
-        language: node
+        # Uses `language: system` (not `node`) because the tool is invoked via
+        # the frontend's yarn install, matching the buf hooks below. pre-commit
+        # 4.6.1+ rejects `language: node` hooks without package.json/deps.
+        language: system
         pass_filenames: true
       # Single oxfmt hook for all frontend source files.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
@@ -47,7 +55,7 @@ repos:
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxfmt --config ./.oxfmtrc.json
         files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
-        language: node
+        language: system
         pass_filenames: true
       - id: oxfmt-yaml
         name: Oxfmt-yaml
@@ -56,7 +64,7 @@ repos:
         # containing `..`.
         entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".github/**/*.{yml,yaml}"
         files: ^.github/.*\.(yml|yaml)$
-        language: node
+        language: system
         pass_filenames: false
       - id: oxfmt-vscode-devcontainer-json
         name: Oxfmt VSCode/devcontainer JSON
@@ -65,7 +73,7 @@ repos:
         # containing `..`.
         entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".vscode/*.json" ".devcontainer/*.json"
         files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
-        language: node
+        language: system
         pass_filenames: false
       - id: license-headers
         name: Checks license headers
@@ -131,7 +139,6 @@ repos:
           /vendor/
           |^vendor/
           |^frontend/component-lib/declarations/apache-arrow
-          |^frontend/app/src/assets/css/variables\.scss
           |^lib/tests/streamlit/elements/test_html\.js
           |^lib/tests/streamlit/elements/test_html\.css
           |^e2e_playwright/static/
@@ -215,6 +222,7 @@ repos:
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
       - id: check-added-large-files
+        exclude: ^uv\.lock$
       - id: check-json
         # Note that this should be the same as the check-json5 hook's files
         # property

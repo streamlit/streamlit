@@ -125,11 +125,31 @@ export function useDetailsAnimation({
   const hasMountedRef = useRef(false)
 
   /**
-   * Cancel any running animation.
+   * Cancel any running animation and clear the inline height/overflow lock it
+   * left behind.
+   *
+   * Clearing here (rather than in `animateHeight`'s async `cancel` listener) is
+   * both safe and correct: the WAAPI `cancel` event fires asynchronously, so
+   * clearing in that listener would clobber the fresh lock that callers apply
+   * synchronously right after cancelling. Callers that keep animating
+   * (`animateTo` / `animateResize`) re-apply `height` + `overflow` on the very
+   * next lines, so this clear is immediately overwritten for them.
+   *
+   * The one caller that does NOT re-lock is the "new expander" reset on a label
+   * change. It relies on this clear so a reused `<details>` node isn't left
+   * clipped by the previous expander's interrupted animation. This upholds the
+   * invariant that the element is never locked with no animation to clear it
+   * (issue #16027).
    */
   const cancelAnimation = useCallback((): void => {
     animationRef.current?.cancel()
     animationRef.current = null
+
+    const details = detailsRef.current
+    if (details) {
+      details.style.height = ""
+      details.style.overflow = ""
+    }
   }, [])
 
   /**
@@ -180,14 +200,17 @@ export function useDetailsAnimation({
             currentHeight,
             targetHeight
           )
+        } else {
+          // contentHeight is 0 — the browser hasn't laid out the content yet
+          // (rare: StyledDetailsPanel has padding, so a mounted panel usually
+          // measures > 0). Clear the lock instead of leaving it in place: the
+          // element then sizes to its natural height so content is never
+          // clipped, and the ResizeObserver animates the reveal once layout
+          // settles. Leaving it locked risked a permanent clip if that resize
+          // never fired a healing animation (issue #16027).
+          details.style.height = ""
+          details.style.overflow = ""
         }
-        // If contentHeight is 0, leave inline height + overflow locked.
-        // This is rare in practice — StyledDetailsPanel always has padding,
-        // so even an empty expander measures > 0. It can only happen if
-        // getBoundingClientRect fires before the browser has laid out the
-        // content. Keeping styles locked lets the ResizeObserver animate
-        // from the collapsed height to the full content height once layout
-        // settles.
       } else {
         // Closing: animate to collapsed height, then set open=false
         const targetHeight = summaryHeight + borderOffset
@@ -278,7 +301,8 @@ export function useDetailsAnimation({
     prevLabelRef.current = label
 
     // If label changed, this is a "new expander" - cancel animations and reset.
-    // Clear any stale inline styles that cancelAnimation leaves behind.
+    // cancelAnimation clears the inline height/overflow lock, so a reused
+    // <details> node isn't left clipped from the previous expander's animation.
     if (labelChanged) {
       cancelAnimation()
       const newOpen = backendExpanded ?? false
@@ -286,8 +310,6 @@ export function useDetailsAnimation({
 
       setIsOpen(newOpen)
       if (detailsRef.current) {
-        detailsRef.current.style.height = ""
-        detailsRef.current.style.overflow = ""
         detailsRef.current.open = newOpen
       }
       return

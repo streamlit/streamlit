@@ -31,25 +31,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set Python version vars
-        uses: ./.github/actions/build_info
-
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-
-      - name: Install Python deps for slack notifications
-        run: |
-          uv pip install --system requests
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
       - name: Configure Git
         env:
@@ -169,7 +157,7 @@ jobs:
           CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
+          uv run --no-sync python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
 
       - name: Slack notification - failure
         if: ${{ steps.cp.outputs.status == 'failed' && inputs.dry_run != true }}
@@ -182,7 +170,7 @@ jobs:
           ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
-          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_failed
+          uv run --no-sync python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_failed
 
       - name: Fail job if cherry-pick failed
         if: ${{ steps.cp.outputs.status == 'failed' }}

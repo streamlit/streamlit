@@ -28,6 +28,9 @@ import {
   SKILLS_NUDGE_DISMISSED_KEY,
   SKILLS_NUDGE_SNOOZE_MS,
   SKILLS_NUDGE_SNOOZED_AT_KEY,
+  skillsNudgeInstallFailureLabel,
+  skillsNudgeInstallSuccessLabel,
+  skillsNudgeSuppressedLabel,
 } from "./skillsNudge"
 
 describe("skillsNudge preferences", () => {
@@ -130,6 +133,102 @@ describe("skillsNudge preferences", () => {
       // so it must not be reclassified as a dropped connection.
       expect(isSkillsNudgeDroppedConnection(CONNECTION_CLOSED_MESSAGE)).toBe(
         false
+      )
+    })
+  })
+
+  describe("skillsNudgeSuppressedLabel", () => {
+    it.each([
+      ["non_loopback_private", "skillsNudgeSuppressedNonLocal:private"],
+      ["non_loopback_other", "skillsNudgeSuppressedNonLocal:other"],
+      ["non_loopback_unknown", "skillsNudgeSuppressedNonLocal:unknown"],
+    ])("keeps the pre-existing label for %s", (reason, expected) => {
+      // This label is load-bearing for the adoption funnel ("eligible" is
+      // shown ∪ suppressedNonLocal) and has been emitted since 1.59. Renaming
+      // it would silently break that: the event log keeps old rows forever and
+      // clients upgrade over months, so both forms would coexist for a long
+      // time. Pinned exactly, byte for byte.
+      expect(skillsNudgeSuppressedLabel(reason)).toBe(expected)
+    })
+
+    it.each([
+      ["conflict", "skillsNudgeSuppressed:conflict"],
+      ["check_failed", "skillsNudgeSuppressed:check_failed"],
+    ])("uses the generic label for %s", (reason, expected) => {
+      expect(skillsNudgeSuppressedLabel(reason)).toBe(expected)
+    })
+
+    it("routes an unrecognized reason to the generic label", () => {
+      // A reason added server-side needs no change here, and must never be
+      // misfiled under the non-loopback label, which would pool a broken-state
+      // suppression into the loopback gate's reach drop-off.
+      expect(skillsNudgeSuppressedLabel("some_new_reason")).toBe(
+        "skillsNudgeSuppressed:some_new_reason"
+      )
+    })
+
+    it("does not treat a merely similar reason as non-loopback", () => {
+      // Guards the prefix check against matching on a substring.
+      expect(skillsNudgeSuppressedLabel("not_non_loopback")).toBe(
+        "skillsNudgeSuppressed:not_non_loopback"
+      )
+    })
+  })
+
+  describe("skillsNudgeInstallSuccessLabel", () => {
+    it("is the bare label when no reroute happened", () => {
+      expect(skillsNudgeInstallSuccessLabel(undefined)).toBe(
+        "skillsNudgeInstallSucceeded"
+      )
+      // An older backend omits fallback_reason; protobuf sends "" for an unset
+      // string. Neither may produce a dangling ":" suffix.
+      expect(skillsNudgeInstallSuccessLabel(null)).toBe(
+        "skillsNudgeInstallSucceeded"
+      )
+      expect(skillsNudgeInstallSuccessLabel("")).toBe(
+        "skillsNudgeInstallSucceeded"
+      )
+    })
+
+    it("suffixes the reason a project install was rerouted to a global copy", () => {
+      // The Windows cohort's diagnostic signal rides the SUCCESS label, because
+      // they cannot lay symlinks, get rerouted, and then succeed.
+      expect(skillsNudgeInstallSuccessLabel("symlinks_no_privilege")).toBe(
+        "skillsNudgeInstallSucceeded:symlinks_no_privilege"
+      )
+    })
+  })
+
+  describe("skillsNudgeInstallFailureLabel", () => {
+    it("suffixes the server's failure reason", () => {
+      expect(
+        skillsNudgeInstallFailureLabel(
+          Object.assign(new Error("nope"), { reason: "write_denied" })
+        )
+      ).toBe("skillsNudgeInstallFailed:write_denied")
+    })
+
+    it("counts a safety-gate refusal as Refused, with the prefix stripped", () => {
+      // A refusal never ran, so it must not land on the failure metric — the
+      // install-failure rate is the number this whole vocabulary exists to explain.
+      const label = skillsNudgeInstallFailureLabel(
+        Object.assign(new Error("not available"), {
+          reason: "refused:non_loopback",
+        })
+      )
+      expect(label).toBe("skillsNudgeInstallRefused:non_loopback")
+      expect(label).not.toContain("Failed")
+      expect(label).not.toContain("refused:")
+    })
+
+    it("falls back to the bare label when the server sends no reason", () => {
+      // An older backend has no error_reason field at all, and a rejection need
+      // not be an Error. Both must still count as a failure, without a suffix.
+      expect(skillsNudgeInstallFailureLabel(new Error("nope"))).toBe(
+        "skillsNudgeInstallFailed"
+      )
+      expect(skillsNudgeInstallFailureLabel(undefined)).toBe(
+        "skillsNudgeInstallFailed"
       )
     })
   })

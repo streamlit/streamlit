@@ -32,6 +32,9 @@ import {
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
+  skillsNudgeInstallFailureLabel,
+  skillsNudgeInstallSuccessLabel,
+  skillsNudgeSuppressedLabel,
 } from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
@@ -148,6 +151,7 @@ import {
   ParentMessage,
   SessionEvent,
   SessionStatus,
+  StopAutoRerun,
   WidgetStates,
 } from "@streamlit/protobuf"
 import {
@@ -159,8 +163,8 @@ import {
 } from "@streamlit/utils"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
-// Used to import fonts + responsive reboot items
-import "@streamlit/app/src/assets/css/theme.scss"
+// Import @font-face rules for app and icon fonts
+import "@streamlit/app/src/assets/css/fonts.css"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 import {
   includeIfDefined,
@@ -199,6 +203,7 @@ interface State {
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
+  disableDataExport: boolean
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
@@ -235,7 +240,6 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
   // Whether the framework "install skills" nudge is currently shown. Set once
@@ -310,12 +314,33 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
+  // Active `run_every` auto-rerun timers, keyed by fragment id. These are
+  // imperative resources (setInterval handles), so they live outside of React
+  // state. Keying by fragment id lets us keep a single timer per fragment: we
+  // reuse the running timer when a fragment re-registers with the same interval
+  // (so frequent ancestor reruns don't reset its countdown), and only restart
+  // it when the interval changes. The stored `interval` (in seconds) is what we
+  // compare against on re-registration.
+  private readonly autoRerunIntervals: Map<
+    string,
+    { timer: ReturnType<typeof setInterval>; interval: number }
+  > = new Map()
+
   // Whether the skills-install nudge has been shown this page load.
   // `handleInitialization` re-runs on websocket reconnect, so this guards
   // against enqueuing a duplicate nudge and against logging multiple
   // `skillsNudgeShown` events (which would inflate the adoption funnel). Reset
   // only by a full page reload (a new App instance).
   private skillsNudgeShown: boolean = false
+
+  // Whether a suppression reason has been reported this page load. Tracked
+  // separately from `skillsNudgeShown` so recording a suppression does NOT
+  // prevent the nudge from appearing later in the same page load: eligibility is
+  // recomputed on every rerun, and `check_failed` in particular is transient (a
+  // thrown eligibility check), so a single bad rerun must not withhold the nudge
+  // until the user reloads. Deduping the two events independently still keeps a
+  // reconnect from inflating either count.
+  private skillsNudgeSuppressionReported: boolean = false
 
   public constructor(props: Props) {
     super(props)
@@ -347,6 +372,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
       showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+      disableDataExport: false,
       // Initialize themeHash to empty string to ensure the first processThemeInput
       // call always processes the theme (whether null or custom theme from server).
       // This prevents the bug where a cached custom theme isn't cleared when the
@@ -385,7 +411,6 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
-      autoReruns: [],
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
@@ -922,7 +947,7 @@ export class App extends PureComponent<Props, State> {
         // Script is using fragments (fragments in last run or
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
-        this.state.autoReruns.length > 0
+        this.autoRerunIntervals.size > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1042,6 +1067,8 @@ export class App extends PureComponent<Props, State> {
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
+        stopAutoRerun: (stopAutoRerun: StopAutoRerun) =>
+          this.handleStopAutoRerun(stopAutoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
@@ -1231,14 +1258,47 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
-    const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
-    }, autoRerun.interval * 1000)
+    const { fragmentId } = autoRerun
 
-    this.setState((prevState: State) => {
-      return {
-        autoReruns: [...prevState.autoReruns, intervalId],
-      }
+    // Auto-reruns are always scoped to a fragment, so we expect a non-empty
+    // fragment id. Guard against an empty id (which protobuf produces when the
+    // field is unset): using it as a map key would collide, so a second empty-id
+    // registration would silently cancel the first. Skip it instead.
+    if (!fragmentId) {
+      LOG.warn("Ignoring auto-rerun message without a fragment id.")
+      return
+    }
+
+    const { interval } = autoRerun
+
+    // A `run_every` fragment re-registers its auto-rerun every time an ancestor
+    // re-renders it (a fragment-only rerun doesn't reset timers). If a timer for
+    // this fragment is already running with the same interval, leave it alone:
+    // restarting it would reset the countdown, so ancestor reruns firing more
+    // often than `run_every` could delay or starve the fragment's auto-rerun.
+    // We only (re)start the timer when there isn't one yet or the interval
+    // changed, which also avoids stacking duplicate intervals.
+    if (this.autoRerunIntervals.get(fragmentId)?.interval === interval) {
+      return
+    }
+
+    this.clearAutoRerunInterval(fragmentId)
+
+    const timer = setInterval(() => {
+      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
+    }, interval * 1000)
+
+    this.autoRerunIntervals.set(fragmentId, { timer, interval })
+  }
+
+  /**
+   * Handler for ForwardMsg.stopAutoRerun messages. The server sends this when
+   * it evicts fragments (e.g. a nested ``run_every`` fragment whose ancestor
+   * stopped rendering it), so we cancel their pending auto-rerun timers.
+   */
+  handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
+    stopAutoRerun.fragmentIds.forEach(fragmentId => {
+      this.clearAutoRerunInterval(fragmentId)
     })
   }
 
@@ -1420,6 +1480,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         showErrorLinks: config.showErrorLinks,
+        disableDataExport: config.disableDataExport,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -1518,17 +1579,20 @@ export class App extends PureComponent<Props, State> {
       this.setState({ showSkillsNudge: true })
       this.trackSkillsNudge("skillsNudgeShown")
     } else if (
-      initialize.skillsNudgeSuppressedLocality &&
+      initialize.skillsNudgeSuppressedReason &&
+      !this.skillsNudgeSuppressionReported &&
       !this.skillsNudgeShown
     ) {
-      // The nudge was eligible server-side but the server suppressed it because
-      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel).
-      // Record the connection class — once per page load, reusing the same
-      // guard so a reconnect can't double-count — so we can measure how much of
-      // the agent-harness audience the conservative loopback gate excludes.
-      this.skillsNudgeShown = true
+      // The nudge was eligible server-side but the server withheld it — because
+      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel),
+      // because a one-click install would only conflict, or because the
+      // eligibility check itself failed. Record the reason once per page load so
+      // suppression is measurable instead of silent, and so a reconnect can't
+      // double-count it. Also skipped once the nudge HAS been shown, since the
+      // funnel treats shown and suppressed as mutually exclusive per session.
+      this.skillsNudgeSuppressionReported = true
       this.trackSkillsNudge(
-        `skillsNudgeSuppressedNonLocal:${initialize.skillsNudgeSuppressedLocality}`
+        skillsNudgeSuppressedLabel(initialize.skillsNudgeSuppressedReason)
       )
     }
   }
@@ -1555,20 +1619,25 @@ export class App extends PureComponent<Props, State> {
         // — no need to also write the permanent "don't show again" flag here,
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
-        this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        this.trackSkillsNudge(
+          skillsNudgeInstallSuccessLabel(result.fallbackReason)
+        )
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
-        // A dropped or timed-out connection during a long install (e.g. the
-        // GitHub global fallback) rejects the request even though the server
-        // install may have completed. Count it separately — not as a failure,
-        // which would over-count the funnel — and surface a reassuring,
-        // retry-friendly message; re-install is idempotent.
+        // A dropped or timed-out connection during a long install rejects the
+        // request even though the server install may have completed. Count it
+        // separately — not as a failure, which would over-count the funnel —
+        // and surface a reassuring, retry-friendly message; re-install is
+        // idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        this.trackSkillsNudge("skillsNudgeInstallFailed")
+        // Append the server's machine-readable reason as a label suffix, and
+        // count a safety-gate refusal under its own event rather than as a
+        // failure. See skillsNudgeInstallFailureLabel.
+        this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error))
         // Re-throw so the toast renders its error state.
         throw error
       })
@@ -1966,10 +2035,21 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
-      clearInterval(value)
+    this.autoRerunIntervals.forEach(({ timer }) => {
+      clearInterval(timer)
     })
-    this.setState({ autoReruns: [] })
+    this.autoRerunIntervals.clear()
+  }
+
+  /**
+   * Clear the auto-rerun interval for a single fragment, if one exists.
+   */
+  private clearAutoRerunInterval(fragmentId: string): void {
+    const existing = this.autoRerunIntervals.get(fragmentId)
+    if (existing !== undefined) {
+      clearInterval(existing.timer)
+      this.autoRerunIntervals.delete(fragmentId)
+    }
   }
 
   /**
@@ -2217,7 +2297,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Asks the server to clear the st_cache and st_cache_data and st_cache_resource
+   * Asks the server to clear st.cache_data and st.cache_resource caches.
    */
   clearCache = (): void => {
     this.closeDialog()
@@ -2620,6 +2700,7 @@ export class App extends PureComponent<Props, State> {
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
         showErrorLinks={this.state.showErrorLinks}
+        disableDataExport={this.state.disableDataExport}
         backendOperationClient={this.backendOperationClient}
       >
         <Hotkeys

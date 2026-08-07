@@ -23,14 +23,11 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
@@ -75,7 +72,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_hash
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash, create_fast_hasher
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -116,65 +113,170 @@ DataTypes: TypeAlias = Union[
 ]
 
 
-class EditingState(TypedDict, total=False):
-    """
-    A dictionary representing the current state of the data editor.
+class DataEditorState(ReadOnlyAttributeDictionary):
+    """The schema for the data editor state.
+
+    The state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Top-level assignment and
+    nested dict mutation raise ``TypeError``. List fields (``added_rows``,
+    ``deleted_rows``) are ordinary lists and are not frozen. Data editor
+    states cannot be programmatically changed or set through Session State.
 
     Attributes
     ----------
-    edited_rows : Dict[int, Dict[str, str | int | float | bool | None]]
-        An hierarchical mapping of edited cells based on:
-        row position -> column name -> value.
+    edited_rows : dict[int, dict[str, str | int | float | bool | list[str] | None]]
+        A hierarchical mapping of edited cells based on row position ->
+        column name -> value. Row positions refer to the original source
+        dataframe before pending edits are applied.
 
-    added_rows : List[Dict[str, str | int | float | bool | None]]
+    added_rows : list[dict[str, str | int | float | bool | list[str] | None]]
         A list of added rows, where each row is a mapping from column name to
         the cell value.
 
-    deleted_rows : List[int]
-        A list of deleted rows, where each row is the numerical position of
-        the deleted row.
+    deleted_rows : list[int]
+        A list of deleted rows, where each entry is the numerical position of
+        the deleted row in the original source dataframe.
     """
 
-    edited_rows: Required[dict[int, dict[str, str | int | float | bool | None]]]
-    added_rows: Required[list[dict[str, str | int | float | bool | None]]]
-    deleted_rows: Required[list[int]]
+    edited_rows: dict[int, dict[str, str | int | float | bool | list[str] | None]]
+    added_rows: list[dict[str, str | int | float | bool | list[str] | None]]
+    deleted_rows: list[int]
+
+    @overload
+    def __getitem__(
+        self, key: Literal["edited_rows"]
+    ) -> dict[int, dict[str, str | int | float | bool | list[str] | None]]: ...
+
+    @overload
+    def __getitem__(
+        self, key: Literal["added_rows"]
+    ) -> list[dict[str, str | int | float | bool | list[str] | None]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["deleted_rows"]) -> list[int]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
 @dataclass
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: str | None) -> EditingState:
-        data_editor_state: EditingState = cast(
-            "EditingState",
+    def deserialize(self, ui_value: str | None) -> DataEditorState:
+        # Keep the payload as a plain dict until the end so missing-key and
+        # row-key mutations below can still run before we wrap.
+        data_editor_state: dict[str, Any] = (
             {
                 "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
             if ui_value is None
-            else json.loads(ui_value),
+            else json.loads(ui_value)
         )
 
-        # Make sure that all editing state keys are present:
-        if "edited_rows" not in data_editor_state:
-            data_editor_state["edited_rows"] = {}  # type: ignore[unreachable]
-
-        if "deleted_rows" not in data_editor_state:
-            data_editor_state["deleted_rows"] = []  # type: ignore[unreachable]
-
-        if "added_rows" not in data_editor_state:
-            data_editor_state["added_rows"] = []  # type: ignore[unreachable]
+        data_editor_state.setdefault("edited_rows", {})
+        data_editor_state.setdefault("added_rows", [])
+        data_editor_state.setdefault("deleted_rows", [])
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
             int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
-        return data_editor_state
+        return DataEditorState(data_editor_state)
 
-    def serialize(self, editing_state: EditingState) -> str:
+    def serialize(self, editing_state: DataEditorState) -> str:
         return json.dumps(editing_state, default=str)
+
+
+def _compute_data_editor_signature(
+    data_df: pd.DataFrame,
+    data_format: dataframe_util.DataFormat,
+    arrow_schema: pa.Schema,
+    dataframe_schema: DataframeSchema,
+    disabled: bool | Iterable[str | int],
+    include_row_count: bool,
+    disabled_columns: Iterable[str | int] = (),
+) -> str:
+    """Compute a stable signature over the data's structure (schema), used as a
+    keyed fixed-rows editor's identity so value-only changes don't reset edits.
+    """
+    import pandas as pd
+
+    h = create_fast_hasher()
+
+    def add_to_signature(label: str, value: object) -> None:
+        # Prefix with the label and terminate with a NUL byte so distinct
+        # (label, value) pairs can never hash to the same bytes.
+        h.update(f"{label}:".encode())
+        h.update(repr(value).encode("utf-8"))
+        h.update(b"\0")
+
+    add_to_signature("format", data_format.name)
+    add_to_signature("columns", tuple(data_df.columns))
+    add_to_signature("index_type", type(data_df.index).__name__)
+    # Encode each index name as a (is_none, name) pair so an unnamed index
+    # (None) can never collide with an index whose name is a sentinel string.
+    add_to_signature(
+        "index_names",
+        tuple((name is None, name) for name in data_df.index.names),
+    )
+
+    if not isinstance(data_df.index, pd.RangeIndex) or (
+        data_df.index.start != 0
+        or data_df.index.stop != len(data_df.index)
+        or data_df.index.step != 1
+    ):
+        h.update(b"index_values:")
+        try:
+            h.update(
+                pd.util.hash_pandas_object(data_df.index, index=False)
+                .to_numpy()
+                .tobytes()
+            )
+        except TypeError:
+            h.update(str(data_df.index.tolist()).encode("utf-8"))
+        h.update(b"\0")
+
+    for field in arrow_schema:
+        add_to_signature(
+            "field",
+            (
+                field.name,
+                str(field.type),
+                field.nullable,
+            ),
+        )
+
+    for column_name, data_kind in sorted(dataframe_schema.items()):
+        add_to_signature("kind", (column_name, data_kind.value))
+
+    if include_row_count:
+        add_to_signature("rows", len(data_df))
+
+    if disabled is True:
+        add_to_signature("disabled", "all")
+    elif disabled is False:
+        add_to_signature("disabled", "none")
+    else:
+        # An empty iterable means "nothing is disabled", which is semantically
+        # the same as disabled=False, so normalize it to the same signature to
+        # avoid needless widget resets when toggling between the two.
+        disabled_names = tuple(sorted(disabled, key=repr))
+        add_to_signature("disabled", disabled_names or "none")
+
+    # Per-column disabled state (from column_config or auto-disabled incompatible
+    # columns) affects which edits are valid: disabling a column must reset
+    # pending edits so the backend does not keep applying an edit for a now
+    # read-only column that the frontend no longer paints.
+    add_to_signature("disabled_columns", tuple(sorted(disabled_columns, key=repr)))
+
+    return h.hexdigest()
 
 
 def _parse_value(
@@ -408,10 +510,15 @@ def _apply_row_additions(
             # Add row using the user-provided index value.
             # This handles any type of index that cannot be auto incremented.
 
-            # Note: this just overwrites the row in case the index value
-            # already exists. In the future, it would be better to
-            # require users to provide unique non-None values for the index with
-            # some kind of visual indications.
+            # Widget state is client-controlled, so reject duplicate index values
+            # instead of letting an "added" row overwrite an existing row.
+            if index_value in df.index:
+                _LOGGER.warning(
+                    "Cannot add row because its index value already exists. "
+                    "Row addition skipped."
+                )
+                continue
+
             _assign_row_values(df, index_value, new_row)
             continue
 
@@ -448,7 +555,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
 
 def _apply_dataframe_edits(
     df: pd.DataFrame,
-    data_editor_state: EditingState,
+    data_editor_state: DataEditorState,
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply edits to the provided dataframe (inplace).
@@ -460,7 +567,7 @@ def _apply_dataframe_edits(
     df : pd.DataFrame
         The dataframe to apply the edits to.
 
-    data_editor_state : EditingState
+    data_editor_state : DataEditorState
         The editing state of the data editor component.
 
     dataframe_schema: DataframeSchema
@@ -840,10 +947,10 @@ class DataEditorMixin:
             the first index column.
 
         key : str, int, or None
-            An optional string to use as the unique key for this widget.
-            If this is ``None`` (default), a key will be generated for
-            the widget based on the values of the other parameters. No
-            two widgets may have the same key.
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
             A key lets you access the widget's value via
             ``st.session_state[key]`` (read-only). For more details, see
@@ -852,6 +959,16 @@ class DataEditorMixin:
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
+
+            .. note::
+                Assigning a key stabilizes the widget's identity and preserves
+                edits across reruns when the data's *values* change. This
+                applies only with ``num_rows="fixed"`` and only while the data's
+                structure stays the same; edits reset when the columns, column
+                types, row count, or index labels change. Edits are matched by
+                row position, so use a meaningful index if edits should follow
+                specific rows when the data is reordered. Omit ``key`` to reset
+                all edits whenever the data changes.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
@@ -1089,6 +1206,7 @@ class DataEditorMixin:
         # If disabled not a boolean, we assume it is a list of columns to disable.
         # This gets translated into the columns configuration:
         if not isinstance(disabled, bool):
+            disabled = list(disabled)
             for column in disabled:
                 update_column_config(column_config_mapping, column, {"disabled": True})
 
@@ -1112,10 +1230,37 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
+        # For keyed editors with a fixed number of rows, we base the widget
+        # identity on the data schema (via a stable signature) instead of the
+        # full data. This keeps edits alive across pure value changes.
+        use_signature_identity = key is not None and num_rows == "fixed"
+        signature_kwargs: dict[str, str] = {}
+        key_as_main_identity: bool | set[str] = False
+        if use_signature_identity:
+            key_as_main_identity = {"data_signature", "num_rows"}
+            # Columns disabled via `column_config` (or auto-disabled for
+            # arrow-incompatible types) are not part of the top-level `disabled`
+            # argument, so we derive them from the resolved column config to
+            # keep them part of the widget identity.
+            disabled_columns = [
+                column
+                for column, config in column_config_mapping.items()
+                if config.get("disabled") is True
+            ]
+            signature_kwargs["data_signature"] = _compute_data_editor_signature(
+                data_df=data_df,
+                data_format=data_format,
+                arrow_schema=arrow_table.schema,
+                dataframe_schema=dataframe_schema,
+                disabled=disabled,
+                disabled_columns=disabled_columns,
+                include_row_count=True,
+            )
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            key_as_main_identity=False,
+            key_as_main_identity=key_as_main_identity,
             dg=self.dg,
             data=arrow_bytes,
             width=width,
@@ -1126,6 +1271,7 @@ class DataEditorMixin:
             num_rows=num_rows,
             row_height=row_height,
             placeholder=placeholder,
+            **signature_kwargs,
         )
 
         proto = DataframeProto()
@@ -1201,6 +1347,9 @@ class DataEditorMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            # `disabled` may be a list of column names for partial disabling;
+            # only enforce server-side when the entire editor is disabled.
+            disabled=disabled is True,
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)

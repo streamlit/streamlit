@@ -40,6 +40,7 @@ def get_streaming_response(prompt):
     for chunk in your_llm_client.stream(prompt):
         yield chunk
 
+
 with st.chat_message("assistant"):
     response = st.write_stream(get_streaming_response(prompt))
 
@@ -103,7 +104,9 @@ SUGGESTIONS = {
 
 # Only show before first message - they disappear after
 if not st.session_state.messages:
-    selected = st.pills("Try asking:", list(SUGGESTIONS.keys()), label_visibility="collapsed")
+    selected = st.pills(
+        "Try asking:", list(SUGGESTIONS.keys()), label_visibility="collapsed"
+    )
     if selected:
         # Use the selection as the first prompt
         prompt = SUGGESTIONS[selected]

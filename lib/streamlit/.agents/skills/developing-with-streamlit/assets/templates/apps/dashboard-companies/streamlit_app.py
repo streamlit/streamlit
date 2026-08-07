@@ -28,6 +28,7 @@ your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
 """
 
 from datetime import date, timedelta
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -295,11 +296,14 @@ with st.container(border=True):
     days_filter = timeframe_options.get(timeframe or "Last 28 days")
 
     # Account types
-    account_types = st.pills(
-        "Account types",
-        options=ACCOUNT_TYPES,
-        default=["Enterprise", "Growth", "Startup"],
-        selection_mode="multi",
+    account_types = cast(
+        "list[str]",
+        st.pills(
+            "Account types",
+            options=ACCOUNT_TYPES,
+            default=["Enterprise", "Growth", "Startup"],
+            selection_mode="multi",
+        ),
     )
 
 # Determine sort order
@@ -397,8 +401,8 @@ with st.container(border=True):
     )
 
 # Company drill-down via dialog when Company column cell is clicked
-if selection.selection.cells:  # type: ignore[attr-defined]
-    cell = selection.selection.cells[0]  # type: ignore[attr-defined]  # tuple: (row_index, column_name)
+if selection.selection.cells:
+    cell = selection.selection.cells[0]  # tuple: (row_index, column_name)
     row_idx, col_name = cell
     # Check if the clicked cell is in the company_name column
     if col_name == "company_name":

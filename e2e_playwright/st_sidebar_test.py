@@ -20,6 +20,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 
 def create_sidebar_collapsed_checker(sidebar: Locator) -> Callable[[], bool]:
@@ -113,7 +114,7 @@ def test_sidebar_chart_and_toolbar(app: Page):
 
     chart.scroll_into_view_if_needed()
 
-    graphics_doc = chart.locator("[role='graphics-document']")
+    graphics_doc = get_vega_graphics_document(chart)
     expect(graphics_doc).to_be_visible()
 
     bbox = graphics_doc.bounding_box()

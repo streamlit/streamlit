@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+import struct
+
 import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 BASELINE_CHARTS = 9
 REGRESSION_CHART_INDEX = 9
@@ -31,15 +35,11 @@ def test_altair_chart_displays_correctly(
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
 
-    # Compound charts (e.g. layered charts within concatenations) may render
-    # multiple graphics documents by design. Verify each baseline chart still
-    # renders exactly one visible graphics document before snapshotting.
+    # Each chart container carries the Vega "graphics-document" ARIA role once
+    # it has rendered. Verify every baseline chart is a visible graphics
+    # document before snapshotting.
     for idx in range(BASELINE_CHARTS):
-        chart = charts.nth(idx)
-        chart_displays = chart.locator("[role='graphics-document']")
-        expect(chart_displays).to_have_count(1)
-        vega_display = chart_displays.first
-        expect(vega_display).to_be_visible()
+        expect(get_vega_graphics_document(charts.nth(idx))).to_be_visible()
 
     assert_snapshot(charts.nth(0), name="st_altair_chart-pie_chart_large_legend_items")
     assert_snapshot(charts.nth(1), name="st_altair_chart-scatter_chart_default_theme")
@@ -69,7 +69,7 @@ def test_layered_vconcat_fit_x_regression_renders(app: Page):
 
     regression_chart = charts.nth(REGRESSION_CHART_INDEX)
     expect(regression_chart).to_be_visible()
-    expect(regression_chart.locator("[role='graphics-document']")).to_have_count(1)
+    expect(get_vega_graphics_document(regression_chart)).to_have_count(1)
 
     # Issue #13974 regression signal: hidden SVG with width=0.
     rendered_chart = regression_chart.locator("canvas, svg").first
@@ -83,10 +83,11 @@ def test_vconcat_layered_facet_regression_renders(app: Page):
 
     regression_chart = charts.nth(ISSUE_14050_CHART_INDEX)
     expect(regression_chart).to_be_visible()
+    expect(get_vega_graphics_document(regression_chart)).to_have_count(1)
 
     # This issue rendered an empty chart with repeated "Infinite extent" console errors.
-    # Assert at least one rendered graphics document exists.
-    expect(regression_chart.locator("[role='graphics-document']").first).to_be_visible()
+    # Assert the chart graphic is actually rendered.
+    expect(regression_chart.locator("canvas, svg").first).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):
@@ -108,23 +109,75 @@ def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction)
     wait_for_react_stability(app)
     pie_chart.scroll_into_view_if_needed()
     wait_for_react_stability(app)
-    pie_chart.locator("[role='graphics-document']").hover(
-        position={"x": 60, "y": 60}, force=True
-    )
+    get_vega_graphics_document(pie_chart).hover(position={"x": 60, "y": 60}, force=True)
     tooltip = app.locator("#vg-tooltip-element")
     expect(tooltip).to_be_visible()
 
     assert_snapshot(tooltip, name="st_altair_chart-tooltip_styling")
 
 
-def test_chart_menu_styling(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Check that the chart menu styling is correct."""
-    chart = themed_app.get_by_test_id("stVegaLiteChart").first
+@pytest.mark.only_browser("chromium")
+def test_download_chart_as_png(app: Page):
+    """The 'Download as PNG' toolbar action triggers a PNG download.
+
+    This replaces the built-in vega-embed actions menu, whose action links are
+    disabled so that a chart spec cannot use them to open same-origin pages with
+    serialized spec contents.
+    """
+    chart = app.get_by_test_id("stFullScreenFrame").first
     expect(chart).to_be_visible()
-    chart.locator("summary").click()
-    chart_menu = chart.locator(".vega-actions")
-    expect(chart_menu).to_be_visible()
-    assert_snapshot(chart_menu, name="st_altair_chart-menu_styling")
+    chart.hover(force=True)
+
+    toolbar = chart.get_by_test_id("stElementToolbar")
+    expect(toolbar).to_be_visible()
+    download_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Download as PNG"
+    )
+    expect(download_button).to_be_visible()
+
+    # The built-in vega-embed actions menu must not be rendered at all: no
+    # menu button (summary) and no actions container (.vega-actions), which
+    # is where the action links would otherwise live.
+    expect(chart.locator("summary")).to_have_count(0)
+    expect(chart.locator(".vega-actions")).to_have_count(0)
+
+    with app.expect_download() as download_info:
+        download_button.click()
+
+    download = download_info.value
+    assert download.suggested_filename.endswith("_chart.png")
+
+    # Assert the exported PNG's dimensions correspond to ~2x the on-screen
+    # chart size so a regression in `toImageURL`'s scaleFactor semantics can't
+    # slip through. Playwright's headless Chromium reports
+    # `devicePixelRatio == 1`, so the `Math.max(2, dpr || 1)` floor in
+    # `useVegaEmbed` deterministically applies a 2x scale here.
+    graphics_doc = get_vega_graphics_document(chart)
+    expect(graphics_doc).to_be_visible()
+    gd_bbox = graphics_doc.bounding_box()
+    assert gd_bbox is not None
+    png_bytes = pathlib.Path(download.path()).read_bytes()
+    assert png_bytes[:8] == b"\x89PNG\r\n\x1a\n", "downloaded file is not a PNG"
+    # PNG IHDR: 8-byte signature + 4-byte length + 4-byte type ("IHDR"), then
+    # width (u32 big-endian) and height (u32 big-endian) at bytes 16..24.
+    png_width, png_height = struct.unpack(">II", png_bytes[16:24])
+    # Vega's `toImageURL` scales the view's width/height by scaleFactor; on-
+    # screen the same view is laid out inside the graphics-document. A tight
+    # tolerance handles Vega's internal padding differing by a few pixels from
+    # the CSS bounding box. A 1x export would fall far outside this window.
+    tolerance = 8
+    expected_width = round(gd_bbox["width"] * 2)
+    expected_height = round(gd_bbox["height"] * 2)
+    assert abs(png_width - expected_width) <= tolerance, (
+        f"PNG width {png_width} is not ~2x graphics-document width "
+        f"{gd_bbox['width']:.1f} (expected ~{expected_width}, tolerance "
+        f"{tolerance})"
+    )
+    assert abs(png_height - expected_height) <= tolerance, (
+        f"PNG height {png_height} is not ~2x graphics-document height "
+        f"{gd_bbox['height']:.1f} (expected ~{expected_height}, tolerance "
+        f"{tolerance})"
+    )
 
 
 def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction):
@@ -137,7 +190,10 @@ def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction
     toolbar = chart.get_by_test_id("stElementToolbar")
     expect(toolbar).to_be_visible()
     toolbar_buttons = toolbar.get_by_test_id("stElementToolbarButton")
-    expect(toolbar_buttons).to_have_count(2)
+    # Show Data + Download as PNG + Copy Vega-Lite spec (localhost) + Fullscreen.
+    expect(toolbar_buttons).to_have_count(4)
+    expect(toolbar_buttons.get_by_label("Download as PNG")).to_be_visible()
+    expect(toolbar_buttons.get_by_label("Copy Vega-Lite spec")).to_be_visible()
 
     expect(toolbar_buttons.get_by_label("Show Data")).to_be_visible()
     toolbar_buttons.get_by_label("Show Data").click()

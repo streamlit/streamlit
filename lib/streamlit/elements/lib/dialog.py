@@ -147,15 +147,14 @@ class Dialog(DeltaGenerator):
                 value_type="trigger_value",
             )
 
-        # We store the delta path here, because in _update we enqueue a new proto
-        # message to update the open status. Without this, the dialog content is gone
-        # when the _update message is sent
-        delta_path: list[int] = (
-            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
-        )
         dialog = cast("Dialog", parent._block(block_proto=block_proto, dg_type=Dialog))
 
-        dialog._delta_path = delta_path
+        # `_update` re-sends the block proto at this path. Use the path `_block()` wrote
+        # to, not the parent cursor, so the update targets the block even if a wrapper
+        # sits between them. Dialogs land top level in the event container, which never
+        # gets a wrapper, so this is a no-op today and stays correct if that changes.
+        # Same idiom as StatusContainer. See issue #16281.
+        dialog._delta_path = dialog._block_delta_path
         dialog._current_proto = block_proto
 
         return dialog
@@ -198,7 +197,7 @@ class Dialog(DeltaGenerator):
     def close(self) -> None:
         self._update(False)
 
-    def __enter__(self) -> Self:  # type: ignore[override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
@@ -207,8 +206,8 @@ class Dialog(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> Literal[False]:
-        return super().__exit__(exc_type, exc_val, exc_tb)
+        return super().__exit__(typ, exc, tb)

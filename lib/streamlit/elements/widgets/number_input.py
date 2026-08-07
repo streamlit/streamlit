@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
@@ -87,7 +88,11 @@ class NumberInputSerde:
             # a no-op for frontend values since the UI enforces bounds.
             # Returning the default triggers _seed_widget_from_url's
             # "deserialized == default" check, which clears the URL param.
-            if val < self.min_value or val > self.max_value:
+            if (
+                (self.data_type == NumberInputProto.FLOAT and not math.isfinite(val))
+                or val < self.min_value
+                or val > self.max_value
+            ):
                 return self.value
 
         return val
@@ -615,6 +620,12 @@ class NumberInputMixin:
         if max_value is not None and value is not None and max_value < value:
             raise StreamlitValueAboveMaxError(value=value, max_value=max_value)
 
+        # Record whether the user explicitly provided bounds before we backfill
+        # unset bounds with JS safe-number sentinels below. The frontend uses
+        # these flags to decide which range-validation message to show.
+        has_user_min = min_value is not None
+        has_user_max = max_value is not None
+
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
         try:
@@ -671,13 +682,17 @@ class NumberInputMixin:
         if help is not None:
             number_input_proto.help = dedent(help)
 
+        # min_value/max_value are guaranteed to be non-None here (unset bounds
+        # were backfilled with JS sentinels above). We always send them as the
+        # input's min/max attributes, but has_min/has_max only reflect bounds
+        # the user actually set.
         if min_value is not None:
             number_input_proto.min = min_value
-            number_input_proto.has_min = True
+            number_input_proto.has_min = has_user_min
 
         if max_value is not None:
             number_input_proto.max = max_value
-            number_input_proto.has_max = True
+            number_input_proto.has_max = has_user_max
 
         if step is not None:
             number_input_proto.step = step
@@ -692,13 +707,12 @@ class NumberInputMixin:
             number_input_proto.query_param_key = str(key)
 
         # min_value and max_value are guaranteed to be Number (not None) after
-        # the JSNumber defaults above. The casts are needed for ty (which doesn't
-        # narrow the type), but mypy sees them as redundant.
+        # the JSNumber defaults above.
         serde = NumberInputSerde(
             value,
             data_type,
-            cast("Number", min_value),  # type: ignore[redundant-cast]
-            cast("Number", max_value),  # type: ignore[redundant-cast]
+            min_value,
+            max_value,
         )
         widget_state = register_widget(
             number_input_proto.id,
@@ -709,6 +723,7 @@ class NumberInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Clearable when value=None: the widget can be in an empty state,

@@ -58,4 +58,8 @@ message Metric {
 
   // Optional description text to display next to the delta value.
   string delta_description = 12;
+
+  // Optional icon displayed inline before the label. Accepts a single-character
+  // emoji, a Material icon shortcode (":material/icon_name:"), or "spinner".
+  string icon = 13;
 }

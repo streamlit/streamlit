@@ -27,7 +27,9 @@ import {
   useCallback,
   useContext,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -65,6 +67,7 @@ import {
 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import {
   StyledHeadingActionElements,
@@ -94,7 +97,9 @@ const StreamlitSyntaxHighlighter = lazy(
 )
 
 const MermaidChart = lazy(() =>
-  import("./MermaidChart").then(module => ({ default: module.MermaidChart }))
+  import("./MermaidChart").then(module => ({
+    default: module.MermaidChart,
+  }))
 )
 
 /**
@@ -263,15 +268,6 @@ export function createAnchorFromText(text: string | null): string {
   return xxhash.h32(text, 0xabcd).toString(16)
 }
 
-// Dangerous URL schemes that can execute arbitrary code when clicked
-const DANGEROUS_URL_SCHEMES = ["javascript:", "vbscript:"]
-
-// C0 control characters (U+0000-U+001F) that browsers silently strip from URLs
-// per the WHATWG URL spec. These must be removed before checking schemes to
-// prevent bypass attacks like "\x01javascript:alert(1)".
-// eslint-disable-next-line no-control-regex
-const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
-
 /**
  * Transforms link URIs for markdown rendering.
  *
@@ -280,28 +276,12 @@ const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
  * custom schemes that Streamlit users rely on (e.g., inline images, PDFs).
  * Only explicitly dangerous schemes (javascript:, vbscript:) are blocked.
  *
- * Note: data:text/html URLs can execute JavaScript but run in a sandboxed
- * null-origin context, making them less dangerous than javascript: URLs.
- *
- * Blocked URLs return "#" instead of "" to prevent navigation. An empty href
- * combined with target="_blank" would open the current page in a new tab.
+ * Blocked URLs return "#" (BLOCKED_LINK_URI) instead of "" to prevent
+ * navigation. An empty href combined with target="_blank" would open the
+ * current page in a new tab.
  */
 function transformLinkUri(href: string): string {
-  // Strip C0 control characters and whitespace, then lowercase for comparison.
-  // Browsers strip C0 chars per WHATWG URL spec, so we must normalize first
-  // to prevent bypass attacks like "\x01javascript:alert(1)".
-  const normalizedHref = href
-    .replace(C0_CONTROL_CHARS_REGEX, "")
-    .toLowerCase()
-    .trim()
-  if (
-    DANGEROUS_URL_SCHEMES.some(scheme => normalizedHref.startsWith(scheme))
-  ) {
-    // Return "#" instead of "" to prevent navigation. Empty href with
-    // target="_blank" would open the current page in a new tab.
-    return "#"
-  }
-  return href
+  return isDangerousLinkUri(href) ? BLOCKED_LINK_URI : href
 }
 
 // wrapping in `once` ensures we only scroll once
@@ -362,13 +342,16 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   const [elementId, setElementId] = useState(propsAnchor)
+  const nodeRef = useRef<HTMLElement | null>(null)
 
-  const ref = useCallback(
-    (node: HTMLElement | null) => {
-      if (node === null) {
-        return
-      }
-
+  /**
+   * Set the heading id from `propsAnchor` or the node's textContent, then scroll
+   * the node into view if that id matches the current URL hash. Shared by the
+   * mount-time ref callback and the rerun effect below so the two paths cannot
+   * drift apart.
+   */
+  const applyAnchor = useCallback(
+    (node: HTMLElement): void => {
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
@@ -378,6 +361,33 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     },
     [propsAnchor]
   )
+
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      nodeRef.current = node
+      if (node === null) {
+        return
+      }
+      applyAnchor(node)
+    },
+    [applyAnchor]
+  )
+
+  // Re-derive the anchor when heading text changes across reruns. The ref
+  // callback only fires on mount or when propsAnchor changes; when only the text
+  // content changes, React reuses the DOM node and the callback never re-fires.
+  // Skipped when propsAnchor is set, since an explicit anchor never depends on
+  // the text.
+  //
+  // useLayoutEffect (not useEffect) so the re-derived id is committed before
+  // paint; otherwise a frame can render with the previous hash link.
+  useLayoutEffect(() => {
+    const node = nodeRef.current
+    if (!node || propsAnchor) {
+      return
+    }
+    applyAnchor(node)
+  }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
   const actionElements = (

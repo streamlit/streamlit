@@ -32,6 +32,19 @@ import os
 import string
 
 
+def is_windows_unc_path(path: str) -> bool:
+    r"""Return True if ``path`` is a Windows UNC or device namespace path.
+
+    This is a lexical check that normalizes forward slashes to backslashes
+    first, so any two leading separators are recognized as UNC -- including the
+    mixed spellings (``\\``, ``//``, ``/\``, ``\/``) that Windows path
+    resolution treats as a UNC root. It must be called before filesystem
+    operations such as ``Path.resolve()`` or ``Path.is_file()`` on Windows
+    because those operations can initiate an SMB connection.
+    """
+    return path.replace("/", "\\").startswith("\\\\")
+
+
 def is_unsafe_path_pattern(path: str) -> bool:
     r"""Return True if path contains UNC, absolute, drive, or traversal patterns.
 
@@ -72,7 +85,7 @@ def is_unsafe_path_pattern(path: str) -> bool:
         return True
 
     # UNC paths (Windows network shares, including \\?\ and \\.\ prefixes)
-    if path.startswith(("\\\\", "//")):
+    if is_windows_unc_path(path):
         return True
 
     # Windows drive paths (e.g. C:\, D:foo) - on Windows, os.path.realpath() on a

@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -168,16 +162,22 @@ describe("st.tabs", () => {
   })
 
   it("renders all tab panels in the DOM but only shows the active one", () => {
-    const { container } = render(<Tabs {...getProps()} />)
+    render(<Tabs {...getProps()} />)
 
-    // The active tab panel is accessible with full ARIA attributes
+    // The active tab panel is accessible and interactive (not inert).
     const activePanel = screen.getByRole("tabpanel")
     expect(activePanel).not.toHaveAttribute("inert")
 
-    // RAC force-mounts inactive panels with `inert` to keep them in the DOM
-    // (preserves scroll state) while blocking interaction and AT access
-    const inertPanels = container.querySelectorAll("[inert]")
-    expect(inertPanels).toHaveLength(4)
+    // All panels stay mounted, but visibility is driven by our own active-tab
+    // state (display:none on inactive panels) rather than RAC's `inert`, which
+    // is unreliable across reruns (#15892, #15893).
+    const panels = screen.getAllByTestId("stTabPanel")
+    expect(panels).toHaveLength(5)
+    expect(panels[0]).toBeVisible()
+
+    panels.slice(1).forEach(panel => {
+      expect(panel).not.toBeVisible()
+    })
   })
 
   it("does not show scroll arrows when tabs don't overflow", () => {
@@ -187,6 +187,30 @@ describe("st.tabs", () => {
     // (JSDOM doesn't implement actual scrolling, so overflow won't be detected)
     expect(screen.queryByTestId("stTabsScrollLeft")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
+  })
+
+  describe("height configuration", () => {
+    it("applies a pixel height when a number is passed", () => {
+      render(<Tabs {...getProps({ height: "300px" })} />)
+
+      const container = screen.getByTestId("stTabs")
+      expect(container).toHaveStyle({ height: "300px" })
+    })
+
+    it("applies a stretch height when '100%' is passed", () => {
+      render(<Tabs {...getProps({ height: "100%" })} />)
+
+      const container = screen.getByTestId("stTabs")
+      expect(container).toHaveStyle({ height: "100%" })
+    })
+
+    it("does not apply a height when height is omitted", () => {
+      render(<Tabs {...getProps()} />)
+
+      const container = screen.getByTestId("stTabs")
+      // No inline height should be set when height is not configured.
+      expect(container.style.height).toBe("")
+    })
   })
 
   describe("CSS key class", () => {
@@ -418,7 +442,9 @@ describe("st.tabs", () => {
         scrollWidth: 800,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollRight")).toBeVisible()
@@ -434,7 +460,9 @@ describe("st.tabs", () => {
         scrollWidth: 700,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()
@@ -452,7 +480,9 @@ describe("st.tabs", () => {
         scrollWidth: 900,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()

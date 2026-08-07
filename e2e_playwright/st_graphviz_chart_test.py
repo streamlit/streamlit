@@ -66,7 +66,7 @@ def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(14)
+    ).to_have_count(15)
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -262,3 +262,29 @@ def test_width_height_combined(app: Page, assert_snapshot: ImageCompareFunction)
         combined_chart.locator("svg"),
         name="st_graphviz_chart_width_height_combined",
     )
+
+
+def test_sanitizes_dangerous_link_urls(app: Page):
+    """Test that dangerous javascript: link URLs are neutralized to '#'.
+
+    This relies on real-browser URL normalization that jsdom cannot fully
+    replicate, so it complements the frontend unit tests.
+    """
+    malicious_chart = app.get_by_test_id("stGraphVizChart").nth(14)
+    link = malicious_chart.locator("a").first
+    expect(link).to_be_attached()
+
+    def link_is_sanitized() -> bool:
+        # Graphviz may emit the link target as "href" and/or "xlink:href"
+        # depending on version; all present values must be neutralized to "#".
+        values = [
+            value
+            for value in (
+                link.get_attribute("href"),
+                link.get_attribute("xlink:href"),
+            )
+            if value is not None
+        ]
+        return len(values) > 0 and all(value == "#" for value in values)
+
+    wait_until(app, link_is_sanitized)

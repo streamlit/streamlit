@@ -18,7 +18,7 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Container, Iterator
 from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
@@ -37,6 +37,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
@@ -130,12 +131,13 @@ class FragmentStorage(Protocol):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
+    ) -> list[str]:
         """Remove stored fragments that are strict descendants of ``root_fragment_id``
         but were not re-registered during the latest run of that root.
 
         Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
-        removed ``run_every`` child) do not keep stale closures in storage.
+        removed ``run_every`` child) do not keep stale closures in storage. Returns
+        the list of removed fragment IDs.
         """
         raise NotImplementedError
 
@@ -152,6 +154,11 @@ class FragmentStorage(Protocol):
     @abstractmethod
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Return a stable ordering that keeps queued ancestors before descendants."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``."""
         raise NotImplementedError
 
     @abstractmethod
@@ -293,8 +300,12 @@ class MemoryFragmentStorage(FragmentStorage):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
-        """Drop descendant fragments under ``root_fragment_id`` not seen this run."""
+    ) -> list[str]:
+        """Drop descendant fragments under ``root_fragment_id`` not seen this run.
+
+        Returns the list of fragment IDs that were removed so the caller can, for
+        example, tell the frontend to cancel their auto-rerun timers.
+        """
 
         with self._lock:
             to_remove = [
@@ -306,6 +317,7 @@ class MemoryFragmentStorage(FragmentStorage):
             ]
             for fragment_id in to_remove:
                 self._remove(fragment_id)
+            return to_remove
 
     def registration_sequence(self) -> int:
         with self._lock:
@@ -324,15 +336,6 @@ class MemoryFragmentStorage(FragmentStorage):
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Run queued ancestors before descendants while preserving FIFO otherwise."""
         with self._lock:
-
-            def has_queued_ancestor(
-                fragment_id: str, queued_fragment_ids: set[str]
-            ) -> bool:
-                return any(
-                    ancestor_id in queued_fragment_ids
-                    for ancestor_id in self._iter_ancestor_ids(fragment_id)
-                )
-
             remaining_fragment_ids = list(fragment_ids)
             ordered_fragment_ids = []
 
@@ -340,7 +343,9 @@ class MemoryFragmentStorage(FragmentStorage):
                 queued_fragment_ids = set(remaining_fragment_ids)
 
                 for index, fragment_id in enumerate(remaining_fragment_ids):
-                    if not has_queued_ancestor(fragment_id, queued_fragment_ids):
+                    if not self._has_ancestor_in_unlocked(
+                        fragment_id, queued_fragment_ids
+                    ):
                         ordered_fragment_ids.append(fragment_id)
                         del remaining_fragment_ids[index]
                         break
@@ -350,6 +355,25 @@ class MemoryFragmentStorage(FragmentStorage):
                     break
 
             return ordered_fragment_ids
+
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        with self._lock:
+            return self._has_ancestor_in_unlocked(fragment_id, candidate_ids)
+
+    def _has_ancestor_in_unlocked(
+        self, fragment_id: str, candidate_ids: Container[str]
+    ) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``.
+
+        Callers must hold ``self._lock``; use ``has_ancestor_in`` from outside
+        the lock. Extracted so ``order_fragment_ids`` (which already holds the
+        lock while walking the queue) and ``has_ancestor_in`` can share the
+        same predicate without deadlocking or drifting apart.
+        """
+        return any(
+            ancestor_id in candidate_ids
+            for ancestor_id in self._iter_ancestor_ids(fragment_id)
+        )
 
     def delete(self, key: str) -> None:
         with self._lock:
@@ -496,13 +520,35 @@ def _fragment(
             if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
-            if ctx.fragment_ids_this_run:
-                # This script run is a run of one or more fragments. We restore the
-                # state of ctx.cursors and dg_stack to the snapshots we took when this
-                # fragment was declared.
+            # True only when the ScriptRunner invokes this fragment directly as a
+            # queued top-level rerun. ``fragment_id is None`` distinguishes that
+            # from an inline call via ``wrap`` from an enclosing fragment, which
+            # matters when a parent and its own descendant are both queued: the
+            # descendant's id is still in ``fragment_ids_this_run`` while the
+            # parent runs it inline, so queue membership alone is not enough.
+            is_queued_toplevel_rerun = bool(
+                ctx.fragment_ids_this_run
+                and fragment_id in ctx.fragment_ids_this_run
+                and ThreadState.get().fragment_id is None
+            )
+
+            if is_queued_toplevel_rerun:
+                # Restore ctx.cursors and dg_stack to the snapshots taken when
+                # this fragment was declared. Nested fragments called via ``wrap``
+                # from an already-rerunning parent must keep the parent's
+                # already-advanced cursor state instead; replacing the dg_stack
+                # with deep copies would sever their writes from the enclosing
+                # scope, making sibling nested fragments compute colliding
+                # fragment ids and overwrite each other's deltas (see #12514).
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
+            if ctx.fragment_ids_this_run:
+                # Wrapper bookkeeping runs for every fragment executing during a
+                # fragment rerun, including nested ones reached via ``wrap``:
+                # their outside-container wrappers still need their cursors reset
+                # so writes overwrite in place rather than accumulate.
+                #
                 # Evict wrappers whose outside containers will be rebuilt by this
                 # fragment, then re-emit and reset the surviving wrappers. Order
                 # matters: eviction must happen first so we don't re-emit a wrapper
@@ -535,7 +581,11 @@ def _fragment(
             # is established below, this will be initialized with the fragment's
             # delta path. Without this, we would inherit the delta path from the
             # parent scope.
-            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
+            with ThreadState.scoped(
+                fragment_id=fragment_id,
+                delta_path=None,
+                run_location=RunLocation.FRAGMENT,
+            ):
                 result = None
                 with active_hash_context:
                     container_ctx = (

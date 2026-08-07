@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
@@ -210,7 +211,7 @@ class SliderSerde:
                 # accepted as-is. Consider snapping to the nearest valid step
                 # for consistency with the UI.
                 for v in val:
-                    if v < self.min_value or v > self.max_value:
+                    if not math.isfinite(v) or v < self.min_value or v > self.max_value:
                         val = self.value
                         break
         else:
@@ -993,11 +994,11 @@ class SliderMixin:
         # already known to be in the [min_value, max_value] range.)
         try:
             if all_ints:
-                JSNumber.validate_int_bounds(min_value, "`min_value`")
-                JSNumber.validate_int_bounds(max_value, "`max_value`")
+                JSNumber.validate_int_bounds(cast("int", min_value), "`min_value`")
+                JSNumber.validate_int_bounds(cast("int", max_value), "`max_value`")
             elif all_floats:
-                JSNumber.validate_float_bounds(min_value, "`min_value`")
-                JSNumber.validate_float_bounds(max_value, "`max_value`")
+                JSNumber.validate_float_bounds(cast("float", min_value), "`min_value`")
+                JSNumber.validate_float_bounds(cast("float", max_value), "`max_value`")
             elif all_timelikes:
                 # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
                 pass
@@ -1065,8 +1066,8 @@ class SliderMixin:
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = prepared_value
-        slider_proto.min = min_value
-        slider_proto.max = max_value
+        slider_proto.min = cast("int | float", min_value)
+        slider_proto.max = cast("int | float", max_value)
         slider_proto.step = cast("float", step)
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
@@ -1087,10 +1088,9 @@ class SliderMixin:
             data_type,
             single_value,
             orig_tz,
-            # Proto min/max are always serialized as doubles (dates/times
-            # become microsecond floats), so the cast is safe here.
-            min_value=cast("float", slider_proto.min),  # type: ignore[redundant-cast]
-            max_value=cast("float", slider_proto.max),  # type: ignore[redundant-cast]
+            # Proto min/max are doubles (dates/times become microsecond floats).
+            min_value=slider_proto.min,
+            max_value=slider_proto.max,
         )
 
         widget_state = register_widget(
@@ -1102,6 +1102,7 @@ class SliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Sliders always have a value (no empty/cleared state in the UI),

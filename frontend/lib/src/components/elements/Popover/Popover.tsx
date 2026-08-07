@@ -18,16 +18,20 @@ import {
   memo,
   ReactElement,
   useCallback,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
+import { FloatingPortal, type Middleware, size } from "@floating-ui/react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -35,6 +39,7 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import {
   DynamicIcon,
   isMenuStyleIconLabel,
@@ -42,7 +47,10 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -52,6 +60,38 @@ import {
   StyledPopoverExpansionIcon,
   StyledPopoverLabelContainer,
 } from "./styled-components"
+
+/**
+ * Fit the popover inside the available space without exceeding the design caps,
+ * and stop CSS `min-width` from defeating that.
+ *
+ * `designMaxWidthPx` and `cssMinWidthPx` mirror StyledPopoverBody; see the call
+ * site for how they are derived.
+ */
+export function clampPopoverSize({
+  availableWidth,
+  availableHeight,
+  designMaxWidthPx,
+  cssMinWidthPx,
+}: {
+  availableWidth: number
+  availableHeight: number
+  designMaxWidthPx: number
+  cssMinWidthPx: number
+}): { maxWidth: string; maxHeight: string; minWidth: string } {
+  const maxWidthPx = Math.min(
+    Math.max(Math.floor(availableWidth), 0),
+    designMaxWidthPx
+  )
+  return {
+    maxWidth: `${maxWidthPx}px`,
+    maxHeight: `min(${Math.max(Math.floor(availableHeight), 0)}px, 70vh)`,
+    // CSS prefers min-width over max-width when they conflict, so lower it.
+    // Compared against the capped width, not the raw available space, so a
+    // stretch popover sized between the design cap and the viewport is caught.
+    minWidth: cssMinWidthPx > maxWidthPx ? `${maxWidthPx}px` : "",
+  }
+}
 
 export interface PopoverProps {
   element: BlockProto.Popover
@@ -73,6 +113,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   fragmentId,
 }): ReactElement => {
   const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
 
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
@@ -118,6 +159,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // match it when stretchWidth is true. A ResizeObserver is required because
   // the popover is portalled to document.body (no CSS parent-child sizing).
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
+
+  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
+  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
+  // skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
 
   // Timestamp of the last open action — used by the outside-click handler to
   // ignore clicks that occur in the same tick as opening. In production
@@ -180,14 +227,98 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const popoverBodyRef = useRef<HTMLDivElement>(null)
 
+  // Records whether the most recent interaction (pointerdown, or Enter/Space
+  // keydown) started inside the popover, its trigger, or a Streamlit overlay
+  // root. We capture it in the capture phase because some overlays close
+  // synchronously on selection (e.g. the date picker calendar and the
+  // single-select dropdown), detaching the activated node from the DOM before
+  // the follow-up `click` fires — at which point `e.target` is orphaned and
+  // `closest(...)` can no longer find the overlay. Covers both mouse and
+  // keyboard activation, which can dispatch a `click` with no prior pointerdown.
+  const interactionInsideRef = useRef(false)
+
+  // Keep the popover inside the viewport for narrow embeds (#9340) and
+  // sidebar overflow clipping (#9387). Two middleware adjustments by scope:
+  //
+  // - **Always**: `size` clamps max-height/max-width to available space at the
+  //   chosen placement, and lowers min-width when the CSS min would exceed
+  //   that clamp.
+  //   - Without the height clamp, a tall popover extends off-screen (#9387).
+  //   - Without the width clamp, the ~704px design max-width overflows a
+  //     narrow oEmbed iframe: `shift` pins one edge and the host clips the
+  //     other (#9340).
+  //   - `size` runs after `flip` so it measures against the final side;
+  //     `StyledPopoverBody`'s `overflow: auto` scrolls when clamped.
+  //
+  // - **Sidebar only**: override the shift/flip `boundary` to
+  //   `document.documentElement` so Floating UI uses the viewport, not the
+  //   sidebar's `overflow: auto` rect. Prefer `<html>` over `document.body`
+  //   because `.stApp`'s `position: absolute; inset: 0` leaves body at 0x0 —
+  //   a body boundary would always report overflow. Without this override,
+  //   shift squishes the popover against the sidebar edge.
+  const overlayOptions = useMemo(() => {
+    const base = {
+      open,
+      placement: "bottom-start" as const,
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+    }
+    if (typeof document === "undefined") {
+      return base
+    }
+    const boundary = document.documentElement
+    // Mirrors StyledPopoverBody — keep in sync with styled-components.ts.
+    // Reading these back from the DOM would force a style recomputation on
+    // every position update. `contentMaxWidth` is a px token; `spacing.lg` is
+    // rem — hence parseFloat vs convertRemToPx.
+    const designMaxWidthPx =
+      parseFloat(theme.sizes.contentMaxWidth) -
+      2 * convertRemToPx(theme.spacing.lg)
+    const cssMinWidthPx = stretchWidth
+      ? Math.max(calculatedWidth, convertRemToPx("10rem"))
+      : convertRemToPx(theme.sizes.minPopupWidth)
+    const sizeMiddleware: Middleware = size({
+      padding: SHIFT_VIEWPORT_PADDING,
+      boundary,
+      apply({ availableHeight, availableWidth, elements }) {
+        const { maxWidth, maxHeight, minWidth } = clampPopoverSize({
+          availableWidth,
+          availableHeight,
+          designMaxWidthPx,
+          cssMinWidthPx,
+        })
+        Object.assign(elements.floating.style, {
+          maxWidth,
+          maxHeight,
+          minWidth,
+        })
+      },
+    })
+    if (!isInSidebar) {
+      // Still apply `size` for narrow embeds, but skip the flip/shift boundary
+      // override — defaults already use the viewport for `position: fixed`.
+      return { ...base, extraMiddleware: [sizeMiddleware] }
+    }
+    return {
+      ...base,
+      flipOptions: { boundary },
+      shiftOptions: { padding: SHIFT_VIEWPORT_PADDING, boundary },
+      extraMiddleware: [sizeMiddleware],
+    }
+  }, [
+    open,
+    theme.spacing.twoXS,
+    theme.spacing.lg,
+    theme.sizes.minPopupWidth,
+    theme.sizes.contentMaxWidth,
+    isInSidebar,
+    stretchWidth,
+    calculatedWidth,
+  ])
+
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection
   // system dependency — it renders arbitrary children, not ComboBox items.
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-  })
+  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // Custom dismissal via document-level DOM listeners.
   //
@@ -201,18 +332,45 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   useEffect(() => {
     if (!open) return
 
+    // Reset on (re)open so a stale origin from a previous interaction — e.g. an
+    // inside pointerdown followed by an Escape that never produced a click —
+    // can't cause the next outside click to be misclassified as inside.
+    interactionInsideRef.current = false
+
+    // True when a node belongs to this popover, its trigger, or any Streamlit
+    // overlay surface (BaseWeb dropdowns/calendars, dataframe portals, and —
+    // via `data-st-overlay-root` on the popover body — nested popovers). Clicks
+    // on these must not dismiss the popover, matching the same contract the
+    // modal dialog uses (see Modal's shouldCloseOnInteractOutside).
+    const isInsidePopoverOrOverlay = (target: Node | null): boolean => {
+      if (!target) return false
+      const targetElement =
+        target instanceof Element ? target : target.parentElement
+      return Boolean(
+        triggerRef.current?.contains(target) ||
+        popoverBodyRef.current?.contains(target) ||
+        targetElement?.closest('[data-st-overlay-root="true"]')
+      )
+    }
+
+    const handlePointerDown = (e: PointerEvent): void => {
+      interactionInsideRef.current = isInsidePopoverOrOverlay(e.target as Node)
+    }
+
     const handleClick = (e: MouseEvent): void => {
       // In test environments (JSDOM), act() flushes useEffect synchronously,
       // so this listener can be live during the same click that opened the
       // popover. The timestamp guard prevents that click from closing it.
       if (Date.now() - openedAtRef.current < 50) return
-      const target = e.target as Node
-      if (
-        !triggerRef.current?.contains(target) &&
-        !popoverBodyRef.current?.contains(target)
-      ) {
-        handleClose()
-      }
+      // Skip dismissal if the interaction started inside the popover/an overlay
+      // (interactionInsideRef, captured before any select-and-close detaches the
+      // node) or the click itself lands inside one.
+      const skip =
+        interactionInsideRef.current ||
+        isInsidePopoverOrOverlay(e.target as Node)
+      interactionInsideRef.current = false
+      if (skip) return
+      handleClose()
     }
 
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -233,12 +391,27 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         e.preventDefault()
         handleClose()
         triggerRef.current?.querySelector<HTMLButtonElement>("button")?.focus()
+        return
+      }
+
+      // Enter/Space can activate a close-on-select overlay option and dispatch
+      // a follow-up `click` with no preceding pointerdown. Record the origin now
+      // (capture phase) so that click isn't misread as an outside click once the
+      // overlay has detached the activated option.
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        interactionInsideRef.current = isInsidePopoverOrOverlay(
+          e.target as Node
+        )
       }
     }
 
+    // Capture phase so we record the target before an overlay's own handler
+    // can select-and-close (which detaches the node).
+    document.addEventListener("pointerdown", handlePointerDown, true)
     document.addEventListener("click", handleClick)
     document.addEventListener("keydown", handleKeyDown, true)
     return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true)
       document.removeEventListener("click", handleClick)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
@@ -279,8 +452,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             aria-expanded={open}
             aria-haspopup="dialog"
           >
-            <StyledPopoverLabelContainer $hideChevron={hideChevron}>
-              <DynamicButtonLabel icon={element.icon} label={element.label} />
+            <StyledPopoverLabelContainer
+              $hideChevron={hideChevron}
+              $truncate={!wrap}
+            >
+              <DynamicButtonLabel
+                icon={element.icon}
+                label={element.label}
+                wrap={wrap}
+                addTitleTooltip={addTitleTooltip}
+              />
               {!hideChevron && (
                 <StyledPopoverExpansionIcon aria-hidden="true">
                   <DynamicIcon
@@ -298,10 +479,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         </BaseButtonTooltip>
       </div>
       {open && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledPopoverBody
             ref={setFloatingRef}
             data-testid="stPopoverBody"
+            // Marks the body as an overlay surface so a nested popover (or the
+            // widget overlays inside it) doesn't dismiss an enclosing popover
+            // whose dismissal logic checks this attribute.
+            data-st-overlay-root="true"
             role="dialog"
             aria-label={element.label}
             style={floatingStyles}

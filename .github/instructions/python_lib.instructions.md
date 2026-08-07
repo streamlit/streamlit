@@ -44,6 +44,14 @@ typing errors in parameters or return types by using mypy and `assert_type`.
 - Always include `from __future__ import annotations` at the top.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
   (e.g. `radio_types.py`, `button_types.py`).
+- For dict-like return values backed by `AttributeDictionary` /
+  `ReadOnlyAttributeDictionary` subclasses (e.g. dataframe/chart selection
+  state, `ButtonColumn` click state, `st.data_editor` edit state), assert both
+  attribute and bracket access (e.g. `state.selection.rows` and
+  `state["selection"]["rows"]`, or `edit_state.edited_rows` and
+  `edit_state["edited_rows"]`). Use a separate `TypedDict` (`*Input`) for
+  values users assign (e.g. `selection_default`), not the returned
+  attribute-dictionary class.
 
 ## Docstrings for Public API
 

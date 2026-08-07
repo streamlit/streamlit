@@ -102,7 +102,9 @@ class ParallelFragmentCoordinator:
         poll_interval: float = 0.1,
     ) -> None:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
-        self._outstanding = 0  # tracks in-flight work units (inc on submit, dec on completion)
+        self._outstanding = (
+            0  # tracks in-flight work units (inc on submit, dec on completion)
+        )
         self._outstanding_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._worker_exception: RerunException | StopException | None = None
@@ -219,7 +221,10 @@ def _dispatch_parallel_fragment(
         # Propagate ScriptRunContext to the pool thread (thread-local)
         add_script_run_ctx(threading.current_thread(), ctx)
         _run_parallel_fragment(
-            coordinator, wrapped_fragment, fragment_id, parent_context,
+            coordinator,
+            wrapped_fragment,
+            fragment_id,
+            parent_context,
         )
 
     coordinator.submit(worker)
@@ -281,10 +286,12 @@ def _run_parallel_fragment(
     def run_fragment() -> None:
         # Set per-thread state inside parent_context.run() so it's
         # scoped to this context copy, not the pool thread's default
-        _thread_state.set(FragmentThreadState(
-            fragment_id=fragment_id,
-            is_parallel_worker=True,
-        ))
+        _thread_state.set(
+            FragmentThreadState(
+                fragment_id=fragment_id,
+                is_parallel_worker=True,
+            )
+        )
         try:
             wrapped_fragment()
         except RerunException as e:
@@ -302,7 +309,7 @@ def _run_parallel_fragment(
             coordinator.request_stop()
         except FragmentHandledException:
             pass  # error already rendered in the fragment's container
-                  # by wrapped_fragment() — existing behavior
+            # by wrapped_fragment() — existing behavior
         except Exception as e:
             handle_uncaught_app_exception(e)
 
@@ -721,6 +728,7 @@ their own lock:
 if "lock" not in st.session_state:
     st.session_state["lock"] = threading.Lock()
 
+
 @st.fragment(parallel=True)
 def increment():
     with st.session_state["lock"]:
@@ -848,6 +856,7 @@ making unsynchronized access impossible by construction.
 class SharedRunState:
     """Thread-safe shared state for a script run.
     Single instance shared across main thread and all worker threads."""
+
     def __init__(self):
         self._lock = threading.Lock()
         self._widget_ids: set[str] = set()
@@ -863,6 +872,7 @@ class SharedRunState:
             is_new = widget_id not in self._widget_ids
             self._widget_ids.add(widget_id)
             return is_new
+
     # ... similar methods for other fields
 ```
 
@@ -877,12 +887,15 @@ thread gets automatic isolation via `copy_context()`:
 
 ```python
 _thread_state: ContextVar[FragmentThreadState] = ContextVar(
-    "thread_state", default=FragmentThreadState(),
+    "thread_state",
+    default=FragmentThreadState(),
 )
+
 
 @dataclass
 class FragmentThreadState:
     """Per-thread state for a fragment execution."""
+
     fragment_id: str | None = None
     delta_path: tuple[int, ...] | None = None
     in_fragment_callback: bool = False
@@ -980,7 +993,7 @@ During a sequential fragment rerun, `st.switch_page` is a valid and common patte
 (`lib/streamlit/commands/execution_control.py`):
 
 ```python
-def switch_page(page: str | Path | StreamlitPage, ...) -> NoReturn:
+def switch_page(page: str | Path | Page, ...) -> NoReturn:
     ctx = get_script_run_ctx()
     if ctx:
         _check_not_parallel_worker("st.switch_page")

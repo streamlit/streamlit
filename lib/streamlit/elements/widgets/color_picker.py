@@ -343,6 +343,7 @@ like '#00FFAA' or '#000'.
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Color picker is not clearable (defaults to black)

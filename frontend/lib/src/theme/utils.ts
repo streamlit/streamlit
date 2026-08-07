@@ -1359,12 +1359,12 @@ export function blend(color: string, background: string | undefined): string {
 }
 
 /**
- * Convert a SCSS rem value to pixels.
- * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * Convert a CSS rem value to pixels.
+ * @param cssValue: a string containing a value in rem units with or without the "rem" unit suffix
  * @returns pixel value of the given rem value
  */
-export const convertRemToPx = (scssValue: string): number => {
-  const remValue = parseFloat(scssValue.replace(/rem$/, ""))
+export const convertRemToPx = (cssValue: string): number => {
+  const remValue = parseFloat(cssValue.replace(/rem$/, ""))
   return (
     // TODO(lukasmasuch): We might want to somehow cache this value at some point.
     // However, I did experimented with the performance of calling this, and

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
 import { PresetThemeName } from "~lib/theme/types"
@@ -28,6 +30,8 @@ import {
   IToolbarItem,
   VersionedMessage,
 } from "./types"
+
+const LOG = getLogger("HostCommunicationManager")
 
 export const HOST_COMM_VERSION = 1
 
@@ -199,16 +203,54 @@ export default class HostCommunicationManager {
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP
-    // frame-anscestors header, it doesn't hurt to be extra safe). We avoid
+    // frame-ancestors header, it doesn't hurt to be extra safe). We avoid
     // processing messages received from origins we haven't explicitly
-    // labeled as trusted here to lower the probability that we end up
-    // processing malicious input.
-    if (
-      message.stCommVersion !== HOST_COMM_VERSION ||
-      !this.allowedOrigins.find(allowed =>
-        isValidOrigin(allowed, event.origin)
-      )
-    ) {
+    // labeled as trusted, and only accept trusted postMessage events from the
+    // direct parent frame (or a genuine same-window self-post, see below) so
+    // same-origin child iframes cannot spoof host commands.
+    const isFromParent = event.source === window.parent
+    // Genuine same-window self-post used by an in-iframe embed preamble to
+    // deliver host messages (e.g. SET_AUTH_TOKEN) to the library when there is
+    // no trusted parent frame to relay them (window.parent is a third-party
+    // page). The browser sets event.source to the calling window, so this can
+    // only match a post from this very window (not a child frame, whose source
+    // would be the child's window). Trusting it grants no extra privilege
+    // since any script in this same window already has full same-origin access.
+    const isSelfPost = event.source === window && window !== window.parent
+    // Reject script-dispatched (synthetic) events, and only accept messages
+    // from the direct parent frame or a genuine same-window self-post.
+    const isTrustedMessage = event.isTrusted && (isFromParent || isSelfPost)
+    const isHostMessage = message?.stCommVersion === HOST_COMM_VERSION
+    // Only parse origins for genuine host messages; this global handler
+    // receives many unrelated postMessages and isValidOrigin allocates
+    // URL/URLPattern objects on every call.
+    const isAllowedOrigin =
+      isHostMessage &&
+      this.allowedOrigins.some(allowed => isValidOrigin(allowed, event.origin))
+
+    if (!isTrustedMessage || !isHostMessage || !isAllowedOrigin) {
+      // The app posts a GUEST_READY message to its own window on load (see
+      // openHostCommunication). That self-post is expected to be dropped here
+      // (it uses window.location.origin, which need not be allow-listed), so we
+      // skip logging it to avoid per-load noise.
+      const isSelfPostGuestReady =
+        isSelfPost && (message?.type as string) === "GUEST_READY"
+      // Only log when the payload looks like a genuine host message so we don't
+      // spam logs for the many unrelated postMessages this global handler
+      // receives. This helps diagnose cases where a legitimate host's messages
+      // are unexpectedly dropped -- including a dropped same-window self-post
+      // from an in-iframe embed preamble (e.g. a SET_AUTH_TOKEN whose origin is
+      // not allow-listed), which the earlier blanket self-post skip hid.
+      if (isHostMessage && !isSelfPostGuestReady) {
+        LOG.debug(
+          "Ignoring host message: isTrusted=%s, sourceIsParent=%s, selfPost=%s, allowedOrigin=%s, origin=%s",
+          event.isTrusted,
+          isFromParent,
+          isSelfPost,
+          isAllowedOrigin,
+          event.origin
+        )
+      }
       return
     }
 

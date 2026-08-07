@@ -25,8 +25,7 @@ export interface FormsContextProps {
    * when forms are updated. This FormsData instance should be updated
    * from that callback.
    *
-   * Consumed by: Form, FormSubmitButton
-   * @see Form
+   * Consumed by: FormSubmitButton
    * @see FormSubmitButton
    */
   formsData: FormsData

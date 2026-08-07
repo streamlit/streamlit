@@ -488,6 +488,60 @@ describe("useWidgetState hook", () => {
         expect.anything()
       )
     })
+
+    it("serializes row selection in stable ascending order regardless of display order", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      // Simulate a sorted grid where the display order is not the original
+      // order: display 0 -> original 5, display 1 -> original 2.
+      const originalByDisplay = [5, 2]
+      const getOriginalIndex = (displayIdx: number): number =>
+        originalByDisplay[displayIdx] ?? displayIdx
+      const syncSelectionState = result.current.createSyncSelectionState(
+        columns,
+        getOriginalIndex
+      )
+
+      // Display rows 0 and 1 are selected (CompactSelection stores them in
+      // ascending display order), which map to original indices [5, 2].
+      const selection = {
+        rows: CompactSelection.empty().add(0).add(1),
+        columns: CompactSelection.empty(),
+        current: undefined,
+      }
+
+      act(() => {
+        syncSelectionState(selection, false)
+      })
+
+      // The serialized rows must be in stable ascending order ([2, 5]) rather
+      // than display order ([5, 2]), so the value is independent of the sort
+      // order and does not trigger a spurious rerun when only the display order
+      // changes.
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('"rows":[2,5]'),
+        expect.anything(),
+        expect.anything()
+      )
+    })
   })
 
   describe("loadInitialSelectionState", () => {
@@ -1008,6 +1062,9 @@ describe("useWidgetState hook", () => {
 
       // Should have loaded the added row from widget state
       expect(result.current.numRows).toBe(6)
+      // Hydration counter is bumped so edit reconciliation can run against
+      // the restored edits.
+      expect(result.current.editStateHydrationCount).toBe(1)
     })
 
     it("does not load editing state for read-only mode", () => {
@@ -1040,6 +1097,8 @@ describe("useWidgetState hook", () => {
 
       // Should not have loaded the added row
       expect(result.current.numRows).toBe(5)
+      // No hydration happened for read-only mode, so the counter stays at 0.
+      expect(result.current.editStateHydrationCount).toBe(0)
     })
   })
 

@@ -59,7 +59,6 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "App",
     "Page",
     "bottom",
-    "cache",
     "cache_data",
     "cache_resource",
     "connection",
