@@ -18,6 +18,7 @@ import asyncio
 import json
 import os
 import sys
+import threading
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
@@ -86,6 +87,7 @@ def _reset_main_script_path_and_config_options() -> Iterator[None]:
 
 class _DummyStatsManager:
     def __init__(self) -> None:
+        self.get_stats_thread_ident: int | None = None
         self._stats: dict[str, list[CacheStat | CounterStat | GaugeStat]] = {
             "cache_memory_bytes": [CacheStat("test_cache", "", 1)],
             "session_events": [
@@ -124,6 +126,7 @@ class _DummyStatsManager:
     def get_stats(
         self, family_names: list[str] | None = None
     ) -> dict[str, list[CacheStat | CounterStat | GaugeStat]]:
+        self.get_stats_thread_ident = threading.current_thread().ident
         if family_names is None:
             return self._stats
         return {k: self._stats.get(k, []) for k in family_names}
@@ -163,6 +166,7 @@ class _DummyRuntime:
         self.bidi_component_registry = _DummyBidiComponentRegistry()
         self.bidi_component_registry.register("comp", str(component_dir))
         self.stats_mgr = _DummyStatsManager()
+        self.event_loop_thread_ident: int | None = None
         self._active_sessions: set[str] = {"session123"}
         self.stopped = False
         self.last_backmsg = None
@@ -196,6 +200,7 @@ class _DummyRuntime:
         return fut
 
     def does_script_run_without_error(self) -> asyncio.Future[tuple[bool, str]]:
+        self.event_loop_thread_ident = threading.current_thread().ident
         loop = asyncio.get_event_loop()
         fut: asyncio.Future[tuple[bool, str]] = loop.create_future()
         fut.set_result(self.script_health)
@@ -380,6 +385,32 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
     assert "active_sessions" in response.text
     assert "# HELP active_sessions Current number of active sessions." in response.text
     assert "# UNIT active_sessions " not in response.text
+
+
+def test_metrics_endpoint_runs_stats_off_event_loop(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """The metrics endpoint offloads get_stats off the event-loop thread.
+
+    Guards against a regression where the potentially CPU-heavy stats
+    computation runs synchronously on the asyncio event loop (CWE-400),
+    starving other coroutines.
+    """
+    client, runtime = starlette_client
+
+    # The script-health endpoint runs entirely on the event loop, so it
+    # records the event-loop thread ident for comparison.
+    health_response = client.get("/_stcore/script-health-check")
+    assert health_response.status_code == 200
+    event_loop_thread_ident = runtime.event_loop_thread_ident
+    assert event_loop_thread_ident is not None
+
+    response = client.get("/_stcore/metrics")
+    assert response.status_code == 200
+
+    get_stats_thread_ident = runtime.stats_mgr.get_stats_thread_ident
+    assert get_stats_thread_ident is not None
+    assert get_stats_thread_ident != event_loop_thread_ident
 
 
 def test_metrics_endpoint_includes_user_session_events(
