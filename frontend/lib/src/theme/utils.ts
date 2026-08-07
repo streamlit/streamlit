@@ -1391,14 +1391,13 @@ export const convertRemToPx = (cssValue: string): number => {
 
 /**
  * Customizer function for lodash mergeWith that skips protobuf default values
- * (empty strings, null, empty arrays) to prevent them from overwriting valid values.
- * @returns objValue (keep existing value) if srcValue is a protobuf default, undefined otherwise
+ * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
+ * and replaces non-empty arrays atomically instead of merging by index.
  */
 const skipProtobufDefaults = (
   objValue: unknown,
   srcValue: unknown
 ): unknown => {
-  // Exclude empty strings, empty arrays, and null values
   if (
     srcValue === "" ||
     srcValue === null ||
@@ -1406,7 +1405,11 @@ const skipProtobufDefaults = (
   ) {
     return objValue
   }
-  // Let mergeWith handle all other cases normally
+  // Replace non-empty arrays wholesale — lodash index-merges arrays, which
+  // leaves leftover parent colors/sizes when a section override is shorter.
+  if (Array.isArray(srcValue) && srcValue.length > 0) {
+    return srcValue
+  }
   return undefined
 }
 

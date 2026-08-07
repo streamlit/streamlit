@@ -76,9 +76,6 @@ class ConfigTest(unittest.TestCase):
             "metricValueFontSize",
             "metricValueFontWeight",
             "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
-            "chartDivergingColors",
         ]
 
         theme_config_options = [
@@ -137,6 +134,9 @@ class ConfigTest(unittest.TestCase):
             "greenTextColor",
             "violetTextColor",
             "grayTextColor",
+            "chartCategoricalColors",
+            "chartSequentialColors",
+            "chartDivergingColors",
         ]
 
         section_config_options = []
@@ -1423,6 +1423,9 @@ class ConfigTest(unittest.TestCase):
             "greenTextColor": "#3dd56d",
             "violetTextColor": "#9a5dff",
             "grayTextColor": "#a3a8b8",
+            "chartCategoricalColors": None,
+            "chartSequentialColors": None,
+            "chartDivergingColors": None,
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 

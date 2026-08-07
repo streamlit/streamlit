@@ -700,10 +700,15 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight",
             "fontFaces",
             "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
         }
         assert main_only_options.isdisjoint(section_options)
+
+        # Chart colors are allowed in all theme sections, including sidebar
+        assert {
+            "chartCategoricalColors",
+            "chartSequentialColors",
+            "chartDivergingColors",
+        }.issubset(section_options)
 
         # Test that we get the expected number of theme.sidebar options
         expected_count = self._get_expected_theme_options_count(section="theme.sidebar")
@@ -908,8 +913,6 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight": "bold",
             "fontFaces": "Arial, sans-serif",
             "showSidebarBorder": True,
-            "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
-            "chartSequentialColors": ["#ff0000", "#00ff00", "#0000ff"],
         }
 
         for main_only_option, option_value in main_only_options.items():
@@ -942,6 +945,34 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             assert main_only_option not in filtered_theme["theme"]["sidebar"]
             # Verify valid main option was preserved
             assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
+
+    def test_validate_theme_file_content_allows_chart_colors_in_sidebar(self):
+        """Chart color options are valid in theme.sidebar sections."""
+        theme_content = {
+            "theme": {
+                "primaryColor": "#ff0000",
+                "sidebar": {
+                    "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
+                    "chartSequentialColors": [f"#{i:02x}0000" for i in range(10)],
+                    "chartDivergingColors": [f"#00{i:02x}00" for i in range(10)],
+                },
+            }
+        }
+
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            filtered_theme = config_util._validate_theme_file_content(
+                theme_content, "test_theme.toml", self.config_template
+            )
+            mock_logger.warning.assert_not_called()
+
+        assert filtered_theme["theme"]["sidebar"]["chartCategoricalColors"] == [
+            "#ff0000",
+            "#00ff00",
+            "#0000ff",
+        ]
+        assert len(filtered_theme["theme"]["sidebar"]["chartSequentialColors"]) == 10
+        assert len(filtered_theme["theme"]["sidebar"]["chartDivergingColors"]) == 10
 
     def test_load_theme_file_missing_toml(self):
         """Test _load_theme_file when toml module is missing."""

@@ -4132,6 +4132,34 @@ describe("Custom theme creation", () => {
       // theme.sidebar.textColor="sidebar-text" (no override in theme.dark.sidebar)
       expect(result.sidebar?.textColor).toBe("sidebar-text") // theme.sidebar wins (no override)
     })
+
+    it("replaces chart color arrays atomically instead of merging by index", () => {
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: ["#aaa", "#bbb", "#ccc"],
+        light: new CustomThemeConfig({
+          chartCategoricalColors: ["#111"],
+        }),
+      })
+
+      const result = handleSectionInheritance(themeInput, "light")
+
+      expect(result.chartCategoricalColors).toEqual(["#111"])
+    })
+
+    it("replaces partial headingFontSizes atomically instead of inheriting tail from parent", () => {
+      const themeInput = new CustomThemeConfig({
+        headingFontSizes: ["2.0", "1.5", "1.25", "1.0", "0.875", "0.75"],
+        dark: new CustomThemeConfig({
+          headingFontSizes: ["1.8", "1.3"],
+        }),
+      })
+
+      const result = handleSectionInheritance(themeInput, "dark")
+
+      // The dark section's partial array replaces wholesale — unspecified
+      // sizes fall back to Streamlit defaults, not the [theme] tail.
+      expect(result.headingFontSizes).toEqual(["1.8", "1.3"])
+    })
   })
 
   describe("createCustomThemes", () => {
@@ -4237,6 +4265,143 @@ describe("Custom theme creation", () => {
       expect(customThemes[1].name).toBe(CUSTOM_THEME_DARK_NAME)
       expect(customThemes[1].emotion.colors.primary).toBe("gold")
       expect(customThemes[1].emotion.colors.bgColor).toBe("black")
+    })
+
+    it("applies chart color overrides per light/dark section", () => {
+      const lightCategorical = [
+        "#111111",
+        "#222222",
+        "#333333",
+        "#444444",
+        "#555555",
+        "#666666",
+        "#777777",
+        "#888888",
+        "#999999",
+        "#aaaaaa",
+      ]
+      const darkCategorical = [
+        "#a1a1a1",
+        "#b2b2b2",
+        "#c3c3c3",
+        "#d4d4d4",
+        "#e5e5e5",
+        "#f6f6f6",
+        "#010101",
+        "#020202",
+        "#030303",
+        "#040404",
+      ]
+      const themeCategorical = [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff",
+        "#ffff00",
+        "#ff00ff",
+        "#00ffff",
+        "#ffffff",
+        "#000000",
+        "#123456",
+        "#654321",
+      ]
+
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: themeCategorical,
+        light: {
+          chartCategoricalColors: lightCategorical,
+        },
+        dark: {
+          chartCategoricalColors: darkCategorical,
+        },
+      })
+
+      const customThemes = createCustomThemes(themeInput)
+
+      expect(customThemes).toHaveLength(3)
+      expect(customThemes[0].emotion.colors.chartCategoricalColors).toEqual(
+        lightCategorical
+      )
+      expect(customThemes[1].emotion.colors.chartCategoricalColors).toEqual(
+        darkCategorical
+      )
+    })
+
+    it("inherits chart colors from theme when light/dark omit them", () => {
+      const themeCategorical = [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff",
+        "#ffff00",
+        "#ff00ff",
+        "#00ffff",
+        "#ffffff",
+        "#000000",
+        "#123456",
+        "#654321",
+      ]
+
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: themeCategorical,
+        light: {
+          primaryColor: "lightblue",
+        },
+        dark: {
+          primaryColor: "darkblue",
+        },
+      })
+
+      const customThemes = createCustomThemes(themeInput)
+
+      expect(customThemes[0].emotion.colors.chartCategoricalColors).toEqual(
+        themeCategorical
+      )
+      expect(customThemes[1].emotion.colors.chartCategoricalColors).toEqual(
+        themeCategorical
+      )
+    })
+
+    it("applies sidebar chart color overrides via createSidebarTheme", () => {
+      const mainCategorical = [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff",
+        "#ffff00",
+        "#ff00ff",
+        "#00ffff",
+        "#ffffff",
+        "#000000",
+        "#123456",
+        "#654321",
+      ]
+      const sidebarCategorical = [
+        "#111111",
+        "#222222",
+        "#333333",
+        "#444444",
+        "#555555",
+        "#666666",
+        "#777777",
+        "#888888",
+        "#999999",
+        "#aaaaaa",
+      ]
+
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: mainCategorical,
+        sidebar: {
+          chartCategoricalColors: sidebarCategorical,
+        },
+      })
+
+      const [customTheme] = createCustomThemes(themeInput)
+      const sidebarTheme = createSidebarTheme(customTheme)
+
+      expect(sidebarTheme.emotion.colors.chartCategoricalColors).toEqual(
+        sidebarCategorical
+      )
+      expect(customTheme.emotion.colors.chartCategoricalColors).toEqual(
+        mainCategorical
+      )
     })
 
     it("handles nested sidebar configs in light section", () => {
