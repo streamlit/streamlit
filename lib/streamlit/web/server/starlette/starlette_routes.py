@@ -18,7 +18,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
+import time
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
@@ -26,6 +28,7 @@ from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.component_file_utils import (
     build_safe_abspath,
@@ -58,9 +61,74 @@ if TYPE_CHECKING:
     from streamlit.runtime import Runtime
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-    from streamlit.runtime.stats import Stat
+    from streamlit.runtime.stats import Stat, StatsManager
 
 _LOGGER: Final = get_logger(__name__)
+
+# Seconds before the cached cache_memory_bytes result is considered stale and
+# recomputed. A few seconds of staleness is invisible to scrape-based monitoring
+# (Prometheus default scrape interval is 15 s), and the TTL collapses request
+# floods to one computation per window.
+_METRICS_EXPENSIVE_STATS_TTL_SECONDS: Final = 5.0
+
+
+class _ExpensiveStatsCache:
+    """Single-flight, short-TTL cache for the ``cache_memory_bytes`` metric family.
+
+    This family fans out across session state, data/resource caches, media files,
+    and uploaded files, making it the only CPU-heavy family in the metrics
+    endpoint. The cache prevents an unauthenticated request flood from sustaining
+    a continuous blocking computation on the asyncio event loop.
+
+    All state is read and mutated exclusively on the event-loop thread, so no
+    locks are required. The check-then-set inside ``get`` must not ``await``
+    between reading ``_inflight`` and assigning it so that only one task is ever
+    started per expired window.
+    """
+
+    def __init__(self, stats_mgr: StatsManager) -> None:
+        self._stats_mgr = stats_mgr
+        self._result: Mapping[str, Sequence[Stat]] | None = None
+        self._expiry: float = 0.0
+        self._inflight: asyncio.Task[Mapping[str, Sequence[Stat]]] | None = None
+
+    async def get(self) -> Mapping[str, Sequence[Stat]]:
+        """Return cached or freshly computed ``cache_memory_bytes`` stats.
+
+        Returns the cached result when it is still within the TTL. When the
+        cache is stale, a single background computation is started and all
+        concurrent callers share the same in-flight task (single-flight
+        coalescing). The computation runs in a thread pool so it does not block
+        the event loop.
+
+        Returns
+        -------
+        Mapping[str, Sequence[Stat]]
+            Stats for the ``cache_memory_bytes`` family.
+        """
+        from starlette.concurrency import run_in_threadpool
+
+        if self._result is not None and time.monotonic() < self._expiry:
+            return self._result
+        # If a computation is already in flight, join it instead of starting a
+        # duplicate. The check and assignment below must not be separated by an
+        # await so that exactly one task is created per expired window.
+        if self._inflight is not None:
+            return await self._inflight
+        self._inflight = asyncio.ensure_future(
+            run_in_threadpool(
+                self._stats_mgr.get_stats,
+                family_names=[CACHE_MEMORY_FAMILY],
+            )
+        )
+        try:
+            result = await self._inflight
+            self._result = result
+            self._expiry = time.monotonic() + _METRICS_EXPENSIVE_STATS_TTL_SECONDS
+            return result
+        finally:
+            self._inflight = None
+
 
 # Route path constants (without base URL prefix)
 # These define the canonical paths for all Starlette server endpoints.
@@ -449,12 +517,45 @@ def create_script_health_routes(
 
 def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create metrics route handlers."""
+    from starlette.concurrency import run_in_threadpool
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
 
+    expensive_cache = _ExpensiveStatsCache(runtime.stats_mgr)
+
     async def _metrics_endpoint(request: Request) -> Response:
-        requested_families = request.query_params.getlist("families")
-        stats = runtime.stats_mgr.get_stats(family_names=requested_families or None)
+        requested: list[str] | None = request.query_params.getlist("families") or None
+        wants_expensive = requested is None or CACHE_MEMORY_FAMILY in requested
+
+        # Determine which cheap families to compute live on this request.
+        all_registered = runtime.stats_mgr.registered_families()
+        if requested is None:
+            cheap_families = [f for f in all_registered if f != CACHE_MEMORY_FAMILY]
+        else:
+            cheap_families = [f for f in requested if f != CACHE_MEMORY_FAMILY]
+
+        cheap_result: Mapping[str, Sequence[Stat]] = {}
+        if cheap_families:
+            cheap_result = await run_in_threadpool(
+                runtime.stats_mgr.get_stats,
+                family_names=cheap_families,
+            )
+
+        expensive_result: Mapping[str, Sequence[Stat]] = {}
+        if wants_expensive:
+            expensive_result = await expensive_cache.get()
+
+        # Merge in registered family order so the serialized output is deterministic.
+        # Families that appear in the request but are not registered will be absent
+        # from the result (get_stats already ignores unknown names).
+        stats: dict[str, Sequence[Stat]] = {}
+        for family in all_registered:
+            if family == CACHE_MEMORY_FAMILY:
+                if CACHE_MEMORY_FAMILY in expensive_result:
+                    stats[CACHE_MEMORY_FAMILY] = expensive_result[CACHE_MEMORY_FAMILY]
+            elif family in cheap_result:
+                stats[family] = cheap_result[family]
+
         accept = request.headers.get("Accept", "")
         if "application/x-protobuf" in accept:
             payload = _stats_to_proto(stats).SerializeToString()
