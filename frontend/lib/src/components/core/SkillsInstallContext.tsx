@@ -16,6 +16,7 @@
 
 import {
   createContext,
+  RefObject,
   useContext,
   useLayoutEffect,
   useRef,
@@ -94,9 +95,36 @@ export const SkillsInstallContext = createContext<SkillsInstallContextProps>({
 SkillsInstallContext.displayName = "SkillsInstallContext"
 
 /**
+ * Whether `element` is actually being rendered to the user.
+ *
+ * Streamlit keeps hidden containers mounted — a collapsed `st.expander` renders
+ * its children into an `inert` subtree, an inactive `st.tabs` panel stays in the
+ * DOM under `display: none`. An error box in either is a fully mounted, eligible
+ * ExceptionElement that would otherwise claim the one app-wide callout slot and
+ * burn the once-per-session impression, leaving a *visible* error below it with
+ * no offer and the funnel holding an impression that could never convert.
+ *
+ * `checkVisibility` handles `display: none` (and detached nodes); `inert` is
+ * orthogonal to CSS visibility so it needs its own check. Where the API is
+ * missing — jsdom, which does no layout at all — treat the element as visible
+ * rather than silently disabling the feature in every unit test.
+ */
+function isRenderedToUser(element: HTMLElement | null): boolean {
+  if (element === null) {
+    return true
+  }
+  if (element.closest("[inert]") !== null) {
+    return false
+  }
+  return typeof element.checkVisibility === "function"
+    ? element.checkVisibility()
+    : true
+}
+
+/**
  * Claim the single shared callout slot the first time this error box becomes
- * `eligible`. Returns whether this caller owns the slot and should render the
- * callout.
+ * `eligible` and is actually on screen. Returns whether this caller owns the slot
+ * and should render the callout.
  *
  * The claim is "sticky": once acquired it is kept even if `eligible` later flips
  * false (e.g. a successful install turns the server recommendation off, or the
@@ -105,12 +133,16 @@ SkillsInstallContext.displayName = "SkillsInstallContext"
  * the owning error box unmounts.
  *
  * Idempotent under React StrictMode's mount/unmount/mount double-invoke because
- * the per-instance token re-acquires its own slot. Hand-off note: if the owner
- * unmounts without a rerun, a sibling does not auto-take-over until the next
- * rerun remounts the tree — acceptable, as exception elements are script-output
- * driven and remount on rerun.
+ * the per-instance token re-acquires its own slot. Two hand-off gaps, both
+ * resolving on the next rerun that remounts the tree, which is how exception
+ * elements arrive in the first place: a sibling doesn't take over the instant the
+ * owner unmounts, and an error that was hidden when it mounted doesn't claim the
+ * slot if it later becomes visible without remounting.
  */
-export function useSkillsCalloutSlot(eligible: boolean): boolean {
+export function useSkillsCalloutSlot(
+  eligible: boolean,
+  elementRef?: RefObject<HTMLElement | null>
+): boolean {
   const { claimCallout, releaseCallout } = useContext(SkillsInstallContext)
   const tokenRef = useRef<symbol | null>(null)
   if (tokenRef.current === null) {
@@ -124,10 +156,13 @@ export function useSkillsCalloutSlot(eligible: boolean): boolean {
     if (!eligible || ownsSlot) {
       return
     }
+    if (!isRenderedToUser(elementRef?.current ?? null)) {
+      return
+    }
     if (claimCallout(tokenRef.current as symbol)) {
       setOwnsSlot(true)
     }
-  }, [eligible, ownsSlot, claimCallout])
+  }, [eligible, ownsSlot, claimCallout, elementRef])
 
   // Free the slot when the owning error box unmounts, and reset `ownsSlot` so a
   // remount re-runs the claim effect and re-acquires the slot. Uses

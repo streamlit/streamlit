@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react"
 
 import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
@@ -150,7 +157,14 @@ function ExceptionElement({
     !element.isWarning &&
     element.isStreamlitException &&
     skillsInstall.enabled
-  const ownsSkillsCalloutSlot = useSkillsCalloutSlot(skillsCalloutEligible)
+  // The slot is only claimed if this box is actually on screen — a collapsed
+  // expander or an inactive tab keeps its errors mounted, and one of those must
+  // not take the single slot from a visible error.
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const ownsSkillsCalloutSlot = useSkillsCalloutSlot(
+    skillsCalloutEligible,
+    wrapperRef
+  )
   const [skillsCalloutDismissed, setSkillsCalloutDismissed] = useState(false)
   const handleSkillsCalloutDismiss = useCallback(
     () => setSkillsCalloutDismissed(true),
@@ -177,7 +191,7 @@ function ExceptionElement({
   }, [copyToClipboard, formattedExceptionFull])
 
   return (
-    <StyledExceptionWithCallout>
+    <StyledExceptionWithCallout ref={wrapperRef}>
       <div className="stException" data-testid="stException">
         <AlertContainer kind={element.isWarning ? Kind.WARNING : Kind.ERROR}>
           <StyledExceptionWrapper>

@@ -245,6 +245,36 @@ describe("ExceptionElement Element", () => {
       expect(screen.getAllByTestId("stSkillsInstallCallout")).toHaveLength(1)
     })
 
+    it("lets a visible error claim the slot ahead of a hidden one", () => {
+      // Streamlit keeps hidden containers mounted: a collapsed st.expander puts
+      // its children in an `inert` subtree, an inactive st.tabs panel leaves them
+      // under display:none. Such an error is fully mounted and eligible, and it
+      // comes FIRST here — so without the visibility check it would take the one
+      // app-wide slot and the visible error below it would get no offer at all.
+      renderWithContexts(
+        <>
+          {/* React 18 drops an unknown boolean prop, so set inert as a string
+              the way the DOM actually carries it. */}
+          <div {...{ inert: "" }}>
+            <ExceptionElement {...getStreamlitProps()} />
+          </div>
+          <div data-testid="visibleHost">
+            <ExceptionElement {...getStreamlitProps()} />
+          </div>
+        </>,
+        {
+          libConfigContext: { showErrorLinks: SHOW_LINKS },
+          skillsInstallContext: { enabled: true },
+        }
+      )
+
+      expect(screen.getAllByTestId("stException")).toHaveLength(2)
+      const callouts = screen.getAllByTestId("stSkillsInstallCallout")
+      expect(callouts).toHaveLength(1)
+      // ...and it's the visible one that got it.
+      expect(screen.getByTestId("visibleHost")).toContainElement(callouts[0])
+    })
+
     it("installs via the callout's action", async () => {
       const user = userEvent.setup()
       const onInstall = vi

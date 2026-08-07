@@ -262,6 +262,14 @@ interface State {
    * callout (and any further nudge) for the rest of the current session.
    */
   skillsInstalledThisSession: boolean
+
+  /**
+   * Set once an install has genuinely failed this session (not merely dropped
+   * its connection). The cause is environmental — a blocked target, a read-only
+   * directory — so it will fail again, and without this every later error would
+   * offer the same doomed install.
+   */
+  skillsInstallFailedThisSession: boolean
 }
 
 export const LOG = getLogger("App")
@@ -372,6 +380,11 @@ export class App extends PureComponent<Props, State> {
   // per-render, since a "don't show again" can flip it mid-session.)
   private cachedSkillsCalloutEnvEligible?: boolean
 
+  // The install currently in flight, if any, so both surfaces share one
+  // operation instead of racing two against the same target tree. Cleared when
+  // it settles. See handleSkillsNudgeInstall.
+  private inFlightSkillsInstall: Promise<string | undefined> | null = null
+
   private get skillsCalloutEnvEligible(): boolean {
     if (this.cachedSkillsCalloutEnvEligible === undefined) {
       this.cachedSkillsCalloutEnvEligible =
@@ -455,6 +468,7 @@ export class App extends PureComponent<Props, State> {
       showSkillsNudge: false,
       recommendSkillsInstall: false,
       skillsInstalledThisSession: false,
+      skillsInstallFailedThisSession: false,
     }
 
     this.connectionManager = null
@@ -1663,8 +1677,22 @@ export class App extends PureComponent<Props, State> {
   private readonly handleSkillsNudgeInstall = (
     surface: "toast" | "errorCallout"
   ): Promise<string | undefined> => {
+    // Both surfaces can be on screen at once (the sticky callout slot lets them
+    // transiently coexist), and each owns its own button. Hand a second clicker
+    // the install already in flight rather than starting another: two concurrent
+    // installs race on the same target tree, and the loser doesn't fail
+    // cleanly — on the symlink path it falls back to a GLOBAL install into the
+    // user's home dir that nobody asked for, and on the copy path it reports
+    // "could not write" for skills that are in fact installed. No second
+    // `skillsNudgeInstall` event either: it's one install, not two attempts.
+    //
+    // This covers one browser client. Two tabs still race, because the guard
+    // that would have to stop that lives in the server's InstallSkillsHandler.
+    if (this.inFlightSkillsInstall) {
+      return this.inFlightSkillsInstall
+    }
     this.trackSkillsNudge("skillsNudgeInstall", surface)
-    return this.backendOperationClient
+    const install = this.backendOperationClient
       .requestInstallSkills()
       .then(result => {
         // The server has re-detected the now-installed skills (it clears its
@@ -1706,9 +1734,24 @@ export class App extends PureComponent<Props, State> {
         // count a safety-gate refusal under its own event rather than as a
         // failure. See skillsNudgeInstallFailureLabel.
         this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error), surface)
+        // Stop offering the install on NEW callouts for the rest of the session.
+        // A failure here is a property of the machine (a blocked target, a
+        // read-only dir), not of this error, so every later error would offer the
+        // same doomed install — a fresh red box each time, none of them
+        // dismissable. The callout already showing keeps its Retry, since a
+        // non-idle callout ignores this gate. Deliberately NOT set for a dropped
+        // connection above: that one really is worth retrying.
+        this.setState({ skillsInstallFailedThisSession: true })
         // Re-throw so the card / callout renders its error state.
         throw error
       })
+      // Clear the slot whatever the outcome, so a later Retry (or a genuinely
+      // new install after a dropped connection) isn't handed a settled promise.
+      .finally(() => {
+        this.inFlightSkillsInstall = null
+      })
+    this.inFlightSkillsInstall = install
+    return install
   }
 
   /** Toast's Install button — installs and tags telemetry with the toast surface. */
@@ -2814,6 +2857,7 @@ export class App extends PureComponent<Props, State> {
           this.state.recommendSkillsInstall &&
           this.skillsCalloutEnvEligible &&
           !this.state.skillsInstalledThisSession &&
+          !this.state.skillsInstallFailedThisSession &&
           !isSkillsNudgeDismissed() &&
           !this.state.showSkillsNudge
         }
