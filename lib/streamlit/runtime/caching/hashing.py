@@ -62,6 +62,28 @@ _NP_SAMPLE_SIZE: Final = 100_000
 # [0, 2**32 - 1]; polars' `seed=` takes a u64, so this bound satisfies both.
 _MAX_SAMPLE_SEED: Final = 2**32 - 1
 
+# Seed values already warned about. `_sample_seed` runs on every large-object
+# hash, so warning unconditionally would flood the log for one misconfiguration.
+_warned_sample_seeds: Final[set[str]] = set()
+
+
+def _warn_unusable_sample_seed(configured: object) -> None:
+    """Warn that ``runner.cacheHashSeed`` is being ignored, once per distinct value.
+
+    Keyed on the repr so a quoted and an unquoted TOML value are reported as the
+    user wrote them, and so an unhashable value cannot raise from here.
+    """
+    key = repr(configured)
+    if key in _warned_sample_seeds:
+        return
+    _warned_sample_seeds.add(key)
+    _LOGGER.warning(
+        "Ignoring runner.cacheHashSeed=%s: it must be a whole number from 0 to %s. "
+        "Falling back to the default seed of 0, so cache keys are unchanged.",
+        key,
+        _MAX_SAMPLE_SEED,
+    )
+
 
 def _sample_seed() -> int:
     """Return the RNG seed used when sampling large objects for cache hashing.
@@ -74,18 +96,23 @@ def _sample_seed() -> int:
 
     Out-of-range values are rejected rather than wrapped into range: wrapping
     would silently sample by a seed the user never chose, which is harder to
-    debug than falling back to the documented default.
+    debug than falling back to the documented default. The fallback warns rather
+    than passing silently, since this option exists precisely to diagnose cache
+    hits that are already silent.
 
     Read per call rather than cached at import so the value stays correct after
     ``config`` is (re)parsed, and so tests can vary it.
     """
     from streamlit import config
 
+    configured = config.get_option("runner.cacheHashSeed")
     try:
-        seed = int(config.get_option("runner.cacheHashSeed"))
+        seed = int(configured)
     except (TypeError, ValueError):
+        _warn_unusable_sample_seed(configured)
         return 0
     if not 0 <= seed <= _MAX_SAMPLE_SEED:
+        _warn_unusable_sample_seed(configured)
         return 0
     return seed
 

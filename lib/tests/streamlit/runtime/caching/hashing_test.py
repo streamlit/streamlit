@@ -55,6 +55,7 @@ from streamlit.runtime.caching.hashing import (
     _HashStack,
     _HashStacks,
     _sample_seed,
+    _warned_sample_seeds,
     update_hash,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -1152,6 +1153,59 @@ def test_cache_hash_seed_honours_the_largest_supported_value() -> None:
     """The upper bound must be usable, not silently reset to the default."""
     with patch_config_options({"runner.cacheHashSeed": _MAX_SAMPLE_SEED}):
         assert _sample_seed() == _MAX_SAMPLE_SEED
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param("not-a-number", id="text"),
+    ],
+)
+def test_cache_hash_seed_warns_when_it_ignores_a_value(value: object) -> None:
+    """An ignored seed must say so; this option exists to debug silent cache hits.
+
+    Raising would break caching outright, so the fallback warns instead of failing.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert repr(value) in logged_message, "the warning must name the value the user set"
+    assert str(_MAX_SAMPLE_SEED) in logged_message, (
+        "the warning must state the valid range"
+    )
+
+
+def test_cache_hash_seed_warns_only_once_for_a_repeated_value() -> None:
+    """``_sample_seed`` runs per hash, so an unchanged bad value must not flood the log."""
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": -1}):
+            for _ in range(5):
+                assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "value", [0, 7, _MAX_SAMPLE_SEED], ids=["default", "normal", "max_supported"]
+)
+def test_cache_hash_seed_stays_quiet_for_a_usable_value(value: int) -> None:
+    """A seed that is honoured must not warn."""
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == value
+
+    mock_warning.assert_not_called()
 
 
 @pytest.mark.parametrize(

@@ -840,8 +840,8 @@ _create_option(
         are sampled. This does not eliminate collisions -- it selects a different
         set of them -- so it resolves a collision an app has actually hit rather
         than guaranteeing uniqueness. A value that cannot be read as an integer,
-        or that falls outside that range, is ignored and the default is used
-        instead.
+        or that falls outside that range, is ignored with a warning and the
+        default is used instead.
 
         Changing this value changes the cache key of every large object and so
         invalidates existing cached entries. Keep it stable across restarts and
