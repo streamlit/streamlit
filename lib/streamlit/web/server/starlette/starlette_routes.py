@@ -103,7 +103,7 @@ class _ExpensiveStatsCache:
         # Join an in-flight computation instead of starting another. Do not await
         # between this check and the assignment below.
         if self._inflight is None:
-            task: asyncio.Task[Mapping[str, Sequence[Stat]]] = asyncio.ensure_future(
+            task: asyncio.Task[Mapping[str, Sequence[Stat]]] = asyncio.create_task(
                 run_in_threadpool(
                     self._stats_mgr.get_stats,
                     family_names=[CACHE_MEMORY_FAMILY],
@@ -120,7 +120,16 @@ class _ExpensiveStatsCache:
                     self._inflight = None
                 if done.cancelled():
                     return
-                if done.exception() is not None:
+                exc = done.exception()
+                if exc is not None:
+                    # Waiters that are still awaiting see the failure via
+                    # shield; log here so a wave where every waiter cancelled
+                    # still leaves an ops signal.
+                    _LOGGER.error(
+                        "Failed to compute %s metrics",
+                        CACHE_MEMORY_FAMILY,
+                        exc_info=(type(exc), exc, exc.__traceback__),
+                    )
                     return
                 self._result = done.result()
                 self._expiry = time.monotonic() + _METRICS_EXPENSIVE_STATS_TTL_SECONDS
@@ -538,16 +547,27 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
             cheap_families = [f for f in requested if f != CACHE_MEMORY_FAMILY]
 
         cheap_result: Mapping[str, Sequence[Stat]] = {}
-        if cheap_families:
-            # Offload even cheap get_stats so sync work stays off the event loop.
-            cheap_result = await run_in_threadpool(
+        expensive_result: Mapping[str, Sequence[Stat]] = {}
+
+        # Overlap cheap (thread-pool) and expensive (cache / thread-pool) work
+        # when both are needed so scrape latency is the max of the two, not the sum.
+        async def _fetch_cheap() -> Mapping[str, Sequence[Stat]]:
+            if not cheap_families:
+                return {}
+            return await run_in_threadpool(
                 runtime.stats_mgr.get_stats,
                 family_names=cheap_families,
             )
 
-        expensive_result: Mapping[str, Sequence[Stat]] = {}
-        if wants_expensive:
-            expensive_result = await expensive_cache.get()
+        async def _fetch_expensive() -> Mapping[str, Sequence[Stat]]:
+            if not wants_expensive:
+                return {}
+            return await expensive_cache.get()
+
+        cheap_result, expensive_result = await asyncio.gather(
+            _fetch_cheap(),
+            _fetch_expensive(),
+        )
 
         # Merge in registration order so the serialized output is deterministic.
         # Unknown requested families are omitted (same as get_stats).
