@@ -588,8 +588,9 @@ class PersistedWidgetTracker:
 class _CallbackRerunVotes:
     """Records whether callbacks in one interaction asked for a targeted or default rerun.
 
-    - ``requested_targeted`` — a callback asked to rerun specific fragments
-      (``fragment_id_queue`` / ``is_fragment_scoped_rerun``).
+    - ``requested_targeted`` — a callback asked to rerun fragments rather than the
+      full app. Today that includes ``scope="fragment"`` (``is_fragment_scoped_rerun``)
+      and any non-empty ``fragment_id_queue`` (including future keyed targets).
     - ``wants_default_scope`` — a callback returned normally or called plain
       ``st.rerun()``, i.e. did not ask for a targeted fragment rerun.
 
@@ -948,9 +949,9 @@ class SessionState:
     ) -> None:
         """Run one widget callback and record how it affects the interaction's rerun scope.
 
-        ``st.rerun()`` raises ``RerunException`` after ``on_scriptrunner_yield``
-        has already consumed the queued request, so this method re-queues it to
-        take effect after all callbacks finish.
+        ``st.rerun()`` interrupts the callback via ``RerunException`` after the
+        queued request has already been consumed at a yield point, so this method
+        re-queues it to take effect after all callbacks finish.
 
         - Fragment-scoped or queued-fragment ``st.rerun()`` → ``votes.requested_targeted``
         - Plain ``st.rerun()`` or a normal return → ``votes.wants_default_scope``
