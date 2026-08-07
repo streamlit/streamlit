@@ -1123,9 +1123,18 @@ def test_cache_hash_seed_falls_back_to_zero_for_unusable_values(
 
 
 def test_cache_hash_seed_truncates_a_fractional_value() -> None:
-    """A float is converted rather than rejected; only the seed changes."""
-    with patch_config_options({"runner.cacheHashSeed": 1.5}):
-        assert _sample_seed() == 1
+    """A float is converted rather than rejected; only the seed changes.
+
+    Truncation is toward zero and is not warned about, since the result is a usable
+    seed -- the config description documents this explicitly.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": 1.5}):
+            assert _sample_seed() == 1
+
+    mock_warning.assert_not_called()
 
 
 @pytest.mark.parametrize(

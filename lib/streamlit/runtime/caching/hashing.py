@@ -57,7 +57,7 @@ _PANDAS_SAMPLE_SIZE: Final = 10_000
 _NP_SIZE_LARGE: Final = 500_000
 _NP_SAMPLE_SIZE: Final = 100_000
 
-# Largest seed every sampling backend below accepts. numpy's RandomState (and
+# Largest seed accepted by all sampling backends below. numpy's RandomState (and
 # pandas' `random_state=`, which defers to it) rejects anything outside
 # [0, 2**32 - 1]; polars' `seed=` takes a u64, so this bound satisfies both.
 _MAX_SAMPLE_SEED: Final = 2**32 - 1
