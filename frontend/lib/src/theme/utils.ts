@@ -793,10 +793,11 @@ export const createEmotionTheme = (
   // Conditional Overrides - Colors
 
   conditionalOverrides.colors.codeBackgroundColor =
-    codeBackgroundColor ?? colors.codeBackgroundColor
+    codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
-    dataframeHeaderBackgroundColor ?? colors.dataframeHeaderBackgroundColor
+    dataframeHeaderBackgroundColor ??
+    conditionalOverrides.colors.dataframeHeaderBackgroundColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
