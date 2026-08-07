@@ -54,7 +54,8 @@ export interface TableProps {
 // Fallback offset value (in rem) used for sticky positioning when multiple header rows
 // exist. This approximates typical row height to ensure sticky headers don't overlap.
 // The actual size may vary based on content, but this default works reasonably well.
-// Header row: fontSize (0.875rem) * lineHeight (1.5) + vertical padding (0.5rem) = 1.8125rem
+// Header row height ≈ fontSize.sm (0.875rem) × lineHeights.small (1.5)
+// + vertical padding (twoXS top and bottom = 0.5rem) → 1.8125rem
 const FALLBACK_HEADER_ROW_OFFSET_REM = "1.8125rem"
 
 function getStickyOffset(index: number, stepPx: number): number {
