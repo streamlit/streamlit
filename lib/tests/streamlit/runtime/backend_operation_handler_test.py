@@ -138,6 +138,11 @@ def test_dispatch_returns_error_when_handler_fails() -> None:
 
     assert response.request_id == "request-id"
     assert response.error_msg == "Failed to process backend operation"
+    # The dispatcher's catch-all used to return no reason at all, so a handler that
+    # raised past its own try/except produced a bare telemetry label -
+    # indistinguishable from a pre-1.61 client and silent about the operation
+    # possibly never having run.
+    assert response.error_reason == "unhandled_RuntimeError"
     assert not response.HasField("deferred_file")
 
 
@@ -267,7 +272,9 @@ def test_install_skills_handler_reports_failure() -> None:
         )
 
     assert response.error_msg == "No skills found"
-    assert response.error_reason == "unknown"
+    # A ``ClickException`` that is not an ``InstallError`` carries no vocabulary
+    # reason, so the reason names its class rather than collapsing to "unknown".
+    assert response.error_reason == "unexpected_ClickException"
     assert not response.HasField("install_skills")
 
 
@@ -338,7 +345,7 @@ def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
     exception carrying a free-form str ``.reason`` (``UnicodeDecodeError`` and
     several stdlib errors do) would emit an unbounded telemetry label and break the
     fixed vocabulary. The reason is now trusted ONLY from skills.InstallError; a
-    non-OSError foreign exception is classified ``unknown``.
+    non-OSError foreign exception is named by its class instead.
     """
     foreign = ValueError("boom")
     foreign.reason = "some-unbounded-string"  # type: ignore[attr-defined]
@@ -353,7 +360,64 @@ def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
             )
         )
 
-    assert response.error_reason == "unknown"
+    assert response.error_reason == "unexpected_ValueError"
+    assert "some-unbounded-string" not in response.error_reason
+
+
+def test_install_skills_handler_names_unclassified_exception_class() -> None:
+    """An exception no vocabulary entry covers is reported by its class name.
+
+    Every such failure used to collapse into one ``unknown`` bucket, which made the
+    largest share of install failures undiagnosable from telemetry - the traceback is
+    logged server-side but never leaves the machine. The class name is a code
+    identifier, so it splits the bucket without carrying a path or any user data.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=RuntimeError("/absolute/server/path exploded"),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unexpected_RuntimeError"
+    # The class name is safe; the *message* is not, and is never part of the reason.
+    assert "/absolute/server/path" not in response.error_reason
+    assert response.error_msg == "Failed to install skills."
+
+
+def test_install_skills_handler_bounds_hostile_exception_class_name() -> None:
+    """The class name is sanitized and length-capped before becoming a label.
+
+    Class names are Python identifiers in practice, but a dynamically built class can
+    carry arbitrary text, and this value ends up as a telemetry label suffix. Anything
+    outside ASCII alphanumerics is dropped - including the ``:`` that downstream
+    ``split_part(label, ':', 2)`` queries would otherwise truncate on.
+    """
+    hostile = type("Bad: name\nwith 💥 junk" + "X" * 80, (Exception,), {})
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", side_effect=hostile("boom")),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    reason = response.error_reason
+    assert reason.startswith("unexpected_")
+    suffix = reason.removeprefix("unexpected_")
+    assert suffix == "BadnamewithjunkXXXXXXXXXXXXXXXXXXXXXXXXX"
+    assert len(suffix) == 40
+    assert ":" not in reason
 
 
 def test_install_skills_handler_refuses_without_agent_harness() -> None:
