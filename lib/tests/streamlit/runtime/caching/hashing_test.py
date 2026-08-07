@@ -46,6 +46,7 @@ from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
     _LOGGER,
+    _MAX_SAMPLE_SEED,
     _NP_SAMPLE_SIZE,
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
@@ -1124,6 +1125,75 @@ def test_cache_hash_seed_truncates_a_fractional_value() -> None:
     """A float is converted rather than rejected; only the seed changes."""
     with patch_config_options({"runner.cacheHashSeed": 1.5}):
         assert _sample_seed() == 1
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param(2**64, id="far_past_max"),
+    ],
+)
+def test_cache_hash_seed_falls_back_to_zero_for_out_of_range_values(
+    value: int,
+) -> None:
+    """An out-of-range seed must be ignored rather than reach the sampling backends.
+
+    ``int()`` accepts these, but numpy's ``RandomState`` (and pandas' ``random_state=``,
+    which defers to it) only accepts ``[0, 2**32 - 1]``, so without a range check they
+    would raise from inside the cache-hashing path.
+    """
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 0
+
+
+def test_cache_hash_seed_honours_the_largest_supported_value() -> None:
+    """The upper bound must be usable, not silently reset to the default."""
+    with patch_config_options({"runner.cacheHashSeed": _MAX_SAMPLE_SEED}):
+        assert _sample_seed() == _MAX_SAMPLE_SEED
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param(2**64, id="far_past_max"),
+        pytest.param(_MAX_SAMPLE_SEED, id="max_supported"),
+    ],
+)
+@pytest.mark.parametrize(
+    "make_obj",
+    [
+        pytest.param(_large_pandas_dataframe, id="pandas_dataframe"),
+        pytest.param(_large_pandas_series, id="pandas_series"),
+        pytest.param(_large_numpy_array, id="numpy_array"),
+        pytest.param(
+            _large_polars_dataframe,
+            id="polars_dataframe",
+            marks=pytest.mark.require_integration,
+        ),
+        pytest.param(
+            _large_polars_series,
+            id="polars_series",
+            marks=pytest.mark.require_integration,
+        ),
+    ],
+)
+def test_cache_hash_seed_never_breaks_hashing_of_a_large_object(
+    make_obj: Callable[[], Any], value: int
+) -> None:
+    """Hashing a large object must succeed whatever the option is set to.
+
+    This is the user-visible symptom: a bad seed reaching the sampling call raises
+    and breaks ``@st.cache_data`` / ``@st.cache_resource`` entirely, so assert on a
+    real hash rather than only on ``_sample_seed``'s return value.
+    """
+    obj = make_obj()
+
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert isinstance(get_hash(obj), bytes)
 
 
 @pytest.mark.parametrize(

@@ -836,11 +836,12 @@ _create_option(
         positions produce the same cache key, and the cached value of one is
         returned for the other.
 
-        Set any integer to move which positions are sampled. This does not
-        eliminate collisions -- it selects a different set of them -- so it
-        resolves a collision an app has actually hit rather than guaranteeing
-        uniqueness. A value that cannot be read as an integer is ignored and the
-        default is used instead.
+        Set an integer from 0 to 4294967295 (2**32 - 1) to move which positions
+        are sampled. This does not eliminate collisions -- it selects a different
+        set of them -- so it resolves a collision an app has actually hit rather
+        than guaranteeing uniqueness. A value that cannot be read as an integer,
+        or that falls outside that range, is ignored and the default is used
+        instead.
 
         Changing this value changes the cache key of every large object and so
         invalidates existing cached entries. Keep it stable across restarts and

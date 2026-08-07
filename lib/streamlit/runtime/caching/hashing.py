@@ -57,14 +57,24 @@ _PANDAS_SAMPLE_SIZE: Final = 10_000
 _NP_SIZE_LARGE: Final = 500_000
 _NP_SAMPLE_SIZE: Final = 100_000
 
+# Largest seed every sampling backend below accepts. numpy's RandomState (and
+# pandas' `random_state=`, which defers to it) rejects anything outside
+# [0, 2**32 - 1]; polars' `seed=` takes a u64, so this bound satisfies both.
+_MAX_SAMPLE_SEED: Final = 2**32 - 1
+
 
 def _sample_seed() -> int:
     """Return the RNG seed used when sampling large objects for cache hashing.
 
     Reads ``runner.cacheHashSeed``, converting to an int so a quoted TOML value
-    works the same as an unquoted one. A value that cannot be converted falls
-    back to ``0`` -- the seed used before the option existed -- so a malformed
-    value leaves cache keys unchanged instead of raising from the hashing path.
+    works the same as an unquoted one. A value that cannot be converted, or that
+    falls outside ``[0, _MAX_SAMPLE_SEED]``, falls back to ``0`` -- the seed used
+    before the option existed -- so a malformed value leaves cache keys unchanged
+    instead of raising from the hashing path.
+
+    Out-of-range values are rejected rather than wrapped into range: wrapping
+    would silently sample by a seed the user never chose, which is harder to
+    debug than falling back to the documented default.
 
     Read per call rather than cached at import so the value stays correct after
     ``config`` is (re)parsed, and so tests can vary it.
@@ -72,9 +82,12 @@ def _sample_seed() -> int:
     from streamlit import config
 
     try:
-        return int(config.get_option("runner.cacheHashSeed"))
+        seed = int(config.get_option("runner.cacheHashSeed"))
     except (TypeError, ValueError):
         return 0
+    if not 0 <= seed <= _MAX_SAMPLE_SEED:
+        return 0
+    return seed
 
 
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
