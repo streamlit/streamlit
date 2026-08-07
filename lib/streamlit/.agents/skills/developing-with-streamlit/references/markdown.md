@@ -122,7 +122,21 @@ Use Google Material Symbols with `:material/icon_name:` syntax. Find icons at [f
 st.markdown(":material/check_circle: Complete")
 ```
 
-Material icons also work in `icon` parameters across many elements (`st.button`, `st.expander`, `st.info`, etc.).
+Material icons also work in the `icon` parameter of the elements that define one —
+`st.button`, `st.expander`, `st.info`, `st.warning`, `st.error`, `st.success`,
+`st.badge`, `st.toast`, `st.page_link`, and `page_icon` on `st.set_page_config`.
+
+There is no `icon` parameter on the heading and text commands (`st.title`,
+`st.header`, `st.subheader`, `st.markdown`, `st.caption`, `st.write`) — passing one
+raises `TypeError`. Put the directive in the text instead:
+
+```python
+# GOOD
+st.title(":material/analytics: Sales dashboard")
+
+# BAD -- TypeError: title() got an unexpected keyword argument 'icon'
+st.title("Sales dashboard", icon=":material/analytics:")
+```
 
 ## Emojis
 

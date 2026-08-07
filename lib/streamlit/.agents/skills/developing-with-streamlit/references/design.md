@@ -43,6 +43,13 @@ st.markdown(":material/calendar_today:")
 st.markdown(":material/dashboard:")
 st.markdown(":material/person:")
 
+# GOOD: in headings, the directive goes in the text
+st.title(":material/analytics: Sales dashboard")
+st.subheader(":material/table: Recent orders")
+
+# BAD: headings have no icon parameter -- this raises TypeError
+st.title("Sales dashboard", icon=":material/analytics:")
+
 # SPARINGLY: Emojis for special occasions
 st.markdown("Celebration! 🎉")
 ```
