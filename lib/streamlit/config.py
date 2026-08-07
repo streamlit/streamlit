@@ -2105,9 +2105,8 @@ _create_theme_options(
         This determines the overall weight of text and UI elements. This is an
         integer multiple of 50. Values can be between 100 and 600, inclusive.
 
-        Streamlit derives the semiBold, bold, and extrabold weights from this
-        base by adding 100, 200, and 300 respectively. The maximum is 600 so
-        that extrabold (base + 300) never exceeds 900.
+        Streamlit derives heavier weights from this base (+100 / +200 / +300).
+        The maximum is 600 so the heaviest derived weight never exceeds 900.
 
         If this isn't set, the font weight will be set to 400 (normal weight).
     """,
@@ -2311,9 +2310,8 @@ _create_theme_options(
         `st.help`. This is an integer multiple of 50. Values can be between
         100 and 600, inclusive.
 
-        Streamlit derives the bold and extrabold code weights from this base
-        by adding 200 and 300 respectively. The maximum is 600 so that the
-        extrabold code weight (base + 300) never exceeds 900.
+        Streamlit derives heavier code weights from this base (+200 / +300).
+        The maximum is 600 so the heaviest derived weight never exceeds 900.
 
         If this isn't set, the code font weight will be 400 (normal weight).
     """,

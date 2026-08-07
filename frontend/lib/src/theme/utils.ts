@@ -483,7 +483,19 @@ export const parseFontSize = (
 }
 
 /**
- * Validate a font weight config
+ * Validates a font weight config value against three rules:
+ *   1. Must be an integer.
+ *   2. Must be an integer multiple of 50.
+ *   3. Must be within [`minWeight`, `maxWeight`] (inclusive).
+ *
+ * @param weightConfigName - Name of the config option, used in the warning message.
+ * @param fontWeight - The value to validate; null/undefined means "not configured".
+ * @param minWeight - Lower bound (inclusive).
+ * @param maxWeight - Upper bound (inclusive).
+ * @param inSidebar - When true, the warning message cites "theme.sidebar" instead of "theme".
+ * @returns `true` if the value is set and passes all three rules.
+ *   Returns `false` and logs a warning when the value is set but fails any rule.
+ *   Returns `false` silently when the value is null or undefined.
  */
 const isValidFontWeight = (
   weightConfigName: string,

@@ -58,16 +58,15 @@ _50_STEP_WEIGHTS_ENV = {
 }
 
 
-@pytest.fixture
-def custom_weights_app(
+def _app_with_theme_env(
     page: Page,
     app_base_url: str,
     app_port: int,
     request: pytest.FixtureRequest,
+    extra_env: dict[str, str],
 ) -> Generator[Page, None, None]:
-    streamlit_proc = start_app_server(
-        app_port, request.module, extra_env=_CUSTOM_WEIGHTS_ENV
-    )
+    """Start a Streamlit server with a custom theme env and yield the loaded page."""
+    streamlit_proc = start_app_server(app_port, request.module, extra_env=extra_env)
     try:
         response = page.goto(build_app_url(app_base_url, path="/"))
         if response is None or response.status != 200:
@@ -76,6 +75,18 @@ def custom_weights_app(
         yield page
     finally:
         streamlit_proc.terminate()
+
+
+@pytest.fixture
+def custom_weights_app(
+    page: Page,
+    app_base_url: str,
+    app_port: int,
+    request: pytest.FixtureRequest,
+) -> Generator[Page, None, None]:
+    yield from _app_with_theme_env(
+        page, app_base_url, app_port, request, _CUSTOM_WEIGHTS_ENV
+    )
 
 
 @pytest.fixture
@@ -85,17 +96,9 @@ def fifty_step_weights_app(
     app_port: int,
     request: pytest.FixtureRequest,
 ) -> Generator[Page, None, None]:
-    streamlit_proc = start_app_server(
-        app_port, request.module, extra_env=_50_STEP_WEIGHTS_ENV
+    yield from _app_with_theme_env(
+        page, app_base_url, app_port, request, _50_STEP_WEIGHTS_ENV
     )
-    try:
-        response = page.goto(build_app_url(app_base_url, path="/"))
-        if response is None or response.status != 200:
-            raise RuntimeError("Unable to load page")
-        wait_for_app_loaded(page)
-        yield page
-    finally:
-        streamlit_proc.terminate()
 
 
 def test_custom_theme_font_weights(
