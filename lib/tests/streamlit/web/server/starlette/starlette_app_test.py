@@ -396,17 +396,22 @@ def test_metrics_endpoint_runs_stats_off_event_loop(
     computation runs synchronously on the asyncio event loop (CWE-400),
     starving other coroutines.
     """
-    client, runtime = starlette_client
+    _, runtime = starlette_client
 
-    # The script-health endpoint runs entirely on the event loop, so it
-    # records the event-loop thread ident for comparison.
-    health_response = client.get("/_stcore/script-health-check")
-    assert health_response.status_code == 200
-    event_loop_thread_ident = runtime.event_loop_thread_ident
-    assert event_loop_thread_ident is not None
+    # The script-health-check endpoint runs entirely on the event loop, so
+    # hitting it records the event-loop thread ident for comparison. It is
+    # gated behind server.scriptHealthCheckEnabled, so enable it and rebuild
+    # the app (mirroring test_script_health_endpoint).
+    with patch_config_options({"server.scriptHealthCheckEnabled": True}):
+        app = create_starlette_app(runtime)
+        with TestClient(app) as client:
+            health_response = client.get("/_stcore/script-health-check")
+            assert health_response.status_code == 200
+            event_loop_thread_ident = runtime.event_loop_thread_ident
+            assert event_loop_thread_ident is not None
 
-    response = client.get("/_stcore/metrics")
-    assert response.status_code == 200
+            response = client.get("/_stcore/metrics")
+            assert response.status_code == 200
 
     get_stats_thread_ident = runtime.stats_mgr.get_stats_thread_ident
     assert get_stats_thread_ident is not None
