@@ -414,6 +414,9 @@ function RangeDateInput({
       if (!date) {
         setDisplayEnd(null)
       }
+      if (date && pendingAnchorRef.current) {
+        pendingAnchorRef.current = date
+      }
       validateBothFields(date, date ? displayEndRef.current : null)
       if (date) onFocusChange(date)
     },
