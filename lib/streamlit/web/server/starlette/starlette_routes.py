@@ -449,12 +449,16 @@ def create_script_health_routes(
 
 def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create metrics route handlers."""
+    from starlette.concurrency import run_in_threadpool
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
 
     async def _metrics_endpoint(request: Request) -> Response:
         requested_families = request.query_params.getlist("families")
-        stats = runtime.stats_mgr.get_stats(family_names=requested_families or None)
+        stats = await run_in_threadpool(
+            runtime.stats_mgr.get_stats,
+            family_names=requested_families or None,
+        )
         accept = request.headers.get("Accept", "")
         if "application/x-protobuf" in accept:
             payload = _stats_to_proto(stats).SerializeToString()
