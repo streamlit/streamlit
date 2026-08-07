@@ -94,6 +94,10 @@ def _sample_seed() -> int:
     before the option existed -- so a malformed value leaves cache keys unchanged
     instead of raising from the hashing path.
 
+    Two TOML values need handling that ``int()`` alone does not give: ``true`` is a
+    ``bool``, which is an ``int`` subclass and would convert to a usable ``1``; and
+    ``inf`` raises ``OverflowError``, which is not a ``ValueError``.
+
     Out-of-range values are rejected rather than wrapped into range: wrapping
     would silently sample by a seed the user never chose, which is harder to
     debug than falling back to the documented default. The fallback warns rather
@@ -106,9 +110,16 @@ def _sample_seed() -> int:
     from streamlit import config
 
     configured = config.get_option("runner.cacheHashSeed")
+    # `bool` is an `int` subclass, so `cacheHashSeed = true` would otherwise convert
+    # to a seed of 1 and silently invalidate every large-object cache key.
+    if isinstance(configured, bool):
+        _warn_unusable_sample_seed(configured)
+        return 0
     try:
         seed = int(configured)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # `OverflowError` is not a `ValueError` subclass and comes from
+        # `int(float("inf"))`, which TOML can produce as `cacheHashSeed = inf`.
         _warn_unusable_sample_seed(configured)
         return 0
     if not 0 <= seed <= _MAX_SAMPLE_SEED:

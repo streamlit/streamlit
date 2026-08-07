@@ -1112,7 +1112,21 @@ def test_cache_hash_seed_accepts_any_whole_number_representation(
 
 
 @pytest.mark.parametrize(
-    "value", ["not-a-number", "", None], ids=["text", "empty", "none"]
+    "value",
+    [
+        pytest.param("not-a-number", id="text"),
+        pytest.param("", id="empty"),
+        pytest.param(None, id="none"),
+        # `bool` is an `int` subclass, so `int(True)` is 1 rather than an error.
+        # TOML writes these as `cacheHashSeed = true` / `false`.
+        pytest.param(True, id="bool_true"),
+        pytest.param(False, id="bool_false"),
+        # `int(float("inf"))` raises OverflowError, which is not a ValueError.
+        # TOML writes these as `cacheHashSeed = inf` / `-inf` / `nan`.
+        pytest.param(float("inf"), id="inf"),
+        pytest.param(float("-inf"), id="negative_inf"),
+        pytest.param(float("nan"), id="nan"),
+    ],
 )
 def test_cache_hash_seed_falls_back_to_zero_for_unusable_values(
     value: object,
@@ -1120,6 +1134,43 @@ def test_cache_hash_seed_falls_back_to_zero_for_unusable_values(
     """A malformed value must leave cache keys unchanged, not raise from hashing."""
     with patch_config_options({"runner.cacheHashSeed": value}):
         assert _sample_seed() == 0
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(True, id="bool_true"),
+        pytest.param(float("inf"), id="inf"),
+        pytest.param(float("nan"), id="nan"),
+    ],
+)
+def test_cache_hash_seed_warns_for_a_value_int_would_have_accepted_or_raised_on(
+    value: object,
+) -> None:
+    """These two slip past a plain ``int()`` guard in opposite directions.
+
+    ``int(True)`` succeeds and yields ``1``, quietly changing every large-object
+    cache key; ``int(float("inf"))`` raises ``OverflowError``, which is not a
+    ``ValueError`` and so would have escaped the fallback entirely.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+
+
+def test_cache_hash_seed_does_not_treat_a_bool_as_the_int_it_subclasses() -> None:
+    """``cacheHashSeed = true`` must not become the perfectly valid seed ``1``."""
+    with patch_config_options({"runner.cacheHashSeed": True}):
+        from_bool = _sample_seed()
+    with patch_config_options({"runner.cacheHashSeed": 1}):
+        from_int = _sample_seed()
+
+    assert from_int == 1, "a real 1 must still be honoured"
+    assert from_bool == 0, "True must fall back rather than alias seed 1"
 
 
 def test_cache_hash_seed_truncates_a_fractional_value() -> None:
