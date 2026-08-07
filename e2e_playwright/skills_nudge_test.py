@@ -54,7 +54,7 @@ def app_server(
         tmp_path_factory,
         home_prefix="skills_nudge_home",
         project_prefix="skills_nudge_project",
-    )
+    )[0]
     yield proc
     print(proc.terminate(), flush=True)
 

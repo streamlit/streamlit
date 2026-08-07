@@ -213,13 +213,16 @@ describe("SkillsInstallCallout", () => {
     expect(row.lastElementChild).toBe(retry)
     expect(icon.closest("[aria-hidden='true']")?.parentElement).toBe(row)
 
-    // Only the copy may flex; the icon and action hold their width while it
-    // wraps. Without this the long reason squashes them instead.
-    expect(getComputedStyle(row).flexWrap).not.toBe("wrap")
-    expect(getComputedStyle(retry).flexShrink).toBe("0")
+    // Structure is all this test can honestly claim. The layout itself — that
+    // the row doesn't wrap, that the copy is the only item that gives way, that
+    // a long path breaks instead of overflowing — depends on five declarations
+    // interacting under real line-breaking, and jsdom does no layout. Asserting
+    // the CSS here only pins the literal inverse of whichever declaration you
+    // thought of. The guard is the E2E snapshot of this exact state in
+    // `skills_install_callout_test.py::test_skills_install_callout_reports_a_failed_install`.
 
     // The Material ligature ("error") is text in the DOM, so it must be hidden
-    // from the role="status" live region or it gets announced before the message.
+    // from the live region or it gets announced before the message.
     expect(icon.closest("[aria-hidden='true']")).not.toBeNull()
   })
 

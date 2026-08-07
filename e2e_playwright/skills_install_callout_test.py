@@ -24,6 +24,7 @@ from e2e_playwright.shared.skills_install_app import start_agent_home_app_server
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
     from playwright.sync_api import Page
 
@@ -40,20 +41,23 @@ def app_server(
     app_port: int,
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
-) -> Generator[AsyncSubprocess, None, None]:
+) -> Generator[tuple[AsyncSubprocess, Path], None, None]:
     """Start the app in a temp HOME (agent present, no skills), non-headless, so
     the server recommends the install — the precondition for the in-error
     callout. See ``start_agent_home_app_server`` for the shared isolation setup
     (also used by ``skills_nudge_test``).
+
+    Yields the project dir alongside the process so a test can plant a conflict
+    in the install targets after the page has loaded.
     """
-    proc = start_agent_home_app_server(
+    proc, project = start_agent_home_app_server(
         app_port,
         request,
         tmp_path_factory,
         home_prefix="skills_callout_home",
         project_prefix="skills_callout_project",
     )
-    yield proc
+    yield proc, project
     print(proc.terminate(), flush=True)
 
 
@@ -165,14 +169,51 @@ def test_skills_install_callout_installs_end_to_end(
     # Snapshot the success confirmation (green check + text) while it's up, before
     # it auto-dismisses. Captured here rather than in the render test because only
     # this test drives a real install through to the success state.
-    #
-    # The failure state has no E2E coverage by construction, not by omission: the
-    # server withholds the recommendation whenever an install would be blocked at
-    # every target (``nudge_suppression_reason`` -> "conflict", via
-    # ``_one_click_install_would_be_refused``), precisely so it never offers an
-    # install that can only fail — and a conflict at only *some* targets installs
-    # the rest and succeeds. What's left are races, write failures, and dropped
-    # connections, none of which a test can force deterministically here. The error
-    # UI is covered by the SkillsInstallCallout unit test instead; the spec carries
-    # a render of it.
     assert_snapshot(callout, name="skills_install_callout-success")
+
+
+# The failure path is a backend outcome and is browser-agnostic apart from the
+# snapshot, so drive it once rather than on every browser.
+@pytest.mark.only_browser("chromium")
+def test_skills_install_callout_reports_a_failed_install(
+    app: Page,
+    app_server: tuple[AsyncSubprocess, Path],
+    assert_snapshot: ImageCompareFunction,
+) -> None:
+    """A refused install shows the server's reason and offers Retry.
+
+    The server withholds the recommendation when an install would be blocked at
+    every target (``nudge_suppression_reason`` -> "conflict"), so it never offers
+    an install that can only fail. But that gate is evaluated once, when the
+    ``NewSession`` message is built — so blocking the targets *after* the page has
+    loaded reaches the failure path deterministically, which is the real race this
+    state exists for. Both project targets have to be blocked: a conflict at only
+    some of them installs the rest and reports a partial success.
+    """
+    _, project = app_server
+
+    # Dismiss the toast so the mutually-exclusive callout appears, and confirm the
+    # offer is live BEFORE the targets are blocked.
+    _dismiss_proactive_toast(app)
+    callout = app.get_by_test_id("stSkillsInstallCallout")
+    expect(callout.get_by_role("button", name="Install skills")).to_be_visible()
+
+    # Block every install target with a real directory. Both are project-local
+    # (`.claude` because the temp HOME has one), and there is a single bundled
+    # skill, so these two cover every (skill, target) pair.
+    for harness in (".agents", ".claude"):
+        (project / harness / "skills" / "developing-with-streamlit").mkdir(parents=True)
+
+    callout.get_by_role("button", name="Install skills").click()
+
+    # The server's own conflict message, naming what to remove, and a Retry.
+    expect(callout.get_by_text("already exist", exact=False)).to_be_visible(
+        timeout=30000
+    )
+    expect(callout.get_by_role("button", name="Retry")).to_be_visible()
+    # It must NOT claim success on a refused install.
+    expect(callout.get_by_text("Skills installed", exact=False)).not_to_be_visible()
+
+    # This is the state the unit tests can only approximate: a real multi-line
+    # server reason, laid out as one row with the action at the right edge.
+    assert_snapshot(callout, name="skills_install_callout-error")

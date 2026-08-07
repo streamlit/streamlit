@@ -7824,10 +7824,31 @@ describe("Skills install nudge", () => {
 
     // A later error in the same session must NOT re-offer the install — the
     // skills are already installed (the server only re-detects next session).
+    //
+    // The first error box has to go FIRST. It's still mounted (only its local
+    // dismissed flag hid the callout) and the shared slot is released on unmount
+    // only — so simply adding a second error would be refused the slot and this
+    // test would pass on that alone, proving nothing about
+    // `skillsInstalledThisSession`.
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: { type: "text", text: { body: "ok" } },
+      },
+      { deltaPath: [0, 0] }
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.queryByTestId("stException")).not.toBeInTheDocument()
+
+    // Slot is now free, so a fresh eligible error could claim it — and must not.
     sendErrorElement([0, 1])
     await act(async () => {
       await Promise.resolve()
     })
+    await screen.findByTestId("stException")
     expect(
       screen.queryByTestId("stSkillsInstallCallout")
     ).not.toBeInTheDocument()

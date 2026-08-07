@@ -32,6 +32,8 @@ from typing import TYPE_CHECKING
 from e2e_playwright.conftest import start_app_server
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import pytest
 
     from e2e_playwright.conftest import AsyncSubprocess
@@ -44,7 +46,7 @@ def start_agent_home_app_server(
     *,
     home_prefix: str,
     project_prefix: str,
-) -> AsyncSubprocess:
+) -> tuple[AsyncSubprocess, Path]:
     """Start the app in a temp HOME with an agent harness present but no skills.
 
     Creates a temp HOME containing a ``.claude`` agent-config dir (the "agent
@@ -60,7 +62,8 @@ def start_agent_home_app_server(
     from the temp HOME, so the tests never depend on the real checkout.
 
     ``home_prefix`` / ``project_prefix`` just name the temp dirs per caller.
-    Returns the started ``AsyncSubprocess`` (the caller yields and terminates it).
+    Returns the started ``AsyncSubprocess`` and the isolated project dir — the
+    latter so a caller can plant a conflict in an install target mid-test.
     """
     home = tmp_path_factory.mktemp(home_prefix)
     # An agent harness is considered "present" when its home config dir exists.
@@ -80,10 +83,22 @@ def start_agent_home_app_server(
         __file__=str(project / os.path.basename(request.module.__file__))
     )
 
-    return start_app_server(
+    proc = start_app_server(
         app_port,
         isolated_module,  # type: ignore[arg-type]
         # Appended last so they override the headless default in conftest.
         extra_args=["--server.headless", "false"],
-        extra_env={"HOME": str(home)},
+        # HOME is what posixpath.expanduser reads; USERPROFILE (and the
+        # HOMEDRIVE/HOMEPATH pair) is what ntpath.expanduser reads, and it
+        # ignores HOME entirely. Set all of them so the isolation holds if these
+        # tests are ever run on Windows — without it the server would resolve
+        # ``Path.home()`` to the developer's real profile and both write a
+        # permanent dismissal marker there and install skills into it.
+        extra_env={
+            "HOME": str(home),
+            "USERPROFILE": str(home),
+            "HOMEDRIVE": "",
+            "HOMEPATH": str(home),
+        },
     )
+    return proc, project

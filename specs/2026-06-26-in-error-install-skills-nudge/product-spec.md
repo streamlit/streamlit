@@ -99,9 +99,10 @@ This state is deliberately hard to reach. `nudge_suppression_reason()` withholds
 recommendation entirely (reason `conflict`, via `_one_click_install_would_be_refused()`)
 whenever an install would be blocked at *every* target, so the server never offers an
 install that can only fail. A conflict at only some targets installs the rest and reports
-a partial success instead. What remains are races (a target becomes blocked between the
-offer and the click), write failures, and a dropped connection — so the render above was
-produced by forcing that gate open locally.
+a partial success instead. But that gate is evaluated once, when the `NewSession` message
+is built — so a target that becomes blocked *between the offer and the click* still fails,
+and that race is what this state is for. `skills_install_callout_test.py` reproduces it
+deterministically by blocking the targets after the page has loaded.
 
 Copy:
 
