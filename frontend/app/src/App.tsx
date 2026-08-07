@@ -1631,6 +1631,17 @@ export class App extends PureComponent<Props, State> {
       localStorageAvailable() &&
       !isSkillsNudgeDismissed() &&
       !isSkillsNudgeSnoozed() &&
+      // Don't re-raise the toast for an install this session already settled.
+      // `skillsNudgeShown` below only stops a SECOND showing — a toast skipped
+      // on first connect (snoozed) leaves it false, so a reconnect once the
+      // snooze lapses would raise the toast even though the callout has since
+      // installed, or tried and failed. Failure matters most: the errored
+      // callout is exempt from the eligibility hide (an error report isn't a
+      // transaction that finishes), so without this the toast would appear
+      // beside it — offering the install that just failed, and breaking the
+      // mutual exclusion the two surfaces otherwise keep.
+      !this.state.skillsInstalledThisSession &&
+      !this.state.skillsInstallFailedThisSession &&
       // `handleInitialization` re-runs on reconnect; show + log the impression
       // only once per page load so a reconnect can't enqueue a duplicate nudge
       // or inflate the funnel's numerator.
@@ -1688,6 +1699,13 @@ export class App extends PureComponent<Props, State> {
     //
     // This covers one browser client. Two tabs still race, because the guard
     // that would have to stop that lives in the server's InstallSkillsHandler.
+    //
+    // `surface` is whoever STARTED the install, not whoever joined it, so a
+    // joiner's click lands on the initiator's telemetry and confirmation. In the
+    // one case that reaches this — callout starts, user then clicks the toast —
+    // the toast is dismissed by the success below and the confirmation appears on
+    // the callout. A slightly odd frame in an already-rare race; not worth
+    // threading a second surface through for.
     if (this.inFlightSkillsInstall) {
       return this.inFlightSkillsInstall
     }

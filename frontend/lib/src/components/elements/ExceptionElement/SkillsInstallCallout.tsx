@@ -50,8 +50,13 @@ export interface SkillsInstallCalloutProps {
    * that remounted this box mid-install) — the callout hides itself so it can't
    * linger with a stale CTA or coexist with the toast. It only HIDES (it doesn't
    * permanently dismiss), so if eligibility returns (e.g. the toast is closed)
-   * the callout reappears. A callout that is installing / succeeded / errored
-   * ignores this and finishes its transaction.
+   * the callout reappears.
+   *
+   * A callout that is installing or confirming ignores this and finishes. So does
+   * one showing a failure — an error report isn't a transaction that ends, so it
+   * stays until its error box unmounts. That would be the one way the two surfaces
+   * could coexist, which is why the app also stops re-raising the toast once an
+   * install has failed this session.
    */
   enabled: boolean
   /**
