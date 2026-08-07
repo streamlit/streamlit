@@ -134,8 +134,8 @@ export function getMaxDate(element: DateInputProto): CalendarDate | undefined {
     : undefined
 }
 
-/** Concrete seed for the calendar's `focusedValue` so it stays controlled
- * from mount (avoids react-stately's uncontrolled-to-controlled warning). */
+/** Seeds the calendar focused date so it stays controlled from mount
+ * (avoids react-stately's uncontrolled→controlled warning). */
 export function getInitialFocusedDate(
   value: string[],
   minDate: CalendarDate

@@ -273,7 +273,6 @@ function DateInput({
   const handleRangeFormCommit = useCallback(
     (dates: CalendarDate[]): void => {
       if (!inForm) return
-      if (dates.length === 0 && !clearable) return
       const isoValue = dates.map(calendarDateToIso)
       updateWidgetMgrState(
         element,
@@ -282,7 +281,7 @@ function DateInput({
         fragmentId
       )
     },
-    [inForm, clearable, element, widgetMgr, fragmentId]
+    [inForm, element, widgetMgr, fragmentId]
   )
 
   const singleValue = useMemo(

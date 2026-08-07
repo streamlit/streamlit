@@ -111,7 +111,13 @@ interface RangeDateInputProps {
   focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
   onValidate: (date: CalendarDate | null) => void
+  /** When inside a form, writes the pending range to WidgetStateManager
+   * synchronously on blur so a concurrent form submit reads the correct
+   * value. Undefined when not in a form. */
   formCommit?: (dates: CalendarDate[]) => void
+  /** Incremented when the parent form is cleared. Signals this component to
+   * reset its local display state to the parent's value props (which may not
+   * have changed if segment edits were never committed). */
   formResetKey: number
 }
 
@@ -271,7 +277,9 @@ function RangeDateInput({
         const allCleared =
           segments &&
           segments.length > 0 &&
-          Array.from(segments).every(s => s.hasAttribute("data-placeholder"))
+          Array.from(segments).every(s =>
+            s.matches('[data-placeholder="true"]')
+          )
 
         let pending: CalendarDate[]
         if (allCleared) {
@@ -493,9 +501,21 @@ function RangeDateInput({
     [isOpen]
   )
 
-  const handleCalendarKeyDown = useCallback(
+  const handlePopoverKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab") return
+      const quickSelectBtn = quickSelectTriggerRef.current
+      // Forward-Tab inside calendar with quick-select available: move to it
+      if (
+        !e.shiftKey &&
+        quickSelectBtn &&
+        !quickSelectBtn.contains(e.target as Node)
+      ) {
+        e.preventDefault()
+        quickSelectBtn.focus()
+        return
+      }
+      // Everything else (Shift+Tab, or Tab from quick-select): close
       e.preventDefault()
       setIsOpenState(false)
       focusLastFieldSegment()
@@ -506,6 +526,11 @@ function RangeDateInput({
   // First click of a new range (from empty/partial state)
   const handleAnchorSelect = useCallback(
     (date: CalendarDate): void => {
+      if (
+        pendingAnchorRef.current &&
+        datesEqual(pendingAnchorRef.current, date)
+      )
+        return
       pendingAnchorRef.current = date
       setDisplayStart(date)
       setDisplayEnd(null)
@@ -606,14 +631,26 @@ function RangeDateInput({
     [makeHandlePaste, displayEnd]
   )
 
-  // Synchronous commit on blur for form-submit races
+  // Synchronous commit on blur for form-submit races.
+  // A field is "partially typed" when it has a MIX of filled and placeholder
+  // segments. Fully cleared (all placeholders → []) and filled start with
+  // empty end (→ [start]) are valid committable states.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (!formCommit) return
-      const hasPlaceholders =
-        triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
-      if (hasPlaceholders) return
+      const fields = triggerRef.current?.querySelectorAll("[data-range-field]")
+      if (fields) {
+        for (const field of fields) {
+          const segments = field.querySelectorAll('[role="spinbutton"]')
+          const placeholders = field.querySelectorAll(
+            '[role="spinbutton"][data-placeholder="true"]'
+          )
+          const isPartiallyTyped =
+            placeholders.length > 0 && placeholders.length < segments.length
+          if (isPartiallyTyped) return
+        }
+      }
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
       if (!rangeEqual(pending, committed)) {
@@ -638,7 +675,7 @@ function RangeDateInput({
         onKeyDown={handleFieldKeyDown}
       >
         <I18nProvider locale="en-US">
-          <StyledDateField $isRange>
+          <StyledDateField $isRange data-range-field="start">
             <div onPaste={handleStartPaste}>
               <DateField
                 aria-label={`${label} start date`}
@@ -656,7 +693,7 @@ function RangeDateInput({
             </div>
           </StyledDateField>
           <StyledRangeSeparator aria-hidden="true">–</StyledRangeSeparator>
-          <StyledDateField $isRange>
+          <StyledDateField $isRange data-range-field="end">
             <div onPaste={handleEndPaste}>
               <DateField
                 aria-label={`${label} end date`}
@@ -714,7 +751,7 @@ function RangeDateInput({
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDateInputCalendar"
-            onKeyDown={handleCalendarKeyDown}
+            onKeyDown={handlePopoverKeyDown}
           >
             <I18nProvider locale={safeLocale}>
               <StyledRangeCalendarRoot

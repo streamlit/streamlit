@@ -15,7 +15,13 @@
  */
 
 import { CalendarDate } from "@internationalized/date"
-import { act, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
 
@@ -2009,13 +2015,55 @@ describe("DateInput range-mode keyboard navigation", () => {
     })
   })
 
-  it("Tab in range calendar closes popover and returns focus to field", async () => {
+  it("Tab in range calendar moves focus to quick-select, then closes popover", async () => {
     const user = userEvent.setup()
     render(
       <DateInput
         {...getProps({
           isRange: true,
           default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const prevMonthBtn = within(calendar).getByLabelText("Previous month")
+    act(() => prevMonthBtn.focus())
+    expect(prevMonthBtn).toHaveFocus()
+
+    // Tab moves to quick-select trigger (popover stays open)
+    await user.tab()
+    const quickSelect = within(calendar).getByLabelText(
+      "Quick select a date range"
+    )
+    expect(quickSelect).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+
+    // Tab again closes popover and returns focus to field
+    await user.tab()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    const endDay = getRangeDateSegments(region, "end").day
+    expect(endDay).toHaveFocus()
+  })
+
+  it("Tab in range calendar without quick-select closes popover directly", async () => {
+    const user = userEvent.setup()
+    vi.setSystemTime(new Date(2024, 2, 15))
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2024-03-06", "2024-03-08"],
+          min: "2024-01-01",
         })}
       />
     )
@@ -2076,6 +2124,56 @@ describe("DateInput range-mode keyboard navigation", () => {
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       ["2024-03-06", "2024-03-10"],
+      { fromUi: true },
+      undefined
+    )
+
+    vi.useRealTimers()
+  })
+
+  it("clicking the same day twice from empty range commits a single-day range", async () => {
+    const user = userEvent.setup()
+    vi.setSystemTime(new Date(2024, 2, 15))
+
+    const props = getProps({
+      isRange: true,
+      default: [],
+      min: "2019-07-01",
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+    await user.click(year)
+
+    // First click sets the anchor
+    await user.click(await screen.findByLabelText("Wednesday, March 6, 2024"))
+
+    expect(screen.queryByTestId("stDateInputCalendar")).toBeInTheDocument()
+
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    // After selection, RAC appends " selected" to the label. Use fireEvent
+    // because userEvent.click hangs on already-selected RAC range cells in JSDOM.
+    const cell2 = screen.getByLabelText("Wednesday, March 6, 2024 selected")
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.pointerDown(cell2, { pointerType: "mouse", button: 0 })
+    fireEvent.pointerUp(cell2, { pointerType: "mouse", button: 0 })
+    fireEvent.click(cell2)
+    /* eslint-enable testing-library/prefer-user-event */
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["2024-03-06", "2024-03-06"],
       { fromUi: true },
       undefined
     )

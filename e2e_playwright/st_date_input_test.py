@@ -450,6 +450,12 @@ def test_range_date_input_start_error_state(
         use_inner_text=True,
     )
 
+    # The committed value should be unchanged (invalid dates are not committed)
+    expect_markdown(
+        themed_app,
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))",
+    )
+
     # Snapshot test of date input in error state
     assert_snapshot(fifth_date_input, name="st_date_input-range_date_input_error")
 
@@ -481,7 +487,12 @@ def test_range_date_input_end_error_state(themed_app: Page):
         "Error: End date set outside allowed range. Please select a date before 2029/07/08.",
         use_inner_text=True,
     )
-    # Skip snapshot test since similar enough to start date error snapshot
+
+    # The committed value should be unchanged (invalid dates are not committed)
+    expect_markdown(
+        themed_app,
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))",
+    )
 
 
 def test_check_top_level_class(app: Page):
