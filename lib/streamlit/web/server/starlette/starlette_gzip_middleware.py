@@ -76,6 +76,29 @@ def _is_range_request(scope: Scope) -> bool:
     return any(name == b"range" for name, _ in scope.get("headers", ()))
 
 
+def _route_path(scope: Scope) -> str:
+    """Return the request path relative to the ASGI ``root_path``.
+
+    Streamlit can be served under a base URL via an ASGI mount or a reverse
+    proxy that sets ``root_path`` (this works even without ``server.baseUrlPath``
+    being configured). In that case ``scope["path"]`` still includes the mount
+    prefix, so we strip it the same way Starlette's router does before matching
+    bypass routes. Otherwise the ``/static/`` and ``/media/`` bypass would not
+    match and those responses would be compressed.
+    """
+    path: str = scope.get("path", "")
+    root_path = scope.get("root_path", "")
+    if not root_path or not path.startswith(root_path):
+        return path
+    # Only strip at a path-segment boundary, so e.g. root_path "/app" does not
+    # match "/application" (mirrors Starlette's get_route_path).
+    if path == root_path:
+        return "/"
+    if path[len(root_path)] == "/":
+        return path[len(root_path) :]
+    return path
+
+
 class SelectiveGZipMiddleware:
     """GZip middleware that skips compression for static and media paths.
 
@@ -84,8 +107,8 @@ class SelectiveGZipMiddleware:
     (streaming handling, header rewriting, ``text/event-stream`` exclusion,
     worker-thread offloading, etc.) instead of subclassing its internals. This
     wrapper only decides, per request, whether to route it through the gzip
-    layer or serve it uncompressed (see ``_should_bypass_gzip`` and the
-    range-request handling in ``__call__``).
+    layer or serve it uncompressed (see ``_should_bypass_gzip``, ``_route_path``
+    for base-URL/mount handling, and the range-request handling in ``__call__``).
 
     The bypass is path-based rather than content-type-based, so audio/video
     served from routes other than ``/media/`` (e.g. custom-component assets or
@@ -113,7 +136,7 @@ class SelectiveGZipMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and (
-            _should_bypass_gzip(scope.get("path", ""), self._base_url)
+            _should_bypass_gzip(_route_path(scope), self._base_url)
             or _is_range_request(scope)
         ):
             # Serve static assets, media, and partial (range) responses without

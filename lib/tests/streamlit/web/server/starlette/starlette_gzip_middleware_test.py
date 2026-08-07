@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -26,11 +27,14 @@ from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
     SelectiveGZipMiddleware,
+    _route_path,
     _should_bypass_gzip,
 )
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    from starlette.types import Message, Receive, Scope, Send
 
 
 def _build_client(
@@ -286,3 +290,91 @@ class TestShouldBypassGzip:
         ``_should_bypass_gzip`` must handle it the same as ``"my-app"``.
         """
         assert _should_bypass_gzip(path, base_url="/my-app/") is expected
+
+
+async def _echo_app(scope: Scope, receive: Receive, send: Send) -> None:
+    """Minimal ASGI app returning a compressible text/plain body."""
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [(b"content-type", b"text/plain")],
+        }
+    )
+    await send({"type": "http.response.body", "body": b"x" * 2000})
+
+
+def _drive(app: Any, scope: Scope) -> list[Message]:
+    """Drive an ASGI app once with an empty request body and collect messages."""
+    messages: list[Message] = []
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message: Message) -> None:
+        messages.append(message)
+
+    asyncio.run(app(scope, receive, send))
+    return messages
+
+
+def _content_encoding(messages: list[Message]) -> bytes | None:
+    """Return the Content-Encoding header from the response start message."""
+    for message in messages:
+        if message["type"] == "http.response.start":
+            return dict(message["headers"]).get(b"content-encoding")
+    return None
+
+
+class TestRootPath:
+    """Bypass must work under an ASGI root_path (mount / reverse-proxy base URL).
+
+    Streamlit can be served under a base URL via ``root_path`` even without
+    ``server.baseUrlPath`` set. In that case ``scope["path"]`` keeps the mount
+    prefix, so the bypass must strip ``root_path`` (like Starlette's router)
+    before matching ``/static/`` and ``/media/``.
+    """
+
+    @pytest.mark.parametrize(
+        ("scope", "expected"),
+        [
+            ({"path": "/app/media/x", "root_path": "/app"}, "/media/x"),
+            ({"path": "/app/static/a.js", "root_path": "/app"}, "/static/a.js"),
+            ({"path": "/app", "root_path": "/app"}, "/"),
+            ({"path": "/app/", "root_path": "/app"}, "/"),
+            # Boundary: root_path "/app" must not strip a "/application" prefix.
+            ({"path": "/application/x", "root_path": "/app"}, "/application/x"),
+            ({"path": "/media/x", "root_path": ""}, "/media/x"),
+            ({"path": "/media/x"}, "/media/x"),
+        ],
+    )
+    def test_route_path(self, scope: Scope, expected: str) -> None:
+        """root_path is stripped only at a path-segment boundary."""
+        assert _route_path(scope) == expected
+
+    @pytest.mark.parametrize(
+        "path", ["/app/media/clip.mp4", "/app/static/app.123.js", "/app"]
+    )
+    def test_bypasses_static_and_media_under_root_path(self, path: str) -> None:
+        """Static/media/root are served uncompressed even under a root_path."""
+        middleware = SelectiveGZipMiddleware(_echo_app, minimum_size=100)
+        scope: Scope = {
+            "type": "http",
+            "path": path,
+            "root_path": "/app",
+            "headers": [(b"accept-encoding", b"gzip")],
+        }
+
+        assert _content_encoding(_drive(middleware, scope)) is None
+
+    def test_compresses_api_under_root_path(self) -> None:
+        """Non-bypassed paths under a root_path are still compressed."""
+        middleware = SelectiveGZipMiddleware(_echo_app, minimum_size=100)
+        scope: Scope = {
+            "type": "http",
+            "path": "/app/_stcore/data",
+            "root_path": "/app",
+            "headers": [(b"accept-encoding", b"gzip")],
+        }
+
+        assert _content_encoding(_drive(middleware, scope)) == b"gzip"
