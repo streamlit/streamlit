@@ -367,22 +367,33 @@ def test_text_input_specialized_types_attributes(app: Page):
 
 
 def test_text_input_search_clear_button(app: Page):
-    """The search type shows a clear (x) button that empties the input on click."""
+    """The search type shows a clear (x) button that empties the input on click.
+
+    ``search_input`` is ``bind="query-params"``, so the clear-button path (which
+    bypasses the Enter/blur commit flow) must also drop the value from the URL.
+    """
     search_widget = get_element_by_key(app, "search_input")
     search_field = search_widget.locator("input").first
 
     clear_button = search_widget.get_by_test_id("stTextInputClearButton")
-    # Empty search input: no clear button yet.
+    # Empty search input: no clear button yet, and no bound query param.
     expect(clear_button).not_to_be_visible()
+    expect(app).not_to_have_url(re.compile(r"[?&]search_input="))
 
+    # Commit a value so it is reflected in the bound query param.
     search_field.fill("laptops")
+    search_field.press("Enter")
+    wait_for_app_run(app)
     expect(clear_button).to_be_visible()
+    expect(app).to_have_url(re.compile(r"search_input=laptops"))
 
     clear_button.click()
     wait_for_app_run(app)
 
     expect(search_field).to_have_value("")
     expect(clear_button).not_to_be_visible()
+    # Clearing via the button also removes the value from the bound query param.
+    expect(app).not_to_have_url(re.compile(r"[?&]search_input="))
 
 
 def test_text_input_email_default_validation(app: Page):

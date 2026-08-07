@@ -338,8 +338,8 @@ class TextWidgetsMixin:
               mobile). Defaults to a call icon, a ``+1 234 567 8900``
               placeholder, and ``autocomplete="tel"``. No default validation
               is applied because phone formats vary too widely.
-            - ``"search"``: A free-text search input with the browser's native
-              clear button. Defaults to a search icon, a ``Search``
+            - ``"search"``: A free-text search input with a clear button that
+              empties the field. Defaults to a search icon, a ``Search``
               placeholder, and ``autocomplete="off"`` (so private search terms
               don't leak into the browser's autofill history). No default
               validation is applied.
