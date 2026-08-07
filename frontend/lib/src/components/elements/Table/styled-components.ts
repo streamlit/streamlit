@@ -140,15 +140,16 @@ const styleCellFunction = (
     paddingLeft: border === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
-  // Always inherit table font size for cell markdown. StreamlitMarkdown defaults
-  // to body size (md), and global `p { font-size: 1rem }` would otherwise keep
-  // paragraphs at 16px even when the container uses sm (including truncate mode).
-  [`${StyledStreamlitMarkdown}`]: {
-    fontSize: "inherit",
-  },
-  [`${StyledStreamlitMarkdown} p`]: {
-    fontSize: "inherit",
-  },
+  // Always inherit the table font size for cell markdown. StreamlitMarkdown
+  // defaults to body size (md), and the global `p, ol, ul, dl { font-size: 1rem }`
+  // rule (theme/globalStyles.ts) would otherwise keep these text containers at
+  // 16px even when the container uses sm (including truncate mode). This selector
+  // covers all of them and is not redefined in the branches below, so it applies
+  // in every mode.
+  [`${StyledStreamlitMarkdown}, ${StyledStreamlitMarkdown} :is(p, ol, ul, dl)`]:
+    {
+      fontSize: "inherit",
+    },
   ...(truncateContent
     ? {
         // Apply truncation only for fixed-width tables to avoid clipping
@@ -166,10 +167,9 @@ const styleCellFunction = (
 
         // StreamlitMarkdown defaults to width: 100% and aggressive word
         // breaking. Override this in table cells so columns size by content,
-        // and wrapping only happens at the max column width.
-        // Spread previous fontSize inherit so this object replace still keeps it.
+        // and wrapping only happens at the max column width. Font size is
+        // handled by the compound selector above (which this does not redefine).
         [`${StyledStreamlitMarkdown}`]: {
-          fontSize: "inherit",
           display: "inline-block",
           width: "fit-content",
           maxWidth: theme.sizes.tableColumnMaxWidth,
@@ -190,7 +190,6 @@ const styleCellFunction = (
           maxWidth: "none",
         },
         [`${StyledStreamlitMarkdown} p`]: {
-          fontSize: "inherit",
           whiteSpace: "normal",
           overflowWrap: "normal",
           wordBreak: "normal",
