@@ -1266,33 +1266,33 @@ class ButtonGroupMixin:
                 pass
 
             else:
-                # A disabled list is only treated as a positional boolean mask if its
-                # length matches options length and EVERY element is a boolean.
-                is_bool_mask = (
-                    len(disabled_seq) == len(indexable_options)
-                    and all(isinstance(x, bool) for x in disabled_seq)
-                )
-                if is_bool_mask:
-                    disabled_options = cast("Sequence[bool]", disabled_seq)
-                    widget_disabled = all(disabled_seq)
-                else:
-                    try:
-                        indices = check_and_convert_to_indices(
-                            indexable_options, disabled_seq
-                        )
-                    except StreamlitAPIException as e:
-                        msg = (
-                            str(e)
-                            .replace("default values", "disabled values")
-                            .replace("default value", "disabled value")
-                        )
-                        raise StreamlitAPIException(msg) from e
+                # First, try treating disabled_seq as a list of option values to disable.
+                try:
+                    indices = check_and_convert_to_indices(
+                        indexable_options, disabled_seq
+                    )
                     disabled_bools = [False] * len(indexable_options)
                     if indices:
                         for idx in indices:
                             disabled_bools[idx] = True
                     disabled_options = disabled_bools
                     widget_disabled = all(disabled_bools)
+                except StreamlitAPIException as val_err:
+                    # If value-based lookup failed, check if disabled_seq is a positional boolean mask.
+                    is_bool_mask = (
+                        len(disabled_seq) == len(indexable_options)
+                        and all(isinstance(x, bool) for x in disabled_seq)
+                    )
+                    if is_bool_mask:
+                        disabled_options = cast("Sequence[bool]", disabled_seq)
+                        widget_disabled = all(disabled_seq)
+                    else:
+                        msg = (
+                            str(val_err)
+                            .replace("default values", "disabled values")
+                            .replace("default value", "disabled value")
+                        )
+                        raise StreamlitAPIException(msg) from val_err
 
         if style not in {"pills", "segmented_control"}:
             raise StreamlitAPIException(

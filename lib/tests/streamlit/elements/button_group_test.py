@@ -897,6 +897,11 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.disabled is False
         assert [option.disabled for option in delta.options] == [True, False]
 
+        st.pills("label2", [False, True], disabled=[False, True])
+        delta2 = self.get_delta_from_queue().new_element.button_group
+        assert delta2.disabled is True
+        assert [option.disabled for option in delta2.options] == [True, True]
+
     def test_per_option_disabled_registers_widget_as_enabled(self):
         """Test that per-option disabled does not mark the entire widget as disabled in session state."""
         res = st.pills("label", ["a", "b"], disabled=["a"])
