@@ -79,7 +79,7 @@ def _warn_unusable_sample_seed(configured: object) -> None:
     _warned_sample_seeds.add(key)
     _LOGGER.warning(
         "Ignoring runner.cacheHashSeed=%s: it must be a whole number from 0 to %s. "
-        "Falling back to the default seed of 0, so cache keys are unchanged.",
+        "Falling back to the default seed of 0.",
         key,
         _MAX_SAMPLE_SEED,
     )
@@ -91,8 +91,8 @@ def _sample_seed() -> int:
     Reads ``runner.cacheHashSeed``, converting to an int so a quoted TOML value
     works the same as an unquoted one. A value that cannot be converted, or that
     falls outside ``[0, _MAX_SAMPLE_SEED]``, falls back to ``0`` -- the seed used
-    before the option existed -- so a malformed value leaves cache keys unchanged
-    instead of raising from the hashing path.
+    before the option existed -- so a malformed value reverts to the historical
+    sample positions instead of raising from the hashing path.
 
     Two TOML values need handling that ``int()`` alone does not give: ``true`` is a
     ``bool``, which is an ``int`` subclass and would convert to a usable ``1``; and

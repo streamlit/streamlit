@@ -1144,14 +1144,16 @@ def test_cache_hash_seed_falls_back_to_zero_for_unusable_values(
         pytest.param(float("nan"), id="nan"),
     ],
 )
-def test_cache_hash_seed_warns_for_a_value_int_would_have_accepted_or_raised_on(
+def test_cache_hash_seed_rejects_bool_and_non_finite_floats(
     value: object,
 ) -> None:
-    """These two slip past a plain ``int()`` guard in opposite directions.
+    """These three slip past a plain ``int()`` guard in three different ways.
 
     ``int(True)`` succeeds and yields ``1``, quietly changing every large-object
     cache key; ``int(float("inf"))`` raises ``OverflowError``, which is not a
-    ``ValueError`` and so would have escaped the fallback entirely.
+    ``ValueError`` and so would have escaped the fallback entirely; and
+    ``int(float("nan"))`` raises ``ValueError``, which was already caught -- it is
+    covered here so that difference stays deliberate rather than incidental.
     """
     _warned_sample_seeds.clear()
 
