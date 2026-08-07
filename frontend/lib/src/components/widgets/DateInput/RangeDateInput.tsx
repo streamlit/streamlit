@@ -200,6 +200,8 @@ function RangeDateInput({
   const errorId = `${id}-error`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
+  // today() inside getQuickSelectPresets is intentionally not a dep — the
+  // component remounts on each script rerun, so stale-day is not possible.
   const quickSelectPresets = useMemo(() => {
     const presets = getQuickSelectPresets()
     if (!maxDate) return presets
@@ -214,10 +216,11 @@ function RangeDateInput({
   // Guards against `handleFocus` reopening the popover during programmatic
   // focus restoration (see `focusLastFieldSegment` below).
   const isRestoringFocusRef = useRef(false)
-  // Enables "click to start new range" on an existing complete range. RAC
-  // fires onChange with start===end after clearing — this ref detects
-  // "second click" and completes the range using the stored anchor.
-  const pendingAnchorRef = useRef<CalendarDate | null>(null)
+  // True while in "anchor mode": user clicked a day to start a new range
+  // and the calendar is waiting for the second click to complete it.
+  // The anchor VALUE is always `displayStartRef.current` — never stored
+  // separately, so it can't go stale when the user edits via keyboard/paste.
+  const inAnchorModeRef = useRef(false)
 
   // --- Two-layer state (matches SingleDateInput pattern) ---
   const [displayStart, setDisplayStart] = useState<CalendarDate | null>(
@@ -269,7 +272,7 @@ function RangeDateInput({
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
-      pendingAnchorRef.current = null
+      inAnchorModeRef.current = false
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
@@ -414,9 +417,6 @@ function RangeDateInput({
       if (!date) {
         setDisplayEnd(null)
       }
-      if (date && pendingAnchorRef.current) {
-        pendingAnchorRef.current = date
-      }
       validateBothFields(date, date ? displayEndRef.current : null)
       if (date) onFocusChange(date)
     },
@@ -443,7 +443,7 @@ function RangeDateInput({
 
   // When start===end, treat it as "first click of a new range" (anchor mode)
   // if a complete range was showing, or "second click" (complete the range
-  // using pendingAnchorRef) if we're already in anchor mode.
+  // using displayStartRef as anchor) if we're already in anchor mode.
   const handleCalendarChange = useCallback(
     (range: { start: CalendarDate; end: CalendarDate }): void => {
       // Guard: once we've committed and initiated a close, ignore any
@@ -454,16 +454,16 @@ function RangeDateInput({
         if (displayEndRef.current) {
           // First click while a complete range is shown — enter anchor mode.
           // Calendar stays open for the second click (core two-click UX).
-          pendingAnchorRef.current = range.start
+          inAnchorModeRef.current = true
           setDisplayStart(range.start)
           setDisplayEnd(null)
           onChange([range.start])
           return
         }
-        if (pendingAnchorRef.current) {
-          // Second click — complete the range using the pending anchor
-          const anchor = pendingAnchorRef.current
-          pendingAnchorRef.current = null
+        if (inAnchorModeRef.current && displayStartRef.current) {
+          // Second click — complete the range using the current start as anchor
+          const anchor = displayStartRef.current
+          inAnchorModeRef.current = false
           const [start, end] =
             anchor.compare(range.start) <= 0
               ? [anchor, range.start]
@@ -478,8 +478,8 @@ function RangeDateInput({
         }
       }
       // Normal completed range (two distinct dates, or single-day when not
-      // in pending-anchor flow)
-      pendingAnchorRef.current = null
+      // in anchor mode)
+      inAnchorModeRef.current = false
       setDisplayStart(range.start)
       setDisplayEnd(range.end)
       onChange([range.start, range.end])
@@ -535,12 +535,9 @@ function RangeDateInput({
   // First click of a new range (from empty/partial state)
   const handleAnchorSelect = useCallback(
     (date: CalendarDate): void => {
-      if (
-        pendingAnchorRef.current &&
-        datesEqual(pendingAnchorRef.current, date)
-      )
+      if (inAnchorModeRef.current && datesEqual(displayStartRef.current, date))
         return
-      pendingAnchorRef.current = date
+      inAnchorModeRef.current = true
       setDisplayStart(date)
       setDisplayEnd(null)
       onChange([date])
@@ -549,6 +546,7 @@ function RangeDateInput({
   )
 
   const handleClear = useCallback((): void => {
+    inAnchorModeRef.current = false
     setDisplayStart(null)
     setDisplayEnd(null)
     onChange([])
@@ -558,7 +556,7 @@ function RangeDateInput({
     (presetId: string): void => {
       const preset = quickSelectPresets.find(p => p.id === presetId)
       if (!preset) return
-      pendingAnchorRef.current = null
+      inAnchorModeRef.current = false
       setDisplayStart(preset.start)
       setDisplayEnd(preset.end)
       onChange([preset.start, preset.end])
@@ -574,6 +572,7 @@ function RangeDateInput({
       if (key) {
         handleQuickSelect(String(key))
       } else {
+        inAnchorModeRef.current = false
         setDisplayStart(null)
         setDisplayEnd(null)
         onChange([])
