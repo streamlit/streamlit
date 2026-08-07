@@ -349,7 +349,7 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
 
 
 def test_range_is_empty_if_calendar_closed_empty(app: Page):
-    """Test that range value is empty of calendar closed empty."""
+    """Test that range value is empty if calendar is closed empty."""
     date_field = get_date_input(app, "Range, two dates").get_by_test_id(
         "stDateInputField"
     )

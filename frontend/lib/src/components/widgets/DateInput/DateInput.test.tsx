@@ -2181,6 +2181,35 @@ describe("DateInput range-mode keyboard navigation", () => {
 
     vi.useRealTimers()
   })
+
+  it("partially cleared range reverts on popover close (Escape)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+
+    // Click to open, then partially clear start (only year)
+    await user.click(start.year)
+    await screen.findByTestId("stDateInputCalendar")
+    await clearSegment(user, start.year)
+
+    // Dismiss via Escape
+    await user.keyboard("{Escape}")
+
+    // Value should be unchanged (partial edit reverted)
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    // Display should revert: start year should show the committed year
+    expect(start.year).not.toHaveAttribute("data-placeholder", "true")
+  })
 })
 
 describe("DateInput range-mode form commit-on-blur", () => {

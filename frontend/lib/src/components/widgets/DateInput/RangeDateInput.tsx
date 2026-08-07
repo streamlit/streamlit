@@ -276,30 +276,53 @@ function RangeDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        // React Aria may revert ref values during blur (DateField onChange
-        // fires with a non-null value before this effect reads them). Use
-        // the DOM as ground truth: if EVERY spinbutton segment shows a
-        // placeholder, the user cleared the entire widget.
-        const segments = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"]'
+        // Check per-field: if any field is partially typed (mix of filled
+        // and placeholder segments), revert display to committed values
+        // rather than committing an incomplete edit. Matches handleBlur.
+        const fields = triggerRef.current?.querySelectorAll(
+          "[data-range-field]"
         )
-        const allCleared =
-          segments &&
-          segments.length > 0 &&
-          Array.from(segments).every(s =>
-            s.matches('[data-placeholder="true"]')
-          )
-
-        let pending: CalendarDate[]
-        if (allCleared) {
-          pending = []
-        } else {
-          pending = compact([displayStartRef.current, displayEndRef.current])
+        let isPartiallyTyped = false
+        if (fields) {
+          for (const field of fields) {
+            const segs = field.querySelectorAll('[role="spinbutton"]')
+            const placeholders = field.querySelectorAll(
+              '[role="spinbutton"][data-placeholder="true"]'
+            )
+            if (placeholders.length > 0 && placeholders.length < segs.length) {
+              isPartiallyTyped = true
+              break
+            }
+          }
         }
 
-        const committed = compact([startValue, endValue])
-        if (!rangeEqual(pending, committed)) {
-          onChangeRef.current(pending)
+        if (isPartiallyTyped) {
+          setDisplayStart(startValue)
+          setDisplayEnd(endValue)
+        } else {
+          // Use the DOM as ground truth: if EVERY spinbutton segment shows
+          // a placeholder, the user cleared the entire widget.
+          const segments = triggerRef.current?.querySelectorAll(
+            '[role="spinbutton"]'
+          )
+          const allCleared =
+            segments &&
+            segments.length > 0 &&
+            Array.from(segments).every(s =>
+              s.matches('[data-placeholder="true"]')
+            )
+
+          let pending: CalendarDate[]
+          if (allCleared) {
+            pending = []
+          } else {
+            pending = compact([displayStartRef.current, displayEndRef.current])
+          }
+
+          const committed = compact([startValue, endValue])
+          if (!rangeEqual(pending, committed)) {
+            onChangeRef.current(pending)
+          }
         }
       }
     }

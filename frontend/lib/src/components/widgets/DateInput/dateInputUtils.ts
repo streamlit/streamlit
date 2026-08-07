@@ -304,3 +304,11 @@ export function isValidSegmentValue(
   if (segmentType === "day") return value >= 1 && value <= 31
   return value >= 1
 }
+
+/** Ensures start <= end for a two-element ISO date array (lexicographic). */
+export function normalizeRangeOrder(isoValues: string[]): string[] {
+  if (isoValues.length === 2 && isoValues[0] > isoValues[1]) {
+    return [isoValues[1], isoValues[0]]
+  }
+  return isoValues
+}

@@ -49,6 +49,7 @@ import {
   getMinDate,
   isOlderThanTwoYears,
   isoToCalendarDate,
+  normalizeRangeOrder,
   validateDate,
 } from "./dateInputUtils"
 import RangeDateInput from "./RangeDateInput"
@@ -226,11 +227,10 @@ function DateInput({
         setError(buildErrorMessage(errorType))
         return
       }
-      // Normalize order: typed/pasted ranges may have start > end
-      if (newIsoDates.length === 2 && newIsoDates[0] > newIsoDates[1]) {
-        newIsoDates.reverse()
-      }
-      setValueWithSource({ value: newIsoDates, fromUi: true })
+      setValueWithSource({
+        value: normalizeRangeOrder(newIsoDates),
+        fromUi: true,
+      })
     },
     [
       buildErrorMessage,
@@ -277,14 +277,13 @@ function DateInput({
   const handleRangeFormCommit = useCallback(
     (dates: CalendarDate[]): void => {
       if (!inForm) return
-      const isoValue = dates.map(calendarDateToIso)
-      if (isoValue.length === 2 && isoValue[0] > isoValue[1]) {
-        isoValue.reverse()
-      }
       updateWidgetMgrState(
         element,
         widgetMgr,
-        { value: isoValue, fromUi: true },
+        {
+          value: normalizeRangeOrder(dates.map(calendarDateToIso)),
+          fromUi: true,
+        },
         fragmentId
       )
     },
