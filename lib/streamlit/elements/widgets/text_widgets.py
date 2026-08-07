@@ -35,7 +35,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -587,10 +587,8 @@ class TextWidgetsMixin:
 
         type_defaults = _TEXT_INPUT_TYPE_DEFAULTS.get(type)
         if type_defaults is None:
-            valid_types = ", ".join(repr(t) for t in _TEXT_INPUT_TYPE_DEFAULTS)
-            raise StreamlitAPIException(
-                f"'{type}' is not a valid text_input type. Valid types are "
-                f"{valid_types}."
+            raise StreamlitValueError(
+                "type", [repr(t) for t in _TEXT_INPUT_TYPE_DEFAULTS]
             )
 
         check_widget_policies(

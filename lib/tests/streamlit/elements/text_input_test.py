@@ -26,6 +26,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
@@ -99,13 +100,13 @@ class TextInputTest(DeltaGeneratorTestCase):
             assert type_value == c.type
 
         # An invalid input type should raise an exception.
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.text_input("label", type="bad_type")
 
         assert (
             str(exc.value)
-            == "'bad_type' is not a valid text_input type. Valid types are "
-            "'default', 'password', 'email', 'url', 'phone', 'search'."
+            == "Invalid `type` value. Supported values: 'default', 'password', "
+            "'email', 'url', 'phone', 'search'."
         )
 
     @parameterized.expand(
