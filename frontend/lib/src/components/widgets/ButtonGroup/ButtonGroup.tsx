@@ -20,6 +20,7 @@ import {
   ReactElement,
   Ref,
   useCallback,
+  useEffect,
   useMemo,
 } from "react"
 
@@ -348,6 +349,24 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     () => contentStringsToIndices(options, value),
     [options, value]
   )
+
+  // When options change and the currently stored value no longer matches any
+  // option (e.g. format_func changed dynamically due to a language switch,
+  // making the stored formatted strings stale), reset the widget so session
+  // state and visual state remain in sync.
+  useEffect(() => {
+    if (value.length === 0) return
+    const validIndices = contentStringsToIndices(options, value)
+    if (validIndices.length > 0) return
+    const backendValue = getCurrStateFromProto(element)
+    setValueWithSource({
+      value:
+        backendValue.length > 0
+          ? backendValue
+          : getDefaultStateFromProto(element),
+      fromUi: false,
+    })
+  }, [options, value, setValueWithSource, element])
 
   const containerWidth = shouldWidthStretch(widthConfig)
 

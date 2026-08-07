@@ -1265,38 +1265,34 @@ class ButtonGroupMixin:
             if len(disabled_seq) == 0:
                 pass
 
-            elif isinstance(disabled_seq[0], bool):
-                if not all(isinstance(x, bool) for x in disabled_seq):
-                    raise StreamlitAPIException(
-                        "When the first element of `disabled` is a boolean, "
-                        "all elements must be booleans."
-                    )
-                if len(disabled_seq) != len(indexable_options):
-                    raise StreamlitAPIException(
-                        f"The `disabled` argument must have the same length as "
-                        f"`options`. Got {len(disabled_seq)} disabled values "
-                        f"for {len(indexable_options)} options."
-                    )
-                disabled_options = cast("Sequence[bool]", disabled_seq)
-                widget_disabled = all(disabled_seq)
-
             else:
-                try:
-                    indices = check_and_convert_to_indices(
-                        indexable_options, disabled_seq
-                    )
-                except StreamlitAPIException as e:
-                    if "default value" in str(e):
-                        raise StreamlitAPIException(
-                            str(e).replace("default value", "disabled value")
-                        ) from e
-                    raise
-                disabled_bools = [False] * len(indexable_options)
-                if indices:
-                    for idx in indices:
-                        disabled_bools[idx] = True
-                disabled_options = disabled_bools
-                widget_disabled = all(disabled_bools)
+                # A disabled list is only treated as a positional boolean mask if its
+                # length matches options length and EVERY element is a boolean.
+                is_bool_mask = (
+                    len(disabled_seq) == len(indexable_options)
+                    and all(isinstance(x, bool) for x in disabled_seq)
+                )
+                if is_bool_mask:
+                    disabled_options = cast("Sequence[bool]", disabled_seq)
+                    widget_disabled = all(disabled_seq)
+                else:
+                    try:
+                        indices = check_and_convert_to_indices(
+                            indexable_options, disabled_seq
+                        )
+                    except StreamlitAPIException as e:
+                        msg = (
+                            str(e)
+                            .replace("default values", "disabled values")
+                            .replace("default value", "disabled value")
+                        )
+                        raise StreamlitAPIException(msg) from e
+                    disabled_bools = [False] * len(indexable_options)
+                    if indices:
+                        for idx in indices:
+                            disabled_bools[idx] = True
+                    disabled_options = disabled_bools
+                    widget_disabled = all(disabled_bools)
 
         if style not in {"pills", "segmented_control"}:
             raise StreamlitAPIException(
@@ -1366,7 +1362,7 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
             value_type="string_array_value",
-            disabled=disabled,
+            disabled=widget_disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=True,

@@ -889,6 +889,22 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.disabled is True
         assert [option.disabled for option in delta.options] == [True, True, True]
 
+    def test_disabled_boolean_option_values(self):
+        """Test that boolean option values can be disabled without being misparsed as index mask."""
+        st.pills("label", [True, False], disabled=[True])
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == [True, False]
+
+    def test_per_option_disabled_registers_widget_as_enabled(self):
+        """Test that per-option disabled does not mark the entire widget as disabled in session state."""
+        res = st.pills("label", ["a", "b"], disabled=["a"])
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == [True, False]
+
     @parameterized.expand(
         get_command_matrix([(None, []), ([], []), (["Tea"], [1]), ("Coffee", [0])])
     )
