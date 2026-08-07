@@ -45,7 +45,7 @@ This means you should always have logs, warnings, errors, and notices end up in
 
 ## Styling Components - CSS-in-JS
 
-- We have removed almost all of the CSS/SCSS in our code, so please do not create new files/(S)CSS styles.
+- We have removed almost all of the CSS in our code, so please do not create new files/CSS styles.
 - When editing or creating a new component that needs styling, add those styles in the form of [styled components](https://emotion.sh/docs/styled) in an accompanying `styled-components.ts` file.
   - We use [Emotion](https://emotion.sh/docs/introduction) to style our components
   - All styled components begin with the word `Styled` to indicate it's a styled component.

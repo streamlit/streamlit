@@ -2316,7 +2316,9 @@ class VegaChartsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -2325,7 +2327,7 @@ class VegaChartsMixin:
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)
         if isinstance(data, dict) and spec is None:
-            spec = data
+            spec = cast("VegaLiteSpec", data)
             data = None
 
         if spec is None:

@@ -155,7 +155,7 @@ test = [
   "httpx2",
   # Playwright and E2E test dependencies:
   # We pin playwright to an exact version to avoid new browser versions breaking our CI.
-  "playwright==1.61.0",
+  "playwright==1.62.0",
   "pytest-playwright",
   "pixelmatch",
   "pytest-xdist",
@@ -483,18 +483,6 @@ ignore_missing_imports = true
 [tool.ty.environment]
 root = ["./lib"]
 
-[tool.ty.analysis]
-# Preserve the historically loose cross-module behavior: treat all first-party
-# `streamlit.*` imports as `Any` instead of resolving them. This keeps ty focused
-# on stdlib/third-party correctness (as it was under the previous flattened root,
-# where `streamlit.*` was unresolved and silenced) without surfacing pre-existing
-# intra-package typing debt that is out of scope here. mypy still resolves and
-# checks first-party types, so this does not reduce overall type coverage.
-# TODO(https://github.com/astral-sh/ty/issues/2443): narrow or drop this once ty
-# handles a first-party `typing.py` without shadowing the stdlib module, so ty can
-# eventually add value on first-party code too.
-replace-imports-with-any = ["streamlit.**"]
-
 [tool.ty.src]
 include = ["lib/streamlit", "e2e_playwright", "scripts"]
 exclude = [
@@ -507,8 +495,3 @@ unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
 unused-ignore-comment = "ignore"
 unused-type-ignore-comment = "ignore"
-# `streamlit.*` imports are replaced with `Any` (see [tool.ty.analysis]), so casts
-# to those types are reported as redundant. Disable the rule to avoid false
-# positives; mypy still enforces `warn_redundant_casts = true` with real type
-# resolution, so genuine redundant casts are still caught.
-redundant-cast = "ignore"
