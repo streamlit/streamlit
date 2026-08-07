@@ -804,11 +804,16 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
+  // Code background should use the codeBackgroundColor config if provided,
+  // otherwise use the derived bgMix (configured/derived or default) above
   conditionalOverrides.colors.codeBackgroundColor =
-    codeBackgroundColor ?? colors.codeBackgroundColor
+    codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
+  // Dataframe header background should use the config if provided,
+  // otherwise use the derived bgMix (configured/derived or default) above
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
-    dataframeHeaderBackgroundColor ?? colors.dataframeHeaderBackgroundColor
+    dataframeHeaderBackgroundColor ??
+    conditionalOverrides.colors.dataframeHeaderBackgroundColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor

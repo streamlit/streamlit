@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { darken, lighten, transparentize } from "color2k"
+import { darken, lighten, mix, transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
 
@@ -1114,6 +1114,23 @@ describe("createEmotionTheme", () => {
       theme.colors.bgMix
     )
   })
+
+  it.each(["codeBackgroundColor", "dataframeHeaderBackgroundColor"] as const)(
+    "derives %s from custom secondaryBackgroundColor",
+    colorKey => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        backgroundColor: "#ffffff",
+        secondaryBackgroundColor: "#FAFAF9",
+      }
+
+      const theme = createEmotionTheme(themeInput)
+      const expectedBgMix = mix("#ffffff", "#FAFAF9", 0.5)
+      expect(theme.colors[colorKey]).toBe(expectedBgMix)
+      expect(theme.colors[colorKey]).not.toBe(
+        lightTheme.emotion.colors[colorKey]
+      )
+    }
+  )
 
   it("sets the borderColor properties based on borderColor config", () => {
     const themeInput: Partial<CustomThemeConfig> = {
