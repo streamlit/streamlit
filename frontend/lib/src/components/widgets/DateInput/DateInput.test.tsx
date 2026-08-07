@@ -1872,10 +1872,11 @@ describe("DateInput range-mode paste handling", () => {
     await user.click(year)
     await user.paste("2024/03/15")
 
+    // Sorted: pasted start (2024-03-15) > existing end (2019-07-08)
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         expect.objectContaining({ id: "1" }),
-        ["2024-03-15", "2019-07-08"],
+        ["2019-07-08", "2024-03-15"],
         expect.objectContaining({ fromUi: true }),
         undefined
       )
@@ -2216,9 +2217,11 @@ describe("DateInput range-mode form commit-on-blur", () => {
     await user.tab()
     await user.tab()
 
+    // Sorted: typed start (2024-03-15) > existing end (2019-07-08), so
+    // the normalization layer swaps them.
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      ["2024-03-15", "2019-07-08"],
+      ["2019-07-08", "2024-03-15"],
       { fromUi: true },
       undefined
     )
@@ -2252,6 +2255,74 @@ describe("DateInput range-mode form commit-on-blur", () => {
     await user.tab()
 
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+  })
+
+  it("fully cleared range commits empty array on blur", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      formId: "form",
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+
+    // Clear all segments of both fields
+    await clearSegment(user, start.year)
+    await clearSegment(user, start.month)
+    await clearSegment(user, start.day)
+    await clearSegment(user, end.year)
+    await clearSegment(user, end.month)
+    await clearSegment(user, end.day)
+
+    // Move focus outside the widget to trigger blur
+    await user.click(document.body)
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("filled start with empty end commits [start] on blur", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      formId: "form",
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const end = getRangeDateSegments(region, "end")
+
+    // Clear all end segments — leaves start intact
+    await clearSegment(user, end.year)
+    await clearSegment(user, end.month)
+    await clearSegment(user, end.day)
+
+    // Move focus outside the widget to trigger blur
+    await user.click(document.body)
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["2019-07-06"],
+      { fromUi: true },
+      undefined
+    )
   })
 })
 

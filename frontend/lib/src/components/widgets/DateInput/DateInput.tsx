@@ -226,6 +226,10 @@ function DateInput({
         setError(buildErrorMessage(errorType))
         return
       }
+      // Normalize order: typed/pasted ranges may have start > end
+      if (newIsoDates.length === 2 && newIsoDates[0] > newIsoDates[1]) {
+        newIsoDates.reverse()
+      }
       setValueWithSource({ value: newIsoDates, fromUi: true })
     },
     [
@@ -274,6 +278,9 @@ function DateInput({
     (dates: CalendarDate[]): void => {
       if (!inForm) return
       const isoValue = dates.map(calendarDateToIso)
+      if (isoValue.length === 2 && isoValue[0] > isoValue[1]) {
+        isoValue.reverse()
+      }
       updateWidgetMgrState(
         element,
         widgetMgr,

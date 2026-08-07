@@ -142,14 +142,20 @@ function AnchorDateWatcher({
   const anchorDate = state?.anchorDate ?? null
   const setAnchorDate = state?.setAnchorDate
   const prevAnchorRef = useRef<CalendarDate | null>(null)
-  const hasSeededRef = useRef(false)
+  const prevSeedRef = useRef<CalendarDate | null>(null)
 
   useEffect(() => {
-    if (!hasSeededRef.current && seedAnchor && !anchorDate) {
-      hasSeededRef.current = true
+    // (Re-)seed when seedAnchor changes to a new non-null value (handles
+    // both initial mount and user editing the start field while the calendar
+    // is open with displayEnd === null).
+    if (seedAnchor && !datesEqual(seedAnchor, prevSeedRef.current)) {
+      prevSeedRef.current = seedAnchor
       prevAnchorRef.current = seedAnchor
       setAnchorDate?.(seedAnchor)
       return
+    }
+    if (!seedAnchor) {
+      prevSeedRef.current = null
     }
     if (anchorDate && !prevAnchorRef.current) {
       onAnchorSelect(anchorDate)
@@ -608,7 +614,9 @@ function RangeDateInput({
         e.preventDefault()
         if (!isValidSegmentValue(partial.segmentType, partial.value)) return
 
-        const base = currentValue ?? minDate
+        const base =
+          currentValue ??
+          (isStartField ? minDate : (displayStartRef.current ?? minDate))
         const newDate = base.set({ [partial.segmentType]: partial.value })
         if (newDate[partial.segmentType] !== partial.value) return
         setDisplay(newDate)

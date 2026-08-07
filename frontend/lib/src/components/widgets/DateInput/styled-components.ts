@@ -562,6 +562,10 @@ export const StyledCalendarCell = styled(CalendarCell, {
       "&[data-selection-start][data-selection-end]": {
         backgroundColor: primary,
         color: selectedTextColor,
+        "&[data-focus-visible]": {
+          outline: `${theme.sizes.focusOutlineWidth} solid ${primary}`,
+          outlineOffset: theme.spacing.threeXS,
+        },
       },
       // Suppress cell-level indicators on all selected range cells —
       // they'd render at td-width with borderRadius:0 (square).
