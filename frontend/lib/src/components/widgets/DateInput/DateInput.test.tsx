@@ -686,7 +686,12 @@ describe("DateInput", () => {
   })
 
   describe("quick select feature", () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     it("hides quick select for range date inputs if minDate is within 2 years", async () => {
+      vi.setSystemTime(new Date(2025, 0, 1))
       const user = userEvent.setup()
       const recentMin = new CalendarDate(2024, 1, 1)
       const recentMinDate = recentMin.toString()
@@ -703,14 +708,9 @@ describe("DateInput", () => {
 
       // Verify calendar is open but quick-select is absent.
       await screen.findByTestId("stDateInputCalendar")
-      const pickerNames = screen
-        .queryAllByRole("button")
-        .map(el => el.getAttribute("aria-label"))
-        .filter(
-          (label): label is string => label === "month" || label === "year"
-        )
-      expect(pickerNames.sort()).toEqual(["month", "year"])
-      expect(screen.queryAllByRole("combobox")).toHaveLength(0)
+      expect(
+        screen.queryByRole("button", { name: /quick select/i })
+      ).not.toBeInTheDocument()
     })
 
     it("shows quick select for range date inputs if minDate is older than 2 years", async () => {

@@ -791,6 +791,7 @@ function RangeDateInput({
                 aria-label="Choose date range"
                 value={calendarValue}
                 onChange={handleCalendarChange}
+                commitBehavior="reset"
                 minValue={minDate}
                 maxValue={maxDate}
                 focusedValue={focusedValue ?? undefined}
