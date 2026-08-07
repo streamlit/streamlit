@@ -1115,33 +1115,22 @@ describe("createEmotionTheme", () => {
     )
   })
 
-  it("derives codeBackgroundColor from custom secondaryBackgroundColor", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      backgroundColor: "#ffffff",
-      secondaryBackgroundColor: "#FAFAF9",
+  it.each(["codeBackgroundColor", "dataframeHeaderBackgroundColor"] as const)(
+    "derives %s from custom secondaryBackgroundColor",
+    colorKey => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        backgroundColor: "#ffffff",
+        secondaryBackgroundColor: "#FAFAF9",
+      }
+
+      const theme = createEmotionTheme(themeInput)
+      const expectedBgMix = mix("#ffffff", "#FAFAF9", 0.5)
+      expect(theme.colors[colorKey]).toBe(expectedBgMix)
+      expect(theme.colors[colorKey]).not.toBe(
+        lightTheme.emotion.colors[colorKey]
+      )
     }
-
-    const theme = createEmotionTheme(themeInput)
-    const expectedBgMix = mix("#ffffff", "#FAFAF9", 0.5)
-    expect(theme.colors.codeBackgroundColor).toBe(expectedBgMix)
-    expect(theme.colors.codeBackgroundColor).not.toBe(
-      lightTheme.emotion.colors.codeBackgroundColor
-    )
-  })
-
-  it("derives dataframeHeaderBackgroundColor from custom secondaryBackgroundColor", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      backgroundColor: "#ffffff",
-      secondaryBackgroundColor: "#FAFAF9",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    const expectedBgMix = mix("#ffffff", "#FAFAF9", 0.5)
-    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(expectedBgMix)
-    expect(theme.colors.dataframeHeaderBackgroundColor).not.toBe(
-      lightTheme.emotion.colors.dataframeHeaderBackgroundColor
-    )
-  })
+  )
 
   it("sets the borderColor properties based on borderColor config", () => {
     const themeInput: Partial<CustomThemeConfig> = {
