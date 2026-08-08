@@ -57,6 +57,12 @@ if TYPE_CHECKING:
     assert_type(title("Title", text_alignment="right"), DeltaGenerator)
     assert_type(title("Title", text_alignment="justify"), DeltaGenerator)
 
+    # Title with icon parameter (keyword-only)
+    assert_type(title("Title", icon="🔥"), DeltaGenerator)
+    assert_type(title("Title", icon=":material/dashboard:"), DeltaGenerator)
+    assert_type(title("Title", icon="spinner"), DeltaGenerator)
+    assert_type(title("Title", icon=None), DeltaGenerator)
+
     # Title with all parameters combined
     assert_type(
         title(
@@ -65,6 +71,7 @@ if TYPE_CHECKING:
             help="Title help text",
             width="stretch",
             text_alignment="center",
+            icon=":material/dashboard:",
         ),
         DeltaGenerator,
     )
@@ -114,6 +121,12 @@ if TYPE_CHECKING:
     assert_type(header("Header", text_alignment="right"), DeltaGenerator)
     assert_type(header("Header", text_alignment="justify"), DeltaGenerator)
 
+    # Header with icon parameter (keyword-only)
+    assert_type(header("Header", icon="🔥"), DeltaGenerator)
+    assert_type(header("Header", icon=":material/home:"), DeltaGenerator)
+    assert_type(header("Header", icon="spinner"), DeltaGenerator)
+    assert_type(header("Header", icon=None), DeltaGenerator)
+
     # Header with all parameters combined
     assert_type(
         header(
@@ -123,6 +136,7 @@ if TYPE_CHECKING:
             divider="blue",
             width="stretch",
             text_alignment="left",
+            icon=":material/home:",
         ),
         DeltaGenerator,
     )
@@ -165,6 +179,12 @@ if TYPE_CHECKING:
     assert_type(subheader("Subheader", text_alignment="right"), DeltaGenerator)
     assert_type(subheader("Subheader", text_alignment="justify"), DeltaGenerator)
 
+    # Subheader with icon parameter (keyword-only)
+    assert_type(subheader("Subheader", icon="🔥"), DeltaGenerator)
+    assert_type(subheader("Subheader", icon=":material/bolt:"), DeltaGenerator)
+    assert_type(subheader("Subheader", icon="spinner"), DeltaGenerator)
+    assert_type(subheader("Subheader", icon=None), DeltaGenerator)
+
     # Subheader with all parameters combined
     assert_type(
         subheader(
@@ -174,6 +194,7 @@ if TYPE_CHECKING:
             divider="green",
             width="content",
             text_alignment="center",
+            icon=":material/bolt:",
         ),
         DeltaGenerator,
     )

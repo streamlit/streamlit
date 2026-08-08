@@ -38,7 +38,7 @@ page = st.navigation(
 
 # App-level UI runs before page content
 # Useful for shared elements like titles
-st.title(f"{page.icon} {page.title}")
+st.title(page.title, icon=page.icon)
 
 page.run()
 ```

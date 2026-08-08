@@ -21,15 +21,16 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    get_element_by_key,
     get_heading,
     reset_focus,
     tab_until_focused,
 )
 
 # Does not include divider header/subheaders
-TITLE_COUNT = 11
-HEADER_COUNT = 10
-SUBHEADER_COUNT = 13
+TITLE_COUNT = 12
+HEADER_COUNT = 11
+SUBHEADER_COUNT = 14
 
 
 def _get_title_elements(app: Page) -> Locator:
@@ -446,3 +447,23 @@ def test_subheader_text_alignment(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(
         subheader_justify, name="st_subheader-text_alignment_justify_with_help"
     )
+
+
+def test_heading_icon_parameter(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the icon parameter renders for title, header, and subheader."""
+    icons_container = get_element_by_key(themed_app, "heading_icons")
+    expect(icons_container.get_by_test_id("stHeadingIcon")).to_have_count(3)
+
+    title_with_icon = get_heading(icons_container, "Title with icon param")
+    # Auto-anchor should ignore the decorative icon and use body text only
+    expect(title_with_icon.locator("h1")).to_have_id("title-with-icon-param")
+    assert_snapshot(title_with_icon, name="st_title-with_icon_param")
+
+    header_with_icon = get_heading(icons_container, "Header with emoji icon")
+    expect(header_with_icon.get_by_test_id("stHeadingIcon")).to_contain_text("🚀")
+    assert_snapshot(header_with_icon, name="st_header-with_emoji_icon_param")
+
+    subheader_with_icon = get_heading(icons_container, "Subheader with icon")
+    assert_snapshot(subheader_with_icon, name="st_subheader-with_icon_param")

@@ -289,6 +289,9 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
 
+/** Marks the heading body text used for aria-labelledby and auto-anchor slugs. */
+const HEADING_TEXT_TEST_ID = "stHeadingText"
+
 interface HeadingActionElements {
   elementId?: string
   help?: string
@@ -329,6 +332,8 @@ interface HeadingWithActionElementsProps {
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
   help?: string
+  /** Optional decorative leading icon rendered inside the heading tag. */
+  icon?: ReactNode
 }
 
 export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
@@ -338,6 +343,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   hideAnchor,
   children,
   tagProps,
+  icon,
 }) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
@@ -349,10 +355,18 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
    * the node into view if that id matches the current URL hash. Shared by the
    * mount-time ref callback and the rerun effect below so the two paths cannot
    * drift apart.
+   *
+   * Prefer the labelled body-text span when present so a decorative leading icon
+   * (or action icons) does not affect the auto-generated anchor slug.
    */
   const applyAnchor = useCallback(
     (node: HTMLElement): void => {
-      const anchor = propsAnchor || createAnchorFromText(node.textContent)
+      const textSource =
+        node.querySelector<HTMLElement>(
+          `[data-testid='${HEADING_TEXT_TEST_ID}']`
+        ) ?? node
+      const anchor =
+        propsAnchor || createAnchorFromText(textSource.textContent)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
       if (windowHash && windowHash === anchor) {
@@ -399,23 +413,22 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   )
 
   // Accessibility:
-  // Headings can contain action elements (help tooltip icon, anchor link icon).
-  // Those elements are rendered inside the <h*> for layout reasons, but they
-  // can accidentally become part of the heading's computed accessible name.
+  // Headings can contain action elements (help tooltip, anchor link) and an
+  // optional decorative leading icon. Those are rendered inside the <h*> for
+  // layout, but must not become part of the heading's accessible name.
   //
-  // To keep the heading name stable (visible heading text only), we use
-  // aria-labelledby to point at a span that wraps only the text content.
+  // aria-labelledby points at a span that wraps only the body text so the name
+  // stays stable (visible heading text only).
   //
-  // We generate the label span id with useId() to ensure uniqueness even if
-  // multiple headings end up sharing the same anchor slug.
+  // useId() keeps the label span id unique even when headings share an anchor slug.
   //
-  // Only set aria-labelledby when action elements are present:
-  // - help: tooltip icon can be present even in sidebar/dialog (where we don't
-  //   set a heading id/anchor)
-  // - anchor icon: only present when we have an elementId and it's not hidden
+  // Set aria-labelledby when action elements or a leading icon are present:
+  // - help: tooltip can appear even in sidebar/dialog (no heading id/anchor)
+  // - anchor icon: only when we have an elementId and it's not hidden
+  // - icon: decorative leading icon must not pollute the accessible name
   const rawHeadingTextId = useId()
   const headingTextId =
-    help || (elementId && !hideAnchor && !isInSidebarOrDialog)
+    help || icon || (elementId && !hideAnchor && !isInSidebarOrDialog)
       ? rawHeadingTextId
       : undefined
 
@@ -433,7 +446,14 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
   const headerElementWithActions = (
     <Tag {...tagProps} {...mergedAttributes}>
-      {headingTextId ? <span id={headingTextId}>{children}</span> : children}
+      {icon}
+      {headingTextId ? (
+        <span id={headingTextId} data-testid={HEADING_TEXT_TEST_ID}>
+          {children}
+        </span>
+      ) : (
+        children
+      )}
       {actionElements}
     </Tag>
   )

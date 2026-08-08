@@ -160,11 +160,15 @@ Options: `"left"` (default), `"center"`, `"right"`, `"justify"`
 
 **Note:** `horizontal_alignment` on containers positions elements but also sets their `text_alignment`. If you need different text alignment within a horizontally-aligned container, override `text_alignment` on the text element itself.
 
-## Icons in callouts and expanders
+## Icons in headings, callouts, and expanders
 
-Material Symbols can make callouts and expanders look nicer:
+Material Symbols can make headings, callouts, and expanders look nicer:
 
 ```python
+st.title("Dashboard", icon=":material/dashboard:")
+st.header("Sales overview", icon=":material/bar_chart:")
+st.subheader("Recent orders", icon=":material/receipt_long:")
+
 st.info("Processing complete", icon=":material/check_circle:")
 st.warning("Rate limit approaching", icon=":material/warning:")
 st.error("Connection failed", icon=":material/error:")

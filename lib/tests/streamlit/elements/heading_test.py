@@ -415,6 +415,81 @@ class StTitleTest(DeltaGeneratorTestCase):
         assert el.width_config.use_stretch is True
 
 
+class StHeadingIconTest(DeltaGeneratorTestCase):
+    """Test the shared icon parameter on st.title / st.header / st.subheader."""
+
+    @parameterized.expand(
+        [
+            (st.header, "some header"),
+            (st.subheader, "some subheader"),
+            (st.title, "some title"),
+        ]
+    )
+    def test_icon_defaults_to_empty(self, heading_fn, body):
+        """Test that omitting icon leaves an empty proto field."""
+        heading_fn(body)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == ""
+
+    @parameterized.expand(
+        [
+            (st.header, "some header"),
+            (st.subheader, "some subheader"),
+            (st.title, "some title"),
+        ]
+    )
+    def test_icon_none_serializes_to_empty(self, heading_fn, body):
+        """Test that icon=None serializes to empty string on the proto."""
+        heading_fn(body, icon=None)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == ""
+
+    @parameterized.expand(
+        [
+            (":material/thermostat:", ":material/thermostat:"),
+            ("🔥", "🔥"),
+            ("spinner", "spinner"),
+        ]
+    )
+    def test_icon_forwards_to_proto(self, icon_value, expected):
+        """Test that validated icon values are forwarded to the proto field."""
+        st.header("some header", icon=icon_value)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == expected
+
+    @parameterized.expand(
+        [
+            (st.subheader, "some subheader", "🚨"),
+            (st.title, "some title", ":material/dashboard:"),
+        ]
+    )
+    def test_icon_accepted_by_all_heading_commands(self, heading_fn, body, icon):
+        """Test that each heading command accepts and forwards icon."""
+        heading_fn(body, icon=icon)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == icon
+
+    @parameterized.expand(
+        [
+            (st.header, "some header"),
+            (st.subheader, "some subheader"),
+            (st.title, "some title"),
+        ]
+    )
+    def test_icon_invalid_raises(self, heading_fn, body):
+        """Test that an invalid icon raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            heading_fn(body, icon="not-a-valid-icon")
+
+    def test_icon_with_help_and_divider(self):
+        """Test that icon works together with help and divider."""
+        st.header("some header", icon="🚀", help="help text", divider="blue")
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == "🚀"
+        assert el.heading.help == "help text"
+        assert el.heading.divider == "blue"
+
+
 class StTitleTextAlignmentTest(DeltaGeneratorTestCase):
     """Test st.title text_alignment parameter."""
 

@@ -122,7 +122,7 @@ Use Google Material Symbols with `:material/icon_name:` syntax. Find icons at [f
 st.markdown(":material/check_circle: Complete")
 ```
 
-Material icons also work in `icon` parameters across many elements (`st.button`, `st.expander`, `st.info`, etc.).
+Material icons also work in `icon` parameters across many elements (`st.title`, `st.header`, `st.subheader`, `st.button`, `st.expander`, `st.info`, etc.).
 
 ## Emojis
 

@@ -251,4 +251,82 @@ describe("Heading", () => {
     const heading = screen.getByRole("heading")
     expect(heading).not.toHaveStyle({ padding: "0" })
   })
+
+  it.each([
+    ["by default", undefined],
+    ["when icon is empty string", ""],
+  ])("does not render icon %s", (_label, icon) => {
+    const props = getHeadingProps({ body: "hello", icon })
+    render(<Heading {...props} />)
+
+    expect(screen.queryByTestId("stHeadingIcon")).not.toBeInTheDocument()
+  })
+
+  it("renders emoji icon", () => {
+    const props = getHeadingProps({ body: "hello", icon: "🔥" })
+    render(<Heading {...props} />)
+
+    const icon = screen.getByTestId("stHeadingIcon")
+    expect(icon).toBeVisible()
+    expect(icon).toHaveTextContent("🔥")
+  })
+
+  it("renders material icon", () => {
+    const props = getHeadingProps({
+      body: "hello",
+      icon: ":material/dashboard:",
+    })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+  })
+
+  it("renders spinner icon", () => {
+    const props = getHeadingProps({ body: "hello", icon: "spinner" })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+  })
+
+  it("renders icon together with help and anchor", () => {
+    const props = getHeadingProps({
+      body: "hello",
+      icon: "🚀",
+      help: "help text",
+      anchor: "some-anchor",
+    })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+    expect(screen.getByTestId("stTooltipIcon")).toBeInTheDocument()
+    expect(screen.getByRole("link")).toHaveAttribute("href", "#some-anchor")
+  })
+
+  it("keeps accessible name as body text when icon is present", () => {
+    // Icon alone triggers aria-labelledby so the decorative icon is excluded
+    // from the accessible name.
+    const props = getHeadingProps({
+      body: "Dashboard",
+      icon: ":material/dashboard:",
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading", { name: "Dashboard" })
+    expect(heading).toBeVisible()
+    expect(heading).toHaveAttribute("aria-labelledby")
+  })
+
+  it("auto-generated anchor ignores the icon", () => {
+    const props = getHeadingProps({
+      body: "My Section",
+      icon: ":material/dashboard:",
+      anchor: "",
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    // Would be "dashboard-my-section" if material ligature text leaked into the slug
+    expect(heading).toHaveAttribute("id", "my-section")
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+  })
 })

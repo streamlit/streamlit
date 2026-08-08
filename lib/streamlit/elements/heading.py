@@ -21,7 +21,7 @@ from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
+from streamlit.string_util import clean_text, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -50,6 +50,7 @@ class HeadingMixin:
         divider: Divider = False,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        icon: str | None = None,
     ) -> DeltaGenerator:
         """Display text in header formatting.
 
@@ -114,6 +115,25 @@ class HeadingMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        icon : str or None
+            An optional emoji or icon to display next to the header. If
+            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
+            is a string, the following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
         Examples
         --------
         >>> import streamlit as st
@@ -125,6 +145,7 @@ class HeadingMixin:
         >>> st.header("Two", divider=True)
         >>> st.header("Three", divider=True)
         >>> st.header("Four", divider=True)
+        >>> st.header("Header with an icon", icon=":material/home:")
 
         .. output::
            https://doc-header.streamlit.app/
@@ -145,6 +166,7 @@ class HeadingMixin:
                 anchor=anchor,
                 help=help,
                 divider=divider,
+                icon=icon,
             ),
             layout_config=layout_config,
         )
@@ -159,6 +181,7 @@ class HeadingMixin:
         divider: Divider = False,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        icon: str | None = None,
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
@@ -223,6 +246,25 @@ class HeadingMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        icon : str or None
+            An optional emoji or icon to display next to the subheader. If
+            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
+            is a string, the following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
         Examples
         --------
         >>> import streamlit as st
@@ -234,6 +276,7 @@ class HeadingMixin:
         >>> st.subheader("Two", divider=True)
         >>> st.subheader("Three", divider=True)
         >>> st.subheader("Four", divider=True)
+        >>> st.subheader("Subheader with an icon", icon=":material/bolt:")
 
         .. output::
            https://doc-subheader.streamlit.app/
@@ -254,6 +297,7 @@ class HeadingMixin:
                 anchor=anchor,
                 help=help,
                 divider=divider,
+                icon=icon,
             ),
             layout_config=layout_config,
         )
@@ -267,6 +311,7 @@ class HeadingMixin:
         help: str | None = None,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        icon: str | None = None,
     ) -> DeltaGenerator:
         """Display text in title formatting.
 
@@ -326,12 +371,32 @@ class HeadingMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        icon : str or None
+            An optional emoji or icon to display next to the title. If
+            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
+            is a string, the following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
         Examples
         --------
         >>> import streamlit as st
         >>>
         >>> st.title("This is a title")
         >>> st.title("_Streamlit_ is :blue[cool] :sunglasses:")
+        >>> st.title("Dashboard", icon=":material/dashboard:")
 
         .. output::
            https://doc-title.streamlit.app/
@@ -351,6 +416,7 @@ class HeadingMixin:
                 body=body,
                 anchor=anchor,
                 help=help,
+                icon=icon,
             ),
             layout_config=layout_config,
         )
@@ -388,10 +454,12 @@ class HeadingMixin:
         anchor: Anchor = None,
         help: str | None = None,
         divider: Divider = False,
+        icon: str | None = None,
     ) -> HeadingProto:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
+        proto.icon = validate_icon_or_emoji(icon)
         if divider:
             proto.divider = HeadingMixin._handle_divider_color(divider)
         if anchor is not None:

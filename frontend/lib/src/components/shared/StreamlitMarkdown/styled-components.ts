@@ -511,6 +511,34 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   },
 }))
 
+/**
+ * Leading decorative icon for st.title / st.header / st.subheader.
+ * Uses 1em sizing so the icon scales with the heading font size
+ * (including sidebar/dialog reductions).
+ */
+export const StyledHeadingIcon = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  verticalAlign: "middle",
+  marginInlineEnd: theme.spacing.sm,
+  color: "inherit",
+  fontSize: "1em",
+  lineHeight: "1em",
+
+  // DynamicIcon defaults to fixed rem iconSizes; override to inherit heading size.
+  "& > span": {
+    fontSize: "1em",
+    width: "1em",
+    height: "1em",
+
+    "& > span, & > img": {
+      fontSize: "inherit",
+      width: "100%",
+      height: "100%",
+    },
+  },
+}))
+
 interface StyledDividerProps {
   rainbow: boolean
   color: string

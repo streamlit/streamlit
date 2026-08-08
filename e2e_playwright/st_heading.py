@@ -120,3 +120,9 @@ st.subheader(
     text_alignment="justify",
     help="This is a help tooltip!",
 )
+
+# Icon parameter examples (distinct from body-markdown icons above)
+with st.container(key="heading_icons"):
+    st.title("Title with icon param", icon=":material/star:")
+    st.header("Header with emoji icon", icon="🚀", divider="blue")
+    st.subheader("Subheader with icon", icon=":material/bolt:")

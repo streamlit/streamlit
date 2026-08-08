@@ -22,6 +22,7 @@ import { Heading as HeadingProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 
 import {
   HeadingWithActionElements,
@@ -30,6 +31,7 @@ import {
 } from "./StreamlitMarkdown"
 import {
   StyledHeaderDivider,
+  StyledHeadingIcon,
   StyledStreamlitMarkdown,
 } from "./styled-components"
 
@@ -71,12 +73,18 @@ const OVERRIDE_COMPONENTS: Components = {
 
 function Heading(props: HeadingProtoProps): ReactElement {
   const { element } = props
-  const { tag, anchor, body, help, hideAnchor, divider } = element
+  const { tag, anchor, body, help, hideAnchor, divider, icon } = element
   const isInDialog = useContext(IsDialogContext)
   const flexContext = useContext(FlexContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
+
+  const headingIcon = icon ? (
+    <StyledHeadingIcon aria-hidden="true">
+      <DynamicIcon iconValue={icon} testid="stHeadingIcon" />
+    </StyledHeadingIcon>
+  ) : undefined
 
   return (
     <div className="stHeading" data-testid="stHeading">
@@ -91,6 +99,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
           help={help}
           hideAnchor={hideAnchor}
           tag={tag}
+          icon={headingIcon}
         >
           <RenderedMarkdown
             allowHTML={false}
