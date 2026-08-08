@@ -444,8 +444,16 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
+  //
+  // data-has-icon enables flex centering in CSS so the leading icon optically
+  // aligns with the heading text (vertical-align alone is unreliable with
+  // heading line-heights).
   const headerElementWithActions = (
-    <Tag {...tagProps} {...mergedAttributes}>
+    <Tag
+      {...tagProps}
+      {...mergedAttributes}
+      {...(icon ? { "data-has-icon": true } : {})}
+    >
       {icon}
       {headingTextId ? (
         <span id={headingTextId} data-testid={HEADING_TEXT_TEST_ID}>

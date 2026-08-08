@@ -112,6 +112,12 @@ function getMarkdownHeadingDefinitions(
       margin: 0,
       color: "inherit",
     },
+    // Flex-center leading icons with the heading text. Prefer this over
+    // vertical-align, which fights heading line-height and glyph metrics.
+    "h1[data-has-icon], h2[data-has-icon], h3[data-has-icon]": {
+      display: "flex",
+      alignItems: "center",
+    },
     h1: {
       fontSize: convertFontSizes(
         theme.fontSizes.h1FontSize,
@@ -513,28 +519,40 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
 
 /**
  * Leading decorative icon for st.title / st.header / st.subheader.
- * Uses 1em sizing so the icon scales with the heading font size
- * (including sidebar/dialog reductions).
+ *
+ * Sized to ~cap-height (0.7em) so icons sit with the text instead of competing
+ * with the full em box. Scales with heading font size (incl. sidebar/dialog).
+ * Vertical centering is handled by the parent heading's flex layout.
  */
 export const StyledHeadingIcon = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  verticalAlign: "middle",
+  justifyContent: "center",
+  flexShrink: 0,
   marginInlineEnd: theme.spacing.sm,
   color: "inherit",
-  fontSize: "1em",
-  lineHeight: "1em",
+  fontSize: "0.7em",
+  lineHeight: 1,
 
-  // DynamicIcon defaults to fixed rem iconSizes; override to inherit heading size.
+  // Spinners are solid rings and read larger than Material/emoji glyphs.
+  "&[data-spinner]": {
+    fontSize: "0.55em",
+  },
+
+  // DynamicIcon defaults to fixed rem iconSizes; override to inherit our size.
   "& > span": {
     fontSize: "1em",
     width: "1em",
     height: "1em",
 
     "& > span, & > img": {
+      boxSizing: "border-box",
       fontSize: "inherit",
-      width: "100%",
-      height: "100%",
+      // Important: spinner styles set rem widths that otherwise win and overflow.
+      width: "100% !important",
+      height: "100% !important",
+      maxWidth: "100%",
+      maxHeight: "100%",
     },
   },
 }))

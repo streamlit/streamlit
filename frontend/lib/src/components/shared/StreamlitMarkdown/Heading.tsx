@@ -81,7 +81,12 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const [heading, ...rest] = body.split("\n")
 
   const headingIcon = icon ? (
-    <StyledHeadingIcon aria-hidden="true">
+    <StyledHeadingIcon
+      aria-hidden="true"
+      // Spinners read larger than Material/emoji at the same em size; mark them
+      // so CSS can optically shrink them.
+      {...(icon === "spinner" ? { "data-spinner": true } : {})}
+    >
       <DynamicIcon iconValue={icon} testid="stHeadingIcon" />
     </StyledHeadingIcon>
   ) : undefined
