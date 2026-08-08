@@ -824,6 +824,38 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "runner.cacheHashSeed",
+    description="""
+        Escape hatch for an app whose @st.cache_data / @st.cache_resource cache
+        returns the wrong value for a large pandas, polars, or numpy object.
+
+        Large objects are hashed from a fixed random sample rather than in full,
+        which keeps cache lookups fast. Because the sample positions are derived
+        from this seed, two large objects that differ only outside the sampled
+        positions produce the same cache key, and the cached value of one is
+        returned for the other.
+
+        Set an integer from 0 to 4294967295 (2**32 - 1) to move which positions
+        are sampled. This does not eliminate collisions -- it selects a different
+        set of them -- so it resolves a collision an app has actually hit rather
+        than guaranteeing uniqueness. A value that cannot be converted to an
+        integer, or that falls outside that range, is ignored with a warning and
+        the default is used instead. A float is truncated toward zero, so 1.5
+        becomes 1.
+
+        Changing this value changes the cache key of every large object and so
+        invalidates existing cached entries. Keep it stable across restarts and
+        across replicas, or a shared/persisted cache will miss.
+
+        If you need hashing to be exact rather than a different sample, pass your
+        own function for the type via the ``hash_funcs`` argument of
+        @st.cache_data / @st.cache_resource, which bypasses sampling entirely.
+    """,
+    default_val=0,
+    type_=int,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
@@ -2454,7 +2486,14 @@ _create_theme_options(
 
 _create_theme_options(
     "chartCategoricalColors",
-    categories=["theme"],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         An array of colors to use for categorical chart data.
 
@@ -2465,6 +2504,10 @@ _create_theme_options(
         Invalid colors are skipped, and colors repeat cyclically if there are
         more categories than colors. If no chart categorical colors are set,
         Streamlit uses a default set of colors.
+
+        This option can be set in ``[theme]``, ``[theme.light]``,
+        ``[theme.dark]``, and the corresponding sidebar sections. Unset
+        sections inherit from ``[theme]``.
 
         For light themes, the following colors are the default:
         [
@@ -2497,7 +2540,14 @@ _create_theme_options(
 
 _create_theme_options(
     "chartSequentialColors",
-    categories=["theme"],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         An array of ten colors to use for sequential or continuous chart data.
 
@@ -2506,6 +2556,10 @@ _create_theme_options(
 
         Invalid color strings are skipped. If there are not exactly ten
         valid colors specified, Streamlit uses a default set of colors.
+
+        This option can be set in ``[theme]``, ``[theme.light]``,
+        ``[theme.dark]``, and the corresponding sidebar sections. Unset
+        sections inherit from ``[theme]``.
 
          For light themes, the following colors are the default:
         [
@@ -2538,7 +2592,14 @@ _create_theme_options(
 
 _create_theme_options(
     "chartDivergingColors",
-    categories=["theme"],
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
     description="""
         An array of ten colors to use for diverging chart data.
 
@@ -2548,6 +2609,10 @@ _create_theme_options(
 
         Invalid color strings are skipped. If there are not exactly ten
         valid colors specified, Streamlit uses a default set of colors.
+
+        This option can be set in ``[theme]``, ``[theme.light]``,
+        ``[theme.dark]``, and the corresponding sidebar sections. Unset
+        sections inherit from ``[theme]``.
 
         The default colors are:
         [
