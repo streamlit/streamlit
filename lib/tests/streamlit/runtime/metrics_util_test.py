@@ -833,6 +833,58 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
 
 
+@pytest.mark.parametrize(
+    ("exc", "expected"),
+    [
+        (
+            TypeError(
+                "button() got an unexpected keyword argument 'use_container_width'"
+            ),
+            "TypeError:use_container_width",
+        ),
+        (
+            StreamlitValueError("width", ["stretch", "content"]),
+            "StreamlitValueError:width",
+        ),
+        (ValueError("boom"), "ValueError"),
+        (TypeError("other"), "TypeError"),
+    ],
+    ids=[
+        "unexpected-kwarg",
+        "streamlit-value-error",
+        "plain-value-error",
+        "other-type-error",
+    ],
+)
+def test_format_uncaught_exception(exc: BaseException, expected: str) -> None:
+    """Format known parameter failures as ``Type:<param>``; otherwise the type name."""
+    assert metrics_util.format_uncaught_exception(exc) == expected
+
+
+def test_format_uncaught_exception_swallows_enrichment_errors() -> None:
+    """Enrichment failures fall back to the bare type name and never raise."""
+
+    class BrokenTypeError(TypeError):
+        def __str__(self) -> str:
+            raise RuntimeError("broken str")
+
+    class BrokenStreamlitValueError(StreamlitValueError):
+        @property
+        def exec_kwargs(self) -> dict[str, Any]:  # type: ignore[override]
+            raise RuntimeError("broken exec_kwargs")
+
+    assert (
+        metrics_util.format_uncaught_exception(BrokenTypeError("unused"))
+        == "BrokenTypeError"
+    )
+    # Bypass StreamlitValueError.__init__; only the type is needed for isinstance.
+    broken_value_error = BrokenStreamlitValueError.__new__(BrokenStreamlitValueError)
+    assert (
+        metrics_util.format_uncaught_exception(broken_value_error)
+        == "BrokenStreamlitValueError"
+    )
+
+
 @pytest.mark.parametrize("server_mode", ["tornado", "starlette-app"])
 def test_create_page_profile_message_sets_server_mode(server_mode: str) -> None:
     """``server_mode`` is copied from ``config._server_mode`` when it is set."""
