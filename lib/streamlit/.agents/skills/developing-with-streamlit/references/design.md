@@ -7,6 +7,24 @@ Visual design works hand-in-hand with other references:
 - `selection-widgets.md` — Choosing the right widget (segmented control, pills, toggle)
 - `data-display.md` — Column config, sparklines, bordered metrics
 - `layouts.md` — Containers, alignment, dashboard cards
+- `theme.md` — Colors, fonts, and borders via `config.toml`
+
+## Colors and theming
+
+Do not use custom CSS to polish an app unless the user explicitly asks for it. Set colors, fonts, and borders in `.streamlit/config.toml` instead—native theming applies consistently across every element and survives Streamlit upgrades, while CSS selectors target internal class names that can change.
+
+```python
+# BAD: Injected CSS for a brand color
+st.html("<style>.stButton button { background: #0969da; }</style>")
+```
+
+```toml
+# GOOD: Configure theme tokens in .streamlit/config.toml
+[theme]
+primaryColor = "#0969da"
+```
+
+Read `theme.md` for the full option set, ready-made theme configs, and the narrow escape hatch to use if the user does explicitly ask for CSS.
 
 ## Page config
 
