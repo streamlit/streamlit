@@ -857,7 +857,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     ],
 )
 def test_format_uncaught_exception(exc: BaseException, expected: str) -> None:
-    """Format known parameter failures as ``Type:<param>``; otherwise the type name."""
+    """Return ``ExceptionType:<param>`` for known parameter failures; otherwise the bare type name."""
     assert metrics_util.format_uncaught_exception(exc) == expected
 
 
