@@ -84,6 +84,11 @@ class SafeSessionState:
         with self._lock:
             return self._state.is_new_state_value(user_key)
 
+    def is_user_set_none(self, user_key: str) -> bool:
+        """True if the last explicit SessionState API assignment for this key was None."""
+        with self._lock:
+            return self._state.is_user_set_none(user_key)
+
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value
         without triggering the "state value cannot be modified" error.

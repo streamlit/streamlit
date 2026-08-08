@@ -34,6 +34,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
+    _is_stale_none,
     create_mappings,
     maybe_coerce_enum,
     resolve_value_against_options,
@@ -61,6 +62,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.type_util import (
@@ -677,7 +679,15 @@ class SelectboxMixin:
         selectbox_proto = SelectboxProto()
         selectbox_proto.id = element_id
         selectbox_proto.label = label
-        if index is not None:
+        # Omit ``proto.default`` when the developer holds an explicit
+        # ``session_state[key] = None``. On remount, the frontend falls back
+        # to ``getDefaultStateFromProto`` if WidgetMgr has no stored value —
+        # if we leave ``default`` set, the UI would resurrect ``options[index]``
+        # while Python still returns ``None``, desyncing UI and script state.
+        holds_explicit_none = key is not None and get_session_state().is_user_set_none(
+            str(key)
+        )
+        if index is not None and not holds_explicit_none:
             selectbox_proto.default = index
         selectbox_proto.options[:] = formatted_options
         selectbox_proto.form_id = current_form_id(self.dg)
@@ -728,6 +738,32 @@ class SelectboxMixin:
         if accept_new_options:
             current_value = widget_state.value
             value_needs_reset = False
+            # Honor a durable explicit ``session_state[key] = None`` even on the
+            # accept_new_options fast path (which bypasses
+            # ``resolve_value_against_options``). Without this, an identity
+            # change that lands here would resurrect ``options[index]`` in the
+            # freshly-seeded widget state while Python's marker says otherwise.
+            if (
+                current_value is not None
+                and key is not None
+                and get_session_state().is_user_set_none(str(key))
+            ):
+                get_session_state().reset_state_value(str(key), None)
+                current_value = None
+                value_needs_reset = True
+            # Also honor the empty→non-empty stale-None reset here: without it,
+            # #10093's original failure mode still applies to
+            # ``accept_new_options=True`` selectboxes (stored ``None`` from an
+            # empty-options run never returns to ``options[index]`` when
+            # options later appear). Skip full option-membership validation —
+            # any string is valid for accept_new_options — but do apply the
+            # ``_is_stale_none`` heuristic so a declared default can win when
+            # the developer never explicitly cleared the key.
+            elif current_value is None and _is_stale_none(key, index, opt):
+                current_value = opt[cast("int", index)]
+                if key is not None:
+                    get_session_state().reset_state_value(str(key), current_value)
+                value_needs_reset = True
         else:
             # Reset the selection only if the stored value no longer matches any
             # option; see resolve_value_against_options for the format_func and

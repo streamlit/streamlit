@@ -351,13 +351,34 @@ def _is_stale_none(
 
     - the developer declared ``index=None``, opting into a nullable widget;
     - there are still no options to resolve a default from;
-    - the developer explicitly assigned ``None`` via the Session State API on this
-      run, which is a deliberate request to clear the widget and must be honored.
+    - the developer explicitly assigned ``None`` via the Session State API at
+      any point (this run or a prior one), which is a deliberate request to
+      clear the widget and must be honored.
     """
     if default_index is None or len(opt) == 0:
         return False
-    # An explicit `st.session_state[key] = None` this run is a deliberate clear.
-    return not (key is not None and get_session_state().is_new_state_value(str(key)))
+    # ``None`` is itself a valid selectable option (see
+    # ``test_noneType_option`` in selectbox_test.py — a user can put ``None``
+    # in options and it round-trips through serialize/deserialize as the
+    # Python literal ``None``). A stored ``None`` in that case might be a
+    # deliberate UI selection, not stale empty-options residue — the two are
+    # indistinguishable from ``current_value`` alone, so refuse to reset.
+    if None in opt:
+        return False
+    if key is None:
+        # Keyless widgets have no durable session-state clear to honor.
+        return True
+    key_str = str(key)
+    session_state = get_session_state()
+    # Preserve None when this run (or a prior one) deliberately cleared the key.
+    # is_new_state_value covers same-run clears (including internal
+    # reset_state_value(k, None) — e.g. chat_input clearing after submit —
+    # which sets new-state but not user-set-none); is_user_set_none covers
+    # durable st.session_state[k] = None across reruns.
+    return not (
+        session_state.is_new_state_value(key_str)
+        or session_state.is_user_set_none(key_str)
+    )
 
 
 def validate_and_sync_value_with_options(
@@ -366,6 +387,7 @@ def validate_and_sync_value_with_options(
     default_index: int | None,
     key: str | int | None,
     format_func: Callable[[Any], str] = str,
+    *,
     reset_stale_none: bool = False,
 ) -> tuple[T | None, bool]:
     """Validate current value against options, resetting session state if invalid.
@@ -402,12 +424,28 @@ def validate_and_sync_value_with_options(
     tuple[T | None, bool]
         A tuple of (validated_value, value_was_reset).
     """
+    # If the developer explicitly assigned ``session_state[key] = None`` and
+    # the widget id changed (e.g. an identity-bearing argument like
+    # ``accept_new_options`` flipped), the fresh widget was seeded with
+    # ``options[default_index]``. Force it back to ``None`` and sync session
+    # state so the widget return value and ``st.session_state[key]`` stay
+    # in lock-step. ``reset_state_value(k, None)`` does not clear
+    # ``_user_set_none_keys``, so the durable marker survives the sync. This
+    # is independent of ``reset_stale_none``: every caller (including
+    # ``st.pills`` / ``st.segmented_control``) must honor a durable explicit
+    # ``None`` regardless of whether they also opt in to the None→default
+    # reset below.
+    if (
+        current_value is not None
+        and key is not None
+        and get_session_state().is_user_set_none(str(key))
+    ):
+        get_session_state().reset_state_value(str(key), None)
+        return None, True
+
     if current_value is None:
-        # A stored None may be stale — left over from a run where options were
-        # empty (forcing None). When options are now available and the developer
-        # declared a non-None default, reset to that default so the widget
-        # reflects the developer's intent rather than an incidentally-stored None.
-        # See _is_stale_none for the cases that are deliberately preserved.
+        # Reset a stale None to the developer's declared default.
+        # See _is_stale_none for when None is stale vs. intentional.
         if reset_stale_none and _is_stale_none(key, default_index, opt):
             reset_val = opt[cast("int", default_index)]
             if key is not None:
@@ -469,6 +507,12 @@ def resolve_value_against_options(
     :func:`validate_and_sync_value_with_options`: when the value is reset and a
     key is provided, session state is updated with the new value.
 
+    Unlike :func:`validate_and_sync_value_with_options` (which opts in via
+    ``reset_stale_none``), stale ``None`` values are always reset to the
+    declared default. Only ``st.selectbox`` currently calls this; a future
+    widget adopting it would inherit that behavior — add a flag if that ever
+    stops being desired.
+
     Parameters
     ----------
     current_value
@@ -493,11 +537,25 @@ def resolve_value_against_options(
     tuple[T | None, bool]
         A tuple of (validated_value, value_was_reset).
     """
+    # Coerce a non-None value back to None when the developer explicitly holds
+    # ``session_state[key] = None`` — mirrors the guard in
+    # ``validate_and_sync_value_with_options`` for the identity-change case
+    # where the widget id changed and the new widget was seeded with
+    # ``options[default_index]``. Syncing session state via
+    # ``reset_state_value(k, None)`` keeps the widget return value and
+    # ``st.session_state[key]`` in lock-step; the marker survives because
+    # ``reset_state_value(None)`` does not discard it.
+    if (
+        current_value is not None
+        and key is not None
+        and get_session_state().is_user_set_none(str(key))
+    ):
+        get_session_state().reset_state_value(str(key), None)
+        return None, True
+
     if current_value is None:
-        # Same logic as validate_and_sync_value_with_options: a stored None may
-        # be stale from a prior run with empty options. See _is_stale_none for
-        # the cases that are deliberately preserved (including an explicit
-        # `st.session_state[key] = None`, which must not be overwritten).
+        # Reset a stale None — same logic as validate_and_sync_value_with_options.
+        # See _is_stale_none.
         if _is_stale_none(key, default_index, opt):
             reset_val = opt[cast("int", default_index)]
             if key is not None:

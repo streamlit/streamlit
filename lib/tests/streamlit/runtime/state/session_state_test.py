@@ -1056,6 +1056,163 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state._new_widget_state.set_from_value("foo", "bar")
         assert not self.session_state._widget_changed("foo")
 
+    # ---- _user_set_none_keys contract (see options_selector_utils._is_stale_none). ----
+    #
+    # These tests pin the durable "developer explicitly cleared this key"
+    # marker so selectbox/radio can distinguish user-explicit ``None`` from a
+    # Streamlit-auto ``None`` even after ``_new_session_state`` is folded into
+    # ``_old_state`` by compaction.
+
+    def test_is_user_set_none_false_by_default(self):
+        """A key never assigned via the SessionState API is not user-set-None."""
+        assert not self.session_state.is_user_set_none("foo")
+        assert not self.session_state.is_user_set_none("unseen")
+
+    def test_setitem_none_marks_user_set_none(self):
+        """``session_state[k] = None`` records the intent so it survives reruns."""
+        self.session_state["foo"] = None
+        assert self.session_state.is_user_set_none("foo")
+
+    def test_setitem_non_none_clears_user_set_none(self):
+        """Reassigning a previously-cleared key to a real value lifts the marker."""
+        self.session_state["foo"] = None
+        assert self.session_state.is_user_set_none("foo")
+
+        self.session_state["foo"] = "bar"
+        assert not self.session_state.is_user_set_none("foo")
+
+    def test_delitem_clears_user_set_none(self):
+        """Deleting a key removes any lingering marker."""
+        self.session_state["foo"] = None
+        assert self.session_state.is_user_set_none("foo")
+
+        del self.session_state["foo"]
+        assert not self.session_state.is_user_set_none("foo")
+
+    def test_clear_removes_all_user_set_none(self):
+        """``clear()`` resets the whole set alongside the rest of session state."""
+        self.session_state["foo"] = None
+        self.session_state["baz"] = None
+        assert self.session_state.is_user_set_none("foo")
+        assert self.session_state.is_user_set_none("baz")
+
+        self.session_state.clear()
+        assert not self.session_state.is_user_set_none("foo")
+        assert not self.session_state.is_user_set_none("baz")
+
+    def test_reset_state_value_non_none_clears_user_set_none(self):
+        """An internal non-``None`` reset (e.g. option-filter override) must lift
+        the marker so future empty→non-empty options transitions defaulting
+        back to a declared index works."""
+        self.session_state["foo"] = None
+        assert self.session_state.is_user_set_none("foo")
+
+        self.session_state.reset_state_value("foo", "bar")
+        assert not self.session_state.is_user_set_none("foo")
+
+    def test_reset_state_value_none_preserves_user_set_none(self):
+        """An internal ``None`` reset (e.g. chat_input clearing after submit)
+        is not a user assignment and must leave the marker as-is."""
+        self.session_state["foo"] = None
+        assert self.session_state.is_user_set_none("foo")
+
+        self.session_state.reset_state_value("foo", None)
+        # Still marked — the reset didn't come from the developer.
+        assert self.session_state.is_user_set_none("foo")
+
+    def test_drop_widget_value_preserves_current_run_user_set_none(self):
+        """Current-run ``__setitem__(k, None)`` writes to ``_new_session_state``
+        and sets the marker. If a page-scoped drop fires later in the same
+        run, ``_new_session_state`` is intentionally left alone (documented
+        contract) — so the marker must survive too, otherwise the next run
+        would treat the still-present current-run ``None`` as stale and reset
+        to the declared default."""
+        self.session_state["foo"] = None
+        assert self.session_state.is_user_set_none("foo")
+        # ``foo`` still sits in ``_new_session_state`` as the current-run
+        # intent. A drop must not retire the marker.
+        self.session_state._drop_widget_value("widget_id_foo", "foo")
+        assert self.session_state.is_user_set_none("foo")
+
+    def test_drop_widget_value_clears_compacted_user_set_none(self):
+        """When the explicit clear lives only in the marker (not in
+        ``_new_session_state``), a page-scoped drop retires the marker along
+        with the value it applied to — e.g. ``persist_state="page"``
+        navigating away and back. Otherwise the coerce guard would keep
+        pinning the widget to ``None`` after its scoped value is gone."""
+        self.session_state["foo"] = None
+        # Simulate the current-run write compacting into _old_state so only
+        # the marker (and _old_state) carry the developer's clear across the
+        # rerun boundary.
+        self.session_state._compact_state()
+        assert "foo" not in self.session_state._new_session_state
+        assert self.session_state.is_user_set_none("foo")
+
+        self.session_state._drop_widget_value("widget_id_foo", "foo")
+        assert not self.session_state.is_user_set_none("foo")
+
+    def test_set_widgets_from_proto_injects_value_none_for_empty_proto(self):
+        """When the frontend sends an empty widget proto for a user-set-None
+        key, ``set_widgets_from_proto`` short-circuits the eventual
+        ``deserialize(None)`` collapse by injecting ``Value(None)`` directly
+        into ``_new_widget_state``."""
+        from streamlit.proto.WidgetStates_pb2 import (
+            WidgetState as WidgetStateProto,
+        )
+        from streamlit.proto.WidgetStates_pb2 import (
+            WidgetStates as WidgetStatesProto,
+        )
+
+        widget_id = "widget_1"
+        user_key = "cleared_key"
+        self.session_state._key_id_mapper.set_key_id_mapping({user_key: widget_id})
+        self.session_state["cleared_key"] = None
+        assert self.session_state.is_user_set_none(user_key)
+
+        empty_proto = WidgetStateProto()
+        empty_proto.id = widget_id
+        states = WidgetStatesProto()
+        states.widgets.append(empty_proto)
+
+        self.session_state.set_widgets_from_proto(states)
+
+        stored = self.session_state._new_widget_state.states.get(widget_id)
+        assert isinstance(stored, Value)
+        assert stored.value is None
+        # Marker is preserved: the frontend didn't send a real interaction.
+        assert self.session_state.is_user_set_none(user_key)
+
+    def test_set_widgets_from_proto_clears_marker_on_non_empty_proto(self):
+        """A non-empty proto is a frontend-driven update; the marker no longer
+        reflects the developer's intent and must be dropped so a future
+        empty→non-empty options transition can restore the declared default."""
+        from streamlit.proto.WidgetStates_pb2 import (
+            WidgetState as WidgetStateProto,
+        )
+        from streamlit.proto.WidgetStates_pb2 import (
+            WidgetStates as WidgetStatesProto,
+        )
+
+        widget_id = "widget_1"
+        user_key = "picker"
+        self.session_state._key_id_mapper.set_key_id_mapping({user_key: widget_id})
+        self.session_state["picker"] = None
+        assert self.session_state.is_user_set_none(user_key)
+
+        real_proto = WidgetStateProto()
+        real_proto.id = widget_id
+        real_proto.string_value = "chosen"
+        states = WidgetStatesProto()
+        states.widgets.append(real_proto)
+
+        self.session_state.set_widgets_from_proto(states)
+
+        # Marker cleared because the frontend confirmed a real value.
+        assert not self.session_state.is_user_set_none(user_key)
+        stored = self.session_state._new_widget_state.states.get(widget_id)
+        assert isinstance(stored, Serialized)
+        assert stored.value.string_value == "chosen"
+
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MagicMock(fragment_ids_this_run=None),

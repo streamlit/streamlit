@@ -72,6 +72,29 @@ class RadioTest(DeltaGeneratorTestCase):
         assert c.default == 0
         assert not c.HasField("default")
 
+    def test_proto_default_omitted_when_session_state_holds_explicit_none(self):
+        """When the developer holds an explicit ``session_state[key] = None``,
+        the proto's ``default`` must be unset even though a non-``None`` ``index``
+        was declared. Otherwise a frontend remount that falls back to
+        ``getDefaultStateFromProto`` would resurrect ``options[index]`` while
+        Python still returns ``None`` (see PR #16285 discussion on remount
+        UI/Python desync)."""
+        st.session_state["picker"] = None
+        st.radio("the label", ("a", "b", "c"), index=0, key="picker")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert not c.HasField("default")
+
+    def test_proto_default_present_when_no_explicit_none(self):
+        """The remount guard must not fire for the common case: a keyed
+        radio with a declared ``index`` and no explicit ``None`` in session
+        state still ships its default."""
+        st.radio("the label", ("a", "b", "c"), index=1, key="picker2")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.HasField("default")
+        assert c.default == 1
+
     def test_horizontal(self):
         """Test that it can be called with horizontal param."""
         st.radio("the label", ("m", "f"), horizontal=True)
@@ -455,7 +478,11 @@ def test_radio_enum_coercion():
 
 
 def test_None_session_state_value_retained():
-    """When index=None is declared, a programmatic session_state=None is preserved."""
+    """An explicit ``session_state[k] = None`` is preserved across a rerun even
+    when a default ``index=0`` is declared (aligned with the selectbox
+    counterpart). ``index=None`` variants are covered separately by
+    ``test_radio_none_default_preserved_when_index_none`` and
+    ``test_radio_explicit_session_state_none_is_honored``."""
 
     def script():
         import streamlit as st
@@ -463,13 +490,69 @@ def test_None_session_state_value_retained():
         if "radio" not in st.session_state:
             st.session_state["radio"] = None
 
-        # index=None declares that None is a valid state for this widget.
-        st.radio("radio", ["a", "b", "c"], index=None, key="radio")
+        st.radio("radio", ["a", "b", "c"], key="radio")
         st.button("button")
 
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.radio[0].value is None
+
+
+def test_None_session_state_value_persists_across_multiple_reruns():
+    """An explicit ``session_state[k] = None`` (assigned once, never
+    re-assigned) survives multiple downstream reruns. See selectbox
+    counterpart for the ``_user_set_none_keys`` contract."""
+
+    def script():
+        import streamlit as st
+
+        if "radio" not in st.session_state:
+            st.session_state["radio"] = None
+
+        st.radio("radio", ["a", "b", "c"], key="radio")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    for _ in range(3):
+        at = at.button[0].click().run()
+        assert at.radio[0].value is None
+
+
+def test_explicit_none_cleared_by_ui_selection_then_reset_to_default():
+    """After an explicit clear, once the user actually picks a value via
+    the widget UI, the ``_user_set_none_keys`` marker must lift so a
+    subsequent empty→non-empty options transition can restore the
+    declared default (#10093 must not reappear for a key that was ever
+    explicitly cleared). Radio counterpart of the selectbox test."""
+
+    def script():
+        import streamlit as st
+
+        if "picker" not in st.session_state:
+            st.session_state["picker"] = None
+
+        if "ready" not in st.session_state:
+            st.session_state["ready"] = True
+
+        options = ["A", "B", "C"] if st.session_state["ready"] else []
+        selected = st.radio("Pick", options, index=0, key="picker")
+        st.text(f"value={selected}")
+
+        if st.button("hide options", key="hide"):
+            st.session_state["ready"] = False
+        if st.button("show options", key="show"):
+            st.session_state["ready"] = True
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "value=None"
+
+    at = at.radio[0].set_value("B").run()
+    assert at.text[0].value == "value=B"
+
+    at = at.button(key="hide").click().run().run()
+    assert at.text[0].value == "value=None"
+    at = at.button(key="show").click().run().run()
+    assert at.text[0].value == "value=A"
 
 
 def test_radio_resets_to_default_when_options_appear():

@@ -632,6 +632,35 @@ class SessionState:
         default_factory=PersistedWidgetTracker
     )
 
+    # User keys the developer has explicitly assigned ``None`` (via
+    # ``st.session_state[k] = None`` / ``st.session_state.k = None``).
+    # Persisted across script runs so downstream widgets can distinguish
+    # "developer explicitly cleared this key" from "Streamlit auto-stored
+    # ``None`` because options were empty" — the two look identical in
+    # ``_old_state`` after compaction but need different reset semantics
+    # (see ``options_selector_utils._is_stale_none``).
+    #
+    # Populated by:
+    #   - ``__setitem__`` when a user key is assigned ``None``.
+    #
+    # Cleared by:
+    #   - ``__setitem__`` when a user key is reassigned to a non-``None`` value.
+    #   - ``__delitem__`` when a user key is removed.
+    #   - ``clear`` when the whole session is reset.
+    #   - ``reset_state_value`` when internal widget code writes a non-``None``
+    #     value for a user key (e.g. an option filter reset).
+    #   - ``set_widgets_from_proto`` when the frontend sends a non-empty widget
+    #     proto for the key's widget (i.e. the user interacted with the widget
+    #     and the marker no longer reflects intent).
+    #   - ``_drop_widget_value`` when a widget's stored value is dropped
+    #     (e.g. ``disabled=True`` re-registration, or a ``persist_state="page"``
+    #     scope-mismatch drop at register-time).
+    #   - ``on_script_will_rerun`` when a ``persist_state="page"`` value is
+    #     retired on a page switch (via ``mark_page_switch_drops``).
+    #   - ``_seed_widget_from_url`` when a bound widget's URL value seeds a
+    #     ``_new_session_state[key]`` write directly (URL wins on initial load).
+    _user_set_none_keys: set[str] = field(default_factory=set)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -650,12 +679,21 @@ class SessionState:
                 pass
         self._new_session_state.clear()
         self._new_widget_state.clear()
+        # _user_set_none_keys intentionally survives compaction: it tracks
+        # durable "developer explicitly cleared this key" intent that must
+        # cross the rerun boundary (see the field comment above). Only the
+        # SessionState API lifecycle (setitem/delitem/clear/reset_state_value)
+        # and set_widgets_from_proto (on real frontend interactions) may
+        # clear entries — do not add ``self._user_set_none_keys.clear()``
+        # here without breaking selectbox/radio `session_state[k] = None`
+        # persistence (#10093).
 
     def clear(self) -> None:
         """Reset self completely, clearing all current and old values."""
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
+        self._user_set_none_keys.clear()
         self._key_id_mapper.clear()
         self._query_param_bound_widget_ids.clear()
         self._persist_tracker.clear()
@@ -704,11 +742,48 @@ class SessionState:
         """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
 
+    def is_user_set_none(self, user_key: str) -> bool:
+        """True if the developer's most-recent explicit assignment to ``user_key``
+        via the SessionState API was ``None``.
+
+        Persisted across script runs so widgets can distinguish an explicit
+        ``st.session_state[key] = None`` from a ``None`` that Streamlit stored
+        itself (e.g. a select widget resolving to ``None`` because its options
+        were empty). The marker is cleared when:
+
+        - The key is reassigned to a non-``None`` value via the SessionState API.
+        - The key is removed via ``__delitem__``.
+        - ``clear()`` resets the whole session.
+        - ``reset_state_value`` writes a non-``None`` value (e.g. an options
+          filter reset from a widget's internal code path).
+        - ``set_widgets_from_proto`` receives a non-empty widget proto for the
+          key (the user interacted with the widget on the frontend, so the
+          marker no longer reflects the developer's intent).
+        - ``_drop_widget_value`` drops the widget's value (e.g. a
+          ``disabled=True`` re-registration, or a ``persist_state="page"``
+          scope switch): the clear was scoped to the value being dropped, and
+          leaving the marker in place would keep coercing to ``None`` after
+          the value it applied to is gone.
+        - ``on_script_will_rerun`` retires ``persist_state="page"`` values on
+          a page switch (see ``mark_page_switch_drops``).
+        - ``_seed_widget_from_url`` seeds a bound widget's value from the URL
+          on initial load (URL wins over any prior programmatic clear).
+
+        See ``_user_set_none_keys`` for the full contract.
+        """
+        return user_key in self._user_set_none_keys
+
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value
         without triggering the "state value cannot be modified" error.
         """
         self._new_session_state[user_key] = value
+        # A non-``None`` reset means Streamlit has overridden the developer's
+        # last explicit clear with a real value; the marker no longer reflects
+        # intent. (An internal ``None`` reset — e.g. chat_input resetting after
+        # submit — is not a user assignment, so we don't add the key.)
+        if value is not None:
+            self._user_set_none_keys.discard(user_key)
 
     def __iter__(self) -> Iterator[Any]:
         """Return an iterator over the keys of the SessionState.
@@ -803,6 +878,13 @@ class SessionState:
                 )
 
         self._new_session_state[user_key] = value
+        # Track user-explicit-None assignments so downstream widgets can
+        # tell them apart from Streamlit-auto-stored ``None`` values in
+        # later runs (see ``_user_set_none_keys`` docstring).
+        if value is None:
+            self._user_set_none_keys.add(user_key)
+        else:
+            self._user_set_none_keys.discard(user_key)
 
     def __delitem__(self, key: str) -> None:
         widget_id = self._get_widget_id(key)
@@ -819,6 +901,8 @@ class SessionState:
         if key in self._key_id_mapper:
             self._key_id_mapper.delete(key)
 
+        self._user_set_none_keys.discard(key)
+
         if widget_id in self._new_widget_state:
             del self._new_widget_state[widget_id]
 
@@ -833,6 +917,45 @@ class SessionState:
 
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
+
+        # Reconcile ``_user_set_none_keys`` with what the frontend just sent.
+        # ``serialize(None)`` produces an empty value field, so the frontend
+        # round-trips a null selectbox/radio as a proto with no value field
+        # set. Without this reconciliation two things would go wrong:
+        #
+        #   1. An empty proto would deserialize via ``deserialize(None)`` to
+        #      the widget's declared default (e.g. ``options[0]``) — clobbering
+        #      the developer's explicit ``None``. Force ``Value(None)`` for
+        #      those keys instead.
+        #   2. A non-empty proto — the user interacted with the widget after a
+        #      prior explicit clear — means the marker no longer reflects the
+        #      developer's intent. Drop the marker so a future empty→non-empty
+        #      options transition can restore the declared default.
+        keys_to_process = list(self._user_set_none_keys)
+        for user_key in keys_to_process:
+            widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
+            if widget_id is None:
+                continue
+            stored = self._new_widget_state.states.get(widget_id)
+            if not isinstance(stored, Serialized):
+                continue
+            oneof = stored.value.WhichOneof("value")
+            # ``serialize(None)`` produces different empty shapes per widget:
+            #   - selectbox/radio (string_value): oneof unset entirely.
+            #   - pills/segmented_control/multiselect (string_array_value):
+            #     oneof IS ``string_array_value`` with an empty list.
+            # Both are "no user selection" and must be treated as the empty
+            # proto path (inject Value(None) + preserve marker); only a
+            # genuinely non-empty selection should discard the marker.
+            is_empty_array = (
+                oneof == "string_array_value"
+                and len(stored.value.string_array_value.data) == 0
+            )
+            if oneof is None or is_empty_array:
+                self._new_widget_state.states[widget_id] = Value(None)
+            else:
+                # A frontend interaction supersedes the stale programmatic None.
+                self._user_set_none_keys.discard(user_key)
 
     def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
         """Called by ScriptRunner before its script re-runs.
@@ -1156,6 +1279,17 @@ class SessionState:
             ),
         ):
             self._old_state.pop(user_key, None)
+            # Also drop the explicit-None marker, but only when there's no
+            # current-run intent still pending for this key. See the mirror
+            # guard in ``_drop_widget_value``: a same-run
+            # ``session_state[k] = None`` must survive the page-switch
+            # retirement, since the write lives in ``_new_session_state``
+            # and represents intent scoped to the incoming page.
+            if (
+                user_key not in self._new_session_state
+                or self._new_session_state[user_key] is not None
+            ):
+                self._user_set_none_keys.discard(user_key)
 
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
@@ -1240,6 +1374,23 @@ class SessionState:
         removed = self._new_widget_state.states.pop(widget_id, None) is not None
         removed = self._old_state.pop(widget_id, None) is not None or removed
         removed = self._old_state.pop(user_key, None) is not None or removed
+        # Clear the explicit-None marker too, but ONLY when there's no
+        # current-run intent still pending under this key. If the developer
+        # did ``st.session_state[key] = None`` on this very run, that write
+        # lives in ``_new_session_state`` and the docstring above guarantees
+        # we leave the current-run intent alone — the marker must survive
+        # compaction so the next run still honors the clear.
+        #
+        # Otherwise (drop is retiring a *prior* clear that only exists in
+        # ``_old_state`` / the marker — e.g. a page-switch drop of a
+        # ``persist_state="page"`` widget), discard the marker so subsequent
+        # renders return to the declared default instead of coercing to
+        # ``None`` for a value that no longer exists.
+        if (
+            user_key not in self._new_session_state
+            or self._new_session_state[user_key] is not None
+        ):
+            self._user_set_none_keys.discard(user_key)
         return removed
 
     def register_widget(
@@ -1585,6 +1736,14 @@ class SessionState:
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)
             self._new_session_state[user_key] = deserialized_value
+            # A URL-seeded value supersedes any prior programmatic
+            # ``st.session_state[key] = None`` — the "URL wins on initial load"
+            # contract must beat the durable explicit-None marker. Without
+            # this, the coerce guard in ``resolve_value_against_options`` /
+            # ``validate_and_sync_value_with_options`` (and the
+            # ``accept_new_options`` fast path in selectbox) would rewrite
+            # the URL-seeded value back to ``None`` on the same run.
+            self._user_set_none_keys.discard(user_key)
 
             # Auto-correct URL if value was clamped/filtered
             self._auto_correct_url_if_needed(

@@ -52,6 +52,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.type_util import (
@@ -512,7 +513,15 @@ class RadioMixin:
         radio_proto = RadioProto()
         radio_proto.id = element_id
         radio_proto.label = label
-        if index is not None:
+        # Omit ``proto.default`` when the developer holds an explicit
+        # ``session_state[key] = None``. On remount, the frontend falls back
+        # to ``getDefaultStateFromProto`` if WidgetMgr has no stored value —
+        # if we leave ``default`` set, the UI would resurrect ``options[index]``
+        # while Python still returns ``None``, desyncing UI and script state.
+        holds_explicit_none = key is not None and get_session_state().is_user_set_none(
+            str(key)
+        )
+        if index is not None and not holds_explicit_none:
             radio_proto.default = index
         radio_proto.options[:] = formatted_options
         radio_proto.form_id = current_form_id(self.dg)

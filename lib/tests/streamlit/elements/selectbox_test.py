@@ -92,6 +92,29 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.default == 0
         assert not c.HasField("default")
 
+    def test_proto_default_omitted_when_session_state_holds_explicit_none(self):
+        """When the developer holds an explicit ``session_state[key] = None``,
+        the proto's ``default`` must be unset even though a non-``None`` ``index``
+        was declared. Otherwise a frontend remount that falls back to
+        ``getDefaultStateFromProto`` would resurrect ``options[index]`` while
+        Python still returns ``None`` (see PR #16285 discussion on remount
+        UI/Python desync)."""
+        st.session_state["picker"] = None
+        st.selectbox("the label", ("a", "b", "c"), index=0, key="picker")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert not c.HasField("default")
+
+    def test_proto_default_present_when_no_explicit_none(self):
+        """The remount guard must not fire for the common case: a keyed
+        selectbox with a declared ``index`` and no explicit ``None`` in
+        session state still ships its default."""
+        st.selectbox("the label", ("a", "b", "c"), index=2, key="picker2")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.HasField("default")
+        assert c.default == 2
+
     def test_noneType_option(self):
         """Test NoneType option value."""
         current_value = st.selectbox("the label", (None, "selected"), 0)
@@ -713,6 +736,163 @@ def test_None_session_state_value_retained():
     assert at.selectbox[0].value is None
 
 
+def test_None_session_state_value_persists_across_multiple_reruns():
+    """An explicit ``session_state[k] = None`` (assigned once, never
+    re-assigned) survives an unbounded number of downstream reruns — the
+    ``_user_set_none_keys`` marker must not decay when the developer
+    simply hasn't touched the key on a run."""
+
+    def script():
+        import streamlit as st
+
+        if "selectbox" not in st.session_state:
+            st.session_state["selectbox"] = None
+
+        st.selectbox("selectbox", ["a", "b", "c"], key="selectbox")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    for _ in range(3):
+        at = at.button[0].click().run()
+        assert at.selectbox[0].value is None
+
+
+def test_explicit_none_cleared_by_ui_selection_then_reset_to_default():
+    """After an explicit clear, once the user actually picks a value via
+    the widget UI, the marker must lift so that a subsequent empty→non-empty
+    options transition can restore the declared default (#10093 must not
+    reappear for a key that was ever explicitly cleared)."""
+
+    def script():
+        import streamlit as st
+
+        if "picker" not in st.session_state:
+            # Simulate the developer explicitly clearing the widget once.
+            st.session_state["picker"] = None
+
+        if "ready" not in st.session_state:
+            st.session_state["ready"] = True
+
+        options = ["A", "B", "C"] if st.session_state["ready"] else []
+        selected = st.selectbox("Pick", options, index=0, key="picker")
+        st.text(f"value={selected}")
+
+        if st.button("hide options", key="hide"):
+            st.session_state["ready"] = False
+        if st.button("show options", key="show"):
+            st.session_state["ready"] = True
+
+    at = AppTest.from_function(script).run()
+    # Explicit clear is honored on first render.
+    assert at.text[0].value == "value=None"
+
+    # User picks a real value via the widget UI. That should clear the
+    # ``_user_set_none_keys`` marker.
+    at = at.selectbox[0].set_value("B").run()
+    assert at.text[0].value == "value=B"
+
+    # Options collapse and re-populate. Because the marker was cleared by
+    # the UI selection above, the widget must fall back to ``index=0``
+    # instead of resurrecting ``None``. An extra ``run()`` after each
+    # button click is needed because the buttons only flip ``ready`` at
+    # the end of their own run; options change on the following run.
+    at = at.button(key="hide").click().run().run()
+    assert at.text[0].value == "value=None"
+    at = at.button(key="show").click().run().run()
+    assert at.text[0].value == "value=A"
+
+
+def test_none_option_is_not_treated_as_stale():
+    """Regression: with ``options=(None, "b", "c")``, a stored ``None`` might
+    be a deliberate UI selection of the ``None`` option, not leftover
+    empty-options residue — the two are indistinguishable from
+    ``current_value`` alone. ``_is_stale_none`` must refuse to reset in that
+    case, otherwise a valid ``None`` selection gets snapped back to
+    ``options[default_index]`` on every rerun."""
+    from streamlit.elements.lib.options_selector_utils import _is_stale_none
+
+    # Baseline (control): options don't contain None → stale None resets.
+    assert _is_stale_none(key="picker", default_index=0, opt=["a", "b", "c"])
+
+    # The fix: options contain None → stale None is unresolvable, don't reset.
+    assert not _is_stale_none(key="picker", default_index=1, opt=(None, "b", "c"))
+    assert not _is_stale_none(key="picker", default_index=0, opt=(None,))
+    # Independent of default_index and key shape.
+    assert not _is_stale_none(key=None, default_index=1, opt=(None, "b"))
+    assert not _is_stale_none(key="k", default_index=None, opt=(None, "b"))
+
+
+def test_url_query_param_seed_supersedes_prior_explicit_none():
+    """Regression: a value seeded from the URL on initial load must win over
+    a prior programmatic ``st.session_state[key] = None`` — the durable
+    explicit-None marker must be discarded when ``_seed_widget_from_url``
+    writes a non-``None`` value into ``_new_session_state`` directly
+    (bypassing ``__setitem__``). Without this, the coerce guard in the
+    options-resolution helpers would rewrite the URL-seeded value back to
+    ``None`` on the same run."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state["picker"] = None
+        selected = st.selectbox(
+            "Pick", ["a", "b", "c"], index=0, key="picker", bind="query-params"
+        )
+        st.text(f"value={selected!r}")
+
+    at = AppTest.from_function(script)
+    at.query_params["picker"] = "b"
+    at = at.run()
+    # URL-seeded ``"b"`` must survive despite the explicit-None assignment
+    # earlier in the script (URL wins on initial load).
+    assert at.text[0].value == "value='b'"
+
+
+def test_explicit_none_survives_options_identity_change():
+    """Regression test for the identity-change coerce path (#16285 review):
+    if the developer holds an explicit ``session_state[k] = None`` and an
+    identity-bearing argument changes, the widget id changes and the fresh
+    widget deserializes to ``options[default_index]``. The durable
+    ``_user_set_none_keys`` marker must still coerce the value back to
+    ``None`` *and* sync ``st.session_state[k]`` via ``reset_state_value``,
+    so the widget's return value and ``st.session_state[k]`` stay in
+    lock-step. For keyed selectboxes, ``accept_new_options`` is
+    identity-bearing (see ``key_as_main_identity`` in ``_selectbox``);
+    flipping it forces the id to change here."""
+
+    def script():
+        import streamlit as st
+
+        if "picker" not in st.session_state:
+            st.session_state["picker"] = None
+        if "phase" not in st.session_state:
+            st.session_state["phase"] = 0
+
+        # ``accept_new_options`` is identity-bearing for keyed selectboxes,
+        # so flipping it forces a new widget id and exercises the coerce.
+        accept_new = st.session_state["phase"] == 1
+        selected = st.selectbox(
+            "Pick",
+            ["A", "B", "C"],
+            index=0,
+            key="picker",
+            accept_new_options=accept_new,
+        )
+        st.text(f"value={selected} state={st.session_state['picker']!r}")
+
+        if st.button("flip identity"):
+            st.session_state["phase"] = 1
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "value=None state=None"
+
+    # Flip the identity-bearing arg — widget id changes, new widget is seeded
+    # with options[0]='A', and the coerce must (a) return None and (b) sync
+    # session_state back to None.
+    at = at.button[0].click().run().run()
+    assert at.text[0].value == "value=None state=None"
+
+
 def test_selectbox_resets_to_default_when_options_appear():
     """Regression test for #10093: when options change from empty to non-empty,
     the widget should reset to the declared default index, not stay at None."""
@@ -747,6 +927,36 @@ def test_selectbox_resets_to_default_when_options_appear():
     at = at.run()
 
     # With options now available and index=0, value should be "A"
+    assert at.text[0].value == "value=A"
+
+
+def test_selectbox_accept_new_options_resets_to_default_when_options_appear():
+    """Regression test: #10093's empty→non-empty stale-None reset must also
+    fire on the ``accept_new_options=True`` fast path. Without the reset in
+    that branch, a keyed ``accept_new_options=True`` selectbox stays stuck on
+    ``None`` when options later appear, even with a non-``None`` declared
+    ``index`` — the original #10093 failure mode, but on a different code
+    path than the main fix."""
+
+    def script():
+        import streamlit as st
+
+        if "ready" not in st.session_state:
+            st.session_state["ready"] = False
+
+        options = ["A", "B", "C"] if st.session_state["ready"] else []
+        selected = st.selectbox(
+            "Pick", options, index=0, key="picker", accept_new_options=True
+        )
+        st.text(f"value={selected}")
+
+        if st.button("Load options"):
+            st.session_state["ready"] = True
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "value=None"
+
+    at = at.button[0].click().run().run()
     assert at.text[0].value == "value=A"
 
 
