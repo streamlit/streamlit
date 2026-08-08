@@ -446,6 +446,19 @@ class StHeadingIconTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (st.header, "some header"),
+            (st.subheader, "some subheader"),
+            (st.title, "some title"),
+        ]
+    )
+    def test_icon_empty_string_serializes_to_empty(self, heading_fn, body):
+        """Test that icon="" is treated like None (e.g. page.icon when unset)."""
+        heading_fn(body, icon="")
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == ""
+
+    @parameterized.expand(
+        [
             (":material/thermostat:", ":material/thermostat:"),
             ("🔥", "🔥"),
             ("spinner", "spinner"),
@@ -459,6 +472,7 @@ class StHeadingIconTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (st.header, "some header", "🔥"),
             (st.subheader, "some subheader", "🚨"),
             (st.title, "some title", ":material/dashboard:"),
         ]

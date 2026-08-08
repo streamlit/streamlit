@@ -459,7 +459,8 @@ class HeadingMixin:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
-        proto.icon = validate_icon_or_emoji(icon)
+        # Treat "" like None so callers can pass page.icon (which is "" when unset).
+        proto.icon = validate_icon_or_emoji(icon or None)
         if divider:
             proto.divider = HeadingMixin._handle_divider_color(divider)
         if anchor is not None:
