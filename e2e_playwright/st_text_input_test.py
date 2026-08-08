@@ -334,13 +334,13 @@ def test_text_input_validation_error_state_rendering(
 
 def test_text_input_specialized_types_attributes(app: Page):
     """Specialized types set the native input type and their smart defaults."""
-    email_input = get_element_by_key(app, "email_input").locator("input").first
+    email_widget = get_element_by_key(app, "email_input")
+    email_input = email_widget.locator("input").first
     expect(email_input).to_have_attribute("type", "email")
     expect(email_input).to_have_attribute("placeholder", "you@example.com")
     expect(email_input).to_have_attribute("autocomplete", "email")
-    expect(
-        get_element_by_key(app, "email_input").get_by_test_id("stTextInputIcon")
-    ).to_be_visible()
+    expect(email_widget.get_by_test_id("stTextInputIcon")).to_be_visible()
+    expect(email_widget.get_by_test_id("stIconMaterial")).to_have_text("mail")
 
     url_input = get_element_by_key(app, "url_input").locator("input").first
     expect(url_input).to_have_attribute("type", "url")
@@ -357,13 +357,26 @@ def test_text_input_specialized_types_attributes(app: Page):
     expect(search_input).to_have_attribute("placeholder", "Search")
     expect(search_input).to_have_attribute("autocomplete", "off")
 
-    # Explicit overrides win over the type defaults.
-    override_input = (
-        get_element_by_key(app, "email_override_input").locator("input").first
-    )
+    # Explicit overrides win over the type defaults (icon, placeholder,
+    # autocomplete, and custom validate message).
+    override_widget = get_element_by_key(app, "email_override_input")
+    override_input = override_widget.locator("input").first
     expect(override_input).to_have_attribute("type", "email")
     expect(override_input).to_have_attribute("placeholder", "name@company.com")
     expect(override_input).to_have_attribute("autocomplete", "off")
+    expect(override_widget.get_by_test_id("stIconMaterial")).to_have_text("work")
+
+    override_input.fill("user@example.com")
+    override_input.blur()
+    expect(
+        app.get_by_text("override value: user@example.com", exact=True)
+    ).to_have_count(0)
+    override_error_icon = override_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(override_error_icon).to_be_visible()
+    override_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Use your @company.com address."
+    )
 
 
 def test_text_input_search_clear_button(app: Page):
@@ -410,8 +423,12 @@ def test_text_input_email_default_validation(app: Page):
 
     error_icon = email_widget.get_by_test_id("stTooltipErrorHoverTarget")
     expect(error_icon).to_be_visible()
-    # Only a single error treatment is shown (no duplicate/native bubble on top
-    # of the regex tooltip).
+    # Streamlit owns the single error treatment: tooltip text is the shipped
+    # email message (not a native constraint bubble).
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Enter a valid email address."
+    )
     expect(email_widget.get_by_test_id("stTextInputErrorIcon")).to_have_count(1)
 
     # A valid value commits and clears the error.
@@ -420,6 +437,30 @@ def test_text_input_email_default_validation(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(app, "email value: a@b.co")
+    expect(error_icon).not_to_be_visible()
+
+
+def test_text_input_url_default_validation(app: Page):
+    """The url type validates by default: it blocks invalid and commits valid values."""
+    url_widget = get_element_by_key(app, "url_input")
+    url_field = url_widget.locator("input").first
+
+    url_field.fill("not a url")
+    url_field.blur()
+    expect(app.get_by_text("url value: not a url", exact=True)).to_have_count(0)
+
+    error_icon = url_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Enter a valid URL."
+    )
+
+    url_field.fill("example.com")
+    url_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "url value: example.com")
     expect(error_icon).not_to_be_visible()
 
 

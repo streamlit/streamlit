@@ -178,6 +178,28 @@ describe("TextInput widget", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("uses Streamlit validate for email type, not native constraint UI", async () => {
+    const user = userEvent.setup()
+    // Product path: EMAIL + the shipped default regex/message.
+    const props = getProps({
+      type: TextInputProto.Type.EMAIL,
+      validateRegex: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+      validateMessage: "Enter a valid email address.",
+    })
+    render(<TextInput {...props} />)
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "not-an-email")
+    await user.click(document.body)
+
+    // Single Streamlit error treatment via the regex `validate` channel.
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getAllByTestId("stTextInputErrorIcon")).toHaveLength(1)
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a valid email address."
+    )
+  })
+
   describe("search clear button", () => {
     it("shows the clear button only for search inputs holding a value", async () => {
       const user = userEvent.setup()
@@ -209,9 +231,16 @@ describe("TextInput widget", () => {
       const props = getProps({ type: TextInputProto.Type.SEARCH })
       const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
       render(<TextInput {...props} />)
+      // Ignore the mount-time registration call so we can assert clear commits
+      // without a preceding blur of the dirty value.
+      setStringValueSpy.mockClear()
 
       const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
       await user.type(searchbox, "laptops")
+
+      // Typing alone must not commit — `preventFocusLoss` on the clear button
+      // exists so mousedown does not blur-commit "laptops" before clear.
+      expect(setStringValueSpy).not.toHaveBeenCalled()
 
       await user.click(screen.getByTestId("stTextInputClearButton"))
 
@@ -219,8 +248,9 @@ describe("TextInput widget", () => {
       expect(
         screen.queryByTestId("stTextInputClearButton")
       ).not.toBeInTheDocument()
-      // The cleared (empty) value is committed so the app updates immediately.
-      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      // Exactly one commit: the cleared empty value (never the pre-clear text).
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      expect(setStringValueSpy).toHaveBeenCalledWith(
         props.element,
         "",
         { fromUi: true },

@@ -158,6 +158,26 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            # Requires a dotted domain: `user@host.tld` passes, `user@host` fails.
+            ("user@host.tld", True),
+            ("a@b.co", True),
+            ("user@host", False),
+            ("a@b", False),
+            ("not-an-email", False),
+        ]
+    )
+    def test_email_type_default_validation_requires_dotted_domain(
+        self, value: str, should_match: bool
+    ):
+        """Test that the default email validation requires a dotted domain."""
+        st.text_input("label", type="email")
+        proto = self.get_delta_from_queue().new_element.text_input
+
+        matched = re.match(proto.validate_regex, value) is not None
+        assert matched is should_match
+
+    @parameterized.expand(
+        [
             # (value, should_match) — the URL scheme is optional.
             ("example.com", True),
             ("www.example.co.uk/path?q=1", True),
@@ -263,30 +283,45 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert not default_proto.HasField("validate_regex")
 
     def test_specialized_type_identity_stable_with_defaults(self):
-        """Test that a keyed email input keeps a stable ID whether the enhanced
-        params are omitted or explicitly None.
+        """Test that type-derived defaults do not enter the email widget identity.
 
-        The type-derived defaults must not enter the widget identity, otherwise
-        switching between omitting and passing ``None`` would reset the widget.
+        The live ID must match an expected ID computed from the raw user kwargs
+        (``None`` enhanced params, no ``validate`` identity kwarg). Folding the
+        email defaults into the hash would change that expected ID. Opting out
+        with ``validate=""`` must stay identity-neutral with the default rule.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
             st.text_input("label", key="email_key", type="email")
-            id1 = self.get_delta_from_queue().new_element.text_input.id
+            actual_id = self.get_delta_from_queue().new_element.text_input.id
 
-            st.text_input(
-                "label",
-                key="email_key",
+            # Reproduce identity from raw kwargs before type-default resolution.
+            # For a keyed widget, dg-derived keys are dropped, so `dg=None`
+            # yields the same result as passing the real dg.
+            expected_id = compute_and_register_element_id(
+                "text_input",
+                user_key="email_key",
+                key_as_main_identity={"max_chars", "validate"},
+                dg=None,
+                label="label",
+                value="",
+                max_chars=None,
                 type="email",
-                icon=None,
-                placeholder=None,
-                validate=None,
+                help=None,
                 autocomplete=None,
+                placeholder=str(None),
+                icon=None,
+                width="stretch",
             )
-            id2 = self.get_delta_from_queue().new_element.text_input.id
-            assert id1 == id2
+            assert actual_id == expected_id
+
+            # Default email validation and an explicit opt-out share an ID —
+            # the type's default rule must stay identity-neutral.
+            st.text_input("label", key="email_key", type="email", validate="")
+            opt_out_id = self.get_delta_from_queue().new_element.text_input.id
+            assert actual_id == opt_out_id
 
     @parameterized.expand([("email",), ("url",), ("phone",), ("search",)])
     def test_bind_query_params_allowed_for_specialized_types(self, type_string: str):
