@@ -30,6 +30,7 @@ import {
   isOlderThanTwoYears,
   isoToCalendarDate,
   isValidSegmentValue,
+  normalizeRangeOrder,
   parseFormatOrder,
   parsePartialSegmentPaste,
   parsePastedDate,
@@ -407,5 +408,36 @@ describe("isValidSegmentValue", () => {
   it("validates year has no fixed upper bound", () => {
     expect(isValidSegmentValue("year", 9999)).toBe(true)
     expect(isValidSegmentValue("year", 0)).toBe(false)
+  })
+})
+
+describe("normalizeRangeOrder", () => {
+  it("swaps when start > end", () => {
+    expect(normalizeRangeOrder(["2024-03-15", "2024-01-01"])).toEqual([
+      "2024-01-01",
+      "2024-03-15",
+    ])
+  })
+
+  it("no-op when start <= end", () => {
+    expect(normalizeRangeOrder(["2024-01-01", "2024-03-15"])).toEqual([
+      "2024-01-01",
+      "2024-03-15",
+    ])
+  })
+
+  it("no-op for equal dates", () => {
+    expect(normalizeRangeOrder(["2024-01-01", "2024-01-01"])).toEqual([
+      "2024-01-01",
+      "2024-01-01",
+    ])
+  })
+
+  it("no-op for single-element array", () => {
+    expect(normalizeRangeOrder(["2024-01-01"])).toEqual(["2024-01-01"])
+  })
+
+  it("no-op for empty array", () => {
+    expect(normalizeRangeOrder([])).toEqual([])
   })
 })

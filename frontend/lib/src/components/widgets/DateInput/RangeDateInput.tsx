@@ -156,6 +156,9 @@ function AnchorDateWatcher({
     }
     if (!seedAnchor) {
       prevSeedRef.current = null
+      if (prevAnchorRef.current) {
+        setAnchorDate?.(null)
+      }
     }
     if (anchorDate && !prevAnchorRef.current) {
       onAnchorSelect(anchorDate)
@@ -173,6 +176,21 @@ function compact(dates: (CalendarDate | null)[]): CalendarDate[] {
 function rangeEqual(a: CalendarDate[], b: CalendarDate[]): boolean {
   if (a.length !== b.length) return false
   return a.every((d, i) => datesEqual(d, b[i]))
+}
+
+function hasPartiallyTypedField(container: HTMLElement | null): boolean {
+  const fields = container?.querySelectorAll("[data-range-field]")
+  if (!fields) return false
+  for (const field of fields) {
+    const segs = field.querySelectorAll('[role="spinbutton"]')
+    const placeholders = field.querySelectorAll(
+      '[role="spinbutton"][data-placeholder="true"]'
+    )
+    if (placeholders.length > 0 && placeholders.length < segs.length) {
+      return true
+    }
+  }
+  return false
 }
 
 function RangeDateInput({
@@ -276,27 +294,7 @@ function RangeDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        // Check per-field: if any field is partially typed (mix of filled
-        // and placeholder segments), revert display to committed values
-        // rather than committing an incomplete edit. Matches handleBlur.
-        const fields = triggerRef.current?.querySelectorAll(
-          "[data-range-field]"
-        )
-        let isPartiallyTyped = false
-        if (fields) {
-          for (const field of fields) {
-            const segs = field.querySelectorAll('[role="spinbutton"]')
-            const placeholders = field.querySelectorAll(
-              '[role="spinbutton"][data-placeholder="true"]'
-            )
-            if (placeholders.length > 0 && placeholders.length < segs.length) {
-              isPartiallyTyped = true
-              break
-            }
-          }
-        }
-
-        if (isPartiallyTyped) {
+        if (hasPartiallyTypedField(triggerRef.current)) {
           setDisplayStart(startValue)
           setDisplayEnd(endValue)
         } else {
@@ -595,14 +593,11 @@ function RangeDateInput({
       if (key) {
         handleQuickSelect(String(key))
       } else {
-        inAnchorModeRef.current = false
-        setDisplayStart(null)
-        setDisplayEnd(null)
-        onChange([])
+        handleClear()
         setIsQuickSelectOpen(false)
       }
     },
-    [onChange, handleQuickSelect]
+    [handleClear, handleQuickSelect]
   )
 
   const makeHandlePaste = useCallback(
@@ -672,18 +667,7 @@ function RangeDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (!formCommit) return
-      const fields = triggerRef.current?.querySelectorAll("[data-range-field]")
-      if (fields) {
-        for (const field of fields) {
-          const segments = field.querySelectorAll('[role="spinbutton"]')
-          const placeholders = field.querySelectorAll(
-            '[role="spinbutton"][data-placeholder="true"]'
-          )
-          const isPartiallyTyped =
-            placeholders.length > 0 && placeholders.length < segments.length
-          if (isPartiallyTyped) return
-        }
-      }
+      if (hasPartiallyTypedField(triggerRef.current)) return
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
       if (!rangeEqual(pending, committed)) {

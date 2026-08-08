@@ -14,6 +14,7 @@
 
 
 import re
+from datetime import date, timedelta
 
 from playwright.sync_api import Page, expect
 
@@ -583,6 +584,19 @@ def test_quick_select_feature_visibility(app: Page):
     # Quick select should be visible for range inputs
     quick_select = app.get_by_role("button", name="Quick select a date range")
     expect(quick_select).to_be_visible()
+
+    # Click "Past Week" and verify it commits the correct date range
+    quick_select.click()
+    app.get_by_role("option", name="Past Week").click()
+    wait_for_app_run(app)
+
+    today = date.today()
+    past_week = today - timedelta(weeks=1)
+    expected = (
+        f"Value 3: (datetime.date({past_week.year}, {past_week.month}, {past_week.day}), "
+        f"datetime.date({today.year}, {today.month}, {today.day}))"
+    )
+    expect_markdown(app, expected)
 
     # Close the calendar
     app.keyboard.press("Escape")
