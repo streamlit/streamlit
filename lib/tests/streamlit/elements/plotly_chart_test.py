@@ -29,7 +29,7 @@ from streamlit.elements.plotly_chart import (
     _resolve_content_height,
     _resolve_content_width,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -62,12 +62,12 @@ class PyDeckTest(DeltaGeneratorTestCase):
     def test_bad_theme(self):
         df = px.data.gapminder().query("country=='Canada'")
         fig = px.line(df, x="year", y="lifeExp", title="Life expectancy in Canada")
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.plotly_chart(fig, theme="bad_theme")
 
-        assert str(exc.value) == (
-            'You set theme="bad_theme" while Streamlit charts only support '
-            "theme=”streamlit” or theme=None to fallback to the default library theme."
+        assert (
+            str(exc.value)
+            == "Invalid `theme` value. Supported values: 'streamlit', None."
         )
 
     def test_st_plotly_chart_simple(self):
@@ -164,7 +164,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
 
         data = [trace0]
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.plotly_chart(data, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -249,7 +249,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert el.plotly_chart.selection_mode == [0, 1, 2]
 
         # Should throw an exception of the selection mode is parsed wrongly
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
 
     def test_plotly_config(self):

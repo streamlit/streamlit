@@ -24,8 +24,8 @@ import streamlit as st
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
@@ -92,12 +92,12 @@ class TextInputTest(DeltaGeneratorTestCase):
             assert type_value == c.type
 
         # An invalid input type should raise an exception.
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.text_input("label", type="bad_type")
 
         assert (
             str(exc.value)
-            == "'bad_type' is not a valid text_input type. Valid types are 'default' and 'password'."
+            == "Invalid `type` value. Supported values: 'default', 'password'."
         )
 
     def test_placeholder(self):
@@ -249,11 +249,11 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.text_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_width_config_default(self):
@@ -490,11 +490,11 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self) -> None:
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
             st.text_input("the label", key="my_text", bind="invalid-value")
 
-        assert "invalid-value" in str(exc.value)
+        assert "Invalid `bind` value" in str(exc.value)
         assert "query-params" in str(exc.value)
 
     def test_bind_query_params_with_default_value(self) -> None:

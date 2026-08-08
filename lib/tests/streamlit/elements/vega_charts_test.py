@@ -47,7 +47,7 @@ from streamlit.elements.vega_charts import (
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -196,7 +196,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.altair_chart(chart, theme="bad_theme")
 
     def test_works_with_element_replay(self):
@@ -296,7 +296,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.altair_chart(chart, on_select=on_select)
 
     @unittest.skipIf(
@@ -1568,7 +1568,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert el.vega_lite_chart.theme == proto_value
 
     def test_bad_theme(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.vega_lite_chart(df1, theme="bad_theme")
 
     def test_width_inside_spec(self):
@@ -1642,7 +1642,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         ]
     )
     def test_vega_lite_on_select_invalid(self, on_select: Any):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.vega_lite_chart(
                 df1,
                 {

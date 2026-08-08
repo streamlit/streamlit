@@ -35,7 +35,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -526,9 +526,7 @@ class TextWidgetsMixin:
         elif type == "password":
             text_input_proto.type = TextInputProto.PASSWORD
         else:
-            raise StreamlitAPIException(
-                f"'{type}' is not a valid text_input type. Valid types are 'default' and 'password'."
-            )
+            raise StreamlitValueError("type", ["'default'", "'password'"])
 
         # Marshall the autocomplete param. If unspecified, this will be
         # set to "new-password" for password inputs.

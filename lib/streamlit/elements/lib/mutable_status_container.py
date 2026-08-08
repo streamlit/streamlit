@@ -25,7 +25,7 @@ from streamlit.elements.lib.layout_utils import (
     get_width_config,
     validate_width,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import enqueue_message
@@ -67,9 +67,7 @@ class StatusContainer(DeltaGenerator):
         elif state == "error":
             expandable_proto.icon = ":material/error:"
         else:
-            raise StreamlitAPIException(
-                f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
-            )
+            raise StreamlitValueError("state", ["'running'", "'complete'", "'error'"])
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -164,8 +162,8 @@ class StatusContainer(DeltaGenerator):
             elif state == "error":
                 msg.delta.add_block.expandable.icon = ":material/error:"
             else:
-                raise StreamlitAPIException(
-                    f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
+                raise StreamlitValueError(
+                    "state", ["'running'", "'complete'", "'error'"]
                 )
             self._current_state = state
 

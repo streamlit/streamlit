@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.navigation.page import Page
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
@@ -318,10 +318,7 @@ def navigation(
     """
     # Validate position parameter
     if not isinstance(position, str) or position not in {"sidebar", "hidden", "top"}:
-        raise StreamlitAPIException(
-            f'Invalid position "{position}". '
-            'The position parameter must be one of "sidebar", "hidden", or "top".'
-        )
+        raise StreamlitValueError("position", ["'sidebar'", "'hidden'", "'top'"])
 
     # Disable the use of the pages feature (ie disregard v1 behavior of Multipage Apps)
     PagesManager.uses_pages_directory = False

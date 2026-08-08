@@ -1251,7 +1251,7 @@ class LayoutsMixin:
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
-                "on_change", ["'rerun'", "'ignore'", "a callable"]
+                "on_change", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         if type not in {"default", "compact"}:
@@ -1643,9 +1643,8 @@ class LayoutsMixin:
 
         # Checks whether the entered button type is one of the allowed options
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:

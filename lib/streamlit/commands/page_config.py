@@ -253,7 +253,7 @@ def set_page_config(
         pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidPageLayoutError(layout=layout)
+        raise StreamlitInvalidPageLayoutError("layout", ["'centered'", "'wide'"])
 
     msg.page_config_changed.layout = pb_layout
 
