@@ -705,8 +705,10 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             )
 
     def test_bind_invalid_value_raises(self) -> None:
-        """Test that invalid bind values raise StreamlitValueError."""
-        with pytest.raises(errors.StreamlitValueError, match="Invalid `bind` value"):
+        """Invalid bind values raise StreamlitInvalidBindValueError."""
+        with pytest.raises(
+            errors.StreamlitInvalidBindValueError, match="Invalid `bind` value"
+        ):
             register_widget(
                 element_id="$$ID-some_hash-my_widget_key",
                 ctx=None,
@@ -754,9 +756,9 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             )
 
     def test_register_widget_invalid_persist_state_raises(self) -> None:
-        """Invalid persist_state values raise StreamlitValueError."""
+        """Invalid persist_state values raise StreamlitInvalidPersistStateError."""
         with pytest.raises(
-            errors.StreamlitValueError,
+            errors.StreamlitInvalidPersistStateError,
             match="Invalid `persist_state` value",
         ):
             register_widget(

@@ -167,7 +167,8 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
     coercion_type = config.get_option("runner.enumCoercion")
     if coercion_type not in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:
         raise StreamlitValueError(
-            "runner.enumCoercion", ["'off'", "'nameOnly'", "'nameAndValue'"]
+            "runner.enumCoercion",
+            [f"'{v}'" for v in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS],
         )
     if coercion_type == "off":
         return from_enum_value  # do not attempt to coerce

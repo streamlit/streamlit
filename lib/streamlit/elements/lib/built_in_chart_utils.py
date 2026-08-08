@@ -118,7 +118,7 @@ def _needs_field_alias(name: str) -> bool:
 
 
 def maybe_raise_stack_warning(stack: bool | ChartStackType | None) -> None:
-    # Check that the stack parameter is valid, raise more informative error if not
+    # Reject values outside the supported stack options.
     if stack not in {None, True, False, "normalize", "center", "layered"}:
         raise StreamlitValueError(
             "stack",

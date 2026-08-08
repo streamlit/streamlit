@@ -630,20 +630,46 @@ class StreamlitValueError(LocalizableStreamlitException):
 
 # Deprecated specialized subclasses kept for isinstance/except compatibility.
 # Prefer raising StreamlitValueError directly for new validation paths.
+# Construction uses StreamlitValueError(parameter, valid_values); old
+# single-arg constructors are not supported.
 class StreamlitInvalidPageLayoutError(StreamlitValueError):
-    """Deprecated. Raised when an invalid page layout value is provided."""
+    """Deprecated alias of StreamlitValueError for invalid ``layout`` values.
+
+    Kept so existing ``except StreamlitInvalidPageLayoutError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
 
 
 class StreamlitInvalidTextAlignmentError(StreamlitValueError):
-    """Deprecated. Raised when an invalid text_alignment value is provided."""
+    """Deprecated alias of StreamlitValueError for invalid ``text_alignment``.
+
+    Kept so existing ``except StreamlitInvalidTextAlignmentError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
 
 
 class StreamlitInvalidBindValueError(StreamlitValueError):
-    """Deprecated. Raised when an invalid bind value is provided."""
+    """Deprecated alias of StreamlitValueError for invalid ``bind`` values.
+
+    Kept so existing ``except StreamlitInvalidBindValueError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
 
 
 class StreamlitInvalidPersistStateError(StreamlitValueError):
-    """Deprecated. Raised when an invalid persist_state value is provided."""
+    """Deprecated alias of StreamlitValueError for invalid ``persist_state``.
+
+    Kept so existing ``except StreamlitInvalidPersistStateError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
 
 
 # config

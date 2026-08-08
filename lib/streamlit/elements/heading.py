@@ -379,18 +379,7 @@ class HeadingMixin:
             return divider
         raise StreamlitValueError(
             "divider",
-            [
-                "True",
-                "'red'",
-                "'orange'",
-                "'yellow'",
-                "'blue'",
-                "'green'",
-                "'violet'",
-                "'gray'",
-                "'grey'",
-                "'rainbow'",
-            ],
+            ["True"] + [f"'{c}'" for c in valid_colors],
         )
 
     @staticmethod
