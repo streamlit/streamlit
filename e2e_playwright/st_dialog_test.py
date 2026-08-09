@@ -727,7 +727,14 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     """
     open_non_dismissible_dialog(app)
     main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+
+    # Wait for dialog content so the non-dismissible keyboard handler is armed
+    # before we exercise Escape / R (important on WebKit).
+    expect(
+        main_dialog.get_by_text("This dialog cannot be dismissed", exact=False)
+    ).to_be_visible()
 
     # Verify the close button (X) is not present
     expect(app.get_by_label("Close")).not_to_be_attached()
@@ -746,7 +753,8 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
 
-    # Press R hotkey:
+    # Press R hotkey — must not rerun/dismiss a non-dismissible dialog
+    # (even when focus is outside the dialog after the backdrop click above).
     app.keyboard.press("R")
 
     # Dialog should still be visible

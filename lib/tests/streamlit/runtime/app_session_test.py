@@ -1999,6 +1999,62 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.dark.body_font == "monospace"
 
     @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_chart_colors_in_theme_sections(self, patched_config):
+        """Chart color options can be set on light, dark, and sidebar sections."""
+        light_colors = ["#111111", "#222222"]
+        dark_colors = ["#333333", "#444444"]
+        sidebar_colors = ["#555555", "#666666"]
+        sequential = [f"#{i:02x}0000" for i in range(10)]
+        diverging = [f"#00{i:02x}00" for i in range(10)]
+
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "light": {
+                        "chartCategoricalColors": light_colors,
+                        "chartSequentialColors": sequential,
+                        "chartDivergingColors": diverging,
+                    },
+                    "dark": {
+                        "chartCategoricalColors": dark_colors,
+                    },
+                    "sidebar": {
+                        "chartCategoricalColors": sidebar_colors,
+                    },
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.light, "theme.light"
+        )
+        app_session._populate_theme_msg(new_session_msg.custom_theme.dark, "theme.dark")
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.sidebar, "theme.sidebar"
+        )
+
+        assert list(new_session_msg.custom_theme.light.chart_categorical_colors) == (
+            light_colors
+        )
+        assert list(new_session_msg.custom_theme.light.chart_sequential_colors) == (
+            sequential
+        )
+        assert list(new_session_msg.custom_theme.light.chart_diverging_colors) == (
+            diverging
+        )
+        assert list(new_session_msg.custom_theme.dark.chart_categorical_colors) == (
+            dark_colors
+        )
+        assert list(new_session_msg.custom_theme.sidebar.chart_categorical_colors) == (
+            sidebar_colors
+        )
+        # Dark/sidebar did not set sequential/diverging; leave empty for frontend inheritance
+        assert not new_session_msg.custom_theme.dark.chart_sequential_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_diverging_colors
+
+    @patch("streamlit.runtime.app_session.config")
     def test_can_specify_light_sidebar_theme_options(self, patched_config):
         """Test that theme.light.sidebar section options are populated correctly."""
         patched_config.get_options_for_section.side_effect = (
@@ -2118,6 +2174,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config")
     def test_new_theme_sections_support_all_color_options(self, patched_config):
         """Test that new theme sections support all color palette options."""
+        chart_categorical = ["#111111", "#222222", "#333333"]
+        chart_sequential = [f"#{i:02x}0000" for i in range(10)]
+        chart_diverging = [f"#00{i:02x}00" for i in range(10)]
         color_overrides = {
             "redColor": "#ff0000",
             "orangeColor": "#ffa500",
@@ -2140,6 +2199,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "greenTextColor": "#00ff00",
             "violetTextColor": "#8a2be2",
             "grayTextColor": "#808080",
+            "chartCategoricalColors": chart_categorical,
+            "chartSequentialColors": chart_sequential,
+            "chartDivergingColors": chart_diverging,
         }
 
         patched_config.get_options_for_section.side_effect = (
@@ -2194,6 +2256,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                 assert theme_obj.green_text_color == "#00ff00"
                 assert theme_obj.violet_text_color == "#8a2be2"
                 assert theme_obj.gray_text_color == "#808080"
+                assert list(theme_obj.chart_categorical_colors) == chart_categorical
+                assert list(theme_obj.chart_sequential_colors) == chart_sequential
+                assert list(theme_obj.chart_diverging_colors) == chart_diverging
 
     @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")

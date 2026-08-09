@@ -39,25 +39,33 @@ import pytest
 from parameterized import parameterized
 from PIL import Image
 
+from streamlit import config
 from streamlit.proto.Common_pb2 import FileURLs
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
     _LOGGER,
+    _MAX_SAMPLE_SEED,
+    _NP_SAMPLE_SIZE,
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
     UserHashError,
     _CacheFuncHasher,
     _HashStack,
     _HashStacks,
+    _sample_seed,
+    _warned_sample_seeds,
     update_hash,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    import numpy.typing as npt
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -1049,3 +1057,345 @@ def test_PIL_pmode_palette_collision_prevention() -> None:
 
     # But the hashes should differ because we now include the palette
     assert get_hash(im1) != get_hash(im2)
+
+
+# Tests for the ``runner.cacheHashSeed`` config option (GitHub issue #14622).
+#
+# Large pandas/polars/numpy objects are hashed from a fixed random sample, so two
+# large objects differing only outside the sampled positions share a cache key.
+# The seed selects which positions are sampled, letting an app that has hit such a
+# collision move off it. It does not make hashing exact.
+
+
+def _large_pandas_dataframe() -> pd.DataFrame:
+    return pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
+
+
+def _large_pandas_series() -> pd.Series:
+    return pd.Series(np.arange(_PANDAS_ROWS_LARGE))
+
+
+def _large_numpy_array() -> npt.NDArray[Any]:
+    return np.arange(_NP_SIZE_LARGE)
+
+
+def _large_polars_dataframe() -> Any:
+    import polars as pl
+
+    return pl.DataFrame({"a": range(_PANDAS_ROWS_LARGE)})
+
+
+def _large_polars_series() -> Any:
+    import polars as pl
+
+    return pl.Series(range(_PANDAS_ROWS_LARGE))
+
+
+def test_cache_hash_seed_defaults_to_zero() -> None:
+    """The default must keep the historical sample positions."""
+    assert config.get_option("runner.cacheHashSeed") == 0
+    assert _sample_seed() == 0
+
+
+@pytest.mark.parametrize("value", [7, "7"], ids=["int", "numeric_string"])
+def test_cache_hash_seed_accepts_any_whole_number_representation(
+    value: object,
+) -> None:
+    """``cacheHashSeed = 7`` and ``cacheHashSeed = "7"`` must mean the same thing.
+
+    ``config.get_option`` returns the raw parsed value rather than coercing it to
+    the declared type, so an unquoted TOML value arrives as an int and a quoted
+    one as a str.
+    """
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 7
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param("not-a-number", id="text"),
+        pytest.param("", id="empty"),
+        pytest.param(None, id="none"),
+        # `bool` is an `int` subclass, so `int(True)` is 1 rather than an error.
+        # TOML writes these as `cacheHashSeed = true` / `false`.
+        pytest.param(True, id="bool_true"),
+        pytest.param(False, id="bool_false"),
+        # `int(float("inf"))` raises OverflowError, which is not a ValueError.
+        # TOML writes these as `cacheHashSeed = inf` / `-inf` / `nan`.
+        pytest.param(float("inf"), id="inf"),
+        pytest.param(float("-inf"), id="negative_inf"),
+        pytest.param(float("nan"), id="nan"),
+    ],
+)
+def test_cache_hash_seed_falls_back_to_zero_for_unusable_values(
+    value: object,
+) -> None:
+    """A malformed value must leave cache keys unchanged, not raise from hashing."""
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 0
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(True, id="bool_true"),
+        pytest.param(float("inf"), id="inf"),
+        pytest.param(float("nan"), id="nan"),
+    ],
+)
+def test_cache_hash_seed_rejects_bool_and_non_finite_floats(
+    value: object,
+) -> None:
+    """These three slip past a plain ``int()`` guard in three different ways.
+
+    ``int(True)`` succeeds and yields ``1``, quietly changing every large-object
+    cache key; ``int(float("inf"))`` raises ``OverflowError``, which is not a
+    ``ValueError`` and so would have escaped the fallback entirely; and
+    ``int(float("nan"))`` raises ``ValueError``, which was already caught -- it is
+    covered here so that difference stays deliberate rather than incidental.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+
+
+def test_cache_hash_seed_does_not_treat_a_bool_as_the_int_it_subclasses() -> None:
+    """``cacheHashSeed = true`` must not become the perfectly valid seed ``1``."""
+    with patch_config_options({"runner.cacheHashSeed": True}):
+        from_bool = _sample_seed()
+    with patch_config_options({"runner.cacheHashSeed": 1}):
+        from_int = _sample_seed()
+
+    assert from_int == 1, "a real 1 must still be honoured"
+    assert from_bool == 0, "True must fall back rather than alias seed 1"
+
+
+def test_cache_hash_seed_truncates_a_fractional_value() -> None:
+    """A float is converted rather than rejected; only the seed changes.
+
+    Truncation is toward zero and is not warned about, since the result is a usable
+    seed -- the config description documents this explicitly.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": 1.5}):
+            assert _sample_seed() == 1
+
+    mock_warning.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param(2**64, id="far_past_max"),
+    ],
+)
+def test_cache_hash_seed_falls_back_to_zero_for_out_of_range_values(
+    value: int,
+) -> None:
+    """An out-of-range seed must be ignored rather than reach the sampling backends.
+
+    ``int()`` accepts these, but numpy's ``RandomState`` (and pandas' ``random_state=``,
+    which defers to it) only accepts ``[0, 2**32 - 1]``, so without a range check they
+    would raise from inside the cache-hashing path.
+    """
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 0
+
+
+def test_cache_hash_seed_honours_the_largest_supported_value() -> None:
+    """The upper bound must be usable, not silently reset to the default."""
+    with patch_config_options({"runner.cacheHashSeed": _MAX_SAMPLE_SEED}):
+        assert _sample_seed() == _MAX_SAMPLE_SEED
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param("not-a-number", id="text"),
+    ],
+)
+def test_cache_hash_seed_warns_when_it_ignores_a_value(value: object) -> None:
+    """An ignored seed must say so; this option exists to debug silent cache hits.
+
+    Raising would break caching outright, so the fallback warns instead of failing.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert repr(value) in logged_message, "the warning must name the value the user set"
+    assert str(_MAX_SAMPLE_SEED) in logged_message, (
+        "the warning must state the valid range"
+    )
+
+
+def test_cache_hash_seed_warns_only_once_for_a_repeated_value() -> None:
+    """``_sample_seed`` runs per hash, so an unchanged bad value must not flood the log."""
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": -1}):
+            for _ in range(5):
+                assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "value", [0, 7, _MAX_SAMPLE_SEED], ids=["default", "normal", "max_supported"]
+)
+def test_cache_hash_seed_stays_quiet_for_a_usable_value(value: int) -> None:
+    """A seed that is honoured must not warn."""
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == value
+
+    mock_warning.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param(2**64, id="far_past_max"),
+        pytest.param(_MAX_SAMPLE_SEED, id="max_supported"),
+    ],
+)
+@pytest.mark.parametrize(
+    "make_obj",
+    [
+        pytest.param(_large_pandas_dataframe, id="pandas_dataframe"),
+        pytest.param(_large_pandas_series, id="pandas_series"),
+        pytest.param(_large_numpy_array, id="numpy_array"),
+        pytest.param(
+            _large_polars_dataframe,
+            id="polars_dataframe",
+            marks=pytest.mark.require_integration,
+        ),
+        pytest.param(
+            _large_polars_series,
+            id="polars_series",
+            marks=pytest.mark.require_integration,
+        ),
+    ],
+)
+def test_cache_hash_seed_never_breaks_hashing_of_a_large_object(
+    make_obj: Callable[[], Any], value: int
+) -> None:
+    """Hashing a large object must succeed whatever the option is set to.
+
+    This is the user-visible symptom: a bad seed reaching the sampling call raises
+    and breaks ``@st.cache_data`` / ``@st.cache_resource`` entirely, so assert on a
+    real hash rather than only on ``_sample_seed``'s return value.
+    """
+    obj = make_obj()
+
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert isinstance(get_hash(obj), bytes)
+
+
+@pytest.mark.parametrize(
+    "make_obj",
+    [
+        pytest.param(_large_pandas_dataframe, id="pandas_dataframe"),
+        pytest.param(_large_pandas_series, id="pandas_series"),
+        pytest.param(_large_numpy_array, id="numpy_array"),
+        # The polars cases need the integration dependency group, and the marker is
+        # exclusive in both directions -- an unmarked polars test would be skipped by
+        # the default run (no polars) and by the integration run (no marker), so it
+        # would never actually execute.
+        pytest.param(
+            _large_polars_dataframe,
+            id="polars_dataframe",
+            marks=pytest.mark.require_integration,
+        ),
+        pytest.param(
+            _large_polars_series,
+            id="polars_series",
+            marks=pytest.mark.require_integration,
+        ),
+    ],
+)
+def test_cache_hash_seed_reaches_every_sampling_path(
+    make_obj: Callable[[], Any],
+) -> None:
+    """Changing the seed must change the cache key of a large object."""
+    obj = make_obj()
+
+    with patch_config_options({"runner.cacheHashSeed": 0}):
+        hash_default = get_hash(obj)
+    with patch_config_options({"runner.cacheHashSeed": 1}):
+        hash_other = get_hash(obj)
+
+    assert hash_default != hash_other
+
+
+def test_cache_hash_seed_is_deterministic_for_pandas_dataframe() -> None:
+    """A given seed must produce a stable cache key across calls."""
+    with patch_config_options({"runner.cacheHashSeed": 7}):
+        first = get_hash(_large_pandas_dataframe())
+        second = get_hash(_large_pandas_dataframe())
+
+    assert first == second
+
+
+def test_cache_hash_seed_does_not_affect_small_objects() -> None:
+    """Objects below the sampling threshold are hashed in full either way."""
+    small = pd.DataFrame({"a": np.arange(10)})
+
+    with patch_config_options({"runner.cacheHashSeed": 0}):
+        hash_default = get_hash(small)
+    with patch_config_options({"runner.cacheHashSeed": 99}):
+        hash_other = get_hash(small)
+
+    assert hash_default == hash_other
+
+
+def test_cache_hash_seed_moves_off_a_real_collision() -> None:
+    """The escape hatch the option exists to provide (GitHub issue #14622).
+
+    Builds a genuine collision under the default seed by mutating only positions
+    that seed never draws -- the drawn positions depend on the seed and the array
+    length, not on the values, so this is exact rather than probabilistic -- then
+    shows a different seed tells the two arrays apart.
+    """
+    length = _NP_SIZE_LARGE + 100_000
+    base = np.arange(length)
+
+    # Replay seed 0 -- the historical default, not ``_sample_seed()`` -- to find the
+    # indices that sampler never draws. ``value == index`` for arange, so the drawn
+    # values are the drawn indices.
+    drawn = np.random.RandomState(0).choice(base.flat, size=_NP_SAMPLE_SIZE)
+    never_drawn = np.setdiff1d(np.arange(length), np.unique(drawn))
+    assert never_drawn.size > 0, (
+        "expected the default seed to leave positions unsampled"
+    )
+
+    mutated = base.copy()
+    mutated[never_drawn] = -1
+
+    with patch_config_options({"runner.cacheHashSeed": 0}):
+        assert get_hash(base) == get_hash(mutated), (
+            "expected a collision under the default seed"
+        )
+
+    with patch_config_options({"runner.cacheHashSeed": 12345}):
+        assert get_hash(base) != get_hash(mutated)
