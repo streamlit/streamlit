@@ -262,7 +262,6 @@ function DateInput({
   const handleFormCommit = useCallback(
     (date: CalendarDate | null): void => {
       if (!inForm) return
-      if (!date && !clearable) return
       const isoValue = date ? [calendarDateToIso(date)] : []
       updateWidgetMgrState(
         element,
@@ -271,7 +270,7 @@ function DateInput({
         fragmentId
       )
     },
-    [inForm, clearable, element, widgetMgr, fragmentId]
+    [inForm, element, widgetMgr, fragmentId]
   )
 
   const handleRangeFormCommit = useCallback(

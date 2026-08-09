@@ -602,9 +602,8 @@ describe("DateInput", () => {
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
-  it("commits cleared value on blur when all segments are cleared in a clearable form widget", async () => {
+  it("commits cleared value on blur when all segments are cleared in a form widget", async () => {
     const user = userEvent.setup()
-    // default: [] makes the widget clearable
     const props = getProps({ formId: "form", default: [] })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -634,6 +633,39 @@ describe("DateInput", () => {
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("non-clearable widget reverts to default on blur after clearing all segments", async () => {
+    const user = userEvent.setup()
+    // Non-empty default makes the widget non-clearable. Clearing all
+    // segments and blurring triggers close-commit which reverts to default,
+    // then form-blur commits that reverted value. The clearable guard was
+    // removed from handleFormCommit so the commit always fires — but the
+    // close-commit effect enforces the non-clearable constraint first.
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+    await clearSegment(user, day)
+
+    await user.tab()
+    // Close-commit reverts the cleared state to default (1970-01-20),
+    // and form-blur-commit writes that value through without being
+    // blocked by a clearable guard.
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [originalDateWire],
       { fromUi: true },
       undefined
     )
