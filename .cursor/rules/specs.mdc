@@ -94,7 +94,7 @@ document its behavioral contract:
 - **Interaction**: whether values are persistent or one-rerun triggers; rerun and callback
   ordering, coalescing, and cancellation
 - **Defaults**: default values and precedence rules
-- **States**: loading, empty, error, disabled, and retry
+- **UI states**: loading, empty, error, disabled, and retry
 - **Accessibility**: keyboard, focus, screen-reader naming, reduced motion
 - **Security & privacy**: what data crosses to the frontend; trust boundaries
 - **Performance**: limits and scaling behavior
@@ -559,10 +559,13 @@ before the script body.
 
 Streamlit updates the UI by re-running code, not by mutating live elements. Don't expose
 imperative element handles or `.update(data)`-style setters; instead, let a targeted rerun
-re-evaluate a region from current state (as event-scoped fragment reruns do). Data that
-must cross a scope boundary lives in `st.session_state`, because a fragment-scoped rerun
-doesn't re-execute the surrounding script. This keeps the UI a pure function of state (see
-#31, #33) and rules out partial-mutation APIs that would break determinism.
+re-evaluate a region from current state (as event-scoped fragment reruns do). The narrow
+exceptions are container chrome and placeholders—`st.status.update()` adjusts a container's
+own label and state, and an `st.empty()` placeholder holds a single, replaceable child—not
+the rendered data of arbitrary elements. Data that must cross a scope boundary lives in
+`st.session_state`, because a fragment-scoped rerun doesn't re-execute the surrounding
+script. This keeps the UI a pure function of state (see #31, #33) and rules out
+partial-mutation APIs that would break determinism.
 
 ## 42. Behavioral Compatibility Is API Compatibility
 
@@ -610,8 +613,9 @@ not silent. Raw HTML and JavaScript require `unsafe_allow_html=True` /
 `unsafe_allow_javascript=True`; auth tokens and PII metrics aren't exposed unless
 configured; secrets never reach `st.session_state` or the browser. Credentials are their
 own channel—`secrets.toml` / `st.secrets` / `st.login` / `st.user`—not casual public
-parameters (see #38). And client-side conveniences (regex validation, `disable_export`)
-are never trust boundaries: enforce anything security-relevant on the server.
+parameters (see #38). And client-side conveniences (regex validation, the
+`client.disableDataExport` config) are never trust boundaries: enforce anything
+security-relevant on the server.
 
 ---
 
