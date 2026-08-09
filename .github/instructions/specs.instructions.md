@@ -278,8 +278,9 @@ automatic/derived default, with `None` meaning "derive" (see #3). The canonical 
 Streamlit is the interaction protocol `"ignore" | "rerun" | callable`, shared by
 `on_select`, container `on_change`, and `on_dismiss` (see #40).
 
-Note the semantic-naming rule (#8) still applies to enum values: the public value is
-`type="phone"`, even though it renders an HTML `<input type="tel">`.
+Note the semantic-naming rule (#8) still applies to enum values: when that type ships, the
+public value is `type="phone"`, even though it maps to an HTML `<input type="tel">` (see the
+text-input-types product spec).
 
 ## 17. Positional Arguments Are Precious
 
@@ -609,11 +610,11 @@ and extensible.
 Dangerous capabilities are off until explicitly enabled, and privilege expansion is named,
 not silent. Raw HTML and JavaScript require `unsafe_allow_html=True` /
 `unsafe_allow_javascript=True`; auth tokens and PII metrics aren't exposed unless
-configured; secrets never reach `st.session_state` or the browser. Credentials are their
-own channel—`secrets.toml` / `st.secrets` / `st.login` / `st.user`—not casual public
-parameters (see #38). And client-side conveniences (regex validation, the
-`client.disableDataExport` config) are never trust boundaries: enforce anything
-security-relevant on the server.
+configured; Streamlit never automatically copies secrets into `st.session_state` or the
+browser. Credentials are their own channel—`secrets.toml` / `st.secrets` / `st.login` /
+`st.user`—not casual public parameters (see #38). And client-side conveniences (regex
+validation, the `client.disableDataExport` config) are never trust boundaries: enforce
+anything security-relevant on the server.
 
 ---
 
