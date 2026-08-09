@@ -1413,11 +1413,12 @@ class ButtonGroupMixin:
                 except ValueError:
                     return None
 
+            disabled_selection_changed = False
             if selection_mode == "single":
                 idx = _option_index(current_value)
                 if idx is not None and disabled_options[idx]:
                     current_value = None
-                    value_needs_reset = True
+                    disabled_selection_changed = True
             elif isinstance(current_value, list):
                 filtered = [
                     v
@@ -1426,7 +1427,14 @@ class ButtonGroupMixin:
                 ]
                 if filtered != current_value:
                     current_value = filtered
-                    value_needs_reset = True
+                    disabled_selection_changed = True
+
+            if disabled_selection_changed:
+                value_needs_reset = True
+                # Keep keyed session state aligned with the cleared return value,
+                # matching validate_and_sync_* helpers.
+                if key is not None:
+                    get_session_state().reset_state_value(str(key), current_value)
 
         # Resend set_value when the selected option's formatted label changed
         # between reruns. The frontend tracks selection by label, so a stale
