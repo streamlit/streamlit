@@ -129,6 +129,15 @@ export const StyledErrorEnhancer = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.sm,
 }))
 
+/** Wraps the spinner shown while a server-side validation request is in flight. */
+export const StyledLoadingEnhancer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  color: theme.colors.fadedText60,
+  paddingLeft: theme.spacing.xs,
+  paddingRight: theme.spacing.sm,
+}))
+
 interface StyledInputInstructionsContainerProps {
   $hasErrorIcon: boolean
   $hasPasswordToggle: boolean

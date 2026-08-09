@@ -139,6 +139,9 @@ message BackendOperationResponse {
 
     // Response for lazy dataframe row chunk requests
     DataframeChunkResponsePayload dataframe_chunk = 6;
+
+    // Response for server-side widget validation requests
+    WidgetValidationResponsePayload widget_validation = 8;
   }
 }
 
@@ -181,6 +184,17 @@ message DataframeChunkResponsePayload {
   bool end_of_stream = 3;
   // The requested rows as an Arrow IPC table.
   ArrowData arrow_data = 4;
+}
+
+// Response payload for server-side widget validation.
+message WidgetValidationResponsePayload {
+  // Whether the value passed validation.
+  bool is_valid = 1;
+  // Set only when is_valid is false. An empty string means "use the frontend's
+  // generic validation error message"; a non-empty string is the custom error
+  // message to display (either developer-provided or a backend default such as
+  // a timeout message).
+  string error_message = 2;
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

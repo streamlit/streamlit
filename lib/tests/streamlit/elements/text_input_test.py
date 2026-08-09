@@ -117,6 +117,27 @@ class TextInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.text_input
         assert not c.HasField("validate_regex")
         assert not c.HasField("validate_message")
+        assert not c.HasField("validate_callable_id")
+
+    def test_validate_callable_registers_and_sets_id(self):
+        """Test that a callable is registered and its id set on the proto."""
+        validator = lambda value: len(value) > 3  # noqa: E731
+
+        st.text_input("the label", validate=validator)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        # A server-side callable is exclusive with the client-side regex fields.
+        assert not c.HasField("validate_regex")
+        assert not c.HasField("validate_message")
+        assert c.HasField("validate_callable_id")
+        assert c.validate_callable_id
+
+        # The callable is registered with the validator manager under the id.
+        from streamlit.runtime import get_instance
+
+        mgr = get_instance().widget_validator_mgr
+        outcome = mgr.run_validation("test session id", c.validate_callable_id, "hello")
+        assert outcome.is_valid is True
 
     def test_validate_regex_string(self):
         """Test that a regex string is marshalled to validate_regex."""
@@ -156,7 +177,7 @@ class TextInputTest(DeltaGeneratorTestCase):
             ("non_string_regex", (1, "msg")),
             ("non_string_message", ("rx", 1)),
             ("list_shape", ["rx", "msg"]),
-            ("callable", lambda _value: True),
+            ("int_shape", 123),
         ]
     )
     def test_invalid_validate_shapes_raise(self, _name, validate):
@@ -413,6 +434,33 @@ class TextInputTest(DeltaGeneratorTestCase):
             )
             c2 = self.get_delta_from_queue().new_element.text_input
             id2 = c2.id
+            assert id1 == id2
+
+    def test_server_validate_callable_does_not_affect_stable_id(self):
+        """Test that swapping the validation callable keeps the same widget ID.
+
+        A callable can't be evaluated at render time (so a stored value can't be
+        proven invalid up front) and is often a fresh object each run, so it must
+        not contribute to the widget identity — otherwise the widget would reset
+        on every rerun.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input(
+                label="Label 1",
+                key="text_input_key",
+                validate=lambda value: len(value) > 3,
+            )
+            id1 = self.get_delta_from_queue().new_element.text_input.id
+
+            st.text_input(
+                label="Label 2",
+                key="text_input_key",
+                validate=lambda value: value != "taken",
+            )
+            id2 = self.get_delta_from_queue().new_element.text_input.id
             assert id1 == id2
 
     @parameterized.expand(

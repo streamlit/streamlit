@@ -89,6 +89,9 @@ message BackendOperationRequest {
 
     // Lazy dataframe row chunk request
     DataframeChunkRequestPayload dataframe_chunk = 6;
+
+    // Server-side widget validation request
+    WidgetValidationRequestPayload widget_validation = 7;
   }
 }
 
@@ -115,4 +118,14 @@ message DataframeChunkRequestPayload {
   uint32 limit = 3;
   // Optional server-side sort state to apply before slicing.
   optional SortState sort = 4;
+}
+
+// Payload for server-side widget validation requests. Asks the backend to run
+// a registered validation callable against a candidate value without a script
+// rerun.
+message WidgetValidationRequestPayload {
+  // Session-scoped, unguessable id of the registered validation callable.
+  string validator_id = 1;
+  // The candidate value to validate.
+  string value = 2;
 }

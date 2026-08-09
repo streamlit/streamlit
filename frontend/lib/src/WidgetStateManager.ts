@@ -53,6 +53,12 @@ export interface WidgetInfo {
 type FormSubmitValidator = () => boolean
 
 /**
+ * Asynchronous form-submit gate (e.g. server-side widget validation). Resolves
+ * to `true` if the widget's value is valid and the form may be submitted.
+ */
+type AsyncFormSubmitValidator = () => Promise<boolean>
+
+/**
  * Valid widget value types for query param bindings.
  * These correspond to the WidgetState proto value field names.
  */
@@ -214,6 +220,14 @@ class FormState {
 
   public readonly submitValidators = new Map<string, FormSubmitValidator>()
 
+  public readonly asyncSubmitValidators = new Map<
+    string,
+    AsyncFormSubmitValidator
+  >()
+
+  /** True while async submit validators for this form are in flight. */
+  public isSubmitting = false
+
   /** True if the form was created with the clear_on_submit flag. */
   public clearOnSubmit = false
 
@@ -366,11 +380,39 @@ export class WidgetStateManager {
   }
 
   /**
+   * Registers an async form-submit gate for `widgetId` (e.g. a server-side
+   * validation callable). On submit, after the synchronous validators pass,
+   * every registered async validator runs in parallel; if any resolves to
+   * `false`, the submit is aborted.
+   */
+  public addFormSubmitAsyncValidator(
+    formId: string,
+    widgetId: string,
+    validator: AsyncFormSubmitValidator
+  ): void {
+    this.getOrCreateFormState(formId).asyncSubmitValidators.set(
+      widgetId,
+      validator
+    )
+  }
+
+  public removeFormSubmitAsyncValidator(
+    formId: string,
+    widgetId: string
+  ): void {
+    // Non-creating lookup, mirroring removeFormSubmitValidator.
+    this.forms.get(formId)?.asyncSubmitValidators.delete(widgetId)
+  }
+
+  /**
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
    *
-   * @returns `true` if the form was submitted, or `false` if a registered
-   * form-submit validator blocked the submit.
+   * @returns `true` if the form was submitted synchronously, or `false` if a
+   * registered form-submit validator blocked the submit. Note that when the
+   * form has async (e.g. server-side) validators, this returns `false`
+   * immediately and the form is submitted later, once those validators resolve
+   * successfully.
    */
   public submitForm(
     formId: string,
@@ -395,6 +437,67 @@ export class WidgetStateManager {
       return false
     }
 
+    // If the form has async (e.g. server-side) validators, gate the submit
+    // behind them without blocking the event loop. The commit happens once all
+    // async validators resolve successfully, so this returns `false` now (the
+    // form has not been submitted yet).
+    if (form.asyncSubmitValidators.size > 0) {
+      this.runAsyncFormSubmit(form, formId, fragmentId, actualSubmitButton)
+      return false
+    }
+
+    this.finalizeFormSubmit(form, formId, fragmentId, actualSubmitButton)
+    return true
+  }
+
+  /**
+   * Runs a form's async submit validators (in parallel, without short-circuit
+   * so every invalid field surfaces its error), then finalizes the submit if
+   * they all pass. A single submit is in flight per form at a time to avoid
+   * duplicate validation requests.
+   */
+  private runAsyncFormSubmit(
+    form: FormState,
+    formId: string,
+    fragmentId: string | undefined,
+    actualSubmitButton?: WidgetInfo
+  ): void {
+    if (form.isSubmitting) {
+      return
+    }
+    form.isSubmitting = true
+
+    const validators = Array.from(form.asyncSubmitValidators.values())
+    // Use `allSettled` (not `all`) so a rejected validator doesn't short-circuit
+    // the others: every field runs its validation and can surface its own error.
+    // A rejection is treated as a validation failure (fail-closed), so the submit
+    // is only finalized when every validator resolves to `true`. `allSettled`
+    // never rejects, so the chain is intentionally not awaited (`void`).
+    void Promise.allSettled(validators.map(validator => validator()))
+      .then(results => {
+        const allValid = results.every(
+          result => result.status === "fulfilled" && result.value === true
+        )
+        if (allValid) {
+          this.finalizeFormSubmit(form, formId, fragmentId, actualSubmitButton)
+        }
+      })
+      .finally(() => {
+        form.isSubmitting = false
+      })
+  }
+
+  /**
+   * Commits a form's pending widget values and sends the rerun message. This is
+   * the shared tail of both the synchronous and async submit paths; it must
+   * only be called after all validators (sync and async) have passed.
+   */
+  private finalizeFormSubmit(
+    form: FormState,
+    formId: string,
+    fragmentId: string | undefined,
+    actualSubmitButton?: WidgetInfo
+  ): void {
     const submitButtons = this.formsData.submitButtons.get(formId)
 
     let selectedSubmitButton
@@ -434,8 +537,6 @@ export class WidgetStateManager {
     if (form.clearOnSubmit) {
       form.formCleared.emit()
     }
-
-    return true
   }
 
   public setChatInputValue(

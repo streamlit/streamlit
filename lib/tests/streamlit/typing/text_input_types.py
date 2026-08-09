@@ -128,6 +128,19 @@ if TYPE_CHECKING:
     assert_type(text_input("Label", validate=("^x$", "msg")), str)
     assert_type(text_input("Label", value=None, validate=("^x$", "msg")), str | None)
 
+    # Server-side callable validators return bool or str.
+    def validate_bool(value: str) -> bool:
+        return len(value) > 3
+
+    def validate_bool_or_str(value: str) -> bool | str:
+        return True if value else "Required."
+
+    assert_type(text_input("Label", validate=validate_bool), str)
+    assert_type(text_input("Label", validate=validate_bool_or_str), str)
+    assert_type(
+        text_input("Label", value=None, validate=validate_bool_or_str), str | None
+    )
+
     # =====================================================================
     # Test width parameter (keyword-only)
     # =====================================================================

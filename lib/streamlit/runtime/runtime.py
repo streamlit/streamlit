@@ -56,6 +56,7 @@ from streamlit.runtime.stats import (
     StatsProvider,
 )
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
+from streamlit.runtime.widget_validator_manager import WidgetValidatorManager
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
@@ -219,6 +220,7 @@ class Runtime:
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._dataframe_source_mgr = DataframeSourceManager()
+        self._widget_validator_mgr = WidgetValidatorManager()
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
 
@@ -280,6 +282,10 @@ class Runtime:
     @property
     def dataframe_source_mgr(self) -> DataframeSourceManager:
         return self._dataframe_source_mgr
+
+    @property
+    def widget_validator_mgr(self) -> WidgetValidatorManager:
+        return self._widget_validator_mgr
 
     @property
     def stats_mgr(self) -> StatsManager:

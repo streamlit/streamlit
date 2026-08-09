@@ -36,6 +36,7 @@ from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
+from streamlit.runtime.widget_validator_manager import WidgetValidatorManager
 from streamlit.source_util import page_icon_and_name
 from streamlit.testing.v1.element_tree import (
     Block,
@@ -369,6 +370,7 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.dataframe_source_mgr = DataframeSourceManager()
+        mock_runtime.widget_validator_mgr = WidgetValidatorManager()
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         if self._bidi_component_manager is None:
             bidi_component_manager = BidiComponentManager()

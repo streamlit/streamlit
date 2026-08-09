@@ -42,6 +42,7 @@ from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.session_manager import SessionManager
 from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.runtime.widget_validator_manager import WidgetValidatorManager
 from streamlit.web.server.server import MEDIA_ENDPOINT, UPLOAD_FILE_ENDPOINT
 
 if TYPE_CHECKING:
@@ -92,6 +93,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
         mock_runtime.dataframe_source_mgr = DataframeSourceManager()
+        mock_runtime.widget_validator_mgr = WidgetValidatorManager()
         mock_runtime.uploaded_file_mgr = self.script_run_ctx.uploaded_file_mgr
         mock_runtime._session_mgr = MagicMock(spec=SessionManager)
         Runtime._instance = mock_runtime

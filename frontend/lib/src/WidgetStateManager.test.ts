@@ -772,6 +772,157 @@ describe("Widget State Manager", () => {
       // @ts-expect-error - inspect internal state: no phantom form was created
       expect(widgetMgr.forms.get(formId)).toBeFalsy()
     })
+
+    it("defers submission until async validators resolve successfully", async () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        { fromUi: true },
+        undefined
+      )
+
+      const asyncValidator = vi.fn(() => Promise.resolve(true))
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget1", asyncValidator)
+
+      // submitForm returns false synchronously because the async gate hasn't
+      // resolved yet; the form must not have been submitted at this point.
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+      expect(sendBackMsg).not.toHaveBeenCalled()
+
+      // Once the async validator resolves, the form is submitted (single rerun).
+      await vi.waitFor(() => {
+        expect(sendBackMsg).toHaveBeenCalledTimes(1)
+      })
+      expect(asyncValidator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton", triggerValue: true },
+            { id: "widget1", stringValue: "foo" },
+          ],
+        },
+        undefined,
+        undefined,
+        undefined
+      )
+    })
+
+    it("aborts submission when an async validator resolves false", async () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const failing = vi.fn(() => Promise.resolve(false))
+      const passing = vi.fn(() => Promise.resolve(true))
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget1", failing)
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget2", passing)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      await vi.waitFor(() => {
+        // Every async validator runs (no short-circuit) so all invalid fields
+        // can surface their error.
+        expect(failing).toHaveBeenCalledTimes(1)
+        expect(passing).toHaveBeenCalledTimes(1)
+      })
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("aborts submission when an async validator rejects without short-circuiting others", async () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      // A rejecting validator must not prevent the other validator from running
+      // (so every field can still surface its own error), and it must be treated
+      // as a validation failure so the submit is aborted (fail-closed).
+      const rejecting = vi.fn(() => Promise.reject(new Error("boom")))
+      const passing = vi.fn(() => Promise.resolve(true))
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget1", rejecting)
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget2", passing)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      await vi.waitFor(() => {
+        expect(rejecting).toHaveBeenCalledTimes(1)
+        expect(passing).toHaveBeenCalledTimes(1)
+      })
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("runs sync validators before async ones and skips async on sync failure", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const syncValidator = vi.fn(() => false)
+      const asyncValidator = vi.fn(() => Promise.resolve(true))
+      widgetMgr.addFormSubmitValidator(formId, "widget1", syncValidator)
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget2", asyncValidator)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      expect(syncValidator).toHaveBeenCalledTimes(1)
+      // No network round-trip when a client-side gate already failed.
+      expect(asyncValidator).not.toHaveBeenCalled()
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("does not start a second async submit while one is in flight", async () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      let resolveValidator: (value: boolean) => void = () => {}
+      const asyncValidator = vi.fn(
+        () =>
+          new Promise<boolean>(resolve => {
+            resolveValidator = resolve
+          })
+      )
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget1", asyncValidator)
+
+      widgetMgr.submitForm(formId, undefined)
+      // A second submit while the first is pending must not fire a duplicate
+      // validation request.
+      widgetMgr.submitForm(formId, undefined)
+      expect(asyncValidator).toHaveBeenCalledTimes(1)
+
+      resolveValidator(true)
+      await vi.waitFor(() => {
+        expect(sendBackMsg).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    it("does not run an async validator after it is removed", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const asyncValidator = vi.fn(() => Promise.resolve(false))
+      widgetMgr.addFormSubmitAsyncValidator(formId, "widget1", asyncValidator)
+      widgetMgr.removeFormSubmitAsyncValidator(formId, "widget1")
+
+      // With no async validators left, the form submits synchronously.
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(true)
+      expect(asyncValidator).not.toHaveBeenCalled()
+      expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe("allowFormEnterToSubmit", () => {

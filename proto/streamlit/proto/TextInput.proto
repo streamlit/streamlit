@@ -45,4 +45,9 @@ message TextInput {
   optional string query_param_key = 15;
   optional string validate_regex = 16;
   optional string validate_message = 17;
+  // Unguessable token identifying a server-side validation callable registered
+  // for this widget. When set, the frontend requests validation from the
+  // backend (via a widget_validation BackendOperationRequest) before committing
+  // the value. Mutually exclusive with validate_regex.
+  optional string validate_callable_id = 18;
 }

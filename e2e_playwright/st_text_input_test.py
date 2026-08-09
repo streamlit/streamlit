@@ -36,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 28
+TEXT_INPUT_ELEMENTS = 30
 
 
 def test_text_input_widget_rendering(
@@ -341,6 +341,77 @@ def test_text_input_validation_blocks_form_submit_and_recovers(app: Page):
     expect_markdown(app, "validated form value: 1234")
     expect_markdown(app, "validated form submitted: True")
     expect_markdown(app, "Validation rerun counter: 2")
+    expect(form_error_icon).not_to_be_visible()
+
+
+def test_text_input_server_validation_blocks_invalid_commits_and_recovers(app: Page):
+    """Server-side (callable) validation blocks invalid commits and allows valid ones."""
+    widget = get_element_by_key(app, "server_validated_input")
+    server_input = widget.locator("input").first
+
+    # A value the callable rejects (with a custom message) must not be committed.
+    server_input.fill("taken")
+    server_input.blur()
+
+    error_icon = widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Username already taken. Try another one."
+    )
+    # The rejected value is never sent to the backend (no rerun/commit).
+    expect_markdown(app, "server-side value: ")
+
+    # A value the callable accepts commits and triggers the normal rerun.
+    server_input.fill("alice")
+    server_input.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "server-side value: alice")
+    expect(error_icon).not_to_be_visible()
+
+
+def test_text_input_server_validation_exception_shows_generic_error(app: Page):
+    """A raising validator rejects the value with the generic error message."""
+    widget = get_element_by_key(app, "server_validated_input")
+    server_input = widget.locator("input").first
+
+    server_input.fill("boom")
+    server_input.blur()
+
+    error_icon = widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    error_icon.hover()
+    # The developer's exception detail must never be leaked to the browser.
+    tooltip = app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_contain_text("Invalid input.")
+    expect(tooltip).not_to_contain_text("intentional validator failure")
+    expect_markdown(app, "server-side value: ")
+
+
+def test_text_input_server_validation_blocks_form_submit_and_recovers(app: Page):
+    """Server-side validation gates form submission and allows it after correction."""
+    widget = get_element_by_key(app, "server_validated_form_input")
+    form_input = widget.locator("input").first
+    submit_button = app.get_by_role(
+        "button", name="Submit server validated form", exact=True
+    )
+
+    form_input.fill("taken")
+    submit_button.click()
+
+    form_error_icon = widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(form_error_icon).to_be_visible()
+    # The invalid form value is not submitted.
+    expect_markdown(app, "server-side form value: ")
+    expect_markdown(app, "server-side form submitted: False")
+
+    form_input.fill("alice")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "server-side form value: alice")
+    expect_markdown(app, "server-side form submitted: True")
     expect(form_error_icon).not_to_be_visible()
 
 
