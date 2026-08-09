@@ -483,6 +483,7 @@ function SingleDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (!formCommit) return
+      if (isCalendarActiveRef.current) return
       const segments = triggerRef.current?.querySelectorAll(
         '[role="spinbutton"]'
       )
