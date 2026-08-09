@@ -1729,7 +1729,7 @@ describe("DateInput single-mode keyboard navigation", () => {
     })
   })
 
-  it("partially cleared segments revert to default on popover close (non-clearable)", async () => {
+  it("partially cleared segments revert to committed value on popover close (non-clearable)", async () => {
     const user = userEvent.setup()
     const props = getProps()
     render(<DateInput {...props} />)
@@ -1759,10 +1759,8 @@ describe("DateInput single-mode keyboard navigation", () => {
       { timeout: 2000 }
     )
 
-    // After close, segments should revert to the default value (1970/01/20).
-    // SingleDateInput reports placeholder segments to handleClose, which
-    // reverts the value to element.default. The controlled value change causes
-    // the DateField to rebuild its segments.
+    // After close, segments revert to the last committed value (1970/01/20,
+    // which equals the default since user hasn't changed it yet).
     await waitFor(
       () => {
         const region2 = screen.getByTestId("stDateInput")
@@ -1770,6 +1768,68 @@ describe("DateInput single-mode keyboard navigation", () => {
         expect(refreshedSegments.year).toHaveTextContent("1970")
         expect(refreshedSegments.month).toHaveTextContent("01")
         expect(refreshedSegments.day).toHaveTextContent("20")
+      },
+      { timeout: 2000 }
+    )
+  })
+
+  it("cleared segments revert to last committed value (not default) after prior selection", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+
+    // Type a new date (1970/01/25) different from default (1970/01/20).
+    // Typing opens the calendar; the new date commits on close.
+    await typeIntoSegment(user, year, "1970")
+    await typeIntoSegment(user, month, "01")
+    await typeIntoSegment(user, day, "25")
+
+    // Close via Escape — commits the typed date (1970-01-25).
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["1970-01-25"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    // Now clear all segments and close again — should revert to the
+    // committed value (1970/01/25), NOT element.default (1970/01/20).
+    const refreshed1 = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await clearSegment(user, refreshed1.year)
+    await clearSegment(user, refreshed1.month)
+    await clearSegment(user, refreshed1.day)
+    await user.keyboard("{Escape}")
+
+    await waitFor(
+      () => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
+
+    await waitFor(
+      () => {
+        const refreshed2 = getSingleDateSegments(
+          screen.getByTestId("stDateInput")
+        )
+        expect(refreshed2.year).toHaveTextContent("1970")
+        expect(refreshed2.month).toHaveTextContent("01")
+        expect(refreshed2.day).toHaveTextContent("25")
       },
       { timeout: 2000 }
     )

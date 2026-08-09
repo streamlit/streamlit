@@ -69,7 +69,6 @@ function DateInput({
   fragmentId,
 }: Props): ReactElement {
   const isInSidebar = useContext(IsSidebarContext)
-  const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Incremented on form clear to signal SingleDateInput to reset its local
   // displayValue (which may have diverged from widget state due to buffering).
@@ -81,7 +80,6 @@ function DateInput({
 
   const handleFormCleared = useCallback(() => {
     resetError()
-    setIsEmpty(false)
     setFormResetKey(k => k + 1)
   }, [resetError])
 
@@ -169,7 +167,6 @@ function DateInput({
 
       if (!date) {
         setValueWithSource({ value: [], fromUi: true })
-        setIsEmpty(true)
         return
       }
 
@@ -179,7 +176,6 @@ function DateInput({
         return
       }
       setValueWithSource({ value: [calendarDateToIso(date)], fromUi: true })
-      setIsEmpty(false)
     },
     [
       buildErrorMessage,
@@ -242,17 +238,17 @@ function DateInput({
     ]
   )
 
-  // Revert to default on close when field is empty or partially cleared.
+  // Revert to last committed value on close when segments are partially
+  // cleared (incomplete date that shouldn't be committed).
   const handleClose = useCallback(
     (hasPlaceholderSegments?: boolean): void => {
-      if (!isEmpty && !hasPlaceholderSegments) {
+      if (!hasPlaceholderSegments) {
         return
       }
       resetError()
-      setValueWithSource({ value: element.default, fromUi: true })
-      setIsEmpty(element.default.length === 0)
+      setValueWithSource({ value, fromUi: true })
     },
-    [isEmpty, element.default, setValueWithSource, resetError]
+    [value, setValueWithSource, resetError]
   )
 
   // Synchronous commit for form-submit races: when inside a form, clicking
