@@ -98,6 +98,7 @@ function HeaderPickerSelect({
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key === "Tab") {
         e.preventDefault()
+        e.stopPropagation()
         setIsOpen(false)
         triggerRef.current?.focus()
       }
