@@ -16,8 +16,9 @@
 
 from __future__ import annotations
 
+import gzip
 import io
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -25,6 +26,7 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.image_utils import marshall_images
 from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -33,6 +35,58 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import LayoutConfig, Width
+
+# Vector output that cannot be turned into an image without an external
+# rasteriser (Ghostscript for PostScript, Poppler for PDF), neither of which
+# Streamlit depends on. Keyed by the magic bytes Matplotlib writes.
+_UNSUPPORTED_VECTOR_MAGIC: Final = {
+    b"%PDF": "PDF",
+    b"%!PS": "PostScript",
+}
+
+
+def _svg_markup_or_none(payload: bytes) -> str | None:
+    r"""Return ``payload`` decoded as SVG markup, or ``None`` if it is not SVG.
+
+    Also handles svgz, which Matplotlib writes for ``format="svgz"`` and which is
+    just gzipped SVG -- inflating it reaches the same SVG path rather than the
+    PNG/PIL path, which cannot parse it.
+
+    Sniffs the buffer rather than reading ``kwargs["format"]``: Matplotlib resolves
+    the format itself, so ``format=None`` with ``rcParams["savefig.format"] = "svg"``
+    still produces SVG. No raster format collides with these prefixes (PNG starts
+    with ``b"\x89PNG"``, JPEG with ``b"\xff\xd8"``). An ``<?xml`` prolog alone is
+    not enough because ``image_to_url`` also requires an ``<svg`` tag, and the search
+    is bounded since Matplotlib emits ``<svg`` within the first few hundred bytes.
+    """
+    if payload[:2] == b"\x1f\x8b":  # gzip magic, i.e. svgz
+        try:
+            payload = gzip.decompress(payload)
+        except (OSError, EOFError):
+            return None
+
+    stripped = payload.lstrip()
+    is_svg = stripped.startswith(b"<svg") or (
+        stripped.startswith(b"<?xml") and b"<svg" in stripped[:2048]
+    )
+    return payload.decode("utf-8") if is_svg else None
+
+
+def _raise_for_unsupported_vector_format(payload: bytes) -> None:
+    """Reject vector output that the image path cannot render.
+
+    Without this, the bytes reach PIL and fail several frames deeper with an
+    opaque ``UnidentifiedImageError`` or ``OSError`` that names neither the
+    format nor a way forward.
+    """
+    for magic, label in _UNSUPPORTED_VECTOR_MAGIC.items():
+        if payload.startswith(magic):
+            raise StreamlitAPIException(
+                f"`st.pyplot` cannot display {label} output, since rendering it "
+                "requires an external tool that Streamlit does not bundle. Use "
+                '`format="png"` (the default) for a raster image, or '
+                '`format="svg"` to keep the output as scalable vector graphics.'
+            )
 
 
 class PyplotMixin:
@@ -224,22 +278,14 @@ def marshall(
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
 
-    # SVG is text, not raster bytes, so decode it to a string and let
-    # image_to_url take its SVG path instead of the PNG/PIL path, which cannot
-    # parse SVG and crashes.
-    #
-    # Sniff the buffer rather than reading kwargs["format"]: Matplotlib resolves
-    # the format itself, so format=None with rcParams["savefig.format"] = "svg"
-    # still produces SVG. No raster format collides with these prefixes (PNG
-    # starts with b"\x89PNG", JPEG with b"\xff\xd8"). An `<?xml` prolog alone is
-    # not enough because image_to_url also requires a `<svg` tag, and the search
-    # is bounded since Matplotlib emits `<svg` within the first few hundred bytes.
+    # SVG is text, not raster bytes, so it goes to image_to_url's SVG path rather
+    # than the PNG/PIL path, which cannot parse it and crashes. Anything else
+    # vector is rejected up front so the failure names the format.
     payload = image.getvalue()
-    stripped = payload.lstrip()
-    is_svg = stripped.startswith(b"<svg") or (
-        stripped.startswith(b"<?xml") and b"<svg" in stripped[:2048]
-    )
-    image_for_proto: str | io.BytesIO = payload.decode("utf-8") if is_svg else image
+    svg_markup = _svg_markup_or_none(payload)
+    if svg_markup is None:
+        _raise_for_unsupported_vector_format(payload)
+    image_for_proto: str | io.BytesIO = image if svg_markup is None else svg_markup
 
     marshall_images(
         coordinates=coordinates,

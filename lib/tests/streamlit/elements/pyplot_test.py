@@ -234,6 +234,62 @@ class PyplotTest(DeltaGeneratorTestCase):
         decoded = base64.b64decode(url.split(",", 1)[1]).decode("utf-8")
         assert "<svg" in decoded
 
+    @parameterized.expand([("lowercase", "svgz"), ("uppercase", "SVGZ")])
+    def test_st_pyplot_svgz_format(self, _, fmt: str):
+        """svgz is gzipped SVG, so it must be inflated onto the SVG path.
+
+        Without inflation the gzip magic bytes reach PIL, which cannot identify
+        them, so this crashed the same way plain SVG used to.
+        """
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, format=fmt)
+
+        el = self.get_delta_from_queue().new_element
+        url = el.imgs.imgs[0].url
+        assert url.startswith("data:image/svg+xml;base64,")
+        # Decode so a gzip blob mislabelled as SVG cannot pass on MIME alone.
+        decoded = base64.b64decode(url.split(",", 1)[1]).decode("utf-8")
+        assert "<svg" in decoded
+
+    @parameterized.expand(
+        [
+            ("pdf", "pdf", "PDF"),
+            ("eps", "eps", "PostScript"),
+            ("ps", "ps", "PostScript"),
+        ]
+    )
+    def test_st_pyplot_rejects_unrenderable_vector_format(
+        self, _, fmt: str, expected_label: str
+    ):
+        """PDF/PostScript must fail with a message naming the format and a way out.
+
+        These need an external rasteriser that Streamlit does not bundle. Left
+        alone they reach PIL and surface an opaque ``UnidentifiedImageError`` /
+        ``OSError`` from several frames deeper, naming neither the format nor a fix.
+        """
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.pyplot(fig, format=fmt)
+
+        message = str(exc_info.value)
+        assert expected_label in message, "the error must name the offending format"
+        assert 'format="png"' in message, "the error must offer a working alternative"
+        assert 'format="svg"' in message
+
+    def test_st_pyplot_png_is_unaffected_by_vector_guard(self):
+        """The default raster path must still render, not trip the new guard."""
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT)
+
     @parameterized.expand(
         [
             (
