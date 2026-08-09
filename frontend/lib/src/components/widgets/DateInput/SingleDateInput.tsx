@@ -133,6 +133,8 @@ function SingleDateInput({
   const theme = useEmotionTheme()
   const id = useId()
   const errorId = `${id}-error`
+  const popoverId = `${id}-calendar`
+  const popoverDescId = `${id}-calendar-desc`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
@@ -508,6 +510,9 @@ function SingleDateInput({
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
         aria-keyshortcuts="Alt+ArrowDown"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? popoverId : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
@@ -568,6 +573,7 @@ function SingleDateInput({
       {isOpen && (
         <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledCalendarPopover
+            id={popoverId}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDateInputCalendar"
@@ -575,7 +581,14 @@ function SingleDateInput({
             role={isCalendarActive ? "dialog" : undefined}
             aria-modal={isCalendarActive ? "true" : undefined}
             aria-label={isCalendarActive ? "Choose date" : undefined}
+            aria-describedby={isCalendarActive ? popoverDescId : undefined}
           >
+            {isCalendarActive && (
+              <StyledVisuallyHidden id={popoverDescId}>
+                Use arrow keys to navigate dates. Enter to select. Escape to
+                close.
+              </StyledVisuallyHidden>
+            )}
             {/* Calendar locale is the visitor's locale (not the field's
                 fixed en-US). safeLocale guards against malformed tags. */}
             <I18nProvider locale={safeLocale}>

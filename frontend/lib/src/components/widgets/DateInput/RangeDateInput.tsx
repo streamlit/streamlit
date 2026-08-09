@@ -216,6 +216,8 @@ function RangeDateInput({
   const theme = useEmotionTheme()
   const id = useId()
   const errorId = `${id}-error`
+  const popoverId = `${id}-calendar`
+  const popoverDescId = `${id}-calendar-desc`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // today() inside getQuickSelectPresets is intentionally not a dep — the
@@ -763,6 +765,9 @@ function RangeDateInput({
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
         aria-keyshortcuts="Alt+ArrowDown"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? popoverId : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
@@ -842,6 +847,7 @@ function RangeDateInput({
       {isOpen && (
         <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledCalendarPopover
+            id={popoverId}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDateInputCalendar"
@@ -849,7 +855,14 @@ function RangeDateInput({
             role={isCalendarActive ? "dialog" : undefined}
             aria-modal={isCalendarActive ? "true" : undefined}
             aria-label={isCalendarActive ? "Choose date range" : undefined}
+            aria-describedby={isCalendarActive ? popoverDescId : undefined}
           >
+            {isCalendarActive && (
+              <StyledVisuallyHidden id={popoverDescId}>
+                Use arrow keys to navigate dates. Enter to select. Escape to
+                close.
+              </StyledVisuallyHidden>
+            )}
             <I18nProvider locale={safeLocale}>
               <StyledRangeCalendarRoot
                 aria-label="Choose date range"
