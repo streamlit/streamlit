@@ -1266,11 +1266,17 @@ class ButtonGroupMixin:
                 pass
 
             else:
-                # An iterable is treated as a positional boolean mask if its length matches
-                # options length AND every element is strictly a boolean.
+                # An iterable is treated as a positional boolean mask only when:
+                # - length matches options, and
+                # - every element is strictly a boolean, and
+                # - options themselves are not boolean-valued (so lists like
+                #   disabled=[False, True] against options=[False, True] are
+                #   treated as option values to disable, not an index mask).
+                options_include_bool = any(type(x) is bool for x in indexable_options)
                 is_bool_mask = (
                     len(disabled_seq) == len(indexable_options)
                     and all(type(x) is bool for x in disabled_seq)
+                    and not options_include_bool
                 )
 
                 if is_bool_mask:
