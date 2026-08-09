@@ -1777,6 +1777,293 @@ describe("DateInput single-mode keyboard navigation", () => {
   })
 })
 
+describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
+  it("Alt+ArrowDown opens calendar in active mode with focus on grid cell", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+      expect(calendar).toHaveAttribute("aria-modal", "true")
+      // Focus should be inside the calendar grid
+      const focused = document.activeElement
+      expect(calendar.contains(focused)).toBe(true)
+      expect(focused?.getAttribute("tabindex")).toBe("0")
+    })
+  })
+
+  it("Alt+ArrowDown opens calendar even if popover was closed", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    // Focus and close the popover via Tab
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+    // Close by tabbing through all segments and out
+    await user.tab() // to month
+    await user.tab() // to day
+    await user.tab() // leaves widget, closes popover
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    // Go back to the field and press Alt+ArrowDown
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+    })
+  })
+
+  it("Tab cycles within active calendar without closing", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({ default: ["2020-06-15"], min: "2000-01-01" })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+    })
+
+    // Tab should cycle within the calendar, not close it
+    await user.tab()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+    await user.tab()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+    await user.tab()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
+
+  it("Escape from active calendar returns focus to originating segment", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { month } = getSingleDateSegments(region)
+
+    // Focus the month segment specifically
+    await user.click(month)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+    })
+
+    // Escape should close and return focus to the month segment
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(month).toHaveFocus()
+  })
+
+  it("selecting a date in active mode closes and returns focus to originating segment", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { month } = getSingleDateSegments(region)
+
+    await user.click(month)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      expect(calendar).toHaveAttribute("role", "dialog")
+      expect(calendar.contains(document.activeElement)).toBe(true)
+    })
+
+    // Navigate to a different date and select it
+    await user.keyboard("{ArrowRight}")
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(month).toHaveFocus()
+  })
+
+  it("passive mode still closes on Tab from last segment (no regression)", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+
+    // Calendar should NOT be in dialog mode
+    const calendar = screen.getByTestId("stDateInputCalendar")
+    expect(calendar).not.toHaveAttribute("role", "dialog")
+    expect(calendar).not.toHaveAttribute("aria-modal")
+
+    // Tab from day should close (passive behavior unchanged)
+    await user.tab()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("wrapper has aria-keyshortcuts attribute", () => {
+    render(<DateInput {...getProps()} />)
+    const wrapper = screen.getByTestId("stDateInputField")
+    expect(wrapper).toHaveAttribute("aria-keyshortcuts", "Alt+ArrowDown")
+  })
+})
+
+describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
+  it("Alt+ArrowDown from start field segment enters active calendar", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+      expect(calendar).toHaveAttribute("aria-modal", "true")
+    })
+  })
+
+  it("Alt+ArrowDown from end field segment enters active calendar", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getRangeDateSegments(region, "end")
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+    })
+  })
+
+  it("Tab cycles through calendar + quick select in active mode", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+    })
+
+    // Tab multiple times — should stay within the calendar
+    for (let i = 0; i < 6; i++) {
+      await user.tab()
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+    }
+  })
+
+  it("Escape from active range calendar returns to originating segment", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { month } = getRangeDateSegments(region, "end")
+    await user.click(month)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    await waitFor(() => {
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+    })
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(month).toHaveFocus()
+  })
+})
+
 describe("DateInput single-mode paste handling", () => {
   it("pasting a full date string updates the value", async () => {
     const user = userEvent.setup()

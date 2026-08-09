@@ -533,8 +533,8 @@ export const StyledCalendarCell = styled(CalendarCell, {
         ...rangeEndpointBase,
         backgroundImage: `linear-gradient(to right, transparent 50%, ${rangeTint} 50%)`,
         "&[data-hovered]::after, &[data-focus-visible]::after": {
-          outline: `${borderWidth} solid ${primary}`,
-          outlineOffset: `-${borderWidth}`,
+          outline: `${theme.sizes.focusOutlineWidth} solid ${primary}`,
+          outlineOffset: theme.spacing.threeXS,
         },
         // Outside-month start: no indicator, no tint — just grey text
         "&[data-outside-month]": {
@@ -548,8 +548,8 @@ export const StyledCalendarCell = styled(CalendarCell, {
         ...rangeEndpointBase,
         backgroundImage: `linear-gradient(to left, transparent 50%, ${rangeTint} 50%)`,
         "&[data-hovered]::after, &[data-focus-visible]::after": {
-          outline: `${borderWidth} solid ${primary}`,
-          outlineOffset: `-${borderWidth}`,
+          outline: `${theme.sizes.focusOutlineWidth} solid ${primary}`,
+          outlineOffset: theme.spacing.threeXS,
         },
         // Outside-month end: no indicator, no tint — just grey text
         "&[data-outside-month]": {
