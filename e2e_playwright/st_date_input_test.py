@@ -318,12 +318,12 @@ def test_range_date_calendar_picker_rendering(
 
 
 def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
-    """Test that single value is reset to default if calendar closed empty."""
+    """Non-clearable widget reverts to last committed value when closed empty."""
     date_input = get_date_input(app, "Single date")
     date_field = date_input.get_by_test_id("stDateInputField")
     date_field.get_by_role("spinbutton").first.click()
 
-    # Select '1970/01/02'
+    # Select '1970/01/02' — this becomes the committed value
     app.get_by_test_id("stDateInputCalendar").get_by_label(
         "Friday, January 2, 1970"
     ).click()
@@ -345,8 +345,8 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     # submit the cleared value
     reset_focus(app)
 
-    # Value should be reset to default
-    expect_markdown(app, "Value 1: 1970-01-01")
+    # Value reverts to last committed (1970-01-02), not the element default
+    expect_markdown(app, "Value 1: 1970-01-02")
 
 
 def test_range_is_empty_if_calendar_closed_empty(app: Page):
