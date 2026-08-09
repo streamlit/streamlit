@@ -253,6 +253,25 @@ class PyplotTest(DeltaGeneratorTestCase):
         decoded = base64.b64decode(url.split(",", 1)[1]).decode("utf-8")
         assert "<svg" in decoded
 
+    def test_st_pyplot_svgz_via_rcparams(self):
+        """svgz resolved from rcParams is also detected, not just from `format=`.
+
+        Mirrors the plain-SVG rcParams case: Matplotlib resolves the format itself,
+        so `format=None` with an rcParams default of "svgz" produces gzipped SVG that
+        the `format` kwarg alone would not reveal. This is what the buffer sniff buys.
+        """
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        with mpl.rc_context({"savefig.format": "svgz"}):
+            st.pyplot(fig, format=None)
+
+        el = self.get_delta_from_queue().new_element
+        url = el.imgs.imgs[0].url
+        assert url.startswith("data:image/svg+xml;base64,")
+        decoded = base64.b64decode(url.split(",", 1)[1]).decode("utf-8")
+        assert "<svg" in decoded
+
     @parameterized.expand(
         [
             ("pdf", "pdf", "PDF"),

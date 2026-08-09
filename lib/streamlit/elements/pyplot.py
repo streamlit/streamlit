@@ -46,18 +46,18 @@ _UNSUPPORTED_VECTOR_MAGIC: Final = {
 
 
 def _svg_markup_or_none(payload: bytes) -> str | None:
-    r"""Return ``payload`` decoded as SVG markup, or ``None`` if it is not SVG.
+    r"""Return SVG markup from ``payload``, or ``None`` if it is not SVG.
 
-    Also handles svgz, which Matplotlib writes for ``format="svgz"`` and which is
-    just gzipped SVG -- inflating it reaches the same SVG path rather than the
-    PNG/PIL path, which cannot parse it.
+    Handles svgz (gzipped SVG) by inflating first, so it reaches the existing SVG
+    path rather than PIL, which cannot parse it.
 
-    Sniffs the buffer rather than reading ``kwargs["format"]``: Matplotlib resolves
-    the format itself, so ``format=None`` with ``rcParams["savefig.format"] = "svg"``
-    still produces SVG. No raster format collides with these prefixes (PNG starts
-    with ``b"\x89PNG"``, JPEG with ``b"\xff\xd8"``). An ``<?xml`` prolog alone is
-    not enough because ``image_to_url`` also requires an ``<svg`` tag, and the search
-    is bounded since Matplotlib emits ``<svg`` within the first few hundred bytes.
+    Sniffs the buffer rather than reading ``kwargs["format"]``, because Matplotlib
+    resolves the format itself -- ``format=None`` with
+    ``rcParams["savefig.format"] = "svg"`` still yields SVG. No raster format shares
+    these prefixes (PNG starts with ``b"\x89PNG"``, JPEG with ``b"\xff\xd8"``). An
+    ``<svg`` tag is required rather than an ``<?xml`` prolog alone, since
+    ``image_to_url`` needs the tag too, and the search is bounded because Matplotlib
+    emits ``<svg`` within the first few hundred bytes.
     """
     if payload[:2] == b"\x1f\x8b":  # gzip magic, i.e. svgz
         try:
