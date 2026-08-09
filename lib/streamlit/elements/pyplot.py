@@ -63,6 +63,9 @@ def _svg_markup_or_none(payload: bytes) -> str | None:
         try:
             payload = gzip.decompress(payload)
         except (OSError, EOFError):
+            # Report "not SVG" rather than raising, so a truncated or corrupt
+            # buffer continues to the raster/rejection path and is reported
+            # there, instead of failing with a gzip error from this helper.
             return None
 
     stripped = payload.lstrip()
@@ -283,9 +286,12 @@ def marshall(
     # vector is rejected up front so the failure names the format.
     payload = image.getvalue()
     svg_markup = _svg_markup_or_none(payload)
-    if svg_markup is None:
+    if svg_markup is not None:
+        image_for_proto: str | io.BytesIO = svg_markup
+    else:
+        # Not SVG, so it is either raster (fine) or vector we cannot render.
         _raise_for_unsupported_vector_format(payload)
-    image_for_proto: str | io.BytesIO = image if svg_markup is None else svg_markup
+        image_for_proto = image
 
     marshall_images(
         coordinates=coordinates,
