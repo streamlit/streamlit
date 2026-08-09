@@ -199,25 +199,40 @@ function SingleDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        const pending = displayValueRef.current
-        const hasPlaceholders =
-          triggerRef.current?.querySelector('[data-placeholder="true"]') !==
-          null
+        const segments = triggerRef.current?.querySelectorAll(
+          '[role="spinbutton"]'
+        )
+        const placeholders = triggerRef.current?.querySelectorAll(
+          '[role="spinbutton"][data-placeholder="true"]'
+        )
+        const isPartiallyTyped =
+          segments &&
+          placeholders &&
+          placeholders.length > 0 &&
+          placeholders.length < segments.length
+        const allCleared =
+          segments &&
+          segments.length > 0 &&
+          placeholders?.length === segments.length
 
-        if (hasPlaceholders && !datesEqual(pending, value)) {
-          // User left segments incomplete — revert display to the committed
-          // value directly. We can't go through the parent round-trip because
-          // the widget state might already be at default (segment edits were
-          // buffered), making the parent's revert a no-op.
+        if (isPartiallyTyped || (allCleared && !clearable)) {
+          // User left segments incomplete, or fully cleared a non-clearable
+          // widget — revert display to the committed value directly. We can't
+          // go through the parent round-trip because the widget state might
+          // already be at default (segment edits were buffered), making the
+          // parent's revert a no-op.
           setDisplayValue(value)
           onCloseRef.current(true /* hasPlaceholderSegments */)
-        } else if (!datesEqual(pending, value)) {
-          onChangeRef.current(pending)
+        } else {
+          const pending = allCleared ? null : displayValueRef.current
+          if (!datesEqual(pending, value)) {
+            onChangeRef.current(pending)
+          }
         }
       }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, value])
+  }, [isOpen, value, clearable])
 
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
@@ -466,9 +481,17 @@ function SingleDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (!formCommit) return
-      const hasPlaceholders =
-        triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
-      if (hasPlaceholders) return
+      const segments = triggerRef.current?.querySelectorAll(
+        '[role="spinbutton"]'
+      )
+      const placeholders = triggerRef.current?.querySelectorAll(
+        '[role="spinbutton"][data-placeholder="true"]'
+      )
+      if (segments && placeholders) {
+        const isPartiallyTyped =
+          placeholders.length > 0 && placeholders.length < segments.length
+        if (isPartiallyTyped) return
+      }
       const pending = displayValueRef.current
       if (!datesEqual(pending, value)) {
         formCommit(pending)

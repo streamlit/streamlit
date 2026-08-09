@@ -580,7 +580,7 @@ describe("DateInput", () => {
     )
   })
 
-  it("does not commit placeholder state on blur in a form (non-clearable)", async () => {
+  it("does not commit placeholder state on blur in a form (partially typed)", async () => {
     const user = userEvent.setup()
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -592,13 +592,51 @@ describe("DateInput", () => {
     const region = screen.getByTestId("stDateInput")
     const { year } = getSingleDateSegments(region)
 
-    // Partially clear the year segment (leaves placeholders)
+    // Partially clear the year segment (leaves placeholders in year,
+    // but month and day remain filled — a mid-edit state)
     await clearSegment(user, year)
 
-    // Blur should NOT commit the placeholder state — form submit should
-    // read the original committed value, not an empty/cleared date.
+    // Blur should NOT commit the partially typed state — form submit
+    // should read the original committed value, not an incomplete date.
     await user.tab()
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+  })
+
+  it("commits cleared value on blur when all segments are cleared in a clearable form widget", async () => {
+    const user = userEvent.setup()
+    // default: [] makes the widget clearable
+    const props = getProps({ formId: "form", default: [] })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    // Pre-seed widget state so the widget starts with a committed value
+    props.widgetMgr.setStringArrayValue(
+      props.element,
+      [originalDateWire],
+      { fromUi: false },
+      undefined
+    )
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+
+    // Clear ALL segments — deliberate empty intent
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+    await clearSegment(user, day)
+
+    // Blur should commit the cleared state — fully cleared is a valid
+    // user intent, distinct from partially typed (mid-edit).
+    await user.tab()
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
   })
 
   describe("localization", () => {
