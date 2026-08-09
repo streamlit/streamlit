@@ -903,6 +903,38 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta2.disabled is True
         assert [option.disabled for option in delta2.options] == [True, True]
 
+    def test_disabled_bool_mask_on_numeric_options(self):
+        """Equal-length bool lists are positional masks for non-bool options.
+
+        Python's False==0 / True==1 must not reclassify a mask as a value list.
+        Disable numeric options by value with disabled=[0]/disabled=[1] instead.
+        """
+        st.pills("label_mask", [0, 1], disabled=[False, True])
+        delta_mask = self.get_delta_from_queue().new_element.button_group
+        assert delta_mask.disabled is False
+        assert [option.disabled for option in delta_mask.options] == [False, True]
+
+        # Same mask pattern for three numeric options (common rating-style UI).
+        st.pills("label_mask3", [0, 1, 2], disabled=[True, False, True])
+        delta_mask3 = self.get_delta_from_queue().new_element.button_group
+        assert delta_mask3.disabled is False
+        assert [option.disabled for option in delta_mask3.options] == [
+            True,
+            False,
+            True,
+        ]
+
+        # Value-list form still works when callers pass the actual option values.
+        st.pills("label_vals", [0, 1], disabled=[0, 1])
+        delta_vals = self.get_delta_from_queue().new_element.button_group
+        assert delta_vals.disabled is True
+        assert [option.disabled for option in delta_vals.options] == [True, True]
+
+        st.pills("label_one", [0, 1], disabled=[0])
+        delta_one = self.get_delta_from_queue().new_element.button_group
+        assert delta_one.disabled is False
+        assert [option.disabled for option in delta_one.options] == [True, False]
+
     def test_per_option_disabled_registers_widget_as_enabled(self):
         """Test that per-option disabled does not mark the entire widget as disabled in session state."""
         res = st.pills("label", ["a", "b"], disabled=["a"])

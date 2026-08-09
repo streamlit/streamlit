@@ -1266,12 +1266,22 @@ class ButtonGroupMixin:
                 pass
 
             else:
-                # An iterable is treated as a positional boolean mask only when:
+                # Disambiguate positional bool masks vs option-value lists.
+                #
+                # An iterable is a positional boolean mask only when:
                 # - length matches options, and
-                # - every element is strictly a boolean, and
-                # - options themselves are not boolean-valued (so lists like
-                #   disabled=[False, True] against options=[False, True] are
-                #   treated as option values to disable, not an index mask).
+                # - every element is strictly a bool (type is bool), and
+                # - options themselves are not boolean-valued.
+                #
+                # When options *are* bools (e.g. options=[False, True] with
+                # disabled=[False, True]), prefer the value-list form so callers
+                # can disable specific boolean choices.
+                #
+                # Do *not* treat Python's False==0 / True==1 as a reason to
+                # switch to value-list parsing for numeric options. Otherwise
+                # st.pills("x", [0, 1, 2], disabled=[True, False, True]) would
+                # silently stop being a mask. Disable numeric options by value
+                # with disabled=[0] / disabled=[1], not with False/True.
                 options_include_bool = any(type(x) is bool for x in indexable_options)
                 is_bool_mask = (
                     len(disabled_seq) == len(indexable_options)
