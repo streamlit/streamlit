@@ -317,7 +317,7 @@ def test_range_date_calendar_picker_rendering(
     )
 
 
-def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
+def test_single_value_reverts_to_committed_if_calendar_closed_empty(app: Page):
     """Non-clearable widget reverts to last committed value when closed empty."""
     date_input = get_date_input(app, "Single date")
     date_field = date_input.get_by_test_id("stDateInputField")

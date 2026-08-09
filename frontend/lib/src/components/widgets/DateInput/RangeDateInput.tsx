@@ -340,12 +340,13 @@ function RangeDateInput({
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
     if (!isCalendarActive || !isOpen) return
-    requestAnimationFrame(() => {
+    const id = requestAnimationFrame(() => {
       const cell = popoverRef.current?.querySelector<HTMLElement>(
         '[role="grid"] [tabindex="0"]'
       )
       cell?.focus()
     })
+    return () => cancelAnimationFrame(id)
   }, [isCalendarActive, isOpen])
 
   const overlayOptions = useMemo(() => {
@@ -678,6 +679,17 @@ function RangeDateInput({
     [handleClear, handleQuickSelect]
   )
 
+  const handleQuickSelectKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key === "Tab") {
+        e.preventDefault()
+        setIsQuickSelectOpen(false)
+        quickSelectTriggerRef.current?.focus()
+      }
+    },
+    []
+  )
+
   const makeHandlePaste = useCallback(
     (
       currentValue: CalendarDate | null,
@@ -922,23 +934,26 @@ function RangeDateInput({
                   placement="bottom end"
                   data-testid="stDateInputQuickSelectPopover"
                 >
-                  <StyledDropdownListBox
-                    aria-label="Quick select a date range"
-                    selectionMode="single"
-                    disallowEmptySelection={!clearable}
-                    selectedKeys={activePreset ? [activePreset.id] : []}
-                    onSelectionChange={handleQuickSelectSelection}
-                    autoFocus
-                  >
-                    {quickSelectPresets.map(preset => (
-                      <StyledDropdownListBoxItem
-                        key={preset.id}
-                        id={preset.id}
-                      >
-                        {preset.label}
-                      </StyledDropdownListBoxItem>
-                    ))}
-                  </StyledDropdownListBox>
+                  {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+                  <div onKeyDown={handleQuickSelectKeyDown}>
+                    <StyledDropdownListBox
+                      aria-label="Quick select a date range"
+                      selectionMode="single"
+                      disallowEmptySelection={!clearable}
+                      selectedKeys={activePreset ? [activePreset.id] : []}
+                      onSelectionChange={handleQuickSelectSelection}
+                      autoFocus
+                    >
+                      {quickSelectPresets.map(preset => (
+                        <StyledDropdownListBoxItem
+                          key={preset.id}
+                          id={preset.id}
+                        >
+                          {preset.label}
+                        </StyledDropdownListBoxItem>
+                      ))}
+                    </StyledDropdownListBox>
+                  </div>
                 </StyledDropdownPopover>
               </StyledQuickSelectRow>
             )}

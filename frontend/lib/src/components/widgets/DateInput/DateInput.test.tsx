@@ -638,13 +638,12 @@ describe("DateInput", () => {
     )
   })
 
-  it("non-clearable widget reverts to default on blur after clearing all segments", async () => {
+  it("non-clearable widget reverts to committed value on blur after clearing all segments", async () => {
     const user = userEvent.setup()
     // Non-empty default makes the widget non-clearable. Clearing all
-    // segments and blurring triggers close-commit which reverts to default,
-    // then form-blur commits that reverted value. The clearable guard was
-    // removed from handleFormCommit so the commit always fires — but the
-    // close-commit effect enforces the non-clearable constraint first.
+    // segments then leaving the field closes the popover; close-commit
+    // restores the last committed value and handleClose re-writes that
+    // value (formCommit is skipped while segments are still cleared).
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -660,9 +659,10 @@ describe("DateInput", () => {
     await clearSegment(user, day)
 
     await user.tab()
-    // Close-commit reverts the cleared state to default (1970-01-20),
-    // and form-blur-commit writes that value through without being
-    // blocked by a clearable guard.
+    // Close-commit reverts the cleared state to the last committed value
+    // (1970-01-20). handleBlur skips formCommit for fully-cleared
+    // non-clearable widgets, avoiding a race where form submit could
+    // capture the empty intermediate state.
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       [originalDateWire],

@@ -239,12 +239,13 @@ function SingleDateInput({
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
     if (!isCalendarActive || !isOpen) return
-    requestAnimationFrame(() => {
+    const id = requestAnimationFrame(() => {
       const cell = popoverRef.current?.querySelector<HTMLElement>(
         '[role="grid"] [tabindex="0"]'
       )
       cell?.focus()
     })
+    return () => cancelAnimationFrame(id)
   }, [isCalendarActive, isOpen])
 
   // In the sidebar, flip/shift are bounded to the viewport

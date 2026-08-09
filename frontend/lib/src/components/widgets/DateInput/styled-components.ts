@@ -269,7 +269,7 @@ export const StyledCalendarHeaderButton = styled(Button)(({ theme }) => ({
   backgroundColor: "transparent",
   color: theme.colors.bodyText,
   cursor: "pointer",
-  outline: "none",
+  outline: "none", // themed ring via :focus-visible below
   "&[data-hovered]": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
@@ -393,7 +393,7 @@ export const StyledCalendarHeaderSelectTrigger = styled(Button)(
     cursor: "pointer",
     padding: `${theme.spacing.twoXS} ${theme.spacing.twoXS}`,
     maxWidth: "100%",
-    outline: "none",
+    outline: "none", // themed ring via :focus-visible below
     "&[data-hovered]": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
