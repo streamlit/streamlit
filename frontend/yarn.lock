@@ -3572,7 +3572,7 @@ __metadata:
     date-fns: "npm:^4.4.0"
     decamelize: "npm:^6.0.1"
     deck.gl: "npm:^9.3.7"
-    dompurify: "npm:^3.4.12"
+    dompurify: "npm:^3.4.13"
     hoist-non-react-statics: "npm:^3.3.2"
     immer: "npm:^11.1.15"
     json5: "npm:^2.2.3"
