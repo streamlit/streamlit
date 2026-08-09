@@ -269,13 +269,14 @@ export const StyledCalendarHeaderButton = styled(Button)(({ theme }) => ({
   backgroundColor: "transparent",
   color: theme.colors.bodyText,
   cursor: "pointer",
+  outline: "none",
   "&[data-hovered]": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&[data-pressed]": {
     backgroundColor: theme.colors.darkenedBgMix25,
   },
-  "&[data-focus-visible]": {
+  "&[data-focus-visible], &:focus-visible": {
     outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
     outlineOffset: theme.spacing.threeXS,
   },
@@ -329,7 +330,7 @@ export const StyledQuickSelectTrigger = styled(Button, {
   "&[data-pressed]": {
     backgroundColor: theme.colors.darkenedBgMix25,
   },
-  "&[data-focus-visible]": {
+  "&[data-focus-visible], &:focus-visible": {
     boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
   },
 }))
@@ -392,14 +393,14 @@ export const StyledCalendarHeaderSelectTrigger = styled(Button)(
     cursor: "pointer",
     padding: `${theme.spacing.twoXS} ${theme.spacing.twoXS}`,
     maxWidth: "100%",
+    outline: "none",
     "&[data-hovered]": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&[data-pressed]": {
       backgroundColor: theme.colors.darkenedBgMix25,
     },
-    "&[data-focus-visible]": {
-      outline: "none",
+    "&[data-focus-visible], &:focus-visible": {
       boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
     },
   })

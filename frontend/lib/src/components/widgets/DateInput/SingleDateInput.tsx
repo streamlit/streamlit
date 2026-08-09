@@ -494,13 +494,15 @@ function SingleDateInput({
         const isPartiallyTyped =
           placeholders.length > 0 && placeholders.length < segments.length
         if (isPartiallyTyped) return
+        const isFullyCleared = placeholders.length === segments.length
+        if (isFullyCleared && !clearable) return
       }
       const pending = displayValueRef.current
       if (!datesEqual(pending, value)) {
         formCommit(pending)
       }
     },
-    [formCommit, value]
+    [formCommit, value, clearable]
   )
 
   return (
