@@ -1416,12 +1416,19 @@ class ButtonGroupMixin:
         # selection cannot remain selected when its option becomes unclickable.
         if disabled_options is not None and current_value is not None:
             def _value_is_disabled(val: Any) -> bool:
-                # True if any occurrence of this value is a disabled option
-                # (handles duplicate options).
-                return any(
-                    opt == val and disabled_options[i]
+                # Clear a selected value only when *every* occurrence of that
+                # value is disabled. With a positional mask that disables only
+                # some duplicates (e.g. options=["a","b","a"],
+                # disabled=[True, False, False]), the enabled "a" must remain
+                # selectable and must not be wiped on the next run.
+                # Value-based disabled still marks all matches, so this is True
+                # for those as well.
+                matches = [
+                    disabled_options[i]
                     for i, opt in enumerate(indexable_options)
-                )
+                    if opt == val
+                ]
+                return bool(matches) and all(matches)
 
             disabled_selection_changed = False
             if selection_mode == "single":

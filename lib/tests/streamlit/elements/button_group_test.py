@@ -918,6 +918,23 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.disabled is False
         assert [option.disabled for option in delta.options] == [True, False, True]
 
+    def test_disabled_mask_partial_duplicates_keeps_enabled_selection(self):
+        """Positional mask that disables only some duplicates must not clear
+        a still-enabled selection of that same value."""
+        st.session_state["pills"] = "a"
+        # First "a" disabled, second "a" still enabled.
+        result = st.pills(
+            "label",
+            ["a", "b", "a"],
+            key="pills",
+            disabled=[True, False, False],
+        )
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert [option.disabled for option in delta.options] == [True, False, False]
+        # Selection of "a" remains valid because an enabled "a" exists.
+        assert result == "a"
+        assert st.session_state["pills"] == "a"
+
     def test_default_skips_disabled_options(self):
         """Default values that point at disabled options are dropped from the proto."""
         st.pills("label", ["a", "b", "c"], default="a", disabled=["a"])
