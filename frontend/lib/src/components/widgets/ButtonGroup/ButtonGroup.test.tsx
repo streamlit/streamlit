@@ -325,6 +325,38 @@ describe("ButtonGroup widget", () => {
       })
     })
 
+    it("honors per-option disabled flags", async () => {
+      const user = userEvent.setup()
+      const perOptionDisabled = [
+        ButtonGroupProto.Option.create({
+          content: "enabled-option",
+          disabled: false,
+        }),
+        ButtonGroupProto.Option.create({
+          content: "disabled-option",
+          disabled: true,
+        }),
+      ]
+      const props = getProps({
+        options: perOptionDisabled,
+        default: [],
+        clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<ButtonGroup {...props} />)
+
+      const buttons = getButtonGroupButtons()
+      expect(buttons).toHaveLength(2)
+      expect(buttons[0]).not.toBeDisabled()
+      expect(buttons[1]).toBeDisabled()
+
+      await user.click(buttons[1])
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+      await user.click(buttons[0])
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
+    })
+
     it("sets widget value on update", () => {
       // Use rawValues with string values instead of value with indices
       const props = getProps({

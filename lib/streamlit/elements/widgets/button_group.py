@@ -341,7 +341,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -363,7 +363,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -385,7 +385,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -407,7 +407,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -428,7 +428,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -695,7 +695,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -717,7 +717,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -739,7 +739,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -761,7 +761,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -783,7 +783,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool | Sequence[bool] | Sequence[Any] = False,
+        disabled: bool | Sequence[bool] | Sequence[V] = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -1296,6 +1296,13 @@ class ButtonGroupMixin:
                     disabled_options = disabled_bools
                     widget_disabled = all(disabled_bools)
 
+        # Drop default indices that point at disabled options so a disabled pill
+        # is never pre-selected (and cannot become stuck in multi-select).
+        if disabled_options is not None and default:
+            default = [
+                idx for idx in default if idx < len(disabled_options) and not disabled_options[idx]
+            ] or None
+
         if style not in {"pills", "segmented_control"}:
             raise StreamlitAPIException(
                 "The style argument must be one of ['pills', 'segmented_control']. "
@@ -1396,6 +1403,30 @@ class ButtonGroupMixin:
                         options_format_func,
                     )
                 )
+
+        # Also drop currently selected values that map to disabled options so a
+        # selection cannot remain selected when its option becomes unclickable.
+        if disabled_options is not None and current_value is not None:
+            def _option_index(val: Any) -> int | None:
+                try:
+                    return list(indexable_options).index(val)
+                except ValueError:
+                    return None
+
+            if selection_mode == "single":
+                idx = _option_index(current_value)
+                if idx is not None and disabled_options[idx]:
+                    current_value = None
+                    value_needs_reset = True
+            elif isinstance(current_value, list):
+                filtered = [
+                    v
+                    for v in current_value
+                    if (i := _option_index(v)) is None or not disabled_options[i]
+                ]
+                if filtered != current_value:
+                    current_value = filtered
+                    value_needs_reset = True
 
         # Resend set_value when the selected option's formatted label changed
         # between reruns. The frontend tracks selection by label, so a stale

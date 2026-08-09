@@ -909,6 +909,24 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.disabled is False
         assert [option.disabled for option in delta.options] == [True, False]
 
+    def test_default_skips_disabled_options(self):
+        """Default values that point at disabled options are dropped from the proto."""
+        st.pills("label", ["a", "b", "c"], default="a", disabled=["a"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert list(delta.default) == []
+        assert [option.disabled for option in delta.options] == [True, False, False]
+
+        st.pills(
+            "label2",
+            ["a", "b", "c"],
+            default=["a", "b"],
+            disabled=["a"],
+            selection_mode="multi",
+        )
+        delta2 = self.get_delta_from_queue().new_element.button_group
+        assert list(delta2.default) == [1]
+        assert [option.disabled for option in delta2.options] == [True, False, False]
+
     @parameterized.expand(
         get_command_matrix([(None, []), ([], []), (["Tea"], [1]), ("Coffee", [0])])
     )
