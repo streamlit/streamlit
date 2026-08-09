@@ -911,6 +911,13 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.disabled is False
         assert [option.disabled for option in delta.options] == [True, False]
 
+    def test_disabled_value_disables_all_duplicate_options(self):
+        """Value-based disabled marks every matching option, not only the first."""
+        st.pills("label", ["a", "b", "a"], disabled=["a"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == [True, False, True]
+
     def test_default_skips_disabled_options(self):
         """Default values that point at disabled options are dropped from the proto."""
         st.pills("label", ["a", "b", "c"], default="a", disabled=["a"])

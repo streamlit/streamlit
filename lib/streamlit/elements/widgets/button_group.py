@@ -1283,10 +1283,12 @@ class ButtonGroupMixin:
                     disabled_options = [bool(x) for x in disabled_seq]
                     widget_disabled = all(disabled_options)
                 else:
+                    # Validate every disabled entry exists in options (same rules as
+                    # default), then mark *all* matching option indices. Using only
+                    # check_and_convert_to_indices would leave later duplicates
+                    # enabled when options contain repeated values.
                     try:
-                        indices = check_and_convert_to_indices(
-                            indexable_options, disabled_seq
-                        )
+                        check_and_convert_to_indices(indexable_options, disabled_seq)
                     except StreamlitAPIException as e:
                         msg = (
                             str(e)
@@ -1295,10 +1297,10 @@ class ButtonGroupMixin:
                         )
                         raise StreamlitAPIException(msg) from e
 
-                    disabled_bools = [False] * len(indexable_options)
-                    if indices:
-                        for idx in indices:
-                            disabled_bools[idx] = True
+                    disabled_bools = [
+                        any(opt == dis for dis in disabled_seq)
+                        for opt in indexable_options
+                    ]
                     disabled_options = disabled_bools
                     widget_disabled = all(disabled_bools)
 
@@ -1413,24 +1415,21 @@ class ButtonGroupMixin:
         # Also drop currently selected values that map to disabled options so a
         # selection cannot remain selected when its option becomes unclickable.
         if disabled_options is not None and current_value is not None:
-            def _option_index(val: Any) -> int | None:
-                try:
-                    return list(indexable_options).index(val)
-                except ValueError:
-                    return None
+            def _value_is_disabled(val: Any) -> bool:
+                # True if any occurrence of this value is a disabled option
+                # (handles duplicate options).
+                return any(
+                    opt == val and disabled_options[i]
+                    for i, opt in enumerate(indexable_options)
+                )
 
             disabled_selection_changed = False
             if selection_mode == "single":
-                idx = _option_index(current_value)
-                if idx is not None and disabled_options[idx]:
+                if _value_is_disabled(current_value):
                     current_value = None
                     disabled_selection_changed = True
             elif isinstance(current_value, list):
-                filtered = [
-                    v
-                    for v in current_value
-                    if (i := _option_index(v)) is None or not disabled_options[i]
-                ]
+                filtered = [v for v in current_value if not _value_is_disabled(v)]
                 if filtered != current_value:
                     current_value = filtered
                     disabled_selection_changed = True
