@@ -84,6 +84,25 @@ Ship the smallest useful API. Explicitly list what you're NOT including:
 
 Every API needs concrete examples showing simplest usage first, then progressive complexity.
 
+### Specify the Behavioral Contract
+
+A correct signature is not a complete spec. For any interactive or stateful feature,
+document its behavioral contract:
+
+- **State**: identity, scope, source of truth, initialization, reset, persistence when not
+  rendered, and cleanup
+- **Interaction**: whether values are persistent or one-rerun triggers; rerun and callback
+  ordering, coalescing, and cancellation
+- **Defaults**: default values and precedence rules
+- **States**: loading, empty, error, disabled, and retry
+- **Accessibility**: keyboard, focus, screen-reader naming, reduced motion
+- **Security & privacy**: what data crosses to the frontend; trust boundaries
+- **Performance**: limits and scaling behavior
+- **Compatibility**: behavioral compatibility and platform degradation
+
+See principles #39–#46 and the Product Principles section below for the rationale behind
+each of these.
+
 ### Keep It Concise
 
 Specs should cover the most important aspects without redundancy. Avoid repeating the same
@@ -102,6 +121,12 @@ the established style and structure.
 These principles guide the design of Streamlit's public API. Follow them when proposing
 new features or modifying existing commands.
 
+They fall into two groups. Principles 1–38 mostly govern API *shape*—naming, types,
+defaults, and composition. Principles 39–46, plus the Product Principles that follow,
+govern *behavioral contracts* and product quality—how state, interactions, reruns,
+compatibility, failures, accessibility, and security behave. A spec isn't done when the
+signature looks right; it's done when the behavioral contract is specified too.
+
 ## 1. Simplicity First
 
 The most common use case should require the fewest arguments. A user should be able to
@@ -117,6 +142,13 @@ keyword-only arguments.
 
 Every optional parameter should have a default that works for 80% of use cases. Users
 shouldn't need to specify `disabled=False` or `width="stretch"` explicitly.
+
+Defaults may be context-aware: use `None` to mean "Streamlit derives the value" (as in
+`lazy=None`, `wrap=None`, `hide_index=None`, `resolution=None`) rather than forcing a
+choice up front. When a default is derived, keep a deterministic precedence—an explicit
+user value always wins, then a type/context default, then the base default—and let users
+both accept the derived value (`None`) and force it off (`""`), as `st.text_input` does
+for `icon`, `placeholder`, and `validate` on typed inputs.
 
 ## 4. Start Minimal, Ship Fast
 
@@ -145,7 +177,12 @@ Use consistent parameter names across the API:
 - `help` (not `tooltip`)
 - `on_change` (not `callback`)
 
-This vocabulary is sacred.
+This vocabulary is sacred, and it's broader than these four names. Widgets share a
+canonical chrome—`label`, `key`, `help`, `disabled`, `label_visibility` (`"visible" |
+"hidden" | "collapsed"`), and `on_change`/`on_click` with `args`/`kwargs`—and a single
+sizing system: `width`/`height` accept `"stretch"`, `"content"`, or a pixel count (this
+replaced the older `use_container_width` boolean). Reuse `border`, `icon`, and `type` with
+their established meanings rather than inventing synonyms.
 
 ## 8. Semantic Names Over Geeky Names
 
@@ -203,6 +240,11 @@ type purity.
 Users should know what to expect: display elements return `DeltaGenerator` (for
 chaining), widgets return their value type, and control flow commands use `NoReturn`.
 
+Some commands return specialized handles instead—stateful containers (`st.expander` and
+`st.status` return objects with extra properties like `.open`), placeholders, or structured
+event state. When they do, the handle must expose meaningful operations and have a stable,
+documented public type, not an incidental internal class (see #45).
+
 ## 14. Type Preservation
 
 Generic types flow through the API. When a user passes `options=["a", "b", "c"]` to
@@ -229,10 +271,17 @@ st.text_input("Password", password=True)
 # Good: Enum allows expansion
 st.text_input("Password", type="password")
 st.text_input("Email", type="email")  # Easy to add later
-st.text_input("Phone", type="tel")  # And again
+st.text_input("Phone", type="phone")  # And again
 ```
 
 Exception: `disabled=True/False` is fine because there will never be a third state.
+`bool | None` is also fine when there are exactly two explicit choices plus an
+automatic/derived default, with `None` meaning "derive" (see #3). The canonical enum in
+Streamlit is the interaction protocol `"ignore" | "rerun" | callable`, shared by
+`on_select`, container `on_change`, and `on_dismiss` (see #40).
+
+Note the semantic-naming rule (#8) still applies to enum values: the public value is
+`type="phone"`, even though it renders an HTML `<input type="tel">`.
 
 ## 17. Positional Arguments Are Precious
 
@@ -320,6 +369,9 @@ code should mostly just work. If a feature requires significant refactoring (lik
 Multipage Apps did), it creates adoption friction and fragments the ecosystem between
 "old style" and "new style" apps.
 
+Migration distance includes runtime behavior, not just code changes: a new parameter's
+default should preserve today's behavior so upgrades are silent (see #42).
+
 ```python
 # Good: Additive feature
 # Old code still works:
@@ -360,6 +412,12 @@ st.selectbox("Pick", np.array(["a", "b", "c"]))  # numpy
 st.selectbox("Pick", pd.Series(["a", "b", "c"]))  # pandas
 ```
 
+Beyond data types, prefer established Python, web, and platform standards over bespoke
+Streamlit dialects, and lean on native affordances when they come for free: `type="email"`
+sets the HTML input type so mobile keyboards and autofill work automatically, `st.App`
+follows the ASGI/Starlette shape, and new format syntax is added compatibly alongside the
+old rather than forcing a migration.
+
 ## 30. Drop-In Replacement for Scripts
 
 Streamlit code should feel like a natural evolution of a Python script. Converting from
@@ -388,15 +446,19 @@ UI elements, not verbs that describe actions. Reserve verbs for true actions (`s
 
 ## 32. Commands Are Non-Blocking
 
-Streamlit commands never block script execution. Code after an `st.text_input()` always
-runs, even before the user types anything. This differs from traditional `input()` which
-halts until the user responds. Users must learn to think in terms of "the script runs
+Input widgets never block script execution. Code after an `st.text_input()` always runs,
+even before the user types anything. This differs from traditional `input()` which halts
+until the user responds. Users must learn to think in terms of "the script runs
 top-to-bottom on every interaction."
 
 ```python
 name = st.text_input("Name")  # Does NOT block
 st.write(f"Hello {name}")  # Always runs (name may be "")
 ```
+
+This applies to widgets inside a script run. A few launcher commands are deliberately
+blocking—`App.run()` starts a server and blocks until stopped—but those run outside the
+script-execution model.
 
 ## 33. Deterministic Output
 
@@ -460,3 +522,133 @@ primaryColor = "#FF6B6B"
 # Code: App-specific behavior
 st.set_page_config(page_title="My App", layout="wide")
 ```
+
+There is also a third channel: credentials and secrets. API keys, connection credentials,
+and auth settings belong in `secrets.toml` / `st.secrets` (and `st.login` / `st.user`),
+never in source code or casual public parameters. Explicit launcher or embedding
+configuration is a justified exception to "environment settings live in config"—e.g.
+`App.run(config=...)` for self-contained launchers—as long as ownership and precedence are
+documented.
+
+## 39. State Has Identity, Scope, and a Lifecycle
+
+Every stateful thing—widget values, event payloads, cached results, connections, and
+background resources—must define its identity, source of truth, scope, and lifecycle.
+Identity comes from `key`, not position: an explicit `key` is what lets a widget survive
+remounts, be addressed programmatically, and expose a `st-key-<key>` CSS hook. Scope is
+explicit and layered: a rerun (`st.rerun(scope="app" | "fragment")`), a page or session
+(`persist_state="page" | "session"`), or a session vs. global process
+(`st.cache_resource(scope="session" | "global")`). Widgets return their value for script
+flow *and*, when given a `key`, mirror it in `st.session_state[key]` (some, like buttons,
+are read-only there). Specify initialization, reset, persistence-when-not-rendered, and
+cleanup (e.g. `on_release`) rather than leaving them implicit.
+
+## 40. Interaction Semantics Are Part of the API
+
+An interactive command's signature is only half its contract. Also specify: whether its
+value is persistent state or a one-rerun trigger (a button's click is only `True` on the
+run it triggered); when a frontend change becomes visible to Python; whether the
+interaction reruns and at what scope; and callback ordering, coalescing, and cancellation.
+Streamlit has a shared interaction protocol for event and selection surfaces—
+`"ignore" | "rerun" | callable`—used consistently by `on_select` (charts, dataframe),
+container `on_change`, and `on_dismiss` (dialogs). Value widgets use `on_change` with
+`args`/`kwargs`; action widgets use `on_click`. Callbacks run at the start of a rerun,
+before the script body.
+
+## 41. Re-evaluate, Don't Mutate
+
+Streamlit updates the UI by re-running code, not by mutating live elements. Don't expose
+imperative element handles or `.update(data)`-style setters; instead, let a targeted rerun
+re-evaluate a region from current state (as event-scoped fragment reruns do). Data that
+must cross a scope boundary lives in `st.session_state`, because a fragment-scoped rerun
+doesn't re-execute the surrounding script. This keeps the UI a pure function of state (see
+#31, #33) and rules out partial-mutation APIs that would break determinism.
+
+## 42. Behavioral Compatibility Is API Compatibility
+
+An additive signature is not automatically backward compatible. Compatibility also covers
+defaults, rerun scope and count, state persistence, callback ordering, side effects, focus
+and scroll behavior, and visual layout. A new parameter's default must reproduce today's
+behavior—`filter_mode="fuzzy"`, `resolution=None`, `parallel=False`, `submit_mode="submit"`,
+`refresh_mode="foreground"`, and container `on_change="ignore"` were all chosen so existing
+apps behave identically after an upgrade. When a change alters behavior by design (e.g.,
+Markdown Mermaid fences), call it out explicitly and provide an escape hatch.
+
+## 43. Never Give Misleading Partial Results
+
+When a command can't deliver complete semantics, disable the operation, fail helpfully, or
+expose best-effort behavior explicitly—never silently operate on partial data while
+presenting it as complete. Lazy dataframes disable search rather than search only the
+loaded chunks; camera input returns the resolution actually captured; cross-origin iframes
+fall back to a fixed height when they can't be measured. Document what a feature does *not*
+do—platform limits, hardware variance, threading caveats—as clearly as what it does.
+
+## 44. Contain Failures
+
+One failing part must not take down the rest. A broken diagram, a raising fragment, or a
+failed background cache refresh should render an inline, isolated error while siblings keep
+working. User-provided hooks—error handlers, callbacks, background refreshers—must never
+break the core path: if a handler raises, fall back to default behavior. And control-flow
+signals like `st.stop()` and `st.rerun()` are not errors; never route them through error
+handling.
+
+## 45. Values That Cross Boundaries Get Public, Structured Types
+
+When a documented command produces a Streamlit-owned value that users reasonably pass
+across functions or module boundaries, give it a stable, importable public type via
+`streamlit.typing`—but curate that surface; don't publish every internal alias. Multi-part
+results (dataframe and chart selections, `st.data_editor` edits, button-column clicks)
+should be returned as structured objects that support both attribute and bracket access
+(`event.selection.rows` and `event["selection"]["rows"]`), read-only where assignment is
+meaningless. Prefer structured state over positional tuples so results stay self-describing
+and extensible.
+
+## 46. Secure by Default
+
+Dangerous capabilities are off until explicitly enabled, and privilege expansion is named,
+not silent. Raw HTML and JavaScript require `unsafe_allow_html=True` /
+`unsafe_allow_javascript=True`; auth tokens and PII metrics aren't exposed unless
+configured; secrets never reach `st.session_state` or the browser. Credentials are their
+own channel—`secrets.toml` / `st.secrets` / `st.login` / `st.user`—not casual public
+parameters (see #38). And client-side conveniences (regex validation, `disable_export`)
+are never trust boundaries: enforce anything security-relevant on the server.
+
+---
+
+# Product Principles
+
+These complement the API principles above. Where the API principles shape the *interface*,
+these describe product qualities every feature should meet regardless of its API shape.
+
+## 1. Accessibility Is First-Class
+
+Keyboard operation, visible focus, accessible names and descriptions, screen-reader
+announcements, reduced-motion behavior, and adequate contrast are default requirements—not
+follow-ups. Labels are mandatory even when hidden: use `label_visibility="collapsed"`,
+never an empty `label` (Streamlit warns today and may raise in the future). Decorative
+elements set `aria-hidden`; loading states announce via ARIA and honor
+`prefers-reduced-motion`; and layout features like text truncation must not strip content
+from the accessibility tree.
+
+## 2. Stay Inside the Visual System
+
+Prefer Streamlit's shared visual vocabulary—theme tokens, `:material/...:` icons, and named
+variants like `type="compact"` or `type="primary"`—over custom CSS or overloaded boolean
+chrome. When more than the border changes, use `type="compact"`, not `border=False`.
+Features should look and feel native and adapt to light and dark themes automatically.
+
+## 3. Design for Developers, Viewers, and Hosts Separately
+
+Three audiences have different needs. Developer-only diagnostics and assistance (full
+tracebacks, the install-skills nudge) can be rich locally but must never leak into deployed
+or embedded apps. Deployment and environment controls belong to hosts (config and secrets);
+app behavior belongs to authors (`st.*`); polished, responsive interaction belongs to
+viewers. Scope each capability to the right audience and platform.
+
+## 4. Responsiveness and Continuity
+
+Perceived performance is a feature. Paint stable UI early, reserve layout during loading
+(skeletons, fixed-width controls), progressively reveal results, and bound background work.
+Reruns must not silently discard user context—focus, scroll position, expanded tabs,
+drafts, or selections—and automatic behavior should yield to deliberate user action (for
+example, autoscroll pauses when the user scrolls up).
