@@ -22,7 +22,6 @@ import {
   MouseEvent,
   ReactElement,
   useCallback,
-  useContext,
   useEffect,
   useId,
   useMemo,
@@ -38,7 +37,6 @@ import {
   CalendarGridBody,
   CalendarGridHeader,
   DateField,
-  DateFieldStateContext,
   I18nProvider,
 } from "react-aria-components"
 
@@ -61,8 +59,8 @@ import {
   isValidSegmentValue,
   parsePartialSegmentPaste,
   parsePastedDate,
-  reorderSegments,
 } from "./dateInputUtils"
+import { ReorderedDateSegments } from "./ReorderedDateSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -72,10 +70,9 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
-  StyledDateFieldInput,
   StyledDateInputWrapper,
-  StyledDateSegment,
   StyledErrorIconContainer,
+  StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
 import { getSafeLocale } from "./weekInfo"
@@ -95,7 +92,7 @@ interface SingleDateInputProps {
    * pinned to `en-US` (see `I18nProvider locale="en-US"` below). */
   locale: string
   isInSidebar: boolean
-  focusedValue: CalendarDate | null
+  focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
   /** Validates a date and updates the parent's error state without
    * committing the value to widget state. Used for real-time error
@@ -112,34 +109,6 @@ interface SingleDateInputProps {
    * reset its local displayValue to the parent's value prop (which may not
    * have changed if segment edits were never committed). */
   formResetKey: number
-}
-
-/** Renders segments reordered to match `format` instead of the locale-derived
- * order. Must be a child of `DateField` to read `DateFieldStateContext`. */
-function ReorderedDateSegments({
-  format,
-}: {
-  format: string
-}): ReactElement | null {
-  const state = useContext(DateFieldStateContext)
-  if (!state) return null
-
-  const segments = reorderSegments(state.segments, format)
-
-  return (
-    <StyledDateFieldInput>
-      {segments.map((segment, i) => (
-        // Index is safe here: `segments` is a fixed-length, fixed-order
-        // array derived from `format` (which doesn't change across
-        // re-renders of a given DateInput instance), so there's no
-        // reordering/insertion for React to misreconcile. A stable key is
-        // needed only to disambiguate the (otherwise identical) literal
-        // separator segments, since `segment.type` alone repeats for those.
-        // eslint-disable-next-line @eslint-react/no-array-index-key
-        <StyledDateSegment key={`${segment.type}-${i}`} segment={segment} />
-      ))}
-    </StyledDateFieldInput>
-  )
 }
 
 function SingleDateInput({
@@ -245,8 +214,7 @@ function SingleDateInput({
   // In the sidebar, flip/shift are bounded to the viewport
   // (document.documentElement) rather than the sidebar's overflow:auto
   // clipping rect. Otherwise the calendar cannot flip up when the trigger
-  // sits near the bottom and overflows the viewport instead (issue #16181).
-  // Matches the pattern established in Selectbox (PR #16199).
+  // sits near the bottom and overflows the viewport instead.
   const overlayOptions = useMemo(() => {
     const base = {
       open: isOpen,
@@ -266,7 +234,6 @@ function SingleDateInput({
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
-  // Restores focus to the last date segment when the popover closes.
   // isRestoringFocusRef prevents handleFocus from reopening the popover
   // in response to this programmatic focus. Reset via rAF to guarantee
   // the synthetic focus event has been processed before re-enabling.
@@ -469,32 +436,34 @@ function SingleDateInput({
             </DateField>
           </StyledDateField>
         </I18nProvider>
-        {error && (
-          <StyledErrorIconContainer data-testid="stDateInputError">
-            <Tooltip
-              content={<StreamlitMarkdown source={error} allowHTML={false} />}
-              placement={Placement.TOP_RIGHT}
-              error
+        <StyledTrailingIcons>
+          {error && (
+            <StyledErrorIconContainer data-testid="stDateInputError">
+              <Tooltip
+                content={
+                  <StreamlitMarkdown source={error} allowHTML={false} />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="base" />
+              </Tooltip>
+            </StyledErrorIconContainer>
+          )}
+          {clearable && !isNullOrUndefined(displayValue) && (
+            <StyledClearButton
+              ref={clearButtonRef}
+              type="button"
+              onClick={handleClear}
+              aria-label="Clear date"
+              data-testid="stDateInputClearButton"
+              tabIndex={-1}
+              onMouseDown={e => e.preventDefault()}
             >
-              <Icon content={ErrorOutline} size="base" />
-            </Tooltip>
-          </StyledErrorIconContainer>
-        )}
-        {clearable && !isNullOrUndefined(displayValue) && (
-          <StyledClearButton
-            ref={clearButtonRef}
-            type="button"
-            onClick={handleClear}
-            aria-label="Clear date"
-            data-testid="stDateInputClearButton"
-            // Removed from tab order: keyboard users clear via
-            // Backspace/Delete in segments. Matches TimeInput's pattern.
-            tabIndex={-1}
-            onMouseDown={e => e.preventDefault()}
-          >
-            <Icon content={Cancel} size="base" />
-          </StyledClearButton>
-        )}
+              <Icon content={Cancel} size="base" />
+            </StyledClearButton>
+          )}
+        </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
             {error.replace(/\*\*/g, "")}

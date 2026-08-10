@@ -22,13 +22,15 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 import {
   calendarDateToIso,
   createDateErrorMessage,
-  dateToCalendarDate,
   formatCalendarDate,
+  getInitialFocusedDate,
   getMaxDate,
   getMinDate,
+  getQuickSelectPresets,
   isOlderThanTwoYears,
   isoToCalendarDate,
   isValidSegmentValue,
+  normalizeRangeOrder,
   parseFormatOrder,
   parsePartialSegmentPaste,
   parsePastedDate,
@@ -135,17 +137,6 @@ describe("isoToCalendarDate / calendarDateToIso", () => {
   })
 })
 
-describe("dateToCalendarDate", () => {
-  it("extracts local Y/M/D and discards time-of-day", () => {
-    // BaseWeb's quick select historically emitted noon (not midnight) for
-    // its native Date objects — see streamlit/streamlit#12293. Using a
-    // non-midnight time here confirms that's structurally impossible to
-    // reproduce with CalendarDate, which has no time component at all.
-    const date = new Date(2024, 2, 15, 12, 0, 0)
-    expect(dateToCalendarDate(date)).toEqual(new CalendarDate(2024, 3, 15))
-  })
-})
-
 describe("getMinDate / getMaxDate", () => {
   it("parses element.min", () => {
     const element = DateInputProto.create({ min: "2020-01-01" })
@@ -169,15 +160,48 @@ describe("getMinDate / getMaxDate", () => {
   })
 })
 
+describe("getInitialFocusedDate", () => {
+  it("prefers the first selected value when present", () => {
+    expect(
+      getInitialFocusedDate(["2019-07-06"], new CalendarDate(1970, 1, 1))
+    ).toEqual(new CalendarDate(2019, 7, 6))
+  })
+
+  it("falls back to today when there's no value and minDate is in the past", () => {
+    const result = getInitialFocusedDate([], new CalendarDate(1970, 1, 1))
+    // "today" isn't mockable here without freezing global Date — just
+    // confirm it's a real CalendarDate rather than the far-past minDate.
+    expect(result).toBeInstanceOf(CalendarDate)
+    expect(result.compare(new CalendarDate(1970, 1, 1))).toBeGreaterThan(0)
+  })
+
+  it("falls back to minDate when there's no value and minDate is in the future", () => {
+    const farFuture = new CalendarDate(2999, 1, 1)
+    expect(getInitialFocusedDate([], farFuture)).toEqual(farFuture)
+  })
+
+  it("never returns null, even for an unparsable value", () => {
+    const result = getInitialFocusedDate(
+      ["not-a-date"],
+      new CalendarDate(1970, 1, 1)
+    )
+    expect(result).toBeInstanceOf(CalendarDate)
+  })
+})
+
 describe("isOlderThanTwoYears", () => {
   it("returns true for a date more than 2 years in the past", () => {
     expect(isOlderThanTwoYears(new CalendarDate(2000, 1, 1))).toBe(true)
   })
 
   it("returns false for a date within the last 2 years", () => {
-    const oneYearAgo = new Date()
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-    expect(isOlderThanTwoYears(dateToCalendarDate(oneYearAgo))).toBe(false)
+    const now = new Date()
+    const oneYearAgo = new CalendarDate(
+      now.getFullYear() - 1,
+      now.getMonth() + 1,
+      now.getDate()
+    )
+    expect(isOlderThanTwoYears(oneYearAgo)).toBe(false)
   })
 })
 
@@ -313,6 +337,61 @@ describe("parsePartialSegmentPaste", () => {
   })
 })
 
+describe("getQuickSelectPresets", () => {
+  const RealDate = globalThis.Date
+
+  beforeEach(() => {
+    // Freeze "today" so preset start/end dates are deterministic.
+    class MockDate extends RealDate {
+      constructor(...args: unknown[]) {
+        if (args.length === 0) {
+          super(2024, 2, 15) // 2024-03-15
+          return
+        }
+        super(...(args as ConstructorParameters<typeof RealDate>))
+      }
+
+      static override now(): number {
+        return new RealDate(2024, 2, 15).getTime()
+      }
+    }
+    globalThis.Date = MockDate as unknown as typeof Date
+  })
+
+  afterEach(() => {
+    globalThis.Date = RealDate
+  })
+
+  it("returns the six default presets with expected labels", () => {
+    const presets = getQuickSelectPresets()
+    expect(presets.map(p => p.label)).toEqual([
+      "Past Week",
+      "Past Month",
+      "Past 3 Months",
+      "Past 6 Months",
+      "Past Year",
+      "Past 2 Years",
+    ])
+  })
+
+  it("always ends at today", () => {
+    const presets = getQuickSelectPresets()
+    const today = new CalendarDate(2024, 3, 15)
+    presets.forEach(p => expect(p.end).toEqual(today))
+  })
+
+  it("computes each preset's start by subtracting its duration from today", () => {
+    const presets = getQuickSelectPresets()
+    const byId = Object.fromEntries(presets.map(p => [p.id, p.start]))
+    expect(byId.pastWeek).toEqual(new CalendarDate(2024, 3, 8))
+    expect(byId.pastMonth).toEqual(new CalendarDate(2024, 2, 15))
+    expect(byId.pastThreeMonths).toEqual(new CalendarDate(2023, 12, 15))
+    expect(byId.pastSixMonths).toEqual(new CalendarDate(2023, 9, 15))
+    expect(byId.pastYear).toEqual(new CalendarDate(2023, 3, 15))
+    expect(byId.pastTwoYears).toEqual(new CalendarDate(2022, 3, 15))
+  })
+})
+
 describe("isValidSegmentValue", () => {
   it("validates month range 1-12", () => {
     expect(isValidSegmentValue("month", 1)).toBe(true)
@@ -329,5 +408,36 @@ describe("isValidSegmentValue", () => {
   it("validates year has no fixed upper bound", () => {
     expect(isValidSegmentValue("year", 9999)).toBe(true)
     expect(isValidSegmentValue("year", 0)).toBe(false)
+  })
+})
+
+describe("normalizeRangeOrder", () => {
+  it("swaps when start > end", () => {
+    expect(normalizeRangeOrder(["2024-03-15", "2024-01-01"])).toEqual([
+      "2024-01-01",
+      "2024-03-15",
+    ])
+  })
+
+  it("no-op when start <= end", () => {
+    expect(normalizeRangeOrder(["2024-01-01", "2024-03-15"])).toEqual([
+      "2024-01-01",
+      "2024-03-15",
+    ])
+  })
+
+  it("no-op for equal dates", () => {
+    expect(normalizeRangeOrder(["2024-01-01", "2024-01-01"])).toEqual([
+      "2024-01-01",
+      "2024-01-01",
+    ])
+  })
+
+  it("no-op for single-element array", () => {
+    expect(normalizeRangeOrder(["2024-01-01"])).toEqual(["2024-01-01"])
+  })
+
+  it("no-op for empty array", () => {
+    expect(normalizeRangeOrder([])).toEqual([])
   })
 })
