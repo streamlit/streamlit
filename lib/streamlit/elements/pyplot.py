@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -34,6 +34,34 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import LayoutConfig, Width
 
+# Sensible Matplotlib savefig defaults for Streamlit display.
+# - bbox_inches="tight": Crop excess whitespace (most common savefig override).
+# - dpi=200: Sharper than Matplotlib's figure default (~100) on high-DPI screens.
+# - format="png": Stable raster output for st.image marshalling.
+_DEFAULT_SAVEFIG_OPTIONS: Final[dict[str, Any]] = {
+    "bbox_inches": "tight",
+    "dpi": 200,
+    "format": "png",
+}
+
+_SAVEFIG_KWARGS_DEPRECATION: Final[str] = """
+Passing Matplotlib `savefig` keyword arguments to `st.pyplot` is
+deprecated and will be removed in a future version.
+
+`st.pyplot` already uses `bbox_inches="tight"` and `dpi=200` by
+default. For other `savefig` options (for example `transparent=True`
+or a custom `dpi`), save the figure yourself and display it with
+`st.image`:
+
+```python
+import io
+
+buf = io.BytesIO()
+fig.savefig(buf, format="png", transparent=True, dpi=300)
+st.image(buf)
+```
+"""
+
 
 class PyplotMixin:
     @gather_metrics("pyplot")
@@ -47,6 +75,10 @@ class PyplotMixin:
         **kwargs: Any,
     ) -> DeltaGenerator:
         """Display a matplotlib.pyplot figure.
+
+        Streamlit renders the figure by calling Matplotlib's ``savefig`` with
+        ``bbox_inches="tight"`` and ``dpi=200`` so charts look sharp and cropped
+        by default.
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
@@ -107,7 +139,14 @@ class PyplotMixin:
                 ``width="content"``.
 
         **kwargs : any
-            Arguments to pass to Matplotlib's savefig function.
+            Arguments to pass to Matplotlib's ``savefig`` function.
+
+            .. deprecated::
+                Passing ``savefig`` keyword arguments to ``st.pyplot`` is
+                deprecated and will be removed in a future version.
+                ``st.pyplot`` already uses ``bbox_inches="tight"`` and
+                ``dpi=200`` by default. For other ``savefig`` options, save the
+                figure yourself and display it with ``st.image``.
 
         Examples
         --------
@@ -148,6 +187,12 @@ class PyplotMixin:
             )
 
             width = "stretch" if use_container_width else "content"
+
+        if kwargs:
+            show_deprecation_warning(
+                _SAVEFIG_KWARGS_DEPRECATION,
+                show_in_browser=True,
+            )
 
         if not fig:
             show_deprecation_warning("""
@@ -210,19 +255,11 @@ def marshall(
 
         fig = cast("Figure", plt)
 
-    # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
-    # So here we pick double of that to make things look good in a high
-    # DPI display.
-    options = {"bbox_inches": "tight", "dpi": 200, "format": "png"}
-
-    # If some options are passed in from kwargs then replace the values in
-    # options with the ones from kwargs
-    options = {a: kwargs.get(a, b) for a, b in options.items()}
-    # Merge options back into kwargs.
-    kwargs.update(options)
+    # Apply Streamlit defaults, then let deprecated kwargs override them.
+    savefig_kwargs = {**_DEFAULT_SAVEFIG_OPTIONS, **kwargs}
 
     image = io.BytesIO()
-    fig.savefig(image, **kwargs)
+    fig.savefig(image, **savefig_kwargs)
 
     # SVG is text, not raster bytes, so decode it to a string and let
     # image_to_url take its SVG path instead of the PNG/PIL path, which cannot
