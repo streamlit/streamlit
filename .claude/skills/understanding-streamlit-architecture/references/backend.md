@@ -192,9 +192,11 @@ Browser connects
   -> Browser disconnects -> Runtime.disconnect_session()
 ```
 
-Non-browser clients that omit `Origin` skip the XSRF hard-reject path so
-programmatic connectors keep working. HTTP routes still send the XSRF token
-in the `X-Xsrftoken` header rather than the WebSocket subprotocol.
+Connections that omit `Origin` skip the XSRF hard-reject path so programmatic
+connectors keep working. HTTP routes still send the XSRF token in the
+`X-Xsrftoken` header rather than the WebSocket subprotocol. The frontend still
+multiplexes host auth token and `_streamlit_xsrf` on one `Sec-WebSocket-Protocol`
+slot; a host-auth value there fails XSRF admission when protection is enabled.
 
 ## Key abstractions
 

@@ -448,11 +448,12 @@ def create_websocket_handler(runtime: Runtime) -> Any:
             websocket.headers
         )
 
-        # Hard-reject browser WebSocket handshakes with missing/invalid XSRF
-        # when protection is enabled (same admission control as HTTP
-        # upload/delete routes):
-        # - Browser clients send an Origin header and must pass the token check
-        # - Non-browser clients omit Origin and stay unrestricted
+        # Hard-reject WebSocket handshakes with missing/invalid XSRF when
+        # protection is enabled and Origin is present (same admission control
+        # as HTTP upload/delete routes):
+        # - Connections with an Origin header must pass the token check
+        # - Connections without an Origin header remain unrestricted so
+        #   programmatic clients continue to work
         if is_xsrf_enabled() and origin:
             xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
             if not starlette_app_utils.validate_xsrf_token(xsrf_token, xsrf_cookie):

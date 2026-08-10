@@ -1103,9 +1103,15 @@ _create_option(
         Enables support for Cross-Site Request Forgery (XSRF) protection, for
         added security.
 
-        This option does not enable `server.enableCORS`. Streamlit does not
-        need a valid XSRF token to open a WebSocket connection, so this option
-        does not replace `server.enableCORS`.
+        When enabled, browser WebSocket handshakes that include an ``Origin``
+        header must present a matching double-submit XSRF token (cookie plus
+        ``Sec-WebSocket-Protocol`` entry) or Streamlit closes the socket with
+        code ``1008`` before accepting the connection. Connections without an
+        ``Origin`` header are not subject to that check, so programmatic
+        clients that omit ``Origin`` continue to work. This option does not
+        enable ``server.enableCORS``; keep CORS enabled (and configure
+        ``server.corsAllowedOrigins``) if you need to limit which origins may
+        attempt a WebSocket connection.
     """,
     default_val=True,
     type_=bool,
@@ -3089,12 +3095,14 @@ def _check_conflicts() -> None:
 Streamlit sends the header 'Access-Control-Allow-Origin: *', except on the file
 upload routes, which stay pinned to the app address and still require a valid
 XSRF token.
-Streamlit also accepts a WebSocket connection from any origin.
+Streamlit also accepts a WebSocket connection from any origin at the CORS
+layer. When 'server.enableXsrfProtection=true', browser handshakes that send
+an Origin header still need a matching XSRF token or Streamlit closes the
+socket with code 1008 before accepting the connection. Connections that omit
+Origin are not subject to that XSRF check.
 Streamlit does not set 'server.enableCORS' to 'true' for you.
-'server.enableXsrfProtection=true' does not stop a cross-origin WebSocket
-connection, because Streamlit does not need a valid XSRF token to open one.
 
-To limit cross-origin access, do these steps:
+To limit which origins may attempt a WebSocket connection, do these steps:
   1. Set 'server.enableCORS=true'.
   2. Put the origins that you trust in 'server.corsAllowedOrigins'.
 

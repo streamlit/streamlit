@@ -881,8 +881,51 @@ class TestWebsocketHandlerXsrfAdmission:
         mock_runtime.connect_session.assert_called_once()
 
     @patch_config_options(_XSRF_ADMISSION_CONFIG)
-    def test_allows_non_browser_handshake_without_xsrf_token(self) -> None:
-        """No Origin means a non-browser client; XSRF is not required to connect."""
+    def test_rejects_host_auth_token_in_shared_xsrf_subprotocol_slot(self) -> None:
+        """Host-auth tokens in the shared subprotocol slot fail XSRF admission.
+
+        The frontend prefers ``hostAuthToken ?? xsrfCookie`` for the second
+        ``Sec-WebSocket-Protocol`` entry. With hard-reject admission, a
+        host-auth-like value does not validate against ``_streamlit_xsrf`` and
+        must not open a session when Origin is present and XSRF is enabled.
+        """
+        xsrf_cookie = starlette_app_utils.generate_xsrf_token_string()
+        mock_websocket = self._make_websocket(
+            origin="http://localhost:8501",
+            xsrf_token="host-auth-token-not-xsrf",
+            xsrf_cookie=xsrf_cookie,
+        )
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
+
+    @patch_config_options(
+        {
+            "server.enableCORS": True,
+            "server.enableXsrfProtection": False,
+            "server.corsAllowedOrigins": ["http://localhost:8501"],
+        }
+    )
+    def test_accepts_browser_handshake_when_xsrf_disabled(self) -> None:
+        """XSRF-disabled browser handshakes connect without a token."""
+        mock_websocket = self._make_websocket(origin="http://localhost:8501")
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        self._run_connecting_handler(handler, mock_websocket)
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+    @patch_config_options(_XSRF_ADMISSION_CONFIG)
+    def test_allows_handshake_without_origin_without_xsrf_token(self) -> None:
+        """No Origin skips XSRF admission so programmatic clients can connect."""
         mock_websocket = self._make_websocket(origin=None)
         mock_runtime = self._make_runtime()
         handler = create_websocket_handler(mock_runtime)
