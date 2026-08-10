@@ -42,7 +42,7 @@ Evaluate all categories. A single hit is enough to recommend external coverage.
    - Hit when changes touch login/logout or OAuth flows, `_streamlit_user`, `_streamlit_xsrf`, CSRF/XSRF handling, `server.trustedUserHeaders`, or session-to-identity binding.
 
 3. **Websocket handshake and session transport**
-   - Hit when changes affect websocket handshake or subprotocols, session affinity, reconnect behavior, ping or timeout behavior, message size limits, or fragmentation.
+   - Hit when changes affect websocket handshake or subprotocols (including XSRF double-submit token admission when `Origin` is present), session affinity, reconnect behavior, ping or timeout behavior, message size limits, or fragmentation.
 
 4. **Embedding and iframe boundary**
    - Hit when changes modify host-to-guest communication (`postMessage`), iframe sizing or resize behavior, iframe sandbox or allow attributes, or permissions policy behavior in embedded contexts.
@@ -100,13 +100,13 @@ Use this exact structure:
 Diff includes:
 
 - `lib/streamlit/web/server/starlette/starlette_routes.py` route changes
-- Cookie/XSRF handling updates in request auth middleware
+- Cookie/XSRF handling updates in request auth middleware or WebSocket admission (`starlette_websocket.py`)
 - Frontend embed code changing iframe `allow` attributes
 
 Expected output:
 
 - `Recommend external_test: Yes`
-- Triggered categories include routing, auth/cookies/CSRF, and embedding boundary
+- Triggered categories include routing, auth/cookies/CSRF, websocket handshake, and embedding boundary
 - Focus areas include external host iframe embedding + auth/session continuity checks
 
 ### Example no recommendation

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import Any, Final
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -39,6 +40,11 @@ from streamlit.web.server.starlette.starlette_websocket import (
     create_websocket_routes,
 )
 from tests.testutil import patch_config_options
+
+_XSRF_ADMISSION_CONFIG: Final = {
+    "server.enableXsrfProtection": True,
+    "server.enableCORS": False,
+}
 
 
 class TestParseSubprotocols:
@@ -774,7 +780,7 @@ class TestWebsocketHandlerTokenExposure:
 
 
 class TestWebsocketHandlerXsrfAdmission:
-    """Tests that XSRF is admission control for browser WebSocket handshakes."""
+    """Reject browser handshakes with missing/invalid XSRF; allow non-browser clients."""
 
     @staticmethod
     def _make_websocket(
@@ -814,38 +820,38 @@ class TestWebsocketHandlerXsrfAdmission:
         mock_runtime.disconnect_session = MagicMock()
         return mock_runtime
 
-    @patch_config_options(
-        {
-            "server.enableXsrfProtection": True,
-            "server.enableCORS": False,
-        }
+    @staticmethod
+    def _run_connecting_handler(handler: Any, mock_websocket: MagicMock) -> None:
+        """Run the handler through connect with a stubbed session client."""
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+        ) as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+            asyncio.run(handler(mock_websocket))
+
+    @pytest.mark.parametrize(
+        ("xsrf_token", "xsrf_cookie"),
+        [
+            pytest.param(None, None, id="missing"),
+            pytest.param(
+                # Distinct generated tokens so decode succeeds but values differ.
+                starlette_app_utils.generate_xsrf_token_string(),
+                starlette_app_utils.generate_xsrf_token_string(),
+                id="mismatched",
+            ),
+        ],
     )
-    def test_rejects_browser_handshake_without_xsrf_token(self) -> None:
-        """Browser Origin without a valid XSRF token must not open a session."""
-        mock_websocket = self._make_websocket(origin="http://localhost:8501")
-        mock_runtime = self._make_runtime()
-        handler = create_websocket_handler(mock_runtime)
-
-        asyncio.run(handler(mock_websocket))
-
-        mock_websocket.close.assert_called_once_with(code=1008)
-        mock_websocket.accept.assert_not_called()
-        mock_runtime.connect_session.assert_not_called()
-
-    @patch_config_options(
-        {
-            "server.enableXsrfProtection": True,
-            "server.enableCORS": False,
-        }
-    )
-    def test_rejects_browser_handshake_with_mismatched_xsrf_token(self) -> None:
-        """Browser Origin with a non-matching XSRF token must not open a session."""
-        cookie_token = starlette_app_utils.generate_xsrf_token_string()
-        other_token = starlette_app_utils.generate_xsrf_token_string()
+    @patch_config_options(_XSRF_ADMISSION_CONFIG)
+    def test_rejects_browser_handshake_with_invalid_xsrf(
+        self, xsrf_token: str | None, xsrf_cookie: str | None
+    ) -> None:
+        """Browser Origin without a matching XSRF token must not open a session."""
         mock_websocket = self._make_websocket(
             origin="http://localhost:8501",
-            xsrf_token=other_token,
-            xsrf_cookie=cookie_token,
+            xsrf_token=xsrf_token,
+            xsrf_cookie=xsrf_cookie,
         )
         mock_runtime = self._make_runtime()
         handler = create_websocket_handler(mock_runtime)
@@ -856,12 +862,7 @@ class TestWebsocketHandlerXsrfAdmission:
         mock_websocket.accept.assert_not_called()
         mock_runtime.connect_session.assert_not_called()
 
-    @patch_config_options(
-        {
-            "server.enableXsrfProtection": True,
-            "server.enableCORS": False,
-        }
-    )
+    @patch_config_options(_XSRF_ADMISSION_CONFIG)
     def test_accepts_browser_handshake_with_valid_xsrf_token(self) -> None:
         """Browser Origin with a matching XSRF token may connect."""
         xsrf_token = starlette_app_utils.generate_xsrf_token_string()
@@ -873,37 +874,20 @@ class TestWebsocketHandlerXsrfAdmission:
         mock_runtime = self._make_runtime()
         handler = create_websocket_handler(mock_runtime)
 
-        with patch(
-            "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
-        ) as mock_client_class:
-            mock_client = MagicMock()
-            mock_client.aclose = AsyncMock()
-            mock_client_class.return_value = mock_client
-            asyncio.run(handler(mock_websocket))
+        self._run_connecting_handler(handler, mock_websocket)
 
         mock_websocket.accept.assert_called_once()
         mock_websocket.close.assert_not_called()
         mock_runtime.connect_session.assert_called_once()
 
-    @patch_config_options(
-        {
-            "server.enableXsrfProtection": True,
-            "server.enableCORS": False,
-        }
-    )
+    @patch_config_options(_XSRF_ADMISSION_CONFIG)
     def test_allows_non_browser_handshake_without_xsrf_token(self) -> None:
         """No Origin means a non-browser client; XSRF is not required to connect."""
         mock_websocket = self._make_websocket(origin=None)
         mock_runtime = self._make_runtime()
         handler = create_websocket_handler(mock_runtime)
 
-        with patch(
-            "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
-        ) as mock_client_class:
-            mock_client = MagicMock()
-            mock_client.aclose = AsyncMock()
-            mock_client_class.return_value = mock_client
-            asyncio.run(handler(mock_websocket))
+        self._run_connecting_handler(handler, mock_websocket)
 
         mock_websocket.accept.assert_called_once()
         mock_websocket.close.assert_not_called()

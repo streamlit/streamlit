@@ -159,6 +159,7 @@ Any state -> DISCONNECTED_FOREVER (on fatal error)
 - Uses `ForwardMsgCache` for message deduplication
 - Maintains message ordering via index queue
 - Handles session reconnection via tokens
+- Passes host auth token or `_streamlit_xsrf` cookie (plus optional last session id) via `Sec-WebSocket-Protocol` because browsers cannot set arbitrary WebSocket headers; the server selects the `"streamlit"` subprotocol in reply
 
 ### ForwardMsgCache (`ForwardMessageCache.ts`)
 

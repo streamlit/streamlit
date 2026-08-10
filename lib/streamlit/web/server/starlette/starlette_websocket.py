@@ -448,14 +448,12 @@ def create_websocket_handler(runtime: Runtime) -> Any:
             websocket.headers
         )
 
-        # Browser WebSocket handshakes include an Origin header. When XSRF
-        # protection is enabled, require a valid double-submit token before
-        # accepting the connection - matching HTTP upload/delete routes which
-        # hard-reject on missing or invalid XSRF. Non-browser clients that omit
-        # Origin are left unrestricted here so programmatic connectors keep
-        # working.
-        origin_header = websocket.headers.get("Origin")
-        if is_xsrf_enabled() and origin_header:
+        # Hard-reject browser WebSocket handshakes with missing/invalid XSRF
+        # when protection is enabled (same admission control as HTTP
+        # upload/delete routes):
+        # - Browser clients send an Origin header and must pass the token check
+        # - Non-browser clients omit Origin and stay unrestricted
+        if is_xsrf_enabled() and origin:
             xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
             if not starlette_app_utils.validate_xsrf_token(xsrf_token, xsrf_cookie):
                 _LOGGER.warning(
@@ -471,15 +469,15 @@ def create_websocket_handler(runtime: Runtime) -> Any:
 
         try:
             user_info: dict[str, Any] = {}
-            if is_xsrf_enabled() and origin_header:
-                # XSRF was validated above. Read expose_tokens lazily on connect
-                # (rather than once at handler creation) so programmatic secrets
-                # from ``st.App(secrets=...)``, which are merged during the ASGI
-                # lifespan after routes are built, are honored. Resolve it
-                # outside the defensive cookie-parsing block below so an
-                # invalid ``expose_tokens`` config surfaces as a clear error
-                # instead of being silently swallowed as a cookie-parsing
-                # failure.
+            if is_xsrf_enabled() and origin:
+                # Browser XSRF was already validated before accept. Read
+                # expose_tokens lazily on connect (rather than once at handler
+                # creation) so programmatic secrets from ``st.App(secrets=...)``,
+                # which are merged during the ASGI lifespan after routes are
+                # built, are honored. Resolve it outside the defensive
+                # cookie-parsing block below so an invalid ``expose_tokens``
+                # config surfaces as a clear error instead of being silently
+                # swallowed as a cookie-parsing failure.
                 expose_tokens = get_expose_tokens_config()
 
                 try:
@@ -488,7 +486,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                     )
                     if raw_auth_cookie:
                         user_info.update(
-                            _parse_decoded_user_cookie(raw_auth_cookie, origin_header)
+                            _parse_decoded_user_cookie(raw_auth_cookie, origin)
                         )
 
                         raw_token_cookie = _get_signed_cookie_with_chunks(

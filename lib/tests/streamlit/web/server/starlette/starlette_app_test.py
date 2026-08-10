@@ -1204,12 +1204,13 @@ def test_static_files_apply_cache_headers(tmp_path: Path) -> None:
         "server.cookieSecret": "test-signing-secret",
     }
 )
-def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> None:
-    """Browser handshakes without a valid XSRF token must be rejected entirely.
+def test_websocket_rejects_browser_handshake_without_valid_xsrf(
+    tmp_path: Path,
+) -> None:
+    """Reject browser handshakes that lack a valid XSRF token.
 
-    Previously an invalid XSRF token only skipped auth-cookie parsing and still
-    opened an anonymous session. Admission control now matches HTTP upload
-    routes and closes the socket before ``connect_session``.
+    Admission matches HTTP upload routes: close with 1008 and never call
+    ``connect_session``, even when an auth cookie is present.
     """
     from starlette.websockets import WebSocketDisconnect
 
@@ -1226,7 +1227,7 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
     app = create_starlette_app(runtime)
     client = TestClient(app)
 
-    # Create a valid auth cookie using Starlette's signing (itsdangerous-based)
+    # Auth cookie alone must not admit the connection.
     cookie_payload = json.dumps(
         {
             "origin": "http://testserver",
@@ -1239,11 +1240,8 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
         "_streamlit_user",
         cookie_payload,
     )
-
-    # Set auth cookie but no XSRF cookie
     client.cookies.set("_streamlit_user", cookie_value.decode("utf-8"))
 
-    # Connect without providing XSRF token in subprotocol
     with pytest.raises(WebSocketDisconnect) as exc_info:
         with client.websocket_connect(
             "/_stcore/stream",
@@ -1253,7 +1251,6 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
             pass
 
     assert exc_info.value.code == 1008
-    # No session should have been created when XSRF admission fails.
     assert runtime.last_user_info is None
 
     monkeypatch.undo()

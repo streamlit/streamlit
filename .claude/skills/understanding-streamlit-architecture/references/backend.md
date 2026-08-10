@@ -46,7 +46,7 @@ Singleton managing the application lifecycle. Access via `Runtime.instance()`.
 Represents a single browser tab.
 
 **Lifecycle**:
-1. WebSocket connects -> `Runtime.connect_session()`
+1. WebSocket connects (after Origin/XSRF admission) -> `Runtime.connect_session()`
 2. Creates `AppSession` (ScriptRunner starts when the first `rerun_script` BackMsg arrives)
 3. Widget interaction -> `handle_backmsg()` -> `request_rerun()`
 4. Script produces ForwardMsgs -> queued -> flushed to browser
@@ -58,7 +58,7 @@ Represents a single browser tab.
 
 Initial session creation and first script run are intentionally decoupled:
 
-1. Backend WebSocket handler accepts connection and calls `Runtime.connect_session()`
+1. Backend WebSocket handler passes Origin/XSRF admission, accepts the connection, and calls `Runtime.connect_session()`
 2. Runtime/SessionManager creates (or reconnects) `AppSession`
 3. Frontend transitions to `CONNECTED` and immediately sends `BackMsg.rerun_script` via `WidgetStateManager.sendUpdateWidgetsMessage()`
 4. `AppSession.request_rerun()` creates/starts `ScriptRunner` for the first script execution
@@ -177,13 +177,24 @@ register_widget(
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
-Browser connects -> Runtime.connect_session()
-                 -> Create AppSession
-                 -> Browser sends first rerun request
-                 -> Start ScriptRunner
-                 -> Messages flow bidirectionally
-                 -> Browser disconnects -> Runtime.disconnect_session()
+Browser connects
+  -> Origin/Host admission check (reject with 1008 if disallowed)
+  -> When XSRF is enabled and Origin is present: validate double-submit
+     token from Sec-WebSocket-Protocol against `_streamlit_xsrf` cookie
+     (reject with 1008 on missing/invalid; matches HTTP upload/delete 403)
+  -> websocket.accept()
+  -> Parse auth cookie into user_info (when XSRF+Origin passed above)
+  -> Runtime.connect_session()
+  -> Create AppSession
+  -> Browser sends first rerun request
+  -> Start ScriptRunner
+  -> Messages flow bidirectionally
+  -> Browser disconnects -> Runtime.disconnect_session()
 ```
+
+Non-browser clients that omit `Origin` skip the XSRF hard-reject path so
+programmatic connectors keep working. HTTP routes still send the XSRF token
+in the `X-Xsrftoken` header rather than the WebSocket subprotocol.
 
 ## Key abstractions
 
