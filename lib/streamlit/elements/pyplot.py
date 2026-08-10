@@ -46,7 +46,7 @@ _DEFAULT_SAVEFIG_OPTIONS: Final[dict[str, Any]] = {
 
 _SAVEFIG_KWARGS_DEPRECATION: Final[str] = """
 Passing Matplotlib `savefig` keyword arguments to `st.pyplot` is
-deprecated and will be removed after 2026-11-15.
+deprecated and will be removed in a future version.
 
 `st.pyplot` already uses `bbox_inches="tight"` and `dpi=200` by
 default. For other `savefig` options (for example `transparent=True`
@@ -143,7 +143,7 @@ class PyplotMixin:
 
             .. deprecated::
                 Passing ``savefig`` keyword arguments to ``st.pyplot`` is
-                deprecated and will be removed after 2026-11-15.
+                deprecated and will be removed in a future version.
                 ``st.pyplot`` already uses ``bbox_inches="tight"`` and
                 ``dpi=200`` by default. For other ``savefig`` options, save the
                 figure yourself and display it with ``st.image``.
