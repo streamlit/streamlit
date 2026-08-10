@@ -91,11 +91,18 @@ In [`ClientState.proto`](../../proto/streamlit/proto/ClientState.proto), add to
 // Resolved appearance from the client: "light" or "dark".
 // System menu selection must be resolved to OS preference before send.
 optional string theme_preference = 7;
+
+// True when a host-provided custom theme (SET_CUSTOM_THEME_CONFIG) is active.
+// When set, the backend skips config.toml resolution and uses theme_preference
+// directly — the host theme overrides config and only the FE knows its appearance.
+optional bool host_theme_active = 8;
 ```
 
 Keep `color_scheme` as what Python exposes via `st.context.theme.type`. When
 `theme_preference` is present, the backend overwrites `color_scheme` before the script
-run. **Old clients without field 7 keep working:** the backend leaves `color_scheme` as
+run. When `host_theme_active` is true, the backend returns `theme_preference` directly
+(config.toml is irrelevant — the FE is painting the host theme, not the config theme).
+**Old clients without fields 7-8 keep working:** the backend leaves `color_scheme` as
 sent, so existing deployed frontends against a new backend do not regress.
 
 ### 2. Backend resolver
@@ -143,8 +150,12 @@ def _merge_for_dual_theme(parent: dict, section: dict) -> dict:
       dropped → bg luminance → "light" (what is painted). Correct.
     - [theme.dark] base="dark" → section's explicit base is kept. Correct.
     """
-    merged = {**parent, **section}
-    if "base" not in section:
+    # Filter None values — get_options_for_section includes all registered keys
+    # even when unset. Only non-None values represent user-provided config.
+    parent_set = {k: v for k, v in parent.items() if v is not None}
+    section_set = {k: v for k, v in section.items() if v is not None}
+    merged = {**parent_set, **section_set}
+    if "base" not in section_set:
         merged.pop("base", None)
     return merged
 
@@ -159,10 +170,19 @@ def _type_from_bg_or_base(opts: dict, *, fallback: str) -> str:
     return fallback
 ```
 
-**`_has_section_content`** returns True when the section has at least one option key
-(e.g. `primaryColor`, `base`, `backgroundColor`). A TOML header with no keys (bare
-`[theme.dark]` with nothing underneath) is not detected as a section — this matches
-the FE's behavior, which also requires at least one key to trigger dual-theme mode.
+**`_has_section_content`** returns True when the section has at least one option with a
+non-None value. `get_options_for_section` returns all registered option keys for the
+section (even when the user didn't write that TOML header), so checking truthiness of
+the dict is insufficient — filter None values:
+
+```python
+def _has_section_content(section: dict) -> bool:
+    return any(v is not None for v in section.values())
+```
+
+A bare `[theme.dark]` header with no keys underneath has all-None values → returns
+False. This matches the FE's behavior, which also requires at least one key to trigger
+dual-theme mode.
 
 | Config shape | How to get `type` (Option C) |
 |--------------|------------------------------|
@@ -178,11 +198,21 @@ resolved value:
 ```python
 if client_state.HasField("context_info"):
     self._client_state.context_info.CopyFrom(client_state.context_info)
-    if self._client_state.context_info.HasField("theme_preference"):
-        self._client_state.context_info.color_scheme = resolve_theme_type(
-            self._client_state.context_info.theme_preference
-        )
+    ctx = self._client_state.context_info
+    if ctx.HasField("theme_preference"):
+        if ctx.host_theme_active:
+            # Host theme overrides config.toml — FE already resolved appearance.
+            ctx.color_scheme = ctx.theme_preference
+        else:
+            ctx.color_scheme = resolve_theme_type(ctx.theme_preference)
 ```
+
+**Critical:** `RerunData.context_info` must be sourced from `self._client_state` (the
+resolved copy), not from the incoming `client_state` parameter. After the snippet above,
+all downstream code that builds `RerunData` reads from `self._client_state.context_info`
+which now has the correct `color_scheme`. Verify that the existing `_create_rerun_data`
+helper (or equivalent) already uses `self._client_state` — if it reads the raw parameter
+instead, the resolved value never reaches the script.
 
 Applies to **full-script and fragment** reruns alike.
 
@@ -198,6 +228,7 @@ In [`App.sendRerunBackMsg`](../../frontend/app/src/App.tsx) / `contextInfo`:
 
 ```ts
 themePreference: this.getResolvedThemePreference(), // "light" | "dark"
+hostThemeActive: this.hostThemePreference != null && !this.hasEmbedThemeOverride(),
 ```
 
 **Source of truth** (do not reverse-engineer from active custom theme name after
@@ -226,6 +257,30 @@ back-compat if useful; BE overwrites when `theme_preference` is present.
 `color_scheme` untouched — existing deployed clients do not regress. New frontend +
 old backend ignores the unknown field until both sides are upgraded; once both are
 new, BE overwrites `color_scheme` from preference + config.
+
+**Host theme vs config.toml precedence:** Two distinct host mechanisms exist:
+
+1. **Pre-load** (`window.__streamlit.LIGHT_THEME` / `DARK_THEME`): merges host colors
+   into the preset Light/Dark themes via `getMergedLightTheme()`. These merged presets
+   appear in the theme picker. However, `createTheme` for config.toml custom themes
+   inherits from the **static** `lightTheme`/`darkTheme` (never the merged ones), so
+   pre-load host colors do NOT propagate into config.toml custom themes. When no custom
+   `[theme]` is configured (presets only), the resolver returns `preference` — correct,
+   since hosts customize within the same dark/light family.
+
+2. **Runtime** (`SET_CUSTOM_THEME_CONFIG` postMessage): creates a standalone custom
+   theme via `setImportedTheme` → `createTheme(name, proto)`. No merge with config.toml
+   — last-write-wins. In practice the host theme arrives after `NewSession` so it
+   replaces config.toml entirely. When `host_theme_active` is true, config.toml colors
+   are not painted — BE must not resolve from them.
+
+**Known limitation — host theme first-run race:** If the host sends its theme *after*
+the FE's first BackMsg (rare — hosts typically send during iframe init handshake before
+WebSocket connects), the first script run resolves from config.toml (potentially wrong).
+The auto-rerun in §4 corrects this within milliseconds once the host theme arrives and
+luminance changes. This is acceptable because: (a) the race is uncommon in practice, (b)
+the correction is immediate and invisible to users, and (c) solving it fully would
+require a new protocol where the host pushes theme to the server, not just the iframe.
 
 ### 4. MPA-safe auto-rerun on appearance change
 
@@ -406,6 +461,9 @@ chosen product meaning. Drop stale first-load / settings caveats; keep CSS-overr
 - Resolver matrix matching the product behavior table (presets; single custom `base` /
   hex / non-hex; light+dark sections; section-wins inheritance merge; parent `base`
   does not override section; missing colors → preference).
+- `host_theme_active = true` → resolver returns `preference` directly, ignoring
+  config.toml (even if config has conflicting `[theme] base="light"`).
+- `_has_section_content` returns False for all-None dicts (registered but unset).
 - `request_rerun` resolves on `_client_state` (not the incoming `client_state`) for
   full and fragment paths; verify server-initiated reruns also use resolved value.
 

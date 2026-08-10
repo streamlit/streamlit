@@ -145,16 +145,22 @@ docstring wording change.
 | Single `[theme]` with non-hex bg, no `base`          | `"light"`            | `"light"` (fallback)         |
 | `[theme.light]` + `[theme.dark]`, both well-authored | `"dark"`             | `"dark"` (from dark section) |
 | `[theme.dark]` with light hex bg (pathological)      | `"dark"`             | `"light"` (what is painted)  |
+| Host dark theme (SiS/Cloud) overriding config        | `"dark"` (host)      | `"dark"` (host wins)         |
 
 ### User-facing behavior (reliability)
 
 Independent of A/B/C, once fixed:
 
 1. **First script run** — `type` is correct for that run (including `[theme]` / `[theme.light]` / `[theme.dark]`).
+   - *Caveat:* Host-provided themes (SiS/Cloud) that arrive after the FE's first BackMsg may have a one-run
+     delay corrected by immediate auto-rerun. In practice this race is rare (hosts send theme during iframe init).
 2. **Appearance change** (menu System/Light/Dark, host theme message, OS change while on System) — app reruns and
    `type` updates without a manual rerun.
 3. **MPA deep links** — non-default page + `[theme]` still lands on that page (no #11797 regression).
 4. **CSS overrides** — injected CSS backgrounds remain out of scope for `type`.
+5. **Host theme vs config.toml** — runtime host themes (`SET_CUSTOM_THEME_CONFIG`) replace config.toml on the
+   FE (no merge, last-write-wins). Pre-load host customizations (`LIGHT_THEME`/`DARK_THEME`) merge into
+   presets only but do not propagate into config.toml custom themes. `type` always reflects what is painted.
 
 ### API surface
 
