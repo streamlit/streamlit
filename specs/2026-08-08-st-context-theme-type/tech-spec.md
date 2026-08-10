@@ -321,10 +321,15 @@ private pendingThemeRerun: boolean = false
 
 ```tsx
 this.skipNextThemeUpdate = true
+this.hostThemePreference = null  // config.toml theme replaces host theme
 ```
 
-Only set when the theme actually changes (hash differs), so it will not stick around
-to suppress a later legitimate change.
+`skipNextThemeUpdate` only set when the theme actually changes (hash differs), so it
+will not stick around to suppress a later legitimate change. Clearing
+`hostThemePreference` ensures `hostThemeActive` goes false on the next BackMsg — the BE
+resumes config.toml resolution since the FE is now painting the config theme, not the
+host theme. If the host later sends another `SET_CUSTOM_THEME_CONFIG`, `handleThemeMessage`
+re-sets `hostThemePreference` and the flag flips back to true.
 
 **3. In `componentDidUpdate`, appended after the existing `scriptRunState` handling:**
 
