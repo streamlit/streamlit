@@ -298,10 +298,15 @@ def test_columns_wrap_false_keeps_single_row_and_scrolls(
     wait_until(app, _has_horizontal_overflow)
 
     # Overflow stays on the column group; the page itself should not scroll.
-    page_fits_without_scroll = app.evaluate(
-        "() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1"
-    )
-    assert page_fits_without_scroll
+    def _page_fits_without_scroll() -> bool:
+        return bool(
+            app.evaluate(
+                "() => document.documentElement.scrollWidth <= "
+                "document.documentElement.clientWidth + 1"
+            )
+        )
+
+    wait_until(app, _page_fits_without_scroll)
 
     column_group.scroll_into_view_if_needed()
     assert_snapshot(column_group, name="st_columns-wrap_false_narrow")
