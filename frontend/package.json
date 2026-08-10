@@ -52,7 +52,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.72.0",
-    "@eslint-react/eslint-plugin": "^5.18.1",
+    "@eslint-react/eslint-plugin": "^5.18.2",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^10.0.1",
@@ -61,7 +61,7 @@
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
     "@vitest/coverage-v8": "^4.1.10",
-    "@vitest/eslint-plugin": "^1.6.24",
+    "@vitest/eslint-plugin": "^1.6.26",
     "concurrently": "^10.0.4",
     "eslint": "^10.8.0",
     "eslint-import-resolver-typescript": "^4.4.5",
@@ -78,7 +78,7 @@
     "oxfmt": "^0.62.0",
     "oxlint": "^1.77.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.65.0",
+    "typescript-eslint": "^8.66.0",
     "vitest": "^4.1.10"
   }
 }
