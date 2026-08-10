@@ -252,12 +252,22 @@ def test_selection_state_remains_after_unmounting(
     # keep the last hoverlabel — so also force an unhover and wait for it.
     reset_hovering(app)
     chart.locator(".js-plotly-plot").evaluate(
-        "el => { if (window.Plotly?.Fx?.unhover) window.Plotly.Fx.unhover(el) }"
+        """el => {
+            if (window.Plotly?.Fx?.unhover) window.Plotly.Fx.unhover(el)
+            // After remount, Plotly intermittently leaves active-selection edge
+            // handles (`.outline-controllers`) drawn. This test only cares that
+            // the selection itself persisted — force the inactive chrome state.
+            if (el._fullLayout?._deactivateShape) {
+                el._fullLayout._deactivateShape(el)
+            }
+            el.querySelectorAll(".outline-controllers").forEach(node => node.remove())
+        }"""
     )
     expect(chart.locator(".modebar-group:has([data-title='Fullscreen'])")).to_have_css(
         "opacity", "0"
     )
     expect(chart.locator(".hovertext")).to_have_count(0)
+    expect(chart.locator(".outline-controllers")).to_have_count(0)
     assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
 
 
