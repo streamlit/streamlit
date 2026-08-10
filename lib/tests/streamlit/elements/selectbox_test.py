@@ -1075,3 +1075,27 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         assert c.query_param_key == "my_key"
         assert c.accept_new_options
+
+
+def test_delete_session_state_key_pushes_default_to_frontend() -> None:
+    """Deleting the key resets the widget in the browser too (issue #16388)."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.selectbox("Sel", ["A", "B", "C"], key="sel")
+
+        def delete() -> None:
+            del st.session_state["sel"]
+
+        st.button("Delete", on_click=delete)
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].set_value("C").run()
+
+    # The frontend still holds "C" when the Delete button is clicked.
+    at.selectbox[0].set_value("C")
+    at = at.button[0].click().run()
+
+    assert at.selectbox[0].proto.set_value is True
+    assert at.selectbox[0].proto.raw_value == "A"

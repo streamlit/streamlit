@@ -37,6 +37,33 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+## Resetting a widget by deleting its key
+
+Delete a keyed widget's entry to return the widget to its default in Python and in the browser. A few widgets cannot correct the browser yet; see the end of this section:
+
+```python
+def reset() -> None:
+    del st.session_state["user_name"]
+
+
+st.text_input("Name", value="", key="user_name")
+st.button("Reset", on_click=reset)
+```
+
+`st.session_state.pop("user_name")` and `st.session_state.clear()` behave the same way for the widget key, because both delete it. `clear()` also removes every other key in session state, including the keys your app owns.
+
+For a widget with `bind="query-params"`, the delete also removes the widget's query parameter from the URL. Other query parameters stay.
+
+Delete the key in a callback to reset the widget in the same run. That is the recommended pattern.
+
+If you delete the key in the script body after the widget rendered, the reset waits for the next rerun:
+
+- For the rest of the delete run, the widget on screen keeps the old value, and the widget's return value is the old value. Inside a fragment run, the key itself already reads as missing, because the widget outside the fragment does not register again.
+- On the next rerun the widget falls back to its default, unless the user changed the widget first. A change the user makes after the delete is newer than the delete, so it wins and `on_change` fires as usual.
+- A script that deletes the key on every run therefore keeps a user's value for one run only, and returns to the default on the run after that.
+
+A few widgets have no way to correct the browser, so a delete resets the Python value but leaves the browser showing the old value, and the old value returns on the next rerun: `st.file_uploader`, `st.camera_input`, `st.audio_input`, `st.data_editor`, custom components, and the selection state of `st.plotly_chart`, `st.altair_chart`, `st.vega_lite_chart`, and `st.pydeck_chart`.
+
 ## Widget input constraints are mostly client-side
 
 Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` (`st.text_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.

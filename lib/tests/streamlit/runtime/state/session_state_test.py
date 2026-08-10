@@ -21,9 +21,11 @@ import unittest
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
+import pandas as pd
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as hst
@@ -70,6 +72,7 @@ from streamlit.runtime.state.session_state import (
     SessionStateStatProvider,
     Value,
     WStates,
+    _equals_deleted_value,
     _is_stale_widget,
     _sanitize_url_array,
 )
@@ -78,6 +81,11 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRe
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from streamlit.runtime.state.common import WidgetCallback
 
 
 def identity(x):
@@ -4058,3 +4066,959 @@ class DisabledWidgetAppTest(unittest.TestCase):
         at.button[0].click().run()
 
         assert at.session_state["clicked"] is True
+
+
+def _create_delete_reset_metadata(
+    widget_id: str,
+    *,
+    value_type: str = "string_value",
+    deserializer: Callable[[Any], Any] | None = None,
+    callback: WidgetCallback | None = None,
+    disabled: bool = False,
+    bind: BindOption = None,
+    persist_state: PersistStateOption = None,
+    fragment_id: str | None = None,
+) -> WidgetMetadata:
+    """Create widget metadata for the widget delete reset tests."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=deserializer or (lambda x: x if x is not None else "default"),
+        serializer=lambda x: x,
+        value_type=value_type,
+        callback=callback,
+        disabled=disabled,
+        bind=bind,
+        persist_state=persist_state,
+        fragment_id=fragment_id,
+    )
+
+
+class WidgetDeleteResetTest(DeltaGeneratorTestCase):
+    """The delete reset: ``del st.session_state[key]`` restores a widget's default.
+
+    The reset must reach the browser as well as Python. See issue #16388 and the
+    ``SessionState._pending_delete_resets`` field comment.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+
+    def _register_and_store_frontend_value(
+        self, metadata: WidgetMetadata, widget_id: str
+    ) -> None:
+        """Run one registration, store the frontend value "hello", end the run."""
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        self.session_state._compact_state()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_delete_in_callback_resets_widget_in_same_run(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A delete before registration resets the widget in the same run.
+
+        The delete removes the frontend value in the same run, and nothing can
+        arrive from the frontend between the callback and the registration. The
+        reset must apply even though no incoming value is left to compare.
+        """
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        # The browser resends the old value, then a callback deletes the key.
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        assert widget_id not in self.session_state._new_widget_state
+
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_delete_then_resent_frontend_value_is_dropped(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A delete after registration resets the widget on the next rerun."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        # Run 2: the widget renders, then the script body deletes the key.
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        # Run 3: the browser still holds the old value and resends it.
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+        assert self.session_state._new_widget_state[widget_id] == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_reset_is_one_shot(self, mock_ctx: MagicMock) -> None:
+        """The widget accepts a new frontend value after the reset."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._compact_state()
+
+        # The user changes the widget again.
+        self.session_state._new_widget_state.set_from_value(widget_id, "second")
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "second"
+        assert result.value_changed is False
+        assert not self.session_state._pending_delete_resets
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_change_after_delete_wins_over_reset(self, mock_ctx: MagicMock) -> None:
+        """A user change that arrives after the delete beats the reset.
+
+        The script deletes the key after the widget rendered, so the reset waits
+        for the next run. If the user changes the widget first, that change is
+        newer than the delete and must survive.
+        """
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        # Run 2: the widget renders, then the script body deletes the key.
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        # Run 3: the user typed a new value instead of resending the old one.
+        self.session_state._new_widget_state.set_from_value(widget_id, "typed")
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "typed"
+        assert result.value_changed is False
+        assert not self.session_state._pending_delete_resets
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_delete_on_every_run_keeps_a_change_for_one_run(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A script that deletes the key on every run keeps a change one run.
+
+        The user's value wins on the run it arrives, because it is newer than the
+        delete. The script then deletes it again, so the next run resets the
+        widget. The widget is never pinned to its default.
+        """
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+
+        # Run 1: the widget renders its default, then the script deletes the key.
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        # Run 2: the user types a value, which is newer than the delete.
+        self.session_state._new_widget_state.set_from_value(widget_id, "typed")
+        result = self.session_state.register_widget(metadata, user_key="foo")
+        assert result.value == "typed"
+        assert result.value_changed is False
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        # Run 3: the frontend resends the same value, so the reset applies.
+        self.session_state._new_widget_state.set_from_value(widget_id, "typed")
+        result = self.session_state.register_widget(metadata, user_key="foo")
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_list_valued_widget_resets_only_on_a_resend(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A list-valued widget such as st.multiselect compares by value."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(
+            widget_id,
+            value_type="string_array_value",
+            deserializer=lambda x: list(x) if x is not None else [],
+        )
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._new_widget_state.set_from_value(widget_id, ["A", "B"])
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_from_value(widget_id, ["A", "B"])
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        # An equal list is a resend, so the reset applies.
+        self.session_state._new_widget_state.set_from_value(widget_id, ["A", "B"])
+        result = self.session_state.register_widget(metadata, user_key="foo")
+        assert result.value == []
+        assert result.value_changed is True
+
+        # A different list is a user change, so it wins.
+        self.session_state._new_widget_state.set_from_value(widget_id, ["C"])
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+        self.session_state._new_widget_state.set_from_value(widget_id, ["A"])
+        result = self.session_state.register_widget(metadata, user_key="foo")
+        assert result.value == ["A"]
+        assert result.value_changed is False
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_bound_widget_change_after_delete_wins(self, mock_ctx: MagicMock) -> None:
+        """A bound widget keeps a change made after the delete."""
+        ThreadState.update(active_script_hash="main_hash")
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id, bind="query-params")
+        query_params = self.session_state.query_params
+        query_params.set_initial_query_params("foo=hello")
+        query_params.set_with_no_forward_msg("foo", "hello")
+
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        # The user typed a new value after the delete.
+        self.session_state._new_widget_state.set_from_value(widget_id, "typed")
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "typed"
+        assert result.value_changed is False
+        # The reset did not run, so it must not clear the URL parameter. For a
+        # change made in the UI the browser writes the new value to the URL.
+        assert query_params.has_param("foo")
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_delete_of_plain_key_records_no_pending_delete_reset(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A key with no widget mapping records no delete reset."""
+        self.session_state._new_session_state["plain"] = 1
+
+        del self.session_state["plain"]
+
+        assert not self.session_state._pending_delete_resets
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_set_after_delete_wins(self, mock_ctx: MagicMock) -> None:
+        """A set after the delete takes precedence over the default."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        self.session_state._new_session_state["foo"] = "programmatic"
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "programmatic"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_incoming_serialized_value_cleared_on_reset(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """The wire label of the dropped value must not reach the caller.
+
+        Otherwise an option-based widget such as st.selectbox reconciles its
+        options against the deleted label and hands back the deleted value.
+        """
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        stale_proto = WidgetStateProto()
+        stale_proto.id = widget_id
+        stale_proto.string_value = "hello"
+        self.session_state._new_widget_state.set_widget_from_proto(stale_proto)
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_widget_from_proto(stale_proto)
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.incoming_serialized_value is None
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_incoming_serialized_values_cleared_on_reset(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A string-array widget such as st.multiselect clears its wire labels."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(
+            widget_id,
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+        )
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._compact_state()
+
+        stale_proto = WidgetStateProto()
+        stale_proto.id = widget_id
+        stale_proto.string_array_value.data[:] = ["A"]
+        self.session_state._new_widget_state.set_widget_from_proto(stale_proto)
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_widget_from_proto(stale_proto)
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == []
+        assert result.value_changed is True
+        assert result.incoming_serialized_values is None
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_pending_delete_reset_pruned_when_widget_goes_stale(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A stale widget needs no reset, because both sides drop its value."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+
+        self.session_state._remove_stale_widgets(frozenset())
+
+        assert not self.session_state._pending_delete_resets
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_pending_delete_reset_survives_when_widget_is_active(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """An active widget keeps its pending delete reset for the next run."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+
+        self.session_state._remove_stale_widgets(frozenset({widget_id}))
+
+        assert set(self.session_state._pending_delete_resets) == {widget_id}
+
+    def test_pending_delete_reset_survives_fragment_run_for_outside_widget(
+        self,
+    ) -> None:
+        """A fragment run must not drop the reset of a widget outside it."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=MockScriptRunCtx(fragment_ids_this_run=["frag_1"]),
+        ):
+            self.session_state.register_widget(metadata, user_key="foo")
+            del self.session_state["foo"]
+
+            self.session_state._remove_stale_widgets(frozenset())
+
+        assert set(self.session_state._pending_delete_resets) == {widget_id}
+
+    def test_callback_suppressed_for_pending_delete_reset(self) -> None:
+        """The on_change callback must not fire for the deleted value.
+
+        On the run after a mid-script delete the browser resends the old value,
+        which looks like a change. The user did not make that change.
+        """
+        widget_id = "$$ID-hash-foo"
+        callback = MagicMock()
+        metadata = _create_delete_reset_metadata(widget_id, callback=callback)
+        self.session_state._set_widget_metadata(metadata)
+        self.session_state._old_state[widget_id] = "old"
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        self.session_state._pending_delete_resets[widget_id] = "hello"
+
+        self.session_state._call_callbacks()
+
+        callback.assert_not_called()
+
+    def test_callback_still_runs_without_pending_delete_reset(self) -> None:
+        """A changed widget with no pending delete reset still runs its callback."""
+        widget_id = "$$ID-hash-foo"
+        callback = MagicMock()
+        metadata = _create_delete_reset_metadata(widget_id, callback=callback)
+        self.session_state._set_widget_metadata(metadata)
+        self.session_state._old_state[widget_id] = "old"
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+
+        self.session_state._call_callbacks()
+
+        callback.assert_called_once()
+
+    def test_callback_runs_for_a_change_after_the_delete(self) -> None:
+        """A real change after the delete still fires on_change.
+
+        The incoming value differs from the deleted value, so the user made it.
+        Only a resent deleted value suppresses the callback.
+        """
+        widget_id = "$$ID-hash-foo"
+        callback = MagicMock()
+        metadata = _create_delete_reset_metadata(widget_id, callback=callback)
+        self.session_state._set_widget_metadata(metadata)
+        self.session_state._old_state[widget_id] = "old"
+        self.session_state._new_widget_state.set_from_value(widget_id, "typed")
+        self.session_state._pending_delete_resets[widget_id] = "hello"
+
+        self.session_state._call_callbacks()
+
+        callback.assert_called_once()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_bound_widget_delete_removes_url_param(self, mock_ctx: MagicMock) -> None:
+        """A delete clears the query parameter of a bound widget."""
+        ThreadState.update(active_script_hash="main_hash")
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id, bind="query-params")
+        query_params = self.session_state.query_params
+        query_params.set_initial_query_params("foo=hello")
+        query_params.set_with_no_forward_msg("foo", "hello")
+
+        result = self.session_state.register_widget(metadata, user_key="foo")
+        assert result.value == "hello"
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+        assert "foo" not in query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_bound_widget_delete_removes_only_its_own_param(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Removing one bound parameter leaves the other parameters alone."""
+        ThreadState.update(active_script_hash="main_hash")
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id, bind="query-params")
+        query_params = self.session_state.query_params
+        query_params.set_initial_query_params("foo=hello&other=keep")
+        query_params.set_with_no_forward_msg("foo", "hello")
+        query_params.set_with_no_forward_msg("other", "keep")
+
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        self.session_state.register_widget(metadata, user_key="foo")
+
+        assert query_params._query_params == {"other": "keep"}
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_bound_widget_delete_skips_url_seeding(self, mock_ctx: MagicMock) -> None:
+        """The resetting registration must not re-seed from the URL.
+
+        The backend re-reads the query string on every same-page rerun, so the
+        old value is still available for seeding.
+        """
+        ThreadState.update(active_script_hash="main_hash")
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id, bind="query-params")
+        self.session_state.query_params.set_initial_query_params("foo=hello")
+
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._compact_state()
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_bound_widget_script_body_delete_resets_on_next_rerun(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A script-body delete clears a bound parameter one run later.
+
+        The URL keeps the deleted value for the whole delete run, and the backend
+        re-reads the query string on every same-page rerun. The reset must still
+        clear the parameter and must not seed the deleted value back.
+        """
+        ThreadState.update(active_script_hash="main_hash")
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id, bind="query-params")
+        query_params = self.session_state.query_params
+        query_params.set_initial_query_params("foo=hello")
+        query_params.set_with_no_forward_msg("foo", "hello")
+
+        self.session_state.register_widget(metadata, user_key="foo")
+        self.session_state._compact_state()
+
+        # Run 2: the widget renders, then the script body deletes the key.
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+        assert query_params.has_param("foo")
+        self.session_state._compact_state()
+
+        # Run 3: the URL and the frontend both still hold the deleted value.
+        query_params.set_initial_query_params("foo=hello")
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+        assert "foo" not in query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_persist_state_widget_delete_resets(self, mock_ctx: MagicMock) -> None:
+        """A persist_state widget also falls back to its default."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id, persist_state="session")
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_disabled_widget_delete_resets(self, mock_ctx: MagicMock) -> None:
+        """A disabled widget resets once, and the two guards do not conflict."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id, disabled=True)
+        self._register_and_store_frontend_value(metadata, widget_id)
+
+        self.session_state._new_widget_state.set_from_value(widget_id, "hello")
+        del self.session_state["foo"]
+        result = self.session_state.register_widget(metadata, user_key="foo")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_internal_clear_drops_pending_delete_resets(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """SessionState.clear wipes the pending delete resets with everything else."""
+        widget_id = "$$ID-hash-foo"
+        metadata = _create_delete_reset_metadata(widget_id)
+        self.session_state.register_widget(metadata, user_key="foo")
+        del self.session_state["foo"]
+
+        self.session_state.clear()
+
+        assert not self.session_state._pending_delete_resets
+
+
+class WidgetDeleteResetAppTest(unittest.TestCase):
+    """Widget delete reset through the whole backend, via AppTest.
+
+    An AppTest widget node reads its value from session state unless the test
+    sets one, so every run below calls ``set_value`` again to model a browser
+    that still holds the old value.
+    """
+
+    @staticmethod
+    def _text_input_script_with_callback() -> None:
+        import streamlit as st
+
+        value = st.text_input("Foo", value="default", key="foo")
+        st.write("got " + repr(value))
+
+        def delete() -> None:
+            del st.session_state["foo"]
+
+        st.button("Delete", on_click=delete)
+        st.button("Noop")
+
+    @staticmethod
+    def _run_then_delete(script: Callable[[], None]) -> AppTest:
+        """Run the script, type "hello", then click the script's first button.
+
+        The second ``set_value`` models a browser that still holds "hello" when
+        the click arrives.
+        """
+        at = AppTest.from_function(script).run()
+        at.text_input[0].set_value("hello").run()
+        at.text_input[0].set_value("hello")
+        at.button[0].click().run()
+        return at
+
+    def test_delete_in_callback_pushes_default_to_frontend(self) -> None:
+        """A delete in a callback resets the widget in the same run."""
+        at = AppTest.from_function(self._text_input_script_with_callback).run()
+        at.text_input[0].set_value("hello").run()
+        assert at.markdown[0].value == "got 'hello'"
+
+        # The frontend still holds "hello" when the Delete button is clicked.
+        at.text_input[0].set_value("hello")
+        at.button[0].click().run()
+
+        assert at.markdown[0].value == "got 'default'"
+        # The proto must carry the correction, or the browser keeps "hello" and
+        # resends it on the next rerun (issue #16388).
+        assert at.text_input[0].proto.set_value is True
+        assert at.text_input[0].proto.value == "default"
+
+    def test_reset_survives_a_plain_rerun(self) -> None:
+        """A real browser adopts the default, so the next rerun keeps it.
+
+        This is a smoke test, not a regression test. AppTest cannot model a
+        browser that ignores ``set_value``, so this case also passes without the
+        fix. ``test_delete_in_script_body_resets_on_next_rerun`` guards the
+        re-adoption of a stale value, because there the browser legitimately
+        still holds the old value.
+        """
+        at = self._run_then_delete(self._text_input_script_with_callback)
+
+        at.button[1].click().run()
+
+        assert at.markdown[0].value == "got 'default'"
+        # The reset is one-shot, so it must not correct the frontend again.
+        assert at.text_input[0].proto.set_value is False
+
+    def test_widget_is_usable_after_reset(self) -> None:
+        """The user can change the widget again after the reset.
+
+        This is a smoke test, not a regression test: it also passes without the
+        fix. ``test_reset_is_one_shot`` covers the one-shot rule directly.
+        """
+        at = self._run_then_delete(self._text_input_script_with_callback)
+
+        at.text_input[0].set_value("second").run()
+
+        assert at.markdown[0].value == "got 'second'"
+        assert at.text_input[0].proto.set_value is False
+
+    def test_delete_in_script_body_resets_on_next_rerun(self) -> None:
+        """A delete after the widget rendered resets on the next rerun."""
+
+        def script() -> None:
+            import streamlit as st
+
+            value = st.text_input("Foo", value="default", key="foo")
+            st.write("got " + repr(value))
+            delete = st.button("Delete")
+            st.button("Noop")
+            if delete:
+                del st.session_state["foo"]
+
+        at = AppTest.from_function(script).run()
+        at.text_input[0].set_value("hello").run()
+        assert at.markdown[0].value == "got 'hello'"
+
+        # The delete runs after the widget rendered, so both sides still show
+        # the old value for the rest of this run.
+        at.text_input[0].set_value("hello")
+        at.button[0].click().run()
+        assert at.markdown[0].value == "got 'hello'"
+
+        # The browser resends the old value on the next rerun. The backend must
+        # drop it and push the default.
+        at.text_input[0].set_value("hello")
+        at.button[1].click().run()
+
+        assert at.markdown[0].value == "got 'default'"
+        assert at.text_input[0].proto.set_value is True
+        assert at.text_input[0].proto.value == "default"
+
+    def test_session_state_clear_resets_widget(self) -> None:
+        """st.session_state.clear() resets a keyed widget."""
+
+        def script() -> None:
+            import streamlit as st
+
+            value = st.text_input("Foo", value="default", key="foo")
+            st.write("got " + repr(value))
+            st.button("Clear", on_click=st.session_state.clear)
+
+        at = self._run_then_delete(script)
+
+        assert at.markdown[0].value == "got 'default'"
+        assert at.text_input[0].proto.set_value is True
+
+    def test_session_state_pop_resets_widget(self) -> None:
+        """st.session_state.pop() resets a keyed widget."""
+
+        def script() -> None:
+            import streamlit as st
+
+            value = st.text_input("Foo", value="default", key="foo")
+            st.write("got " + repr(value))
+
+            def pop() -> None:
+                st.session_state.pop("foo")
+
+            st.button("Pop", on_click=pop)
+
+        at = self._run_then_delete(script)
+
+        assert at.markdown[0].value == "got 'default'"
+        assert at.text_input[0].proto.set_value is True
+
+    def test_delete_in_callback_resets_selectbox(self) -> None:
+        """An option-based widget resets to its default option.
+
+        st.selectbox reconciles the incoming wire label against its options, so
+        the reset must also clear that label.
+        """
+
+        def script() -> None:
+            import streamlit as st
+
+            value = st.selectbox("Sel", ["A", "B", "C"], key="sel")
+            st.write("got " + repr(value))
+
+            def delete() -> None:
+                del st.session_state["sel"]
+
+            st.button("Delete", on_click=delete)
+
+        at = AppTest.from_function(script).run()
+        at.selectbox[0].set_value("C").run()
+        assert at.markdown[0].value == "got 'C'"
+
+        at.selectbox[0].set_value("C")
+        at.button[0].click().run()
+
+        assert at.markdown[0].value == "got 'A'"
+        assert at.selectbox[0].proto.set_value is True
+
+    def test_change_during_a_deferred_reset_is_kept(self) -> None:
+        """A user change after a script-body delete must not disappear.
+
+        The script deletes the key at the end of the run, so the reset waits for
+        the next run. The user then changes the widget. That change is newer than
+        the delete, so the app must receive it and on_change must fire.
+        """
+
+        def script() -> None:
+            import streamlit as st
+
+            def on_change() -> None:
+                st.session_state["change_count"] = (
+                    st.session_state.get("change_count", 0) + 1
+                )
+
+            value = st.text_input(
+                "Cb", value="cb_default", key="cb", on_change=on_change
+            )
+            st.write("got " + repr(value))
+
+            def arm() -> None:
+                st.session_state["armed"] = True
+
+            st.button("Arm", on_click=arm)
+
+            if st.session_state.get("armed"):
+                st.session_state["armed"] = False
+                st.session_state.pop("cb", None)
+
+        at = AppTest.from_function(script).run()
+        at.text_input[0].set_value("cb2").run()
+        assert at.markdown[0].value == "got 'cb2'"
+        assert at.session_state["change_count"] == 1
+
+        # Arm the script-body delete. The browser still holds "cb2".
+        at.text_input[0].set_value("cb2")
+        at.button[0].click().run()
+        assert at.markdown[0].value == "got 'cb2'"
+
+        # The user types a new value before the browser sees any correction.
+        at.text_input[0].set_value("cb3").run()
+
+        assert at.markdown[0].value == "got 'cb3'"
+        assert at.text_input[0].proto.set_value is False
+        assert at.session_state["change_count"] == 2
+
+    def test_delete_after_a_set_in_the_same_run_resets(self) -> None:
+        """The recorded value must match the value the frontend then holds.
+
+        A callback sets the key, so the frontend adopts that value. The script
+        body then deletes the key. The recorded value must be the value the app
+        set, not the value the frontend sent before the callback ran.
+        """
+
+        def script() -> None:
+            import streamlit as st
+
+            def seed() -> None:
+                st.session_state["multi"] = ["A"]
+
+            go = st.button("Go", on_click=seed)
+            value = st.multiselect("M", ["A", "B"], key="multi")
+            st.write("got " + repr(value))
+            st.button("Noop")
+            if go:
+                del st.session_state["multi"]
+
+        at = AppTest.from_function(script).run()
+        at.button[0].click().run()
+        assert at.markdown[0].value == "got ['A']"
+
+        # The browser resends the value it adopted, so the reset applies.
+        at.multiselect[0].set_value(["A"])
+        at.button[1].click().run()
+
+        assert at.markdown[0].value == "got []"
+        assert at.multiselect[0].proto.set_value is True
+
+    def test_delete_after_a_set_of_another_container_type_does_not_reset(self) -> None:
+        """Known limitation: the recorded value must equal the resent value.
+
+        The app sets a tuple, but the widget serializes it and the browser stores
+        a list. The recorded tuple no longer equals the resent list, so the
+        backend reads the resend as a fresh user change and skips the reset. The
+        behavior matches Streamlit before the delete reset existed.
+        """
+
+        def script() -> None:
+            import streamlit as st
+
+            def seed() -> None:
+                st.session_state["multi"] = ("A",)
+
+            go = st.button("Go", on_click=seed)
+            value = st.multiselect("M", ["A", "B"], key="multi")
+            st.write("got " + repr(value))
+            st.button("Noop")
+            if go:
+                del st.session_state["multi"]
+
+        at = AppTest.from_function(script).run()
+        at.button[0].click().run()
+        assert at.markdown[0].value == "got ('A',)"
+
+        at.multiselect[0].set_value(["A"])
+        at.button[1].click().run()
+
+        assert at.markdown[0].value == "got ['A']"
+        assert at.multiselect[0].proto.set_value is False
+
+    def test_delete_on_every_run_keeps_a_change_for_one_run(self) -> None:
+        """A script that deletes the key on every run stays usable.
+
+        The user's value wins on the run it arrives. The script deletes it again,
+        so the following run resets the widget. The widget is never pinned to its
+        default.
+        """
+
+        def script() -> None:
+            import streamlit as st
+
+            value = st.text_input("Always", value="alwaysdefault", key="s_always")
+            st.write("got " + repr(value))
+            st.session_state.pop("s_always", None)
+            st.button("Noop")
+
+        at = AppTest.from_function(script).run()
+        assert at.markdown[0].value == "got 'alwaysdefault'"
+
+        at.text_input[0].set_value("typed").run()
+        assert at.markdown[0].value == "got 'typed'"
+
+        # The browser resends the same value, so the reset applies.
+        at.text_input[0].set_value("typed")
+        at.button[0].click().run()
+        assert at.markdown[0].value == "got 'alwaysdefault'"
+        assert at.text_input[0].proto.set_value is True
+
+
+@pytest.mark.parametrize(
+    ("incoming_value", "deleted_value", "expected"),
+    [
+        ("hello", "hello", True),
+        (["A", "B"], ["A", "B"], True),
+        ("typed", "hello", False),
+        (["A"], ["A", "B"], False),
+    ],
+    ids=["same_string", "same_list", "other_string", "other_list"],
+)
+def test_equals_deleted_value(
+    incoming_value: Any, deleted_value: Any, expected: bool
+) -> None:
+    """An equal value is a resend of the deleted value, a different one a change."""
+    assert _equals_deleted_value(incoming_value, deleted_value) is expected
+
+
+def test_equals_deleted_value_applies_reset_on_inconclusive_comparison() -> None:
+    """A comparison with no bool result falls back to the reset.
+
+    A widget value can hold an object whose `==` gives no bool. An st.multiselect
+    option can be a numpy array, which raises ValueError, or a pd.NA from a
+    dataframe column with a missing value, which raises TypeError. The app asked
+    for the reset, so apply it instead of letting the error reach the app.
+    """
+    assert _equals_deleted_value([np.array([1, 2, 3])], [np.array([4, 5, 6])]) is True
+    assert _equals_deleted_value(pd.NA, pd.NA) is True

@@ -632,6 +632,13 @@ class SessionState:
         default_factory=PersistedWidgetTracker
     )
 
+    # Widget values that `del st.session_state[key]` removed, keyed by widget id.
+    # The frontend keeps its own copy of every widget value and resends it on the
+    # next rerun, so a delete must also tell the frontend to fall back to the
+    # widget's default. The recorded value lets the next registration separate a
+    # resent value from a fresh user change. One-shot per id.
+    _pending_delete_resets: dict[str, Any] = field(default_factory=dict)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -659,6 +666,11 @@ class SessionState:
         self._key_id_mapper.clear()
         self._query_param_bound_widget_ids.clear()
         self._persist_tracker.clear()
+        # This is the internal full reset, so drop the pending delete resets
+        # instead of recording them. The user-facing st.session_state.clear()
+        # takes a different path: MutableMapping.clear() calls __delitem__ for
+        # each key, which records a pending delete reset per widget.
+        self._pending_delete_resets.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -810,6 +822,20 @@ class SessionState:
         if not (key in self or widget_id in self):
             raise KeyError(_missing_key_error_message(key))
 
+        if key in self._key_id_mapper:
+            # The key belongs to a widget, so record the value that goes away.
+            # Read the stored value rather than self[key]: apply_presenter can
+            # change what self[key] shows the app, while the frontend holds and
+            # resends the stored value. The guard above proves this read cannot
+            # raise.
+            #
+            # Known gap: a value the app set earlier in this run reaches the
+            # frontend through the widget's serializer. A set that uses another
+            # container type (a tuple for st.multiselect) therefore records a
+            # value that no longer equals the list the frontend resends, and the
+            # reset does not apply.
+            self._pending_delete_resets[widget_id] = self._getitem(widget_id, key)
+
         if key in self._new_session_state:
             del self._new_session_state[key]
 
@@ -862,6 +888,15 @@ class SessionState:
         # suppressed.
 
         # Path 1: single callback.
+        #
+        # Skip `on_change` while the frontend only resends a deleted value. That
+        # looks like a change the user never made. A value the user really changed
+        # differs, so its callback still runs.
+        #
+        # Path 2 stays unguarded on purpose. It serves custom components v2 and
+        # JSON-valued widgets, which have no set_value path, so a delete never
+        # corrects their frontend value and every change they report is a genuine
+        # one-shot trigger.
         changed_widget_ids_for_single_callback = [
             wid
             for wid in self._new_widget_state
@@ -870,6 +905,7 @@ class SessionState:
             is not None
             and metadata.callback is not None
             and not metadata.disabled
+            and not self._needs_delete_reset(wid)
         ]
 
         for wid in changed_widget_ids_for_single_callback:
@@ -1206,6 +1242,19 @@ class SessionState:
         self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
         self._persist_tracker.prune(wid_key_map.keys(), self._old_state)
 
+        # A stale widget needs no delete reset. Both sides forget its value: the
+        # backend above, and the frontend in WidgetStateManager.removeInactive.
+        # The widget therefore starts from its default when it reappears.
+        self._pending_delete_resets = {
+            wid: deleted_value
+            for wid, deleted_value in self._pending_delete_resets.items()
+            if not _is_stale_widget(
+                self._new_widget_state.widget_metadata.get(wid),
+                active_widget_ids,
+                ctx.fragment_ids_this_run,
+            )
+        }
+
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
         return self._new_widget_state.widget_metadata.get(widget_id)
@@ -1241,6 +1290,27 @@ class SessionState:
         removed = self._old_state.pop(widget_id, None) is not None or removed
         removed = self._old_state.pop(user_key, None) is not None or removed
         return removed
+
+    def _needs_delete_reset(self, widget_id: str) -> bool:
+        """True if a pending delete reset still applies to a widget.
+
+        The reset applies while the frontend holds the deleted value. It stops
+        applying once the user changes the widget to a different value: that
+        change is newer than the delete, so it wins. A user who retypes the
+        deleted value gets the reset, because the two values are equal and the
+        backend cannot tell the two cases apart.
+        """
+        if widget_id not in self._pending_delete_resets:
+            return False
+
+        if widget_id not in self._new_widget_state:
+            # The delete removed the frontend value in this same run, so no user
+            # change can exist yet.
+            return True
+
+        return _equals_deleted_value(
+            self._new_widget_state[widget_id], self._pending_delete_resets[widget_id]
+        )
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: str | None
@@ -1283,12 +1353,32 @@ class SessionState:
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
 
+        # Consume the pending delete reset, if the widget has one. Drop the value
+        # the frontend resends and flag the frontend to adopt the widget's
+        # default. See _pending_delete_resets for the recording side.
+        delete_reset_applied = self._needs_delete_reset(widget_id)
+        # Pop unconditionally: this registration either applies the reset, or a
+        # newer user change replaced it. Neither outcome may apply again.
+        self._pending_delete_resets.pop(widget_id, None)
+        if delete_reset_applied:
+            self._drop_widget_value(widget_id, user_key or widget_id)
+            # Clear the captured wire value too. Otherwise a caller like
+            # st.selectbox reconciles its options against the deleted label (see
+            # resolve_value_against_options) and hands back the deleted value.
+            incoming_serialized_value = None
+            incoming_serialized_values = None
+            if metadata.bind == "query-params" and user_key is not None:
+                # The URL is a second source of truth, and the backend re-reads
+                # the query string on every same-page rerun. Remove the param so
+                # the browser URL loses it and the next run cannot re-seed it.
+                self.query_params.remove_param(user_key)
+
         # Handle query param binding
         url_value_seeded = False
         if metadata.bind == "query-params" and user_key is not None:
             self._query_param_bound_widget_ids.add(widget_id)
             url_value_seeded = self._handle_query_param_binding(
-                metadata, user_key, widget_id
+                metadata, user_key, widget_id, skip_url_seeding=delete_reset_applied
             )
         elif metadata.bind is None and user_key is not None:
             # Widget stopped using bind — clean up any stale binding
@@ -1440,13 +1530,17 @@ class SessionState:
         # - a persisted value was restored from session state on (re)mount, for
         #   the same reason;
         # - a "page"-scoped value was dropped on a page switch, so the frontend
-        #   must fall back to the default for the reused widget id.
+        #   must fall back to the default for the reused widget id;
+        # - a forged value was discarded for a disabled widget;
+        # - a pending delete reset applied, so the frontend must fall back to the
+        #   widget's default.
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
             or restored_persisted_value
             or dropped_page_scoped_value
             or disabled_value_discarded
+            or delete_reset_applied
         )
 
         return RegisterWidgetResult(
@@ -1457,7 +1551,12 @@ class SessionState:
         )
 
     def _handle_query_param_binding(
-        self, metadata: WidgetMetadata[T], user_key: str, widget_id: str
+        self,
+        metadata: WidgetMetadata[T],
+        user_key: str,
+        widget_id: str,
+        *,
+        skip_url_seeding: bool = False,
     ) -> bool:
         """Handle query param binding for a widget.
 
@@ -1467,6 +1566,13 @@ class SessionState:
         - On initial load, URL wins (enables shareable URLs)
         - On subsequent reruns, session_state values win
         - User interaction (frontend value) always wins
+
+        Pass ``skip_url_seeding=True`` to register the binding and skip the
+        seeding. A pending delete reset needs this, because the two stores hold
+        the deleted value separately. ``remove_param`` clears ``_query_params``
+        and updates the browser URL, but same-page ``ctx.reset`` has already
+        refreshed ``_initial_query_params`` from the stale query string, and the
+        seeding below reads that snapshot.
 
         Returns True if the widget's value was seeded from URL, False otherwise.
         """
@@ -1479,6 +1585,9 @@ class SessionState:
             value_type=metadata.value_type,
             script_hash=script_hash,
         )
+
+        if skip_url_seeding:
+            return False
 
         # Check priority rules - skip seeding if user/code has already set a value.
         # A disabled widget is exempt: it cannot be interacted with, so any value in
@@ -1679,6 +1788,25 @@ class SessionState:
 
 def _is_internal_key(key: str) -> bool:
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
+
+
+def _equals_deleted_value(incoming_value: Any, deleted_value: Any) -> bool:
+    """True if a widget's incoming value equals the value that `del` removed.
+
+    Some widget values give no bool for `==`. A list of numpy arrays from
+    st.multiselect options raises ValueError, and a pd.NA option raises
+    TypeError. Such a comparison is not conclusive, so treat the value as the
+    deleted one and apply the reset the app asked for.
+
+    Returning True for an inconclusive comparison is a deliberate trade-off, not
+    an oversight. It can discard a change the user made after the delete when the
+    two values cannot be compared. Do not change it to False: equal values raise
+    here too, so False would stop the reset for every widget of that value type.
+    """
+    try:
+        return bool(incoming_value == deleted_value)
+    except (ValueError, TypeError):
+        return True
 
 
 def _is_stale_widget(

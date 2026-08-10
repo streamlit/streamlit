@@ -984,3 +984,27 @@ class MultiSelectBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.query_param_key == "my_key"
         assert c.accept_new_options is True
+
+
+def test_delete_session_state_key_pushes_default_to_frontend() -> None:
+    """Deleting the key resets the widget in the browser too (issue #16388)."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.multiselect("Multi", ["A", "B", "C"], key="multi")
+
+        def delete() -> None:
+            del st.session_state["multi"]
+
+        st.button("Delete", on_click=delete)
+
+    at = AppTest.from_function(script).run()
+    at.multiselect[0].set_value(["B"]).run()
+
+    # The frontend still holds ["B"] when the Delete button is clicked.
+    at.multiselect[0].set_value(["B"])
+    at = at.button[0].click().run()
+
+    assert at.multiselect[0].proto.set_value is True
+    assert list(at.multiselect[0].proto.raw_values) == []

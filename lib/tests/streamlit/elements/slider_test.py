@@ -795,3 +795,32 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     def test_empty_value_list_uses_outer_bounds(self):
         """An empty value list uses min_value and max_value as bounds."""
         assert st.slider("label", value=[], min_value=0, max_value=100) == (0, 100)
+
+
+def test_delete_session_state_key_pushes_default_to_frontend() -> None:
+    """Deleting the key resets the slider in the browser too.
+
+    Issue #5442 claims that st.slider already behaves correctly. It does not:
+    the slider uses the same registration path and the same value_changed flag
+    as every other widget, so it needs the same fix (issue #16388).
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.slider("Slide", 0, 10, 3, key="slide")
+
+        def delete() -> None:
+            del st.session_state["slide"]
+
+        st.button("Delete", on_click=delete)
+
+    at = AppTest.from_function(script).run()
+    at.slider[0].set_value(8).run()
+
+    # The frontend still holds 8 when the Delete button is clicked.
+    at.slider[0].set_value(8)
+    at = at.button[0].click().run()
+
+    assert at.slider[0].proto.set_value is True
+    assert list(at.slider[0].proto.value) == [3]

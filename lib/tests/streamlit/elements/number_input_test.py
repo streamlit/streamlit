@@ -878,3 +878,27 @@ def test_serde_resets_non_finite_float_to_default(ui_value: float) -> None:
         value=0.5, data_type=NumberInput.FLOAT, min_value=0.0, max_value=1.0
     )
     assert serde.deserialize(ui_value) == 0.5
+
+
+def test_delete_session_state_key_pushes_default_to_frontend() -> None:
+    """Deleting the key resets the widget in the browser too (issue #16388)."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.number_input("Num", value=1, key="num")
+
+        def delete() -> None:
+            del st.session_state["num"]
+
+        st.button("Delete", on_click=delete)
+
+    at = AppTest.from_function(script).run()
+    at.number_input[0].set_value(7).run()
+
+    # The frontend still holds 7 when the Delete button is clicked.
+    at.number_input[0].set_value(7)
+    at = at.button[0].click().run()
+
+    assert at.number_input[0].proto.set_value is True
+    assert at.number_input[0].proto.value == 1

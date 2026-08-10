@@ -797,3 +797,27 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.text_input[0].value is None
+
+
+def test_delete_session_state_key_pushes_default_to_frontend() -> None:
+    """Deleting the key resets the widget in the browser too (issue #16388)."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.text_input("Foo", value="default", key="foo")
+
+        def delete() -> None:
+            del st.session_state["foo"]
+
+        st.button("Delete", on_click=delete)
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("hello").run()
+
+    # The frontend still holds "hello" when the Delete button is clicked.
+    at.text_input[0].set_value("hello")
+    at = at.button[0].click().run()
+
+    assert at.text_input[0].proto.set_value is True
+    assert at.text_input[0].proto.value == "default"
