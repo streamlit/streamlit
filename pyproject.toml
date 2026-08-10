@@ -88,7 +88,7 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.63",
+  "ty==0.0.69",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.16.1",
   # We fix mypy to a version to avoid breaking our CI on updates,
@@ -489,6 +489,12 @@ exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",
 ]
+
+[tool.ty.analysis]
+# Altair mark_* methods annotate return type as Self. ty currently resolves
+# those as T@__call__, which falsely flags .encode/.add_params/etc. Treat
+# Altair as Any until ty correctly binds Self on Altair's MarkMethodMixin.
+replace-imports-with-any = ["altair.**"]
 
 [tool.ty.rules]
 unresolved-import = "ignore"
