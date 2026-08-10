@@ -490,6 +490,12 @@ exclude = [
   "lib/streamlit/vendor/**",
 ]
 
+[tool.ty.analysis]
+# Altair mark_* methods annotate return type as Self. ty currently resolves
+# those as T@__call__, which falsely flags .encode/.add_params/etc. Treat
+# Altair as Any until ty correctly binds Self on Altair's MarkMethodMixin.
+replace-imports-with-any = ["altair.**"]
+
 [tool.ty.rules]
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
