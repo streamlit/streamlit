@@ -26,8 +26,7 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 /**
  * Date utilities using `@internationalized/date`. Wire format is always
- * ISO 8601 (`YYYY-MM-DD`). `element.format` (e.g. `YYYY/MM/DD`) controls
- * display order only — it's not a moment/date-fns runtime dependency.
+ * ISO 8601 (`YYYY-MM-DD`). `element.format` controls display order only.
  */
 
 type FormatToken = "Y" | "M" | "D"
@@ -93,7 +92,6 @@ export function reorderSegments(
   return result
 }
 
-/** Converts an ISO 8601 (`YYYY-MM-DD`) wire-format string to a `CalendarDate`. */
 export function isoToCalendarDate(value: string): CalendarDate | null {
   if (!value) return null
   try {
@@ -103,7 +101,6 @@ export function isoToCalendarDate(value: string): CalendarDate | null {
   }
 }
 
-/** Converts a `CalendarDate` back to the ISO 8601 wire format. */
 export function calendarDateToIso(value: CalendarDate): string {
   return value.toString()
 }
@@ -116,15 +113,6 @@ export function datesEqual(
   if (a === b) return true
   if (!a || !b) return false
   return a.compare(b) === 0
-}
-
-/** Converts a native JS `Date` to a `CalendarDate`, discarding time-of-day. */
-export function dateToCalendarDate(date: Date): CalendarDate {
-  return new CalendarDate(
-    date.getFullYear(),
-    date.getMonth() + 1,
-    date.getDate()
-  )
 }
 
 /**
@@ -146,17 +134,61 @@ export function getMaxDate(element: DateInputProto): CalendarDate | undefined {
     : undefined
 }
 
-/**
- * Gate for enabling quick-select: only when `minDate` is more than 2 years
- * in the past. Replaces `moment().subtract(2, "years").toDate()`.
- */
+/** Seeds the calendar focused date so it stays controlled from mount
+ * (avoids react-stately's uncontrolled→controlled warning). */
+export function getInitialFocusedDate(
+  value: string[],
+  minDate: CalendarDate
+): CalendarDate {
+  const fromValue = value[0] ? isoToCalendarDate(value[0]) : null
+  if (fromValue) return fromValue
+  const now = today(getLocalTimeZone())
+  return now.compare(minDate) < 0 ? minDate : now
+}
+
+/** Gate for enabling quick-select: only when `minDate` is more than 2 years in the past. */
 export function isOlderThanTwoYears(date: CalendarDate): boolean {
   return date.compare(today(getLocalTimeZone()).subtract({ years: 2 })) < 0
 }
 
+export interface QuickSelectPreset {
+  id: string
+  label: string
+  start: CalendarDate
+  end: CalendarDate
+}
+
+/** Range-mode quick-select presets. `end` is always today. */
+export function getQuickSelectPresets(): QuickSelectPreset[] {
+  const end = today(getLocalTimeZone())
+  return [
+    { id: "pastWeek", label: "Past Week", start: end.subtract({ weeks: 1 }) },
+    {
+      id: "pastMonth",
+      label: "Past Month",
+      start: end.subtract({ months: 1 }),
+    },
+    {
+      id: "pastThreeMonths",
+      label: "Past 3 Months",
+      start: end.subtract({ months: 3 }),
+    },
+    {
+      id: "pastSixMonths",
+      label: "Past 6 Months",
+      start: end.subtract({ months: 6 }),
+    },
+    { id: "pastYear", label: "Past Year", start: end.subtract({ years: 1 }) },
+    {
+      id: "pastTwoYears",
+      label: "Past 2 Years",
+      start: end.subtract({ years: 2 }),
+    },
+  ].map(({ id, label, start }) => ({ id, label, start, end }))
+}
+
 export type DateValidationErrorType = "Start" | "End" | null
 
-/** Returns "Start" if below min, "End" if above max, null if valid. */
 export function validateDate(
   date: CalendarDate | null,
   minDate: CalendarDate,
@@ -172,7 +204,6 @@ function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
 }
 
-/** Formats a `CalendarDate` according to `format` (e.g. "DD.MM.YYYY"). */
 export function formatCalendarDate(
   date: CalendarDate,
   format: string
@@ -247,12 +278,7 @@ export function parsePastedDate(
 
 export type DateSegmentType = "year" | "month" | "day"
 
-/**
- * Parses a partial paste (pure digits, no separator) targeting a single
- * focused segment — e.g. pasting "15" into just the day segment. Mirrors
- * `TimeInput.tsx`'s `handlePaste` partial-paste path. Returns `null` if the
- * text isn't 1-4 pure digits or `segmentType` isn't a real date segment.
- */
+/** Parses a partial paste (pure digits, no separator) targeting a single segment. */
 export function parsePartialSegmentPaste(
   text: string,
   segmentType: string | null
@@ -269,8 +295,7 @@ export function parsePartialSegmentPaste(
   return { segmentType, value: Number(text.trim()) }
 }
 
-/** Whether `value` is in-range for `segmentType` (month 1-12, day 1-31; year
- * has no fixed upper bound but is capped at 4 digits by the paste regex). */
+/** Whether `value` is in-range for `segmentType` (month 1-12, day 1-31). */
 export function isValidSegmentValue(
   segmentType: DateSegmentType,
   value: number
@@ -278,4 +303,12 @@ export function isValidSegmentValue(
   if (segmentType === "month") return value >= 1 && value <= 12
   if (segmentType === "day") return value >= 1 && value <= 31
   return value >= 1
+}
+
+/** Ensures start <= end for a two-element ISO date array (lexicographic). */
+export function normalizeRangeOrder(isoValues: string[]): string[] {
+  if (isoValues.length === 2 && isoValues[0] > isoValues[1]) {
+    return [isoValues[1], isoValues[0]]
+  }
+  return isoValues
 }

@@ -380,9 +380,9 @@ def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
 def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> None:
     """Type digits into a DateInput's segments and optionally commit.
 
-    For single-date mode, `st.date_input` renders its typed field as a
-    sequence of `role="spinbutton"` segments (React Aria `DateField`) rather
-    than a single free-text `<input>`, so values must be typed segment-by-segment.
+    For React Aria segmented ``st.date_input`` fields (single and range),
+    values are typed segment-by-segment into ``role="spinbutton"`` segments
+    rather than a single free-text ``<input>``.
 
     Segment edits are buffered locally until the popover closes (the
     commit-on-close pattern). By default this helper closes the popover via
@@ -390,18 +390,16 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
     ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
     the popover open (e.g. for error-state tests that inspect UI before commit).
 
-    Note: Range mode still uses BaseWeb's free-text input and is not yet
-    migrated to React Aria segments.
-
     Parameters
     ----------
     date_input_field : Locator
-        The `stDateInputField` locator (the segmented field container) for a
-        single-date `date_input`.
+        The ``stDateInputField`` locator (the segmented field container).
 
     *parts : str
         Digit strings for each segment, in the same left-to-right order the
-        segments are rendered in (which follows the widget's `format`), e.g.
+        segments are rendered in (which follows the widget's ``format``).
+        Pass 3 parts for a single-date field, 6 for a range field (start +
+        end segments), e.g.
         ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
 
     commit : bool

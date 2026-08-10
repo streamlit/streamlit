@@ -35,11 +35,11 @@ import {
   StyledCalendarHeaderPickerGroup,
   StyledCalendarHeaderSelect,
   StyledCalendarHeaderSelectChevron,
-  StyledCalendarHeaderSelectListBox,
-  StyledCalendarHeaderSelectListBoxItem,
-  StyledCalendarHeaderSelectPopover,
   StyledCalendarHeaderSelectTrigger,
   StyledCalendarHeadingFallback,
+  StyledDropdownListBox,
+  StyledDropdownListBoxItem,
+  StyledDropdownPopover,
 } from "./styled-components"
 
 interface HeaderPickerItem {
@@ -51,9 +51,9 @@ interface HeaderPickerItem {
 const renderPickerItem = (item: unknown): ReactElement => {
   const pickerItem = item as HeaderPickerItem
   return (
-    <StyledCalendarHeaderSelectListBoxItem id={pickerItem.id}>
+    <StyledDropdownListBoxItem id={pickerItem.id}>
       {pickerItem.formatted}
-    </StyledCalendarHeaderSelectListBoxItem>
+    </StyledDropdownListBoxItem>
   )
 }
 
@@ -101,15 +101,15 @@ function HeaderPickerSelect({
           <KeyboardArrowDown size={theme.iconSizes.base} />
         </StyledCalendarHeaderSelectChevron>
       </StyledCalendarHeaderSelectTrigger>
-      <StyledCalendarHeaderSelectPopover
+      <StyledDropdownPopover
         ref={setFloatingRef}
         isNonModal
         data-testid="stDateInputHeaderPickerPopover"
       >
-        <StyledCalendarHeaderSelectListBox items={items}>
+        <StyledDropdownListBox items={items}>
           {renderPickerItem}
-        </StyledCalendarHeaderSelectListBox>
-      </StyledCalendarHeaderSelectPopover>
+        </StyledDropdownListBox>
+      </StyledDropdownPopover>
     </StyledCalendarHeaderSelect>
   )
 }
