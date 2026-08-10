@@ -30,6 +30,7 @@ from starlette.middleware import Middleware
 from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
@@ -166,6 +167,7 @@ class _DummyRuntime:
         self._active_sessions: set[str] = {"session123"}
         self.stopped = False
         self.last_backmsg = None
+        self.deserialization_exceptions: list[BaseException] = []
         self.last_user_info: dict[str, str | bool | None] | None = None
         self.last_existing_session_id: str | None = None
         self.script_health = (True, "ok")
@@ -231,7 +233,7 @@ class _DummyRuntime:
         exc: BaseException,
         client: object | None = None,
     ) -> None:
-        self.last_backmsg = (session_id, exc)
+        self.deserialization_exceptions.append(exc)
 
     async def start(self) -> None:  # pragma: no cover - lifecycle stub
         return None
@@ -1363,6 +1365,38 @@ def test_websocket_allows_debug_shutdown_in_dev_mode(tmp_path: Path) -> None:
 
     # Runtime should be stopped
     assert runtime.stopped is True
+
+
+def test_websocket_closes_on_malformed_backmsg(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that a frame that fails to parse as a BackMsg closes the connection
+    with a protocol error. The server does not report the frame into the session.
+    """
+    client, runtime = starlette_client
+
+    with client.websocket_connect("/_stcore/stream") as websocket:
+        # Send a valid frame first. It shows that only the malformed frame closes
+        # the connection.
+        back_msg = BackMsg()
+        back_msg.rerun_script.query_string = ""
+        websocket.send_bytes(back_msg.SerializeToString())
+
+        websocket.send_bytes(b"\xff")
+
+        # The client waits for a ForwardMsg and gets a disconnect instead.
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            websocket.receive_bytes()
+
+    assert excinfo.value.code == 1002  # 1002 = Protocol Error
+
+    # The valid frame reaches the runtime. The server never routes the malformed
+    # frame into the session, so the session creates no Exception ForwardMsg for
+    # it.
+    assert runtime.last_backmsg is not None
+    _session_id, msg = runtime.last_backmsg
+    assert msg.WhichOneof("type") == "rerun_script"
+    assert runtime.deserialization_exceptions == []
 
 
 # ---------------------------------------------------------------------------
