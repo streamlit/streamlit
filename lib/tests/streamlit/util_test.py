@@ -15,14 +15,20 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import random
 import unittest
+from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 
 from streamlit import util
 from streamlit.util import AttributeDictionary, ReadOnlyAttributeDictionary
+
+if TYPE_CHECKING:
+    from hashlib import _Hash
 
 
 class UtilTest(unittest.TestCase):
@@ -65,6 +71,41 @@ class UtilTest(unittest.TestCase):
         assert hasattr(hasher, "update")
         assert hasattr(hasher, "hexdigest")
         assert hasattr(hasher, "digest")
+
+    def test_create_fast_hasher_falls_back_for_fixed_size_blake2b(self) -> None:
+        """Test fallback for FIPS builds whose BLAKE2b has a fixed digest size."""
+        original_blake2b = hashlib.blake2b
+
+        def openssl_blake2b(
+            data: bytes = b"", *, usedforsecurity: bool = True
+        ) -> _Hash:
+            return original_blake2b(data, usedforsecurity=usedforsecurity)
+
+        data = b"test data"
+        with patch.object(hashlib, "blake2b", openssl_blake2b):
+            hasher = util.create_fast_hasher()
+            hasher.update(data)
+
+        expected = hashlib.new("md5", data, usedforsecurity=False).hexdigest()
+        assert hasher.hexdigest() == expected
+
+    def test_create_fast_hasher_falls_back_when_blake2b_raises_value_error(
+        self,
+    ) -> None:
+        """Test MD5 fallback when blake2b rejects digest_size with ValueError."""
+
+        def openssl_blake2b_rejecting_digest_size(
+            *args: object, **kwargs: object
+        ) -> _Hash:
+            raise ValueError("digest_size is invalid for openssl_blake2b()")
+
+        data = b"test data"
+        with patch.object(hashlib, "blake2b", openssl_blake2b_rejecting_digest_size):
+            hasher = util.create_fast_hasher()
+            hasher.update(data)
+
+        expected = hashlib.new("md5", data, usedforsecurity=False).hexdigest()
+        assert hasher.hexdigest() == expected
 
     def test_create_fast_hasher_produces_consistent_results(self):
         """Test that create_fast_hasher produces consistent hash results."""

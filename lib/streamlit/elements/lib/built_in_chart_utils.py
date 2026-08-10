@@ -332,7 +332,7 @@ def _add_improved_hover_tooltips(
         )
     )
 
-    return cast("alt.LayerChart", layer_chart)
+    return cast("alt.LayerChart", layer_chart)  # ty: ignore[redundant-cast]
 
 
 def _infer_vegalite_type(

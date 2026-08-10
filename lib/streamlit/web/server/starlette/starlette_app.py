@@ -221,14 +221,18 @@ def create_streamlit_middleware() -> list[Middleware]:
         )
     )
 
-    # Keep static asset responses out of the gzip middleware. Local load testing
-    # showed that bypassing gzip on these paths materially improves initial load
-    # times and peak RSS, while a session-only bypass regressed.
+    # Keep static asset and media responses out of the gzip middleware. Local
+    # load testing showed that bypassing gzip on the static paths materially
+    # improves initial load times and peak RSS (a session-only bypass
+    # regressed), and compressing binary media breaks range-based playback.
+    # The base URL is forwarded so the path bypass works when
+    # server.baseUrlPath is configured.
     middleware.append(
         Middleware(
             SelectiveGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
+            base_url=config.get_option("server.baseUrlPath") or "",
         )
     )
 

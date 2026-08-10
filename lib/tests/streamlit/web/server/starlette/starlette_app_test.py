@@ -50,7 +50,6 @@ from streamlit.web.server.starlette.starlette_app import (
 )
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
     SelectiveGZipMiddleware,
-    _should_bypass_static_gzip,
 )
 from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
 from streamlit.web.server.starlette.starlette_server_config import (
@@ -279,35 +278,25 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     assert response.text == "ok"
 
 
-@pytest.mark.parametrize(
-    ("path", "expected"),
-    [
-        ("/", True),
-        ("/static/app.123.js", True),
-        ("/app/static/logo.svg", False),
-        ("/assets/theme.css", False),
-        ("/_stcore/metrics", False),
-        ("/media/file", False),
-    ],
-    ids=[
-        "root",
-        "static-bundle",
-        "app-static",
-        "hashed-style",
-        "api-route",
-        "media-route",
-    ],
-)
-def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
-    """Only root and `/static/...` paths should bypass the gzip middleware."""
-    assert _should_bypass_static_gzip(path) is expected
-
-
 def test_create_streamlit_middleware_uses_selective_gzip() -> None:
     """The Streamlit middleware stack should use the selective gzip wrapper."""
     middleware_list = create_streamlit_middleware()
 
     assert middleware_list[2].cls is SelectiveGZipMiddleware
+
+
+def test_create_streamlit_middleware_forwards_base_url() -> None:
+    """The gzip middleware receives server.baseUrlPath so its path bypass works.
+
+    Guards against a refactor silently dropping ``base_url``, which would break
+    the static/media bypass whenever a base URL path is configured.
+    """
+    with patch_config_options({"server.baseUrlPath": "my-app"}):
+        middleware_list = create_streamlit_middleware()
+
+    gzip_middleware = middleware_list[2]
+    assert gzip_middleware.cls is SelectiveGZipMiddleware
+    assert gzip_middleware.kwargs["base_url"] == "my-app"
 
 
 def test_selective_gzip_skips_static_like_paths() -> None:
