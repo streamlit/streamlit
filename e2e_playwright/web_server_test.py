@@ -719,7 +719,7 @@ def test_direct_websocket_with_session_id_in_subprotocol(app: Page, app_base_url
             const match = document.cookie.match(/(?:^|; )_streamlit_xsrf=([^;]*)/);
             const xsrf = match ? decodeURIComponent(match[1]) : null;
             if (!xsrf) {
-                resolve({ connected: false, error: 'missing _streamlit_xsrf cookie' });
+                reject('missing _streamlit_xsrf cookie');
                 return;
             }
             const ws = new WebSocket(
@@ -730,14 +730,13 @@ def test_direct_websocket_with_session_id_in_subprotocol(app: Page, app_base_url
                 resolve({ connected: true, protocol: ws.protocol });
                 ws.close();
             };
-            ws.onerror = () => resolve({ connected: false, error: 'connection failed' });
-            setTimeout(() => resolve({ connected: false, error: 'timeout' }), 5000);
+            ws.onerror = () => reject('connection failed');
+            setTimeout(() => reject('timeout'), 5000);
         })
     """,
         [ws_url, session_id],
     )
 
-    assert result["connected"], f"WebSocket connection failed: {result.get('error')}"
     assert result["protocol"] == "streamlit", (
         f"Expected 'streamlit' subprotocol, got: {result['protocol']}"
     )

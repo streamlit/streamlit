@@ -1108,10 +1108,14 @@ _create_option(
         ``Sec-WebSocket-Protocol`` entry) or Streamlit closes the socket with
         code ``1008`` before accepting the connection. Connections without an
         ``Origin`` header are not subject to that check, so programmatic
-        clients that omit ``Origin`` continue to work. This option does not
-        enable ``server.enableCORS``; keep CORS enabled (and configure
-        ``server.corsAllowedOrigins``) if you need to limit which origins may
-        attempt a WebSocket connection.
+        clients that omit ``Origin`` continue to work. The frontend currently
+        shares that subprotocol slot with host auth tokens
+        (``hostAuthToken ?? xsrfCookie``); embeds that use
+        ``useExternalAuthToken`` must send a matching XSRF cookie/token pair
+        or disable XSRF until that shared-slot contract is redesigned. This
+        option does not enable ``server.enableCORS``; keep CORS enabled (and
+        configure ``server.corsAllowedOrigins``) if you need to limit which
+        origins may attempt a WebSocket connection.
     """,
     default_val=True,
     type_=bool,

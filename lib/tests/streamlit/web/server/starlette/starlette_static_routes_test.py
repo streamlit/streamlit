@@ -29,6 +29,7 @@ from streamlit.web.server.starlette.starlette_static_routes import (
     STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
     create_streamlit_static_handler,
 )
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -104,6 +105,36 @@ class TestStreamlitStaticFiles:
         response = static_app.get("/index.html")
 
         assert response.headers["Cache-Control"] == "no-cache"
+
+    @patch_config_options({"server.enableXsrfProtection": True})
+    def test_sets_xsrf_cookie_on_html_responses(self, static_app: TestClient) -> None:
+        """HTML navigations must set `_streamlit_xsrf` before the frontend connects."""
+        for path in ("/", "/index.html", "/unknown/spa/route"):
+            response = static_app.get(path)
+
+            assert response.status_code == 200
+            assert "_streamlit_xsrf" in response.cookies
+
+    @patch_config_options({"server.enableXsrfProtection": True})
+    def test_does_not_set_xsrf_cookie_on_non_html_assets(
+        self, static_app: TestClient
+    ) -> None:
+        """Hashed JS/CSS assets should not carry an XSRF Set-Cookie."""
+        for path in ("/app.abc123.js", "/style.css", "/manifest.json"):
+            response = static_app.get(path)
+
+            assert response.status_code == 200
+            assert "_streamlit_xsrf" not in response.cookies
+
+    @patch_config_options({"server.enableXsrfProtection": False})
+    def test_skips_xsrf_cookie_when_protection_disabled(
+        self, static_app: TestClient
+    ) -> None:
+        """No XSRF cookie is set when protection is disabled."""
+        response = static_app.get("/index.html")
+
+        assert response.status_code == 200
+        assert "_streamlit_xsrf" not in response.cookies
 
     def test_cache_control_for_manifest(self, static_app: TestClient) -> None:
         """Test that manifest.json has no-cache header."""

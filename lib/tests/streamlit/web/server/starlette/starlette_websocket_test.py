@@ -780,7 +780,10 @@ class TestWebsocketHandlerTokenExposure:
 
 
 class TestWebsocketHandlerXsrfAdmission:
-    """Reject browser handshakes with missing/invalid XSRF; allow non-browser clients."""
+    """Reject Origin-bearing handshakes with missing/invalid XSRF.
+
+    Origin-less connections are allowed without an XSRF token.
+    """
 
     @staticmethod
     def _make_websocket(
