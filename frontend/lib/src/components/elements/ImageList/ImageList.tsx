@@ -221,22 +221,20 @@ function ImageList({
         data-testid="stImage"
         shouldStretch={shouldStretch}
       >
-        {element.imgs.map(
-          (iimage, idx): ReactElement => (
-            <Image
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-array-index-key
-              key={idx}
-              itemKey={idx.toString()}
-              image={iimage as ImageProto}
-              imgStyle={imgStyle}
-              buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
-              handleImageError={handleImageError}
-              shouldStretch={shouldStretch}
-              link={element.imgs.length === 1 ? element.link : undefined}
-            />
-          )
-        )}
+        {element.imgs.map((iimage, idx): ReactElement => (
+          <Image
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
+            key={idx}
+            itemKey={idx.toString()}
+            image={iimage as ImageProto}
+            imgStyle={imgStyle}
+            buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
+            handleImageError={handleImageError}
+            shouldStretch={shouldStretch}
+            link={element.imgs.length === 1 ? element.link : undefined}
+          />
+        ))}
       </StyledImageList>
     </StyledToolbarElementContainer>
   )
