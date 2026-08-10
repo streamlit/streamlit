@@ -56,27 +56,6 @@ st.altair_chart(chart)
 - Interactive tooltips
 - Layered visualizations
 
-## Deprecated: `st.pyplot` savefig kwargs
-
-**Do not pass Matplotlib `savefig` keyword arguments to `st.pyplot`.** Passing `**kwargs` (for example `transparent=True`, custom `dpi`, or `bbox_inches`) is deprecated and will be removed in a future version.
-
-`st.pyplot` already applies good defaults for the most common options: `bbox_inches="tight"` and `dpi=200`. Prefer those defaults. For niche `savefig` options, save the figure to a buffer and display it with `st.image`:
-
-```python
-# BAD: deprecated savefig kwargs
-st.pyplot(fig, transparent=True, dpi=300)
-
-# GOOD: rely on st.pyplot defaults
-st.pyplot(fig)
-
-# GOOD: custom savefig options via st.image
-import io
-
-buf = io.BytesIO()
-fig.savefig(buf, format="png", transparent=True, dpi=300)
-st.image(buf)
-```
-
 ## Deprecated: `use_container_width`
 
 **Do not use `use_container_width`.** It is deprecated — Streamlit elements now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.

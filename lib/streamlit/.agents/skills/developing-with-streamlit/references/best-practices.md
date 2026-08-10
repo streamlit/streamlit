@@ -268,23 +268,6 @@ chart = (
 st.altair_chart(chart)
 ```
 
-Do not pass Matplotlib `savefig` kwargs to `st.pyplot` — they are deprecated. `st.pyplot` already uses `bbox_inches="tight"` and `dpi=200`. For other `savefig` options (for example `transparent=True` or a custom `dpi`), save the figure yourself and display it with `st.image`:
-
-```python
-# BAD: deprecated savefig kwargs
-st.pyplot(fig, transparent=True, dpi=300)
-
-# GOOD: default st.pyplot display
-st.pyplot(fig)
-
-# GOOD: custom savefig options via st.image
-import io
-
-buf = io.BytesIO()
-fig.savefig(buf, format="png", transparent=True, dpi=300)
-st.image(buf)
-```
-
 Keep sensitive data out of frontend payloads. Hiding a dataframe column only hides it visually; pre-filter sensitive columns before display.
 
 ```python
