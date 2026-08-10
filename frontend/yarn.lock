@@ -4816,14 +4816,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/plotly.js@npm:*":
-  version: 3.0.10
-  resolution: "@types/plotly.js@npm:3.0.10"
-  checksum: 10c0/72f33ce44df74b53bcde5c0e503d5bf89424bed89791aed030da33c82d787d1d49c40748b764d3c65715a6b28b0c3bc78761a99f576e40fcd2078a9764d19192
-  languageName: node
-  linkType: hard
-
-"@types/plotly.js@npm:^3.0.12":
+"@types/plotly.js@npm:*, @types/plotly.js@npm:^3.0.12":
   version: 3.0.12
   resolution: "@types/plotly.js@npm:3.0.12"
   checksum: 10c0/5bdf7be3769118178ec6bfe5346233eda61fba061e4191c8a3d968f9fd6e2a69151bd0af1c58aa56339242900826ae02b47340e3559ffb7c2ec44ca4aa34c140
