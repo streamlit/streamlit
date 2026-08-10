@@ -103,7 +103,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.popover` | Insert a popover container. Use it for compact controls or details that should appear on demand without occupying page space. |
 | `st.progress` | Display a progress bar. Use it to communicate completion state for running tasks or staged workflows. |
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
-| `st.pyplot` | Display a matplotlib.pyplot figure. Use it for existing Matplotlib visualizations or libraries that produce Matplotlib figures. |
+| `st.pyplot` | Display a matplotlib.pyplot figure. Use it for existing Matplotlib visualizations or libraries that produce Matplotlib figures. Do not pass Matplotlib `savefig` kwargs (`**kwargs`); they are deprecated. Defaults already include `bbox_inches="tight"` and `dpi=200`. For other `savefig` options, use `fig.savefig` + `st.image`. |
 | `st.radio` | Display a radio button widget. Use it when users should choose exactly one option from a small visible set. |
 | `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. |
 | `st.scatter_chart` | Display a scatterplot chart. Use it for relationships between numeric variables, optionally with size and color encodings. |
