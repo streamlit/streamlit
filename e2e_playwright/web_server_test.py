@@ -663,13 +663,23 @@ def test_direct_websocket_connection_with_subprotocol(app: Page, app_base_url: s
     This verifies the server correctly handles the subprotocol negotiation.
     Uses browser's native WebSocket API via page.evaluate() to avoid the complexity
     of Python async WebSocket libraries conflicting with Playwright's event loop.
+
+    Browser handshakes include an Origin header, so the second subprotocol entry
+    must be the matching ``_streamlit_xsrf`` cookie value when XSRF is enabled.
     """
     # The app fixture automatically navigates and waits for the app to load.
+    wait_for_app_loaded(app)
     ws_url = _app_ws_url(app_base_url, path="/_stcore/stream")
     result = app.evaluate(
         """
         (url) => new Promise((resolve, reject) => {
-            const ws = new WebSocket(url, ['streamlit']);
+            const match = document.cookie.match(/(?:^|; )_streamlit_xsrf=([^;]*)/);
+            const xsrf = match ? decodeURIComponent(match[1]) : null;
+            if (!xsrf) {
+                reject('missing _streamlit_xsrf cookie');
+                return;
+            }
+            const ws = new WebSocket(url, ['streamlit', xsrf]);
             ws.onopen = () => {
                 resolve(ws.protocol);
                 ws.close();
@@ -701,14 +711,20 @@ def test_direct_websocket_with_session_id_in_subprotocol(app: Page, app_base_url
     if session_id is None:
         session_id = "test-session-id-12345"
 
-    # Subprotocol entries: protocol name, XSRF token placeholder, session ID
+    # Subprotocol entries: protocol name, XSRF token, session ID
     ws_url = _app_ws_url(app_base_url, path="/_stcore/stream")
     result = app.evaluate(
         """
         ([url, sessionId]) => new Promise((resolve, reject) => {
+            const match = document.cookie.match(/(?:^|; )_streamlit_xsrf=([^;]*)/);
+            const xsrf = match ? decodeURIComponent(match[1]) : null;
+            if (!xsrf) {
+                resolve({ connected: false, error: 'missing _streamlit_xsrf cookie' });
+                return;
+            }
             const ws = new WebSocket(
                 url,
-                ['streamlit', 'placeholder', sessionId]
+                ['streamlit', xsrf, sessionId]
             );
             ws.onopen = () => {
                 resolve({ connected: true, protocol: ws.protocol });
