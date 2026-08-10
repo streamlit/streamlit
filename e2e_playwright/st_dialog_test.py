@@ -753,9 +753,10 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     # Click on body element outside dialog
     app.locator("body").click(position={"x": 50, "y": 50}, force=True)
 
-    # Dialog should still be visible
+    # Dialog should still be visible, and the outside click must not rerun.
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
     # Press R hotkey — must not rerun/dismiss a non-dismissible dialog
     # (even when focus is outside the dialog after the backdrop click above).

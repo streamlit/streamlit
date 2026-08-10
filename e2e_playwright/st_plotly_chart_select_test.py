@@ -256,10 +256,8 @@ def test_selection_state_remains_after_unmounting(
             if (window.Plotly?.Fx?.unhover) window.Plotly.Fx.unhover(el)
             // After remount, Plotly intermittently leaves active-selection edge
             // handles (`.outline-controllers`) drawn. This test only cares that
-            // the selection itself persisted — force the inactive chrome state.
-            if (el._fullLayout?._deactivateShape) {
-                el._fullLayout._deactivateShape(el)
-            }
+            // the selection itself persisted — strip that inactive chrome from
+            // the DOM rather than calling private Plotly layout APIs.
             el.querySelectorAll(".outline-controllers").forEach(node => node.remove())
         }"""
     )
