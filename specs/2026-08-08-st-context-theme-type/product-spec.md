@@ -98,9 +98,11 @@ colors.
 
 `type` answers "does the app look light or dark?" Resolve from the active theme/section:
 
-1. Prefer `base` if set.
-2. Else infer from 6-digit hex `backgroundColor` luminance.
-3. Else fall back to resolved appearance preference.
+1. If `backgroundColor` is a 6-digit hex → use luminance (authoritative: what is painted).
+2. Else if `base` is `"light"` or `"dark"` → use it (determines which preset bg fills in).
+3. Else inferred default: `"light"` for single `[theme]` (FE default when base is unspecified), or the
+   section variant name for dual themes (e.g. `"dark"` for `[theme.dark]` — mirrors the FE injecting
+   `base` from the section name via `handleSectionInheritance`).
 
 - Pros: Matches today's docs; matches the primary "contrast my content" use case; single dark custom theme
   correctly reports `"dark"` even if OS preference is light.
