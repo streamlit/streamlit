@@ -238,17 +238,19 @@ function DateInput({
     ]
   )
 
-  // Revert to last committed value on close when segments are partially
-  // cleared (incomplete date that shouldn't be committed).
+  // Revert to last committed value on close when segments still show
+  // placeholders (partially typed, or fully cleared on a non-clearable widget).
+  // The display revert is handled by SingleDateInput/RangeDateInput locally;
+  // here we only clear the validation error. No setValueWithSource needed
+  // because the committed value never changed (edits were buffered locally).
   const handleClose = useCallback(
     (hasPlaceholderSegments?: boolean): void => {
       if (!hasPlaceholderSegments) {
         return
       }
       resetError()
-      setValueWithSource({ value, fromUi: true })
     },
-    [value, setValueWithSource, resetError]
+    [resetError]
   )
 
   // Synchronous commit for form-submit races: when inside a form, clicking

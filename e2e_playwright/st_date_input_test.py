@@ -739,8 +739,12 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
 
-    # Tab to the month picker trigger and activate it
+    # Tab to the month picker trigger and activate it.
+    # Note: prev-month button is disabled (min_value=1970-01-01, showing Jan 1970),
+    # so the first focusable after the grid is the month picker trigger.
     app.keyboard.press("Tab")
+    month_trigger = calendar.get_by_role("button", name="month", exact=True)
+    expect(month_trigger).to_be_focused()
     app.keyboard.press("Enter")
     picker_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
     expect(picker_popover).to_be_visible()

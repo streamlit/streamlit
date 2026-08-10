@@ -642,8 +642,8 @@ describe("DateInput", () => {
     const user = userEvent.setup()
     // Non-empty default makes the widget non-clearable. Clearing all
     // segments then leaving the field closes the popover; close-commit
-    // restores the last committed value and handleClose re-writes that
-    // value (formCommit is skipped while segments are still cleared).
+    // restores the last committed value locally. No backend write fires
+    // because the committed value never changed (edits were buffered).
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -659,16 +659,9 @@ describe("DateInput", () => {
     await clearSegment(user, day)
 
     await user.tab()
-    // Close-commit reverts the cleared state to the last committed value
-    // (1970-01-20). handleBlur skips formCommit for fully-cleared
-    // non-clearable widgets, avoiding a race where form submit could
-    // capture the empty intermediate state.
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
-      [originalDateWire],
-      { fromUi: true },
-      undefined
-    )
+    // Close-commit reverts the display locally; no setStringArrayValue
+    // should fire (avoids a spurious backend rerun with an unchanged value).
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
   describe("localization", () => {
@@ -2073,10 +2066,12 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     })
   })
 
-  it("wrapper has aria-keyshortcuts attribute", () => {
+  it("has aria-keyshortcuts on wrapper", () => {
     render(<DateInput {...getProps()} />)
-    const wrapper = screen.getByTestId("stDateInputField")
-    expect(wrapper).toHaveAttribute("aria-keyshortcuts", "Alt+ArrowDown")
+    expect(screen.getByTestId("stDateInputField")).toHaveAttribute(
+      "aria-keyshortcuts",
+      "Alt+ArrowDown"
+    )
   })
 })
 

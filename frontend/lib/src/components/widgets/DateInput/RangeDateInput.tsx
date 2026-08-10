@@ -340,13 +340,13 @@ function RangeDateInput({
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
     if (!isCalendarActive || !isOpen) return
-    const id = requestAnimationFrame(() => {
+    const rafId = requestAnimationFrame(() => {
       const cell = popoverRef.current?.querySelector<HTMLElement>(
         '[role="grid"] [tabindex="0"]'
       )
       cell?.focus()
     })
-    return () => cancelAnimationFrame(id)
+    return () => cancelAnimationFrame(rafId)
   }, [isCalendarActive, isOpen])
 
   const overlayOptions = useMemo(() => {
@@ -581,6 +581,9 @@ function RangeDateInput({
 
   // In active mode: Tab cycles focus within the popover (focus trap).
   // In passive mode: Tab moves to quick-select or closes the popover.
+  // Scoped to popoverRef only — portaled month/year pickers and the
+  // quick-select listbox self-dismiss on Tab (stopPropagation + restore
+  // trigger focus in CalendarPopoverHeader / handleQuickSelectKeyDown).
   const handlePopoverKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab") return
@@ -775,13 +778,13 @@ function RangeDateInput({
     <StyledDateFieldContainer>
       <StyledDateInputWrapper
         ref={setTriggerRef}
-        data-testid="stDateInputField"
-        data-disabled={disabled || undefined}
-        data-has-error={error ? "" : undefined}
         aria-keyshortcuts="Alt+ArrowDown"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={isOpen ? popoverId : undefined}
+        data-testid="stDateInputField"
+        data-disabled={disabled || undefined}
+        data-has-error={error ? "" : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
