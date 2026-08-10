@@ -103,7 +103,9 @@ sent, so existing deployed frontends against a new backend do not regress.
 Add `lib/streamlit/runtime/theme_type.py` (sketch under Option C):
 
 ```python
-def resolve_theme_type(preference: Literal["light", "dark"]) -> Literal["light", "dark"]:
+def resolve_theme_type(
+    preference: Literal["light", "dark"],
+) -> Literal["light", "dark"]:
     theme = config.get_options_for_section("theme")
     light = config.get_options_for_section("theme.light")
     dark = config.get_options_for_section("theme.dark")
@@ -183,61 +185,137 @@ new, BE overwrites `color_scheme` from preference + config.
 
 ### 4. MPA-safe auto-rerun on appearance change
 
-#### Hard invariant (source allowlist + preference ref)
+#### Design: unified `componentDidUpdate` preference-diff with suppression flag
 
-```text
-Auto-rerun fires ONLY when BOTH:
-  (a) resolved theme_preference !== lastSentThemePreference, AND
-  (b) trigger source is an intentional appearance action:
-        - main menu / settings Light|Dark|System toggle
-        - handleThemeMessage (host)
-        - OS matchMedia change while selection is System
-      NEVER as a side-effect of processThemeInput, handleNewSession,
-      or any setAndSendTheme call initiated from those paths.
+All three trigger sources (menu toggle, host message, OS preference change) produce
+the same observable: `props.theme.activeTheme` changes its visual appearance in
+`App.tsx`. A single `componentDidUpdate` check handles all three. The only path to
+suppress is `processThemeInput` (called during `handleNewSession`).
+
+#### Implementation (4 touch points in `App.tsx`)
+
+**1. Two instance fields:**
+
+```tsx
+private lastSentThemePreference: "light" | "dark" | null = null
+private skipNextThemeUpdate: boolean = false
 ```
 
-Sketch:
+- `lastSentThemePreference` — tracks the preference sent in the last
+  `sendRerunBackMsg`. Prevents duplicate reruns and handles edge cases where
+  appearance does not actually change.
+- `skipNextThemeUpdate` — set by `processThemeInput` when it applies a server-sent
+  custom theme. Consumed (cleared) by the next `componentDidUpdate` to prevent that
+  render from triggering an auto-rerun.
 
-```ts
-maybeRerunForThemePreference = (source: "menu" | "host" | "os"): void => {
-  if (this.suppressThemeRerun) return // belt-and-suspenders during NewSession
-  const next = this.getResolvedThemePreference()
-  if (next === this.lastSentThemePreference) return
-  this.sendRerunBackMsg(
-    this.state.widgetStates,
-    undefined, // fragmentId — full script
-    this.state.currentPageScriptHash,
-    /* pageName / query from current URL state */
-  )
+**2. In `processThemeInput`, after the hash-check early return (~line 1738), before
+`this.setState`:**
+
+```tsx
+this.skipNextThemeUpdate = true
+```
+
+Only set when the theme actually changes (hash differs), so it will not stick around
+to suppress a later legitimate change.
+
+**3. In `componentDidUpdate`, appended after the existing `scriptRunState` handling:**
+
+```tsx
+const prevPreference = hasLightBackgroundColor(prevProps.theme.activeTheme.emotion)
+  ? "light" : "dark"
+const currPreference = hasLightBackgroundColor(this.props.theme.activeTheme.emotion)
+  ? "light" : "dark"
+
+if (prevPreference !== currPreference && !this.skipNextThemeUpdate) {
+  this.maybeRerunForThemeChange()
 }
-
-// Allowlisted call sites only — NOT the end of setAndSendTheme:
-// - menu/settings handler after updating tracked ThemeSelection
-// - handleThemeMessage after mapping host light/dark → selection
-// - matchMedia listener when selection === "System"
+if (this.skipNextThemeUpdate) {
+  this.skipNextThemeUpdate = false
+}
 ```
 
-#### Why preference-diff alone is not enough
+**4. New method `maybeRerunForThemeChange`:**
 
-`processThemeInput` calls `setAndSendTheme` on every NewSession. An ungated hook inside
-`setAndSendTheme` would fire on connect/nav/reconnect.
+```tsx
+private maybeRerunForThemeChange = (): void => {
+  const currentPreference = hasLightBackgroundColor(
+    this.props.theme.activeTheme.emotion
+  ) ? "light" : "dark"
 
-- **NewSession / first connect:** preference already sent; BE resolved `type`; preference
-  unchanged after paint → **no** second rerun (avoids #11797).
-- **Intentional toggle on MPA Page B:** preference changes → auto-rerun must send
-  current `pageScriptHash` / page name / query from live App state **synchronously**
-  (no debounce that can observe stale page state).
+  if (currentPreference === this.lastSentThemePreference) return
+  if (!this.isServerConnected()) return
+  if (
+    this.state.scriptRunState === ScriptRunState.RUNNING ||
+    this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED
+  ) return
 
-#### Implementation commitments
+  this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+}
+```
 
-1. Compare **preference only**, never theme name / FE luminance.
-2. **Do not** put an ungated auto-rerun at the end of `setAndSendTheme`. Prefer
-   allowlisted call sites, or an explicit `rerunOnPreferenceChange` flag that NewSession
-   never sets.
-3. `suppressThemeRerun` around `handleNewSession` / `processThemeInput` is a backstop,
-   not the sole defense.
-4. Update [`handleThemeMessage`](../../frontend/app/src/App.tsx) — today visual-only.
-5. **Do not restore** name-based `componentDidUpdate` reruns.
+MPA safety: `sendUpdateWidgetsMessage(undefined)` passes no `pageScriptHash`, so
+`sendRerunBackMsg` falls through to `this.state.currentPageScriptHash` (the current
+page).
+
+**5. In `sendRerunBackMsg`, after the BackMsg is sent (~line 2243):**
+
+```tsx
+this.lastSentThemePreference = hasLightBackgroundColor(
+  this.props.theme.activeTheme.emotion
+) ? "light" : "dark"
+```
+
+#### Why `skipNextThemeUpdate` works across the React render boundary
+
+1. `processThemeInput` sets `skipNextThemeUpdate = true` synchronously.
+2. It calls `setAndSendTheme` → `this.props.theme.setTheme()` → triggers React state
+   update (batched).
+3. React schedules a re-render; `processThemeInput` returns; `handleNewSession`
+   continues.
+4. React flushes the batched state update → re-renders `ThemedApp` → new
+   `activeTheme` prop flows to `App`.
+5. `componentDidUpdate` fires for the new render — `skipNextThemeUpdate` is still
+   `true`.
+6. Flag is consumed and cleared.
+
+#### Why this does not regress MPA (failure mode analysis)
+
+| Old failure mode (PR #10972) | How this proposal avoids it |
+|---|---|
+| Fired on `processThemeInput` (preset → custom name change) | `skipNextThemeUpdate` suppresses the resulting `componentDidUpdate` |
+| Fired on page navigation (new `NewSession` → theme reapplication) | Page nav → `handleNewSession` → `processThemeInput` → flag set → suppressed |
+| Fired on reconnection | Same: reconnection → `handleNewSession` → `processThemeInput` → suppressed |
+| Used theme NAME comparison (fragile, changes for internal reasons) | Uses resolved PREFERENCE (luminance "light"/"dark") — only changes on actual appearance flip |
+| `sendRerunBackMsg()` without page context lost current page | `sendUpdateWidgetsMessage(undefined)` → `sendRerunBackMsg` uses `this.state.currentPageScriptHash` |
+| Infinite loops (theme change → rerun → NewSession → theme change → ...) | `lastSentThemePreference` updated after send; next `componentDidUpdate` sees no diff and short-circuits. Plus `processThemeInput` sets skip flag. |
+
+#### Scenario walkthrough
+
+| Scenario | Flow | Result |
+|----------|------|--------|
+| Initial load, custom dark theme | `processThemeInput` applies dark → `skip=true` → `componentDidUpdate` sees light→dark but skip is true → consumed, no rerun | Correct |
+| User toggles Dark in menu | `setAndSendTheme` → React re-renders → `componentDidUpdate` sees light→dark, `skip=false` → `maybeRerunForThemeChange()` fires | Correct |
+| MPA page navigation | `handleNewSession` → `processThemeInput` → `skip=true` → suppressed | Correct |
+| Host sends dark theme | `handleThemeMessage` → `setTheme()` → React re-renders → `componentDidUpdate` fires → rerun | Correct |
+| OS dark↔light while System selected | `updateAutoTheme` in `useThemeManager` → prop changes → `componentDidUpdate` fires → rerun | Correct |
+| Reconnection | Same path as initial load through `handleNewSession` → suppressed | Correct |
+| Script already running when theme changes | `maybeRerunForThemeChange` sees `RUNNING` → returns without firing | Correct |
+
+#### No changes needed to
+
+- `setAndSendTheme` (signature unchanged)
+- `handleThemeMessage` (no modification)
+- `ThemeContext` or `ThemeManager` interface
+- `useThemeManager` hook (the `matchMedia` listener stays as-is)
+- The `setTheme` prop passed through context (stays as `this.setAndSendTheme`)
+
+#### Key files
+
+- `frontend/app/src/App.tsx` — all implementation changes
+- `frontend/lib/src/theme/getColors.ts` — `hasLightBackgroundColor` (existing, used
+  for preference comparison)
+- `frontend/app/src/util/useThemeManager.ts` — contains `matchMedia` listener (no
+  changes; theme changes flow through props)
 
 ### 5. Docs
 
@@ -256,9 +334,11 @@ chosen product meaning. Drop stale first-load / settings caveats; keep CSS-overr
 
 - Preference serialization (System→OS, Light, Dark, host query); not from remapped
   custom theme name.
-- `maybeRerunForThemePreference`: allowlisted sources only; no-op when preference
-  unchanged; **no** rerun from `processThemeInput` / `handleNewSession`; page hash /
-  name / query from current state.
+- `componentDidUpdate` preference-diff: fires rerun on light↔dark flip; suppressed
+  when `skipNextThemeUpdate` is set; no-op when `lastSentThemePreference` matches;
+  no-op when script is running.
+- `processThemeInput` sets `skipNextThemeUpdate` — verify that `componentDidUpdate`
+  after `handleNewSession` / page navigation does NOT trigger rerun.
 - Regression: theme **name** change alone must not call `sendRerunBackMsg`.
 
 **E2E** (`make run-e2e-test`)
@@ -306,7 +386,7 @@ BE work.
 
 | Risk | Mitigation |
 |------|------------|
-| Auto-rerun reintroduces #11797 | Source allowlist + preference-diff + sync page hash; MPA E2E required |
+| Auto-rerun reintroduces #11797 | `skipNextThemeUpdate` suppresses `processThemeInput` renders; preference-diff (not name); `sendUpdateWidgetsMessage` preserves page context; MPA E2E required |
 | BE luminance disagrees with FE | Prefer `base`; hex-only luminance; fall back to preference |
 | Preference tracking drifts after `processThemeInput` | Track explicit `ThemeSelection`, never reverse from theme name |
 | Host/SiS theme messages ignored | Explicit `handleThemeMessage` path; re-enable hostframe E2E |
