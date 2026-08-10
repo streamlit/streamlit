@@ -75,7 +75,8 @@ three different things (current docs describe **C** — "inferred from the backg
 | B. Theme identity          | "Which application theme is active?" | The theme name/variant: Default Light, Default Dark, Custom, Custom Light, Custom Dark  |
 | C. Visual appearance       | "Does the app look light or dark?"  | `base` / luminance of the rendered background                                           |
 
-Where they diverge in practice (see behavior matrix above): A/B/C agree for presets and well-authored dual themes;
+Where they diverge in practice (see the "Expected `type` under Option C" behavior matrix in the Proposal section
+below): A/B/C agree for presets and well-authored dual themes;
 they disagree for a single custom theme whose appearance differs from OS preference, and for pathological section
 colors.
 

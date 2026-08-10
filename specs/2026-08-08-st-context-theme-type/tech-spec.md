@@ -153,8 +153,10 @@ if client_state.HasField("context_info"):
 Applies to **full-script and fragment** reruns alike.
 
 If product picks **Option A**, this collapses to
-`color_scheme = theme_preference`. If **Option B**, return the selected section’s
-nominal variant without luminance.
+`color_scheme = theme_preference`. If **Option B** (theme identity), return a
+descriptive string like `"Default Light"`, `"Custom"`, or `"Custom Dark"` instead of
+a binary light/dark classification — requires changing the return type and downstream
+`st.context.theme.type` contract.
 
 ### 3. Frontend: send preference on every rerun
 
@@ -192,7 +194,7 @@ the same observable: `props.theme.activeTheme` changes its visual appearance in
 `App.tsx`. A single `componentDidUpdate` check handles all three. The only path to
 suppress is `processThemeInput` (called during `handleNewSession`).
 
-#### Implementation (4 touch points in `App.tsx`)
+#### Implementation
 
 **1. Two instance fields:**
 
@@ -351,6 +353,7 @@ chosen product meaning. Drop stale first-load / settings caveats; keep CSS-overr
   [`test_st_context_theme_respects_dark_theme_message`](../../e2e_playwright/hostframe_app_test.py)
   (skipped since #11870). No new CI host environment — this is an existing Playwright
   hostframe suite; unskip only.
+
 ## Alternatives considered
 
 ### A. Fix the auto-rerun MPA-safely (no new proto field)
@@ -395,6 +398,7 @@ BE work.
 ## Out of scope
 
 - Full theme config on `st.context.theme` ([#11536](https://github.com/streamlit/streamlit/issues/11536)).
+- Programmatic theme setters at runtime ([#14172](https://github.com/streamlit/streamlit/issues/14172)).
 - Full Emotion theme build on the backend.
 - Non-hex CSS color parsing for luminance.
 - CSS-injected backgrounds affecting `type`.
