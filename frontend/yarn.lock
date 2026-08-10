@@ -2214,9 +2214,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.25":
-  version: 1.31.25
-  resolution: "@microlink/react-json-view@npm:1.31.25"
+"@microlink/react-json-view@npm:^1.31.26":
+  version: 1.31.26
+  resolution: "@microlink/react-json-view@npm:1.31.26"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2224,7 +2224,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/27fa08d48bd901ac947c85c8566893ed0f6ff8c4c9850f3126f41597f8eef18d6439760391f8b07820df77a91cbe60b7c5989e84e5a6166c0bd3326324d9b7db
+  checksum: 10c0/63624b36e70cd86b4cc16f7aa3ed0768cc12d4db1ff35f507b81a98cf81c57ee5cbc78d7f5fc6aa19a100b34860626945210805d9bbb90c284ec457ac0b74655
   languageName: node
   linkType: hard
 
@@ -3532,7 +3532,7 @@ __metadata:
     "@loaders.gl/core": "npm:^4.4.4"
     "@loaders.gl/csv": "npm:^4.4.4"
     "@loaders.gl/gltf": "npm:^4.4.4"
-    "@microlink/react-json-view": "npm:^1.31.25"
+    "@microlink/react-json-view": "npm:^1.31.26"
     "@sindresorhus/slugify": "npm:^3.0.0"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
@@ -8432,14 +8432,14 @@ __metadata:
   linkType: hard
 
 "dompurify@npm:^3.2.4":
-  version: 3.4.12
-  resolution: "dompurify@npm:3.4.12"
+  version: 3.4.13
+  resolution: "dompurify@npm:3.4.13"
   dependencies:
     "@types/trusted-types": "npm:^2.0.7"
   dependenciesMeta:
     "@types/trusted-types":
       optional: true
-  checksum: 10c0/127a13817353d4e20e75a991a9022a04c3af12af7479f68e2b8bee6dbc7330a96edfb8f4ebff96f4f0f24cd43e8dbba46214131f510c3aa87a843bd8b610d0ab
+  checksum: 10c0/9c2a1a71e1a1d8b77953db7a39ffc935ef4ed4f10fe40770232128c2cbfd4c3dc677d3d7bae51eb24cc52d9ff3548612dc540ecb4343e89b26e809d2be2e0cfe
   languageName: node
   linkType: hard
 
@@ -10182,10 +10182,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^17.8.0":
-  version: 17.8.0
-  resolution: "globals@npm:17.8.0"
-  checksum: 10c0/e31b36cef3befd446487674dc6ca7b8f8e62a3b76aadd975dbf80ffa732366b3ac58df8941999eb6b1406d97480103711db85d2a49c955da47ff5ec688bee9b5
+"globals@npm:^17.9.0":
+  version: 17.9.0
+  resolution: "globals@npm:17.9.0"
+  checksum: 10c0/776116bffb916e462d548c26a44c9a5d8f4e551935a883991e9f5d68cbcb21b63e4c688e36bbc564f97d3025e304d8b2bb0a611ecf944825aeee164898dcfbdd
   languageName: node
   linkType: hard
 
@@ -16621,7 +16621,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.1.0"
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-testing-library: "npm:^7.16.2"
-    globals: "npm:^17.8.0"
+    globals: "npm:^17.9.0"
     jiti: "npm:^2.7.0"
     knip: "npm:^6.31.0"
     oxfmt: "npm:^0.61.0"
