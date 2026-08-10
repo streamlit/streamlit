@@ -55,9 +55,12 @@ jobs:
             # Use a unique delimiter so a bare "EOF" line in uv's log cannot
             # close the multiline GITHUB_OUTPUT block early.
             echo "upgrade_log<<EOF_UPGRADE_LOG"
-            # Emit as a markdown bullet list for the PR body / summary.
+            # Emit Update/Add/Remove lines as markdown bullets for the PR
+            # body / summary; skip resolution chatter like "Resolved N packages".
             while IFS= read -r line || [[ -n "$line" ]]; do
               [[ -z "$line" ]] && continue
+              # Match Updated/Added/Removed (and Update/Add/Remove) prefixes.
+              [[ "$line" =~ ^(Update|Add|Remove) ]] || continue
               echo "- ${line}"
             done < "$upgrade_log"
             echo "EOF_UPGRADE_LOG"
