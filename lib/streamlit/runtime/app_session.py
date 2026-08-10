@@ -974,11 +974,11 @@ class AppSession:
     def _create_exception_message(self, e: BaseException) -> ForwardMsg:
         """Create and return an Exception ForwardMsg."""
         msg = ForwardMsg()
-        # The is_uncaught_app_exception flag applies the client.showErrorDetails
+        # The apply_show_error_details flag applies the client.showErrorDetails
         # redaction. Without this flag, the session sends the internal message,
         # type, and stack trace of the error to the browser.
         exception_utils.marshall(
-            msg.delta.new_element.exception, e, is_uncaught_app_exception=True
+            msg.delta.new_element.exception, e, apply_show_error_details=True
         )
         return msg
 
