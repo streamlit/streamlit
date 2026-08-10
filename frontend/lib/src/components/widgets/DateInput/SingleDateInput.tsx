@@ -98,8 +98,9 @@ interface SingleDateInputProps {
    * committing the value to widget state. Used for real-time error
    * feedback during segment editing. */
   onValidate: (date: CalendarDate | null) => void
-  /** Called when close requires parent-level revert logic (segments left in
-   * placeholder state after an edit). Parent resets to default value. */
+  /** Called when close requires parent-level cleanup (segments left in
+   * placeholder state after an edit). Parent clears the validation error;
+   * the display revert is handled locally. */
   onClose: (hasPlaceholderSegments: boolean) => void
   /** When inside a form, writes the pending value to WidgetStateManager
    * synchronously on blur so a concurrent form submit reads the correct
@@ -364,6 +365,9 @@ function SingleDateInput({
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
+      // Pointer-only: active mode enters via rAF, so handleFocus can't reset
+      // it without breaking Tab cycling inside the calendar.
+      setIsCalendarActive(false)
       handleFocus()
     },
     [handleFocus]

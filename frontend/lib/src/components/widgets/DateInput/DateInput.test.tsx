@@ -2066,6 +2066,60 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     })
   })
 
+  it("clicking back into the field exits active mode", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+    const { year, day } = getSingleDateSegments(
+      screen.getByTestId("stDateInput")
+    )
+
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    // Let pending rAF focus moves land before clicking.
+    for (let i = 0; i < 3; i++) {
+      await act(
+        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+      )
+    }
+
+    await user.click(day)
+    // Let any rAF re-steal attempt land.
+    for (let i = 0; i < 3; i++) {
+      await act(
+        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+      )
+    }
+    expect(day).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).not.toHaveAttribute(
+      "role",
+      "dialog"
+    )
+
+    // Close by tabbing out, then re-open by click: must stay passive.
+    await user.tab()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    const refreshed = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(refreshed.day)
+    await screen.findByTestId("stDateInputCalendar")
+    for (let i = 0; i < 3; i++) {
+      await act(
+        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+      )
+    }
+    expect(refreshed.day).toHaveFocus()
+  })
+
   it("has aria-keyshortcuts on wrapper", () => {
     render(<DateInput {...getProps()} />)
     expect(screen.getByTestId("stDateInputField")).toHaveAttribute(
