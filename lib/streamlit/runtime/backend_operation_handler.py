@@ -50,8 +50,9 @@ _LOGGER: Final = get_logger(__name__)
 _REFUSED_REASON_PREFIX: Final[str] = "refused:"
 
 # Prefixes marking an ``error_reason`` as an *unclassified* exception: the reason
-# vocabulary did not cover it, so the suffix is the exception's class name instead of
-# a vocabulary member. Two prefixes because the distinction is diagnostic:
+# vocabulary did not cover it, so the suffix names the exception's class and the
+# Streamlit function it was raised from (``unexpected_ValueError_in_install_skills``)
+# instead of a vocabulary member. Two prefixes because the distinction is diagnostic:
 #   - ``unexpected_`` — the operation ran and raised. The handler's own vocabulary
 #     (``InstallError.reason``, errno classification) did not apply.
 #   - ``unhandled_``  — the exception escaped the handler entirely and was caught by
@@ -65,23 +66,58 @@ _REFUSED_REASON_PREFIX: Final[str] = "refused:"
 _UNEXPECTED_REASON_PREFIX: Final[str] = "unexpected_"
 _UNHANDLED_REASON_PREFIX: Final[str] = "unhandled_"
 
-# Cap on the class-name portion of the reasons above. Exception class names are Python
-# identifiers in practice, but a dynamically built class can carry anything, and the
-# reason becomes a telemetry label - so bound the length and strip everything outside
-# ASCII alphanumerics rather than trusting ``__name__``.
-_MAX_EXCEPTION_NAME_LEN: Final[int] = 40
+# Cap on each identifier in the reasons above (exception class, function name).
+# Both are Python identifiers in practice, but a dynamically built class can carry
+# anything and the reason becomes a telemetry label - so bound the length and keep only
+# identifier characters rather than trusting ``__name__``. Dropping ``:`` is the
+# load-bearing part: downstream reads the reason with ``split_part(label, ':', 2)``.
+_MAX_REASON_IDENT_LEN: Final[int] = 40
+
+
+def _reason_ident(value: str, fallback: str) -> str:
+    """Bound one identifier destined for a telemetry label."""
+    kept = "".join(c for c in value if c.isascii() and (c.isalnum() or c == "_"))
+    return kept[:_MAX_REASON_IDENT_LEN] or fallback
+
+
+def _raising_streamlit_function(ex: BaseException) -> str | None:
+    """Name the deepest frame in Streamlit's own code, or ``None`` if there is none.
+
+    The traceback is the only thing in an ``except`` block that says *where* a failure
+    happened, and it is logged but never leaves the machine - so without this an
+    unclassified failure reports its type and nothing about its location.
+
+    The deepest *Streamlit* frame is the right granularity. If the raise came from
+    inside a stdlib call, this names the Streamlit function that made the call, which
+    is the actionable part. It also means a frame in the user's own app code can never
+    be named here: only modules under the ``streamlit`` package qualify.
+
+    The line number is deliberately excluded. It moves with every edit to the file,
+    which would scatter one bug across several labels as releases go out.
+    """
+    name: str | None = None
+    tb = ex.__traceback__
+    while tb is not None:
+        module = tb.tb_frame.f_globals.get("__name__", "")
+        if isinstance(module, str) and (
+            module == "streamlit" or module.startswith("streamlit.")
+        ):
+            name = tb.tb_frame.f_code.co_name
+        tb = tb.tb_next
+    return name
 
 
 def _exception_reason(prefix: str, ex: BaseException) -> str:
-    """Build a bounded ``error_reason`` naming the exception's class.
+    """Build a bounded ``error_reason`` naming the exception's class and origin.
 
-    The class name is the whole point: without it every unclassified failure
-    collapses into one opaque bucket that no query can take apart. It is a code
-    identifier, not user data, so it carries no paths and no PII - unlike the
-    exception's *message*, which is why that is never used here.
+    Both halves are code identifiers, not user data, so neither carries a path nor
+    any PII - unlike the exception's *message*, which is why that is never used here.
+    The class name stays directly after the prefix so a ``unexpected_ValueError%``
+    prefix match keeps working whether or not a function was resolved.
     """
-    name = "".join(c for c in type(ex).__name__ if c.isascii() and c.isalnum())
-    return f"{prefix}{name[:_MAX_EXCEPTION_NAME_LEN] or 'Exception'}"
+    reason = f"{prefix}{_reason_ident(type(ex).__name__, 'Exception')}"
+    func = _raising_streamlit_function(ex)
+    return f"{reason}_in_{_reason_ident(func, 'unknown')}" if func else reason
 
 
 def connection_locality(session_id: str) -> str:
