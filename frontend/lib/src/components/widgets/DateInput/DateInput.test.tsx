@@ -638,6 +638,35 @@ describe("DateInput", () => {
     )
   })
 
+  it("commits pending value on blur outside a form (calendar-select → adjust → blur)", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+
+    // Type a new date — edits are buffered locally in displayValue.
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+
+    // Before blur: no widget write yet.
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    // Blur commits the buffered value even outside a form.
+    await user.tab()
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [newDateWire],
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("non-clearable widget reverts to committed value on blur after clearing all segments", async () => {
     const user = userEvent.setup()
     // Non-empty default makes the widget non-clearable. Clearing all
@@ -2678,7 +2707,41 @@ describe("DateInput range-mode keyboard navigation", () => {
   })
 })
 
-describe("DateInput range-mode form commit-on-blur", () => {
+describe("DateInput range-mode commit-on-blur", () => {
+  it("commits pending range value on blur outside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+
+    await typeIntoSegment(user, start.year, "2024")
+    await typeIntoSegment(user, start.month, "03")
+    await typeIntoSegment(user, start.day, "15")
+
+    // Before blur: segment edits are buffered — no widget write yet.
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    // Click outside the widget to trigger blur.
+    await user.click(document.body)
+
+    // Sorted: typed start (2024-03-15) > existing end (2019-07-08), so
+    // the normalization layer swaps them.
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["2019-07-08", "2024-03-15"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("commits pending range value on blur when inside a form", async () => {
     const user = userEvent.setup()
     const props = getProps({

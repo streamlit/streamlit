@@ -295,7 +295,9 @@ export function parsePartialSegmentPaste(
   return { segmentType, value: Number(text.trim()) }
 }
 
-/** Whether `value` is in-range for `segmentType` (month 1-12, day 1-31). */
+/** Whether `value` is in-range for `segmentType` (month 1-12, day 1-31).
+ * Day uses a universal 1-31 range; month-specific limits are enforced
+ * downstream by `CalendarDate`'s constructor which rejects invalid dates. */
 export function isValidSegmentValue(
   segmentType: DateSegmentType,
   value: number

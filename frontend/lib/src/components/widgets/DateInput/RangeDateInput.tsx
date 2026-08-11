@@ -773,21 +773,19 @@ function RangeDateInput({
     [makeHandlePaste, displayEnd]
   )
 
-  // Synchronous commit on blur for form-submit races.
-  // A field is "partially typed" when it has a MIX of filled and placeholder
-  // segments. Fully cleared (all placeholders → []) and filled start with
-  // empty end (→ [start]) are valid committable states.
+  // Commit buffered edits when focus leaves the field (matches TimeInput).
+  // Also writes to WidgetStateManager synchronously when inside a form so a
+  // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
-      if (!formCommit) return
       if (isCalendarActiveRef.current) return
       if (hasPartiallyTypedField(triggerRef.current)) return
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
-      if (!rangeEqual(pending, committed)) {
-        formCommit(pending)
-      }
+      if (rangeEqual(pending, committed)) return
+      onChangeRef.current(pending)
+      formCommit?.(pending)
     },
     [formCommit, startValue, endValue]
   )

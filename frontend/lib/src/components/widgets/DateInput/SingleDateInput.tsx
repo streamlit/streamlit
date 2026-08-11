@@ -197,6 +197,8 @@ function SingleDateInput({
   const [isOpen, setIsOpen] = useState(false)
 
   const wasOpenRef = useRef(isOpen)
+  // `value` is in deps so the effect re-evaluates when the committed value
+  // changes externally (session_state, form clear), not just on isOpen toggle.
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
       if (skipCloseCommitRef.current) {
@@ -510,13 +512,12 @@ function SingleDateInput({
     [restoreFocusToField]
   )
 
-  // Synchronous commit on blur for form-submit races: clicking a form's
-  // Submit button causes blur before effects fire, so the pending value
-  // must be written to WidgetStateManager synchronously.
+  // Commit buffered edits when focus leaves the field (matches TimeInput).
+  // Also writes to WidgetStateManager synchronously when inside a form so a
+  // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
-      if (!formCommit) return
       if (isCalendarActiveRef.current) return
       const segments = triggerRef.current?.querySelectorAll(
         '[role="spinbutton"]'
@@ -532,9 +533,9 @@ function SingleDateInput({
         if (isFullyCleared && !clearable) return
       }
       const pending = displayValueRef.current
-      if (!datesEqual(pending, value)) {
-        formCommit(pending)
-      }
+      if (datesEqual(pending, value)) return
+      onChangeRef.current(pending)
+      formCommit?.(pending)
     },
     [formCommit, value, clearable]
   )

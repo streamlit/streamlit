@@ -70,8 +70,8 @@ function DateInput({
 }: Props): ReactElement {
   const isInSidebar = useContext(IsSidebarContext)
   const [error, setError] = useState<string | null>(null)
-  // Incremented on form clear to signal SingleDateInput to reset its local
-  // displayValue (which may have diverged from widget state due to buffering).
+  // Incremented on form clear to signal child components to reset local
+  // display state (which may have diverged from widget state due to buffering).
   const [formResetKey, setFormResetKey] = useState(0)
 
   const resetError = useCallback(() => {
@@ -253,9 +253,9 @@ function DateInput({
     [resetError]
   )
 
-  // Synchronous commit for form-submit races: when inside a form, clicking
-  // Submit causes blur before effects fire, so widget state must be written
-  // synchronously. Matches TimeInput's handleBlur dual-write pattern.
+  // Synchronous WidgetStateManager write for form-submit races: clicking a
+  // form's Submit button causes blur before effects fire. The child's blur
+  // handler calls onChange (async state update) + formCommit (sync WM write).
   const inForm = isInForm({ formId: element.formId })
   const handleFormCommit = useCallback(
     (date: CalendarDate | null): void => {
