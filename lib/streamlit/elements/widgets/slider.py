@@ -153,33 +153,37 @@ def _date_to_datetime(date_: date) -> datetime:
 
 
 def _window_around(anchor: date, window: timedelta) -> tuple[Any, Any]:
-    """Return ``anchor`` -/+ ``window``, clamped to what its type can represent.
+    """Return ``anchor`` -/+ ``window``, kept inside the representable range.
 
     This feeds the default ``min_value``/``max_value``, which are computed even when
-    the caller passed both explicitly, so the arithmetic has to hold for any
-    ``anchor``. Within ``window`` of the type's limit it would otherwise raise
-    ``OverflowError``.
+    the caller passed both explicitly, so it has to hold for any ``anchor``.
 
-    ``anchor`` may be a ``date`` or a ``datetime`` -- dates are not converted until
-    later -- so the limits are taken from the matching type, and only ``datetime``
-    carries the ``tzinfo`` that has to be preserved.
+    Two things constrain the result. The arithmetic itself overflows within ``window``
+    of ``date``/``datetime``'s own limits. And a window that merely avoids overflow can
+    still land outside the frontend's representable range, which would reject a bound
+    the caller never set -- including for an ``anchor`` this module's own error message
+    recommends.
+
+    The clamp never moves a bound past ``anchor``, so an ``anchor`` that is itself
+    unrepresentable still reaches the range check below and is reported as the
+    out-of-range value it is, rather than as an inverted window.
     """
     floor: date
     ceiling: date
     if isinstance(anchor, datetime):
-        floor = datetime.min.replace(tzinfo=anchor.tzinfo)
-        ceiling = datetime.max.replace(tzinfo=anchor.tzinfo)
+        floor = datetime.combine(_MIN_SAFE_DAY, time.min, tzinfo=anchor.tzinfo)
+        ceiling = datetime.combine(_MAX_SAFE_DAY, time.max, tzinfo=anchor.tzinfo)
     else:
-        floor, ceiling = date.min, date.max
+        floor, ceiling = _MIN_SAFE_DAY, _MAX_SAFE_DAY
 
     try:
-        low = anchor - window
+        low = min(anchor, max(anchor - window, floor))
     except OverflowError:
-        low = floor
+        low = anchor
     try:
-        high = anchor + window
+        high = max(anchor, min(anchor + window, ceiling))
     except OverflowError:
-        high = ceiling
+        high = anchor
     return low, high
 
 

@@ -303,6 +303,28 @@ class SliderTest(DeltaGeneratorTestCase):
         assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
         assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
 
+    @parameterized.expand(
+        [
+            ("min_as_date", lambda: _MIN_SAFE_DAY),
+            ("max_as_date", lambda: _MAX_SAFE_DAY),
+            ("min_as_datetime", lambda: datetime.combine(_MIN_SAFE_DAY, time(12))),
+            ("max_as_datetime", lambda: datetime.combine(_MAX_SAFE_DAY, time(12))),
+        ]
+    )
+    def test_advertised_bound_works_without_explicit_bounds(self, _name, make_value):
+        """A bare ``value=`` at either advertised bound is accepted.
+
+        ``min_value``/``max_value`` default to ``value`` +/- 14 days, which at the edge
+        of the representable range lands outside it. Without clamping, following the
+        error message's own advice raised a second error naming a bound the caller
+        never passed.
+        """
+        st.slider("Label", value=make_value())
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
     def test_advertised_range_is_the_widest_whole_day_span(self):
         """One day beyond either advertised bound is rejected by the range check.
 
