@@ -116,6 +116,8 @@ DataTypes: TypeAlias = Union[
 class DataEditorState(ReadOnlyAttributeDictionary):
     """The schema for the data editor state.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     The state is stored in a read-only dictionary-like object that
     supports both key and attribute notation. Top-level assignment and
     nested dict mutation raise ``TypeError``. List fields (``added_rows``,
@@ -956,6 +958,10 @@ class DataEditorMixin:
             ``st.session_state[key]`` (read-only). For more details, see
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            The value in Session State is a ``DataEditorState`` object that
+            describes the pending edits. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.

@@ -97,6 +97,8 @@ _ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
 class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     This dataclass contains the user's input text, any files uploaded, and optionally
     an audio recording. It provides a dict-like interface for accessing and modifying
     its attributes.
@@ -801,7 +803,7 @@ class ChatMixin:
 
         Returns
         -------
-        None, str, or dict-like
+        None, str, or ChatInputValue
             The user's submission. This is one of the following types:
 
             - ``None``: If the user didn't submit a message, file, or audio
@@ -809,12 +811,16 @@ class ChatMixin:
             - A string: When the widget isn't configured to accept files or
               audio recordings, and the user submitted a message in the last
               rerun, the widget returns the user's message as a string.
-            - A dict-like object: When the widget is configured to accept files
-              or audio recordings, and the user submitted any content in the
-              last rerun, the widget returns a dict-like object.
+            - A ``ChatInputValue`` object: When the widget is configured to
+              accept files or audio recordings, and the user submitted any
+              content in the last rerun, the widget returns a dictionary-like
+              object.
               The object always includes the ``text`` attribute, and
               optionally includes ``files`` and/or ``audio`` attributes depending
               on the ``accept_file`` and ``accept_audio`` parameters.
+
+            To use ``ChatInputValue`` or ``UploadedFile`` in an annotation,
+            import them from ``streamlit.typing``.
 
             When the widget is configured to accept files or audio recordings,
             and the user submitted content in the last rerun, you can access

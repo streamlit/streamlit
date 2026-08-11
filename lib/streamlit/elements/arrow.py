@@ -246,6 +246,8 @@ class DataframeState(ReadOnlyAttributeDictionary):
     """
     The schema for the dataframe event state.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states can be programmatically set
     through session state by assigning a dictionary with the same schema to the
@@ -923,12 +925,13 @@ class ArrowMixin:
 
         Returns
         -------
-        element or dict
+        element or DataframeState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element. Otherwise, this
-            command returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``DataframeState`` class.
+            command returns a ``DataframeState`` object. This object is
+            dictionary-like and supports both key and attribute notation. To
+            use this type in an annotation, import it from
+            ``streamlit.typing``.
 
         Examples
         --------
