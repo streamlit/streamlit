@@ -325,6 +325,21 @@ class SliderTest(DeltaGeneratorTestCase):
         assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
         assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
 
+    @parameterized.expand([("lower", _MIN_SAFE_DAY), ("upper", _MAX_SAFE_DAY)])
+    def test_advertised_bound_works_for_aware_datetimes(self, _name, day):
+        """The clamped default window keeps the ``tzinfo`` of an aware ``value``.
+
+        ``_window_around`` rebuilds the limits it clamps to, so an aware ``anchor``
+        would raise on the comparison if they came back naive.
+        """
+        value = datetime.combine(day, time(12), tzinfo=self.PST)
+
+        st.slider("Label", value=value)
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
     def test_advertised_range_is_the_widest_whole_day_span(self):
         """One day beyond either advertised bound is rejected by the range check.
 
