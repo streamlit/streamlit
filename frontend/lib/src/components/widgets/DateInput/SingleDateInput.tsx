@@ -98,8 +98,9 @@ interface SingleDateInputProps {
    * committing the value to widget state. Used for real-time error
    * feedback during segment editing. */
   onValidate: (date: CalendarDate | null) => void
-  /** Called when close requires parent-level revert logic (segments left in
-   * placeholder state after an edit). Parent resets to default value. */
+  /** Called when close requires parent-level cleanup (segments left in
+   * placeholder state after an edit). Parent clears the validation error;
+   * the display revert is handled locally. */
   onClose: (hasPlaceholderSegments: boolean) => void
   /** When inside a form, writes the pending value to WidgetStateManager
    * synchronously on blur so a concurrent form submit reads the correct
@@ -133,16 +134,26 @@ function SingleDateInput({
   const theme = useEmotionTheme()
   const id = useId()
   const errorId = `${id}-error`
+  const popoverId = `${id}-calendar`
+  const popoverDescId = `${id}-calendar-desc`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // Guards against `handleFocus` reopening the popover it's in the middle
-  // of closing — see `focusLastFieldSegment` below.
+  // of closing — see `restoreFocusToField` below.
   const isRestoringFocusRef = useRef(false)
   // When an action (calendar click, paste, clear) already committed the value
   // via onChange, the close-detection effect should skip its own commit to
   // avoid a redundant write + backend rerun.
   const skipCloseCommitRef = useRef(false)
+
+  // Dual-mode state: passive (visual aid) vs active (keyboard-modal).
+  const [isCalendarActive, setIsCalendarActive] = useState(false)
+  const isCalendarActiveRef = useRef(false)
+  isCalendarActiveRef.current = isCalendarActive
+  // Tracks which segment had focus before Alt+ArrowDown entered active mode.
+  const activeOriginRef = useRef<HTMLElement | null>(null)
+  const popoverRef = useRef<HTMLDivElement | null>(null)
 
   // --- Two-layer state (matches TimeInput/NumberInput pattern) ---
   // `displayValue` tracks what the field shows during editing.
@@ -191,25 +202,52 @@ function SingleDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        const pending = displayValueRef.current
-        const hasPlaceholders =
-          triggerRef.current?.querySelector('[data-placeholder="true"]') !==
-          null
+        const segments = triggerRef.current?.querySelectorAll(
+          '[role="spinbutton"]'
+        )
+        const placeholders = triggerRef.current?.querySelectorAll(
+          '[role="spinbutton"][data-placeholder="true"]'
+        )
+        const isPartiallyTyped =
+          segments &&
+          placeholders &&
+          placeholders.length > 0 &&
+          placeholders.length < segments.length
+        const allCleared =
+          segments &&
+          segments.length > 0 &&
+          placeholders?.length === segments.length
 
-        if (hasPlaceholders && !datesEqual(pending, value)) {
-          // User left segments incomplete — revert display to the committed
-          // value directly. We can't go through the parent round-trip because
-          // the widget state might already be at default (segment edits were
-          // buffered), making the parent's revert a no-op.
+        if (isPartiallyTyped || (allCleared && !clearable)) {
+          // User left segments incomplete, or fully cleared a non-clearable
+          // widget — revert display to the committed value directly. We can't
+          // go through the parent round-trip because the widget state might
+          // already be at default (segment edits were buffered), making the
+          // parent's revert a no-op.
           setDisplayValue(value)
           onCloseRef.current(true /* hasPlaceholderSegments */)
-        } else if (!datesEqual(pending, value)) {
-          onChangeRef.current(pending)
+        } else {
+          const pending = allCleared ? null : displayValueRef.current
+          if (!datesEqual(pending, value)) {
+            onChangeRef.current(pending)
+          }
         }
       }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, value])
+  }, [isOpen, value, clearable])
+
+  // When entering active mode, move focus to the focused calendar cell.
+  useEffect(() => {
+    if (!isCalendarActive || !isOpen) return
+    const rafId = requestAnimationFrame(() => {
+      const cell = popoverRef.current?.querySelector<HTMLElement>(
+        '[role="grid"] [tabindex="0"]'
+      )
+      cell?.focus()
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [isCalendarActive, isOpen])
 
   // In the sidebar, flip/shift are bounded to the viewport
   // (document.documentElement) rather than the sidebar's overflow:auto
@@ -234,36 +272,79 @@ function SingleDateInput({
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
-  // isRestoringFocusRef prevents handleFocus from reopening the popover
-  // in response to this programmatic focus. Reset via rAF to guarantee
-  // the synthetic focus event has been processed before re-enabling.
-  const focusLastFieldSegment = useCallback((): void => {
-    const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
-      '[role="spinbutton"]'
-    )
-    const lastSegment = segments?.[segments.length - 1]
+  // Restores focus to the date field after the calendar closes.
+  // In active mode: returns to the segment that was focused before
+  // Alt+ArrowDown. In passive mode: returns to the last segment.
+  const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (lastSegment) {
-      lastSegment.focus()
+    if (isCalendarActiveRef.current && activeOriginRef.current) {
+      activeOriginRef.current.focus()
     } else {
-      triggerRef.current?.focus()
+      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
+        '[role="spinbutton"]'
+      )
+      const lastSegment = segments?.[segments.length - 1]
+      if (lastSegment) {
+        lastSegment.focus()
+      } else {
+        triggerRef.current?.focus()
+      }
     }
     requestAnimationFrame(() => {
       isRestoringFocusRef.current = false
     })
   }, [])
 
-  const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
-    isOpen,
-    onClose: () => setIsOpen(false),
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
-    restoreFocusFn: focusLastFieldSegment,
-    // Exclude the month/year picker popover so Escape closes it first,
-    // not the whole calendar.
-    excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
-    excludeEscape: true,
-  })
+  const { setFloatingRef: setDismissalFloatingRef, setReferenceRef } =
+    useOverlayDismissal({
+      isOpen,
+      onClose: () => {
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        // Synchronous form commit: outside-click dismiss can race form submit
+        // (the close-commit effect fires after paint). Mirrors handleBlur.
+        if (formCommit) {
+          const segments = triggerRef.current?.querySelectorAll(
+            '[role="spinbutton"]'
+          )
+          const placeholders = triggerRef.current?.querySelectorAll(
+            '[role="spinbutton"][data-placeholder="true"]'
+          )
+          const isPartiallyTyped =
+            segments &&
+            placeholders &&
+            placeholders.length > 0 &&
+            placeholders.length < segments.length
+          const isFullyCleared =
+            segments &&
+            segments.length > 0 &&
+            placeholders?.length === segments.length
+          if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+            // Will revert on next render — don't commit stale/invalid state.
+          } else {
+            const pending = isFullyCleared ? null : displayValueRef.current
+            if (!datesEqual(pending, value)) {
+              formCommit(pending)
+            }
+          }
+        }
+      },
+      floatingSetFn: refs.setFloating,
+      referenceSetFn: refs.setReference,
+      restoreFocusFn: restoreFocusToField,
+      // Exclude the month/year picker popover so Escape closes it first,
+      // not the whole calendar.
+      excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
+      excludeEscape: true,
+    })
+
+  const setFloatingRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      popoverRef.current = node
+      setDismissalFloatingRef(node)
+    },
+    [setDismissalFloatingRef]
+  )
 
   const setTriggerRef = useCallback(
     (node: HTMLDivElement | null): void => {
@@ -293,9 +374,10 @@ function SingleDateInput({
       onChange(date)
       skipCloseCommitRef.current = true
       setIsOpen(false)
-      focusLastFieldSegment()
+      restoreFocusToField()
+      setIsCalendarActive(false)
     },
-    [onChange, focusLastFieldSegment]
+    [onChange, restoreFocusToField]
   )
 
   // Wired to onFocus and onClickCapture: clicking an already-focused segment
@@ -310,6 +392,9 @@ function SingleDateInput({
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
+      // Pointer-only: active mode enters via rAF, so handleFocus can't reset
+      // it without breaking Tab cycling inside the calendar.
+      setIsCalendarActive(false)
       handleFocus()
     },
     [handleFocus]
@@ -354,11 +439,18 @@ function SingleDateInput({
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Tab from edge segments closes the popover and lets focus leave the
-  // widget naturally (Ant Design pattern: calendar is a visual aid for
-  // pointer users; keyboard users type dates directly in the segments).
+  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
+  // closes the passive popover and lets focus leave the widget naturally.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
+      if (e.altKey && e.key === "ArrowDown") {
+        e.preventDefault()
+        activeOriginRef.current = e.target as HTMLElement
+        if (!isOpen) setIsOpen(true)
+        setIsCalendarActive(true)
+        return
+      }
+
       if (e.key !== "Tab" || !isOpen) return
       const wrapper = triggerRef.current
       if (!wrapper) return
@@ -375,17 +467,47 @@ function SingleDateInput({
     [isOpen]
   )
 
-  // If focus lands in the calendar (mouse click on a header control),
-  // Tab closes the popover and returns focus to the field rather than
-  // letting it escape into the page behind the overlay.
+  // In active mode: Tab cycles focus within the calendar (focus trap).
+  // In passive mode: Tab closes the popover and returns focus to the field.
+  // Scoped to popoverRef only — portaled month/year pickers self-dismiss on
+  // Tab (stopPropagation + restore trigger focus in CalendarPopoverHeader).
   const handleCalendarKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab") return
       e.preventDefault()
-      setIsOpen(false)
-      focusLastFieldSegment()
+
+      if (!isCalendarActiveRef.current) {
+        setIsOpen(false)
+        restoreFocusToField()
+        return
+      }
+
+      // Active mode: cycle through focusable elements within the popover
+      const popover = popoverRef.current
+      if (!popover) return
+
+      const focusables = Array.from(
+        popover.querySelectorAll<HTMLElement>(
+          'button:not([tabindex="-1"]):not([disabled]), [tabindex="0"]'
+        )
+      )
+
+      if (focusables.length === 0) return
+
+      const currentIndex = focusables.indexOf(
+        document.activeElement as HTMLElement
+      )
+      let nextIndex: number
+      if (e.shiftKey) {
+        nextIndex =
+          currentIndex <= 0 ? focusables.length - 1 : currentIndex - 1
+      } else {
+        nextIndex =
+          currentIndex >= focusables.length - 1 ? 0 : currentIndex + 1
+      }
+      focusables[nextIndex].focus()
     },
-    [focusLastFieldSegment]
+    [restoreFocusToField]
   )
 
   // Synchronous commit on blur for form-submit races: clicking a form's
@@ -395,21 +517,36 @@ function SingleDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (!formCommit) return
-      const hasPlaceholders =
-        triggerRef.current?.querySelector('[data-placeholder="true"]') !== null
-      if (hasPlaceholders) return
+      if (isCalendarActiveRef.current) return
+      const segments = triggerRef.current?.querySelectorAll(
+        '[role="spinbutton"]'
+      )
+      const placeholders = triggerRef.current?.querySelectorAll(
+        '[role="spinbutton"][data-placeholder="true"]'
+      )
+      if (segments && placeholders) {
+        const isPartiallyTyped =
+          placeholders.length > 0 && placeholders.length < segments.length
+        if (isPartiallyTyped) return
+        const isFullyCleared = placeholders.length === segments.length
+        if (isFullyCleared && !clearable) return
+      }
       const pending = displayValueRef.current
       if (!datesEqual(pending, value)) {
         formCommit(pending)
       }
     },
-    [formCommit, value]
+    [formCommit, value, clearable]
   )
 
   return (
     <StyledDateFieldContainer>
       <StyledDateInputWrapper
         ref={setTriggerRef}
+        aria-keyshortcuts="Alt+ArrowDown"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? popoverId : undefined}
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
@@ -473,11 +610,22 @@ function SingleDateInput({
       {isOpen && (
         <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledCalendarPopover
+            id={popoverId}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDateInputCalendar"
             onKeyDown={handleCalendarKeyDown}
+            role={isCalendarActive ? "dialog" : undefined}
+            aria-modal={isCalendarActive ? "true" : undefined}
+            aria-label={isCalendarActive ? "Choose date" : undefined}
+            aria-describedby={isCalendarActive ? popoverDescId : undefined}
           >
+            {isCalendarActive && (
+              <StyledVisuallyHidden id={popoverDescId}>
+                Use arrow keys to navigate dates. Enter to select. Escape to
+                close.
+              </StyledVisuallyHidden>
+            )}
             {/* Calendar locale is the visitor's locale (not the field's
                 fixed en-US). safeLocale guards against malformed tags. */}
             <I18nProvider locale={safeLocale}>

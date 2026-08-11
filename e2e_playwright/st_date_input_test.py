@@ -317,13 +317,13 @@ def test_range_date_calendar_picker_rendering(
     )
 
 
-def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
-    """Test that single value is reset to default if calendar closed empty."""
+def test_single_value_reverts_to_committed_if_calendar_closed_empty(app: Page):
+    """Non-clearable widget reverts to last committed value when closed empty."""
     date_input = get_date_input(app, "Single date")
     date_field = date_input.get_by_test_id("stDateInputField")
     date_field.get_by_role("spinbutton").first.click()
 
-    # Select '1970/01/02'
+    # Select '1970/01/02' — this becomes the committed value
     app.get_by_test_id("stDateInputCalendar").get_by_label(
         "Friday, January 2, 1970"
     ).click()
@@ -345,8 +345,8 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     # submit the cleared value
     reset_focus(app)
 
-    # Value should be reset to default
-    expect_markdown(app, "Value 1: 1970-01-01")
+    # Value reverts to last committed (1970-01-02), not the element default
+    expect_markdown(app, "Value 1: 1970-01-02")
 
 
 def test_range_is_empty_if_calendar_closed_empty(app: Page):
@@ -692,3 +692,117 @@ def test_date_input_query_param_out_of_range_resets(page: Page, app_base_url: st
 
     expect_prefixed_markdown(page, "Bound minmax:", "2025-06-15")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_date="))
+
+
+# --- Keyboard navigation (active calendar mode) tests ---
+
+
+def test_single_date_active_calendar_keyboard_navigation(app: Page):
+    """Test keyboard navigation for single date input active calendar mode (Alt+ArrowDown).
+
+    Covers: passive mode has no dialog role, Alt+ArrowDown enters active mode,
+    Tab cycles within the calendar, nested picker Escape closes only the picker,
+    Escape returns focus to originating segment, date selection closes and returns focus.
+    """
+    date_input = get_date_input(app, "Single date")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    first_segment = date_field.get_by_role("spinbutton").first
+    second_segment = date_field.get_by_role("spinbutton").nth(1)
+
+    # --- Passive mode: no dialog role ---
+    first_segment.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+    expect(calendar).not_to_have_attribute("role", "dialog")
+    expect(calendar).not_to_have_attribute("aria-modal", "true")
+
+    # --- Alt+ArrowDown enters active mode ---
+    app.keyboard.press("Alt+ArrowDown")
+    expect(calendar).to_have_attribute("role", "dialog")
+    expect(calendar).to_have_attribute("aria-modal", "true")
+    expect(calendar.locator(":focus")).to_have_attribute("role", "button")
+
+    # --- Tab cycles within the calendar without closing ---
+    for _ in range(6):
+        app.keyboard.press("Tab")
+        expect(calendar).to_be_visible()
+    expect(calendar.locator(":focus")).to_be_visible()
+    expect(calendar).to_have_attribute("role", "dialog")
+
+    # --- Escape closes and returns focus to originating segment ---
+    app.keyboard.press("Escape")
+    expect(calendar).not_to_be_visible()
+    expect(first_segment).to_be_focused()
+
+    # --- Nested picker Escape closes only the picker ---
+    first_segment.click()
+    app.keyboard.press("Alt+ArrowDown")
+    expect(calendar).to_be_visible()
+
+    # Tab to the month picker trigger and activate it.
+    # Note: prev-month button is disabled (min_value=1970-01-01, showing Jan 1970),
+    # so the first focusable after the grid is the month picker trigger.
+    app.keyboard.press("Tab")
+    month_trigger = calendar.get_by_role("button", name="month", exact=True)
+    expect(month_trigger).to_be_focused()
+    app.keyboard.press("Enter")
+    picker_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(picker_popover).to_be_visible()
+
+    # Escape should close only the picker, not the outer calendar
+    app.keyboard.press("Escape")
+    expect(picker_popover).not_to_be_visible()
+    expect(calendar).to_be_visible()
+    expect(calendar).to_have_attribute("role", "dialog")
+
+    # Close to reset state
+    app.keyboard.press("Escape")
+    expect(calendar).not_to_be_visible()
+
+    # --- Date selection closes calendar and returns focus ---
+    second_segment.click()
+    app.keyboard.press("Alt+ArrowDown")
+    expect(calendar).to_be_visible()
+
+    # Navigate to a different date and select it with Enter
+    app.keyboard.press("ArrowRight")
+    app.keyboard.press("Enter")
+
+    expect(calendar).not_to_be_visible()
+    expect(second_segment).to_be_focused()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 1: 1970-01-02")
+
+
+def test_range_date_active_calendar_keyboard_navigation(app: Page):
+    """Test keyboard navigation for range date input active calendar mode (Alt+ArrowDown).
+
+    Covers: Alt+ArrowDown enters active mode from start field,
+    Escape returns focus to the originating segment (last segment of end field).
+    """
+    date_input = get_date_input(app, "Range, two dates")
+    date_field = date_input.get_by_test_id("stDateInputField")
+
+    # --- Alt+ArrowDown from start field enters active mode ---
+    date_field.get_by_role("spinbutton").first.click()
+    app.keyboard.press("Alt+ArrowDown")
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+    expect(calendar).to_have_attribute("role", "dialog")
+    expect(calendar).to_have_attribute("aria-modal", "true")
+    expect(calendar.locator(":focus")).to_have_attribute("role", "button")
+
+    # Close to reset
+    app.keyboard.press("Escape")
+    expect(calendar).not_to_be_visible()
+
+    # --- Alt+ArrowDown from last segment of end field, Escape returns there ---
+    last_segment = date_field.get_by_role("spinbutton").last
+    last_segment.click()
+    app.keyboard.press("Alt+ArrowDown")
+    expect(calendar).to_be_visible()
+
+    app.keyboard.press("Escape")
+    expect(calendar).not_to_be_visible()
+    expect(last_segment).to_be_focused()

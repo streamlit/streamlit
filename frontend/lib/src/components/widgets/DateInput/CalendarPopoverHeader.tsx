@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement, useState } from "react"
+import {
+  KeyboardEvent,
+  ReactElement,
+  useCallback,
+  useRef,
+  useState,
+} from "react"
 
 import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import { ArrowBack, ArrowForward } from "@emotion-icons/material-rounded"
@@ -80,12 +86,25 @@ function HeaderPickerSelect({
   const selectedLabel = items.find(item => item.id === value)?.formatted ?? ""
 
   const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen,
     onClose: () => setIsOpen(false),
     // No floating-ui positioning needed — the picker uses CSS absolute positioning.
     floatingSetFn: noop,
   })
+
+  const handlePickerKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key === "Tab") {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsOpen(false)
+        triggerRef.current?.focus()
+      }
+    },
+    []
+  )
 
   return (
     <StyledCalendarHeaderSelect
@@ -95,7 +114,12 @@ function HeaderPickerSelect({
       isOpen={isOpen}
       onOpenChange={setIsOpen}
     >
-      <StyledCalendarHeaderSelectTrigger ref={setReferenceRef}>
+      <StyledCalendarHeaderSelectTrigger
+        ref={(node: HTMLButtonElement | null) => {
+          triggerRef.current = node
+          setReferenceRef(node)
+        }}
+      >
         {selectedLabel}
         <StyledCalendarHeaderSelectChevron>
           <KeyboardArrowDown size={theme.iconSizes.base} />
@@ -106,9 +130,12 @@ function HeaderPickerSelect({
         isNonModal
         data-testid="stDateInputHeaderPickerPopover"
       >
-        <StyledDropdownListBox items={items}>
-          {renderPickerItem}
-        </StyledDropdownListBox>
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+        <div onKeyDown={handlePickerKeyDown}>
+          <StyledDropdownListBox items={items}>
+            {renderPickerItem}
+          </StyledDropdownListBox>
+        </div>
       </StyledDropdownPopover>
     </StyledCalendarHeaderSelect>
   )
