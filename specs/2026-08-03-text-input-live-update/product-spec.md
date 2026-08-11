@@ -159,6 +159,46 @@ st.text_input("Search", on_change=handle_submit)  # Called on blur/enter
 - Doesn't address the debounce requirement
 - Adds API complexity
 
+#### Option 4: Semantic rename keeping the flag-or-duration shape (`live` or `auto_submit`)
+
+Same `int | str | bool` value shape as Option 1 (including duration strings and the `"0ms"`
+every-keystroke spelling) — only the parameter name changes from the `debounce` jargon to a more
+semantic term. Unlike Option 2's boolean-only `live_update`, these keep full timing control.
+
+```python
+# Using live
+st.text_input("Search", live=True)       # On, sensible default delay (300ms)
+st.text_input("Search", live="300ms")    # Custom delay
+st.text_input("Search", live="0ms")      # Every keystroke
+
+# Using auto_submit
+st.text_input("Search", auto_submit=True)
+st.text_input("Search", auto_submit="300ms")
+```
+
+**Pros:**
+- Semantic and understandable to data scientists without a web background (Principle 8), unlike the
+  `debounce` jargon
+- Keeps the full flag-or-duration flexibility of Option 1, so no timing use case is lost (the main
+  advantage over Option 2)
+- `live=True` / `auto_submit=True` reads naturally for the common on/off case
+- `auto_submit` has an intuitive mental model: a `text_input` already "submits" its value on
+  Enter/blur, so `auto_submit=True` reads as "submit automatically while typing"
+
+**Cons:**
+- Loses the `streamlit-keyup` migration parity that motivates `debounce` (those users already know
+  `debounce`)
+- A bare number reads less clearly than the delay-focused `debounce` (`live=300` — "300 what?");
+  mitigated by the duration string (`live="300ms"`)
+- `live` alone is somewhat vague about *what* is going live
+- `auto_submit` overloads "submit", which already carries a distinct, **terminal** meaning in
+  `st.form` (submit button) and `st.chat_input` (`submit_mode`). Using it for continuous,
+  intermediate updates introduces a second, conflicting sense of "submit" across the text widgets
+  (Principles 7 and 10: standardized vocabulary, same name / same behavior). It also makes the
+  in-form no-op (edge case 3) read as a contradiction ("I set `auto_submit=True`, why does it never
+  submit?"), whereas `debounce` / `live` describe typing responsiveness and degrade more gracefully
+  inside a form.
+
 ### Recommended API: `debounce` parameter
 
 ```python
