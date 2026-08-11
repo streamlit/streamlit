@@ -63,7 +63,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -1272,12 +1272,17 @@ class DataEditorMixin:
                         st.toast("Amounts must be positive.", icon=":material/error:")
                         return source_df
 
-                    for row_position in edits.deleted_rows:
-                        delete_order(source_df.iloc[row_position]["id"])
-                    for row_position, changes in edits.edited_rows.items():
-                        update_order(source_df.iloc[row_position]["id"], changes)
-                    for row in edits.added_rows:
-                        insert_order(row)
+                    # Persist the whole batch atomically. Streamlit preserves
+                    # the full edit batch when the callback raises, so a
+                    # mid-batch failure must roll back completely — otherwise a
+                    # later retry would replay already-committed operations.
+                    with begin_transaction():
+                        for row_position in edits.deleted_rows:
+                            delete_order(source_df.iloc[row_position]["id"])
+                        for row_position, changes in edits.edited_rows.items():
+                            update_order(source_df.iloc[row_position]["id"], changes)
+                        for row in edits.added_rows:
+                            insert_order(row)
 
                     refreshed_df = load_orders()
                     st.session_state.orders = refreshed_df
@@ -1763,8 +1768,11 @@ class DataEditorMixin:
                 raise
             except Exception as ex:
                 # A failing callback or an incompatible result preserves the
-                # pending edits and surfaces the standard exception message.
-                handle_uncaught_app_exception(ex)
+                # pending edits and surfaces the standard exception message via
+                # the user-script path (so a configured on_script_error handler
+                # still runs). ScriptControlException is re-raised above.
+                on_script_error = ctx.on_script_error if ctx is not None else None
+                handle_user_script_exception(ex, on_script_error)
                 render_df = data_df
 
         self.dg._enqueue("dataframe", proto, layout_config=layout_config)
