@@ -34,7 +34,7 @@ from streamlit.elements.widgets.button import (
     IconPosition,
     _normalize_icon_position,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -452,14 +452,11 @@ class FormMixin:
 
         # Checks whether the entered button type is one of the allowed options
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.form_submit_button must be "primary", "secondary", or "tertiary". \n'
-                f'The argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
-        normalized_icon_position = _normalize_icon_position(
-            icon_position, "st.form_submit_button"
-        )
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self._form_submit_button(
             label=label,

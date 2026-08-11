@@ -52,7 +52,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.VegaLiteChart_pb2 import (
     VegaLiteChart as VegaLiteChartProto,
 )
@@ -1153,11 +1153,7 @@ class VegaChartsMixin:
 
         """
         # Check that the stack parameter is valid, raise more informative error message if not
-        maybe_raise_stack_warning(
-            stack,
-            "st.area_chart",
-            "https://docs.streamlit.io/develop/api-reference/charts/st.area_chart",
-        )
+        maybe_raise_stack_warning(stack)
 
         # st.area_chart's stack=False option translates to a "layered" area chart for
         # vega. We reserve stack=False for
@@ -1482,11 +1478,7 @@ class VegaChartsMixin:
 
         """
         # Check that the stack parameter is valid, raise more informative error message if not
-        maybe_raise_stack_warning(
-            stack,
-            "st.bar_chart",
-            "https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart",
-        )
+        maybe_raise_stack_warning(stack)
 
         # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
@@ -2294,16 +2286,11 @@ class VegaChartsMixin:
         See the `vega_lite_chart` method docstring for more information.
         """
         if theme not in {"streamlit", None}:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support '
-                "theme=”streamlit” or theme=None to fallback to the default "
-                "library theme."
-            )
+            raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         key = to_key(key)

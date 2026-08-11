@@ -370,15 +370,14 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
 
             @st.cache_data(persist="yesplz")
             def foo():
                 pass
 
         assert (
-            str(e.value)
-            == "Unsupported persist option 'yesplz'. Valid values are 'disk' or None."
+            str(e.value) == "Invalid `persist` value. Supported values: 'disk', None."
         )
 
     @patch("shutil.rmtree")
