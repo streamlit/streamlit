@@ -199,7 +199,8 @@ class AudioInputMixin:
             The ``UploadedFile`` class is a subclass of ``BytesIO``, and
             therefore is "file-like". This means you can pass an instance of it
             anywhere a file is expected. The MIME type for the audio data is
-            ``audio/wav``.
+            ``audio/wav``. To use this type in an annotation, import it from
+            ``streamlit.typing``.
 
             .. Note::
                 The resulting ``UploadedFile`` is subject to the size
