@@ -15,14 +15,13 @@
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
-    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -34,6 +33,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     reset_focus,
     reset_hovering,
+    wait_for_datepicker_popover_animation,
 )
 
 NUM_DATE_INPUTS = 22
@@ -260,52 +260,13 @@ def test_calls_callback_on_change(app: Page):
     expect_prefixed_markdown(app, "Date Input Changed:", "False")
 
 
-def _wait_for_calendar_popover_animation(app: Page, calendar: Locator) -> None:
-    """Wait until the BaseWeb datepicker popover open animation has finished.
-
-    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
-    an 8px ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
-    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
-    Chromium as ~8% pixel diff).
-
-    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
-    transform share the 0.1s open transition, but a subsequent Popper
-    reposition can still nudge the calendar after opacity settles. Require a
-    stable calendar bounding box before screenshotting.
-    """
-    expect(calendar).to_be_visible()
-    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
-    expect(popover).to_have_css("opacity", "1")
-
-    previous_box: dict[str, float] | None = None
-
-    def _calendar_box_is_stable() -> bool:
-        nonlocal previous_box
-        box = calendar.bounding_box()
-        if box is None:
-            return False
-        if previous_box is None:
-            previous_box = box
-            return False
-        stable = (
-            abs(previous_box["x"] - box["x"]) < 0.5
-            and abs(previous_box["y"] - box["y"]) < 0.5
-            and abs(previous_box["width"] - box["width"]) < 0.5
-            and abs(previous_box["height"] - box["height"]) < 0.5
-        )
-        previous_box = box
-        return stable
-
-    wait_until(app, _calendar_box_is_stable)
-
-
 def test_single_date_calendar_picker_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the single value calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Single date").locator("input").click()
     calendar = themed_app.locator('[data-baseweb="calendar"]').first
-    _wait_for_calendar_popover_animation(themed_app, calendar)
+    wait_for_datepicker_popover_animation(themed_app, calendar)
     assert_snapshot(
         calendar,
         name="st_date_input-single_date_calendar",
@@ -318,7 +279,7 @@ def test_range_date_calendar_picker_rendering(
     """Test that the range calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Range, two dates").locator("input").click()
     calendar = themed_app.locator('[data-baseweb="calendar"]').first
-    _wait_for_calendar_popover_animation(themed_app, calendar)
+    wait_for_datepicker_popover_animation(themed_app, calendar)
     assert_snapshot(
         calendar,
         name="st_date_input-range_two_dates_calendar",
