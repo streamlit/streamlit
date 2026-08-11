@@ -149,11 +149,7 @@ from streamlit.typing import ChatInputValue, UploadedFile
 
 
 def first_file(submission: ChatInputValue) -> UploadedFile | None:
-    return (
-        submission.files[0]
-        if "files" in submission and submission.files
-        else None
-    )
+    return submission.files[0] if "files" in submission and submission.files else None
 ```
 
 ## Audio input
