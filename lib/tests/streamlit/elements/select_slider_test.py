@@ -24,10 +24,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -257,13 +258,13 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.select_slider(
                 "the label", options=["red", "orange"], label_visibility="wrong_value"
             )
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):
@@ -740,8 +741,8 @@ class SelectSliderBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.select_slider(
                 "the label",
                 options=["a", "b"],
@@ -776,3 +777,89 @@ class SelectSliderBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.query_param_key == "my_key"
         assert list(c.default) == [1, 3]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # Known single option -> matched via the formatted-index lookup.
+        ("b", ["b"]),
+        # Unknown single value -> formatted string is returned as a single-item list.
+        ("z", ["z"]),
+        # Range/sequence value -> each element is formatted individually.
+        (["a", "c"], ["a", "c"]),
+    ],
+)
+def test_select_slider_serde_serialize(
+    value: str | list[str], expected: list[str]
+) -> None:
+    """serialize handles known singles, unknown singles, and range sequences."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "c"],
+        formatted_option_to_index={"a": 0, "b": 1, "c": 2},
+        default_indices=[0],
+    )
+    assert serde.serialize(value) == expected
+
+
+def test_select_slider_serde_deserialize_none_returns_single_default() -> None:
+    """deserialize(None) returns the single-value default for a non-range serde."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "c"],
+        formatted_option_to_index={"a": 0, "b": 1, "c": 2},
+        default_indices=[1],
+    )
+    assert serde.deserialize(None) == "b"
+
+
+def test_select_slider_serde_deserialize_none_returns_range_default() -> None:
+    """deserialize(None) returns the range default for a range serde."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "c", "d"],
+        formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
+        default_indices=[0, 3],
+    )
+    assert serde.deserialize(None) == ("a", "d")
+
+
+def test_select_slider_serde_deserialize_wrong_length_falls_back_to_default() -> None:
+    """deserialize returns the default when the value count mismatches the range arity."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "c", "d"],
+        formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
+        default_indices=[0, 3],
+    )
+    # A range serde expects two values; a single value triggers the fallback.
+    assert serde.deserialize(["b"]) == ("a", "d")
+
+
+def test_select_slider_serde_deserialize_unknown_value_uses_default_index() -> None:
+    """deserialize falls back to the position's default index when a value is unknown."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "c"],
+        formatted_option_to_index={"a": 0, "b": 1, "c": 2},
+        default_indices=[1],
+    )
+    assert serde.deserialize(["unknown"]) == "b"
+
+
+def test_select_slider_serde_deserialize_range_with_unknown_value() -> None:
+    """deserialize a range with one unknown value falls back to that position's default."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "c", "d"],
+        formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
+        default_indices=[0, 3],
+    )
+    # The second value is unknown, so it falls back to default_indices[1] = 3 ("d").
+    assert serde.deserialize(["b", "unknown"]) == ("b", "d")
+
+
+def test_select_slider_serde_deserialize_range_sorts_ascending() -> None:
+    """deserialize returns an out-of-order range in ascending option order."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "c", "d"],
+        formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
+        default_indices=[0, 3],
+    )
+    # Values arrive as (high, low); the result is swapped back to ascending order.
+    assert serde.deserialize(["d", "b"]) == ("b", "d")

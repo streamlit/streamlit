@@ -345,3 +345,28 @@ with widget_outside_container:
     st.markdown("widget-outside footer")
 
 st.markdown(f"app-level marker: {uuid4()}")
+
+
+# Regression scenario for issue #16281: a fragment writes an st.status into a container
+# declared outside the fragment, then opens that status twice. Exiting the first `with`
+# block marks the status complete, which re-sends the status block proto. Before the fix
+# that message landed on the fragment's transparent wrapper instead of the status block,
+# so the write in the second `with` block had no parent and crashed the app.
+status_container_outside = st.container(key="status_container_outside")
+with status_container_outside:
+    st.markdown("status-outside header")
+
+
+@st.fragment
+def status_outside_fragment():
+    st.button("rerun status outside", key="rerun_status_outside")
+    status = status_container_outside.status("status outside", expanded=True)
+    with status:
+        st.markdown("status first write")
+    with status:
+        st.markdown("status second write")
+
+
+status_outside_fragment()
+with status_container_outside:
+    st.markdown("status-outside footer")

@@ -36,6 +36,7 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
@@ -130,6 +131,12 @@ function MenuButton(props: Props): ReactElement {
 
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
+  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
+  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
+  // skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
+
   const handleItemSelect = useCallback(
     (key: Key) => {
       if (buttonDisabled) {
@@ -165,8 +172,16 @@ function MenuButton(props: Props): ReactElement {
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
-          <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
-            <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <StyledMenuButtonLabelContainer
+            $hideChevron={hideChevron}
+            $truncate={!wrap}
+          >
+            <DynamicButtonLabel
+              icon={element.icon}
+              label={element.label}
+              wrap={wrap}
+              addTitleTooltip={addTitleTooltip}
+            />
             {!hideChevron && (
               <StyledMenuButtonExpansionIcon aria-hidden="true">
                 <DynamicIcon

@@ -162,7 +162,7 @@ def register_widget(
 
     # Validate bind parameter value
     if bind is not None and bind != "query-params":
-        raise StreamlitInvalidBindValueError(bind)
+        raise StreamlitInvalidBindValueError("bind", ["'query-params'", "None"])
 
     # Validate that widget with bind="query-params" has a provided key
     if bind == "query-params":
@@ -183,7 +183,9 @@ def register_widget(
     # Validate persist_state value and key requirement.
     if persist_state is not None:
         if persist_state not in {"page", "session"}:
-            raise StreamlitInvalidPersistStateError(persist_state)
+            raise StreamlitInvalidPersistStateError(
+                "persist_state", ["'page'", "'session'", "None"]
+            )
         if user_key_from_element_id(element_id) is None:
             raise StreamlitAPIException(
                 "When using persist_state, the widget must have a unique 'key' "

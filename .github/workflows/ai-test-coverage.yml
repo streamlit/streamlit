@@ -11,7 +11,7 @@ on:
         description: "Model to use for coverage improvement"
         required: false
         type: string
-        default: "claude-opus-4-8-thinking-xhigh"
+        default: "cursor-grok-4.5-high"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -19,7 +19,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'claude-opus-4-8-thinking-xhigh' }}
+  MODEL: ${{ inputs.model || 'cursor-grok-4.5-high' }}
 
 jobs:
   check-secrets:

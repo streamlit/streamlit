@@ -481,7 +481,7 @@ def _parse_chart_type(
 
 def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
     if delta_arrow not in {"auto", "up", "down", "off"}:
-        raise StreamlitValueError("delta_arrow", ["auto", "up", "down", "off"])
+        raise StreamlitValueError("delta_arrow", ["'auto'", "'up'", "'down'", "'off'"])
     return delta_arrow
 
 
@@ -515,10 +515,22 @@ def _determine_delta_color_and_direction(
     delta: Delta,
 ) -> MetricColorAndDirection:
     if delta_color not in _VALID_DELTA_COLORS:
-        raise StreamlitAPIException(
-            f"'{delta_color}' is not an accepted value. delta_color only accepts: "
-            "'normal', 'inverse', 'off', or a color name ('red', 'orange', 'yellow', "
-            "'green', 'blue', 'violet', 'gray'/'grey', 'primary')"
+        raise StreamlitValueError(
+            "delta_color",
+            [
+                "'normal'",
+                "'inverse'",
+                "'off'",
+                "'red'",
+                "'orange'",
+                "'yellow'",
+                "'green'",
+                "'blue'",
+                "'violet'",
+                "'gray'",
+                "'grey'",
+                "'primary'",
+            ],
         )
 
     if delta is None or delta == "":

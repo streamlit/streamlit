@@ -42,7 +42,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -50,7 +50,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
 )
-from streamlit.util import AttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -90,9 +90,9 @@ def parse_selection_mode(
         )
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
     if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
@@ -111,12 +111,12 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
-class PydeckSelectionState(AttributeDictionary):
+class PydeckSelectionState(ReadOnlyAttributeDictionary):
     r"""
     The schema for the PyDeck chart selection state.
 
-    The selection state is stored in a dictionary-like object that supports
-    both key and attribute notation. Selection states cannot be
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
     programmatically changed or set through Session State.
 
     You must define ``id`` in ``pydeck.Layer`` to ensure statefulness when
@@ -232,13 +232,13 @@ class PydeckSelectionState(AttributeDictionary):
         return super().__getitem__(key)
 
 
-class PydeckState(AttributeDictionary):
+class PydeckState(ReadOnlyAttributeDictionary):
     """
     The schema for the PyDeck event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically changed
-    or set through Session State.
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -251,21 +251,12 @@ class PydeckState(AttributeDictionary):
 
     """
 
-    # Keep selection typed as PydeckSelectionState; without this property,
-    # attribute access re-wraps the nested dict as a plain AttributeDictionary.
-    @property
-    def selection(self) -> PydeckSelectionState:
-        try:
-            return self["selection"]
-        except KeyError as err:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute 'selection'"
-            ) from err
+    selection: PydeckSelectionState
 
-    @selection.setter
-    def selection(self, value: PydeckSelectionState) -> None:
-        self["selection"] = value
-
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed as
+    # PydeckSelectionState. Use dict.__getitem__ for the selection key so the
+    # read-only base class does not re-wrap the already-typed nested instance.
     @overload
     def __getitem__(self, key: Literal["selection"]) -> PydeckSelectionState: ...
 
@@ -273,10 +264,14 @@ class PydeckState(AttributeDictionary):
     def __getitem__(self, key: Any) -> Any: ...
 
     def __getitem__(self, key: Any) -> Any:
-        item = super().__getitem__(key)
-        if key == "selection" and not isinstance(item, PydeckSelectionState):
-            return PydeckSelectionState(item)
-        return item
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, PydeckSelectionState):
+                item = PydeckSelectionState(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -592,9 +587,8 @@ class PydeckMixin:
         is_selection_activated = on_select != "ignore"
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. "
-                "But only 'ignore', 'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         if is_selection_activated:
@@ -606,7 +600,9 @@ class PydeckMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,

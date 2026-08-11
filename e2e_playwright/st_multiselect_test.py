@@ -51,7 +51,14 @@ def select_for_multiselect(
     ms = get_multiselect(page, label)
     ms.scroll_into_view_if_needed()
     ms.locator("input").click()
-    page.get_by_role("option", name=option_text, exact=True).first.click()
+    option = page.get_by_role("option", name=option_text, exact=True).first
+    expect(option).to_be_visible()
+    option.click()
+    # Wait until the selection is committed in the UI before Escape. On WebKit
+    # under CI load, pressing Escape immediately after click can close the
+    # listbox before the option selection is applied, so the subsequent rerun
+    # never updates the value text.
+    expect(ms.locator(f'span[title="{option_text}"]')).to_be_visible()
     if close_after_selecting:
         page.keyboard.press("Escape")
     wait_for_app_run(page)

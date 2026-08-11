@@ -33,6 +33,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     reset_focus,
     reset_hovering,
+    wait_for_datepicker_popover_animation,
 )
 
 NUM_DATE_INPUTS = 22
@@ -265,8 +266,7 @@ def test_single_date_calendar_picker_rendering(
     """Test that the single value calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Single date").locator("input").click()
     calendar = themed_app.locator('[data-baseweb="calendar"]').first
-    # Wait for the calendar popup to be fully visible before taking screenshot
-    expect(calendar).to_be_visible()
+    wait_for_datepicker_popover_animation(themed_app, calendar)
     assert_snapshot(
         calendar,
         name="st_date_input-single_date_calendar",
@@ -279,8 +279,7 @@ def test_range_date_calendar_picker_rendering(
     """Test that the range calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Range, two dates").locator("input").click()
     calendar = themed_app.locator('[data-baseweb="calendar"]').first
-    # Wait for the calendar popup to be fully visible before taking screenshot
-    expect(calendar).to_be_visible()
+    wait_for_datepicker_popover_animation(themed_app, calendar)
     assert_snapshot(
         calendar,
         name="st_date_input-range_two_dates_calendar",

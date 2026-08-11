@@ -336,6 +336,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "disabled",
     "format_func",
     "label_visibility",
+    # wrap only controls label text wrapping, not widget identity.
+    "wrap",
     # on_change callbacks and similar/related parameters.
     "args",
     "kwargs",
@@ -703,7 +705,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             )
 
     def test_bind_invalid_value_raises(self) -> None:
-        """Test that invalid bind values raise StreamlitInvalidBindValueError."""
+        """Invalid bind values raise StreamlitInvalidBindValueError."""
         with pytest.raises(
             errors.StreamlitInvalidBindValueError, match="Invalid `bind` value"
         ):

@@ -707,13 +707,12 @@ class NumberInputMixin:
             number_input_proto.query_param_key = str(key)
 
         # min_value and max_value are guaranteed to be Number (not None) after
-        # the JSNumber defaults above. The casts are needed for ty (which doesn't
-        # narrow the type), but mypy sees them as redundant.
+        # the JSNumber defaults above.
         serde = NumberInputSerde(
             value,
             data_type,
-            cast("Number", min_value),  # type: ignore[redundant-cast]
-            cast("Number", max_value),  # type: ignore[redundant-cast]
+            min_value,
+            max_value,
         )
         widget_state = register_widget(
             number_input_proto.id,

@@ -158,12 +158,12 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
-        _query = cache_data(
+        cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
         )(_query)
 
-        return _query(self._connection_instance_id, sql, params)
+        return cached_query(self._connection_instance_id, sql, params)
 
     def write_pandas(
         self,

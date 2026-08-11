@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import inspect
 import os
+import re
 import sys
 import threading
 import time
@@ -26,6 +27,7 @@ from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
+from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -240,6 +242,11 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
+
+# Matches CPython's ``got an unexpected keyword argument 'name'`` TypeError.
+_UNEXPECTED_KWARG_RE: Final = re.compile(
+    r"got an unexpected keyword argument '([^']+)'"
+)
 
 
 def _get_machine_id_v3() -> str:
@@ -479,6 +486,31 @@ def _get_command_telemetry(
 def to_microseconds(seconds: float) -> int:
     """Convert seconds into microseconds."""
     return int(seconds * 1_000_000)
+
+
+def format_uncaught_exception(exc: BaseException) -> str:
+    """Return a page-profile label for an uncaught exception.
+
+    Uses the exception type name, appending ``:<param>`` when the failing
+    parameter is known:
+
+    - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
+    - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+
+    Enrichment failures are swallowed so telemetry cannot interrupt script
+    execution or drop the page-profile payload.
+    """
+    name = type(exc).__name__
+    with contextlib.suppress(Exception):
+        if isinstance(exc, TypeError):
+            match = _UNEXPECTED_KWARG_RE.search(str(exc))
+            if match:
+                return f"{name}:{match.group(1)}"
+        elif isinstance(exc, StreamlitValueError):
+            parameter = exc.exec_kwargs.get("parameter")
+            if isinstance(parameter, str) and parameter:
+                return f"{name}:{parameter}"
+    return name
 
 
 F = TypeVar("F", bound=Callable[..., Any])

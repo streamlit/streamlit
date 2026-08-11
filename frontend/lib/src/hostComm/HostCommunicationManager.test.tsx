@@ -73,6 +73,32 @@ function newHostMessageEvent(init: MessageEventInit): MessageEvent {
   } as unknown as MessageEvent
 }
 
+/**
+ * Runs `fn` with `window.parent` replaced by a stub so `receiveHostMessage`
+ * treats the app as embedded in a third-party iframe (`window !== window.parent`),
+ * then restores the original `window.parent`. This mirrors the environment in
+ * which an in-iframe embed preamble delivers host messages via a same-window
+ * self-post (`event.source === window`). Supports both synchronous and async
+ * `fn`, keeping the stub in place until an async `fn` settles.
+ */
+async function withEmbeddedWindow(
+  fn: () => void | Promise<void>
+): Promise<void> {
+  const originalParent = window.parent
+  Object.defineProperty(window, "parent", {
+    value: { postMessage: vi.fn() },
+    configurable: true,
+  })
+  try {
+    await fn()
+  } finally {
+    Object.defineProperty(window, "parent", {
+      value: originalParent,
+      configurable: true,
+    })
+  }
+}
+
 describe("HostCommunicationManager messaging", () => {
   let hostCommunicationMgr: HostCommunicationManager
 
@@ -758,6 +784,93 @@ describe("HostCommunicationManager messaging", () => {
     }
   })
 
+  it("processes messages from a genuine same-window self-post (in-iframe embed preamble)", async () => {
+    // When embedded, window.parent is an untrusted third-party page, so the
+    // in-iframe embed preamble delivers host messages by posting to this
+    // window itself (event.source === window). Unlike a child frame (whose
+    // source is the child's own window), a same-window self-post is a
+    // legitimate delivery path and must be processed.
+    await withEmbeddedWindow(() => {
+      const message = newHostMessageEvent({
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+          prefix: "https://someprefix.com/hello/",
+          headers: {
+            header1: "header1value",
+          },
+        },
+        origin: "https://devel.streamlit.test",
+        source: window,
+      })
+      dispatchEvent("message", message)
+
+      expect(
+        // @ts-expect-error - props are private
+        hostCommunicationMgr.props.fileUploadClientConfigChanged
+      ).toHaveBeenCalledWith({
+        prefix: "https://someprefix.com/hello/",
+        headers: {
+          header1: "header1value",
+        },
+      })
+    })
+  })
+
+  it("ignores script-dispatched (untrusted) self-posts even when embedded", async () => {
+    // The self-post exception must still be gated by event.isTrusted: a
+    // synthetic (dispatchEvent) event with source === window must be rejected
+    // so injected scripts cannot fabricate host commands.
+    await withEmbeddedWindow(() => {
+      const message = new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+          prefix: "https://evil.example/upload/",
+          headers: {
+            "X-Xsrftoken": "exfiltrated-token",
+          },
+        },
+        origin: "https://devel.streamlit.test",
+        source: window,
+      })
+      // Guard the precondition so the test can only pass via the isTrusted
+      // check: a natively constructed event is untrusted while its source is a
+      // genuine same-window self-post and its origin is allowed.
+      expect(message.isTrusted).toBe(false)
+      dispatchEvent("message", message)
+
+      expect(
+        // @ts-expect-error - props are private
+        hostCommunicationMgr.props.fileUploadClientConfigChanged
+      ).not.toHaveBeenCalled()
+    })
+  })
+
+  it("ignores self-posts from a disallowed origin even when embedded", async () => {
+    // The self-post exception must not bypass the allowedOrigins check.
+    await withEmbeddedWindow(() => {
+      const message = newHostMessageEvent({
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+          prefix: "https://evil.example/upload/",
+          headers: {
+            "X-Xsrftoken": "exfiltrated-token",
+          },
+        },
+        origin: "https://not-allowed.example",
+        source: window,
+      })
+      dispatchEvent("message", message)
+
+      expect(
+        // @ts-expect-error - props are private
+        hostCommunicationMgr.props.fileUploadClientConfigChanged
+      ).not.toHaveBeenCalled()
+    })
+  })
+
   it("ignores script-dispatched host messages even when source and origin match", () => {
     const message = new MessageEvent("message", {
       data: {
@@ -824,13 +937,15 @@ describe("HostCommunicationManager messaging", () => {
     })
     dispatchEvent("message", message)
 
-    // Args mirror the LOG.debug call: isTrusted, sourceIsParent, allowedOrigin,
-    // origin. The event is untrusted (script-constructed) but its source is the
-    // parent and its origin is allowed, so only the isTrusted guard fails.
+    // Args mirror the LOG.debug call: isTrusted, sourceIsParent, selfPost,
+    // allowedOrigin, origin. The event is untrusted (script-constructed) but
+    // its source is the parent (not a self-post) and its origin is allowed, so
+    // only the isTrusted guard fails.
     expect(debugSpy).toHaveBeenCalledExactlyOnceWith(
       expect.stringContaining("Ignoring host message"),
       false,
       true,
+      false,
       true,
       "https://devel.streamlit.test"
     )
@@ -854,40 +969,63 @@ describe("HostCommunicationManager messaging", () => {
     debugSpy.mockRestore()
   })
 
-  it("does not log a debug message for the guest's own self-posted messages", () => {
+  it("does not log a debug message for the guest's own self-posted messages", async () => {
     const debugSpy = vi
       .spyOn(getLogger("HostCommunicationManager"), "debug")
       .mockImplementation(() => {})
 
-    // Simulate being embedded so window.parent differs from window; otherwise
-    // jsdom makes window.parent === window and a self-post is indistinguishable
-    // from a top-level parent message.
-    const originalParent = window.parent
-    Object.defineProperty(window, "parent", {
-      value: { postMessage: vi.fn() },
-      configurable: true,
-    })
+    try {
+      // Simulate being embedded so window.parent differs from window; otherwise
+      // jsdom makes window.parent === window and a self-post is
+      // indistinguishable from a top-level parent message.
+      await withEmbeddedWindow(() => {
+        // Mimics the GUEST_READY message the manager posts to its own window
+        // when embedded: a genuine host-versioned payload whose source is this
+        // window (not the parent). It is intentionally ignored and, being the
+        // app's own per-load self-post, must not be logged.
+        const message = new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "GUEST_READY",
+          },
+          origin: "https://devel.streamlit.test",
+          source: window,
+        })
+        dispatchEvent("message", message)
+
+        expect(debugSpy).not.toHaveBeenCalled()
+      })
+    } finally {
+      debugSpy.mockRestore()
+    }
+  })
+
+  it("logs a debug message for a dropped non-GUEST_READY self-post", async () => {
+    const debugSpy = vi
+      .spyOn(getLogger("HostCommunicationManager"), "debug")
+      .mockImplementation(() => {})
 
     try {
-      // Mimics the GUEST_READY message the manager posts to its own window when
-      // embedded: a genuine host-versioned payload whose source is this window
-      // (not the parent). It is intentionally ignored and must not be logged.
-      const message = new MessageEvent("message", {
-        data: {
-          stCommVersion: HOST_COMM_VERSION,
-          type: "GUEST_READY",
-        },
-        origin: "https://devel.streamlit.test",
-        source: window,
-      })
-      dispatchEvent("message", message)
+      // A dropped same-window self-post that is NOT the app's own GUEST_READY
+      // (here a SET_AUTH_TOKEN from a disallowed origin) must still be logged so
+      // an in-iframe embed preamble's delivery problems remain diagnosable.
+      await withEmbeddedWindow(() => {
+        dispatchEvent(
+          "message",
+          newHostMessageEvent({
+            data: {
+              stCommVersion: HOST_COMM_VERSION,
+              type: "SET_AUTH_TOKEN",
+              authToken: "dropped token",
+            },
+            origin: "https://not-allowed.example",
+            source: window,
+          })
+        )
 
-      expect(debugSpy).not.toHaveBeenCalled()
-    } finally {
-      Object.defineProperty(window, "parent", {
-        value: originalParent,
-        configurable: true,
+        expect(debugSpy).toHaveBeenCalled()
       })
+    } finally {
       debugSpy.mockRestore()
     }
   })
@@ -1132,5 +1270,39 @@ describe("HostCommunicationManager external auth token handling", () => {
     await expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
       "i am a NEW auth token"
     )
+  })
+
+  it("resolves the auth token from a genuine same-window self-post when embedded (in-iframe embed preamble)", async () => {
+    const { dispatchEvent } = mockEventListeners()
+
+    // Simulate being embedded in a third-party page: window.parent is not a
+    // trusted relay, so the in-iframe embed preamble delivers SET_AUTH_TOKEN
+    // by posting to this window itself (event.source === window).
+    await withEmbeddedWindow(async () => {
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["http://devel.streamlit.test"],
+        useExternalAuthToken: true,
+      })
+
+      setTimeout(() => {
+        dispatchEvent(
+          "message",
+          newHostMessageEvent({
+            data: {
+              stCommVersion: HOST_COMM_VERSION,
+              type: "SET_AUTH_TOKEN",
+              authToken: "self-posted auth token",
+            },
+            origin: "http://devel.streamlit.test",
+            source: window,
+          })
+        )
+      })
+
+      await expect(
+        // @ts-expect-error - deferredAuthToken is private
+        hostCommunicationMgr.deferredAuthToken.promise
+      ).resolves.toBe("self-posted auth token")
+    })
   })
 })

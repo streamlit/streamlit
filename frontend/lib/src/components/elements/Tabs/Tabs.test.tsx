@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -448,7 +442,9 @@ describe("st.tabs", () => {
         scrollWidth: 800,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollRight")).toBeVisible()
@@ -464,7 +460,9 @@ describe("st.tabs", () => {
         scrollWidth: 700,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()
@@ -482,7 +480,9 @@ describe("st.tabs", () => {
         scrollWidth: 900,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()
