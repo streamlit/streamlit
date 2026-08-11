@@ -813,8 +813,9 @@ class ChatMixin:
               rerun, the widget returns the user's message as a string.
             - A ``ChatInputValue`` object: When the widget is configured to
               accept files or audio recordings, and the user submitted any
-              content in the last rerun, the widget returns a dictionary-like
-              object.
+              content in the last rerun, the widget returns a ``ChatInputValue``
+              object. This object is dictionary-like and supports both key and
+              attribute notation.
               The object always includes the ``text`` attribute, and
               optionally includes ``files`` and/or ``audio`` attributes depending
               on the ``accept_file`` and ``accept_audio`` parameters.

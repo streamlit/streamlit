@@ -3373,13 +3373,12 @@ def ButtonColumn(
         clicked, the click information is stored under this key in Session
         State as a ``ButtonColumnClickState`` object with ``row`` (int) and
         ``label`` (str) entries that support both key and attribute notation.
-        To use this type in an annotation, import it from
-        ``streamlit.typing``. For example, if ``key="my_click"``, you can
-        access the clicked row with
+        For example, if ``key="my_click"``, you can access the clicked row with
         ``st.session_state.my_click.row`` or
         ``st.session_state["my_click"]["row"]``. The value is only present
         during the rerun triggered by the click; it resets to ``None`` on
-        subsequent reruns.
+        subsequent reruns. To use ``ButtonColumnClickState`` in an annotation,
+        import it from ``streamlit.typing``.
 
         ``key`` is required to enable button clicks and callbacks.
 
