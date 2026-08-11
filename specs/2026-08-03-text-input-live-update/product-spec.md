@@ -69,11 +69,11 @@ We considered several parameter names for this feature:
 #### Option 1: `debounce` (bool, integer in milliseconds, or duration string) - PREFERRED
 
 ```python
-st.text_input("Search", debounce=True)     # Rerun with sensible default (300ms)
-st.text_input("Search", debounce=300)      # Rerun after 300ms of inactivity
-st.text_input("Search", debounce="0.5s")   # Same, using a duration string
-st.text_input("Search", debounce="0ms")    # Rerun on every keystroke (no debounce)
-st.text_input("Name")                        # Default: rerun on blur/enter only
+st.text_input("Search", debounce=True)  # Rerun with sensible default (300ms)
+st.text_input("Search", debounce=300)  # Rerun after 300ms of inactivity
+st.text_input("Search", debounce="0.5s")  # Same, using a duration string
+st.text_input("Search", debounce="0ms")  # Rerun on every keystroke (no debounce)
+st.text_input("Name")  # Default: rerun on blur/enter only
 ```
 
 The parameter accepts a `bool` (on/off with a sensible default), an `int` (delay in milliseconds),
@@ -167,9 +167,9 @@ semantic term. Unlike Option 2's boolean-only `live_update`, these keep full tim
 
 ```python
 # Using live
-st.text_input("Search", live=True)       # On, sensible default delay (300ms)
-st.text_input("Search", live="300ms")    # Custom delay
-st.text_input("Search", live="0ms")      # Every keystroke
+st.text_input("Search", live=True)  # On, sensible default delay (300ms)
+st.text_input("Search", live="300ms")  # Custom delay
+st.text_input("Search", live="0ms")  # Every keystroke
 
 # Using auto_submit
 st.text_input("Search", auto_submit=True)
