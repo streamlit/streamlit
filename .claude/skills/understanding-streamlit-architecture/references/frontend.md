@@ -159,6 +159,17 @@ Any state -> DISCONNECTED_FOREVER (on fatal error)
 - Uses `ForwardMsgCache` for message deduplication
 - Maintains message ordering via index queue
 - Handles session reconnection via tokens
+- Sends `hostAuthToken ?? xsrfCookie` in the second `Sec-WebSocket-Protocol` entry
+  (`getSessionTokens`). A host auth token wins that one slot, so an embed that uses
+  `useExternalAuthToken` cannot also send the XSRF token. The server still admits the handshake
+  when the page and the backend share an origin, but it cannot read the signed user cookie. Then
+  `st.user` stays empty unless `server.trustedUserHeaders` supplies the identity. A deployment that
+  points `BACKEND_BASE_URL` at another host makes the handshake cross-origin, so the server closes
+  it with code `1008`. Such a page cannot read the backend's XSRF cookie, so it cannot put the
+  token in the slot, and admission fails whatever `server.xsrfCookieSameSite` allows the browser to
+  send. Those deployments need XSRF protection off, which the file upload routes already require of
+  them. Note that `server.enableXsrfProtection=false` alone does not turn it off when an `[auth]`
+  section exists in secrets, because `is_xsrf_enabled()` honors both paths.
 
 ### ForwardMsgCache (`ForwardMessageCache.ts`)
 

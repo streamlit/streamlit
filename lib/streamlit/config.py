@@ -1103,9 +1103,32 @@ _create_option(
         Enables support for Cross-Site Request Forgery (XSRF) protection, for
         added security.
 
-        This option does not enable `server.enableCORS`. Streamlit does not
-        need a valid XSRF token to open a WebSocket connection, so this option
-        does not replace `server.enableCORS`.
+        When enabled, a WebSocket handshake that comes from an origin other
+        than the app must send a matching XSRF token. Streamlit rejects such a
+        handshake before it opens a session.
+
+        - A handshake from the app's own origin does not need the token.
+        - A handshake without an ``Origin`` header does not need the token, so
+          programmatic clients still connect.
+        - A page on the app's host but a different port must send the token,
+          and it can. The browser shares the cookie across ports.
+        - A page on a different host cannot read the XSRF cookie, so it cannot
+          put the token in the handshake and the connection fails while XSRF
+          protection is on. The file upload routes already reject that page for
+          the same reason. Serve the page and the server from one host, or turn
+          XSRF protection off. An ``[auth]`` section in your secrets also turns
+          XSRF protection on, so this option alone does not turn it off for an
+          app that uses Streamlit authentication.
+        - An app that receives an external auth token from its host page puts
+          that token in the same ``Sec-WebSocket-Protocol`` entry that carries
+          the XSRF token. Streamlit cannot validate the XSRF token for those
+          connections, so it does not read the signed user cookie and
+          ``st.user`` stays empty.
+
+        This option does not enable ``server.enableCORS``. To limit which
+        origins may attempt a connection, set ``server.enableCORS=true`` and
+        list the origins that you trust in ``server.corsAllowedOrigins``. That
+        allowlist does not exempt an origin from the XSRF token requirement.
     """,
     default_val=True,
     type_=bool,
@@ -3089,14 +3112,16 @@ def _check_conflicts() -> None:
 Streamlit sends the header 'Access-Control-Allow-Origin: *', except on the file
 upload routes, which stay pinned to the app address and still require a valid
 XSRF token.
-Streamlit also accepts a WebSocket connection from any origin.
 Streamlit does not set 'server.enableCORS' to 'true' for you.
-'server.enableXsrfProtection=true' does not stop a cross-origin WebSocket
-connection, because Streamlit does not need a valid XSRF token to open one.
+The Origin check admits a WebSocket handshake from any origin, but
+'server.enableXsrfProtection=true' rejects a cross-origin handshake that has a
+missing or invalid XSRF token.
 
-To limit cross-origin access, do these steps:
+To limit which origins may attempt a connection, do these steps:
   1. Set 'server.enableCORS=true'.
   2. Put the origins that you trust in 'server.corsAllowedOrigins'.
+
+That allowlist does not exempt an origin from the XSRF token requirement.
 
 'server.allowedHosts' can also limit the hostnames that Streamlit accepts on a
 WebSocket connection.
