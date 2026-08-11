@@ -122,7 +122,7 @@ def resolve_theme_type(
 
     if _has_section_content(light) or _has_section_content(dark):
         section = dark if preference == "dark" else light
-        merged = _merge_for_dual_theme(theme, section)
+        merged = _merge_for_dual_theme(theme, section, variant=preference)
         # fallback = preference (which equals the section variant name, e.g.
         # "dark" for [theme.dark]) — mirrors the FE behavior where selecting
         # the dark section implies dark appearance when no explicit base/bg.
@@ -133,30 +133,34 @@ def resolve_theme_type(
     return _type_from_bg_or_base(theme, fallback="light")
 
 
-def _merge_for_dual_theme(parent: dict, section: dict) -> dict:
+def _merge_for_dual_theme(parent: dict, section: dict, *, variant: str) -> dict:
     """Merge parent [theme] into a light/dark section for type resolution.
 
     Section values override parent (mirrors frontend handleSectionInheritance).
-    Parent's `base` is explicitly DROPPED — the FE never inherits `base` from
-    [theme] into a section. If the section explicitly sets `base`, that is kept.
-    If neither section nor parent provides `base`, the caller's `fallback`
-    parameter (= section variant name) provides the final answer.
+    After merging, `base` is ALWAYS forced to the section variant name —
+    matching the FE, which unconditionally sets `base` from the variant last
+    (overriding both parent and any explicit section `base`). This means a
+    pathological `[theme.dark] base="light"` still gets `base="dark"` — the FE
+    paints dark, so the resolver must agree.
+
+    The only way to override `base` in dual themes is via `backgroundColor`
+    luminance (priority 1 in `_type_from_bg_or_base`).
 
     This ensures:
-    - [theme] base="light" + [theme.dark] primaryColor="..." (no base in
-      section) → parent base dropped → no base in merged → fallback "dark"
-      (= preference = section variant). Correct.
-    - [theme.dark] backgroundColor="#ffffff" (pathological) → parent base
-      dropped → bg luminance → "light" (what is painted). Correct.
-    - [theme.dark] base="dark" → section's explicit base is kept. Correct.
+    - [theme] base="light" + [theme.dark] primaryColor="..." → base forced to
+      "dark" (variant) → resolver returns "dark". Correct.
+    - [theme.dark] backgroundColor="#ffffff" (pathological) → bg luminance →
+      "light" (what is painted, overrides forced base). Correct.
+    - [theme.dark] base="light" (contradictory) → base forced to "dark"
+      (variant, matching FE). Correct — FE paints dark.
     """
     # Filter None values — get_options_for_section includes all registered keys
     # even when unset. Only non-None values represent user-provided config.
     parent_set = {k: v for k, v in parent.items() if v is not None}
     section_set = {k: v for k, v in section.items() if v is not None}
     merged = {**parent_set, **section_set}
-    if "base" not in section_set:
-        merged.pop("base", None)
+    # Force base from variant — matches FE handleSectionInheritance
+    merged["base"] = variant
     return merged
 
 
@@ -191,11 +195,22 @@ A bare `[theme.dark]` header with no keys underneath has all-None values → ret
 False. This matches the FE's behavior, which also requires at least one key to trigger
 dual-theme mode.
 
+**`_has_any_theme_config`** is a simple OR over the three sections:
+
+```python
+def _has_any_theme_config(theme: dict, light: dict, dark: dict) -> bool:
+    return (
+        _has_section_content(theme)
+        or _has_section_content(light)
+        or _has_section_content(dark)
+    )
+```
+
 | Config shape | How to get `type` (Option C) |
 |--------------|------------------------------|
 | No custom theme (presets) | Return `preference` |
 | Single `[theme]` only | `_type_from_bg_or_base` with `fallback="light"` (FE default) |
-| `[theme.light]` and/or `[theme.dark]` | Pick section from `preference`, drop parent `base`, then `_type_from_bg_or_base` with `fallback=preference` (= section variant name) |
+| `[theme.light]` and/or `[theme.dark]` | Pick section from `preference`, force `base=variant` (matching FE), then `_type_from_bg_or_base` with `fallback=preference` (= section variant name) |
 
 Wire in [`app_session.request_rerun`](../../lib/streamlit/runtime/app_session.py) after
 copying client `context_info` into `RerunData`. **Resolution targets the cached
@@ -274,20 +289,22 @@ BE remains correct and `hostThemeActive` must be false.
 1. Existing embed query options `embed_options=light_theme` /
    `embed_options=dark_theme` (already used by host embedding — not a new protocol)
    if present.
-2. Host-provided custom theme (`SET_CUSTOM_THEME_CONFIG` / `handleThemeMessage`) →
-   resolve appearance from `themeInfo.backgroundColor` luminance. Store as
-   `hostThemePreference` (and `hostImportedThemeName`) on the App instance in
-   `handleThemeMessage` after applying the theme. This covers SiS / Cloud hosts that
-   push themes without going through the menu or embed queries.
+2. Host-provided custom theme — **only when `isHostThemePainted()` is true** (the host
+   theme is still the active rendered theme). Returns `hostThemePreference` (stored in
+   `handleThemeMessage` from `themeInfo.backgroundColor` luminance). If
+   `isHostThemePainted()` is false, this step is skipped even if `hostThemePreference`
+   is non-null — prevents stale host preference from leaking after the user picks a
+   different theme from the menu.
 3. Else tracked `ThemeSelection` (`Light` / `Dark` / `System`), with
    `System` → `getSystemThemePreference()`.
 4. `getCachedThemeSelection()` only for initial hydrate.
 
-`getResolvedThemePreference()` checks these in order: embed query → host override →
+`getResolvedThemePreference()` checks in order: embed query → host (if painted) →
 menu/OS selection.
 
-Maintain `lastRerunAppearance` on the App instance (see §4 for semantics); update it
-with painted luminance whenever a rerun BackMsg is sent. Keep sending `colorScheme` for
+Maintain `lastRerunAppearance` on the App instance (see §4 `lastRerunAppearance`
+definition for dedup semantics); update it with painted luminance whenever a rerun
+BackMsg is sent. Keep sending `colorScheme` for
 back-compat if useful; BE overwrites when `theme_preference` is present.
 
 **Backward compatibility:** New backend + old frontend (no `theme_preference`) leaves
@@ -390,11 +407,17 @@ if (prevAppearance !== currAppearance && !this.skipNextThemeUpdate) {
 }
 if (this.skipNextThemeUpdate) {
   this.skipNextThemeUpdate = false
+  // Update dedup guard to match what the script currently sees (the custom theme
+  // just applied by processThemeInput). Without this, lastRerunAppearance stays at
+  // the initial preset value, and a later toggle back to that appearance would be
+  // incorrectly suppressed by the dedup guard.
+  this.lastRerunAppearance = currAppearance
 }
 
-// --- Drain pending theme rerun when script becomes idle ---
+// --- Drain pending theme rerun when connected + idle ---
 if (
   this.pendingThemeRerun &&
+  this.isServerConnected() &&
   this.state.scriptRunState === ScriptRunState.NOT_RUNNING
 ) {
   this.pendingThemeRerun = false
@@ -411,11 +434,12 @@ private maybeRerunForThemeChange = (): void => {
   ) ? "light" : "dark"
 
   if (currentAppearance === this.lastRerunAppearance) return
-  if (!this.isServerConnected()) return
   if (
+    !this.isServerConnected() ||
     this.state.scriptRunState === ScriptRunState.RUNNING ||
     this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED
   ) {
+    // Defer: fire once connected + idle
     this.pendingThemeRerun = true
     return
   }
@@ -448,7 +472,8 @@ this.lastRerunAppearance = hasLightBackgroundColor(
    `activeTheme` prop flows to `App`.
 5. `componentDidUpdate` fires for the new render — `skipNextThemeUpdate` is still
    `true`.
-6. Flag is consumed and cleared.
+6. Flag is consumed, cleared, and `lastRerunAppearance` is updated to the new
+   appearance (ensures dedup guard tracks the custom theme's visual state).
 
 #### Why this does not regress MPA (failure mode analysis)
 
@@ -457,7 +482,7 @@ this.lastRerunAppearance = hasLightBackgroundColor(
 | Fired on `processThemeInput` (preset → custom name change) | `skipNextThemeUpdate` suppresses the resulting `componentDidUpdate` |
 | Fired on page navigation (new `NewSession` → theme reapplication) | Page nav → `handleNewSession` → `processThemeInput` → flag set → suppressed |
 | Fired on reconnection | Same: reconnection → `handleNewSession` → `processThemeInput` → suppressed |
-| Used theme NAME comparison (fragile, changes for internal reasons) | Uses resolved PREFERENCE (luminance "light"/"dark") — only changes on actual appearance flip |
+| Used theme NAME comparison (fragile, changes for internal reasons) | Uses resolved APPEARANCE (luminance "light"/"dark") — only changes on actual appearance flip |
 | `sendRerunBackMsg()` without page context lost current page | `sendUpdateWidgetsMessage(undefined)` → `sendRerunBackMsg` uses `this.state.currentPageScriptHash` |
 | Theme change while script running was silently dropped | `pendingThemeRerun` records the intent; `componentDidUpdate` drains it once `scriptRunState` → `NOT_RUNNING` |
 | Infinite loops (theme change → rerun → NewSession → theme change → ...) | `lastRerunAppearance` updated after send; next `componentDidUpdate` sees no diff and short-circuits. Plus `processThemeInput` sets skip flag. |
@@ -473,6 +498,8 @@ this.lastRerunAppearance = hasLightBackgroundColor(
 | OS dark↔light while System selected | `updateAutoTheme` in `useThemeManager` → prop changes → `componentDidUpdate` fires → rerun | Correct |
 | Reconnection | Same path as initial load through `handleNewSession` → suppressed | Correct |
 | Script already running when theme changes | `maybeRerunForThemeChange` sees `RUNNING` → sets `pendingThemeRerun=true` → script finishes → `componentDidUpdate` sees `NOT_RUNNING` + pending → fires rerun | Correct |
+| Theme change while disconnected | `maybeRerunForThemeChange` sees `!isServerConnected()` → sets `pendingThemeRerun=true` → reconnect → `componentDidUpdate` drain sees connected + `NOT_RUNNING` + pending → fires rerun | Correct |
+| User switches away from host theme via menu | `setAndSendTheme` → active theme name changes → `isHostThemePainted()` returns false → next BackMsg sends `hostThemeActive=false` + menu preference → BE resumes config.toml resolution | Correct |
 
 #### Minor modification to `handleThemeMessage`
 
@@ -480,6 +507,9 @@ After applying the host theme, store the resolved preference and imported theme 
 `isHostThemePainted()` / `getResolvedThemePreference()`:
 
 ```tsx
+// Set BEFORE React flushes the batched state update from setTheme() above.
+// React 18 automatic batching ensures componentDidUpdate fires AFTER these
+// synchronous assignments, so isHostThemePainted() sees the correct state.
 this.hostThemePreference = hasLightBackgroundColor(newTheme.emotion)
   ? "light" : "dark"
 this.hostImportedThemeName = newTheme.name  // used by isHostThemePainted()
@@ -512,8 +542,9 @@ chosen product meaning. Drop stale first-load / settings caveats; keep CSS-overr
 **Python unit**
 
 - Resolver matrix matching the product behavior table (presets; single custom `base` /
-  hex / non-hex; light+dark sections; section-wins inheritance merge; parent `base`
-  does not override section; missing colors → preference).
+  hex / non-hex; light+dark sections; dual-theme forced variant `base` overrides
+  explicit section `base` (matching FE `handleSectionInheritance`); missing colors →
+  preference).
 - `host_theme_active = true` → resolver returns `preference` directly, ignoring
   config.toml (even if config has conflicting `[theme] base="light"`).
 - `_has_section_content` returns False for all-None dicts (registered but unset).
@@ -527,16 +558,20 @@ chosen product meaning. Drop stale first-load / settings caveats; keep CSS-overr
 - `componentDidUpdate` appearance-diff: fires rerun on light↔dark flip; suppressed
   when `skipNextThemeUpdate` is set; no-op when `lastRerunAppearance` matches;
   deferred when script is running.
-- `pendingThemeRerun`: theme change during `RUNNING` sets pending; transition to
-  `NOT_RUNNING` drains it by calling `maybeRerunForThemeChange`.
+- `pendingThemeRerun`: theme change during `RUNNING` or disconnect sets pending;
+  drain when connected + `NOT_RUNNING` by calling `maybeRerunForThemeChange`.
 - `processThemeInput` sets `skipNextThemeUpdate` — verify that `componentDidUpdate`
   after `handleNewSession` / page navigation does NOT trigger rerun.
+- Skip consumption updates `lastRerunAppearance` to the new appearance — verify that a
+  subsequent toggle back to the pre-custom-theme appearance still fires a rerun (dedup
+  guard is not stale).
 - `handleThemeMessage` stores `hostThemePreference` and `hostImportedThemeName`;
-  `getResolvedThemePreference()` returns host preference when set;
-  `isHostThemePainted()` returns true only when active theme matches
-  `hostImportedThemeName`.
+  `getResolvedThemePreference()` returns host preference only when
+  `isHostThemePainted()` is true; falls through to menu/OS otherwise.
 - `isHostThemePainted()` returns false after user selects a different theme from
   the menu (non-sticky host activation).
+- `getResolvedThemePreference()` does NOT return stale `hostThemePreference` after
+  user selects different theme from menu (guards on `isHostThemePainted()`).
 - Regression: theme **name** change alone must not call `sendRerunBackMsg`.
 
 **E2E** (`make run-e2e-test`)

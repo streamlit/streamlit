@@ -100,9 +100,10 @@ colors.
 
 1. If `backgroundColor` is a 6-digit hex → use luminance (authoritative: what is painted).
 2. Else if `base` is `"light"` or `"dark"` → use it (determines which preset bg fills in).
-3. Else inferred default: `"light"` for single `[theme]` (FE default when base is unspecified), or the
-   section variant name for dual themes (e.g. `"dark"` for `[theme.dark]` — mirrors the FE injecting
-   `base` from the section name via `handleSectionInheritance`).
+   For dual themes, `base` is always present — the FE forces it from the section variant
+   name via `handleSectionInheritance` (e.g. `"dark"` for `[theme.dark]`), so step 2
+   always applies unless a hex `backgroundColor` is set (step 1).
+3. Else `"light"` (the frontend default for single `[theme]` when `base` is unspecified).
 
 - Pros: Matches today's docs; matches the primary "contrast my content" use case; single dark custom theme
   correctly reports `"dark"` even if OS preference is light.
@@ -143,7 +144,7 @@ docstring wording change.
 | Single `[theme]` with `base = "dark"`                | `"light"`            | `"dark"`                     |
 | Single `[theme]` with `#121212` bg, no `base`        | `"light"`            | `"dark"` (hex luminance)     |
 | Single `[theme]` with non-hex bg, no `base`          | `"light"`            | `"light"` (fallback)         |
-| `[theme.light]` + `[theme.dark]`, both well-authored | `"dark"`             | `"dark"` (from dark section) |
+| `[theme.light]` + `[theme.dark]`, both well-authored | `"dark"`             | `"dark"` (section bg or forced variant base) |
 | `[theme.dark]` with light hex bg (pathological)      | `"dark"`             | `"light"` (what is painted)  |
 | Host dark theme (SiS/Cloud) overriding config        | `"dark"` (host)      | `"dark"` (host wins)         |
 
