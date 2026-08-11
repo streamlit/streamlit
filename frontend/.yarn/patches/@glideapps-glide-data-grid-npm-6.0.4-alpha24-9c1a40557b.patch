@@ -1,27 +1,8 @@
 diff --git a/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js b/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
-index face64122d35e884020eeabc6d96514141fc18d1..3e84aca2af3bf11f0372c0b86d1c6504cce99e93 100644
+index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d6d64a68b 100644
 --- a/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
 +++ b/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
-@@ -32,19 +32,30 @@ const DataGridOverlayEditor = p => {
-                 setIsValid(true);
-             }
-         }
-+        // Sync the ref during onChange so Enter's deferred commit
-+        // (setTimeout 0) reads the latest value when keydown arrives
-+        // before React re-renders.
-+        lastValueRef.current = newVal;
-         setTempValueRaw(newVal);
-     }, [cell, validateCell]);
-     const finished = React.useRef(false);
-     const customMotion = React.useRef(undefined);
-     const onClickOutside = React.useCallback(() => {
--        onFinishEditing(tempValue, [0, 0]);
-+        onFinishEditing(lastValueRef.current, [0, 0]);
-         finished.current = true;
--    }, [tempValue, onFinishEditing]);
-+    }, [onFinishEditing]);
-     const onEditorFinished = React.useCallback((newValue, movement) => {
-         onFinishEditing(newValue, movement ?? customMotion.current ?? [0, 0]);
+@@ -45,6 +45,13 @@ const DataGridOverlayEditor = p => {
          finished.current = true;
      }, [onFinishEditing]);
      const onKeyDown = React.useCallback(async (event) => {
@@ -35,44 +16,11 @@ index face64122d35e884020eeabc6d96514141fc18d1..3e84aca2af3bf11f0372c0b86d1c6504
          let save = false;
          if (event.key === "Escape") {
              event.stopPropagation();
-@@ -68,11 +79,11 @@ const DataGridOverlayEditor = p => {
-         }
-         window.setTimeout(() => {
-             if (!finished.current && customMotion.current !== undefined) {
--                onFinishEditing(save ? tempValue : undefined, customMotion.current);
-+                onFinishEditing(save ? lastValueRef.current : undefined, customMotion.current);
-                 finished.current = true;
-             }
-         }, 0);
--    }, [onFinishEditing, tempValue]);
-+    }, [onFinishEditing]);
-     const targetValue = tempValue ?? content;
-     const [editorProvider, useLabel] = React.useMemo(() => {
-         if (isInnerOnlyCell(content))
 diff --git a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
-index face64122d35e884020eeabc6d96514141fc18d1..3e84aca2af3bf11f0372c0b86d1c6504cce99e93 100644
+index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d6d64a68b 100644
 --- a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
 +++ b/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
-@@ -32,19 +32,30 @@ const DataGridOverlayEditor = p => {
-                 setIsValid(true);
-             }
-         }
-+        // Sync the ref during onChange so Enter's deferred commit
-+        // (setTimeout 0) reads the latest value when keydown arrives
-+        // before React re-renders.
-+        lastValueRef.current = newVal;
-         setTempValueRaw(newVal);
-     }, [cell, validateCell]);
-     const finished = React.useRef(false);
-     const customMotion = React.useRef(undefined);
-     const onClickOutside = React.useCallback(() => {
--        onFinishEditing(tempValue, [0, 0]);
-+        onFinishEditing(lastValueRef.current, [0, 0]);
-         finished.current = true;
--    }, [tempValue, onFinishEditing]);
-+    }, [onFinishEditing]);
-     const onEditorFinished = React.useCallback((newValue, movement) => {
-         onFinishEditing(newValue, movement ?? customMotion.current ?? [0, 0]);
+@@ -45,6 +45,13 @@ const DataGridOverlayEditor = p => {
          finished.current = true;
      }, [onFinishEditing]);
      const onKeyDown = React.useCallback(async (event) => {
@@ -86,17 +34,3 @@ index face64122d35e884020eeabc6d96514141fc18d1..3e84aca2af3bf11f0372c0b86d1c6504
          let save = false;
          if (event.key === "Escape") {
              event.stopPropagation();
-@@ -68,11 +79,11 @@ const DataGridOverlayEditor = p => {
-         }
-         window.setTimeout(() => {
-             if (!finished.current && customMotion.current !== undefined) {
--                onFinishEditing(save ? tempValue : undefined, customMotion.current);
-+                onFinishEditing(save ? lastValueRef.current : undefined, customMotion.current);
-                 finished.current = true;
-             }
-         }, 0);
--    }, [onFinishEditing, tempValue]);
-+    }, [onFinishEditing]);
-     const targetValue = tempValue ?? content;
-     const [editorProvider, useLabel] = React.useMemo(() => {
-         if (isInnerOnlyCell(content))

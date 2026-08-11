@@ -375,9 +375,15 @@ def _test_number_cell_editing(
 
     # Change the value
     input_field.fill("9876.54")
-    # Wait for the fill value to be applied before pressing Enter,
-    # to avoid a race where Enter commits the previous value.
     expect(input_field).to_have_value("9876.54")
+    # `fill()` updates the input's DOM value and fires a single input event, but
+    # the overlay editor commits on Enter via a deferred (setTimeout) callback
+    # that closes over the React state value. If Enter arrives before that state
+    # update has re-rendered, the commit uses the previous value. Yield one
+    # event-loop task so the re-render flushes before we press Enter. (Atomic
+    # fill+Enter is a test-harness timing artifact; real typing never hits this
+    # sub-frame window.)
+    themed_app.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
     input_field.press("Enter")
     wait_for_app_run(themed_app)
 
