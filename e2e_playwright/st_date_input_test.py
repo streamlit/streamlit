@@ -15,7 +15,7 @@
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -33,6 +33,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     reset_focus,
     reset_hovering,
+    wait_for_datepicker_popover_animation,
 )
 
 NUM_DATE_INPUTS = 22
@@ -259,26 +260,13 @@ def test_calls_callback_on_change(app: Page):
     expect_prefixed_markdown(app, "Date Input Changed:", "False")
 
 
-def _wait_for_calendar_popover_animation(app: Page, calendar: Locator) -> None:
-    """Wait until the BaseWeb datepicker popover open animation has finished.
-
-    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
-    an 8px ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
-    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
-    Chromium as ~8% pixel diff).
-    """
-    expect(calendar).to_be_visible()
-    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
-    expect(popover).to_have_css("opacity", "1")
-
-
 def test_single_date_calendar_picker_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the single value calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Single date").locator("input").click()
     calendar = themed_app.locator('[data-baseweb="calendar"]').first
-    _wait_for_calendar_popover_animation(themed_app, calendar)
+    wait_for_datepicker_popover_animation(themed_app, calendar)
     assert_snapshot(
         calendar,
         name="st_date_input-single_date_calendar",
@@ -291,7 +279,7 @@ def test_range_date_calendar_picker_rendering(
     """Test that the range calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Range, two dates").locator("input").click()
     calendar = themed_app.locator('[data-baseweb="calendar"]').first
-    _wait_for_calendar_popover_animation(themed_app, calendar)
+    wait_for_datepicker_popover_animation(themed_app, calendar)
     assert_snapshot(
         calendar,
         name="st_date_input-range_two_dates_calendar",
