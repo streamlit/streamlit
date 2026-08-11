@@ -22,6 +22,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -266,10 +267,36 @@ def _wait_for_calendar_popover_animation(app: Page, calendar: Locator) -> None:
     an 8px ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
     mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
     Chromium as ~8% pixel diff).
+
+    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
+    transform share the 0.1s open transition, but a subsequent Popper
+    reposition can still nudge the calendar after opacity settles. Require a
+    stable calendar bounding box before screenshotting.
     """
     expect(calendar).to_be_visible()
     popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
     expect(popover).to_have_css("opacity", "1")
+
+    previous_box: dict[str, float] | None = None
+
+    def _calendar_box_is_stable() -> bool:
+        nonlocal previous_box
+        box = calendar.bounding_box()
+        if box is None:
+            return False
+        if previous_box is None:
+            previous_box = box
+            return False
+        stable = (
+            abs(previous_box["x"] - box["x"]) < 0.5
+            and abs(previous_box["y"] - box["y"]) < 0.5
+            and abs(previous_box["width"] - box["width"]) < 0.5
+            and abs(previous_box["height"] - box["height"]) < 0.5
+        )
+        previous_box = box
+        return stable
+
+    wait_until(app, _calendar_box_is_stable)
 
 
 def test_single_date_calendar_picker_rendering(
