@@ -115,13 +115,13 @@ export const StyledSkillsNudgeBody = styled.div(({ theme }) => ({
   color: theme.colors.fadedText60,
 }))
 
+// Deliberately sets no font size: ``BaseButton`` is ``fontSize: inherit``, so
+// the actions pick up the card's ``sm`` body size from ``StyledMessageWrapper``.
+// Sizing them to ``md`` to match a dialog's buttons (as this row previously did)
+// makes the labels a notch larger than the card's own heading and body copy.
 export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.lg,
   marginTop: theme.spacing.twoXS,
-  // Match the deploy dialog's buttons: stock BaseButton (default size), which
-  // renders against the dialog's 16px text — the card body is 14px, so set the
-  // action row to 16px so the buttons look identical to the deploy dialog.
-  fontSize: theme.fontSizes.md,
 }))
