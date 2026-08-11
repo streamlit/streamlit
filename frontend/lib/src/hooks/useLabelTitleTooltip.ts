@@ -31,16 +31,14 @@ interface LabelTitleTooltipRefs<
  * label truncated with an ellipsis (e.g. `wrap=false`) can still be read on
  * hover.
  *
- * The title uses the rendered plain text (the control's accessible name), so a
- * Markdown label is shown without its raw syntax. Because it is a native
- * `title`, the browser shows it on hover whenever it is set, regardless of
- * whether the label is actually clipped.
- *
- * The plain text is read from the DOM because Markdown can only be converted to
- * plain text after it is rendered. DOM mutations are observed so the title
- * re-syncs after async Markdown plugins (e.g. emoji) replace a loading skeleton
- * with the real label. When `addTitleTooltip` is false, no observer is attached
- * so most controls do not subscribe to DOM mutations.
+ * - Uses the rendered plain text (the control's accessible name), so a Markdown
+ *   label is shown without its raw syntax. It is read from the DOM because
+ *   Markdown can only be converted to plain text after it renders.
+ * - The native `title` is always set when enabled; the browser shows it on hover
+ *   without measuring whether the label is actually clipped.
+ * - A MutationObserver re-syncs the title after async Markdown plugins (e.g.
+ *   emoji) replace a loading skeleton with the real label. When
+ *   `addTitleTooltip` is false, no observer is attached.
  *
  * @param addTitleTooltip Whether to attach the native title tooltip.
  * @param label The raw label source, used to re-sync when it changes.

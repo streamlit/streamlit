@@ -88,10 +88,8 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
-  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
-  // wrap resolves to no-wrap, the label ellipsizes on one line and the full
-  // label is revealed on hover via a native title, skipped when help is set
-  // since help provides the tooltip.
+  // wrap=None resolves from layout: no-wrap in horizontal containers, wrap otherwise.
+  // When truncated, a native title reveals the full label on hover (skipped when help is set).
   const wrap = useResolvedWrap(element.wrap)
   const truncate = !wrap
   const addTitleTooltip = truncate && !element.help

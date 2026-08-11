@@ -462,6 +462,14 @@ describe("Checkbox query param binding", () => {
 describe("Checkbox wrap", () => {
   const LONG_LABEL = "A very long checkbox label that should ellipsize"
 
+  // Both checkbox and toggle share the same truncation/title wiring, so the
+  // wrap behavior is exercised over both style types to catch a regression in
+  // either root (StyledCheckboxRoot / StyledSwitchRoot).
+  const STYLE_TYPES = [
+    ["checkbox", CheckboxProto.StyleType.DEFAULT],
+    ["toggle", CheckboxProto.StyleType.TOGGLE],
+  ] as const
+
   const horizontalContext: IFlexContext = {
     direction: Direction.HORIZONTAL,
     isInHorizontalLayout: true,
@@ -469,10 +477,7 @@ describe("Checkbox wrap", () => {
     isInContentWidthContainer: false,
   }
 
-  it.each([
-    ["checkbox", CheckboxProto.StyleType.DEFAULT],
-    ["toggle", CheckboxProto.StyleType.TOGGLE],
-  ])(
+  it.each(STYLE_TYPES)(
     "sets a native title with the full label when %s wrap is false",
     (_name, type) => {
       render(
@@ -482,35 +487,66 @@ describe("Checkbox wrap", () => {
     }
   )
 
-  it("does not set a title by default outside a horizontal layout", () => {
-    render(<Checkbox {...getProps({ label: LONG_LABEL })} />)
-    expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
-  })
+  it.each(STYLE_TYPES)(
+    "uses the plain text of a Markdown %s label for the title",
+    (_name, type) => {
+      render(
+        <Checkbox
+          {...getProps({ type, wrap: false, label: "**Bold** report" })}
+        />
+      )
+      // The title is the rendered plain text, not the raw Markdown source.
+      expect(screen.getByTitle("Bold report")).toBeVisible()
+      expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
+    }
+  )
 
-  it("auto default sets a title inside a horizontal layout", () => {
-    render(
-      <FlexContext.Provider value={horizontalContext}>
-        <Checkbox {...getProps({ label: LONG_LABEL })} />
-      </FlexContext.Provider>
-    )
-    expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
-  })
+  it.each(STYLE_TYPES)(
+    "does not set a title by default outside a horizontal layout (%s)",
+    (_name, type) => {
+      render(<Checkbox {...getProps({ type, label: LONG_LABEL })} />)
+      expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+    }
+  )
 
-  it("explicit wrap=true keeps wrapping inside a horizontal layout", () => {
-    render(
-      <FlexContext.Provider value={horizontalContext}>
-        <Checkbox {...getProps({ wrap: true, label: LONG_LABEL })} />
-      </FlexContext.Provider>
-    )
-    expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
-  })
+  it.each(STYLE_TYPES)(
+    "auto default sets a title inside a horizontal layout (%s)",
+    (_name, type) => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Checkbox {...getProps({ type, label: LONG_LABEL })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+    }
+  )
 
-  it("does not set a title when help is set (help tooltip takes over)", () => {
-    render(
-      <Checkbox
-        {...getProps({ wrap: false, label: LONG_LABEL, help: "Help wins" })}
-      />
-    )
-    expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
-  })
+  it.each(STYLE_TYPES)(
+    "explicit wrap=true keeps wrapping inside a horizontal layout (%s)",
+    (_name, type) => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Checkbox {...getProps({ type, wrap: true, label: LONG_LABEL })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "does not set a %s title when help is set (help tooltip takes over)",
+    (_name, type) => {
+      render(
+        <Checkbox
+          {...getProps({
+            type,
+            wrap: false,
+            label: LONG_LABEL,
+            help: "Help wins",
+          })}
+        />
+      )
+      expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+    }
+  )
 })

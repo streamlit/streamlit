@@ -462,14 +462,18 @@ hello
 
     @parameterized.expand(
         [
-            ("checkbox", st.checkbox),
-            ("toggle", st.toggle),
+            ("checkbox_default", st.checkbox, {}),
+            ("checkbox_explicit_none", st.checkbox, {"wrap": None}),
+            ("toggle_default", st.toggle, {}),
+            ("toggle_explicit_none", st.toggle, {"wrap": None}),
         ]
     )
-    def test_wrap_default(self, _name: str, widget_func: object) -> None:
-        """By default wrap is left unset (auto) so the frontend resolves it from
-        the layout."""
-        widget_func("the label")
+    def test_wrap_default(
+        self, _name: str, widget_func: object, kwargs: dict[str, object]
+    ) -> None:
+        """Omitting wrap or passing wrap=None leaves the proto field unset (auto),
+        so the frontend resolves wrapping from the layout."""
+        widget_func("the label", **kwargs)
 
         c = self.get_delta_from_queue().new_element.checkbox
         assert not c.HasField("wrap")
@@ -489,13 +493,18 @@ hello
         c = self.get_delta_from_queue().new_element.checkbox
         assert c.wrap is wrap_value
 
-    def test_wrap_excluded_from_id(self) -> None:
-        """wrap is layout-only and must not change the element id.
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_wrap_excluded_from_id(self, _name: str, widget_func: object) -> None:
+        """wrap is layout-only and must not affect the element id (state-preserving).
 
-        Two otherwise-identical checkboxes that differ only in wrap collide on
-        the same auto-generated id, proving wrap is excluded from id computation
-        and so preserves widget state when toggled.
+        Two otherwise-identical widgets that differ only in wrap collide on the
+        same auto-generated id, proving wrap is excluded from id computation.
         """
-        st.checkbox("same label")
+        widget_func("same label")
         with pytest.raises(StreamlitDuplicateElementId):
-            st.checkbox("same label", wrap=False)
+            widget_func("same label", wrap=False)
