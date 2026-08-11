@@ -227,9 +227,11 @@ function DataFrame({
   // Commit-edits mode: st.data_editor was called with a commit_edits callback.
   // In this mode the editor disables itself as soon as it submits an edit batch
   // and stays disabled until the matching script/fragment rerun finishes
-  // (mirrors st.chat_input(submit_mode="disable")). All the logic below is inert
-  // when commitEditsActive is false, so st.dataframe / plain data_editor are
-  // unaffected.
+  // (mirrors st.chat_input(submit_mode="disable")). Disable-in-flight logic
+  // below is inert when commitEditsActive is false. Note: ScriptRunContext is
+  // still subscribed unconditionally, so plain st.dataframe / data_editor also
+  // re-render on run-state transitions (tracked follow-up: isolate in-flight
+  // tracking behind a child mounted only when commitEditsActive).
   const commitEditsActive = element.commitEdits
 
   const {

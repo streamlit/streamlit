@@ -1887,7 +1887,10 @@ class ValidateEditedDataframeCompatibilityTest(unittest.TestCase):
             ),
             (
                 "changed_index_structure",
-                pd.DataFrame({"a": [1, 2]}, index=pd.Index([10, 20])),
+                pd.DataFrame(
+                    {"a": [1, 2]},
+                    index=pd.DatetimeIndex(["2020-01-01", "2020-01-02"]),
+                ),
                 pd.DataFrame({"a": [1, 2]}),
                 "index structure",
             ),
@@ -1932,13 +1935,27 @@ class ValidateEditedDataframeCompatibilityTest(unittest.TestCase):
         result = baseline.copy(deep=True)
         result.loc[len(result)] = {"a": 3}
         # Some pandas versions downcast the RangeIndex to an integer Index when a
-        # row is added via .loc. Normalize it back to a RangeIndex so this test
-        # isolates the string/large_string arrow-variant check; index-structure
-        # handling is covered separately.
-        result.index = pd.RangeIndex(len(result))
+        # row is added via .loc. Leave that as-is: RangeIndex / integer Index
+        # equivalence is part of the compatibility contract under test here.
 
         validated, _ = self._validate(result, baseline)
         assert len(validated) == 3
+
+    def test_accepts_range_index_downcast_to_integer_index(self) -> None:
+        """A RangeIndex baseline and an integer Index result (pandas < 3.0 row
+        addition) are editing-compatible, including the ``__index_level_0__``
+        Arrow field that only appears for the plain Index."""
+        baseline = pd.DataFrame({"a": [1, 2]})
+        # Simulate the pandas < 3.0 .loc enlargement downcast without depending
+        # on the installed pandas version.
+        result = pd.DataFrame(
+            {"a": [1, 2, 3]}, index=pd.Index([0, 1, 2], dtype="int64")
+        )
+
+        validated, arrow_table = self._validate(result, baseline)
+        assert len(validated) == 3
+        assert isinstance(arrow_table, pa.Table)
+        # The result may carry `__index_level_0__`; validation must still pass.
 
 
 class CanonicalArrowTypeTest(unittest.TestCase):
@@ -2026,6 +2043,25 @@ class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitAPIException) as exc:
             st.data_editor(pd.DataFrame({"a": [1]}), key="editor", commit_edits=commit)
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+
+    def test_not_supported_with_async_callable_object(self) -> None:
+        """An instance with async ``__call__`` is rejected like an async function."""
+
+        class AsyncCommit:
+            async def __call__(
+                self, source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+            ) -> pd.DataFrame:
+                return source
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=AsyncCommit(),
+            )
         assert str(exc.value) == (
             "st.data_editor: commit_edits does not support async callbacks."
         )

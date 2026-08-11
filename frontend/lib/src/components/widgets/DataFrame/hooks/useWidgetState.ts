@@ -197,8 +197,10 @@ interface UseWidgetStateReturn {
   resetEditingState: () => void
   // Callback to update numRows from editing state
   updateNumRows: () => void
-  // Debounced callback to sync editing state with widget manager
-  syncEditState: () => void
+  // Debounced callback to sync editing state with widget manager.
+  // Pass `{ submit: false }` for passive persistence (e.g. edit reconciliation)
+  // so commit-edits mode does not treat the write as a fresh user submission.
+  syncEditState: (options?: { submit?: boolean }) => void
   // Immediately syncs a pending edit and cancels its debounce timeout
   flushEditState: () => void
   // Resets the editing state and persists an empty editing state to the widget
@@ -340,48 +342,55 @@ function useWidgetState({
    * Inner function to sync editing state with widget manager.
    * This is wrapped with debounce below.
    *
+   * @param fromUi - Whether the write should trigger a widget-driven rerun.
    * @returns True if the widget value was actually updated (i.e. the editing
    * state differed from the stored widget value), false otherwise.
    */
-  const innerSyncEditState = useCallback((): boolean => {
-    if (!widgetMgr) {
+  const innerSyncEditState = useCallback(
+    (fromUi: boolean = true): boolean => {
+      if (!widgetMgr) {
+        return false
+      }
+
+      const currentEditingState =
+        editingStateRef.current.toJson(originalColumns)
+      let currentWidgetState = widgetMgr.getStringValue({
+        id: element.id,
+        formId: element.formId ?? undefined,
+      })
+
+      if (currentWidgetState === undefined) {
+        // Create an empty widget state
+        currentWidgetState = new EditingState(0).toJson([])
+      }
+
+      // Only update if there is actually a difference between editing and widget state
+      if (currentEditingState !== currentWidgetState) {
+        widgetMgr.setStringValue(
+          {
+            id: element.id,
+            formId: element.formId ?? undefined,
+          },
+          currentEditingState,
+          {
+            fromUi,
+          },
+          fragmentId
+        )
+        return true
+      }
+
       return false
-    }
-
-    const currentEditingState = editingStateRef.current.toJson(originalColumns)
-    let currentWidgetState = widgetMgr.getStringValue({
-      id: element.id,
-      formId: element.formId ?? undefined,
-    })
-
-    if (currentWidgetState === undefined) {
-      // Create an empty widget state
-      currentWidgetState = new EditingState(0).toJson([])
-    }
-
-    // Only update if there is actually a difference between editing and widget state
-    if (currentEditingState !== currentWidgetState) {
-      widgetMgr.setStringValue(
-        {
-          id: element.id,
-          formId: element.formId ?? undefined,
-        },
-        currentEditingState,
-        {
-          fromUi: true,
-        },
-        fragmentId
-      )
-      return true
-    }
-
-    return false
-  }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
+    },
+    [originalColumns, element.id, element.formId, widgetMgr, fragmentId]
+  )
 
   // Debounced version of the edit sync used in the default (non-commit) mode to
   // prevent rapid updates to the widget state.
   const { debouncedCallback: debouncedSyncEditState, flush: flushEditState } =
-    useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
+    useDebouncedCallback(() => {
+      innerSyncEditState(true)
+    }, DEBOUNCE_TIME_MS)
 
   /**
    * Syncs the editing state with the widget manager.
@@ -392,21 +401,29 @@ function useWidgetState({
    * `onEditsSubmitted` is invoked when a widget update was actually written.
    * Multiple synchronous edits from a single user action are still coalesced
    * into one backend rerun by the widget manager's macrotask-level batching.
+   *
+   * Pass `{ submit: false }` for passive persistence (edit reconciliation): the
+   * reduced edit set is written with `fromUi: false` and does not call
+   * `onEditsSubmitted`, so a partial clear never auto-retries `commit_edits`.
    */
-  const syncEditState = useCallback(() => {
-    if (commitEditsActive) {
-      if (innerSyncEditState()) {
-        onEditsSubmitted?.()
+  const syncEditState = useCallback(
+    (options?: { submit?: boolean }) => {
+      const submit = options?.submit ?? true
+      if (commitEditsActive) {
+        if (innerSyncEditState(submit) && submit) {
+          onEditsSubmitted?.()
+        }
+        return
       }
-      return
-    }
-    debouncedSyncEditState()
-  }, [
-    commitEditsActive,
-    innerSyncEditState,
-    onEditsSubmitted,
-    debouncedSyncEditState,
-  ])
+      debouncedSyncEditState()
+    },
+    [
+      commitEditsActive,
+      innerSyncEditState,
+      onEditsSubmitted,
+      debouncedSyncEditState,
+    ]
+  )
 
   /**
    * Resets the editing state and persists an empty editing state to the widget

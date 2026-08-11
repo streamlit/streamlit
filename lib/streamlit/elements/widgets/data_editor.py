@@ -228,6 +228,64 @@ def _canonical_arrow_type(arrow_type: pa.DataType) -> str:
     return str(arrow_type)
 
 
+def _is_integer_like_index(index: pd.Index[Any]) -> bool:
+    """True for ``RangeIndex`` and plain integer ``Index`` variants.
+
+    On pandas < 3.0, adding a row via ``.loc`` can downcast a default
+    ``RangeIndex`` to a plain integer ``Index``. Those forms are equivalent for
+    editing purposes (labels may still change).
+    """
+    import pandas as pd
+
+    if isinstance(index, pd.RangeIndex):
+        return True
+    if type(index) is pd.Index and pd.api.types.is_integer_dtype(index.dtype):
+        return True
+    # Legacy numeric index types (removed in newer pandas).
+    return is_type(index, "pandas.core.indexes.numeric.Int64Index") or is_type(
+        index, "pandas.core.indexes.numeric.UInt64Index"
+    )
+
+
+def _canonical_index_type_name(index: pd.Index[Any]) -> str:
+    """Stable index-kind name for widget identity / compatibility checks."""
+    if _is_integer_like_index(index):
+        return "integer"
+    return type(index).__name__
+
+
+def _indexes_have_compatible_structure(
+    result_index: pd.Index[Any], baseline_index: pd.Index[Any]
+) -> bool:
+    """True when two indexes share the same editing-compatible structure.
+
+    Index labels may differ. ``RangeIndex`` and an equivalent integer ``Index``
+    are treated as the same kind so ``return edited_df`` after a row addition
+    stays valid on pandas < 3.0.
+    """
+    if list(result_index.names) != list(baseline_index.names):
+        return False
+    if type(result_index) is type(baseline_index):
+        return True
+    return _is_integer_like_index(result_index) and _is_integer_like_index(
+        baseline_index
+    )
+
+
+def _is_async_callable(callback: Any) -> bool:
+    """True for async functions and callable instances with async ``__call__``."""
+    if inspect.iscoroutinefunction(callback):
+        return True
+    # ``inspect.iscoroutinefunction`` misses instances whose ``__call__`` is
+    # defined with ``async def``. Walk the MRO for that method without using
+    # ``getattr(..., "__call__")`` (flagged by ruff as an unreliable callable check).
+    for cls in type(callback).__mro__:
+        call_attr = cls.__dict__.get("__call__")
+        if call_attr is not None:
+            return inspect.iscoroutinefunction(call_attr)
+    return False
+
+
 def _compute_data_editor_signature(
     data_df: pd.DataFrame,
     data_format: dataframe_util.DataFormat,
@@ -260,7 +318,9 @@ def _compute_data_editor_signature(
 
     add_to_signature("format", data_format.name)
     add_to_signature("columns", tuple(data_df.columns))
-    add_to_signature("index_type", type(data_df.index).__name__)
+    # Canonicalize RangeIndex / integer Index so a pandas < 3.0 row-add
+    # downcast does not churn the commit_edits widget identity.
+    add_to_signature("index_type", _canonical_index_type_name(data_df.index))
     # Encode each index name as a (is_none, name) pair so an unnamed index
     # (None) can never collide with an index whose name is a sentinel string.
     add_to_signature(
@@ -798,7 +858,8 @@ def _validate_edited_dataframe_compatibility(
     """Validate that a ``commit_edits`` result stays editing-compatible.
 
     A compatible result may change values, row count, and index labels, but must
-    preserve the column order, index structure (type and names), the Arrow field
+    preserve the column order, index kind and names (``RangeIndex`` and an
+    equivalent integer ``Index`` count as the same kind), the Arrow field
     types/nullability, and the parsing data kinds of the baseline dataframe.
 
     Returns the validated dataframe together with its Arrow table so the caller
@@ -820,11 +881,9 @@ def _validate_edited_dataframe_compatibility(
             "source dataframe."
         )
 
-    if type(result.index) is not type(baseline_df.index) or list(
-        result.index.names
-    ) != list(baseline_df.index.names):
+    if not _indexes_have_compatible_structure(result.index, baseline_df.index):
         raise StreamlitAPIException(
-            "st.data_editor: commit_edits must preserve the index structure (type "
+            "st.data_editor: commit_edits must preserve the index structure (kind "
             "and names) of the source dataframe."
         )
 
@@ -838,9 +897,13 @@ def _validate_edited_dataframe_compatibility(
     result_arrow = pa.Table.from_pandas(result)
 
     def _arrow_fields(schema: pa.Schema) -> dict[str, tuple[str, bool]]:
+        # Pandas materializes an unnamed Index as ``__index_level_N__``, while a
+        # RangeIndex stays metadata-only. Ignore those fields so RangeIndex /
+        # integer Index equivalence does not look like a schema change.
         return {
             field.name: (_canonical_arrow_type(field.type), field.nullable)
             for field in schema
+            if not field.name.startswith("__index_level_")
         }
 
     result_fields = _arrow_fields(result_arrow.schema)
@@ -1183,7 +1246,7 @@ class DataEditorMixin:
             - Async callbacks aren't supported.
             - The returned dataframe must stay editing-compatible: it may change
               values, row count, and index labels, but must preserve the column
-              order, index structure, column data types/nullability, and
+              order, index kind and names, column data types/nullability, and
               editable data kinds of ``source_df``. Incompatible results raise a
               ``StreamlitAPIException`` and preserve the pending edits.
 
@@ -1370,7 +1433,7 @@ class DataEditorMixin:
                 raise StreamlitAPIException(
                     "st.data_editor: commit_edits does not support pandas.Styler input."
                 )
-            if inspect.iscoroutinefunction(commit_edits):
+            if _is_async_callable(commit_edits):
                 raise StreamlitAPIException(
                     "st.data_editor: commit_edits does not support async callbacks."
                 )

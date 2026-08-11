@@ -1620,6 +1620,49 @@ describe("useWidgetState hook", () => {
       expect(onEditsSubmitted).toHaveBeenCalledTimes(1)
     })
 
+    it("passively persists reconciled edits without submitting a new commit", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const onEditsSubmitted = vi.fn()
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
+            commitEdits: true,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 5,
+          originalColumns: columns,
+          commitEditsActive: true,
+          onEditsSubmitted,
+        })
+      )
+
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+
+      act(() => {
+        result.current.syncEditState({ submit: false })
+      })
+
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "test-id" }),
+        expect.any(String),
+        { fromUi: false },
+        "test-fragment"
+      )
+      expect(onEditsSubmitted).not.toHaveBeenCalled()
+    })
+
     it("does not notify onEditsSubmitted when the edit does not change the widget value", () => {
       const mockWidgetMgr = createMockWidgetMgr()
       // The stored widget value already matches the empty editing state.
