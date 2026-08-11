@@ -16,10 +16,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
+import starlette
 from starlette.middleware.gzip import GZipMiddleware
 
+from streamlit.type_util import is_version_less_than
 from streamlit.web.server.starlette.starlette_routes import (
     BASE_ROUTE_MEDIA,
     BASE_ROUTE_STATIC,
@@ -28,18 +30,61 @@ from streamlit.web.server.starlette.starlette_routes import (
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
 
+# Starlette 1.5.0 gained two GZipMiddleware features that let it handle media
+# and range responses on its own:
+#   - It excludes already-compressed media content types by default (audio/*,
+#     video/*, common raster images, archives, WOFF fonts; PR #3421).
+#   - It skips compressing partial 206 responses (PR #3420).
+# On those versions we route media and range requests through the stock
+# middleware and let it decide by content type / status code, instead of
+# bypassing the /media/ path and every Range request ourselves. Older versions
+# (down to our >=0.46 floor) only exclude text/event-stream and always compress
+# 206 responses, so for them we keep the path- and Range-based bypass.
+_STARLETTE_HANDLES_MEDIA_AND_RANGE: Final = not is_version_less_than(
+    starlette.__version__, "1.5.0"
+)
+
+
+def _strip_segment_prefix(path: str, prefix: str) -> str:
+    """Strip ``prefix`` from ``path``, but only at a path-segment boundary.
+
+    The prefix must match a whole leading segment, so prefix ``"/app"`` strips
+    ``"/app/x"`` to ``"/x"`` but leaves ``"/application/x"`` untouched. An exact
+    match collapses to ``"/"`` (the root document). Mirrors Starlette's
+    ``get_route_path``.
+    """
+    if path == prefix:
+        return "/"
+    if path.startswith(f"{prefix}/"):
+        return path[len(prefix) :]
+    return path
+
+
+def _strip_base_url(path: str, base_url: str) -> str:
+    """Strip a configured ``base_url`` prefix from a request path.
+
+    ``server.baseUrlPath`` can be configured with surrounding slashes (e.g.
+    ``"/my-app/"``), so the prefix is normalized before stripping.
+    """
+    normalized_base = base_url.strip("/")
+    if not normalized_base:
+        return path
+    return _strip_segment_prefix(path, f"/{normalized_base}")
+
 
 def _should_bypass_gzip(path: str, base_url: str = "") -> bool:
-    """Return whether a request path should skip HTTP gzip compression.
+    """Return whether a request path should always skip HTTP gzip compression.
 
-    Compression is bypassed for two kinds of paths:
+    Compression is bypassed for the frontend static-asset route
+    (``/static/...``) and the root document. Local load testing showed that
+    bypassing gzip here materially improves initial load time and peak RSS
+    (a session-only bypass regressed). This bypass applies on every Starlette
+    version because static bundles are compressible text that we still choose
+    not to compress for latency reasons, so no content-type exclusion covers it.
 
-    - The frontend static-asset route (``/static/...``) and the root document.
-      Local load testing showed that bypassing gzip here materially improves
-      initial load time and peak RSS.
-    - The media route (``/media/...``), which serves audio, video, images, and
-      downloads. Compressing already-compressed binary media wastes CPU and,
-      for audio/video, breaks range-request playback in some browsers.
+    The media route (``/media/...``) is handled separately (see
+    ``_is_media_path``), because on modern Starlette we prefer content-type
+    exclusion over a path bypass.
 
     Parameters
     ----------
@@ -51,27 +96,36 @@ def _should_bypass_gzip(path: str, base_url: str = "") -> bool:
         before matching so the checks work regardless of whether a base URL is
         configured.
     """
-    normalized_base = base_url.strip("/")
-    if normalized_base:
-        prefix = f"/{normalized_base}"
-        if path == prefix:
-            return True
-        if path.startswith(f"{prefix}/"):
-            path = path[len(prefix) :]
-
+    path = _strip_base_url(path, base_url)
     if not path or path == "/":
         return True
+    return path.startswith(f"/{BASE_ROUTE_STATIC}/")
 
-    return path.startswith((f"/{BASE_ROUTE_STATIC}/", f"/{BASE_ROUTE_MEDIA}/"))
+
+def _is_media_path(path: str, base_url: str = "") -> bool:
+    """Return whether a request path targets the media route (``/media/...``).
+
+    The media route serves audio, video, images, and downloads. On Starlette
+    versions before 1.5.0 this path is bypassed entirely, because those versions
+    cannot exclude already-compressed media by content type and would corrupt
+    range-based playback by compressing partial responses. On newer versions the
+    stock middleware handles those cases, so this path is compressed like any
+    other route (already-compressed types are excluded by content type, and
+    partial 206 responses are skipped natively).
+    """
+    path = _strip_base_url(path, base_url)
+    return path.startswith(f"/{BASE_ROUTE_MEDIA}/")
 
 
 def _is_range_request(scope: Scope) -> bool:
     """Return whether the request carries a ``Range`` header.
 
-    Ranged responses (HTTP 206) must not be gzip-compressed: the
-    ``Content-Range`` and ``Content-Length`` headers describe the uncompressed
-    byte range, so compressing the body would corrupt range-based playback and
-    downloads (e.g. seeking in audio/video).
+    On Starlette versions before 1.5.0, ranged responses (HTTP 206) must not be
+    gzip-compressed: the ``Content-Range`` and ``Content-Length`` headers
+    describe the uncompressed byte range, so compressing the body would corrupt
+    range-based playback and downloads (e.g. seeking in audio/video). Newer
+    versions skip 206 responses natively, so this bypass is only used as a
+    fallback for older Starlette.
     """
     return any(name == b"range" for name, _ in scope.get("headers", ()))
 
@@ -83,40 +137,35 @@ def _route_path(scope: Scope) -> str:
     proxy that sets ``root_path`` (this works even without ``server.baseUrlPath``
     being configured). In that case ``scope["path"]`` still includes the mount
     prefix, so we strip it the same way Starlette's router does before matching
-    bypass routes. Otherwise the ``/static/`` and ``/media/`` bypass would not
-    match and those responses would be compressed.
+    bypass routes. Otherwise the static bypass (and, on older Starlette, the
+    media bypass) would not match and those responses would be compressed.
     """
     path: str = scope.get("path", "")
     root_path = scope.get("root_path", "")
-    if not root_path or not path.startswith(root_path):
+    if not root_path:
         return path
-    # Only strip at a path-segment boundary, so e.g. root_path "/app" does not
-    # match "/application" (mirrors Starlette's get_route_path).
-    if path == root_path:
-        return "/"
-    if path[len(root_path)] == "/":
-        return path[len(root_path) :]
-    return path
+    return _strip_segment_prefix(path, root_path)
 
 
 class SelectiveGZipMiddleware:
-    """GZip middleware that skips compression for static and media paths.
+    """GZip middleware that skips compression for static (and legacy media) paths.
 
     The actual compression is delegated to Starlette's built-in
     ``GZipMiddleware``, so we inherit its behavior and future improvements
-    (streaming handling, header rewriting, ``text/event-stream`` exclusion,
+    (streaming handling, header rewriting, content-type exclusion, 206 handling,
     worker-thread offloading, etc.) instead of subclassing its internals. This
     wrapper only decides, per request, whether to route it through the gzip
-    layer or serve it uncompressed (see ``_should_bypass_gzip``, ``_route_path``
-    for base-URL/mount handling, and the range-request handling in ``__call__``).
+    layer or serve it uncompressed.
 
-    The bypass is path-based rather than content-type-based, so audio/video
-    served from routes other than ``/media/`` (e.g. custom-component assets or
-    ``/app/static/``) may now be compressed on full 200 responses. This is an
-    intentional trade-off: the universal ``Range``-request bypass still applies,
-    and browsers issue range requests for seeking, so media playback and seeking
-    stay safe while the built-in ``st.audio``/``st.video``/``st.image`` path
-    (served from ``/media/``) remains fully bypassed.
+    Static assets (``/static/...``) and the root document are always served
+    uncompressed for load-time and peak-RSS reasons (see ``_should_bypass_gzip``,
+    and ``_route_path`` for base-URL/mount handling).
+
+    Media (``/media/...``) and ``Range`` requests are only bypassed on older
+    Starlette; on >= 1.5.0 the stock middleware excludes already-compressed media
+    by content type and skips partial 206 responses natively, so they are routed
+    through it instead (see ``_STARLETTE_HANDLES_MEDIA_AND_RANGE``,
+    ``_is_media_path``, and ``_is_range_request`` for the rationale).
     """
 
     def __init__(
@@ -129,20 +178,28 @@ class SelectiveGZipMiddleware:
     ) -> None:
         self.app = app
         self._base_url = base_url
-        # Stock, unmodified Starlette middleware does all the real work.
+        # Stock, unmodified Starlette middleware does all the real work. Its
+        # default exclude_content_types already covers already-compressed media
+        # on Starlette >= 1.5.0, so we do not override it.
         self._gzip_app = GZipMiddleware(
             app, minimum_size=minimum_size, compresslevel=compresslevel
         )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and (
-            _should_bypass_gzip(_route_path(scope), self._base_url)
-            or _is_range_request(scope)
-        ):
-            # Serve static assets, media, and partial (range) responses without
-            # compression. Compressing a range response would corrupt it, since
-            # the Content-Range/Content-Length describe the uncompressed bytes.
-            await self.app(scope, receive, send)
-            return
+        if scope["type"] == "http":
+            route_path = _route_path(scope)
+            if _should_bypass_gzip(route_path, self._base_url):
+                # Serve static assets and the root document without compression.
+                await self.app(scope, receive, send)
+                return
+            if not _STARLETTE_HANDLES_MEDIA_AND_RANGE and (
+                _is_media_path(route_path, self._base_url) or _is_range_request(scope)
+            ):
+                # Legacy Starlette fallback: serve media and partial (range)
+                # responses without compression. Compressing a range response
+                # would corrupt it, since the Content-Range/Content-Length
+                # describe the uncompressed bytes.
+                await self.app(scope, receive, send)
+                return
 
         await self._gzip_app(scope, receive, send)
