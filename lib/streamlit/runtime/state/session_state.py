@@ -1057,6 +1057,16 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
+    def widget_changed(self, widget_id: str) -> bool:
+        """Public accessor for whether a widget's value changed this run.
+
+        Returns ``True`` if the widget's value differs between the previous
+        script run and the current one. This is the same signal used to gate
+        ``on_change`` callbacks and lets a widget's own render logic detect that
+        a fresh interaction was submitted this run.
+        """
+        return self._widget_changed(widget_id)
+
     def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.

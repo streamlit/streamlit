@@ -1567,4 +1567,186 @@ describe("useWidgetState hook", () => {
       }
     )
   })
+
+  describe("commit-edits mode", () => {
+    const EMPTY_EDITS_JSON = JSON.stringify({
+      edited_rows: {},
+      added_rows: [],
+      deleted_rows: [],
+    })
+
+    it("flushes immediately (bypassing the debounce) and notifies onEditsSubmitted", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const onEditsSubmitted = vi.fn()
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
+            commitEdits: true,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 5,
+          originalColumns: columns,
+          commitEditsActive: true,
+          onEditsSubmitted,
+        })
+      )
+
+      // Create a difference from the empty initial widget state.
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+
+      act(() => {
+        result.current.syncEditState()
+      })
+
+      // The write happens immediately, without advancing the debounce timer.
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "test-id" }),
+        expect.any(String),
+        { fromUi: true },
+        "test-fragment"
+      )
+      expect(onEditsSubmitted).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not notify onEditsSubmitted when the edit does not change the widget value", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      // The stored widget value already matches the empty editing state.
+      mockWidgetMgr.getStringValue.mockReturnValue(EMPTY_EDITS_JSON)
+      const columns = [createMockColumn("col1", 0)]
+      const onEditsSubmitted = vi.fn()
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.FIXED,
+            commitEdits: true,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 0,
+          originalColumns: columns,
+          commitEditsActive: true,
+          onEditsSubmitted,
+        })
+      )
+
+      act(() => {
+        result.current.syncEditState()
+      })
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(onEditsSubmitted).not.toHaveBeenCalled()
+    })
+
+    it("clearEditsAndWidgetValue resets edits and writes empty edits without a rerun", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
+            commitEdits: true,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 5,
+          originalColumns: columns,
+          commitEditsActive: true,
+        })
+      )
+
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+      expect(result.current.numRows).toBe(6)
+
+      act(() => {
+        result.current.clearEditsAndWidgetValue()
+      })
+
+      // Editing state is reset back to the original number of rows.
+      expect(result.current.numRows).toBe(5)
+      // Empty edits are persisted without triggering a rerun.
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "test-id" }),
+        EMPTY_EDITS_JSON,
+        { fromUi: false },
+        "test-fragment"
+      )
+      // The clear must never write with fromUi: true (which would rerun).
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        { fromUi: true },
+        expect.anything()
+      )
+    })
+
+    it("keeps using the debounce and never notifies when commit-edits mode is inactive", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const onEditsSubmitted = vi.fn()
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 5,
+          originalColumns: columns,
+          commitEditsActive: false,
+          onEditsSubmitted,
+        })
+      )
+
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+
+      act(() => {
+        result.current.syncEditState()
+      })
+
+      // Debounced: nothing is written synchronously.
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(onEditsSubmitted).not.toHaveBeenCalled()
+
+      act(() => {
+        vi.advanceTimersByTime(200)
+      })
+
+      // The write happens after the debounce, but the notify never fires.
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(onEditsSubmitted).not.toHaveBeenCalled()
+    })
+  })
 })

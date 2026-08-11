@@ -169,6 +169,19 @@ interface UseWidgetStateParams {
   fragmentId?: string
   originalNumRows: number
   originalColumns: BaseColumn[]
+  /**
+   * When true (st.data_editor with a commit_edits callback), edit submissions
+   * flush immediately instead of using the 150ms debounce, and `onEditsSubmitted`
+   * is invoked so the component can disable the editor synchronously with the
+   * submit. Inert (no behavior change) when false.
+   */
+  commitEditsActive?: boolean
+  /**
+   * Called right after an edit batch has been written to the widget manager
+   * (fromUi: true) in commit-edits mode. Only invoked when an actual widget
+   * update was written.
+   */
+  onEditsSubmitted?: () => void
 }
 
 interface UseWidgetStateReturn {
@@ -188,6 +201,10 @@ interface UseWidgetStateReturn {
   syncEditState: () => void
   // Immediately syncs a pending edit and cancels its debounce timeout
   flushEditState: () => void
+  // Resets the editing state and persists an empty editing state to the widget
+  // manager without triggering a rerun (fromUi: false). Used by the commit-edits
+  // clear signal after a successful commit.
+  clearEditsAndWidgetValue: () => void
   // Creates a sync selection state callback for the given columns and getOriginalIndex
   // This needs to be called after useColumnSort since it needs the sorted columns and getOriginalIndex
   createSyncSelectionState: (
@@ -237,6 +254,8 @@ function useWidgetState({
   fragmentId,
   originalNumRows,
   originalColumns,
+  commitEditsActive = false,
+  onEditsSubmitted,
 }: UseWidgetStateParams): UseWidgetStateReturn {
   const { READ_ONLY } = DataframeProto.EditingMode
 
@@ -320,10 +339,13 @@ function useWidgetState({
   /**
    * Inner function to sync editing state with widget manager.
    * This is wrapped with debounce below.
+   *
+   * @returns True if the widget value was actually updated (i.e. the editing
+   * state differed from the stored widget value), false otherwise.
    */
-  const innerSyncEditState = useCallback(() => {
+  const innerSyncEditState = useCallback((): boolean => {
     if (!widgetMgr) {
-      return
+      return false
     }
 
     const currentEditingState = editingStateRef.current.toJson(originalColumns)
@@ -350,12 +372,67 @@ function useWidgetState({
         },
         fragmentId
       )
+      return true
     }
+
+    return false
   }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
 
-  // Debounced version of syncEditState to prevent rapid updates
-  const { debouncedCallback: syncEditState, flush: flushEditState } =
+  // Debounced version of the edit sync used in the default (non-commit) mode to
+  // prevent rapid updates to the widget state.
+  const { debouncedCallback: debouncedSyncEditState, flush: flushEditState } =
     useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
+
+  /**
+   * Syncs the editing state with the widget manager.
+   *
+   * In the default mode the sync is debounced. When commit-edits mode is active,
+   * the edit is flushed immediately (bypassing the debounce) so the editor can
+   * disable itself synchronously with the submitted edit batch, and
+   * `onEditsSubmitted` is invoked when a widget update was actually written.
+   * Multiple synchronous edits from a single user action are still coalesced
+   * into one backend rerun by the widget manager's macrotask-level batching.
+   */
+  const syncEditState = useCallback(() => {
+    if (commitEditsActive) {
+      if (innerSyncEditState()) {
+        onEditsSubmitted?.()
+      }
+      return
+    }
+    debouncedSyncEditState()
+  }, [
+    commitEditsActive,
+    innerSyncEditState,
+    onEditsSubmitted,
+    debouncedSyncEditState,
+  ])
+
+  /**
+   * Resets the editing state and persists an empty editing state to the widget
+   * manager without triggering a rerun (fromUi: false). Called in response to
+   * the one-shot commit-edits clear signal after a successful commit, so the
+   * freshly committed data is shown with no lingering pending edits.
+   */
+  const clearEditsAndWidgetValue = useCallback(() => {
+    resetEditingState()
+
+    if (!widgetMgr) {
+      return
+    }
+
+    widgetMgr.setStringValue(
+      {
+        id: element.id,
+        formId: element.formId ?? undefined,
+      },
+      new EditingState(0).toJson([]),
+      {
+        fromUi: false,
+      },
+      fragmentId
+    )
+  }, [resetEditingState, widgetMgr, element.id, element.formId, fragmentId])
 
   /**
    * Creates a function to sync selection state with the widget manager.
@@ -665,6 +742,7 @@ function useWidgetState({
     updateNumRows,
     syncEditState,
     flushEditState,
+    clearEditsAndWidgetValue,
     createSyncSelectionState,
     onFormCleared,
     loadInitialSelectionState,

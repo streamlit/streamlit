@@ -61,6 +61,18 @@ message Dataframe {
   // left empty for lazy dataframes.
   optional LazyDataframe lazy_data = 14;
 
+  // True when st.data_editor was called with a commit_edits callback. Enables
+  // the frontend's disable-in-flight behavior: the editor disables itself as
+  // soon as it submits an edit batch and stays disabled until the matching
+  // script or fragment rerun finishes.
+  bool commit_edits = 15;
+
+  // One-shot signal set only on the render immediately after a successful
+  // commit_edits call. Tells the frontend to reset its editing state and clear
+  // the stored widget value, so the freshly committed data is displayed without
+  // any lingering pending edits.
+  bool clear_edits = 16;
+
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.

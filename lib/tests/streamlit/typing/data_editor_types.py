@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import assert_type
 
@@ -28,8 +28,34 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from streamlit.elements.widgets.data_editor import DataEditorMixin
+    from streamlit.typing import DataEditorState
 
     data_editor = DataEditorMixin().data_editor
+
+    # =====================================================================
+    # DataEditorState (returned via st.session_state[key]) supports both
+    # attribute and item access.
+    # =====================================================================
+
+    edit_state = cast("DataEditorState", object())
+    assert_type(
+        edit_state.edited_rows,
+        dict[int, dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        edit_state["edited_rows"],
+        dict[int, dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        edit_state.added_rows,
+        list[dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(
+        edit_state["added_rows"],
+        list[dict[str, str | int | float | bool | list[str] | None]],
+    )
+    assert_type(edit_state.deleted_rows, list[int])
+    assert_type(edit_state["deleted_rows"], list[int])
 
     # =====================================================================
     # Return type tests based on data parameter type
@@ -100,3 +126,21 @@ if TYPE_CHECKING:
     # Return type preserved with optional parameters for non-DataFrame types
     assert_type(data_editor(list_data, num_rows="dynamic"), list[dict[str, int]])
     assert_type(data_editor(dict_data, disabled=True), dict[str, list[str]])
+
+    # =====================================================================
+    # Test commit_edits parameter (return type unchanged)
+    # =====================================================================
+
+    def commit_edits(
+        source_df: pd.DataFrame,
+        edited_df: pd.DataFrame,
+        edits: DataEditorState,
+    ) -> pd.DataFrame:
+        return source_df
+
+    assert_type(data_editor(df, key="editor", commit_edits=commit_edits), pd.DataFrame)
+    assert_type(data_editor(df, key="editor", commit_edits=None), pd.DataFrame)
+    assert_type(
+        data_editor(list_data, key="editor", commit_edits=commit_edits),
+        list[dict[str, int]],
+    )
