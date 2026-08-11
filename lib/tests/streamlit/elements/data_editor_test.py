@@ -940,6 +940,35 @@ class DataEditorSignatureTest(unittest.TestCase):
             df1, include_index_values=False
         ) == _get_data_editor_signature(df2, include_index_values=False)
 
+    def test_signature_stable_across_range_to_integer_index_downcast(self) -> None:
+        """A RangeIndex baseline and a pandas < 3.0 integer-Index result must
+        share the commit_edits schema signature.
+
+        Arrow only materializes ``__index_level_0__`` for the integer Index;
+        hashing that field would churn the widget id and orphan the next edit.
+        """
+        baseline = pd.DataFrame({"a": [1, 2]})
+        assert isinstance(baseline.index, pd.RangeIndex)
+
+        # Simulate the pandas < 3.0 ``.loc`` append downcast (and force it on
+        # pandas 3+ where RangeIndex may be preserved).
+        edited = baseline.copy()
+        edited.loc[len(edited)] = 3
+        if isinstance(edited.index, pd.RangeIndex):
+            edited.index = pd.Index(list(edited.index))
+        assert type(edited.index) is pd.Index
+
+        assert _get_data_editor_signature(
+            baseline, include_row_count=False, include_index_values=False
+        ) == _get_data_editor_signature(
+            edited, include_row_count=False, include_index_values=False
+        )
+        # Including index values / row count must still distinguish them so
+        # non-commit keyed editors keep noticing structural changes.
+        assert _get_data_editor_signature(baseline) != _get_data_editor_signature(
+            edited
+        )
+
     def test_signature_hashes_meaningful_index_values(self):
         df = pd.DataFrame({"a": [1, 2, 3]}, index=["x", "y", "z"])
         reordered_df = df.iloc[::-1]

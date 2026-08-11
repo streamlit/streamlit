@@ -348,6 +348,12 @@ def _compute_data_editor_signature(
         h.update(b"\0")
 
     for field in arrow_schema:
+        # Pandas materializes an unnamed Index as ``__index_level_N__``, while a
+        # RangeIndex stays metadata-only. Skip those fields so a pandas < 3.0
+        # RangeIndex → integer Index downcast does not churn widget identity
+        # (same rule as ``_validate_edited_dataframe_compatibility``).
+        if field.name.startswith("__index_level_"):
+            continue
         add_to_signature(
             "field",
             (
