@@ -304,22 +304,28 @@ class SliderTest(DeltaGeneratorTestCase):
         assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
 
     def test_advertised_range_is_the_widest_whole_day_span(self):
-        """One day beyond either advertised bound is rejected.
+        """One day beyond either advertised bound is rejected by the range check.
 
-        Guards the range from drifting inward and needlessly narrowing what callers
-        are told they can use.
+        Guards the advertised range from drifting inward and needlessly narrowing what
+        callers are told they can use.
+
+        Each end needs the opposite time of day: the limit falls at 00:12 on the first
+        day and 23:47 on the last, so it is midnight that overflows below and
+        end-of-day that overflows above. The pairing bound stays in range so the
+        earlier ``min_value < max_value`` check cannot mask the result, and the message
+        is asserted so a rejection for some other reason does not count.
         """
-        for out_of_range in (
-            _MIN_SAFE_DAY - timedelta(days=1),
-            _MAX_SAFE_DAY + timedelta(days=1),
-        ):
-            with pytest.raises(StreamlitAPIException):
-                st.slider(
-                    "Label",
-                    min_value=datetime.combine(out_of_range, time(23, 59)),
-                    max_value=datetime.combine(out_of_range, time(23, 59)),
-                    value=datetime.combine(out_of_range, time(23, 59)),
-                )
+        just_below = datetime.combine(_MIN_SAFE_DAY - timedelta(days=1), time())
+        just_above = datetime.combine(_MAX_SAFE_DAY + timedelta(days=1), time(23, 59))
+        in_range = datetime.combine(_MIN_SAFE_DAY, time(12))
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", min_value=just_below, max_value=in_range, value=in_range)
+        assert "`min_value` is too far from 1970" in str(exc.value)
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", min_value=in_range, max_value=just_above, value=in_range)
+        assert "`max_value` is too far from 1970" in str(exc.value)
 
     @parameterized.expand(
         [

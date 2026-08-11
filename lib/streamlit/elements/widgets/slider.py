@@ -1039,6 +1039,8 @@ class SliderMixin:
         # we simply re-package as StreamlitAPIExceptions.
         # (We check `min_value` and `max_value` here; `value` and `step` are
         # already known to be in the [min_value, max_value] range.)
+        # Timelike bounds are checked further down instead, after the conversion to
+        # microseconds -- that integer is what the frontend has to represent.
         try:
             if all_ints:
                 JSNumber.validate_int_bounds(cast("int", min_value), "`min_value`")
@@ -1046,10 +1048,6 @@ class SliderMixin:
             elif all_floats:
                 JSNumber.validate_float_bounds(cast("float", min_value), "`min_value`")
                 JSNumber.validate_float_bounds(cast("float", max_value), "`max_value`")
-            elif all_timelikes:
-                # Checked after the conversion to microseconds below, since that
-                # integer is what the frontend actually has to represent.
-                pass
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
