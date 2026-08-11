@@ -33,8 +33,8 @@ if TYPE_CHECKING:
 # Starlette 1.5.0 gained two GZipMiddleware features that let it handle media
 # and range responses on its own:
 #   - It excludes already-compressed media content types by default (audio/*,
-#     video/*, common raster images, archives, WOFF fonts; PR #3421).
-#   - It skips compressing partial 206 responses (PR #3420).
+#     video/*, common raster images, archives, WOFF fonts; Starlette PR #3421).
+#   - It skips compressing partial 206 responses (Starlette PR #3420).
 # On those versions we route media and range requests through the stock
 # middleware and let it decide by content type / status code, instead of
 # bypassing the /media/ path and every Range request ourselves. Older versions
