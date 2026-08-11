@@ -73,7 +73,7 @@ sns.despine()
 
 st.pyplot(fig)
 
-st.write("Advanced Seaborn figure using kwargs (low dpi):")
+st.write("Advanced Seaborn figure using deprecated kwargs (low dpi):")
 
 kwargs = {
     "dpi": 50,  # We use a low dpi to show a stark difference to the figure above.
@@ -82,8 +82,8 @@ kwargs = {
     "format": "png",  # Required for some Matplotlib backends.
 }
 
-# We need to set clear_figure=True, otherwise the global object
-# test below would not work.
+# clear_figure=True so the global-object test below still works.
+# Deprecated savefig kwargs are still exercised here until removal.
 st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
 
 st.write("Figure using deprecated global object:")

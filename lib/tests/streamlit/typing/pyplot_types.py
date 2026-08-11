@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     assert_type(pyplot(fig, use_container_width=False), DeltaGenerator)
     assert_type(pyplot(fig, use_container_width=None), DeltaGenerator)
 
-    # pyplot with extra savefig kwargs (**kwargs: Any)
+    # pyplot with deprecated savefig kwargs (**kwargs: Any)
     assert_type(pyplot(fig, dpi=300, transparent=True), DeltaGenerator)
 
     # pyplot with all parameters combined
@@ -63,7 +63,7 @@ if TYPE_CHECKING:
             clear_figure=True,
             width="stretch",
             use_container_width=None,
-            dpi=200,
+            dpi=200,  # deprecated savefig kwarg
         ),
         DeltaGenerator,
     )

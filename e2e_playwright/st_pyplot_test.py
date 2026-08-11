@@ -53,8 +53,9 @@ def test_displays_a_pyplot_figures(
 
 
 def test_shows_deprecation_warning(app: Page):
-    """Test that the deprecation warning is displayed correctly."""
+    """Test that pyplot deprecation warnings are displayed correctly."""
     expect_warning(app, "without providing a figure argument has been deprecated")
+    expect_warning(app, "Passing Matplotlib savefig keyword arguments")
 
 
 @pytest.mark.skip_browser("webkit")
