@@ -128,7 +128,7 @@ app = st.App(
     ],
     middleware=[Middleware(CustomHeaderMiddleware)],
     lifespan=lifespan,
-    exception_handlers={CustomAPIError: custom_api_error_handler},  # type: ignore[dict-item]
+    exception_handlers={CustomAPIError: custom_api_error_handler},  # type: ignore[dict-item] # ty: ignore[invalid-argument-type]
     on_script_error=handle_script_error,
     secrets={
         "api_key": "test-api-key-12345",

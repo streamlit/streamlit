@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -35,7 +35,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -86,6 +86,104 @@ class TextAreaSerde:
         return v
 
 
+def _parse_text_input_validate(
+    validate: str | tuple[str, str] | None,
+) -> tuple[str | None, str | None]:
+    if validate is None:
+        return None, None
+
+    if isinstance(validate, str):
+        return validate, None
+
+    if (
+        isinstance(validate, tuple)
+        and len(validate) == 2
+        and all(isinstance(item, str) for item in validate)
+    ):
+        return validate
+
+    raise StreamlitAPIException(
+        "The `validate` parameter must be `None`, a regex string, or a "
+        "`(regex, message)` tuple of strings."
+    )
+
+
+# Default (regex, message) validation rules for the specialized text input types.
+# The regexes are JS-flavored (compiled with the "us" flags on the frontend) and
+# anchored, so they flow through the same `validate` channel as a user-supplied
+# rule. The email regex requires a dotted domain (accepts `user@host.tld`,
+# rejects `user@host`). The url regex requires a dotted host but makes the
+# `http(s)://` scheme optional (and case-insensitive, so `HTTPS://` works too),
+# so both `example.com` and `https://example.com` pass while obvious non-URLs
+# (plain words, values with spaces) are rejected. The first host label excludes
+# `/` so a bare path (`path/to/file.txt`) or a malformed scheme
+# (`https://.example.com`) does not sneak through, while paths after the host
+# (`example.com/a/b`) still pass. It stays intentionally permissive since it only
+# needs to catch clear mistakes; users who want stricter rules can pass their own
+# `validate`.
+_EMAIL_VALIDATE: Final = (
+    r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
+    "Enter a valid email address.",
+)
+_URL_VALIDATE: Final = (
+    r"^([Hh][Tt][Tt][Pp][Ss]?://)?[^\s/.]+\.[^\s]+$",
+    "Enter a valid URL.",
+)
+
+
+class _TextInputTypeDefaults(NamedTuple):
+    """Type-derived smart defaults for a ``text_input`` ``type`` value.
+
+    A user value always wins; a ``None`` argument falls back to the value here,
+    and an empty string (``""``) forces the corresponding feature off.
+    """
+
+    proto_type: TextInputProto.Type.ValueType
+    icon: str | None
+    placeholder: str | None
+    validate: tuple[str, str] | None
+    autocomplete: str
+
+
+# Single source of truth mapping each public `type` string to its native input
+# type (proto enum) and its overridable smart defaults. Keeping the whole policy
+# here means the frontend only needs the enum -> DOM type mapping.
+_TEXT_INPUT_TYPE_DEFAULTS: Final[dict[str, _TextInputTypeDefaults]] = {
+    "default": _TextInputTypeDefaults(TextInputProto.DEFAULT, None, None, None, ""),
+    "password": _TextInputTypeDefaults(
+        TextInputProto.PASSWORD, None, None, None, "new-password"
+    ),
+    "email": _TextInputTypeDefaults(
+        TextInputProto.EMAIL,
+        ":material/mail:",
+        "you@example.com",
+        _EMAIL_VALIDATE,
+        "email",
+    ),
+    "url": _TextInputTypeDefaults(
+        TextInputProto.URL,
+        ":material/link:",
+        "https://example.com",
+        _URL_VALIDATE,
+        "url",
+    ),
+    "phone": _TextInputTypeDefaults(
+        TextInputProto.PHONE,
+        ":material/call:",
+        "+1 234 567 8900",
+        None,
+        "tel",
+    ),
+    "search": _TextInputTypeDefaults(
+        TextInputProto.SEARCH,
+        ":material/search:",
+        "Search",
+        None,
+        "off",
+    ),
+}
+
+
 class TextWidgetsMixin:
     @overload
     def text_input(
@@ -94,7 +192,9 @@ class TextWidgetsMixin:
         value: str = "",
         max_chars: int | None = None,
         key: Key | None = None,
-        type: Literal["default", "password"] = "default",
+        type: Literal[
+            "default", "password", "email", "url", "phone", "search"
+        ] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -105,6 +205,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -118,7 +219,9 @@ class TextWidgetsMixin:
         value: SupportsStr | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
-        type: Literal["default", "password"] = "default",
+        type: Literal[
+            "default", "password", "email", "url", "phone", "search"
+        ] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -129,6 +232,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -142,7 +246,9 @@ class TextWidgetsMixin:
         value: str | SupportsStr | None = "",
         max_chars: int | None = None,
         key: Key | None = None,
-        type: Literal["default", "password"] = "default",
+        type: Literal[
+            "default", "password", "email", "url", "phone", "search"
+        ] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -153,6 +259,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -200,8 +307,8 @@ class TextWidgetsMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``max_chars`` resets the widget even when a key
-               is provided.
+               Changing ``max_chars`` or the validation regex resets the
+               widget even when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -210,10 +317,44 @@ class TextWidgetsMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
-        type : "default" or "password"
-            The type of the text input. This can be either "default" (for
-            a regular text input), or "password" (for a text input that
-            masks the user's typed value). Defaults to "default".
+        type : "default", "password", "email", "url", "phone", or "search"
+            The type of the text input. This sets the underlying native HTML
+            input type (which controls things like the mobile keyboard and
+            browser autofill) and, for the specialized types, applies
+            overridable smart defaults for ``icon``, ``placeholder``,
+            ``validate``, and ``autocomplete``. Defaults to ``"default"``.
+
+            - ``"default"``: A regular single-line text input. No smart
+              defaults are applied.
+            - ``"password"``: A text input that masks the user's typed value.
+              ``autocomplete`` defaults to ``"new-password"``.
+            - ``"email"``: An input for email addresses. Defaults to a mail
+              icon, a ``you@example.com`` placeholder, email-format
+              validation, and ``autocomplete="email"``.
+            - ``"url"``: An input for web addresses. Defaults to a link icon,
+              an ``https://example.com`` placeholder, URL-format validation,
+              and ``autocomplete="url"``.
+            - ``"phone"``: An input for phone numbers (numeric keypad on
+              mobile). Defaults to a call icon, a ``+1 234 567 8900``
+              placeholder, and ``autocomplete="tel"``. No default validation
+              is applied because phone formats vary too widely.
+            - ``"search"``: A free-text search input with a clear button that
+              empties the field. Defaults to a search icon, a ``Search``
+              placeholder, and ``autocomplete="off"`` (so private search terms
+              don't leak into the browser's autofill history). No default
+              validation is applied.
+
+            The smart defaults are only applied when you don't pass a value
+            for ``icon``, ``placeholder``, ``validate``, or ``autocomplete``.
+            For each of these, ``None`` (or omission) uses the type's default,
+            an explicit value overrides it, and ``""`` forces the feature off
+            (for example, ``icon=""`` shows no icon).
+
+            .. note::
+               The default email and URL validation runs in the user's browser
+               and can be bypassed. If the validation is security-relevant, you
+               must also validate the value on the server (in your app code)
+               after it is submitted.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -224,11 +365,16 @@ class TextWidgetsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        autocomplete : str
+        autocomplete : str or None
             An optional value that will be passed to the <input> element's
-            autocomplete property. If unspecified, this value will be set to
-            "new-password" for "password" inputs, and the empty string for
-            "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
+            autocomplete property. If this is ``None`` (default), the value is
+            derived from ``type``: ``"new-password"`` for ``"password"``,
+            ``"email"`` for ``"email"``, ``"url"`` for ``"url"``, ``"tel"``
+            for ``"phone"``, ``"off"`` for ``"search"``, and the empty string
+            for ``"default"``. Pass an explicit token to override the default,
+            or ``""`` to fall back to the browser's default autofill behavior
+            (equivalent to not setting the attribute). For more details, see
+            https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
 
         on_change : callable
             An optional callback invoked when this text input's value changes.
@@ -240,8 +386,12 @@ class TextWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
 
         placeholder : str or None
-            An optional string displayed when the text input is empty. If None,
-            no text is displayed.
+            An optional string displayed when the text input is empty. If
+            ``placeholder`` is ``None`` (default), the placeholder is derived
+            from ``type`` (for example, ``you@example.com`` for
+            ``type="email"``); for ``type="default"`` and ``type="password"``,
+            no placeholder is displayed. Pass ``placeholder=""`` to force no
+            placeholder even for a specialized type.
 
         disabled : bool
             An optional boolean that disables the text input if set to
@@ -254,9 +404,12 @@ class TextWidgetsMixin:
 
         icon : str, None
             An optional emoji or icon to display within the input field to the
-            left of the value. If ``icon`` is ``None`` (default), no icon is
-            displayed. If ``icon`` is a string, the following options are
-            valid:
+            left of the value. If ``icon`` is ``None`` (default), the icon is
+            derived from ``type`` (for example, a mail icon for
+            ``type="email"``); for ``type="default"`` and ``type="password"``,
+            no icon is displayed. Pass ``icon=""`` to force no icon even for a
+            specialized type. If ``icon`` is a non-empty string, the following
+            options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -271,6 +424,44 @@ class TextWidgetsMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        validate : str, tuple[str, str], or None
+            An optional client-side validation rule for the input. If this is
+            ``None`` (default), no validation is performed for
+            ``type="default"`` and ``type="password"``, while ``type="email"``
+            and ``type="url"`` fall back to their built-in format validation.
+            Pass ``validate=""`` to turn a specialized type's default
+            validation off. If this is a string, it is treated as a
+            JavaScript-flavored regular expression that the input must match
+            before it can be submitted, and a generic error message is shown
+            when validation fails. If this is a ``(regex, message)`` tuple, the
+            regex is used for client-side validation and the custom ``message``
+            is shown when validation fails. Providing a custom message is
+            recommended, since generic validation messages are less helpful to
+            users. A user-supplied ``validate`` replaces the type's default
+            rule.
+
+            For example, pass ``r"^[^@\s]+@[^@\s]+\.[^@\s]+$"`` to require an
+            email-like value, or
+            ``(r"^\d{3}-\d{3}-\d{4}$", "Use the format 555-123-4567.")`` to
+            require a phone number and show a custom error message. Patterns are
+            not implicitly anchored; use ``^`` / ``$`` when the whole value must
+            match (same semantics as ``st.column_config.TextColumn``).
+
+            Validation runs when the user tries to submit a value: on blur or
+            Enter outside a form, and on form submission inside a form. Invalid
+            values are not submitted, and empty inputs bypass validation.
+
+            Inside a form with ``bind="query-params"``, keystrokes still stage
+            the value into widget state (and therefore the URL) before
+            submit-time validation runs. Form submission itself still blocks
+            invalid values from reaching the server.
+
+            .. note::
+               This validation runs in the user's browser and can be bypassed.
+               If the validation is security-relevant, you must also validate
+               the value on the server (in your app code) after it is
+               submitted.
 
         width : "stretch" or int
             The width of the text input widget. This can be one of the
@@ -336,6 +527,15 @@ class TextWidgetsMixin:
            https://doc-text-input.streamlit.app/
            height: 260px
 
+        Use a specialized ``type`` to get a matching native input, icon,
+        placeholder, and validation with zero extra code:
+
+        >>> import streamlit as st
+        >>>
+        >>> email = st.text_input("Email", type="email")
+        >>> if email:
+        ...     st.write("We'll reach you at", email)
+
         """
         ctx = get_script_run_ctx()
         return self._text_input(
@@ -353,6 +553,7 @@ class TextWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             icon=icon,
+            validate=validate,
             width=width,
             bind=bind,
             persist_state=persist_state,
@@ -376,12 +577,19 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
+        validate: str | tuple[str, str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
+
+        type_defaults = _TEXT_INPUT_TYPE_DEFAULTS.get(type)
+        if type_defaults is None:
+            raise StreamlitValueError(
+                "type", [repr(t) for t in _TEXT_INPUT_TYPE_DEFAULTS]
+            )
 
         check_widget_policies(
             self.dg,
@@ -394,12 +602,36 @@ class TextWidgetsMixin:
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
 
+        # Compute the widget identity from the RAW user-provided values, before
+        # resolving any type-derived smart defaults below. `type` is already
+        # part of the identity, so folding the type defaults (icon, placeholder,
+        # validate, autocomplete) in here would needlessly reset every
+        # pre-existing widget on upgrade. This is what keeps `type="default"`
+        # and `type="password"` element IDs byte-for-byte unchanged.
+        identity_validate_regex, _ = _parse_text_input_validate(validate)
+
+        # Only contribute the validation regex to the element identity when
+        # validation is actually configured. This keeps element IDs (and thus
+        # widget state) stable across upgrades for the common case of inputs
+        # without validation, instead of hashing a `validate=None` placeholder
+        # that would reset every pre-existing text input on the first run after
+        # upgrade. A falsy regex (`None` or `""`) is identity-neutral, matching
+        # the frontend, which treats an empty regex as "no validation". When a
+        # regex is set, it still affects identity so that changing the regex
+        # resets the widget (its value may no longer be valid). The message is
+        # intentionally excluded since it is cosmetic.
+        validate_identity_kwarg = (
+            {"validate": identity_validate_regex} if identity_validate_regex else {}
+        )
+
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            # Explicitly whitelist max_chars to make sure the ID changes when it changes
-            # since the widget value might become invalid based on a different max_chars
-            key_as_main_identity={"max_chars"},
+            # Explicitly whitelist max_chars and validate so the ID changes when
+            # they change, since the widget value might become invalid based on a
+            # different max_chars or validation regex. Only the regex (not the
+            # message) is used for identity, since the message is purely cosmetic.
+            key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,
             value=value,
@@ -410,7 +642,34 @@ class TextWidgetsMixin:
             placeholder=str(placeholder),
             icon=icon,
             width=width,
+            **validate_identity_kwarg,
         )
+
+        # Resolve the effective values from the type defaults now that the
+        # widget identity has been computed from the raw values above.
+        # Precedence per property: explicit user value -> type default -> off.
+        if icon is None:
+            icon = type_defaults.icon
+        elif icon == "":
+            # `icon=""` opts out of the icon. Map it to None so it isn't passed
+            # to `validate_icon_or_emoji`, which raises on an empty string.
+            icon = None
+
+        if placeholder is None:
+            placeholder = type_defaults.placeholder
+
+        # `validate=None` falls back to the type default (a no-op for
+        # `default`/`password`, which define none); `validate=""` and explicit
+        # values pass through unchanged. This effective regex is separate from
+        # the identity regex above, which intentionally ignores the type
+        # default so the default rule never enters the widget ID.
+        effective_validate = type_defaults.validate if validate is None else validate
+        validate_regex, validate_message = _parse_text_input_validate(
+            effective_validate
+        )
+
+        if autocomplete is None:
+            autocomplete = type_defaults.autocomplete
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
@@ -439,19 +698,14 @@ class TextWidgetsMixin:
         if icon is not None:
             text_input_proto.icon = validate_icon_or_emoji(icon)
 
-        if type == "default":
-            text_input_proto.type = TextInputProto.DEFAULT
-        elif type == "password":
-            text_input_proto.type = TextInputProto.PASSWORD
-        else:
-            raise StreamlitAPIException(
-                f"'{type}' is not a valid text_input type. Valid types are 'default' and 'password'."
-            )
+        if validate_regex is not None:
+            text_input_proto.validate_regex = validate_regex
 
-        # Marshall the autocomplete param. If unspecified, this will be
-        # set to "new-password" for password inputs.
-        if autocomplete is None:
-            autocomplete = "new-password" if type == "password" else ""
+        if validate_message is not None:
+            text_input_proto.validate_message = validate_message
+
+        text_input_proto.type = type_defaults.proto_type
+
         text_input_proto.autocomplete = autocomplete
 
         # Prevent binding password inputs to query params (exposes secrets in URL)

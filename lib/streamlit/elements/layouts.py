@@ -924,7 +924,9 @@ class LayoutsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1249,7 +1251,7 @@ class LayoutsMixin:
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
-                "on_change", ["'rerun'", "'ignore'", "a callable"]
+                "on_change", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         if type not in {"default", "compact"}:
@@ -1267,7 +1269,9 @@ class LayoutsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1357,6 +1361,7 @@ class LayoutsMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1482,6 +1487,24 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
+
+        wrap : bool or None
+            Whether the popover button's label can wrap onto multiple lines.
+            This can be one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. The icon and chevron remain
+            visible.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -1620,9 +1643,8 @@ class LayoutsMixin:
 
         # Checks whether the entered button type is one of the allowed options
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
@@ -1642,7 +1664,9 @@ class LayoutsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1692,6 +1716,8 @@ class LayoutsMixin:
         popover_proto.disabled = disabled
         popover_proto.type = type
         popover_proto.open = current_open
+        if wrap is not None:
+            popover_proto.wrap = wrap
         if help:
             popover_proto.help = str(help)
         if icon is not None:

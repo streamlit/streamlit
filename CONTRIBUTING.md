@@ -395,7 +395,7 @@ We've set up various formatting, linting, and type-checking rules that our Conti
 
 ### Python
 
-For Python, we use [ruff](https://github.com/astral-sh/ruff) for formatting & linting and [mypy](https://github.com/python/mypy) for type-checking.
+For Python, we use [ruff](https://github.com/astral-sh/ruff) for formatting & linting and [mypy](https://github.com/python/mypy) plus [ty](https://github.com/astral-sh/ty) for type-checking.
 
 #### Formatting
 

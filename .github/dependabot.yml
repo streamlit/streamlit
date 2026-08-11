@@ -48,9 +48,6 @@ updates:
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
-      - dependency-name: "sass"
-        # Breaks our build process, needs more investigation
-        versions: [">=1.80.0"]
       - dependency-name: "react-window"
         # This requires us to update baseui, since that has a dependency on react-window v1.
         versions: [">=2.0.0"]

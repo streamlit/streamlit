@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import copy
 from unittest.mock import MagicMock, patch
 
 import plotly.express as px
@@ -23,10 +24,12 @@ import streamlit as st
 from streamlit.elements.plotly_chart import (
     PlotlyChartSelectionSerde,
     PlotlyMixin,
+    PlotlySelectionState,
+    PlotlyState,
     _resolve_content_height,
     _resolve_content_width,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -59,12 +62,12 @@ class PyDeckTest(DeltaGeneratorTestCase):
     def test_bad_theme(self):
         df = px.data.gapminder().query("country=='Canada'")
         fig = px.line(df, x="year", y="lifeExp", title="Life expectancy in Canada")
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.plotly_chart(fig, theme="bad_theme")
 
-        assert str(exc.value) == (
-            'You set theme="bad_theme" while Streamlit charts only support '
-            "theme=”streamlit” or theme=None to fallback to the default library theme."
+        assert (
+            str(exc.value)
+            == "Invalid `theme` value. Supported values: 'streamlit', None."
         )
 
     def test_st_plotly_chart_simple(self):
@@ -161,7 +164,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
 
         data = [trace0]
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.plotly_chart(data, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -246,7 +249,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert el.plotly_chart.selection_mode == [0, 1, 2]
 
         # Should throw an exception of the selection mode is parsed wrongly
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
 
     def test_plotly_config(self):
@@ -717,3 +720,38 @@ def test_plotly_serde_serialize_returns_json_string() -> None:
 
     assert isinstance(payload, str)
     assert "selection" in payload
+
+
+def test_plotly_serde_returns_typed_state_classes() -> None:
+    """The Plotly serde returns typed classes for both state levels."""
+    result = PlotlyChartSelectionSerde().deserialize(None)
+
+    assert isinstance(result, PlotlyState)
+    assert isinstance(result.selection, PlotlySelectionState)
+    assert result.selection.points == []
+    assert result["selection"]["point_indices"] == []
+    # Nested selection must be a stable stored instance (not a per-access copy).
+    assert result["selection"] is result["selection"]
+    assert result.selection is result["selection"]
+
+
+def test_plotly_state_is_read_only() -> None:
+    """The Plotly event state is read-only at the top and nested levels.
+
+    It also keeps its typed classes through deepcopy, since Session State
+    deep-copies the initial widget value.
+    """
+    result = PlotlyChartSelectionSerde().deserialize(None)
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"] = {}
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection = {}  # type: ignore[misc]
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"]["points"] = [{"x": 1}]
+
+    # Read access still works, and deepcopy preserves the concrete types.
+    assert result.selection.points == []
+    copied = copy.deepcopy(result)
+    assert isinstance(copied, PlotlyState)
+    assert isinstance(copied.selection, PlotlySelectionState)

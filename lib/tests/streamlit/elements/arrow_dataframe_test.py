@@ -14,6 +14,7 @@
 
 """Arrow DataFrame tests."""
 
+import copy
 import enum
 import json
 from typing import Any
@@ -34,14 +35,17 @@ from streamlit.dataframe_util import (
 )
 from streamlit.elements.arrow import (
     DataframeSelectionSerde,
+    DataframeSelectionState,
+    DataframeState,
     _validate_selection_state,
     parse_selection_mode,
 )
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ButtonClickSerde,
+    ButtonColumnClickState,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
@@ -270,7 +274,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_dataframe_with_invalid_on_select(self):
         """Test that an exception is thrown if the on_select parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.dataframe(df, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -1263,8 +1267,9 @@ class TestButtonClickSerde:
 
         # Attribute access must work in addition to key access.
         assert result is not None
-        assert result.row == 2  # type: ignore[attr-defined]
-        assert result.label == "Delete"  # type: ignore[attr-defined]
+        assert isinstance(result, ButtonColumnClickState)
+        assert result.row == 2
+        assert result.label == "Delete"
         assert result["row"] == 2
 
         # The dict is read-only; mutating it must raise.
@@ -1316,14 +1321,33 @@ def test_dataframe_selection_serde_deserialize_rows(
 
 
 def test_dataframe_selection_serde_deserialize_returns_attribute_dictionary() -> None:
-    """``deserialize`` wraps the result in a read-only ``ReadOnlyAttributeDictionary``."""
+    """``deserialize`` returns typed, read-only state classes."""
     result = DataframeSelectionSerde().deserialize(None)
 
     # Attribute access must work for users (regression: #14454).
-    assert result.selection.rows == []  # type: ignore[attr-defined]
+    assert isinstance(result, DataframeState)
+    assert isinstance(result.selection, DataframeSelectionState)
+    assert result.selection.rows == []
+    assert result["selection"]["rows"] == []
+    # Nested selection must be a stable stored instance (not a per-access copy).
+    assert result["selection"] is result["selection"]
+    assert result.selection is result["selection"]
     # The dict is read-only; mutating the top-level mapping must raise.
     with pytest.raises(TypeError):
         result["selection"] = {"rows": [99], "columns": [], "cells": []}  # type: ignore[index]
+
+
+def test_dataframe_selection_serde_deserialize_survives_deepcopy() -> None:
+    """A deep-copied state keeps its typed classes.
+
+    Session State deep-copies the initial widget value, so a copy that collapsed
+    to the base ``ReadOnlyAttributeDictionary`` would make ``st.session_state[key]``
+    fail ``isinstance(..., DataframeState)`` checks (regression).
+    """
+    copied = copy.deepcopy(DataframeSelectionSerde().deserialize(None))
+
+    assert isinstance(copied, DataframeState)
+    assert isinstance(copied.selection, DataframeSelectionState)
 
 
 def test_dataframe_selection_serde_returns_empty_when_no_default() -> None:
@@ -1365,8 +1389,8 @@ def test_dataframe_selection_serde_serialize_roundtrip() -> None:
 
 
 def test_parse_selection_mode_with_invalid_mode_raises() -> None:
-    """``parse_selection_mode`` raises ``StreamlitAPIException`` for unknown modes."""
-    with pytest.raises(StreamlitAPIException, match="Invalid selection mode"):
+    """``parse_selection_mode`` raises ``StreamlitValueError`` for unknown modes."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `selection_mode` value"):
         parse_selection_mode("not-a-real-mode")  # type: ignore[arg-type]
 
 
@@ -1411,17 +1435,24 @@ def test_programmatic_selection_returns_attribute_dictionary() -> None:
         )
         # Attribute access would raise AttributeError if result is a plain dict.
         st.text(f"rows: {result.selection.rows}")
+        # Nested selection must stay identity-stable after programmatic set.
+        st.session_state["_selection_stable"] = (
+            result["selection"] is result.selection
+            and result["selection"] is result["selection"]
+        )
 
     at = AppTest.from_function(script).run()
     assert at.text[0].value == "rows: []"
 
     at = at.run()
     assert at.text[0].value == "rows: [1]"
+    assert at.session_state["_selection_stable"] is True
 
     # Third run without modifying session state: selection should persist
     # as AttributeDictionary (verifies the fix applies across subsequent reruns).
     at = at.run()
     assert at.text[0].value == "rows: [1]"
+    assert at.session_state["_selection_stable"] is True
 
 
 def test_selection_state_is_read_only() -> None:

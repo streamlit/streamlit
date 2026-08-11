@@ -23,21 +23,41 @@ export const StyledTextInput = styled.div`
   position: relative;
 `
 
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+/** Visually hidden but accessible to screen readers (standard CSS pattern). */
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+
 interface StyledInputRootProps {
   $isFocused: boolean
   $hasIcon: boolean
+  $hasError: boolean
 }
 
 export const StyledInputRoot = styled.div<StyledInputRootProps>(
-  ({ theme, $isFocused, $hasIcon }) => ({
+  ({ theme, $isFocused, $hasIcon, $hasError }) => ({
     display: "flex",
     alignItems: "center",
     height: theme.sizes.minElementHeight,
     borderWidth: theme.sizes.borderWidth,
     borderStyle: "solid",
-    borderColor: getBorderColor(theme.colors, $isFocused),
+    borderColor: $hasError
+      ? theme.colors.redTextColor
+      : getBorderColor(theme.colors, $isFocused),
     borderRadius: theme.radii.default,
-    backgroundColor: theme.colors.secondaryBg,
+    backgroundColor: $hasError
+      ? theme.colors.redBackgroundColor
+      : theme.colors.secondaryBg,
     paddingLeft: $hasIcon ? theme.spacing.sm : 0,
     overflow: "hidden",
     transitionDuration: "200ms",
@@ -46,7 +66,9 @@ export const StyledInputRoot = styled.div<StyledInputRootProps>(
     // Show the focused border whenever any descendant (input or password toggle)
     // has keyboard focus — handles the case where Tab moves focus to the toggle.
     "&:focus-within": {
-      borderColor: getBorderColor(theme.colors, true),
+      borderColor: $hasError
+        ? theme.colors.redTextColor
+        : getBorderColor(theme.colors, true),
     },
   })
 )
@@ -67,6 +89,11 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   paddingLeft: theme.spacing.md,
   paddingRight: theme.spacing.sm,
   "::placeholder": { color: theme.colors.fadedText60 },
+  // `type="search"` inputs otherwise render a browser-native clear (×) control
+  // that clashes with Streamlit's styling. Hide it so we can show our own
+  // consistent clear button (see StyledClearButton) instead.
+  "::-webkit-search-cancel-button": { display: "none" },
+  "::-webkit-search-decoration": { display: "none" },
   "&[disabled]": {
     cursor: "not-allowed",
     color: theme.colors.fadedText40,
@@ -92,6 +119,87 @@ export const StyledStartEnhancer = styled.div<StyledStartEnhancerProps>(
     flexShrink: 0,
   })
 )
+
+export const StyledEndEnhancers = styled.div({
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+})
+
+export const StyledErrorEnhancer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  color: theme.colors.redTextColor,
+  paddingLeft: theme.spacing.xs,
+  paddingRight: theme.spacing.sm,
+}))
+
+/**
+ * Clear (×) button shown for `type="search"` inputs that hold a value. Mirrors
+ * the clear-button styling used by other input widgets (e.g. st.number_input).
+ */
+export const StyledClearButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  // Match the password toggle's horizontal padding so trailing controls sit a
+  // consistent distance from the input's right edge.
+  padding: `0 ${theme.spacing.sm}`,
+  color: theme.colors.grayTextColor,
+  flexShrink: 0,
+  "&:hover:not(:disabled)": {
+    color: theme.colors.bodyText,
+  },
+  "&:disabled": {
+    cursor: "not-allowed",
+  },
+}))
+
+interface StyledInputInstructionsContainerProps {
+  $hasErrorIcon: boolean
+  $hasClearButton: boolean
+  $hasPasswordToggle: boolean
+}
+
+/**
+ * Positions the input instructions (e.g. "Press Enter to apply") so they don't
+ * overlap the end enhancers (validation error icon, clear button, and/or
+ * password visibility toggle) anchored to the right edge of the input. The
+ * `right` offset clears the combined width of whichever end enhancers are
+ * currently shown.
+ */
+export const StyledInputInstructionsContainer =
+  styled.div<StyledInputInstructionsContainerProps>(
+    ({ theme, $hasErrorIcon, $hasClearButton, $hasPasswordToggle }) => {
+      const enhancerWidths: string[] = []
+      if ($hasErrorIcon) {
+        enhancerWidths.push(
+          `${theme.spacing.xs} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
+        )
+      }
+      if ($hasClearButton) {
+        enhancerWidths.push(
+          `${theme.spacing.sm} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
+        )
+      }
+      if ($hasPasswordToggle) {
+        enhancerWidths.push(
+          `${theme.spacing.sm} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
+        )
+      }
+
+      return {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: enhancerWidths.length
+          ? `calc(${enhancerWidths.join(" + ")})`
+          : 0,
+      }
+    }
+  )
 
 export const StyledPasswordToggle = styled.button(({ theme }) => ({
   display: "flex",

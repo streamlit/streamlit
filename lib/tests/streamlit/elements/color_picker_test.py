@@ -21,7 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.color_picker import ColorPickerSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -104,11 +104,11 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.color_picker("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):
@@ -255,11 +255,11 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
             st.color_picker("the label", key="my_color", bind="invalid-value")
 
-        assert "invalid-value" in str(exc.value)
+        assert "Invalid `bind` value" in str(exc.value)
         assert "query-params" in str(exc.value)
 
     def test_empty_key_raises_exception(self) -> None:
