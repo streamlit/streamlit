@@ -69,41 +69,42 @@ class PyplotTest(DeltaGeneratorTestCase):
         assert el.imgs.imgs[0].caption == ""
         assert el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT)
 
-    @parameterized.expand([("true", True), ("false", False), ("none", None)])
-    def test_st_pyplot_clear_global_figure(self, _, clear_figure: bool | None):
-        """st.pyplot should clear the global figure if `clear_figure` is
-        True *or* None.
-        """
-        plt.hist(np.random.normal(1, 1, size=100), bins=20)
-        with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
-            st.pyplot(clear_figure=clear_figure)
-
-            if clear_figure in {True, None}:
-                plt_clf.assert_called_once()
-            else:
-                plt_clf.assert_not_called()
-
-    @patch("streamlit.elements.pyplot.show_deprecation_warning")
-    def test_global_object_deprecation_warning(self, show_warning_mock: Mock):
-        """We show deprecation warnings when st.pyplot is called without a figure object."""
-        plt.hist(np.random.normal(1, 1, size=100), bins=20)
-        st.pyplot()
-
-        show_warning_mock.assert_called_once()
-
-    @parameterized.expand([("true", True), ("false", False), ("none", None)])
-    def test_st_pyplot_clear_figure(self, _, clear_figure: bool | None):
-        """st.pyplot should clear the passed-in figure if `clear_figure` is True."""
+    @parameterized.expand([("true", True), ("false", False)])
+    def test_st_pyplot_clear_figure(self, _, clear_figure: bool):
+        """st.pyplot calls fig.clf() only when clear_figure is True."""
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
         ax1.hist(np.random.normal(1, 1, size=100), bins=20)
         with patch.object(fig, "clf", wraps=fig.clf, autospec=True) as fig_clf:
             st.pyplot(fig, clear_figure=clear_figure)
 
-            if clear_figure is True:
+            if clear_figure:
                 fig_clf.assert_called_once()
             else:
                 fig_clf.assert_not_called()
+
+    def test_st_pyplot_clear_figure_defaults_to_false(self):
+        """Omitting clear_figure leaves the figure uncleared."""
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        ax1.hist(np.random.normal(1, 1, size=100), bins=20)
+        with patch.object(fig, "clf", wraps=fig.clf, autospec=True) as fig_clf:
+            st.pyplot(fig)
+
+            fig_clf.assert_not_called()
+
+    def test_st_pyplot_requires_fig_argument(self):
+        """Omitting fig raises TypeError now that the argument is required."""
+        with pytest.raises(TypeError):
+            st.pyplot()  # type: ignore[call-arg]
+
+    def test_st_pyplot_rejects_none_fig(self):
+        """Passing fig=None raises a migration-oriented API exception."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.pyplot(None)  # type: ignore[arg-type]
+
+        assert "requires a Matplotlib figure" in str(exc_info.value)
+        assert "st.pyplot(fig)" in str(exc_info.value)
 
     @parameterized.expand([(True, "use_stretch"), (False, "use_content")])
     def test_st_pyplot_use_container_width(
