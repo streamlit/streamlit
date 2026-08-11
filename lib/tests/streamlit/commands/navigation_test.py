@@ -18,7 +18,7 @@ import pytest
 
 import streamlit as st
 from streamlit.commands.navigation import convert_to_streamlit_page
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.navigation.page import Page, StreamlitPage
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -439,14 +439,12 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_navigation_with_invalid_position(self):
         """Test that invalid position value raises appropriate error"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             st.navigation(
                 [st.Page("page1.py"), st.Page("page2.py")],
                 position="foo",  # Invalid position
             )
-        assert "Invalid position" in str(exc_info.value) or "position must be" in str(
-            exc_info.value
-        )
+        assert "Invalid `position` value" in str(exc_info.value)
 
     def test_navigation_top_position_no_fallback_with_config(self):
         """Test that position="top" remains TOP even when client.showSidebarNavigation=False"""

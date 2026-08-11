@@ -31,8 +31,9 @@ if TYPE_CHECKING:
     import altair as alt
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.vega_charts import VegaChartsMixin, VegaLiteState
-    from streamlit.util import AttributeDictionary
+    from streamlit.elements.vega_charts import VegaChartsMixin
+    from streamlit.typing import VegaLiteState
+    from streamlit.util import ReadOnlyAttributeDictionary
 
     line_chart = VegaChartsMixin().line_chart
     area_chart = VegaChartsMixin().area_chart
@@ -209,8 +210,8 @@ if TYPE_CHECKING:
         VegaLiteState,
     )
     vega_lite_state = altair_chart(chart, on_select="rerun")
-    assert_type(vega_lite_state.selection, AttributeDictionary)
-    assert_type(vega_lite_state["selection"], AttributeDictionary)
+    assert_type(vega_lite_state.selection, ReadOnlyAttributeDictionary)
+    assert_type(vega_lite_state["selection"], ReadOnlyAttributeDictionary)
     assert_type(
         altair_chart(
             chart,

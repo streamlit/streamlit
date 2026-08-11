@@ -29,7 +29,7 @@ from streamlit.elements.lib.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.errors import Error, StreamlitAPIException
+from streamlit.errors import Error, StreamlitAPIException, StreamlitValueError
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
@@ -117,15 +117,12 @@ def _needs_field_alias(name: str) -> bool:
     return any(ch in name for ch in _VEGA_LITE_FIELD_SPECIAL_CHARS)
 
 
-def maybe_raise_stack_warning(
-    stack: bool | ChartStackType | None, command: str | None, docs_link: str
-) -> None:
-    # Check that the stack parameter is valid, raise more informative error if not
+def maybe_raise_stack_warning(stack: bool | ChartStackType | None) -> None:
+    # Reject values outside the supported stack options.
     if stack not in {None, True, False, "normalize", "center", "layered"}:
-        raise StreamlitAPIException(
-            f"Invalid value for stack parameter: {stack}. Stack must be one of True, "
-            'False, "normalize", "center", "layered" or None. See documentation '
-            f"for `{command}` [here]({docs_link}) for more information."
+        raise StreamlitValueError(
+            "stack",
+            ["True", "False", "'normalize'", "'center'", "'layered'", "None"],
         )
 
 
@@ -332,7 +329,7 @@ def _add_improved_hover_tooltips(
         )
     )
 
-    return cast("alt.LayerChart", layer_chart)
+    return cast("alt.LayerChart", layer_chart)  # ty: ignore[redundant-cast]
 
 
 def _infer_vegalite_type(
@@ -641,10 +638,10 @@ def _maybe_convert_color_column_in_place(
 
     first_color_datum = df[color_column].iat[0]
 
-    if is_hex_color_like(first_color_datum):  # type: ignore[arg-type]
+    if is_hex_color_like(first_color_datum):
         # Hex is already CSS-valid.
         pass
-    elif is_color_tuple_like(first_color_datum):  # type: ignore[arg-type]
+    elif is_color_tuple_like(first_color_datum):
         # Tuples need to be converted to CSS-valid.
         df.loc[:, color_column] = df[color_column].apply(to_css_color)
     else:
@@ -1204,7 +1201,7 @@ def _get_color_encoding(
 
             # If the 0th element in the color column looks like a color, we'll use
             # the color column's values as the colors in our chart.
-            if len(df[color_column]) and is_color_like(df[color_column].iat[0]):  # type: ignore[arg-type]
+            if len(df[color_column]) and is_color_like(df[color_column].iat[0]):
                 color_range = [to_css_color(c) for c in df[color_column].unique()]
                 color_enc["scale"] = alt.Scale(range=color_range)
                 # Don't show the color legend, because it will just show text with

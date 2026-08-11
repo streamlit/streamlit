@@ -362,7 +362,7 @@ class TestEnumCoercion:
 
     @patch_config_options({"runner.enumCoercion": "badValue"})
     def test_coerce_enum_bad_config_value(self, EnumAOrig, EnumAEqual):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             _coerce_enum(EnumAOrig.A, EnumAEqual)
 
     def test_maybe_coerce_enum(self):

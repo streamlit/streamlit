@@ -65,6 +65,12 @@ alwaysApply: false
 - Add typing annotations to every new function, method or class member.
 - Use `typing_extensions` for back-porting newer typing features.
 - Use future annotations via `from __future__ import annotations`.
+- `make python-types` runs both `ty` and `mypy`. `ty` resolves first-party
+  `streamlit.*` imports (config in root `pyproject.toml`); prefer real
+  narrowing/annotation fixes over suppressions. When a checker-specific
+  suppression is needed, use a rule-specific comment such as
+  `# ty: ignore[redundant-cast]` (and keep `# type: ignore[...]` for mypy when
+  both apply).
 
 ## Relevant `make` commands
 

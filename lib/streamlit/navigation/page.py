@@ -497,7 +497,7 @@ def _create_page(page: str | Path, *, default: bool = False) -> Page:
     page_object = Page.__new__(Page)
     # ``gather_metrics`` wraps ``__init__``, so ``__wrapped__`` is the original
     # initializer; calling it directly skips the telemetry recorded for st.Page.
-    Page.__init__.__wrapped__(  # type: ignore[attr-defined]
+    Page.__init__.__wrapped__(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         page_object, page, default=default
     )
     return page_object

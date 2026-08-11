@@ -33,7 +33,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -243,9 +243,9 @@ class AudioInputMixin:
         """
         # Validate sample_rate parameter
         if sample_rate is not None and sample_rate not in ALLOWED_SAMPLE_RATES:
-            raise StreamlitAPIException(
-                f"Invalid sample_rate: {sample_rate}. "
-                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            raise StreamlitValueError(
+                "sample_rate",
+                [str(rate) for rate in sorted(ALLOWED_SAMPLE_RATES)] + ["None"],
             )
 
         ctx = get_script_run_ctx()
