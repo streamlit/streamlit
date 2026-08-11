@@ -64,34 +64,6 @@
   `# ty: ignore[redundant-cast]` (and keep `# type: ignore[...]` for mypy when
   both apply).
 
-## Exception handling
-
-User-facing API errors raised from `st.*` commands belong in
-`streamlit.errors`. Prefer existing reusable exception types over raising a
-generic `StreamlitAPIException` with a one-off message.
-
-- `StreamlitAPIException`: base for malformed user interaction with the Streamlit
-  API. Prefer a more specific subclass when one fits.
-- `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
-  an invalid value from a known finite set (Literal / enum-like options). Example:
-  `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
-- Prefer other shared validators/errors when they already exist for the
-  parameter, including:
-  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
-    `StreamlitInvalidSizeError` (layout sizing helpers)
-  - `StreamlitInvalidColorError`
-  - `StreamlitInvalidVerticalAlignmentError` /
-    `StreamlitInvalidHorizontalAlignmentError` /
-    `StreamlitInvalidColumnGapError` (layout alignment/gap; these keep
-    element-type context in the message)
-  - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
-    date/time bounds)
-  - `StreamlitInvalidFormCallbackError` (form callback policy)
-
-Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
-type (missing required args, incompatible option combinations, nesting rules,
-serialization failures, and similar).
-
 ## Relevant `make` commands
 
 Run from the repo root:
