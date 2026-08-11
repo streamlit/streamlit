@@ -1,0 +1,567 @@
+<!--
+ Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!DOCTYPE html>
+<!--
+  PR report template. Copy, then fill in. Markers are {{ }} — finalize.py fails
+  the build if any survive.
+
+  Design contract, in priority order:
+    1. The BRIEF comes first (problem / why / why this way / how), then the visual
+       full width. A screenshot means more once you know what problem it solves.
+    2. The report must be faster to read than the diff. finalize.py enforces a
+       word budget; if it fails, cut prose, never visuals.
+    3. "What isn't obvious" is the section readers value most — give it the room
+       (2-5 points). Everything else earns its space against it.
+    4. Assume a NARROW viewport: this is read on a phone, and inside the wiki
+       explorer's iframe. Single column, fluid, no side-by-side grids, tables
+       never wider than two columns.
+    5. No CI reporting. The dot in the header is the entire allowance.
+
+  Colour rules that are load-bearing, not taste (see references/design.md):
+    * --accent (#ff4b4b) measures 3.16:1 on the card surface. That clears the 3:1
+      floor for borders, marks, dots and large display type, and FAILS the 4.5:1
+      floor for body and small text. Small red text uses --accent-deep.
+    * Snapshot baselines arrive in both light and dark theme. figure img has a
+      neutral backing rather than white so a dark-theme shot doesn't sit in a
+      glowing frame.
+
+  The PR-comment pitch lives ONLY in the <script type="text/markdown"> block,
+  reachable by the copy button. Do not also render it as prose — one narrative.
+
+  One PR: delete the extra tab buttons and sections. Several: duplicate the
+  tab + section pair, keeping ids in sync (pr-a / quiz-a).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{REPORT_TITLE}}</title>
+<style>
+:root{
+  /* Streamlit light theme tokens, straight from
+     frontend/lib/src/theme/primitives/colors.ts, so the report reads as a
+     Streamlit artifact without inventing a second palette. */
+  --bg:#ffffff; --card:#fafafa; --card-2:#f0f2f6; --rule:#e6eaf1;
+  --fg:#262730; --muted:#555867; --faint:#6e7284;
+  /* --accent is red70, the Streamlit brand red: 3.16:1 on --card. Borders,
+     dots, active tab, hero chip, large display type. NEVER small text.
+     --accent-deep is red90 at 5.06:1 — the one to use for kickers, labels and
+     links, i.e. anything small that has to be red. */
+  --accent:#ff4b4b; --accent-deep:#bd4043;
+  /* Data marks: both clear 3:1 against --card (5.06 and 6.76) and are 2.14:1
+     apart from each other, so they stay distinguishable in greyscale. */
+  --viz-acc:#ff4b4b; --viz-base:#555867; --viz-axis:#d5dae5;
+  /* Semantic, deliberately NOT the brand accent: red means wrong everywhere, so
+     a red "correct" state would fight the reader. green100 is 5.76:1 on --card
+     and 5.37:1 on --card-2, so it holds up as small text on both surfaces. */
+  --ok:#177233; --amber:#b04a00; --red:#7d353b; --blue:#0068c9;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --body:-apple-system,BlinkMacSystemFont,"Segoe UI","Source Sans Pro",Helvetica,Arial,sans-serif;
+  --disp:var(--body);
+  --r-card:8px; --r-chip:4px;
+  --pad:1.5rem;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);
+  font-size:16.5px;line-height:1.62;-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
+a{color:var(--accent-deep);text-decoration:none;border-bottom:1px solid rgba(189,64,67,.35)}
+a:hover{border-bottom-color:var(--accent-deep)}
+code{font-family:var(--mono);font-size:.82em;background:var(--card-2);border:1px solid var(--rule);
+  padding:.06em .32em;border-radius:var(--r-chip);color:var(--accent-deep)}
+/* Single fluid column. 720px, not 1080 — one column of prose wants a short measure,
+   and the narrow case (phone, iframe) is the common one. */
+.wrap{max-width:720px;margin:0 auto;padding:0 var(--pad)}
+@media(max-width:560px){:root{--pad:1.1rem} body{font-size:16px}}
+
+/* header */
+header.mast{border-bottom:1px solid var(--rule);padding:1.8rem 0 1.2rem}
+.kicker{font-family:var(--mono);font-size:.62rem;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--accent-deep)}
+h1.mast-t{font-family:var(--disp);font-weight:700;font-size:clamp(1.7rem,6vw,2.4rem);
+  line-height:1.12;margin:.5rem 0 .3rem;letter-spacing:-.02em}
+.mast-sub{color:var(--muted);margin:0;font-size:.95rem}
+
+/* tabs + gate. Scrolls sideways rather than wrapping into a tall stack on a phone. */
+nav.gate{position:sticky;top:0;z-index:80;background:rgba(255,255,255,.95);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.gate-inner{max-width:720px;margin:0 auto;padding:.55rem var(--pad);display:flex;gap:.4rem;
+  align-items:center;overflow-x:auto;scrollbar-width:none}
+.gate-inner::-webkit-scrollbar{display:none}
+.tab{font-family:var(--mono);font-size:.7rem;color:var(--muted);background:none;
+  border:1px solid var(--rule);border-radius:var(--r-chip);padding:.4rem .65rem;cursor:pointer;
+  display:flex;gap:.45rem;align-items:center;white-space:nowrap;flex:none;min-height:32px}
+.tab.on{color:var(--accent-deep);border-color:var(--accent);background:rgba(255,75,75,.07)}
+.tab .dot{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:none}
+.tab.pass .dot{background:var(--ok)}
+.tab.fail .dot{background:var(--red)}
+.gate-status{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);margin-left:auto;padding-left:.6rem;white-space:nowrap;flex:none}
+
+/* PR section */
+.pr{display:none;padding:1.6rem 0 4rem}
+.pr.on{display:block}
+.pr-num{font-family:var(--mono);font-size:.65rem;letter-spacing:.14em;color:var(--accent-deep);
+  text-transform:uppercase;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+/* The entire CI allowance: one dot. Nothing merges without green checks, so a
+   table of them is noise. */
+.ci{width:7px;height:7px;border-radius:50%;flex:none}
+.ci.ok{background:var(--viz-base)} .ci.no{background:var(--red)}
+/* The repo's own review vocabulary. Cheap to include, and it tells a reviewer
+   what kind of PR this is before they read a word. */
+.lbl{font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;text-transform:none;
+  border:1px solid var(--rule);background:var(--card-2);color:var(--muted);
+  padding:.14rem .4rem;border-radius:var(--r-chip);white-space:nowrap}
+h2.pr-t{font-family:var(--disp);font-weight:700;font-size:clamp(1.4rem,4.6vw,1.9rem);
+  line-height:1.2;margin:.35rem 0 .8rem;letter-spacing:-.015em}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1.8rem}
+.chip{font-family:var(--mono);font-size:.68rem;border:1px solid var(--rule);
+  border-radius:var(--r-chip);padding:.3rem .55rem;color:var(--muted);white-space:nowrap}
+.chip b{color:var(--fg);font-weight:600}
+.chip.hero{border-color:var(--accent)}
+.chip.hero b{color:var(--accent-deep)}
+
+/* visual — first, full width, no grid so it can't collapse badly. The backing is
+   neutral, not white: half the baselines here are dark-theme shots. */
+figure{margin:0 0 1.2rem}
+figure img{width:100%;display:block;border:1px solid var(--rule);
+  border-radius:var(--r-card);background:var(--card-2)}
+figcaption{font-family:var(--mono);font-size:.64rem;color:var(--faint);margin-top:.5rem;
+  line-height:1.55}
+/* before/after label for a snapshot pair — the contrast is the teaching, so say
+   which is which rather than relying on reading order. */
+.ba{font-family:var(--mono);font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 .3rem}
+
+/* brief — the preamble. Four beats before the picture, because a screenshot
+   means more once you know what problem it solves. */
+.brief{border:1px solid var(--rule);border-left:3px solid var(--viz-acc);
+  border-radius:var(--r-card);background:var(--card);padding:1.1rem 1.2rem;margin:0 0 1.4rem}
+.brief div{display:grid;grid-template-columns:5.2rem 1fr;gap:.3rem .8rem;margin-bottom:.6rem}
+.brief div:last-child{margin-bottom:0}
+.brief dt{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent-deep);padding-top:.25rem}
+.brief dd{margin:0;font-size:.95rem;color:var(--fg)}
+@media(max-width:480px){.brief div{grid-template-columns:1fr;gap:.1rem}}
+
+/* ---- data viz. Forms chosen by the data's job, per the dataviz procedure:
+   two headline numbers -> stat tiles ("the number is the chart"), never a
+   2-bar chart. A paired before/after -> dumbbell on a DECLARED axis. Colour is
+   emphasis (one accent + de-emphasis gray), so a hue never silently changes
+   meaning between charts. Values are direct-labelled, so identity is never
+   colour-alone. */
+.viz{border:1px solid var(--rule);border-radius:var(--r-card);background:var(--card);
+  padding:1.1rem 1.2rem;margin:0 0 1.4rem}
+.viz-t{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 1rem}
+.viz-legend{display:flex;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.62rem;
+  color:var(--muted);margin-top:.9rem}
+.viz-legend span.k{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:.35rem}
+.viz-legend .k.base{background:var(--viz-base)} .viz-legend .k.acc{background:var(--viz-acc)}
+
+/* stat tiles — proportional figures (tabular-nums would look loose at this size) */
+.statpair{display:flex;flex-wrap:wrap;gap:.6rem}
+.st{flex:1 1 8.5rem;border:1px solid var(--rule);border-radius:var(--r-chip);
+  padding:.7rem .8rem;background:var(--card-2)}
+.st-l{display:block;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:.3rem}
+.st-v{font-family:var(--mono);font-size:1.5rem;font-weight:600;color:var(--fg);line-height:1.1}
+.st.acc{border-color:rgba(255,75,75,.45)}
+.st.acc .st-v{color:var(--viz-acc)}
+.st-d{display:block;font-family:var(--mono);font-size:.66rem;color:var(--muted);margin-top:.25rem}
+
+/* dumbbell — one row per item, two dots, gap is the point. 8px+ markers, 2px
+   connector, recessive axis with real ticks so the scale is declared. */
+.db-row{display:grid;grid-template-columns:minmax(4.5rem,7rem) 1fr auto;gap:.7rem;
+  align-items:center;margin-bottom:.85rem}
+.db-lbl{font-family:var(--mono);font-size:.66rem;color:var(--muted);line-height:1.3}
+.db-track{position:relative;height:18px}
+.db-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;
+  background:var(--viz-axis)}
+.db-conn{position:absolute;top:50%;transform:translateY(-50%);height:2px;
+  left:var(--a);width:calc(var(--b) - var(--a));background:var(--viz-base);opacity:.85}
+.db-dot{position:absolute;top:50%;left:var(--p);transform:translate(-50%,-50%);
+  width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px var(--card)}
+.db-dot.base{background:var(--viz-base)} .db-dot.acc{background:var(--viz-acc)}
+.db-val{font-family:var(--mono);font-size:.72rem;color:var(--fg);font-variant-numeric:tabular-nums}
+.db-axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;
+  color:var(--faint);border-top:1px solid var(--viz-axis);padding-top:.3rem;
+  margin-left:calc(4.5rem + .7rem)}
+@media(max-width:480px){.db-axis{margin-left:0}}
+
+/* sections */
+h3.sec{font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent-deep);margin:2.4rem 0 .7rem}
+.body{max-width:66ch}
+.body p{margin:0 0 .95rem}
+.body strong{color:var(--fg);font-weight:600}
+/* Numbered points — each is one non-obvious thing, one short paragraph. */
+.pt{margin:0 0 1.15rem;padding-left:1.9rem;position:relative}
+.pt::before{content:attr(data-n);position:absolute;left:0;top:.1rem;font-family:var(--mono);
+  font-size:.7rem;color:var(--accent-deep);border:1px solid var(--rule);border-radius:var(--r-chip);
+  width:1.4rem;height:1.4rem;display:grid;place-items:center}
+.pt h4{margin:0 0 .25rem;font-size:1.02rem;font-family:var(--disp);font-weight:600}
+.pt p{margin:0;color:var(--muted);font-size:.94rem}
+.pt p strong{color:var(--fg)}
+
+/* key/value list — use INSTEAD of a table whenever there'd be >2 columns.
+   A 4-column table is unreadable at 380px; this stacks cleanly. */
+.kv{border:1px solid var(--rule);border-radius:var(--r-card);overflow:hidden;margin:0 0 1.4rem}
+.kv > div{padding:.7rem .9rem;border-bottom:1px solid var(--rule)}
+.kv > div:last-child{border-bottom:0}
+.kv dt{font-family:var(--mono);font-size:.68rem;color:var(--fg);margin:0 0 .2rem}
+.kv dd{margin:0;color:var(--muted);font-size:.89rem}
+.tag{font-family:var(--mono);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:.14rem .4rem;border-radius:var(--r-chip);border:1px solid;white-space:nowrap}
+.tag.stale{color:var(--blue);border-color:rgba(0,104,201,.4)}
+.tag.open{color:var(--amber);border-color:rgba(176,74,0,.4)}
+.tag.risk{color:var(--red);border-color:rgba(125,53,59,.4)}
+table{width:100%;border-collapse:collapse;font-size:.86rem;margin:0 0 1.4rem;
+  border:1px solid var(--rule);border-radius:var(--r-card);overflow:hidden}
+th{font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);text-align:left;padding:.55rem .75rem;font-weight:500;
+  border-bottom:1px solid var(--rule);background:var(--card)}
+td{padding:.55rem .75rem;border-bottom:1px solid rgba(44,44,49,.6);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.mono{font-family:var(--mono);font-size:.76rem}
+
+/* quiz */
+.quiz{border:1px solid var(--rule);border-radius:var(--r-card);background:var(--card);
+  margin-top:1rem;overflow:hidden}
+.quiz-head{padding:1.1rem 1.2rem;border-bottom:1px solid var(--rule);background:var(--card-2)}
+.quiz-head .t{font-family:var(--disp);font-size:1.25rem;font-weight:600;margin:0}
+.quiz-head .s{font-family:var(--mono);font-size:.62rem;color:var(--faint);margin:.3rem 0 0;
+  text-transform:uppercase;letter-spacing:.08em}
+.q{padding:1.2rem;border-bottom:1px solid var(--rule)}
+.q:last-of-type{border-bottom:0}
+.q .qn{font-family:var(--mono);font-size:.6rem;letter-spacing:.16em;color:var(--accent-deep);
+  text-transform:uppercase}
+.q .qt{margin:.35rem 0 .8rem;font-size:.99rem;line-height:1.5;color:var(--fg)}
+.opts{display:flex;flex-direction:column;gap:.15rem}
+/* min-height keeps these tappable on a phone */
+.opt{display:flex;gap:.6rem;align-items:flex-start;padding:.6rem .7rem;min-height:44px;
+  border:1px solid transparent;border-radius:var(--r-chip);cursor:pointer;font-size:.9rem;
+  line-height:1.45;transition:.14s}
+.opt:hover{background:var(--card-2)}
+.opt input{margin:.3rem 0 0;accent-color:var(--accent);flex:none;width:16px;height:16px}
+.opt .ltr{font-family:var(--mono);font-size:.7rem;color:var(--faint);flex:none;width:1rem}
+.graded .opt{cursor:default}
+.graded .opt:hover{background:none}
+.graded .opt.correct{background:rgba(23,114,51,.1);border-color:rgba(23,114,51,.45)}
+.graded .opt.wrong{background:rgba(125,53,59,.1);border-color:rgba(125,53,59,.45)}
+.why{display:none;margin-top:.9rem;padding:.8rem .95rem;border-left:2px solid var(--rule);
+  font-size:.88rem;color:var(--muted)}
+.graded .why{display:block}
+.why b{color:var(--fg)}
+.why.hit{border-left-color:var(--ok)}
+.why.miss{border-left-color:var(--red)}
+.why .verdict{font-family:var(--mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;
+  display:block;margin-bottom:.35rem}
+.why.hit .verdict{color:var(--ok)}
+.why.miss .verdict{color:var(--red)}
+.quiz-foot{padding:1.1rem 1.2rem;display:flex;gap:.7rem;align-items:center;flex-wrap:wrap;
+  background:var(--card-2)}
+.btn{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+  padding:.6rem 1.1rem;border-radius:var(--r-chip);cursor:pointer;font-weight:600;min-height:40px;
+  border:1px solid var(--accent-deep);background:var(--accent-deep);color:#fff}
+.btn:hover{filter:brightness(.92)}
+.btn.ghost{background:none;color:var(--muted);border-color:var(--rule);font-weight:400}
+.btn.ghost:hover{color:var(--fg);border-color:var(--faint);background:none}
+.copy{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+  background:none;color:var(--muted);border:1px solid var(--rule);border-radius:var(--r-chip);
+  padding:.45rem .7rem;cursor:pointer;min-height:34px}
+.copy:hover{color:var(--accent-deep);border-color:var(--accent)}
+.copy.done{color:var(--ok);border-color:var(--ok)}
+.score{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.stamp{font-family:var(--mono);font-weight:600;font-size:.66rem;letter-spacing:.16em;
+  text-transform:uppercase;border:2px solid;padding:.4rem .75rem;border-radius:var(--r-chip);
+  transform:rotate(-2deg);opacity:0;transition:.3s}
+.stamp.show{opacity:1}
+.stamp.ok{color:var(--ok);border-color:var(--ok)}
+.stamp.no{color:var(--red);border-color:var(--red)}
+
+footer{border-top:1px solid var(--rule);padding:1.5rem 0 3rem;color:var(--faint);
+  font-family:var(--mono);font-size:.62rem;line-height:1.7;
+  display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header class="mast"><div class="wrap">
+  <div class="kicker">{{KICKER — e.g. "PR report · 2026-07-28"}}</div>
+  <h1 class="mast-t">{{Short headline — what this catches you up on}}</h1>
+  <p class="mast-sub">{{One sentence. What to read first.}}</p>
+</div></header>
+
+<nav class="gate"><div class="gate-inner">
+  <button class="tab on" data-pr="a"><span class="dot"></span>{{short label}}</button>
+  <!-- duplicate per extra PR; delete if only one -->
+  <span class="gate-status" id="gateStatus">0 / {{N}} cleared</span>
+</div></nav>
+
+<section class="pr on" id="pr-a"><div class="wrap">
+
+  <div class="pr-num">
+    <span class="ci ok"></span>{{streamlit/streamlit#N · state}}
+    <span class="lbl">{{impact:users}}</span><span class="lbl">{{change:feature}}</span>
+  </div>
+  <h2 class="pr-t">{{[type] PR title}}</h2>
+
+  <!-- 1. THE BRIEF. Four beats, before the picture. Keep each to one sentence:
+       this is orientation, not the explainer. -->
+  <dl class="brief">
+    <div><dt>Problem</dt><dd>{{What is broken, missing, or unmeasurable today.}}</dd></div>
+    <div><dt>Why</dt><dd>{{Why it's worth solving now — the cost of leaving it.}}</dd></div>
+    <div><dt>Approach</dt><dd>{{Why THIS is the right way — and what was rejected.}}</dd></div>
+    <div><dt>How</dt><dd>{{The mechanism, in one line.}}</dd></div>
+  </dl>
+
+  <!-- 2. THE VISUAL, full width. For a snapshot pair, stack before then after and
+       LABEL each: the contrast is the teaching, and at 380px the two figures are
+       far apart vertically, so reading order alone won't carry it.
+
+       Say which theme a baseline is (the file name tells you), and if the pixel
+       delta was small, caption it as the subtle shift it is rather than implying a
+       dramatic one. -->
+  <figure>
+    <p class="ba">Before · {{develop}}</p>
+    <img src="{{…-before.png — finalize.py inlines it}}" alt="{{what is visible, for screen readers}}">
+  </figure>
+  <figure>
+    <p class="ba">After · {{this PR}}</p>
+    <img src="{{…-after.png}}" alt="{{what is visible}}">
+    <figcaption>{{What changed and why this is the state worth showing. Name the
+    test it came from, e.g. st_text_input_test · dark theme.}}</figcaption>
+  </figure>
+
+  <!-- No UI to screenshot? Use a form matched to the data's job. NEVER a 2-bar
+       chart, and never a bar whose track has no declared maximum.
+
+       (a) Two headline numbers -> stat tiles. The number IS the chart. Say
+       outright when a difference is inside the noise; bars would imply a verdict
+       the data doesn't support. -->
+  <div class="viz">
+    <p class="viz-t">{{what is being compared · basis}}</p>
+    <div class="statpair">
+      <div class="st"><span class="st-l">{{baseline}}</span><b class="st-v">{{6.45%}}</b></div>
+      <div class="st acc"><span class="st-l">{{our cohort}}</span><b class="st-v">{{6.90%}}</b>
+        <span class="st-d">{{+0.45pp — inside noise}}</span></div>
+    </div>
+  </div>
+
+  <!-- (b) A paired before/after across items -> dumbbell. The GAP is the point.
+       Set --p (and --a/--b for the connector) to value ÷ axis-max × 100%, and
+       label the axis so the scale is declared. Accent = the cohort in question,
+       gray = context; that pairing never changes meaning between charts. -->
+  <div class="viz">
+    <p class="viz-t">{{measure · what the axis shows}}</p>
+    <div class="db-row">
+      <span class="db-lbl">{{item}}</span>
+      <span class="db-track">
+        <span class="db-conn" style="--a:61%;--b:90%"></span>
+        <span class="db-dot base" style="--p:61%"></span>
+        <span class="db-dot acc" style="--p:90%"></span>
+      </span>
+      <span class="db-val">{{+8.6pp}}</span>
+    </div>
+    <div class="db-axis"><span>0</span><span>{{10%}}</span><span>{{20%}}</span><span>{{30%}}</span></div>
+    <div class="viz-legend"><span><span class="k base"></span>{{baseline}}</span>
+      <span><span class="k acc"></span>{{our cohort}}</span></div>
+  </div>
+
+  <div class="chips">
+    <span class="chip"><b>{{n}}</b> files</span>
+    <span class="chip hero"><b>{{key number}}</b> {{baselines updated / e2e tests touched / proto fields added}}</span>
+  </div>
+
+  <!-- 3. THE SECTION READERS VALUE MOST: 2-5 things the diff can't tell you.
+       Give this the room. If you're trimming for the word budget, trim
+       elsewhere first. -->
+  <h3 class="sec">What isn't obvious</h3>
+  <div class="body">
+    <div class="pt" data-n="1">
+      <h4>{{The claim, as a short phrase}}</h4>
+      <p>{{One paragraph. A widget id that shifts and silently resets state, a
+      proto3 default that keeps an older client on the old behaviour, a derived
+      theme token that reaches elements the diff never names, a near-duplicate
+      pair where one is load-bearing — and why it changes what the reader does.}}</p>
+    </div>
+    <div class="pt" data-n="2">
+      <h4>{{...}}</h4><p>{{...}}</p>
+    </div>
+  </div>
+
+  <!-- 4. Only if genuinely non-empty. Delete the whole section otherwise. -->
+  <h3 class="sec">Watch out for</h3>
+  <div class="kv">
+    <div><dt>{{the thing}}</dt><dd><span class="tag risk">no e2e</span> {{one line — why, and who can}}</dd></div>
+    <div><dt>{{a stale review finding}}</dt><dd><span class="tag stale">stale</span> {{filed against an older commit; behaviour changed in <code>sha</code>}}</dd></div>
+  </div>
+
+  <!-- 5. Quiz: 4–6 questions. data-a is the 0-based index of the right option,
+       and the explanation must open by naming that letter — finalize.py checks
+       that they agree, so a mis-key can't ship. -->
+  <h3 class="sec">Check yourself</h3>
+  <div class="quiz" id="quiz-a" data-total="{{N}}">
+    <div class="quiz-head">
+      <p class="t">{{N}} questions</p>
+      <p class="s">{{N}}/{{N}} to clear · consequences, not line numbers</p>
+    </div>
+
+    <div class="q" data-a="1">
+      <div class="qn">Q1 · {{facet}}</div>
+      <p class="qt">{{Scenario with a concrete outcome — "X happens under Y; then what?"}}</p>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="qa1" value="0"><span class="ltr">A</span><span>{{plausible miss}}</span></label>
+        <label class="opt"><input type="radio" name="qa1" value="1"><span class="ltr">B</span><span>{{correct}}</span></label>
+        <label class="opt"><input type="radio" name="qa1" value="2"><span class="ltr">C</span><span>{{what a skimmer picks}}</span></label>
+        <label class="opt"><input type="radio" name="qa1" value="3"><span class="ltr">D</span><span>{{plausible miss}}</span></label>
+      </div>
+      <div class="why"><span class="verdict"></span><b>B.</b> {{Why right — and why the tempting option was tempting. The second half is the learning.}}</div>
+    </div>
+
+    <div class="quiz-foot">
+      <button class="btn" data-grade="quiz-a">Submit</button>
+      <button class="btn ghost" data-reset="quiz-a">Reset</button>
+      <span class="score" id="score-quiz-a"></span>
+      <span class="stamp" id="stamp-quiz-a"></span>
+    </div>
+  </div>
+
+  <script type="text/markdown" id="pitch-a">
+{{PR-comment pitch — clipboard only, never rendered above. Real markdown (**bold**),
+because this goes in a GitHub comment. Sharpest true sentence, then why it's cheap
+or safe to merge, then the ask, then the report link. Under ~150 words; a reviewer
+reads it in the notification email.}}
+  </script>
+
+</div></section>
+
+<footer><div class="wrap" style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap">
+  <button class="copy" data-src="pitch-a">Copy PR comment</button>
+  <span>{{Provenance: PR heads/shas, whether the visuals are committed baselines
+  (and from which merge base) or fresh captures, how many changed baselines were
+  left out, and whether any figure was quoted rather than recomputed (with age).}}</span>
+</div></footer>
+
+<script>
+(function(){
+  var tabs = document.querySelectorAll(".tab");
+  tabs.forEach(function(t){
+    t.addEventListener("click", function(){
+      tabs.forEach(function(x){ x.classList.remove("on"); });
+      t.classList.add("on");
+      document.querySelectorAll(".pr").forEach(function(s){ s.classList.remove("on"); });
+      document.getElementById("pr-" + t.dataset.pr).classList.add("on");
+      window.scrollTo({top:0, behavior:"instant"});
+    });
+  });
+
+  document.querySelectorAll(".copy").forEach(function(b){
+    b.addEventListener("click", function(){
+      var src = document.getElementById(b.dataset.src);
+      if(!src) return;
+      navigator.clipboard.writeText(src.textContent.trim()).then(function(){
+        var old = b.textContent;
+        b.textContent = "Copied ✓"; b.classList.add("done");
+        setTimeout(function(){ b.textContent = old; b.classList.remove("done"); }, 1800);
+      });
+    });
+  });
+
+  var ids = Array.prototype.map.call(tabs, function(t){ return t.dataset.pr; });
+  var passed = {};
+  ids.forEach(function(i){ passed["quiz-" + i] = false; });
+
+  function updateGate(){
+    var n = 0;
+    Object.keys(passed).forEach(function(k){ if(passed[k]) n++; });
+    var el = document.getElementById("gateStatus");
+    if(el) el.textContent = n + " / " + ids.length + " cleared";
+    ids.forEach(function(i){
+      var tab = document.querySelector('.tab[data-pr="' + i + '"]');
+      var q = document.getElementById("quiz-" + i);
+      if(!tab || !q) return;
+      tab.classList.remove("pass","fail");
+      if(passed["quiz-" + i]) tab.classList.add("pass");
+      else if(q.classList.contains("graded")) tab.classList.add("fail");
+    });
+  }
+
+  document.querySelectorAll("[data-grade]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var quiz = document.getElementById(btn.dataset.grade);
+      var qs = quiz.querySelectorAll(".q");
+      var scoreEl = document.getElementById("score-" + quiz.id);
+      var blank = 0;
+      qs.forEach(function(q){ if(!q.querySelector("input:checked")) blank++; });
+      // Blanks aren't wrong answers — grading them would teach nothing.
+      if(blank > 0){
+        scoreEl.textContent = blank + " unanswered";
+        scoreEl.style.color = "var(--red)";
+        return;
+      }
+      var right = 0;
+      qs.forEach(function(q){
+        var want = parseInt(q.dataset.a, 10);
+        var got = parseInt(q.querySelector("input:checked").value, 10);
+        var hit = want === got;
+        if(hit) right++;
+        q.querySelectorAll(".opt").forEach(function(o){
+          var v = parseInt(o.querySelector("input").value, 10);
+          o.classList.remove("correct","wrong");
+          if(v === want) o.classList.add("correct");
+          else if(v === got) o.classList.add("wrong");
+          o.querySelector("input").disabled = true;
+        });
+        var why = q.querySelector(".why");
+        why.classList.remove("hit","miss");
+        why.classList.add(hit ? "hit" : "miss");
+        why.querySelector(".verdict").textContent = hit ? "Correct" : "Missed";
+      });
+      quiz.classList.add("graded");
+      var total = parseInt(quiz.dataset.total, 10);
+      var perfect = right === total;
+      scoreEl.textContent = right + " / " + total;
+      scoreEl.style.color = perfect ? "var(--ok)" : "var(--red)";
+      var stamp = document.getElementById("stamp-" + quiz.id);
+      stamp.className = "stamp show " + (perfect ? "ok" : "no");
+      stamp.textContent = perfect ? "Cleared" : "Reread and retry";
+      passed[quiz.id] = perfect;
+      updateGate();
+    });
+  });
+
+  document.querySelectorAll("[data-reset]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var quiz = document.getElementById(btn.dataset.reset);
+      quiz.classList.remove("graded");
+      quiz.querySelectorAll("input").forEach(function(i){ i.disabled = false; i.checked = false; });
+      quiz.querySelectorAll(".opt").forEach(function(o){ o.classList.remove("correct","wrong"); });
+      document.getElementById("score-" + quiz.id).textContent = "";
+      document.getElementById("stamp-" + quiz.id).className = "stamp";
+      passed[quiz.id] = false;
+      updateGate();
+      quiz.scrollIntoView({behavior:"smooth", block:"start"});
+    });
+  });
+
+  updateGate();
+})();
+</script>
+</body>
+</html>

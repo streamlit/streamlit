@@ -349,6 +349,14 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
+".claude/skills/**" = [
+  # Standalone agent-facing CLIs, not importable modules. Same shape as
+  # `scripts/**`: their whole output is `print`, and they drive `git`/`gh`.
+  "EXE001", # Shebang is for documentation; these run via `uv run python`.
+  "INP",
+  "S",
+  "T20",
+]
 "lib/streamlit/.agents/**" = [
   # Each template is a standalone app, not a package. Adding __init__.py would
   # misrepresent them as importable modules.

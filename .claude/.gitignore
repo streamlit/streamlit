@@ -34,6 +34,7 @@ skills/*
 !skills/generating-changelog/
 !skills/improving-frontend-coverage/
 !skills/improving-python-coverage/
+!skills/explaining-pull-requests/
 
 # Allow agents
 !agents/

@@ -124,6 +124,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
 | `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |
 | `reviewing-pr-description` | When reviewing a PR's title and description for clarity and conciseness |
+| `explaining-pull-requests` | When you need to understand, explain, or get sign-off on a PR — builds a short visual HTML report from the PR's before/after Playwright baselines, ending in a quiz |
 
 ### Subagents
 
