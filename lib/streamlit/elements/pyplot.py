@@ -64,9 +64,8 @@ st.image(buf)
 """
 
 _FIG_REQUIRED: Final[str] = """
-`st.pyplot` requires a Matplotlib figure. Calling it without one (or
-with `None`) is not supported because Matplotlib's global figure object
-is not thread-safe.
+`st.pyplot` requires a Matplotlib figure. Passing `None` is not supported
+because Matplotlib's global figure object is not thread-safe.
 
 Pass a figure explicitly:
 
