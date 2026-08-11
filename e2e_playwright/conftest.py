@@ -393,9 +393,15 @@ def hash_to_range(
 
 
 def is_port_available(port: int, host: str) -> bool:
-    """Check if a port is available on the given host."""
+    """Check if a server can bind to a port on the given host."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        return sock.connect_ex((host, port)) != 0
+        try:
+            # A connection probe only detects listeners. An active client socket
+            # can still prevent a server from binding to its ephemeral port.
+            sock.bind((host, port))
+        except OSError:
+            return False
+        return True
 
 
 def find_available_port(
