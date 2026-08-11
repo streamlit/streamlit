@@ -394,6 +394,18 @@ function RangeDateInput({
       onClose: () => {
         setIsOpenState(false)
         setIsCalendarActive(false)
+        // Synchronous form commit: outside-click dismiss can race form submit
+        // (the close-commit effect fires after paint). Mirrors handleBlur.
+        if (formCommit && !hasPartiallyTypedField(triggerRef.current)) {
+          const pending = compact([
+            displayStartRef.current,
+            displayEndRef.current,
+          ])
+          const committed = compact([startValue, endValue])
+          if (!rangeEqual(pending, committed)) {
+            formCommit(pending)
+          }
+        }
       },
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,

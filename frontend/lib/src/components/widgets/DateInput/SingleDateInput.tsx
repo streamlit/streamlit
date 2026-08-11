@@ -301,6 +301,13 @@ function SingleDateInput({
       onClose: () => {
         setIsOpen(false)
         setIsCalendarActive(false)
+        // Synchronous form commit: outside-click dismiss can race form submit
+        // (the close-commit effect fires after paint). Mirrors handleBlur.
+        if (formCommit && displayValueRef.current) {
+          if (!datesEqual(displayValueRef.current, value)) {
+            formCommit(displayValueRef.current)
+          }
+        }
       },
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
