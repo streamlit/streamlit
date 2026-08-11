@@ -357,6 +357,7 @@ function DateInput({
           focusedValue={focusedValue}
           onFocusChange={setFocusedValue}
           onValidate={handleValidate}
+          onClose={handleClose}
           formCommit={inForm ? handleRangeFormCommit : undefined}
           formResetKey={formResetKey}
         />

@@ -111,6 +111,7 @@ interface RangeDateInputProps {
   focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
   onValidate: (date: CalendarDate | null) => void
+  onClose: (hasPlaceholderSegments: boolean) => void
   /** When inside a form, writes the pending range to WidgetStateManager
    * synchronously on blur so a concurrent form submit reads the correct
    * value. Undefined when not in a form. */
@@ -210,6 +211,7 @@ function RangeDateInput({
   focusedValue,
   onFocusChange,
   onValidate,
+  onClose,
   formCommit,
   formResetKey,
 }: RangeDateInputProps): ReactElement {
@@ -294,6 +296,8 @@ function RangeDateInput({
 
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   const [isOpen, setIsOpenState] = useState(false)
 
@@ -307,6 +311,7 @@ function RangeDateInput({
         if (hasPartiallyTypedField(triggerRef.current)) {
           setDisplayStart(startValue)
           setDisplayEnd(endValue)
+          onCloseRef.current(true)
         } else {
           // Use the DOM as ground truth: if EVERY spinbutton segment shows
           // a placeholder, the user cleared the entire widget.
@@ -795,8 +800,8 @@ function RangeDateInput({
         ref={setTriggerRef}
         aria-keyshortcuts="Alt+ArrowDown"
         aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-controls={isOpen ? popoverId : undefined}
+        aria-expanded={isCalendarActive}
+        aria-controls={isCalendarActive ? popoverId : undefined}
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}

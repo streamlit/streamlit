@@ -545,8 +545,8 @@ function SingleDateInput({
         ref={setTriggerRef}
         aria-keyshortcuts="Alt+ArrowDown"
         aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-controls={isOpen ? popoverId : undefined}
+        aria-expanded={isCalendarActive}
+        aria-controls={isCalendarActive ? popoverId : undefined}
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
