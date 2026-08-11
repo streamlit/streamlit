@@ -956,7 +956,9 @@ class DataEditorSignatureTest(unittest.TestCase):
         edited.loc[len(edited)] = 3
         if isinstance(edited.index, pd.RangeIndex):
             edited.index = pd.Index(list(edited.index))
-        assert type(edited.index) is pd.Index
+        # Older pandas may use Int64Index rather than a plain Index.
+        assert not isinstance(edited.index, pd.RangeIndex)
+        assert pd.api.types.is_integer_dtype(edited.index.dtype)
 
         assert _get_data_editor_signature(
             baseline, include_row_count=False, include_index_values=False
