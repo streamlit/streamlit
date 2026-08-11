@@ -47,8 +47,9 @@ as the release candidate.
 1. Confirm the selected nightly workflow completed successfully, including
    Python, JavaScript, and Playwright tests.
 2. Record its full tag. A cutoff for a `1.60.0` release typically has a nightly
-   tag like `1.59.1.dev20260725` (not `1.60.1.dev20260725`), because nightly
-   versions are derived from the latest PyPI patch version + 1.
+   tag like `1.59.1.dev20260725` (not `1.60.1.dev20260725`), because the
+   nightly version increments the patch component of the latest PyPI release
+   by one.
 
 ### 2. Create the release branch
 
@@ -65,9 +66,9 @@ pushes the branch.
 
 ### 3. Add only essential post-cutoff changes
 
-The original author of a post-cutoff change is responsible for getting it onto
-the release branch. Cherry-pick only changes that are necessary and low risk,
-such as:
+Most releases ship the cutoff nightly as-is. When a post-cutoff change is
+needed, the original author is responsible for getting it onto the release
+branch. Cherry-pick only changes that are necessary and low risk, such as:
 
 - a critical bug fix required to ship safely;
 - a small correction to documentation for a feature already in the release.
@@ -82,10 +83,10 @@ cherry-pick manually on a local checkout of the release branch, run the checks
 appropriate to the change, and push the resolved commit. Do not broaden the
 change while resolving the conflict.
 
-After all cherry-picks:
+If you cherry-picked anything:
 
-- test each release-specific fix on the release branch;
-- rerun focused unit or end-to-end tests as appropriate;
+- spot-check each release-specific fix on the release branch;
+- rerun focused unit or end-to-end tests for those changes as appropriate;
 - inspect the complete diff from the selected nightly's parent commit
   (`<nightly-tag>^`, i.e. the commit before the nightly version bump) to the
   release branch.
@@ -181,10 +182,14 @@ should verify:
    the PR.
 9. Request publication to the default Conda channel in the Snowflake-internal
    [#anaconda-snowflake-technical](https://snowflake.enterprise.slack.com/archives/C02D68R4D0D)
-   Slack channel. You may need to request access to the channel first. Use this
-   message template:
+   Slack channel. This keeps Streamlit current in the main `anaconda` channel
+   (separate from conda-forge). You may need to request access to the channel
+   first. Use this message template:
 
    > Released Streamlit v<version>
+
+   The Anaconda team will publish the package to the default Conda channel,
+   which may take a day or two.
 
 ## Patch release
 
