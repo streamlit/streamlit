@@ -31,6 +31,7 @@ from __future__ import annotations
 import multiprocessing
 import socket
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from multiprocessing import Pool
@@ -75,7 +76,17 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
 
 
 def test_port_availability_check_rejects_active_client_port() -> None:
-    """Ensure active ephemeral client ports aren't selected for a server."""
+    """Ensure active ephemeral client ports aren't selected for a server.
+
+    On Linux CI (where the load-test flake was observed), SO_REUSEADDR still
+    cannot bind over a live client ephemeral port. On macOS/BSD, SO_REUSEADDR
+    can, matching Streamlit's server socket options — so skip there.
+    """
+    if sys.platform == "darwin":
+        pytest.skip(
+            "macOS SO_REUSEADDR allows binding over live client ephemeral ports"
+        )
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
         listener.bind(("localhost", 0))
         listener.listen()

@@ -398,8 +398,12 @@ def is_port_available(port: int, host: str) -> bool:
         try:
             # Bind to verify the port is free. connect_ex only detects listeners,
             # so ports held by active client sockets look free but cannot be bound.
-            # Intentionally omit SO_REUSEADDR: on macOS/BSD it can allow binding
-            # over live client ephemeral ports and would hide the failure mode.
+            # Match Streamlit's server socket options so TIME_WAIT ports that the
+            # real server could reuse (via SO_REUSEADDR) are not treated as busy.
+            # Skip SO_REUSEADDR on Windows for the same reason as starlette_server:
+            # there it can allow binding over a live listener.
+            if os.name != "nt":
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((host, port))
         except OSError:
             return False
