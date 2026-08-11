@@ -246,6 +246,72 @@ class SliderTest(DeltaGeneratorTestCase):
             st.slider("Label", value=0.5, min_value=min_value)
         assert f"`min_value` ({min_value}) must be >= -1.797e+308" == str(exc.value)
 
+    @parameterized.expand(
+        [
+            ("historical", date(1600, 1, 1), date(1700, 1, 1)),
+            ("far_future", date(2300, 1, 1), date(2400, 1, 1)),
+            ("date_min", date(1, 1, 1), date(2, 1, 1)),
+            ("date_max", date(9998, 1, 1), date(9999, 12, 31)),
+            (
+                "datetime_far_future",
+                datetime(2300, 1, 1),
+                datetime(2400, 1, 1),
+            ),
+        ]
+    )
+    def test_timelike_value_out_of_js_bounds(self, _name, min_value, max_value):
+        """Timelike bounds beyond JS safe-integer microseconds are rejected.
+
+        Dates are serialized as microseconds since the epoch, which the frontend holds
+        in a JavaScript number. Past MAX_SAFE_INTEGER the value cannot round-trip, so
+        it has to fail rather than silently shift to a different instant.
+        """
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider(
+                "Label", min_value=min_value, max_value=max_value, value=min_value
+            )
+        assert "too far from 1970" in str(exc.value)
+        # The message has to name a usable range, not just reject the input.
+        assert "1684-07-28" in str(exc.value)
+        assert "2255-06-05" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("epoch_adjacent", date(1970, 1, 1), date(1971, 1, 1)),
+            ("historical_but_safe", date(1700, 1, 1), date(1800, 1, 1)),
+            ("just_inside_lower", date(1685, 1, 1), date(1686, 1, 1)),
+            ("just_inside_upper", date(2254, 1, 1), date(2255, 1, 1)),
+        ]
+    )
+    def test_timelike_value_within_js_bounds_is_accepted(
+        self, _name, min_value, max_value
+    ):
+        """Dates inside the representable range are unaffected by the bounds check."""
+        st.slider("Label", min_value=min_value, max_value=max_value, value=min_value)
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    @parameterized.expand(
+        [
+            ("date_min", date(1, 1, 1)),
+            ("date_max", date(9999, 12, 31)),
+            ("datetime_min", datetime(1, 1, 1)),
+            ("datetime_max", datetime(9999, 12, 31, 23, 59)),
+        ]
+    )
+    def test_timelike_value_near_type_limits_reports_the_range(self, _name, value):
+        """A value within the default 14-day window of the type limits still reports.
+
+        The default ``min_value``/``max_value`` are computed as ``value`` +/- 14 days
+        even when bounds are passed explicitly, and that arithmetic overflows next to
+        ``date.min``/``date.max``. It used to surface as a bare ``OverflowError``.
+        """
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", value=value)
+        assert "too far from 1970" in str(exc.value)
+
     def test_step_zero(self):
         with pytest.raises(StreamlitAPIException) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)

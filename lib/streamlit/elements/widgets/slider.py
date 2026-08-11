@@ -123,6 +123,17 @@ SUPPORTED_TYPES: Final = {
 }
 TIMELIKE_TYPES: Final = (SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE)
 
+# Widest date/datetime range the frontend can represent exactly. Timelike values are
+# serialized as microseconds since the epoch, and the frontend holds that in a
+# JavaScript number, which is only exact up to ``JSNumber.MAX_SAFE_INTEGER``. Used for
+# the error message only, so naive datetimes are fine here.
+_MIN_SAFE_TIMELIKE: Final = datetime(1970, 1, 1) - timedelta(
+    microseconds=JSNumber.MAX_SAFE_INTEGER
+)
+_MAX_SAFE_TIMELIKE: Final = datetime(1970, 1, 1) + timedelta(
+    microseconds=JSNumber.MAX_SAFE_INTEGER
+)
+
 
 def _time_to_datetime(time_: time) -> datetime:
     # Note, here we pick an arbitrary date well after Unix epoch.
@@ -135,6 +146,37 @@ def _time_to_datetime(time_: time) -> datetime:
 
 def _date_to_datetime(date_: date) -> datetime:
     return datetime.combine(date_, time())
+
+
+def _window_around(anchor: date, window: timedelta) -> tuple[Any, Any]:
+    """Return ``anchor`` -/+ ``window``, clamped to what its type can represent.
+
+    This feeds the default ``min_value``/``max_value``, which are computed even when
+    the caller passed both explicitly, so the arithmetic has to hold for any
+    ``anchor``. Within ``window`` of the type's limit it would otherwise raise
+    ``OverflowError``.
+
+    ``anchor`` may be a ``date`` or a ``datetime`` -- dates are not converted until
+    later -- so the limits are taken from the matching type, and only ``datetime``
+    carries the ``tzinfo`` that has to be preserved.
+    """
+    floor: date
+    ceiling: date
+    if isinstance(anchor, datetime):
+        floor = datetime.min.replace(tzinfo=anchor.tzinfo)
+        ceiling = datetime.max.replace(tzinfo=anchor.tzinfo)
+    else:
+        floor, ceiling = date.min, date.max
+
+    try:
+        low = anchor - window
+    except OverflowError:
+        low = floor
+    try:
+        high = anchor + window
+    except OverflowError:
+        high = ceiling
+    return low, high
 
 
 def _delta_to_micros(delta: timedelta) -> int:
@@ -879,8 +921,9 @@ class SliderMixin:
         if data_type in {SliderProto.DATETIME, SliderProto.DATE}:
             prepared_value = cast("Sequence[datetime]", prepared_value)
 
-            datetime_min = prepared_value[0] - timedelta(days=14)
-            datetime_max = prepared_value[0] + timedelta(days=14)
+            datetime_min, datetime_max = _window_around(
+                prepared_value[0], timedelta(days=14)
+            )
 
         defaults: Final[dict[SliderProto.DataType.ValueType, dict[str, Any]]] = {
             SliderProto.INT: {
@@ -1000,7 +1043,8 @@ class SliderMixin:
                 JSNumber.validate_float_bounds(cast("float", min_value), "`min_value`")
                 JSNumber.validate_float_bounds(cast("float", max_value), "`max_value`")
             elif all_timelikes:
-                # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
+                # Checked after the conversion to microseconds below, since that
+                # integer is what the frontend actually has to represent.
                 pass
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
@@ -1051,6 +1095,21 @@ class SliderMixin:
             min_value = _datetime_to_micros(min_value)
             max_value = _datetime_to_micros(max_value)
             step = _delta_to_micros(step)
+
+            # Beyond MAX_SAFE_INTEGER microseconds the frontend's JavaScript number
+            # cannot hold the value exactly, so the slider would silently round to a
+            # different instant rather than fail.
+            for name, micros in (
+                ("`min_value`", min_value),
+                ("`max_value`", max_value),
+            ):
+                if abs(micros) > JSNumber.MAX_SAFE_INTEGER:
+                    raise StreamlitAPIException(
+                        f"{name} is too far from 1970 for Streamlit to represent "
+                        "exactly. Use a value between "
+                        f"{_MIN_SAFE_TIMELIKE:%Y-%m-%d} and "
+                        f"{_MAX_SAFE_TIMELIKE:%Y-%m-%d}."
+                    )
 
         # At this point, prepared_value is expected to be a list of floats:
         prepared_value = cast("list[float]", prepared_value)
