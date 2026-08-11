@@ -64,9 +64,77 @@ value = st_keyup("Search", debounce=500)
 
 ### Parameter Name Options
 
-We considered several parameter names for this feature:
+We considered several parameter names for this feature. The ranked recommendation below reflects
+the current thinking; the detailed per-candidate trade-offs follow it.
 
-#### Option 1: `debounce` (bool, integer in milliseconds, or duration string) - PREFERRED
+#### Recommended parameter name (ranked)
+
+> **Naming status:** The rest of this spec still uses `debounce` as a working placeholder so the
+> behavior, values, and implementation can be reviewed independently of the final name. Swapping the
+> name later does not change any of the behavior below — with one exception noted in the values table
+> (a semantic name would drop the bare-integer form).
+
+The strongest naming precedents in the current API fall into a few groups:
+
+| Pattern | Examples | Lesson |
+| --- | --- | --- |
+| Semantic name over mechanism | `run_every`, `clear_on_submit`, `enter_to_submit`, `accept_new_options` | Name the outcome, not the implementation (Principle 8) |
+| Interaction behavior → compound name | `clear_on_submit`, `enter_to_submit`, `accept_multiple_files` | Interaction toggles get explicit compound names, unlike terse property flags (`disabled`, `border`, `parallel`, `lazy`) |
+| Flag-or-config in one param | `show_spinner: bool \| str`, `expanded: bool \| int`, `accept_file: bool \| Literal[...]` | Precedent for "turn on + configure" in a single parameter |
+| Duration values | `ttl`, `run_every`, `toast(duration=...)` | Duration strings + `timedelta`; **bare numbers are seconds, not milliseconds** |
+| Mode enums | `submit_mode`, `filter_mode`, `selection_mode` | Best when values are discrete modes, not timings |
+
+`debounce` names the frontend *technique*, which fights Principle 8 (semantic over geeky). Migration
+parity with `streamlit-keyup` is real but one-time and niche; the native name is permanent and is seen
+by every user, including non-web developers.
+
+**Ranked candidates** (all use the value shape `bool | str`, optionally `| timedelta`, default `False`,
+unless noted):
+
+| Rank | Name | Assessment |
+| --- | --- | --- |
+| **1** | **`live_update`** | Unambiguous, matches the `clear_on_submit` / `enter_to_submit` interaction-behavior pattern, self-evident in IDE autocomplete, and extends cleanly to `st.text_area`. Minor cost: slightly verbose, and `live_update="500ms"` reads a touch redundantly. **Recommended.** |
+| **2** | **`live`** | Punchy, community-proposed ([#4899](https://github.com/streamlit/streamlit/issues/4899) / [#4920](https://github.com/streamlit/streamlit/pull/4920)), and `live=True` reads beautifully; Streamlit tolerates terse flags (`parallel`, `lazy`). Only real knock: vague in isolation ("live *what*?"). A very close co-#1. |
+| **3** | **`update_while_typing`** | Maximum self-documentation — impossible to misread, and consistent with descriptive names like `accept_multiple_files`. Knocks: verbose, durations read awkwardly, and "typing" is slightly inaccurate for paste / voice / IME input. |
+| **4** | **`auto_update`** | Clear, and "update" maps onto Streamlit's rerun-as-update model while avoiding the `submit` collision that sinks `auto_submit`. Knock: `auto_*` is not an established Streamlit prefix, and it faintly evokes timer-based refresh (`run_every`), blurring "on a timer" vs "as I type". |
+| **5** | **`update_delay` / `typing_delay`** (duration-only shape: `str \| timedelta \| None = None`) | Cleanest type model and most consistent with `ttl` / `run_every`. Knock: loses the one-line `=True` on-ramp (Principle 1), and `None`-means-off is less obvious than `False`. |
+
+**`live_update` vs `live`** is the only close call. `live` wins on brevity and reads slightly better
+with a duration (`live="300ms"`). `live_update` wins on the two things that compound over the life of a
+public API: it follows the pattern Streamlit uses for *interaction* behaviors (`clear_on_submit`,
+`enter_to_submit`) rather than static-property flags, and it is self-explanatory in autocomplete
+without reading the docstring (Principle 35, discoverability). We recommend `live_update` and document
+`live` as the accepted fallback.
+
+**Excluded names:** `keyup` (DOM jargon; also wrong for paste / voice / IME), `auto_submit` (collides
+with the terminal "submit" meaning in `st.form` and `st.chat_input`'s `submit_mode`), `on_input`
+(`on_*` means a callback in Streamlit), `update_on` (good as a finite enum, poor at also carrying a
+duration), and `realtime` (over-promises — a 300ms-debounced server rerun isn't real-time).
+
+**Values (regardless of the chosen name):**
+
+| Value | Meaning |
+| --- | --- |
+| `False` (default) | Rerun on blur or Enter only (today's behavior) |
+| `True` | Live updates with a sensible default (300ms) |
+| `"300ms"`, `"0.5s"`, `"1s"` | Custom inactivity delay (same `pandas.Timedelta` parser as `ttl`) |
+| `"0ms"` | Rerun on every input change (carries the performance warning) |
+| `timedelta(...)` (optional) | Programmatic duration; mirrors `run_every`'s type for consistency |
+| negative or unparseable duration | Raises `StreamlitAPIException` |
+
+We recommend **dropping bare integers** for any semantic name: `run_every`, `ttl`, and
+`toast(duration=...)` all treat a bare number as *seconds*, so `live_update=300` meaning *milliseconds*
+would be inconsistent, and `"300ms"` is more readable than either `300` or `0.3`. Using `bool | str`
+also removes the `0 == False` ambiguity that the `debounce` proposal below has to mitigate explicitly,
+while `"0ms"` remains the explicit "every keystroke" opt-in. (`debounce`, ranked #4 above, is the one
+candidate where a bare integer reads naturally — `debounce=300` — which is why the placeholder text
+below still accepts `int`.)
+
+#### Detailed trade-offs by candidate
+
+The following subsections capture the full pros/cons for the leading candidates.
+
+#### Option 1: `debounce` (bool, integer in milliseconds, or duration string)
 
 ```python
 st.text_input("Search", debounce=True)  # Rerun with sensible default (300ms)
@@ -200,6 +268,10 @@ st.text_input("Search", auto_submit="300ms")
   inside a form.
 
 ### Recommended API: `debounce` parameter
+
+> **Naming status:** `live_update` is the current front-runner (see "Recommended parameter name
+> (ranked)" above). This section and everything below still use `debounce` as a working placeholder;
+> the name is not yet final.
 
 ```python
 def text_input(
