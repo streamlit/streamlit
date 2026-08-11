@@ -205,6 +205,25 @@ class TestBypass:
         else:
             assert response.headers.get("content-encoding") is None
 
+    def test_media_compressible_download_gzipped(self) -> None:
+        """Compressible /media/ downloads depend on the version.
+
+        The PR's user-facing win is that compressible download payloads (e.g.
+        text/CSV/JSON from st.download_button) are gzipped again on modern
+        Starlette. Starlette >= 1.5 does not exclude text/csv by content type,
+        so a full 200 download is compressed. Starlette < 1.5 bypasses the whole
+        /media/ path, so the same download is never compressed.
+        """
+        client = _build_client(_text_route("/media/data.csv", content_type="text/csv"))
+
+        response = client.get("/media/data.csv", headers={"Accept-Encoding": "gzip"})
+
+        assert response.status_code == 200
+        if _STARLETTE_HANDLES_MEDIA_AND_RANGE:
+            assert response.headers.get("content-encoding") == "gzip"
+        else:
+            assert response.headers.get("content-encoding") is None
+
     def test_compresses_app_static_path(self) -> None:
         """User app-static assets (/app/static) are still compressed."""
         client = _build_client(
@@ -219,15 +238,13 @@ class TestBypass:
         assert response.headers.get("content-encoding") == "gzip"
 
     def test_media_content_type_excluded_outside_media_path(self) -> None:
-        """Already-compressed media outside /media/ depends on the version.
+        """Media content types outside /media/ are excluded by content type on >= 1.5.
 
-        The point of delegating to the stock middleware is that it excludes
-        already-compressed content types wherever they are served, not just
-        under /media/ (e.g. a custom component asset or an /app/static/ file).
-        Starlette >= 1.5 skips a video/mp4 body on this non-media, non-static
-        path via its default content-type exclusion, so nothing here relies on
-        the /media/ path bypass. Starlette < 1.5 has no such exclusion, so the
-        same body is compressed.
+        On Starlette >= 1.5, the stock middleware excludes already-compressed
+        content types (e.g. video/mp4) regardless of route, so media served
+        outside /media/ — from a custom component or /app/static/ — is not
+        compressed. On Starlette < 1.5, no such exclusion exists, so the same
+        body is compressed.
         """
         client = _build_client(
             _text_route("/app/static/clip.mp4", content_type="video/mp4")
@@ -511,7 +528,8 @@ class TestRootPath:
     Streamlit can be served under a base URL via ``root_path`` even without
     ``server.baseUrlPath`` set. In that case ``scope["path"]`` keeps the mount
     prefix, so path handling must strip ``root_path`` (like Starlette's router)
-    before matching ``/static/`` and ``/media/``.
+    before matching the static/root bypass (and, on older Starlette, the media
+    path bypass).
     """
 
     @pytest.mark.parametrize(
