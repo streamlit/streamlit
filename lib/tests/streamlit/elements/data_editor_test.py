@@ -1931,6 +1931,11 @@ class ValidateEditedDataframeCompatibilityTest(unittest.TestCase):
         # large_string to string; returning that frame must still validate.
         result = baseline.copy(deep=True)
         result.loc[len(result)] = {"a": 3}
+        # Some pandas versions downcast the RangeIndex to an integer Index when a
+        # row is added via .loc. Normalize it back to a RangeIndex so this test
+        # isolates the string/large_string arrow-variant check; index-structure
+        # handling is covered separately.
+        result.index = pd.RangeIndex(len(result))
 
         validated, _ = self._validate(result, baseline)
         assert len(validated) == 3
