@@ -39,6 +39,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { isNullOrUndefined } from "~lib/util/utils"
 
+import { noop } from "./dateInputUtils"
 import {
   StyledCalendarHeader,
   StyledCalendarHeaderButton,
@@ -55,6 +56,7 @@ import {
 interface HeaderPickerItem {
   id: number
   formatted: string
+  date?: { year: number; month: number; day: number }
 }
 
 // Item is untyped because styled(ListBox) erases RAC's generic.
@@ -66,8 +68,6 @@ const renderPickerItem = (item: unknown): ReactElement => {
     </StyledDropdownListBoxItem>
   )
 }
-
-const noop = (): void => {}
 
 /**
  * Controlled Select so we can use `isNonModal` on the popover — without it,
@@ -164,12 +164,9 @@ export function CalendarPopoverHeader(): ReactElement {
   const handleYearChange = useCallback(
     (key: Key | null, items: HeaderPickerItem[]): void => {
       if (isNullOrUndefined(key) || !state) return
-      const selectedItem = items[Number(key)]
+      const selectedItem = items.find(i => i.id === Number(key))
       if (!selectedItem) return
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const selectedYear = (selectedItem as any).date?.year as
-        | number
-        | undefined
+      const selectedYear = selectedItem.date?.year
       if (isNullOrUndefined(selectedYear)) return
       state.setFocusedDate(state.focusedDate.set({ year: selectedYear }))
     },

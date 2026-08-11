@@ -376,7 +376,7 @@ describe("DateInput", () => {
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
-  it("resets its value to default when it's closed with empty input", async () => {
+  it("reverts to committed value when closed with empty input (non-clearable)", async () => {
     const user = userEvent.setup()
     const props = getProps()
 

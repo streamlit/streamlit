@@ -371,8 +371,8 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
     )
 
     # Clear every segment (both start and end fields) via the keyboard —
-    # mirrors test_resets_to_default_single_value_if_calendar_closed_empty —
-    # without selecting a new date.
+    # mirrors the single-mode revert-to-committed test — without selecting
+    # a new date.
     for segment in date_field.get_by_role("spinbutton").all():
         segment.click()
         for _ in range(4):

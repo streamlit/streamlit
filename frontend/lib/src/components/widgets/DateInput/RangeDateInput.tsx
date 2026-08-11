@@ -63,6 +63,7 @@ import {
   datesEqual,
   getQuickSelectPresets,
   isValidSegmentValue,
+  noop,
   parsePartialSegmentPaste,
   parsePastedDate,
   validateDate,
@@ -91,8 +92,6 @@ import {
   StyledVisuallyHidden,
 } from "./styled-components"
 import { getSafeLocale } from "./weekInfo"
-
-const noop = (): void => {}
 
 interface RangeDateInputProps {
   startValue: CalendarDate | null
@@ -325,6 +324,8 @@ function RangeDateInput({
               s.matches('[data-placeholder="true"]')
             )
 
+          // Range mode intentionally commits [] on full clear (including
+          // non-clearable widgets); SingleDateInput reverts to last committed.
           let pending: CalendarDate[]
           if (allCleared) {
             pending = []

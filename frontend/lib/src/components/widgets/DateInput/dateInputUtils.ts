@@ -307,6 +307,8 @@ export function isValidSegmentValue(
   return value >= 1
 }
 
+export const noop = (): void => {}
+
 /** Ensures start <= end for a two-element ISO date array (lexicographic). */
 export function normalizeRangeOrder(isoValues: string[]): string[] {
   if (isoValues.length === 2 && isoValues[0] > isoValues[1]) {
