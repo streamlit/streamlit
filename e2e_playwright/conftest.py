@@ -396,8 +396,10 @@ def is_port_available(port: int, host: str) -> bool:
     """Check if a server can bind to a port on the given host."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         try:
-            # A connection probe only detects listeners. An active client socket
-            # can still prevent a server from binding to its ephemeral port.
+            # Bind to verify the port is free. connect_ex only detects listeners,
+            # so ports held by active client sockets look free but cannot be bound.
+            # Intentionally omit SO_REUSEADDR: on macOS/BSD it can allow binding
+            # over live client ephemeral ports and would hide the failure mode.
             sock.bind((host, port))
         except OSError:
             return False
