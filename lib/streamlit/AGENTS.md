@@ -3,6 +3,13 @@
 Tips and guidelines specific to the development of the Streamlit Python library,
 not applicable to scripts and e2e tests.
 
+## FIPS Compatibility
+
+- Production code must remain compatible with Python/OpenSSL environments running in FIPS mode.
+- For non-security hashing, use `streamlit.util.create_fast_hasher` (incremental hashing) or `calc_hash` (one-shot string/bytes hashing) instead of calling `hashlib` directly. Direct use of `hashlib.md5`, `sha1`, `blake2b`, `blake2s`, and `hashlib.new` is banned by lint (ruff `TID251`); the shared `streamlit.util` helpers are the only place that use them directly, guarded with `# noqa: TID251`.
+- FIPS-approved constructors (e.g. `hashlib.sha256`) remain allowed for genuine security needs.
+- Update `lib/tests/streamlit/fips_test.py` when changing hashing behavior.
+
 ## Logging
 
 If something needs to be logged, please use our logger - that returns a default

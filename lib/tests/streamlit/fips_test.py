@@ -16,39 +16,50 @@
 
 from __future__ import annotations
 
-import ast
 import hashlib
 import os
+import socket
 import subprocess
 import sys
 import time
-from pathlib import Path
-from typing import Any
+import urllib.request
+from typing import TYPE_CHECKING, Any
 from urllib.error import URLError
-from urllib.request import urlopen
 
 import pytest
+from websockets.sync.client import connect
 
 from streamlit import util
+from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import _make_function_key, _make_value_key
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.watcher.util import calc_hash_with_blocking_retries
 
-_STREAMLIT_PACKAGE_ROOT = Path(__file__).parents[2] / "streamlit"
-_FIPS_SENSITIVE_HASHLIB_ALGORITHMS = {"md5", "sha1", "blake2b", "blake2s"}
-# Directories below the package root that are not part of Streamlit's own
-# runtime hashing and therefore should not be held to the FIPS rule: vendored
-# third-party code and shipped example-app templates.
-_EXCLUDED_DIRECTORY_NAMES = {"vendor", ".agents"}
+if TYPE_CHECKING:
+    from pathlib import Path
+
 _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS = 30
+# Number of times to retry starting the server on a fresh port, guarding against
+# the small window where the chosen port is claimed between selection and bind.
+_SERVER_START_ATTEMPTS = 3
+_FIPS_SMOKE_MARKER = "FIPS runtime guard and WebSocket smoke test passed"
+_REJECT_BLAKE2_DIGEST_SIZE_ENV = "STREAMLIT_TEST_REJECT_BLAKE2_DIGEST_SIZE"
 _FIPS_HASHLIB_SITE_CUSTOMIZE = """
 from __future__ import annotations
 
 import functools
 import hashlib
+import os
 
-FIPS_SENSITIVE_ALGORITHMS = {"md5", "sha1", "blake2b", "blake2s"}
+# SHA-1 stays available because OpenSSL's FIPS provider exposes it and the
+# WebSocket handshake requires it. Ruff separately prevents new Streamlit uses.
+FIPS_RESTRICTED_ALGORITHMS = {"md5", "blake2b", "blake2s"}
+REJECT_BLAKE2_DIGEST_SIZE = os.environ.get(
+    "STREAMLIT_TEST_REJECT_BLAKE2_DIGEST_SIZE"
+) == "1"
 
 
 def guard_algorithm(name, original):
@@ -56,13 +67,15 @@ def guard_algorithm(name, original):
     def guarded(*args, **kwargs):
         if kwargs.get("usedforsecurity", True) is not False:
             raise ValueError(f"FIPS mode blocks {name} for security use")
+        if name == "blake2b" and REJECT_BLAKE2_DIGEST_SIZE and "digest_size" in kwargs:
+            raise ValueError("FIPS provider rejects a custom BLAKE2b digest size")
 
         return original(*args, **kwargs)
 
     return guarded
 
 
-for algorithm in FIPS_SENSITIVE_ALGORITHMS:
+for algorithm in FIPS_RESTRICTED_ALGORITHMS:
     if hasattr(hashlib, algorithm):
         setattr(hashlib, algorithm, guard_algorithm(algorithm, getattr(hashlib, algorithm)))
 
@@ -70,7 +83,7 @@ original_new = hashlib.new
 
 
 def guarded_new(name, *args, **kwargs):
-    if name.lower() in FIPS_SENSITIVE_ALGORITHMS and kwargs.get("usedforsecurity", True) is not False:
+    if name.lower() in FIPS_RESTRICTED_ALGORITHMS and kwargs.get("usedforsecurity", True) is not False:
         raise ValueError(f"FIPS mode blocks {name} for security use")
 
     return original_new(name, *args, **kwargs)
@@ -80,172 +93,43 @@ hashlib.new = guarded_new
 """
 
 
-class _HashlibCallVisitor(ast.NodeVisitor):
-    def __init__(self, filename: Path) -> None:
-        self.filename = filename
-        self.hashlib_aliases: set[str] = set()
-        self.hashlib_new_aliases: set[str] = set()
-        self.hash_constructor_aliases: dict[str, str] = {}
-        self.violations: list[str] = []
-
-    def visit_Import(self, node: ast.Import) -> None:
-        for alias in node.names:
-            if alias.name == "hashlib":
-                self.hashlib_aliases.add(alias.asname or alias.name)
-
-        self.generic_visit(node)
-
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        if node.module != "hashlib":
-            self.generic_visit(node)
-            return
-
-        for alias in node.names:
-            local_name = alias.asname or alias.name
-            if alias.name == "*":
-                # A wildcard import pulls every public hashlib name into scope,
-                # including `new` and the FIPS-sensitive constructors, so track
-                # them all to keep the guard from being bypassed silently.
-                self.hashlib_new_aliases.add("new")
-                for algorithm in _FIPS_SENSITIVE_HASHLIB_ALGORITHMS:
-                    self.hash_constructor_aliases[algorithm] = algorithm
-            elif alias.name == "new":
-                self.hashlib_new_aliases.add(local_name)
-            elif alias.name in _FIPS_SENSITIVE_HASHLIB_ALGORITHMS:
-                self.hash_constructor_aliases[local_name] = alias.name
-
-        self.generic_visit(node)
-
-    def visit_Call(self, node: ast.Call) -> None:
-        algorithm = self._get_fips_sensitive_algorithm(node)
-        if algorithm is not None and not self._passes_usedforsecurity_false(node):
-            self.violations.append(
-                f"{self.filename}:{node.lineno} uses hashlib {algorithm!r} without "
-                "usedforsecurity=False"
-            )
-
-        self.generic_visit(node)
-
-    def _get_fips_sensitive_algorithm(self, node: ast.Call) -> str | None:
-        func = node.func
-
-        # Attribute access on the hashlib module, e.g. `hashlib.md5(...)`
-        # or `hashlib.new("md5")`.
-        if (
-            isinstance(func, ast.Attribute)
-            and isinstance(func.value, ast.Name)
-            and func.value.id in self.hashlib_aliases
-        ):
-            if func.attr in _FIPS_SENSITIVE_HASHLIB_ALGORITHMS:
-                return func.attr
-            if func.attr == "new":
-                return self._get_hashlib_new_algorithm(node)
-
-        # Direct call of a name imported from hashlib, e.g. `md5(...)`
-        # or `new("md5")`.
-        if isinstance(func, ast.Name):
-            if func.id in self.hash_constructor_aliases:
-                return self.hash_constructor_aliases[func.id]
-            if func.id in self.hashlib_new_aliases:
-                return self._get_hashlib_new_algorithm(node)
-
-        return None
-
-    @staticmethod
-    def _get_hashlib_new_algorithm(node: ast.Call) -> str | None:
-        # The algorithm can be passed positionally (`new("md5")`) or by
-        # keyword (`new(name="md5")`).
-        algorithm_arg: ast.expr | None = node.args[0] if node.args else None
-        if algorithm_arg is None:
-            algorithm_arg = next(
-                (kw.value for kw in node.keywords if kw.arg == "name"), None
-            )
-
-        if not isinstance(algorithm_arg, ast.Constant) or not isinstance(
-            algorithm_arg.value, str
-        ):
-            return None
-
-        algorithm = algorithm_arg.value.lower()
-        if algorithm in _FIPS_SENSITIVE_HASHLIB_ALGORITHMS:
-            return algorithm
-
-        return None
-
-    @staticmethod
-    def _passes_usedforsecurity_false(node: ast.Call) -> bool:
-        return any(
-            keyword.arg == "usedforsecurity"
-            and isinstance(keyword.value, ast.Constant)
-            and keyword.value.value is False
-            for keyword in node.keywords
-        )
-
-
-def test_fips_sensitive_hashlib_calls_disable_security_use() -> None:
-    """Require explicit non-security use for FIPS-sensitive hashlib algorithms.
-
-    The scan inspects static algorithm names only. Calls that build the
-    algorithm name dynamically (e.g. ``hashlib.new(algo_var)``) cannot be
-    resolved at parse time and are therefore not covered by this guard.
-    """
-    violations: list[str] = []
-
-    for path in _STREAMLIT_PACKAGE_ROOT.rglob("*.py"):
-        relative_parts = path.relative_to(_STREAMLIT_PACKAGE_ROOT).parts
-        if _EXCLUDED_DIRECTORY_NAMES.intersection(relative_parts):
-            continue
-
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        visitor = _HashlibCallVisitor(path)
-        visitor.visit(tree)
-        violations.extend(visitor.violations)
-
-    assert violations == []
-
-
 @pytest.mark.parametrize(
-    ("source", "expect_violation"),
-    [
-        # Attribute access on the hashlib module.
-        ("import hashlib\nhashlib.md5(b'x')\n", True),
-        ("import hashlib\nhashlib.md5(b'x', usedforsecurity=False)\n", False),
-        # Aliased module and `hashlib.new` (positional and keyword).
-        ("import hashlib as h\nh.new('sha1', b'x')\n", True),
-        ("import hashlib\nhashlib.new(name='blake2b')\n", True),
-        # Names imported directly from hashlib.
-        ("from hashlib import blake2b\nblake2b(b'x')\n", True),
-        # Wildcard imports bring the constructors into scope too.
-        ("from hashlib import *\nblake2b(b'x')\n", True),
-        ("from hashlib import *\nblake2b(b'x', usedforsecurity=False)\n", False),
-        # Non-sensitive algorithms and dynamic names are not flagged.
-        ("import hashlib\nhashlib.sha256(b'x')\n", False),
-        ("import hashlib\nalgo = 'md5'\nhashlib.new(algo)\n", False),
-    ],
+    "blake2b_error",
+    [None, TypeError, ValueError],
+    ids=["blake2b", "md5-fallback-type-error", "md5-fallback-value-error"],
 )
-def test_hashlib_visitor_flags_fips_sensitive_calls(
-    source: str, expect_violation: bool
+def test_internal_hashing_uses_non_security_hashes(
+    blake2b_error: type[Exception] | None,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
-    """Detect FIPS-sensitive hashlib calls, including via wildcard imports."""
-    visitor = _HashlibCallVisitor(Path("snippet.py"))
-    visitor.visit(ast.parse(source))
-
-    assert bool(visitor.violations) is expect_violation
-
-
-def test_internal_hashing_works_when_fips_rejects_security_blake2b(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Exercise internal hashes with a FIPS-like provider restriction."""
+    """Exercise internal hashes with FIPS-like provider restrictions."""
     real_blake2b = hashlib.blake2b
+    real_new = hashlib.new
+    blake2b_call_count = 0
+    md5_call_count = 0
 
     def fips_blake2b(*args: Any, **kwargs: Any) -> Any:
+        nonlocal blake2b_call_count
+        blake2b_call_count += 1
         if kwargs.get("usedforsecurity", True) is not False:
             raise ValueError("FIPS mode blocks BLAKE2b for security use")
+        if blake2b_error is not None and "digest_size" in kwargs:
+            raise blake2b_error("FIPS provider rejects a custom BLAKE2b digest size")
 
         return real_blake2b(*args, **kwargs)
 
+    def fips_new(name: str, *args: Any, **kwargs: Any) -> Any:
+        nonlocal md5_call_count
+        if name.lower() == "md5":
+            md5_call_count += 1
+            if kwargs.get("usedforsecurity", True) is not False:
+                raise ValueError("FIPS mode blocks MD5 for security use")
+
+        return real_new(name, *args, **kwargs)
+
     monkeypatch.setattr(hashlib, "blake2b", fips_blake2b)
+    monkeypatch.setattr(hashlib, "new", fips_new)
 
     assert util.calc_hash("streamlit") == util.calc_hash(b"streamlit")
 
@@ -266,22 +150,40 @@ def test_internal_hashing_works_when_fips_rejects_security_blake2b(
     watched_file.write_text("print('changed')", encoding="utf-8")
 
     assert calc_hash_with_blocking_retries(str(watched_file))
+    assert blake2b_call_count > 0
+    if blake2b_error is None:
+        assert md5_call_count == 0  # BLAKE2b succeeded, so no MD5 fallback.
+    else:
+        assert md5_call_count > 0  # BLAKE2b was rejected, so we fell back to MD5.
 
 
+@pytest.mark.parametrize("reject_blake2_digest_size", [False, True])
 def test_streamlit_run_serves_app_when_fips_rejects_security_hashes(
-    tmp_path: Path, free_tcp_port: int
+    reject_blake2_digest_size: bool, tmp_path: Path
 ) -> None:
-    """Start Streamlit under FIPS-like hash restrictions and check health."""
+    """Run a Streamlit session under FIPS-like hash restrictions."""
     (tmp_path / "sitecustomize.py").write_text(
         _FIPS_HASHLIB_SITE_CUSTOMIZE, encoding="utf-8"
     )
 
     app_path = tmp_path / "fips_smoke_app.py"
     app_path.write_text(
-        """
-import streamlit as st
+        f"""\
+import hashlib
 
-st.write("FIPS compatibility smoke test")
+import streamlit as st
+from streamlit import util
+
+try:
+    hashlib.md5(b"blocked")
+except ValueError:
+    pass
+else:
+    raise RuntimeError("FIPS runtime guard was not installed")
+
+hashlib.md5(b"allowed", usedforsecurity=False)
+assert util.calc_hash("exercise the Streamlit hasher")
+st.write("{_FIPS_SMOKE_MARKER}")
 """,
         encoding="utf-8",
     )
@@ -291,63 +193,140 @@ st.write("FIPS compatibility smoke test")
     env["PYTHONPATH"] = (
         f"{tmp_path}{os.pathsep}{python_path}" if python_path else str(tmp_path)
     )
+    env[_REJECT_BLAKE2_DIGEST_SIZE_ENV] = "1" if reject_blake2_digest_size else "0"
 
-    process = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            str(app_path),
-            "--server.headless=true",
-            f"--server.port={free_tcp_port}",
-            "--browser.gatherUsageStats=false",
-            "--global.developmentMode=false",
-        ],
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
+    # The server output is sent to a log file rather than a pipe so that reading
+    # it for diagnostics never blocks and a chatty server cannot deadlock on a
+    # full pipe buffer while we poll for health.
+    log_path = tmp_path / "streamlit_server.log"
+    process, port = _start_streamlit_server(app_path, env, log_path)
+    try:
+        _run_streamlit_websocket_session(port)
+    finally:
+        _terminate(process)
+
+
+def _start_streamlit_server(
+    app_path: Path, env: dict[str, str], log_path: Path
+) -> tuple[subprocess.Popen[str], int]:
+    """Start ``streamlit run`` and return the process once it is healthy."""
+    last_output = ""
+    for _attempt in range(_SERVER_START_ATTEMPTS):
+        port = _get_free_tcp_port()
+        with log_path.open("w", encoding="utf-8") as log_file:
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "streamlit",
+                    "run",
+                    str(app_path),
+                    "--server.headless=true",
+                    f"--server.port={port}",
+                    "--browser.gatherUsageStats=false",
+                    "--global.developmentMode=false",
+                ],
+                env=env,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+        if _wait_for_streamlit_health(process, port, log_path):
+            return process, port
+
+        # The server exited before becoming healthy (most likely the port was
+        # taken between selection and bind); capture its output and retry.
+        last_output = log_path.read_text(encoding="utf-8", errors="replace")
+        _terminate(process)
+
+    pytest.fail(
+        f"Streamlit did not become healthy after {_SERVER_START_ATTEMPTS} "
+        f"attempts.\nLast output:\n{last_output}"
     )
 
-    try:
-        _wait_for_streamlit_health(process, free_tcp_port)
-    finally:
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+
+def _run_streamlit_websocket_session(port: int) -> None:
+    websocket_url = f"ws://127.0.0.1:{port}/_stcore/stream"
+    rerun_request = BackMsg(rerun_script=ClientState()).SerializeToString()
+    saw_smoke_marker = False
+
+    with connect(
+        websocket_url,
+        subprotocols=["streamlit"],
+        open_timeout=5,
+        close_timeout=2,
+    ) as websocket:
+        websocket.send(rerun_request)
+
+        deadline = time.monotonic() + _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS
+        while time.monotonic() < deadline:
+            try:
+                payload = websocket.recv(timeout=max(0.1, deadline - time.monotonic()))
+            except TimeoutError:
+                pytest.fail("Timed out waiting for the FIPS smoke app's messages")
+            assert isinstance(payload, bytes)
+
+            forward_msg = ForwardMsg.FromString(payload)
+            if (
+                forward_msg.HasField("delta")
+                and forward_msg.delta.HasField("new_element")
+                and forward_msg.delta.new_element.HasField("markdown")
+                and forward_msg.delta.new_element.markdown.body == _FIPS_SMOKE_MARKER
+            ):
+                saw_smoke_marker = True
+
+            if forward_msg.WhichOneof("type") == "script_finished":
+                assert forward_msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+                break
+        else:
+            pytest.fail("Streamlit did not finish the FIPS smoke app")
+
+    assert saw_smoke_marker, "The FIPS runtime canaries did not complete"
 
 
-def _wait_for_streamlit_health(process: subprocess.Popen[str], port: int) -> None:
+def _wait_for_streamlit_health(
+    process: subprocess.Popen[str], port: int, log_path: Path
+) -> bool:
+    """Poll the health endpoint, returning ``False`` if the server exits early."""
     deadline = time.monotonic() + _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS
     health_url = f"http://127.0.0.1:{port}/_stcore/health"
+    # Bypass any configured proxy so the loopback request is not routed away.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     last_error: BaseException | None = None
 
     while time.monotonic() < deadline:
         if process.poll() is not None:
-            output = process.stdout.read() if process.stdout is not None else ""
-            pytest.fail(
-                "Streamlit exited before serving the FIPS smoke app.\n"
-                f"Exit code: {process.returncode}\n"
-                f"Output:\n{output}"
-            )
+            return False
 
         try:
-            with urlopen(health_url, timeout=1) as response:
+            with opener.open(health_url, timeout=1) as response:
                 if response.read().decode("utf-8") == "ok":
-                    return
+                    return True
         except URLError as ex:
             last_error = ex
 
         time.sleep(0.2)
 
-    output = process.stdout.read() if process.stdout is not None else ""
+    output = log_path.read_text(encoding="utf-8", errors="replace")
     pytest.fail(
         f"Streamlit did not serve {health_url} within "
         f"{_STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS} seconds.\n"
         f"Last error: {last_error!r}\n"
         f"Output:\n{output}"
     )
+
+
+def _terminate(process: subprocess.Popen[str]) -> None:
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
+def _get_free_tcp_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]

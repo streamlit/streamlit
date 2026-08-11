@@ -94,7 +94,6 @@ runner's system Python.
 | `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
 | `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
 | `python-bare-executions.yml` | Push/PR to `develop` | Bare Python execution tests |
-| `fips-compatibility.yml` | Push/PR to `develop` | Focused FIPS compatibility guard for internal non-security hashing |
 | `flaky-test-verification.yml` | `flaky-verify` label | Runs E2E tests multiple times to verify flakiness fixes |
 | `flaky-js-test-verification.yml` | `flaky-verify-js` label | Runs JS unit tests multiple times to verify flakiness fixes |
 
