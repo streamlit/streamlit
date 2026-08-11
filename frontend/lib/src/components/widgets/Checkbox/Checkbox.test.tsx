@@ -534,7 +534,7 @@ describe("Checkbox wrap", () => {
   )
 
   it.each(STYLE_TYPES)(
-    "does not set a %s title when help is set (help tooltip takes over)",
+    "still sets a %s title when help is set (help lives on a separate icon)",
     (_name, type) => {
       render(
         <Checkbox
@@ -542,11 +542,36 @@ describe("Checkbox wrap", () => {
             type,
             wrap: false,
             label: LONG_LABEL,
-            help: "Help wins",
+            help: "Extra context",
           })}
         />
       )
-      expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+      // Unlike a button, the help tooltip is triggered by the separate help icon,
+      // so the label's native title stays enabled and both coexist.
+      expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+      expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "scopes the %s title to the label, not the help icon",
+    (_name, type) => {
+      render(
+        <Checkbox
+          {...getProps({
+            type,
+            wrap: false,
+            label: LONG_LABEL,
+            help: "Extra context",
+          })}
+        />
+      )
+      // The title is on the label element, so the help icon is not a descendant
+      // of the titled element and won't surface the full-label tooltip on hover.
+      const titledElement = screen.getByTitle(LONG_LABEL)
+      expect(
+        titledElement.querySelector('[data-testid="stTooltipHoverTarget"]')
+      ).toBeNull()
     }
   )
 })

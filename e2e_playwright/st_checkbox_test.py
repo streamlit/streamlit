@@ -193,11 +193,16 @@ def test_wrap_false_single_row_and_auto_resolution(app: Page):
     expect(wrap_auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
 
-def test_wrap_false_help_takes_precedence_over_title(app: Page):
-    """When help is set, no native title is added and the help tooltip shows."""
+def test_wrap_false_title_and_help_coexist(app: Page):
+    """With help set, the full-label title stays on the label (the help tooltip
+    lives on a separate icon), so both coexist.
+    """
     container = get_element_by_key(app, "wrap_help_checkbox")
-    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    # The label is still ellipsized and exposes the full label via a native title.
+    expect_label_truncated(container)
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
+    # Hovering the separate help icon still shows the help tooltip.
     reset_hovering(app)
     expect_help_tooltip(app, container, "wrap help text")
 

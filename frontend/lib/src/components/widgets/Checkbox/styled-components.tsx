@@ -50,6 +50,23 @@ export const StyledContent = styled.div<StyledContentProps>(
   })
 )
 
+interface StyledLabelTextProps {
+  /** When true, the label truncates on one line, so it must be shrinkable. */
+  $truncate?: boolean
+}
+
+/**
+ * Wraps the label markdown so the native `title` tooltip is scoped to the label
+ * only (not the sibling help icon). When truncating it becomes a shrinkable flex
+ * box so the markdown can ellipsize; otherwise it stays transparent to layout.
+ */
+export const StyledLabelText = styled.div<StyledLabelTextProps>(
+  ({ $truncate }) =>
+    $truncate
+      ? { display: "flex", alignItems: "center", minWidth: 0 }
+      : { display: "contents" }
+)
+
 interface StyledRootProps {
   /** When true, the control can shrink within its container so the label can ellipsize. */
   $truncate?: boolean

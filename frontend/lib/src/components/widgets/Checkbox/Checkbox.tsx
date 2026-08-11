@@ -35,6 +35,7 @@ import {
   StyledCheckboxIndicator,
   StyledCheckboxRoot,
   StyledContent,
+  StyledLabelText,
   StyledSwitchRoot,
   StyledToggleThumb,
   StyledToggleTrack,
@@ -89,32 +90,35 @@ function Checkbox({
   )
 
   // wrap=None resolves from layout: no-wrap in horizontal containers, wrap otherwise.
-  // When truncated, a native title reveals the full label on hover (skipped when help is set).
+  // When truncated, a native title on the label reveals the full label on hover.
+  // Unlike a button (whose help tooltip covers the whole control), help here lives
+  // on a separate icon, so the title and help never compete and both stay enabled.
   const wrap = useResolvedWrap(element.wrap)
   const truncate = !wrap
-  const addTitleTooltip = truncate && !element.help
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
-    addTitleTooltip,
+    truncate,
     element.label
   )
 
   const labelContent = (
     <StyledContent
-      ref={titleRef}
       visibility={labelVisibility}
       $truncate={truncate}
       data-testid="stWidgetLabel"
     >
-      {/* Wrap the label so we can read its plain text for the native title
-          without picking up the help icon. `display: contents` adds no box. */}
-      <span ref={labelTextRef} style={{ display: "contents" }}>
-        <StreamlitMarkdown
-          source={element.label}
-          allowHTML={false}
-          isLabel
-          truncate={truncate}
-        />
-      </span>
+      {/* The title is scoped to the label (not the help icon) so hovering the
+          help icon shows only its tooltip. The inner `display: contents` span
+          lets us read the label's plain text without adding a box. */}
+      <StyledLabelText ref={titleRef} $truncate={truncate}>
+        <span ref={labelTextRef} style={{ display: "contents" }}>
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isLabel
+            truncate={truncate}
+          />
+        </span>
+      </StyledLabelText>
       {element.help && (
         <WidgetLabelHelpIconInline
           content={element.help}
