@@ -173,8 +173,10 @@ def test_wrap_false_single_row_and_auto_resolution(app: Page):
     wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_checkbox")
 
     # wrap=False: label ellipsized and full label exposed via a native title.
+    # The checkbox indicator itself must remain visible (not clipped by truncation).
     expect_label_truncated(wrap_false)
     expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(wrap_false.get_by_role("checkbox")).to_be_visible()
 
     # Auto default in a vertical layout wraps onto another line and adds no title.
     expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
