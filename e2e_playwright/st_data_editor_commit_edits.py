@@ -242,6 +242,7 @@ st.data_editor(
     commit_edits=commit_slow,
 )
 _marker("slow-count", str(len(st.session_state.slow_df)))
+_marker("slow-first-value", str(st.session_state.slow_df["item"].iloc[0]))
 
 
 # ---------------------------------------------------------------------------

@@ -190,23 +190,28 @@ def test_commit_disables_editor_while_in_flight(app: Page) -> None:
     editor = _get_editor(app, "slow_editor")
     expect_canvas_to_be_visible(editor)
     expect(_marker(app, "slow-count")).to_have_text("2")
+    expect(_marker(app, "slow-first-value")).to_have_text("s1")
 
     editor.hover()
-    add_button = _add_row_button(editor)
-    expect(add_button).to_be_attached()
+    expect(_add_row_button(editor)).to_be_attached()
 
-    # Adding a row submits an edit batch and starts the deliberately slow commit.
-    add_button.click()
+    # Editing a cell submits an edit batch and starts the deliberately slow
+    # commit. A cell edit is used (rather than the toolbar "Add row" button)
+    # because the floating toolbar button is prone to flaky pointer interception
+    # on WebKit; the disable-in-flight behavior is identical for any submitted
+    # edit, and row additions are covered by test_commit_dynamic_add_and_delete_rows.
+    click_on_cell(
+        editor, 1, 1, column_width="small", has_row_marker_col=True, double_click=True
+    )
+    edit_cell_value(app, "edited-slow", wait_for_run=False)
 
     # While the run is in flight the editing affordances are removed (disabled).
     expect(_add_row_button(editor)).not_to_be_attached()
 
     wait_for_app_run(app)
 
-    # Once the run finishes the row was committed and the editor is re-enabled.
-    # Returning `edited_df` directly after a row addition must commit cleanly
-    # (the null new cell stays editing-compatible), so no exception is shown.
-    expect(_marker(app, "slow-count")).to_have_text("3")
+    # Once the run finishes the value was committed and the editor is re-enabled.
+    expect(_marker(app, "slow-first-value")).to_have_text("edited-slow")
     expect_no_exception(app)
     editor.hover()
     expect(_add_row_button(editor)).to_be_attached()
