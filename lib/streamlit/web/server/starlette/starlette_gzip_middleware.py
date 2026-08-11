@@ -149,7 +149,7 @@ def _route_path(scope: Scope) -> str:
 
 
 class SelectiveGZipMiddleware:
-    """GZip middleware that skips compression for static (and legacy media) paths.
+    """GZip middleware: always skip static/root; media/range only on old Starlette.
 
     The actual compression is delegated to Starlette's built-in
     ``GZipMiddleware``, so we inherit its behavior and future improvements

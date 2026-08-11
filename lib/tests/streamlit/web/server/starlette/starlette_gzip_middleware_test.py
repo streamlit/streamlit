@@ -206,13 +206,13 @@ class TestBypass:
             assert response.headers.get("content-encoding") is None
 
     def test_media_compressible_download_gzipped(self) -> None:
-        """Compressible /media/ downloads depend on the version.
+        """Compressible /media/ downloads are gzipped on Starlette >= 1.5.
 
-        The PR's user-facing win is that compressible download payloads (e.g.
-        text/CSV/JSON from st.download_button) are gzipped again on modern
-        Starlette. Starlette >= 1.5 does not exclude text/csv by content type,
-        so a full 200 download is compressed. Starlette < 1.5 bypasses the whole
-        /media/ path, so the same download is never compressed.
+        Compressible download payloads (e.g. text/CSV/JSON from
+        st.download_button) are gzipped on Starlette >= 1.5, which does not
+        exclude text/csv by content type, so a full 200 download is compressed.
+        Starlette < 1.5 bypasses the whole /media/ path, so the same download is
+        never compressed.
         """
         client = _build_client(_text_route("/media/data.csv", content_type="text/csv"))
 
