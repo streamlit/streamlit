@@ -62,6 +62,7 @@ import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
 import {
   datesEqual,
   getQuickSelectPresets,
+  getSafeLocale,
   isValidSegmentValue,
   noop,
   parsePartialSegmentPaste,
@@ -91,7 +92,6 @@ import {
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { getSafeLocale } from "./weekInfo"
 
 interface RangeDateInputProps {
   startValue: CalendarDate | null
