@@ -75,12 +75,9 @@ def _strip_base_url(path: str, base_url: str) -> str:
 def _should_bypass_gzip(path: str, base_url: str = "") -> bool:
     """Return whether a request path should always skip HTTP gzip compression.
 
-    Compression is bypassed for the frontend static-asset route
-    (``/static/...``) and the root document. Local load testing showed that
-    bypassing gzip here materially improves initial load time and peak RSS
-    (a session-only bypass regressed). This bypass applies on every Starlette
-    version because static bundles are compressible text that we still choose
-    not to compress for latency reasons, so no content-type exclusion covers it.
+    Bypasses the frontend static-asset route (``/static/...``) and the root
+    document, on every Starlette version. See the inline comment in the body for
+    why these best-compressing assets are deliberately served uncompressed.
 
     The media route (``/media/...``) is handled separately (see
     ``_is_media_path``), because on modern Starlette we prefer content-type
@@ -97,6 +94,23 @@ def _should_bypass_gzip(path: str, base_url: str = "") -> bool:
         configured.
     """
     path = _strip_base_url(path, base_url)
+    # Static bundles are highly compressible text, so this bypass looks
+    # counterintuitive, but compressing them at the Python origin is a poor
+    # tradeoff in practice:
+    #   - Starlette's GZipMiddleware re-compresses the body on every request and
+    #     never caches the output, and uvicorn has no sendfile/pathsend zero-copy
+    #     path, so we burn CPU on every hit instead of serving the bytes straight
+    #     from the OS page cache.
+    #   - Bundles are content-hashed and served "immutable, max-age=1yr", so each
+    #     client fetches an asset once: the win is a per-first-load bandwidth
+    #     saving, while the CPU cost recurs and spikes during post-deploy
+    #     thundering herds, competing with the event loop and script runs.
+    #   - Production usually sits behind a reverse proxy / CDN that compresses and
+    #     caches these responses, making origin compression redundant.
+    # Local load testing confirmed this: the bypass materially improved initial
+    # load time and peak RSS under concurrency (a session-only bypass regressed).
+    # No content-type exclusion covers this, since the assets are text we
+    # deliberately choose not to compress.
     if not path or path == "/":
         return True
     return path.startswith(f"/{BASE_ROUTE_STATIC}/")
