@@ -187,7 +187,7 @@ export function getQuickSelectPresets(): QuickSelectPreset[] {
   ].map(({ id, label, start }) => ({ id, label, start, end }))
 }
 
-export type DateValidationErrorType = "Start" | "End" | null
+export type DateValidationErrorType = "beforeMin" | "afterMax" | null
 
 export function validateDate(
   date: CalendarDate | null,
@@ -195,8 +195,8 @@ export function validateDate(
   maxDate: CalendarDate | undefined
 ): DateValidationErrorType {
   if (!date) return null
-  if (maxDate && date.compare(maxDate) > 0) return "End"
-  if (date.compare(minDate) < 0) return "Start"
+  if (maxDate && date.compare(maxDate) > 0) return "afterMax"
+  if (date.compare(minDate) < 0) return "beforeMin"
   return null
 }
 
@@ -228,13 +228,20 @@ export function createDateErrorMessage(
   if (!errorType) return null
 
   if (isRange) {
+    const label = errorType === "afterMax" ? "End" : "Start"
     const messageEnding =
-      errorType === "End"
+      errorType === "afterMax"
         ? `before ${maxDateString}`
         : `after ${minDateString}`
-    return `**Error**: ${errorType} date set outside allowed range. Please select a date ${messageEnding}.`
+    return `**Error**: ${label} date set outside allowed range. Please select a date ${messageEnding}.`
   }
 
+  if (errorType === "afterMax") {
+    return `**Error**: Date set outside allowed range. Please select a date on or before ${maxDateString}.`
+  }
+  if (!maxDateString) {
+    return `**Error**: Date set outside allowed range. Please select a date on or after ${minDateString}.`
+  }
   return `**Error**: Date set outside allowed range. Please select a date between ${minDateString} and ${maxDateString}.`
 }
 

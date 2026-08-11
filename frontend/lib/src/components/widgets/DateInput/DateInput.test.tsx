@@ -286,7 +286,7 @@ describe("DateInput", () => {
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
     expect(tooltip).toHaveTextContent(
-      "Error: Date set outside allowed range. Please select a date between 2020/01/05 and 2020/01/25."
+      "Error: Date set outside allowed range. Please select a date on or before 2020/01/25."
     )
   })
 

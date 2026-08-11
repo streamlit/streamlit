@@ -219,15 +219,15 @@ describe("validateDate", () => {
     )
   })
 
-  it("returns 'Start' for a date before minDate", () => {
+  it("returns 'beforeMin' for a date before minDate", () => {
     expect(
       validateDate(new CalendarDate(2019, 12, 31), minDate, maxDate)
-    ).toBe("Start")
+    ).toBe("beforeMin")
   })
 
-  it("returns 'End' for a date after maxDate", () => {
+  it("returns 'afterMax' for a date after maxDate", () => {
     expect(validateDate(new CalendarDate(2021, 1, 1), minDate, maxDate)).toBe(
-      "End"
+      "afterMax"
     )
   })
 
@@ -254,25 +254,39 @@ describe("createDateErrorMessage", () => {
     ).toBeNull()
   })
 
-  it("builds the single-date message", () => {
+  it("builds the single-date message with both bounds", () => {
     expect(
-      createDateErrorMessage("Start", false, "2020/01/01", "2020/12/31")
+      createDateErrorMessage("beforeMin", false, "2020/01/01", "2020/12/31")
     ).toBe(
       "**Error**: Date set outside allowed range. Please select a date between 2020/01/01 and 2020/12/31."
     )
   })
 
-  it("builds the range 'Start' message", () => {
+  it("builds the single-date message with no max", () => {
+    expect(createDateErrorMessage("beforeMin", false, "2020/01/01", "")).toBe(
+      "**Error**: Date set outside allowed range. Please select a date on or after 2020/01/01."
+    )
+  })
+
+  it("builds the single-date afterMax message", () => {
     expect(
-      createDateErrorMessage("Start", true, "2020/01/01", "2020/12/31")
+      createDateErrorMessage("afterMax", false, "2020/01/01", "2020/12/31")
+    ).toBe(
+      "**Error**: Date set outside allowed range. Please select a date on or before 2020/12/31."
+    )
+  })
+
+  it("builds the range 'beforeMin' message", () => {
+    expect(
+      createDateErrorMessage("beforeMin", true, "2020/01/01", "2020/12/31")
     ).toBe(
       "**Error**: Start date set outside allowed range. Please select a date after 2020/01/01."
     )
   })
 
-  it("builds the range 'End' message", () => {
+  it("builds the range 'afterMax' message", () => {
     expect(
-      createDateErrorMessage("End", true, "2020/01/01", "2020/12/31")
+      createDateErrorMessage("afterMax", true, "2020/01/01", "2020/12/31")
     ).toBe(
       "**Error**: End date set outside allowed range. Please select a date before 2020/12/31."
     )

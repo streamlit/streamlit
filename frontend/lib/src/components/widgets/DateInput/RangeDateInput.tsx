@@ -513,9 +513,11 @@ function RangeDateInput({
     [onFocusChange, validateBothFields]
   )
 
+  // Null when start > end prevents RangeCalendar from rewriting state
+  // with an inverted range during in-progress segment edits.
   const calendarValue = useMemo(
     () =>
-      displayStart && displayEnd
+      displayStart && displayEnd && displayStart.compare(displayEnd) <= 0
         ? { start: displayStart, end: displayEnd }
         : null,
     [displayStart, displayEnd]
