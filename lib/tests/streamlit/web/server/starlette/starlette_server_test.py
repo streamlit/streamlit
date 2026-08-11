@@ -59,14 +59,62 @@ class TestBindSocket:
             result = _bind_socket("127.0.0.1", 8501, 100)
 
             mock_socket_cls.assert_called_once_with(family=socket.AF_INET)
-            mock_sock.setsockopt.assert_called_with(
-                socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-            )
             mock_sock.bind.assert_called_once_with(("127.0.0.1", 8501))
             mock_sock.listen.assert_called_once_with(100)
             mock_sock.setblocking.assert_called_once_with(False)
             mock_sock.set_inheritable.assert_called_once_with(True)
             assert result == mock_sock
+
+    @pytest.mark.parametrize("address", ["127.0.0.1", "::"])
+    def test_sets_reuseaddr_on_non_windows_platforms(self, address: str) -> None:
+        """Test that SO_REUSEADDR is set on platforms other than Windows."""
+
+        mock_sock = mock.MagicMock()
+        with (
+            patch("socket.socket", return_value=mock_sock),
+            patch("os.name", "posix"),
+        ):
+            _bind_socket(address, 8501, 100)
+
+            mock_sock.setsockopt.assert_any_call(
+                socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+            )
+
+    @pytest.mark.parametrize("address", ["127.0.0.1", "::"])
+    def test_skips_reuseaddr_on_windows(self, address: str) -> None:
+        """Test that SO_REUSEADDR is not set on Windows.
+
+        On Windows the option lets a second socket bind a port that another live
+        socket is already listening on, which hides port conflicts from the
+        caller's free-port search (see #16296). "::" is the default bind address,
+        so it is the family the conflict actually surfaces on.
+        """
+
+        mock_sock = mock.MagicMock()
+        with (
+            patch("socket.socket", return_value=mock_sock),
+            patch("os.name", "nt"),
+        ):
+            _bind_socket(address, 8501, 100)
+
+            assert (
+                mock.call(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                not in mock_sock.setsockopt.call_args_list
+            )
+
+    def test_sets_ipv6_v6only_on_windows(self) -> None:
+        """Test that Windows still gets IPV6_V6ONLY even though SO_REUSEADDR is skipped."""
+
+        mock_sock = mock.MagicMock()
+        with (
+            patch("socket.socket", return_value=mock_sock),
+            patch("os.name", "nt"),
+        ):
+            _bind_socket("::", 8501, 100)
+
+            mock_sock.setsockopt.assert_any_call(
+                socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0
+            )
 
     def test_creates_ipv6_socket(self) -> None:
         """Test that IPv6 address creates AF_INET6 socket."""
@@ -112,6 +160,29 @@ class TestBindSocket:
                 _bind_socket("127.0.0.1", 8501, 100)
 
             mock_sock.close.assert_called_once()
+
+    def test_raises_eaddrinuse_for_port_that_is_already_listening(self) -> None:
+        """Test that binding a port another socket listens on raises EADDRINUSE.
+
+        The caller's free-port search only advances when bind() fails here. If it
+        silently succeeds, every Streamlit process lands on the same port
+        (see #16296). This runs against the host platform's real bind semantics,
+        so it pins that _bind_socket propagates the underlying errno rather than
+        wrapping or swallowing it. It does not cover the Windows SO_REUSEADDR
+        branch, which test_skips_reuseaddr_on_windows pins instead.
+        """
+
+        with socket.socket() as occupied_sock:
+            occupied_sock.bind(("127.0.0.1", 0))
+            occupied_sock.listen(1)
+            occupied_port = occupied_sock.getsockname()[1]
+
+            # Message wording differs per platform, so match only the word they
+            # share. The errno assertion below is the real check.
+            with pytest.raises(OSError, match=r"(?i)address") as exc_info:
+                _bind_socket("127.0.0.1", occupied_port, 100)
+
+            assert exc_info.value.errno == errno.EADDRINUSE
 
 
 class TestGetBindAddress:

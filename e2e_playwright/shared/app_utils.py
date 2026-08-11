@@ -21,7 +21,7 @@ from typing import Literal, Protocol, cast
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run, wait_until
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
@@ -1071,6 +1071,30 @@ def expect_help_tooltip(
     expect(tooltip_content).not_to_be_attached()
 
 
+def expect_label_truncated(element: Locator) -> None:
+    """Expect the markdown label inside ``element`` to be ellipsized.
+
+    Verifies the rendered label is actually clipped (its content is wider than the
+    space available for it), rather than only checking that a ``wrap``/``title``
+    attribute was set. Use this together with a fixed width narrower than the
+    label so the truncation is deterministic.
+
+    Parameters
+    ----------
+    element : Locator
+        A locator whose subtree contains a single label markdown container
+        (e.g. a button, popover trigger, or menu-button trigger).
+    """
+    label = element.get_by_test_id("stMarkdownContainer").locator("p").first
+    expect(label).to_be_visible()
+    # Retry until layout is stable — a one-shot evaluate can race with flex
+    # sizing even after the label is visible.
+    wait_until(
+        element.page,
+        lambda: label.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
+
+
 def reset_hovering(locator: LocatorContext) -> None:
     """Reset the hovering of the app.
 
@@ -1587,3 +1611,40 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         }""",
         timeout=timeout,
     )
+
+
+def wait_for_datepicker_popover_animation(app: Page, calendar: Locator) -> None:
+    """Wait until a BaseWeb datepicker popover open animation has finished.
+
+    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
+    a ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
+    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
+    Chromium as ~8% pixel diffs).
+
+    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
+    transform share the 0.1s open transition, but a subsequent Popper
+    reposition can still nudge the calendar after opacity settles. Require a
+    stable calendar bounding box before screenshotting.
+    """
+    expect(calendar).to_be_visible()
+    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
+    expect(popover).to_have_css("opacity", "1")
+
+    previous: tuple[float, float, float, float] | None = None
+
+    def _calendar_box_is_stable() -> bool:
+        nonlocal previous
+        box = calendar.bounding_box()
+        if box is None:
+            return False
+        current = (box["x"], box["y"], box["width"], box["height"])
+        if previous is None:
+            previous = current
+            return False
+        stable = all(
+            abs(prev - curr) < 0.5 for prev, curr in zip(previous, current, strict=True)
+        )
+        previous = current
+        return stable
+
+    wait_until(app, _calendar_box_is_stable)

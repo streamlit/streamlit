@@ -222,6 +222,32 @@ def test_install_skills_handler_installs_in_project_mode() -> None:
         response.install_skills.detail == "Installed to .agents/skills, .claude/skills."
     )
     assert response.error_msg == ""
+    # A normal project (symlink) install did not take the global fallback.
+    assert response.install_skills.fallback_reason == ""
+
+
+def test_install_skills_handler_forwards_global_fallback_flag() -> None:
+    """A fallback install forwards WHICH fallback route it took, so the frontend can
+    emit skillsNudgeInstallSucceeded:<fallback_reason> and the two causes stay
+    separable in the funnel.
+    """
+    install_result = skills._InstallResult(
+        installed=["~/.agents/skills/foo"], fallback_reason="symlink_failed"
+    )
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", return_value=install_result),
+        patch.object(skills, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.HasField("install_skills")
+    assert response.install_skills.fallback_reason == "symlink_failed"
 
 
 def test_install_skills_handler_reports_failure() -> None:
@@ -241,16 +267,49 @@ def test_install_skills_handler_reports_failure() -> None:
         )
 
     assert response.error_msg == "No skills found"
+    assert response.error_reason == "unknown"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_forwards_failure_reason() -> None:
+    """A ``skills.InstallError`` propagates its machine-readable ``reason`` into
+    the response's ``error_reason`` so the client can split install-failure
+    telemetry by cause (e.g. conflict vs. write_failed vs. source_missing)."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=skills.InstallError(
+                "developing-with-streamlit already exists. Remove it and try again.",
+                reason="conflict",
+            ),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_msg == (
+        "developing-with-streamlit already exists. Remove it and try again."
+    )
+    assert response.error_reason == "conflict"
     assert not response.HasField("install_skills")
 
 
 def test_install_skills_handler_does_not_leak_os_error_path() -> None:
-    """A non-``ClickException`` (e.g. ``OSError``) yields a generic message.
+    """A non-``ClickException`` ``OSError`` yields a generic message but a
+    ``write_failed`` reason.
 
     ``click.ClickException`` messages are developer-authored and safe to show in
-    the browser toast, but a raw ``OSError`` can embed an absolute server path.
-    The handler must forward only the former verbatim and replace anything else
-    with a generic string, so a server path can never leak into the nudge.
+    the browser toast, but a raw ``OSError`` can embed an absolute server path -
+    so the message is replaced with a generic string. The reason, however, is
+    still meaningful: a bare ``OSError`` escaping the installer (e.g. a
+    permission error creating the target dir, before the copy's own try/except)
+    is a filesystem write failure, so it's classified ``write_failed`` rather
+    than buried in ``unknown``.
     """
     with (
         patch("streamlit.config.get_option", return_value=False),
@@ -268,7 +327,33 @@ def test_install_skills_handler_does_not_leak_os_error_path() -> None:
 
     assert response.error_msg == "Failed to install skills."
     assert "/absolute/server/path" not in response.error_msg
+    assert response.error_reason == "write_failed"
     assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
+    """A non-InstallError exception exposing a str ``.reason`` must NOT be emitted.
+
+    The handler used to read the reason with ``getattr(ex, 'reason')``, so any
+    exception carrying a free-form str ``.reason`` (``UnicodeDecodeError`` and
+    several stdlib errors do) would emit an unbounded telemetry label and break the
+    fixed vocabulary. The reason is now trusted ONLY from skills.InstallError; a
+    non-OSError foreign exception is classified ``unknown``.
+    """
+    foreign = ValueError("boom")
+    foreign.reason = "some-unbounded-string"  # type: ignore[attr-defined]
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", side_effect=foreign),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unknown"
 
 
 def test_install_skills_handler_refuses_without_agent_harness() -> None:
@@ -289,6 +374,7 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "refused:no_agent"
     assert not response.HasField("install_skills")
 
 
@@ -313,6 +399,7 @@ def test_install_skills_handler_refuses_non_loopback_connection() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "refused:non_loopback"
     assert not response.HasField("install_skills")
 
 
@@ -353,6 +440,7 @@ def test_install_skills_handler_allows_idempotent_retry_when_already_installed()
         global_mode=False, yes=True, app_dir="/app/dir"
     )
     assert response.error_msg == ""
+    assert response.error_reason == ""
     assert response.HasField("install_skills")
     assert response.install_skills.detail == "Skills are already up to date."
 
@@ -373,6 +461,7 @@ def test_install_skills_handler_refuses_in_headless_mode() -> None:
 
     mock_install.assert_not_called()
     assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "refused:headless"
     assert not response.HasField("install_skills")
 
 

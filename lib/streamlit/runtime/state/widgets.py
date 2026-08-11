@@ -64,6 +64,7 @@ def register_widget(
     clearable: bool | None = None,
     max_array_length: int | None = None,
     allow_url_duplicates: bool = False,
+    disabled: bool = False,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -123,6 +124,12 @@ def register_widget(
         behavior). When True, an empty URL param (e.g., ?foo=) will seed the widget
         with an empty value. When False, an empty URL param will be ignored.
         **Required when bind='query-params'**, otherwise defaults to False.
+    disabled : bool
+        Whether the widget is disabled. A disabled widget cannot be interacted
+        with in the browser, so Streamlit enforces this server-side: any incoming
+        value from the frontend is discarded (the widget keeps its default/previous
+        value) and its on-change callback is not invoked. This guards against
+        forged widget values from a manipulated BackMsg. Defaults to False.
 
     Returns
     -------
@@ -155,7 +162,7 @@ def register_widget(
 
     # Validate bind parameter value
     if bind is not None and bind != "query-params":
-        raise StreamlitInvalidBindValueError(bind)
+        raise StreamlitInvalidBindValueError("bind", ["'query-params'", "None"])
 
     # Validate that widget with bind="query-params" has a provided key
     if bind == "query-params":
@@ -176,7 +183,9 @@ def register_widget(
     # Validate persist_state value and key requirement.
     if persist_state is not None:
         if persist_state not in {"page", "session"}:
-            raise StreamlitInvalidPersistStateError(persist_state)
+            raise StreamlitInvalidPersistStateError(
+                "persist_state", ["'page'", "'session'", "None"]
+            )
         if user_key_from_element_id(element_id) is None:
             raise StreamlitAPIException(
                 "When using persist_state, the widget must have a unique 'key' "
@@ -202,6 +211,7 @@ def register_widget(
         clearable=clearable if clearable is not None else False,
         max_array_length=max_array_length,
         allow_url_duplicates=allow_url_duplicates,
+        disabled=disabled,
     )
     return register_widget_from_metadata(metadata, ctx)
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -494,7 +494,7 @@ describe("Sidebar Component", () => {
       expect(sidebarLogo).toBeInTheDocument()
 
       // Trigger the onerror event for the logo
-      fireEvent.error(sidebarLogo)
+      sidebarLogo.dispatchEvent(new Event("error"))
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(
         "Sidebar Logo",
@@ -655,7 +655,8 @@ describe("Sidebar Component", () => {
       mockWindowDimensions.innerWidth = 1024
     })
 
-    it("does not collapse sidebar when clicking outside on desktop viewport", () => {
+    it("does not collapse sidebar when clicking outside on desktop viewport", async () => {
+      const user = userEvent.setup()
       // Temporarily set to desktop viewport
       mockWindowDimensions.innerWidth = 1024
 
@@ -668,13 +669,13 @@ describe("Sidebar Component", () => {
 
       // Click on main app area - should NOT collapse on desktop
       const mainApp = screen.getByTestId("stApp")
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(mainApp)
+      await user.pointer({ target: mainApp, keys: "[MouseLeft]" })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
 
-    it("does not collapse sidebar when clicking inside sidebar", () => {
+    it("does not collapse sidebar when clicking inside sidebar", async () => {
+      const user = userEvent.setup()
       const mockOnToggleCollapse = vi.fn()
 
       renderSidebar({
@@ -683,8 +684,10 @@ describe("Sidebar Component", () => {
       })
 
       // Click inside sidebar
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(screen.getByTestId("stSidebarContent"))
+      await user.pointer({
+        target: screen.getByTestId("stSidebarContent"),
+        keys: "[MouseLeft]",
+      })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
@@ -695,7 +698,8 @@ describe("Sidebar Component", () => {
     // renderWithContexts. The critical behavior (NOT collapsing on portaled elements like
     // dropdowns) is validated by the negative tests below.
 
-    it("does not collapse sidebar when clicking outside the main app container (portaled elements)", () => {
+    it("does not collapse sidebar when clicking outside the main app container (portaled elements)", async () => {
+      const user = userEvent.setup()
       const mockOnToggleCollapse = vi.fn()
 
       renderSidebar({
@@ -709,13 +713,13 @@ describe("Sidebar Component", () => {
       document.body.appendChild(portalElement)
 
       // Click on element outside the main app container - should NOT collapse
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(portalElement)
+      await user.pointer({ target: portalElement, keys: "[MouseLeft]" })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
 
-    it("does not collapse when sidebar is already collapsed", () => {
+    it("does not collapse when sidebar is already collapsed", async () => {
+      const user = userEvent.setup()
       const mockOnToggleCollapse = vi.fn()
 
       renderSidebar({
@@ -725,8 +729,7 @@ describe("Sidebar Component", () => {
 
       // Click on main app area
       const mainApp = screen.getByTestId("stApp")
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(mainApp)
+      await user.pointer({ target: mainApp, keys: "[MouseLeft]" })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })

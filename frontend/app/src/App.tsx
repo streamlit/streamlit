@@ -32,6 +32,9 @@ import {
   setSkillsNudgeDismissed,
   setSkillsNudgeSnoozed,
   SKILLS_NUDGE_DROPPED_MESSAGE,
+  skillsNudgeInstallFailureLabel,
+  skillsNudgeInstallSuccessLabel,
+  skillsNudgeSuppressedLabel,
 } from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
 import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
@@ -160,8 +163,8 @@ import {
 } from "@streamlit/utils"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
-// Used to import fonts + responsive reboot items
-import "@streamlit/app/src/assets/css/theme.scss"
+// Import @font-face rules for app and icon fonts
+import "@streamlit/app/src/assets/css/fonts.css"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 import {
   includeIfDefined,
@@ -329,6 +332,15 @@ export class App extends PureComponent<Props, State> {
   // `skillsNudgeShown` events (which would inflate the adoption funnel). Reset
   // only by a full page reload (a new App instance).
   private skillsNudgeShown: boolean = false
+
+  // Whether a suppression reason has been reported this page load. Tracked
+  // separately from `skillsNudgeShown` so recording a suppression does NOT
+  // prevent the nudge from appearing later in the same page load: eligibility is
+  // recomputed on every rerun, and `check_failed` in particular is transient (a
+  // thrown eligibility check), so a single bad rerun must not withhold the nudge
+  // until the user reloads. Deduping the two events independently still keeps a
+  // reconnect from inflating either count.
+  private skillsNudgeSuppressionReported: boolean = false
 
   public constructor(props: Props) {
     super(props)
@@ -1567,17 +1579,20 @@ export class App extends PureComponent<Props, State> {
       this.setState({ showSkillsNudge: true })
       this.trackSkillsNudge("skillsNudgeShown")
     } else if (
-      initialize.skillsNudgeSuppressedLocality &&
+      initialize.skillsNudgeSuppressedReason &&
+      !this.skillsNudgeSuppressionReported &&
       !this.skillsNudgeShown
     ) {
-      // The nudge was eligible server-side but the server suppressed it because
-      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel).
-      // Record the connection class — once per page load, reusing the same
-      // guard so a reconnect can't double-count — so we can measure how much of
-      // the agent-harness audience the conservative loopback gate excludes.
-      this.skillsNudgeShown = true
+      // The nudge was eligible server-side but the server withheld it — because
+      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel),
+      // because a one-click install would only conflict, or because the
+      // eligibility check itself failed. Record the reason once per page load so
+      // suppression is measurable instead of silent, and so a reconnect can't
+      // double-count it. Also skipped once the nudge HAS been shown, since the
+      // funnel treats shown and suppressed as mutually exclusive per session.
+      this.skillsNudgeSuppressionReported = true
       this.trackSkillsNudge(
-        `skillsNudgeSuppressedNonLocal:${initialize.skillsNudgeSuppressedLocality}`
+        skillsNudgeSuppressedLabel(initialize.skillsNudgeSuppressedReason)
       )
     }
   }
@@ -1604,20 +1619,25 @@ export class App extends PureComponent<Props, State> {
         // — no need to also write the permanent "don't show again" flag here,
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
-        this.trackSkillsNudge("skillsNudgeInstallSucceeded")
+        this.trackSkillsNudge(
+          skillsNudgeInstallSuccessLabel(result.fallbackReason)
+        )
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
-        // A dropped or timed-out connection during a long install (e.g. the
-        // GitHub global fallback) rejects the request even though the server
-        // install may have completed. Count it separately — not as a failure,
-        // which would over-count the funnel — and surface a reassuring,
-        // retry-friendly message; re-install is idempotent.
+        // A dropped or timed-out connection during a long install rejects the
+        // request even though the server install may have completed. Count it
+        // separately — not as a failure, which would over-count the funnel —
+        // and surface a reassuring, retry-friendly message; re-install is
+        // idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
           this.trackSkillsNudge("skillsNudgeInstallDropped")
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
-        this.trackSkillsNudge("skillsNudgeInstallFailed")
+        // Append the server's machine-readable reason as a label suffix, and
+        // count a safety-gate refusal under its own event rather than as a
+        // failure. See skillsNudgeInstallFailureLabel.
+        this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error))
         // Re-throw so the toast renders its error state.
         throw error
       })
@@ -2277,7 +2297,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Asks the server to clear the st_cache and st_cache_data and st_cache_resource
+   * Asks the server to clear st.cache_data and st.cache_resource caches.
    */
   clearCache = (): void => {
     this.closeDialog()

@@ -24,7 +24,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.feedback import FeedbackSerde
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -113,12 +113,11 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         assert delta.type == expected_type
 
     def test_invalid_option_literal(self):
-        """Test that invalid option raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that invalid option raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.feedback("foo")
         assert str(e.value) == (
-            "The options argument to st.feedback must be one of "
-            "['thumbs', 'faces', 'stars']. The argument passed was 'foo'."
+            "Invalid `options` value. Supported values: 'thumbs', 'faces', 'stars'."
         )
 
     @parameterized.expand([(0,), (1,)])

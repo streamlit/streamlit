@@ -30,6 +30,7 @@ from starlette.middleware import Middleware
 from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
@@ -50,7 +51,6 @@ from streamlit.web.server.starlette.starlette_app import (
 )
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
     SelectiveGZipMiddleware,
-    _should_bypass_static_gzip,
 )
 from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
 from streamlit.web.server.starlette.starlette_server_config import (
@@ -167,6 +167,7 @@ class _DummyRuntime:
         self._active_sessions: set[str] = {"session123"}
         self.stopped = False
         self.last_backmsg = None
+        self.deserialization_exceptions: list[BaseException] = []
         self.last_user_info: dict[str, str | bool | None] | None = None
         self.last_existing_session_id: str | None = None
         self.script_health = (True, "ok")
@@ -218,16 +219,21 @@ class _DummyRuntime:
         self.last_existing_session_id = existing_session_id
         return session_id
 
-    def disconnect_session(self, session_id: str) -> None:
+    def disconnect_session(self, session_id: str, client: object | None = None) -> None:
         self._active_sessions.discard(session_id)
 
-    def handle_backmsg(self, session_id: str, msg: object) -> None:
+    def handle_backmsg(
+        self, session_id: str, msg: object, client: object | None = None
+    ) -> None:
         self.last_backmsg = (session_id, msg)
 
     def handle_backmsg_deserialization_exception(
-        self, session_id: str, exc: BaseException
+        self,
+        session_id: str,
+        exc: BaseException,
+        client: object | None = None,
     ) -> None:
-        self.last_backmsg = (session_id, exc)
+        self.deserialization_exceptions.append(exc)
 
     async def start(self) -> None:  # pragma: no cover - lifecycle stub
         return None
@@ -274,35 +280,25 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     assert response.text == "ok"
 
 
-@pytest.mark.parametrize(
-    ("path", "expected"),
-    [
-        ("/", True),
-        ("/static/app.123.js", True),
-        ("/app/static/logo.svg", False),
-        ("/assets/theme.css", False),
-        ("/_stcore/metrics", False),
-        ("/media/file", False),
-    ],
-    ids=[
-        "root",
-        "static-bundle",
-        "app-static",
-        "hashed-style",
-        "api-route",
-        "media-route",
-    ],
-)
-def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
-    """Only root and `/static/...` paths should bypass the gzip middleware."""
-    assert _should_bypass_static_gzip(path) is expected
-
-
 def test_create_streamlit_middleware_uses_selective_gzip() -> None:
     """The Streamlit middleware stack should use the selective gzip wrapper."""
     middleware_list = create_streamlit_middleware()
 
     assert middleware_list[2].cls is SelectiveGZipMiddleware
+
+
+def test_create_streamlit_middleware_forwards_base_url() -> None:
+    """The gzip middleware receives server.baseUrlPath so its path bypass works.
+
+    Guards against a refactor silently dropping ``base_url``, which would break
+    the static/media bypass whenever a base URL path is configured.
+    """
+    with patch_config_options({"server.baseUrlPath": "my-app"}):
+        middleware_list = create_streamlit_middleware()
+
+    gzip_middleware = middleware_list[2]
+    assert gzip_middleware.cls is SelectiveGZipMiddleware
+    assert gzip_middleware.kwargs["base_url"] == "my-app"
 
 
 def test_selective_gzip_skips_static_like_paths() -> None:
@@ -1369,6 +1365,38 @@ def test_websocket_allows_debug_shutdown_in_dev_mode(tmp_path: Path) -> None:
 
     # Runtime should be stopped
     assert runtime.stopped is True
+
+
+def test_websocket_closes_on_malformed_backmsg(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that a frame that fails to parse as a BackMsg closes the connection
+    with a protocol error. The server does not report the frame into the session.
+    """
+    client, runtime = starlette_client
+
+    with client.websocket_connect("/_stcore/stream") as websocket:
+        # Send a valid frame first. It shows that only the malformed frame closes
+        # the connection.
+        back_msg = BackMsg()
+        back_msg.rerun_script.query_string = ""
+        websocket.send_bytes(back_msg.SerializeToString())
+
+        websocket.send_bytes(b"\xff")
+
+        # The client waits for a ForwardMsg and gets a disconnect instead.
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            websocket.receive_bytes()
+
+    assert excinfo.value.code == 1002  # 1002 = Protocol Error
+
+    # The valid frame reaches the runtime. The server never routes the malformed
+    # frame into the session, so the session creates no Exception ForwardMsg for
+    # it.
+    assert runtime.last_backmsg is not None
+    _session_id, msg = runtime.last_backmsg
+    assert msg.WhichOneof("type") == "rerun_script"
+    assert runtime.deserialization_exceptions == []
 
 
 # ---------------------------------------------------------------------------

@@ -361,3 +361,31 @@ st.text(
 if st.button("Switch to ES", key="switch_to_es_btn"):
     st.session_state["dynamic_fmt_lang"] = "es"
     st.rerun()
+
+# --- Interdependent pills with dynamic format_func (gh-16269) ---
+# Regression test: when a parent pill's selection is cleared, the child pill's
+# format_func output (a record count embedded in the label) changes for the
+# still-selected option. The child must stay visually selected at its new label
+# instead of silently deselecting, and its return value must be preserved.
+
+st.header("Pills - interdependent format_func")
+
+# Both the child option set and the per-option counts depend on whether the
+# parent filter is active, mirroring the original repro where a dataframe is
+# filtered by the parent selection: with the parent active fewer rows remain,
+# so the option list shrinks and the counts drop. This exercises the case where
+# a still-selected option ("D") keeps its value across both a label change and a
+# change to the surrounding options list.
+if st.session_state.get("idf_parent"):
+    _idf_counts = {"D": 1, "E": 1}
+else:
+    _idf_counts = {"D": 3, "E": 2, "F": 4}
+
+st.pills("idf parent", options=["A", "B"], key="idf_parent")
+idf_child_val = st.pills(
+    "idf child",
+    options=list(_idf_counts),
+    format_func=lambda x: f"{x} ({_idf_counts[x]})",
+    key="idf_child",
+)
+st.text(f"idf_child value: {idf_child_val}")

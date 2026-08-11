@@ -17,9 +17,10 @@
 from __future__ import annotations
 
 import inspect
+import re
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -27,21 +28,19 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.help import (
+    _get_caller_frame,
+    _get_current_line_of_code_as_str,
     _get_first_line,
     _get_signature,
+    _get_value,
+    _get_variable_name,
     _get_variable_name_from_code_str,
     _is_computed_property,
+    _is_streamlit_internal_frame,
 )
 from streamlit.errors import StreamlitInvalidWidthError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
-
-
-def patch_varname_getter():
-    """Patches streamlit.elements.help so _get_variable_name() works outside ScriptRunner."""
-    parent_frame_filename = inspect.getouterframes(inspect.currentframe())[2].filename
-
-    return patch("streamlit.elements.help.SCRIPTRUNNER_FILENAME", parent_frame_filename)
 
 
 class StHelpTest(DeltaGeneratorTestCase):
@@ -50,8 +49,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_no_arg(self):
         """When st.help is called with no arguments, show Streamlit docs."""
 
-        with patch_varname_getter():
-            st.help()
+        st.help()
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == ""
@@ -62,8 +60,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_none_arg(self):
         """When st.help is called with None as an argument, don't show Streamlit docs."""
 
-        with patch_varname_getter():
-            st.help(None)
+        st.help(None)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == ""
@@ -81,8 +78,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         def my_func(some_param, another_param=123):
             """This is the doc"""
 
-        with patch_varname_getter():
-            st.help(my_func)
+        st.help(my_func)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "my_func"
@@ -99,8 +95,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         def my_func(some_param, another_param=123):
             pass
 
-        with patch_varname_getter():
-            st.help(my_func)
+        st.help(my_func)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "my_func"
@@ -111,11 +106,31 @@ class StHelpTest(DeltaGeneratorTestCase):
         assert ds.type == "function"
         assert ds.doc_string == ""
 
+    def test_st_help_inside_nested_function(self):
+        """Regression test for GH #11430.
+
+        When ``st.help`` is called inside a nested function (as happens in
+        multipage apps where the page function calls ``st.help(...)`` and is
+        invoked via ``page.run()``), the header/name must come from the frame
+        that literally contains the ``st.help(...)`` call — not from an outer
+        frame whose source line is ``page.run()`` or the function name.
+        """
+
+        def page_function():
+            st.help(st.write)
+
+        page_function()
+
+        ds = self.get_delta_from_queue().new_element.help_info
+        assert ds.name == "st.write"
+        assert ds.type == "method"
+        assert ds.name != "page_function()"
+        assert ds.name != "page.run()"
+
     def test_deltagenerator_func(self):
         """Test Streamlit DeltaGenerator function."""
 
-        with patch_varname_getter():
-            st.help(st.audio)
+        st.help(st.audio)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "st.audio"
@@ -133,8 +148,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_builtin_func(self):
         """Test a built-in function."""
 
-        with patch_varname_getter():
-            st.help(dir)
+        st.help(dir)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "dir"
@@ -146,8 +160,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         """Test a named variable."""
 
         myvar = 123
-        with patch_varname_getter():
-            st.help(myvar)
+        st.help(myvar)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "myvar"
@@ -158,8 +171,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_walrus(self):
         """Test a named variable using walrus operator."""
 
-        with patch_varname_getter():
-            st.help(myvar := 123)  # noqa: F841
+        st.help(myvar := 123)  # noqa: F841
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "myvar"
@@ -172,8 +184,7 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         myvar = {"foo": [None, {"bar": "baz"}]}
 
-        with patch_varname_getter():
-            st.help(myvar["foo"][1]["bar"].strip)
+        st.help(myvar["foo"][1]["bar"].strip)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == 'myvar["foo"][1]["bar"].strip'
@@ -184,8 +195,7 @@ class StHelpTest(DeltaGeneratorTestCase):
     def test_builtin_obj(self):
         """Test a built-in function."""
 
-        with patch_varname_getter():
-            st.help(123)
+        st.help(123)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == ""
@@ -201,8 +211,7 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         array = np.arange(1)
 
-        with patch_varname_getter():
-            st.help(array)
+        st.help(array)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert ds.name == "array"
@@ -217,8 +226,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         class MyClass:
             pass
 
-        with patch_varname_getter():
-            st.help(MyClass)
+        st.help(MyClass)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert type(MyClass) is type
@@ -237,8 +245,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         class MyClass:
             pass
 
-        with patch_varname_getter():
-            st.help(MyClass)
+        st.help(MyClass)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert type(MyClass) is type
@@ -272,8 +279,7 @@ class StHelpTest(DeltaGeneratorTestCase):
             def classmethod1(cls, y=20):
                 "Class method 1"
 
-        with patch_varname_getter():
-            st.help(MyClass)
+        st.help(MyClass)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert len(ds.members) == 5
@@ -316,8 +322,7 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         my_instance = MyClass()
 
-        with patch_varname_getter():
-            st.help(my_instance)
+        st.help(my_instance)
 
         ds = self.get_delta_from_queue().new_element.help_info
         assert len(ds.members) == 7
@@ -682,3 +687,68 @@ def test_get_signature_handles_pep649_annotations() -> None:
     # Our _get_signature should handle this gracefully by returning "(...)
     signature = _get_signature(func)
     assert signature == "(...)"
+
+
+def test_get_variable_name_returns_none_without_code_line() -> None:
+    """``_get_variable_name`` returns ``None`` when the source line is unavailable."""
+    with patch(
+        "streamlit.elements.help._get_current_line_of_code_as_str",
+        return_value=None,
+    ):
+        assert _get_variable_name() is None
+
+
+def test_get_current_line_of_code_returns_none_without_caller_frame() -> None:
+    """``_get_current_line_of_code_as_str`` returns ``None`` when no caller frame is found."""
+    with patch("streamlit.elements.help._get_caller_frame", return_value=None):
+        assert _get_current_line_of_code_as_str() is None
+
+
+def test_get_current_line_of_code_returns_none_for_empty_code_context() -> None:
+    """``_get_current_line_of_code_as_str`` returns ``None`` for a frame with empty code context.
+
+    Some frames (e.g. inside ``exec()``) expose an empty ``code_context``, so no
+    source line can be recovered.
+    """
+    frame = MagicMock(code_context=[])
+    with patch("streamlit.elements.help._get_caller_frame", return_value=frame):
+        assert _get_current_line_of_code_as_str() is None
+
+
+def test_get_caller_frame_returns_none_when_frame_has_no_code_context() -> None:
+    """``_get_caller_frame`` returns ``None`` when a stack frame has ``code_context is None``."""
+    frame = MagicMock(code_context=None)
+    with patch("streamlit.elements.help.inspect.stack", return_value=[frame]):
+        assert _get_caller_frame() is None
+
+
+def test_get_caller_frame_returns_none_when_all_frames_internal() -> None:
+    """``_get_caller_frame`` returns ``None`` when every frame is streamlit-internal."""
+    frame = MagicMock(code_context=["x"])
+    with (
+        patch("streamlit.elements.help.inspect.stack", return_value=[frame]),
+        patch(
+            "streamlit.elements.help._is_streamlit_internal_frame",
+            return_value=True,
+        ),
+    ):
+        assert _get_caller_frame() is None
+
+
+def test_is_streamlit_internal_frame_returns_false_on_realpath_error() -> None:
+    """``_is_streamlit_internal_frame`` returns ``False`` when the path cannot be resolved."""
+    frame = MagicMock(filename="some_file.py")
+    with patch(
+        "streamlit.elements.help.os.path.realpath",
+        side_effect=OSError("bad path"),
+    ):
+        assert _is_streamlit_internal_frame(frame) is False
+
+
+def test_get_value_returns_none_when_value_matches_var_name() -> None:
+    """``_get_value`` returns ``None`` when the computed value merely repeats the name.
+
+    For example, ``st.help(re)`` would only repeat the variable name in the value
+    slot, so the redundant value is dropped.
+    """
+    assert _get_value(re, "re") is None

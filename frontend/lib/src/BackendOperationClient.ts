@@ -39,12 +39,12 @@ const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 120_000
 /**
  * Timeout for skills-install requests (3 minutes).
  *
- * The default 30s is too short here: a project-mode install is fast (it just
- * creates symlinks), but `streamlit skills` falls back to downloading the
- * skills archive from GitHub when symlinks aren't supported (e.g. Windows
- * without Developer Mode). That download can exceed 30s on a slow network,
- * which would surface a spurious "install failed" in the toast while the
- * server keeps installing. We use the same generous budget as deferred files.
+ * The default 30s is too short here: an install does real filesystem I/O -
+ * copying the bundled meta-skill/content skills into project or home dirs -
+ * which can be slow on locked-down machines (antivirus scans, networked or
+ * OneDrive-backed home directories). A too-short timeout would surface a
+ * spurious "install failed" in the toast while the server keeps installing.
+ * We use the same generous budget as deferred files.
  */
 const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000
 
@@ -57,6 +57,46 @@ export const CONNECTION_CLOSED_MESSAGE = "Connection closed"
 
 /** Rejection message used when a request exceeds its timeout. */
 export const REQUEST_TIMED_OUT_MESSAGE = "Request timed out"
+
+/**
+ * Error a backend operation rejects with when the server returns a failure.
+ * Carries the server's machine-readable `reason` (e.g. the skills-install
+ * failure cause) alongside the human-readable message, so callers can route it
+ * to telemetry without parsing the message text. Read it via
+ * {@link getBackendOperationReason} rather than exporting the class, which keeps
+ * the throw site inside this module and gives callers a typed accessor instead of
+ * a hand-written structural cast.
+ */
+class BackendOperationError extends Error {
+  public readonly reason?: string
+
+  constructor(message: string, reason?: string) {
+    super(message)
+    this.name = "BackendOperationError"
+    this.reason = reason || undefined
+  }
+}
+
+/**
+ * Return the server's machine-readable failure reason from a rejected backend
+ * operation, or `undefined` for any other error.
+ *
+ * The reason is a bounded server-side vocabulary (never user input), so callers
+ * may safely use it as a telemetry label suffix.
+ *
+ * Reads the property structurally rather than via `instanceof
+ * BackendOperationError`, deliberately. The class is thrown inside
+ * `@streamlit/lib` and read in `@streamlit/app`, and an `instanceof` across that
+ * boundary is only sound while both sides resolve to one class identity — which
+ * bundling and test mocks do not guarantee. What this accessor buys is the thing
+ * that matters: callers no longer hand-write `(error as { reason?: string })`, and
+ * renaming the property is a one-line change here instead of a silent `undefined`
+ * at every call site.
+ */
+export function getBackendOperationReason(error: unknown): string | undefined {
+  const reason = (error as { reason?: unknown } | null | undefined)?.reason
+  return typeof reason === "string" && reason ? reason : undefined
+}
 
 /** Information about a pending request. */
 interface PendingRequest<T> {
@@ -193,15 +233,19 @@ export class BackendOperationClient {
   /**
    * Request a one-click install of the bundled Streamlit agent skills.
    *
-   * @returns A promise that resolves with an optional outcome detail, or
-   * rejects with the server-provided error message on failure.
+   * @returns A promise that resolves with an optional outcome detail and a
+   * `fallbackReason` naming why a project install was rerouted to a global copy
+   * (empty when it wasn't), or rejects with a {@link BackendOperationError} whose
+   * `reason` classifies the failure for telemetry.
    */
-  public requestInstallSkills(): Promise<{ detail?: string | null }> {
-    return this.request<{ detail?: string | null }>(
-      "installSkills",
-      {},
-      INSTALL_SKILLS_REQUEST_TIMEOUT_MS
-    )
+  public requestInstallSkills(): Promise<{
+    detail?: string | null
+    fallbackReason?: string | null
+  }> {
+    return this.request<{
+      detail?: string | null
+      fallbackReason?: string | null
+    }>("installSkills", {}, INSTALL_SKILLS_REQUEST_TIMEOUT_MS)
   }
 
   /**
@@ -230,7 +274,12 @@ export class BackendOperationClient {
     this.cleanupRequest(requestId)
 
     if (response.errorMsg) {
-      pending.resolver.reject(new Error(response.errorMsg))
+      pending.resolver.reject(
+        new BackendOperationError(
+          response.errorMsg,
+          response.errorReason ?? undefined
+        )
+      )
     } else {
       try {
         const payload = this.extractResponsePayload(response)

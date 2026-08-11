@@ -39,6 +39,11 @@ FILES_AND_REGEXES = {
     "lib/streamlit/version.py": r"(?P<pre_match>.*_version\(\").*(?P<post_match>\"\)$)",
 }
 
+_PYPROJECT_FILES_WITH_SELF_REFERENCES = (
+    "pyproject.toml",
+    "lib/pyproject.toml",
+)
+
 
 def update_root_pyproject_toml(project_name: str) -> None:
     """Update the root pyproject.toml to use the new package name.
@@ -82,6 +87,51 @@ def update_root_pyproject_toml(project_name: str) -> None:
         f.write(content)
 
 
+def _update_pyproject_self_references(project_name: str) -> None:
+    """Rename `streamlit[extras]` self-references to the new project name.
+
+    Aborts if any self-reference is left unrenamed so the nightly build
+    cannot silently depend on the stable `streamlit` package.
+    """
+    # Matches lines like `  "streamlit[extras]",`, with an optional trailing comma.
+    dependency_pattern = r'(?P<pre_match>^\s*")streamlit(?P<post_match>\[[^"]+\]",?$)'
+    # Fail if any self-reference was left unrenamed. The count check only
+    # requires one replacement, so a version-constrained form like
+    # `streamlit[snowflake]>=1.0.0` would otherwise slip through.
+    leftover_pattern = r'^\s*"streamlit\['
+
+    for filename in _PYPROJECT_FILES_WITH_SELF_REFERENCES:
+        file_path = os.path.join(BASE_DIR, filename)
+
+        with open(file_path, encoding="utf-8") as f:
+            content = f.read()
+
+        content, dependency_count = re.subn(
+            dependency_pattern,
+            rf"\g<pre_match>{project_name}\g<post_match>",
+            content,
+            flags=re.MULTILINE,
+        )
+        if dependency_count == 0:
+            raise Exception(
+                f'In file "{file_path}", did not find regex "{dependency_pattern}"'
+            )
+
+        # Skip the guard for identity renames, since an unchanged
+        # `streamlit[...]` reference would still match `leftover_pattern`
+        # and falsely abort.
+        if project_name != "streamlit" and re.search(
+            leftover_pattern, content, flags=re.MULTILINE
+        ):
+            raise Exception(
+                f'In file "{file_path}", found a "streamlit[...]" self-reference '
+                "that was not renamed"
+            )
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+
 def update_files(project_name: str, files: dict[str, str]) -> None:
     """Update files with new project name."""
     for filename, regex in files.items():
@@ -106,6 +156,7 @@ def main() -> None:
     project_name = sys.argv[1]
     update_files(project_name, FILES_AND_REGEXES)
     update_root_pyproject_toml(project_name)
+    _update_pyproject_self_references(project_name)
 
 
 if __name__ == "__main__":

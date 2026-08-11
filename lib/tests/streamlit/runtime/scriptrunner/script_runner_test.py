@@ -504,6 +504,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
+            inner()
 
         outer = MagicMock(side_effect=rerender_outer)
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
@@ -516,6 +517,8 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         outer.assert_called_once()
+        # The parent already re-rendered the child inline, so the child's own queue
+        # entry is skipped instead of running it a second time (#10719).
         inner.assert_called_once()
         assert scriptrunner._fragment_storage.contains("inner")
 
@@ -561,9 +564,123 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         outer.assert_called_once()
-        assert middle.call_count == 2
-        assert grandchild.call_count == 3
+        # The outer rerun re-renders the whole chain inline, so the queued
+        # descendants are skipped rather than run again (#10719), and the
+        # grandchild must survive in storage for later reruns.
+        middle.assert_called_once()
+        grandchild.assert_called_once()
         assert scriptrunner._fragment_storage.contains("grandchild")
+
+    def test_fragment_queue_nested_widgets_are_not_duplicated(self):
+        """Coalesced parent+child auto-reruns must not re-create the child's widgets.
+
+        Regression test for issue #10719: two nested ``run_every`` fragments can have
+        their auto-reruns coalesced into a single queue. The parent re-renders the
+        child as part of its own body, so also running the child from the queue
+        registered its widgets twice and raised StreamlitDuplicateElementId.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner_errors: list[Exception] = []
+
+        def render_inner() -> None:
+            try:
+                st.button("inner button")
+            except Exception as e:
+                # Recorded rather than raised so the assertion below can name the
+                # duplicate-id failure instead of it being swallowed by the runner.
+                inner_errors.append(e)
+
+        inner = MagicMock(side_effect=render_inner)
+
+        def render_outer() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            st.button("outer button")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.register(
+                "inner", inner, parent_fragment_id="outer"
+            )
+            inner()
+
+        outer = MagicMock(side_effect=render_outer)
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert inner_errors == []
+        inner.assert_called_once()
+        button_labels = [
+            element.button.label
+            for element in scriptrunner.elements()
+            if element.WhichOneof("type") == "button"
+        ]
+        assert button_labels == ["outer button", "inner button"]
+        self._assert_no_exceptions(scriptrunner)
+
+    def test_fragment_queue_runs_descendant_when_ancestor_is_gone(self):
+        """A queued descendant still runs if its queued ancestor never executed."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner = MagicMock()
+
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        # "outer" is queued but absent from storage, so it is skipped without running
+        # and must not suppress its descendant's own queued rerun.
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        inner.assert_called_once()
+        self._assert_no_exceptions(scriptrunner)
+
+    def test_fragment_queue_skips_descendant_when_ancestor_raises(self):
+        """A failing ancestor must still suppress its queued descendant.
+
+        The ancestor is added to ``executed_fragment_ids`` *before* its own body
+        runs, so a descendant reached later in the queue is skipped by
+        ``has_ancestor_in`` even when that body raised. The ancestor owns the
+        descendant's container either way: rerunning the descendant here would
+        render it outside the parent that just failed. Moving that bookkeeping
+        after the call would let the descendant run, so this pins the ordering.
+
+        The ancestor re-registers the descendant before raising. Without that,
+        ``clear_stale_descendants`` prunes the descendant during cleanup and the
+        lookup fails, which would make this pass for the wrong reason.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner = MagicMock()
+
+        def register_child_then_explode() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.shared.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.register(
+                "inner", inner, parent_fragment_id="outer"
+            )
+            raise RuntimeError("kaboom")
+
+        outer = MagicMock(side_effect=register_child_then_explode)
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_not_called()
+        assert scriptrunner._fragment_storage.contains("inner"), (
+            "the descendant must survive cleanup, or this test passes vacuously"
+        )
 
     def test_fragment_scoped_rerun_child_first_does_not_rerun_parent(self):
         """A child-scoped rerun must not requeue an already-run parent."""
@@ -586,6 +703,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
+            inner()
 
         outer = MagicMock(side_effect=rerender_outer)
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
@@ -617,6 +735,8 @@ class ScriptRunnerTest(unittest.TestCase):
             with ThreadState.scoped(fragment_id="outer"):
                 if outer.call_count == 1:
                     st.rerun(scope="fragment")
+
+            inner()
 
         outer = MagicMock(side_effect=rerun_outer)
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)

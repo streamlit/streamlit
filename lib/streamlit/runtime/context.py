@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Mapping
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from streamlit import runtime
 from streamlit.runtime.context_util import maybe_add_page_path, maybe_trim_page_path
@@ -68,6 +68,15 @@ class StreamlitTheme(AttributeDictionary):
     """
 
     type: Literal["dark", "light"] | None
+
+    @overload
+    def __getitem__(self, key: Literal["type"]) -> Literal["dark", "light"] | None: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
     def __init__(self, theme_info: dict[str, str | None]):
         super().__init__(theme_info)

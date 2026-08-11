@@ -33,7 +33,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -240,9 +240,8 @@ class CameraInputMixin:
 
         """
         if resolution is not None and resolution not in _RESOLUTION_TO_HEIGHT:
-            raise StreamlitAPIException(
-                f"Invalid resolution: {resolution!r}. "
-                f"Must be one of {list(_RESOLUTION_TO_HEIGHT)}, or None."
+            raise StreamlitValueError(
+                "resolution", ["'480p'", "'720p'", "'1080p'", "None"]
             )
 
         ctx = get_script_run_ctx()
@@ -325,6 +324,7 @@ class CameraInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         self.dg._enqueue(

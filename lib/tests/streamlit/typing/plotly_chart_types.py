@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import assert_type
 
@@ -30,7 +30,8 @@ if TYPE_CHECKING:
     from plotly.basedatatypes import BaseFigure
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.plotly_chart import PlotlyMixin, PlotlyState
+    from streamlit.elements.plotly_chart import PlotlyMixin, PlotlySelectionState
+    from streamlit.typing import PlotlyState
 
     plotly_chart = PlotlyMixin().plotly_chart
 
@@ -51,6 +52,18 @@ if TYPE_CHECKING:
     assert_type(plotly_chart(mpl_fig), PlotlyState)
     assert_type(plotly_chart([fig, data]), PlotlyState)
     assert_type(plotly_chart({"data": data}), PlotlyState)
+
+    plotly_state = plotly_chart(fig)
+    assert_type(plotly_state.selection, PlotlySelectionState)
+    assert_type(plotly_state["selection"], PlotlySelectionState)
+    assert_type(plotly_state.selection.points, list[dict[str, Any]])
+    assert_type(plotly_state.selection["points"], list[dict[str, Any]])
+    assert_type(plotly_state.selection.point_indices, list[int])
+    assert_type(plotly_state.selection["point_indices"], list[int])
+    assert_type(plotly_state.selection.box, list[dict[str, Any]])
+    assert_type(plotly_state.selection["box"], list[dict[str, Any]])
+    assert_type(plotly_state.selection.lasso, list[dict[str, Any]])
+    assert_type(plotly_state.selection["lasso"], list[dict[str, Any]])
 
     # =====================================================================
     # Return type tests with on_select="ignore" -> DeltaGenerator

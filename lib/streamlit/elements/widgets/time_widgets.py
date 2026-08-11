@@ -44,7 +44,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -1049,9 +1049,7 @@ class TimeWidgetsMixin:
             time_input_proto.query_param_key = str(key)
 
         if format not in {"12h", "24h", "localized"}:
-            raise StreamlitAPIException(
-                f"`format` must be '12h', '24h', or 'localized' but got {format!r}."
-            )
+            raise StreamlitValueError("format", ["'12h'", "'24h'", "'localized'"])
         time_input_proto.format = format
 
         widget_state = register_widget(
@@ -1063,6 +1061,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=(parsed_time is None),
@@ -1500,6 +1499,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=(default_value is None),
@@ -2012,6 +2012,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             clearable=(parsed_values.value is None),

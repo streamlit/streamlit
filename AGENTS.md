@@ -37,6 +37,7 @@
 - Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
 - The committed root `uv.lock` is the source of truth for normal development and CI. Do not hand-edit it.
 - For Python dependency changes, edit the relevant `pyproject.toml`, run `uv lock`, and commit both files. Also run `uv lock` after changing the package name or version. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `uv lock --upgrade` for a full compatible upgrade, and `uv lock --check` to verify consistency.
+- The dev/CI `[dependency-groups]` in the root `pyproject.toml` use bare package names because `uv.lock` owns the versions: do not add lower-bound floors, reserve exact `==` pins for tools we deliberately hold back, and add upper caps (`<`) only for versions known to break us (mirrored by `ignore` entries in `.github/dependabot.yml`); a `!=` exclusion of a single known-broken release needs no `ignore` entry. This does NOT apply to `lib/pyproject.toml`, whose version ranges are the published package's contract with users. See the comment above `[dependency-groups]` in the root `pyproject.toml` for details.
 - If `uv.lock` conflicts during a merge, restore it with `git checkout origin/develop -- uv.lock`, then run `uv lock`; never hand-merge it.
 - For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
@@ -87,6 +88,7 @@ Selection of `make` commands for development (run in the repo root):
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
+- **Subagent model**: When launching subagents, use the same model as the parent session (`model: inherit` / omit any model override). Do not switch to a different or faster model unless the user explicitly requests it. Prefer the named custom agents in `.claude/agents/` when available.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - Use `agent-wiki/` (gitignored, cloned on first use) to share intermediate files (specs, plans, learnings) relevant for the current PR. This is a local checkout of [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git). Files are stored in `pull-requests/<pr-number>/` and accessible at `https://issues.streamlit.app/agent_wiki_explorer?file=<relative-path>`. See `sharing-pr-agent-artifacts` skill.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.

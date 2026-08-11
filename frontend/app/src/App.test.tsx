@@ -16,13 +16,7 @@
 
 import { act } from "react"
 
-import {
-  fireEvent,
-  render,
-  RenderResult,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { render, RenderResult, screen, waitFor } from "@testing-library/react"
 import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event"
@@ -463,17 +457,8 @@ function sendForwardMessage(
 }
 
 async function openCacheModal(): Promise<void> {
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyDown(document.body, {
-    key: "c",
-    which: 67,
-  })
-
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyUp(document.body, {
-    key: "c",
-    which: 67,
-  })
+  const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
+  await user.keyboard("c")
 
   expect(
     screen.getByText(
@@ -484,6 +469,16 @@ async function openCacheModal(): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(0)
   })
+}
+
+/**
+ * Advances fake timers when active so userEvent delays don't hang under
+ * vi.useFakeTimers(). Passed as userEvent.setup({ advanceTimers }).
+ */
+function advanceUserEventTimers(delay: number): void {
+  if (vi.isFakeTimers()) {
+    vi.advanceTimersByTime(delay)
+  }
 }
 
 describe("App", () => {
@@ -725,7 +720,8 @@ describe("App", () => {
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
 
-  it("reruns when the user presses 'r'", () => {
+  it("reruns when the user presses 'r'", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
 
     getMockConnectionManager(true)
@@ -734,11 +730,7 @@ describe("App", () => {
       getStoredValue<WidgetStateManager>(WidgetStateManager)
     expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82,
-    })
+    await user.keyboard("r")
 
     expect(widgetStateManager.sendUpdateWidgetsMessage).toHaveBeenCalled()
   })
@@ -4182,16 +4174,13 @@ describe("App", () => {
   })
 
   describe("Test Main Menu shortcut functionality", () => {
-    it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
+    it("Tests dev menu shortcuts cannot be accessed as a viewer", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
 
       getMockConnectionManager(true)
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyPress(screen.getByTestId("stApp"), {
-        key: "c",
-        which: 67,
-      })
+      await user.keyboard("c")
 
       expect(
         screen.queryByText(
@@ -4447,7 +4436,8 @@ describe("App", () => {
       expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
     })
 
-    it("requests script rerun if wasRerunRequested is true", () => {
+    it("requests script rerun if wasRerunRequested is true", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
@@ -4462,11 +4452,7 @@ describe("App", () => {
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyDown(document.body, {
-        key: "r",
-        which: 82,
-      })
+      await user.keyboard("r")
 
       act(() => {
         getMockConnectionManagerProp("connectionStateChanged")(
@@ -5586,7 +5572,11 @@ describe("App", () => {
       )
     })
 
-    it("retains embed query params even if the page hash is different", () => {
+    it("retains embed query params even if the page hash is different", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
       const embedParams =
         "embed=true&embed_options=disable_scrolling&embed_options=show_padding"
       window.history.pushState({}, "", `/?${embedParams}`)
@@ -5632,8 +5622,7 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- navLinks have pointer-events:none which userEvent.click respects but the real browser click works
-      fireEvent.click(navLinks[1])
+      await user.click(navLinks[1])
 
       expect(
         // @ts-expect-error
@@ -5896,6 +5885,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
   })
 
   it("ensures incrementMessageCacheRunCount is NOT called when hasReceivedNewSession is false", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
     const connectionManager = getMockConnectionManager(true) // isConnected = true
     const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
@@ -5929,11 +5919,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       scriptIsRunning: false,
     })
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82, // Key code for 'r'
-    })
+    await user.keyboard("r")
 
     // Wait for state updates from rerunScript to propagate if any were async.
     // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
@@ -6118,7 +6104,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         ).toBeVisible()
       })
 
-      it("does not display error dialog if already dismissed", () => {
+      it("does not display error dialog if already dismissed", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6131,10 +6118,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6196,7 +6180,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     })
 
     describe("connection state transitions with error dismissal", () => {
-      it("resets dismissal state when reconnected", () => {
+      it("resets dismissal state when reconnected", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6209,10 +6194,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6359,7 +6341,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         expect(screen.queryByText(/Error 2/)).toBeNull()
       })
 
-      it("maintains dismissal state across multiple disconnections", () => {
+      it("maintains dismissal state across multiple disconnections", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6370,10 +6353,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -7093,32 +7073,131 @@ describe("Skills install nudge", () => {
     })
   })
 
-  it("tracks a suppressed (non-loopback) nudge without showing it", () => {
+  it.each([
+    // Non-loopback keeps the label it has emitted since 1.59, so the existing
+    // adoption funnel keeps resolving across the upgrade.
+    ["non_loopback_private", "skillsNudgeSuppressedNonLocal:private"],
+    ["non_loopback_unknown", "skillsNudgeSuppressedNonLocal:unknown"],
+    // New reasons get the generic label.
+    ["conflict", "skillsNudgeSuppressed:conflict"],
+    ["check_failed", "skillsNudgeSuppressed:check_failed"],
+  ])(
+    "tracks a suppressed nudge (%s) without showing it",
+    (reason, expectedLabel) => {
+      renderApp(getProps())
+      const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Server says the nudge was eligible but withheld it, and says why.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        initialize: {
+          ...NEW_SESSION_JSON.initialize,
+          recommendSkillsInstall: false,
+          skillsNudgeSuppressedReason: reason,
+        },
+      })
+
+      // The nudge is not shown...
+      expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+      // ...but the reason is recorded, so suppression is measurable instead of
+      // silent. `conflict` matches the install-failure reason of the same cause,
+      // so the two are comparable in one query.
+      expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+        label: expectedLabel,
+      })
+      // And no (false) impression is logged.
+      expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+        label: "skillsNudgeShown",
+      })
+    }
+  )
+
+  it("still shows the nudge after an earlier suppression, on reconnect", () => {
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
 
-    // Server says the nudge was eligible but suppressed because the browser
-    // isn't on a direct-loopback connection (Docker/VM/tunnel).
+    // Connect, and let a transient `check_failed` withhold the nudge.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
     sendForwardMessage("newSession", {
       ...NEW_SESSION_JSON,
       initialize: {
         ...NEW_SESSION_JSON.initialize,
         recommendSkillsInstall: false,
-        skillsNudgeSuppressedLocality: "private",
+        skillsNudgeSuppressedReason: "check_failed",
       },
     })
-
-    // The nudge is not shown...
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
-    // ...but the connection class is recorded so we can measure the excluded
-    // (containerized/remote) slice of the agent-harness audience.
-    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "skillsNudgeSuppressedNonLocal:private",
+
+    // Reconnect re-runs the first-session initialization. `check_failed` is
+    // transient — the eligibility check threw, it did not decide against us — so
+    // a now-eligible session must still be able to surface the nudge. Reusing the
+    // shown-guard for suppression would withhold it until a full page reload.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
     })
-    // And no (false) impression is logged.
-    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
     })
+  })
+
+  it("reports a suppression only once across a reconnect", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    const sendSuppressedNewSession = (): void => {
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        initialize: {
+          ...NEW_SESSION_JSON.initialize,
+          recommendSkillsInstall: false,
+          skillsNudgeSuppressedReason: "conflict",
+        },
+      })
+    }
+
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendSuppressedNewSession()
+
+    // A reconnect re-runs initialization, which must not double-count this
+    // developer in the suppression metric.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendSuppressedNewSession()
+
+    const suppressions = (
+      metricsManager.enqueue as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      ([event, payload]) =>
+        event === "menuClick" &&
+        payload?.label === "skillsNudgeSuppressed:conflict"
+    )
+    expect(suppressions).toHaveLength(1)
   })
 
   it("tracks the impression only once across a reconnect", () => {
@@ -7299,6 +7378,100 @@ describe("Skills install nudge", () => {
     })
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
+    })
+  })
+
+  it("appends the server failure reason to the install-failed label", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server classifies the failure (e.g. a filesystem write failure on a
+    // locked-down target dir) and the rejected error carries a machine-readable
+    // reason from the fixed vocabulary.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(new Error("Could not write ~/.claude/skills/..."), {
+        reason: "write_failed",
+      })
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The reason is a label suffix (mirroring skillsNudgeSuppressedNonLocal:<locality>)
+    // so the funnel can break install failures down by cause.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:write_failed",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+    })
+  })
+
+  it("tags a rerouted install with the server's fallback reason", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Installs the server reroutes from project mode to a global copy carry WHY.
+    // Symlinks being unavailable machine-wide (Windows without Developer Mode) is a
+    // different problem from a single link failing, so the label keeps them apart.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({
+      detail: "Installed to ~/.agents/skills",
+      fallbackReason: "symlinks_unsupported",
+    })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded:symlinks_unsupported",
+    })
+    // The plain success label must not also fire (it would double-count).
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+    })
+  })
+
+  it("tracks a safety-gate refusal as Refused, not Failed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server prefixes gate reasons with `refused:` — the install was declined
+    // before it was attempted, so it must not inflate the install-failure rate.
+    // Label construction is unit-tested in skillsNudge.test.ts; this asserts App
+    // routes a refusal to the distinct EVENT, which is the funnel discontinuity
+    // this PR introduces and the one thing a unit test cannot see.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(
+        new Error("Skills install is not available in this environment."),
+        { reason: "refused:non_loopback" }
+      )
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The prefix is stripped, so the gate name stays readable in the label.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallRefused:non_loopback",
+    })
+    // A refusal is not a failure and must stay off the failure funnel.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:refused:non_loopback",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
     })
   })
 

@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_prefixed_markdown,
     get_element_by_key,
     reset_hovering,
@@ -54,7 +55,7 @@ def change_widget_values(app: Page):
 
     # Change the multiselect value.
     form_1.get_by_test_id("stMultiSelect").locator("input").click()
-    app.locator("[data-baseweb='popover'] >> li").nth(0).click()
+    app.get_by_role("option").first.click()
 
     # Change the number input value.
     form_1.get_by_test_id("stNumberInput").locator("input").fill("42")
@@ -425,3 +426,16 @@ def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction)
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_wrap_false_submit_button_truncates_and_sets_native_title(app: Page):
+    """wrap=False ellipsizes the submit-button label and exposes the full label
+    via a native title.
+    """
+    container = get_element_by_key(app, "wrap_false_submit_button")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

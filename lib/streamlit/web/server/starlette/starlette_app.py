@@ -221,14 +221,18 @@ def create_streamlit_middleware() -> list[Middleware]:
         )
     )
 
-    # Keep static asset responses out of the gzip middleware. Local load testing
-    # showed that bypassing gzip on these paths materially improves initial load
-    # times and peak RSS, while a session-only bypass regressed.
+    # Keep static asset and media responses out of the gzip middleware. Local
+    # load testing showed that bypassing gzip on the static paths materially
+    # improves initial load times and peak RSS (a session-only bypass
+    # regressed), and compressing binary media breaks range-based playback.
+    # The base URL is forwarded so the path bypass works when
+    # server.baseUrlPath is configured.
     middleware.append(
         Middleware(
             SelectiveGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
+            base_url=config.get_option("server.baseUrlPath") or "",
         )
     )
 
@@ -345,13 +349,13 @@ class App:
     --------
     Basic usage:
 
-    >>> from streamlit.web.server.starlette import App
-    >>> app = App("main.py")
+    >>> import streamlit as st
+    >>> app = st.App("main.py")
 
     With lifespan hooks:
 
     >>> from contextlib import asynccontextmanager
-    >>> from streamlit.web.server.starlette import App
+    >>> import streamlit as st
     >>>
     >>> @asynccontextmanager
     ... async def lifespan(app):
@@ -359,25 +363,25 @@ class App:
     ...     yield {"model": "loaded"}
     ...     print("Shutting down...")
     >>>
-    >>> app = App("main.py", lifespan=lifespan)
+    >>> app = st.App("main.py", lifespan=lifespan)
 
     With custom routes:
 
+    >>> import streamlit as st
     >>> from starlette.routing import Route
     >>> from starlette.responses import JSONResponse
-    >>> from streamlit.web.server.starlette import App
     >>>
     >>> async def health(request):
     ...     return JSONResponse({"status": "ok"})
     >>>
-    >>> app = App("main.py", routes=[Route("/health", health)])
+    >>> app = st.App("main.py", routes=[Route("/health", health)])
 
     With programmatic secrets:
 
     >>> import os
-    >>> from streamlit.web.server.starlette import App
+    >>> import streamlit as st
     >>>
-    >>> app = App(
+    >>> app = st.App(
     ...     "main.py",
     ...     secrets={
     ...         "database": {
@@ -390,7 +394,7 @@ class App:
     With error monitoring (Sentry):
 
     >>> import sentry_sdk
-    >>> from streamlit.web.server.starlette import App
+    >>> import streamlit as st
     >>>
     >>> sentry_sdk.init(dsn="...")
     >>>
@@ -398,18 +402,17 @@ class App:
     ...     sentry_sdk.capture_exception(exc)
     ...     return None  # Show default exception display
     >>>
-    >>> app = App("main.py", on_script_error=log_to_sentry)
+    >>> app = st.App("main.py", on_script_error=log_to_sentry)
 
     With custom error UI:
 
     >>> import streamlit as st
-    >>> from streamlit.web.server.starlette import App
     >>>
     >>> def custom_error_handler(exc):
     ...     st.error("Something went wrong!")
     ...     return True  # Suppress default exception display
     >>>
-    >>> app = App("main.py", on_script_error=custom_error_handler)
+    >>> app = st.App("main.py", on_script_error=custom_error_handler)
     """
 
     def __init__(
@@ -628,9 +631,9 @@ class App:
         Mount st.App on FastAPI:
 
         >>> from fastapi import FastAPI
-        >>> from streamlit.starlette import App
+        >>> import streamlit as st
         >>>
-        >>> streamlit_app = App("dashboard.py")
+        >>> streamlit_app = st.App("dashboard.py")
         >>> fastapi_app = FastAPI(lifespan=streamlit_app.lifespan())
         >>> fastapi_app.mount("/dashboard", streamlit_app)
         """

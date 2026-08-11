@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import inspect
 import os
+import re
 import sys
 import threading
 import time
@@ -26,6 +27,7 @@ from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
+from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -241,6 +243,11 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
+# Matches CPython's ``got an unexpected keyword argument 'name'`` TypeError.
+_UNEXPECTED_KWARG_RE: Final = re.compile(
+    r"got an unexpected keyword argument '([^']+)'"
+)
+
 
 def _get_machine_id_v3() -> str:
     """Get the machine ID.
@@ -413,7 +420,11 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
 
 
 def _get_command_telemetry(
-    _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
+    _command_func: Callable[..., Any],
+    _command_name: str,
+    *args: Any,
+    _positional_arg_offset: int = 0,
+    **kwargs: Any,
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
     arg_keywords = _get_arg_keywords(_command_func)
@@ -423,7 +434,10 @@ def _get_command_telemetry(
     name = _command_name
 
     for i, arg in enumerate(args):
-        pos = i
+        # Offset the recorded position so a decorated method's first real
+        # argument lands at position 0, matching a plain-function command that
+        # has no leading ``self`` argument (see ``_positional_arg_offset``).
+        pos = i - _positional_arg_offset
         if is_method:
             # If func is a method, ignore the first argument (self)
             i += 1  # noqa: PLW2901
@@ -474,6 +488,31 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+def format_uncaught_exception(exc: BaseException) -> str:
+    """Return a page-profile label for an uncaught exception.
+
+    Uses the exception type name, appending ``:<param>`` when the failing
+    parameter is known:
+
+    - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
+    - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+
+    Enrichment failures are swallowed so telemetry cannot interrupt script
+    execution or drop the page-profile payload.
+    """
+    name = type(exc).__name__
+    with contextlib.suppress(Exception):
+        if isinstance(exc, TypeError):
+            match = _UNEXPECTED_KWARG_RE.search(str(exc))
+            if match:
+                return f"{name}:{match.group(1)}"
+        elif isinstance(exc, StreamlitValueError):
+            parameter = exc.exec_kwargs.get("parameter")
+            if isinstance(parameter, str) and parameter:
+                return f"{name}:{parameter}"
+    return name
+
+
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -481,6 +520,8 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(
     name: str,
     func: F,
+    *,
+    _positional_arg_offset: int = 0,
 ) -> F: ...
 
 
@@ -488,10 +529,17 @@ def gather_metrics(
 def gather_metrics(
     name: str,
     func: None = None,
+    *,
+    _positional_arg_offset: int = 0,
 ) -> Callable[[F], F]: ...
 
 
-def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
+def gather_metrics(
+    name: str,
+    func: F | None = None,
+    *,
+    _positional_arg_offset: int = 0,
+) -> Callable[[F], F] | F:
     """Function decorator to add telemetry tracking to commands.
 
     Parameters
@@ -501,6 +549,13 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
     func : callable or None
         The function to track for telemetry. If ``None`` (default), returns a
         decorator that can be applied to a function.
+    _positional_arg_offset : int
+        How many leading positional arguments to skip when assigning recorded
+        position indexes. The arguments are still tracked; only their stored
+        position (``p``) is shifted. Set this to ``1`` when decorating a method
+        (such as a class ``__init__``) so that its first real argument is
+        recorded at position ``0``, matching an equivalent plain-function
+        command.
 
     Examples
     --------
@@ -519,6 +574,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             return gather_metrics(
                 name=name,
                 func=f,
+                _positional_arg_offset=_positional_arg_offset,
             )
 
         return wrapper
@@ -550,7 +606,11 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         if ctx and tracking_activated:
             try:
                 command_telemetry = _get_command_telemetry(
-                    non_optional_func, name, *args, **kwargs
+                    non_optional_func,
+                    name,
+                    *args,
+                    _positional_arg_offset=_positional_arg_offset,
+                    **kwargs,
                 )
 
                 ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
