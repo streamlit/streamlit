@@ -49,7 +49,7 @@ def test_displays_a_pyplot_figures(
 
 
 def test_shows_deprecation_warning(app: Page):
-    """Test that pyplot deprecation warnings are displayed correctly."""
+    """Test that st.pyplot shows the deprecation warning for savefig kwargs."""
     expect_warning(app, "Passing Matplotlib savefig keyword arguments")
 
 

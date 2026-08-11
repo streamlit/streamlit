@@ -93,6 +93,19 @@ class PyplotTest(DeltaGeneratorTestCase):
 
             fig_clf.assert_not_called()
 
+    def test_st_pyplot_requires_fig_argument(self):
+        """Omitting fig raises TypeError now that the argument is required."""
+        with pytest.raises(TypeError):
+            st.pyplot()  # type: ignore[call-arg]
+
+    def test_st_pyplot_rejects_none_fig(self):
+        """Passing fig=None raises a migration-oriented API exception."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.pyplot(None)  # type: ignore[arg-type]
+
+        assert "requires a Matplotlib figure" in str(exc_info.value)
+        assert "st.pyplot(fig)" in str(exc_info.value)
+
     @parameterized.expand([(True, "use_stretch"), (False, "use_content")])
     def test_st_pyplot_use_container_width(
         self, use_container_width: bool, expected_attribute: str

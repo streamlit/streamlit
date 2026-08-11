@@ -25,6 +25,7 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.image_utils import marshall_images
 from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -62,6 +63,21 @@ st.image(buf)
 ```
 """
 
+_FIG_REQUIRED: Final[str] = """
+`st.pyplot` requires a Matplotlib figure. Calling it without one (or
+with `None`) is not supported because Matplotlib's global figure object
+is not thread-safe.
+
+Pass a figure explicitly:
+
+```python
+fig, ax = plt.subplots()
+ax.scatter([1, 2, 3], [1, 2, 3])
+# other plotting actions...
+st.pyplot(fig)
+```
+"""
+
 
 class PyplotMixin:
     @gather_metrics("pyplot")
@@ -94,12 +110,11 @@ class PyplotMixin:
         fig : Matplotlib Figure
             The Matplotlib ``Figure`` object to render. See
             https://matplotlib.org/stable/gallery/index.html for examples.
-            This argument is required.
 
         clear_figure : bool
-            Whether to clear the figure after rendering it. If ``True``,
+            Whether to clear the figure after rendering it. If this is
+            ``False`` (default), the figure is left as-is. If ``True``,
             Streamlit calls ``fig.clf()`` after the figure is displayed.
-            Defaults to ``False``.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -163,6 +178,9 @@ class PyplotMixin:
         For more information, see https://matplotlib.org/faq/usage_faq.html.
 
         """
+
+        if fig is None:
+            raise StreamlitAPIException(_FIG_REQUIRED)
 
         if use_container_width is not None:
             show_deprecation_warning(
