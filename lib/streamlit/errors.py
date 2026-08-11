@@ -198,16 +198,6 @@ class LocalizableStreamlitException(StreamlitAPIException):
         return self._exec_kwargs
 
 
-class StreamlitInvalidPageLayoutError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for layout."""
-
-    def __init__(self, layout: str) -> None:
-        super().__init__(
-            '`layout` must be `"centered"` or `"wide"` (got `"{layout}"`)',
-            layout=layout,
-        )
-
-
 class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for `initial_sidebar_state`."""
 
@@ -291,39 +281,6 @@ class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
             "The argument passed was {horizontal_alignment}.",
             horizontal_alignment=horizontal_alignment,
             element_type=element_type,
-        )
-
-
-class StreamlitInvalidTextAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid text_alignment value is provided."""
-
-    def __init__(self, text_alignment: Any) -> None:
-        super().__init__(
-            'Invalid text_alignment value: "{text_alignment}". '
-            'Valid values are: `"left"`, `"center"`, `"right"`, or `"justify"`.',
-            text_alignment=text_alignment,
-        )
-
-
-class StreamlitInvalidBindValueError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for the bind parameter."""
-
-    def __init__(self, bind_value: Any) -> None:
-        super().__init__(
-            'Invalid `bind` value: "{bind_value}". '
-            'Supported values are: `"query-params"` or `None`.',
-            bind_value=bind_value,
-        )
-
-
-class StreamlitInvalidPersistStateError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for the persist_state parameter."""
-
-    def __init__(self, persist_state_value: Any) -> None:
-        super().__init__(
-            'Invalid `persist_state` value: "{persist_state_value}". '
-            'Supported values are: `"page"`, `"session"`, or `None`.',
-            persist_state_value=persist_state_value,
         )
 
 
@@ -661,7 +618,7 @@ class StreamlitInvalidSizeError(LocalizableStreamlitException):
 
 
 class StreamlitValueError(LocalizableStreamlitException):
-    """Exception raised when a value is not valid for a parameter."""
+    """Raised when a parameter receives a value outside a known finite set."""
 
     def __init__(self, parameter: str, valid_values: list[str]) -> None:
         super().__init__(
@@ -669,6 +626,50 @@ class StreamlitValueError(LocalizableStreamlitException):
             parameter=parameter,
             valid_values=", ".join(valid_values),
         )
+
+
+# Deprecated specialized subclasses kept for isinstance/except compatibility.
+# Prefer raising StreamlitValueError directly for new validation paths.
+# Construction uses StreamlitValueError(parameter, valid_values); old
+# single-arg constructors are not supported.
+class StreamlitInvalidPageLayoutError(StreamlitValueError):
+    """Deprecated alias of StreamlitValueError for invalid ``layout`` values.
+
+    Kept so existing ``except StreamlitInvalidPageLayoutError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
+
+
+class StreamlitInvalidTextAlignmentError(StreamlitValueError):
+    """Deprecated alias of StreamlitValueError for invalid ``text_alignment``.
+
+    Kept so existing ``except StreamlitInvalidTextAlignmentError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
+
+
+class StreamlitInvalidBindValueError(StreamlitValueError):
+    """Deprecated alias of StreamlitValueError for invalid ``bind`` values.
+
+    Kept so existing ``except StreamlitInvalidBindValueError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
+
+
+class StreamlitInvalidPersistStateError(StreamlitValueError):
+    """Deprecated alias of StreamlitValueError for invalid ``persist_state``.
+
+    Kept so existing ``except StreamlitInvalidPersistStateError`` handlers still
+    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
+    legacy single-arg constructors are unsupported. Prefer raising
+    ``StreamlitValueError`` directly in new code.
+    """
 
 
 # config

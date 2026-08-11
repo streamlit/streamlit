@@ -27,7 +27,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import (
     cache_background_refresh,
@@ -840,13 +840,13 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     def test_bad_scope_raises_exception(self, _, cache_decorator):
         """A bad scope argument should raise an exception."""
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
 
             @cache_decorator(scope="request")
             def get_foo() -> None:
                 pass
 
-        e.match("Unsupported scope option.*request")
+        e.match(r"Invalid `scope` value")
 
 
 class CommonCacheTTLTest(unittest.TestCase):

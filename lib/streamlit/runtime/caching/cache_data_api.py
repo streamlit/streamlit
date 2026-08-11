@@ -33,7 +33,7 @@ from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
@@ -708,14 +708,10 @@ class CacheDataAPI:
 
         if persist_string not in {None, "disk"}:
             # We'll eventually have more persist options.
-            raise StreamlitAPIException(
-                f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
-            )
+            raise StreamlitValueError("persist", ["'disk'", "None"])
 
         if scope not in {"global", "session"}:
-            raise StreamlitAPIException(
-                f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
-            )
+            raise StreamlitValueError("scope", ["'global'", "'session'"])
 
         validate_refresh_mode(
             refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)

@@ -30,7 +30,7 @@ from streamlit.elements.widgets.button_group import (
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
@@ -1029,12 +1029,11 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(get_command_matrix([]))
     def test_invalid_selection_mode(self, command: Callable[..., None]):
         """Test that passing an invalid selection_mode raises an exception."""
-        with pytest.raises(StreamlitAPIException) as exception:
+        with pytest.raises(StreamlitValueError) as exception:
             command(["a", "b"], selection_mode="foo")
         assert (
             str(exception.value)
-            == "The selection_mode argument must be one of ['single', 'multi']. "
-            "The argument passed was 'foo'."
+            == "Invalid `selection_mode` value. Supported values: 'single', 'multi'."
         )
 
     @parameterized.expand(get_command_matrix([]))
@@ -1117,14 +1116,13 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""
 
-        with pytest.raises(StreamlitAPIException) as exception:
+        with pytest.raises(StreamlitValueError) as exception:
             ButtonGroupMixin._internal_button_group(
                 st._main, ["a", "b", "c"], style="foo"
             )
         assert (
-            str(exception.value) == "The style argument must be one of "
-            "['pills', 'segmented_control']. "
-            "The argument passed was 'foo'."
+            str(exception.value)
+            == "Invalid `style` value. Supported values: 'pills', 'segmented_control'."
         )
 
     @parameterized.expand(
@@ -2012,8 +2010,8 @@ class PillsBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.pills("label", ["a", "b"], key="my_key", bind="invalid-value")
 
     def test_bind_with_format_func(self):

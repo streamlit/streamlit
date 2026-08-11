@@ -34,7 +34,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -261,11 +261,7 @@ class FeedbackMixin:
 
         """
         if options not in {"thumbs", "faces", "stars"}:
-            raise StreamlitAPIException(
-                "The options argument to st.feedback must be one of "
-                "['thumbs', 'faces', 'stars']. "
-                f"The argument passed was '{options}'."
-            )
+            raise StreamlitValueError("options", ["'thumbs'", "'faces'", "'stars'"])
 
         num_options = _get_num_options(options)
 

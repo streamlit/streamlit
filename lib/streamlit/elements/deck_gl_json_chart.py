@@ -42,7 +42,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -90,9 +90,9 @@ def parse_selection_mode(
         )
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
     if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
@@ -587,9 +587,8 @@ class PydeckMixin:
         is_selection_activated = on_select != "ignore"
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. "
-                "But only 'ignore', 'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         if is_selection_activated:

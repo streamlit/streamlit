@@ -429,7 +429,7 @@ class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.markdown("Test", text_alignment="invalid")
 
-        assert 'Invalid text_alignment value: "invalid"' in str(exc.value)
+        assert "Invalid `text_alignment` value" in str(exc.value)
         assert "left" in str(exc.value)
         assert "center" in str(exc.value)
         assert "right" in str(exc.value)
@@ -475,7 +475,7 @@ class StCaptionTextAlignmentTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.caption("Caption text", text_alignment="top")
 
-        assert 'Invalid text_alignment value: "top"' in str(exc.value)
+        assert "Invalid `text_alignment` value" in str(exc.value)
         assert "left" in str(exc.value)
         assert "center" in str(exc.value)
         assert "right" in str(exc.value)

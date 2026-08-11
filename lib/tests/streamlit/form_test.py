@@ -22,7 +22,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
@@ -415,7 +415,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         """Test that invalid submit button icon positions raise an error."""
 
         form = st.form("foo")
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
             form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
 
     def test_return_false_when_not_submitted(self):

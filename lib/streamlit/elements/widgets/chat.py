@@ -53,7 +53,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
@@ -951,13 +951,13 @@ class ChatMixin:
         )
 
         if accept_file not in {True, False, "multiple", "directory"}:
-            raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            raise StreamlitValueError(
+                "accept_file", ["True", "False", "'multiple'", "'directory'"]
             )
 
         if submit_mode not in {"submit", "disable", "stop"}:
-            raise StreamlitAPIException(
-                "The `submit_mode` parameter must be 'submit', 'disable', or 'stop'."
+            raise StreamlitValueError(
+                "submit_mode", ["'submit'", "'disable'", "'stop'"]
             )
 
         if max_upload_size is not None and (
@@ -1008,9 +1008,9 @@ class ChatMixin:
             audio_sample_rate is not None
             and audio_sample_rate not in ALLOWED_SAMPLE_RATES
         ):
-            raise StreamlitAPIException(
-                f"Invalid audio_sample_rate: {audio_sample_rate}. "
-                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            raise StreamlitValueError(
+                "audio_sample_rate",
+                [str(rate) for rate in sorted(ALLOWED_SAMPLE_RATES)] + ["None"],
             )
 
         # It doesn't make sense to create a chat input inside a form.

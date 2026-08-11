@@ -52,7 +52,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -313,10 +313,7 @@ def _build_proto(
 def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
     """Check if the selection_mode value is valid or raise exception otherwise."""
     if selection_mode not in {"single", "multi"}:
-        raise StreamlitAPIException(
-            "The selection_mode argument must be one of ['single', 'multi']. "
-            f"The argument passed was '{selection_mode}'."
-        )
+        raise StreamlitValueError("selection_mode", ["'single'", "'multi'"])
 
 
 class ButtonGroupMixin:
@@ -1227,10 +1224,7 @@ class ButtonGroupMixin:
             )
 
         if style not in {"pills", "segmented_control"}:
-            raise StreamlitAPIException(
-                "The style argument must be one of ['pills', 'segmented_control']. "
-                f"The argument passed was '{style}'."
-            )
+            raise StreamlitValueError("style", ["'pills'", "'segmented_control'"])
 
         key = to_key(key)
 

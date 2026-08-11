@@ -950,10 +950,10 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         assert "A label is required for a popover" in str(e.value)
 
     def test_invalid_type_raises(self):
-        """Test that an unsupported button type raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an unsupported button type raises a StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.popover("label", type="invalid")
-        assert "must be" in str(e.value)
+        assert "Invalid `type` value" in str(e.value)
 
     def test_just_label(self):
         """Test that it correctly applies label param."""
@@ -1362,7 +1362,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
 
     def test_throws_error_on_wrong_state(self):
         """Test that it throws an error on unknown state."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.status("label", state="unknown")
 
     def test_just_label(self):
@@ -2267,7 +2267,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_decorator_invalid_on_dismiss(self):
         """Test dialog decorator with invalid on_dismiss raises error"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
 
             @dialog_decorator("Test Dialog", on_dismiss="invalid")
             def test_dialog():
@@ -2275,7 +2275,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             test_dialog()
 
-        assert "You have passed invalid to `on_dismiss`" in str(exc_info.value)
+        assert "Invalid `on_dismiss` value" in str(exc_info.value)
 
     def test_dialog_on_dismiss_rerun(self):
         """Test that the dialog decorator with on_dismiss='rerun'."""

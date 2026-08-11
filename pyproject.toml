@@ -345,6 +345,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
   "RUF069",  # Allow float equality checks in test assertions.
   "S",       # Ignore bandit security rules (test code doesn't need security hardening).
+  "TID251",  # Allow direct hash constructors in test fixtures and FIPS policy probes.
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
@@ -357,6 +358,13 @@ extend-safe-fixes = ["TC002", "TC003"]
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"hashlib.md5".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.sha1".msg = "Use an approved constructor or streamlit.util.create_fast_hasher; only use SHA-1 directly when a protocol requires it."
+"hashlib.blake2b".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.blake2s".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.new".msg = "Use a named approved constructor or streamlit.util.create_fast_hasher."
 
 [tool.ruff.lint.isort]
 known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
