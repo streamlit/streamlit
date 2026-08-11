@@ -1100,23 +1100,24 @@ _create_option(
 _create_option(
     "server.enableXsrfProtection",
     description="""
-        Enables support for Cross-Site Request Forgery (XSRF) protection, for
-        added security.
+        Enables Cross-Site Request Forgery (XSRF) protection for browser
+        WebSocket handshakes.
 
-        When enabled, browser WebSocket handshakes that include an ``Origin``
-        header must present a matching double-submit XSRF token (cookie plus
+        When enabled, a browser handshake that includes an ``Origin`` header
+        must present a matching double-submit XSRF token (cookie plus
         ``Sec-WebSocket-Protocol`` entry) or Streamlit closes the socket with
-        code ``1008`` before accepting the connection. Connections without an
-        ``Origin`` header are not subject to that check, so programmatic
-        clients that omit ``Origin`` continue to work. The frontend currently
-        shares that subprotocol slot with host auth tokens
-        (``hostAuthToken ?? xsrfCookie``); when a host auth token is present it
-        occupies the slot, so ``useExternalAuthToken`` embeds cannot also send
-        the XSRF token and must disable XSRF (or wait for a protocol that can
-        carry both) under default-on protection. This option does not enable
-        ``server.enableCORS``; keep CORS enabled (and configure
-        ``server.corsAllowedOrigins``) if you need to limit which origins may
-        attempt a WebSocket connection.
+        code ``1008`` before accepting the connection.
+
+        - Connections without an ``Origin`` header skip that check, so
+          programmatic clients that omit ``Origin`` continue to work.
+        - The frontend currently shares the second subprotocol slot with host
+          auth tokens (``hostAuthToken ?? xsrfCookie``). When a host auth token
+          is present it occupies the slot, so ``useExternalAuthToken`` embeds
+          cannot also send the XSRF token and must disable XSRF (or wait for a
+          protocol that can carry both) under default-on protection.
+        - This option does not enable ``server.enableCORS``. Keep CORS enabled
+          (and configure ``server.corsAllowedOrigins``) if you need to limit
+          which origins may attempt a WebSocket connection.
     """,
     default_val=True,
     type_=bool,

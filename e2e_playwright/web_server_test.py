@@ -667,7 +667,7 @@ def test_direct_websocket_connection_with_subprotocol(app: Page, app_base_url: s
     Browser handshakes include an Origin header, so the second subprotocol entry
     must be the matching ``_streamlit_xsrf`` cookie value when XSRF is enabled.
     """
-    # The app fixture automatically navigates and waits for the app to load.
+    # Re-wait so ``_streamlit_xsrf`` is present before the direct handshake.
     wait_for_app_loaded(app)
     ws_url = _app_ws_url(app_base_url, path="/_stcore/stream")
     result = app.evaluate(
