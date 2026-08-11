@@ -368,14 +368,17 @@ def _test_number_cell_editing(
     cell_overlay.press("ControlOrMeta+A")
 
     # Get the (number) input element and check the value
-    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    input_field = cell_overlay.locator(".gdg-input")
+    expect(input_field).to_have_attribute("value", "1231231.41")
     if not skip_snapshot:
         assert_snapshot(cell_overlay, name="st_data_editor-number_col_editor")
 
     # Change the value
-    cell_overlay.locator(".gdg-input").fill("9876.54")
-    # Press Enter to apply the change
-    themed_app.keyboard.press("Enter")
+    input_field.fill("9876.54")
+    # Ensure React onChange has applied before Enter. Without the glide patch,
+    # Enter's setTimeout(0) commit can still see a stale tempValue closure.
+    expect(input_field).to_have_value("9876.54")
+    input_field.press("Enter")
     wait_for_app_run(themed_app)
 
     # Check if that the value was submitted
