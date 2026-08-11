@@ -107,7 +107,14 @@ sent, so existing deployed frontends against a new backend do not regress.
 
 ### 2. Backend resolver
 
-Add `lib/streamlit/runtime/theme_type.py` (sketch under Option C):
+Add `lib/streamlit/runtime/theme_type.py` (sketch under Option C).
+
+**Module comment required:** The general principle (per `AGENTS.md`) is that theming
+calculations belong on the frontend. This module is a justified exception: the backend is
+the only entity that has both the user's appearance preference AND `config.toml` at
+first-run time (the FE hasn't received `NewSession.custom_theme` yet). The implementation
+PR must include a short module-level docstring explaining this so future readers do not
+"fix" it back to FE-only luminance.
 
 ```python
 def resolve_theme_type(
@@ -481,11 +488,14 @@ if (prevAppearance !== currAppearance && !this.skipNextThemeUpdate) {
 }
 if (this.skipNextThemeUpdate) {
   this.skipNextThemeUpdate = false
-  // Update dedup guard to match what the script currently sees (the custom theme
-  // just applied by processThemeInput). Without this, lastRerunAppearance stays at
-  // the initial preset value, and a later toggle back to that appearance would be
-  // incorrectly suppressed by the dedup guard.
-  this.lastRerunAppearance = currAppearance
+  // Update dedup guard to match what the script currently sees — BUT only if
+  // no pending rerun is waiting. A pending rerun means a legitimate appearance
+  // change happened while the script was running; advancing the guard here would
+  // make the subsequent drain no-op (currentAppearance === lastRerunAppearance),
+  // swallowing the rerun and leaving Python with a stale type.
+  if (!this.pendingThemeRerun) {
+    this.lastRerunAppearance = currAppearance
+  }
 }
 
 // --- Drain pending theme rerun when connected + idle ---
@@ -546,8 +556,10 @@ this.lastRerunAppearance = hasLightBackgroundColor(
    `activeTheme` prop flows to `App`.
 5. `componentDidUpdate` fires for the new render — `skipNextThemeUpdate` is still
    `true`.
-6. Flag is consumed, cleared, and `lastRerunAppearance` is updated to the new
-   appearance (ensures dedup guard tracks the custom theme's visual state).
+6. Flag is consumed and cleared. If no `pendingThemeRerun` is outstanding,
+   `lastRerunAppearance` is updated to the new appearance (ensures dedup guard
+   tracks the custom theme's visual state). If `pendingThemeRerun` IS set, the
+   guard is left stale so the subsequent drain can fire correctly.
 
 #### Why this does not regress MPA (failure mode analysis)
 
@@ -574,6 +586,7 @@ this.lastRerunAppearance = hasLightBackgroundColor(
 | Script already running when theme changes | `maybeRerunForThemeChange` sees `RUNNING` → sets `pendingThemeRerun=true` → script finishes → `componentDidUpdate` sees `NOT_RUNNING` + pending → fires rerun | Correct |
 | Theme change while disconnected | `maybeRerunForThemeChange` sees `!isServerConnected()` → sets `pendingThemeRerun=true` → reconnect → `componentDidUpdate` drain sees connected + `NOT_RUNNING` + pending → fires rerun | Correct |
 | User switches away from host theme via menu | `setAndSendTheme` → active theme name changes → `isHostThemePainted()` returns false → next BackMsg sends `hostThemeActive=false` + menu preference → BE resumes config.toml resolution | Correct |
+| Appearance change while RUNNING + hash-changing `processThemeInput` | Theme flip sets `pendingThemeRerun=true` → script finishes → `NewSession` with different config theme → `processThemeInput` sets `skip=true` → `componentDidUpdate`: skip consumed but `lastRerunAppearance` NOT updated (pending guard) → drain fires → `currentAppearance !== lastRerunAppearance` → rerun sends | Correct |
 
 #### Minor modification to `handleThemeMessage`
 
@@ -645,6 +658,10 @@ chosen product meaning. Drop stale first-load / settings caveats; keep CSS-overr
 - Skip consumption updates `lastRerunAppearance` to the new appearance — verify that a
   subsequent toggle back to the pre-custom-theme appearance still fires a rerun (dedup
   guard is not stale).
+- Skip consumption does NOT update `lastRerunAppearance` when `pendingThemeRerun` is
+  true — verify that an appearance change deferred while RUNNING, followed by a
+  hash-changing `processThemeInput`, still fires once idle (the pending guard prevents
+  the dedup from swallowing the drain).
 - `handleThemeMessage` stores `hostThemePreference` and `hostImportedThemeName`;
   `getResolvedThemePreference()` returns host preference only when
   `isHostThemePainted()` is true; falls through to menu/OS otherwise.
@@ -704,7 +721,7 @@ BE work.
 | BE luminance disagrees with FE | Use identical WCAG formula (sRGB linearization + BT.709, threshold `> 0.5`); normalize all hex forms (#rgb/#rgba/#rrggbb/#rrggbbaa); cross-check unit test against FE boundary values; fall back to `base`/preference for non-hex |
 | Preference tracking drifts after `processThemeInput` | Track explicit `ThemeSelection`, never reverse from theme name |
 | Host/SiS theme messages ignored | Explicit `handleThemeMessage` path; re-enable hostframe E2E |
-| Option A/B chosen late | §2 is the only major rewrite; proto + auto-rerun stay |
+| Option A/B chosen late | §2 resolver is the primary rewrite. However, Option A also requires §4 trigger/dedup redesign: a preference change that does NOT flip painted luminance (e.g. Light→Dark with a single dark custom theme) must still trigger a rerun under A, so the auto-rerun dimension would need to track preference-diff (or dual-track preference + appearance), not only appearance-diff. Proto stays either way. |
 
 ## Out of scope
 
