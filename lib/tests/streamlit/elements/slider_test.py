@@ -25,7 +25,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
-from streamlit.elements.widgets.slider import SliderSerde
+from streamlit.elements.widgets.slider import (
+    _MAX_SAFE_DAY,
+    _MIN_SAFE_DAY,
+    SliderSerde,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidWidthError,
@@ -272,8 +276,50 @@ class SliderTest(DeltaGeneratorTestCase):
             )
         assert "too far from 1970" in str(exc.value)
         # The message has to name a usable range, not just reject the input.
-        assert "1684-07-28" in str(exc.value)
-        assert "2255-06-05" in str(exc.value)
+        assert f"{_MIN_SAFE_DAY:%Y-%m-%d}" in str(exc.value)
+        assert f"{_MAX_SAFE_DAY:%Y-%m-%d}" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("as_date", lambda d: d),
+            ("as_datetime_midnight", lambda d: datetime.combine(d, time())),
+            ("as_datetime_end_of_day", lambda d: datetime.combine(d, time(23, 59))),
+        ]
+    )
+    def test_advertised_range_is_actually_accepted(self, _name, to_value):
+        """The bounds named in the error message must themselves be accepted.
+
+        The representable limit lands mid-day, so naming the limit's calendar days
+        would recommend values that are then rejected -- following the error message
+        would produce another error. Both ends are checked at the end of the day too,
+        since a datetime may carry any time.
+        """
+        min_value = to_value(_MIN_SAFE_DAY)
+        max_value = to_value(_MAX_SAFE_DAY)
+
+        st.slider("Label", min_value=min_value, max_value=max_value, value=min_value)
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    def test_advertised_range_is_the_widest_whole_day_span(self):
+        """One day beyond either advertised bound is rejected.
+
+        Guards the range from drifting inward and needlessly narrowing what callers
+        are told they can use.
+        """
+        for out_of_range in (
+            _MIN_SAFE_DAY - timedelta(days=1),
+            _MAX_SAFE_DAY + timedelta(days=1),
+        ):
+            with pytest.raises(StreamlitAPIException):
+                st.slider(
+                    "Label",
+                    min_value=datetime.combine(out_of_range, time(23, 59)),
+                    max_value=datetime.combine(out_of_range, time(23, 59)),
+                    value=datetime.combine(out_of_range, time(23, 59)),
+                )
 
     @parameterized.expand(
         [

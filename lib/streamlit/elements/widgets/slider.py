@@ -123,15 +123,19 @@ SUPPORTED_TYPES: Final = {
 }
 TIMELIKE_TYPES: Final = (SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE)
 
-# Widest date/datetime range the frontend can represent exactly. Timelike values are
+# Widest span of whole days the frontend can represent exactly. Timelike values are
 # serialized as microseconds since the epoch, and the frontend holds that in a
-# JavaScript number, which is only exact up to ``JSNumber.MAX_SAFE_INTEGER``. Used for
-# the error message only, so naive datetimes are fine here.
-_MIN_SAFE_TIMELIKE: Final = datetime(1970, 1, 1) - timedelta(
-    microseconds=JSNumber.MAX_SAFE_INTEGER
+# JavaScript number, which is only exact up to ``JSNumber.MAX_SAFE_INTEGER``.
+#
+# That limit lands mid-day -- 00:12 on the first day, 23:47 on the last -- so these
+# round *inward* to the first and last day that is usable at any time of day. Naming
+# the raw limit days instead would recommend values the check below then rejects.
+_SAFE_TIMELIKE_SPAN: Final = timedelta(microseconds=JSNumber.MAX_SAFE_INTEGER)
+_MIN_SAFE_DAY: Final = (datetime(1970, 1, 1) - _SAFE_TIMELIKE_SPAN).date() + timedelta(
+    days=1
 )
-_MAX_SAFE_TIMELIKE: Final = datetime(1970, 1, 1) + timedelta(
-    microseconds=JSNumber.MAX_SAFE_INTEGER
+_MAX_SAFE_DAY: Final = (datetime(1970, 1, 1) + _SAFE_TIMELIKE_SPAN).date() - timedelta(
+    days=1
 )
 
 
@@ -1107,8 +1111,8 @@ class SliderMixin:
                     raise StreamlitAPIException(
                         f"{name} is too far from 1970 for Streamlit to represent "
                         "exactly. Use a value between "
-                        f"{_MIN_SAFE_TIMELIKE:%Y-%m-%d} and "
-                        f"{_MAX_SAFE_TIMELIKE:%Y-%m-%d}."
+                        f"{_MIN_SAFE_DAY:%Y-%m-%d} and "
+                        f"{_MAX_SAFE_DAY:%Y-%m-%d}."
                     )
 
         # At this point, prepared_value is expected to be a list of floats:
