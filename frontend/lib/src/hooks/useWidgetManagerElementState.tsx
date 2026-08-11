@@ -22,7 +22,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 /**
  * Think of useState, but the state is also persisted in the widget manager.
- * This allows you to have the state be persisted between mounting and unmounting of the component.
+ * This persists the state across component mount and unmount cycles.
  *
  * The `widgetMgr` may be undefined (e.g. for `st.dataframe`, which shares the
  * DataFrame component with `st.data_editor` but has no widget manager). In that
