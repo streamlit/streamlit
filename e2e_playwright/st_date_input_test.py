@@ -806,3 +806,44 @@ def test_range_date_active_calendar_keyboard_navigation(app: Page):
     app.keyboard.press("Escape")
     expect(calendar).not_to_be_visible()
     expect(last_segment).to_be_focused()
+
+
+def test_year_picker_does_not_revert_month(app: Page):
+    """Changing the year after changing the month must not revert the month."""
+    # "Single datetime" starts at July 6, 2019
+    date_input = get_date_input(app, "Single datetime")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # --- Change month from July to March ---
+    month_trigger = calendar.get_by_role("button", name="month", exact=True)
+    expect(month_trigger).to_have_text("July")
+    month_trigger.click()
+
+    picker_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(picker_popover).to_be_visible()
+    picker_popover.get_by_role("option", name="March").click()
+
+    # Verify month changed
+    expect(month_trigger).to_have_text("March")
+
+    # --- Now change the year ---
+    year_trigger = calendar.get_by_role("button", name="year", exact=True)
+    expect(year_trigger).to_have_text("2019")
+    year_trigger.click()
+
+    year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(year_popover).to_be_visible()
+    year_popover.get_by_role("option", name="2011").click()
+
+    # --- The month must still be March, NOT reverted to July ---
+    expect(month_trigger).to_have_text("March")
+    expect(year_trigger).to_have_text("2011")
+
+    # Select a date to commit and verify the output has the correct month
+    calendar.get_by_label(re.compile(r"March 6, 2011")).click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 2: 2011-03-06")

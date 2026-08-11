@@ -18,6 +18,7 @@ import {
   KeyboardEvent,
   ReactElement,
   useCallback,
+  useContext,
   useRef,
   useState,
 } from "react"
@@ -26,14 +27,17 @@ import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import { ArrowBack, ArrowForward } from "@emotion-icons/material-rounded"
 import {
   CalendarMonthPicker,
+  CalendarStateContext,
   CalendarYearPicker,
   Heading,
   Key,
+  RangeCalendarStateContext,
 } from "react-aria-components"
 
 import Icon from "~lib/components/shared/Icon/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledCalendarHeader,
@@ -148,6 +152,30 @@ function HeaderPickerSelect({
  * consistent styling with other Streamlit dropdowns.
  */
 export function CalendarPopoverHeader(): ReactElement {
+  const calendarState = useContext(CalendarStateContext)
+  const rangeCalendarState = useContext(RangeCalendarStateContext)
+  const state = calendarState || rangeCalendarState
+
+  // Workaround for React Aria bug: CalendarYearPicker's items may embed a
+  // stale month when focusedValue is controlled. When the user changes the
+  // month and then picks a year, the library would propagate the old month
+  // from items[key].date. We intercept onChange to use state.focusedDate
+  // (which always reflects the correct month) and only change the year.
+  const handleYearChange = useCallback(
+    (key: Key | null, items: HeaderPickerItem[]): void => {
+      if (isNullOrUndefined(key) || !state) return
+      const selectedItem = items[Number(key)]
+      if (!selectedItem) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const selectedYear = (selectedItem as any).date?.year as
+        | number
+        | undefined
+      if (isNullOrUndefined(selectedYear)) return
+      state.setFocusedDate(state.focusedDate.set({ year: selectedYear }))
+    },
+    [state]
+  )
+
   return (
     <StyledCalendarHeader>
       <StyledCalendarHeaderButton slot="previous" aria-label="Previous month">
@@ -165,11 +193,11 @@ export function CalendarPopoverHeader(): ReactElement {
           )}
         </CalendarMonthPicker>
         <CalendarYearPicker>
-          {({ "aria-label": ariaLabel, value, onChange, items }) => (
+          {({ "aria-label": ariaLabel, value, items }) => (
             <HeaderPickerSelect
               ariaLabel={ariaLabel}
               value={value}
-              onChange={onChange}
+              onChange={key => handleYearChange(key, items)}
               items={items}
             />
           )}
