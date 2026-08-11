@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
 import socket
@@ -61,7 +62,7 @@ import os
 # WebSocket handshake requires it. Ruff separately prevents new Streamlit uses.
 FIPS_RESTRICTED_ALGORITHMS = {"md5", "blake2b", "blake2s"}
 REJECT_BLAKE2_DIGEST_SIZE = os.environ.get(
-    "STREAMLIT_TEST_REJECT_BLAKE2_DIGEST_SIZE"
+    "__FIPS_REJECT_ENV__"
 ) == "1"
 
 
@@ -93,7 +94,7 @@ def guarded_new(name, *args, **kwargs):
 
 
 hashlib.new = guarded_new
-"""
+""".replace("__FIPS_REJECT_ENV__", _REJECT_BLAKE2_DIGEST_SIZE_ENV)
 
 
 @pytest.mark.parametrize(
@@ -106,7 +107,8 @@ def test_internal_hashing_uses_non_security_hashes(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Exercise internal hashes with FIPS-like provider restrictions."""
+    """Fail if internal cache, media, or watcher hashing omits
+    ``usedforsecurity=False`` under FIPS-like BLAKE2b/MD5 restrictions."""
     real_blake2b = hashlib.blake2b
     real_new = hashlib.new
     blake2b_call_count = 0
@@ -197,6 +199,9 @@ st.write("{_FIPS_SMOKE_MARKER}")
         f"{tmp_path}{os.pathsep}{python_path}" if python_path else str(tmp_path)
     )
     env[_REJECT_BLAKE2_DIGEST_SIZE_ENV] = "1" if reject_blake2_digest_size else "0"
+    # Disable stdout/stderr buffering so the redirected server log is populated
+    # promptly, keeping failure diagnostics from looking empty under buffering.
+    env["PYTHONUNBUFFERED"] = "1"
 
     # The server output is sent to a log file rather than a pipe so that reading
     # it for diagnostics never blocks and a chatty server cannot deadlock on a
@@ -338,7 +343,11 @@ def _terminate(process: subprocess.Popen[str]) -> None:
         process.wait(timeout=5)
     except subprocess.TimeoutExpired:
         process.kill()
-        process.wait(timeout=5)
+        # Reap the killed process; if even SIGKILL does not settle in time there
+        # is nothing more to do, so avoid masking the real failure with a
+        # teardown error.
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            process.wait(timeout=5)
 
 
 def _get_free_tcp_port() -> int:
