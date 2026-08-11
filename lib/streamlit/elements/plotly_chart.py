@@ -558,8 +558,13 @@ class PlotlyMixin:
 
         key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If this is ``None`` (default), the element's identity
-            will be determined based on the values of the other parameters.
+            identity. If a key is provided, Streamlit can restore the chart's
+            frontend state (zoom, pan, legend visibility, and 3D camera
+            position) if the chart is unmounted and remounted. To preserve
+            this state when the chart data changes, set Plotly's
+            ``layout.uirevision`` to a stable value. If this is ``None``
+            (default), the chart's frontend state is not preserved and resets
+            when the chart is unmounted and remounted.
 
             If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
@@ -747,22 +752,31 @@ class PlotlyMixin:
 
         ctx = get_script_run_ctx()
 
-        # We are computing the widget id for all plotly uses
-        # to also allow non-widget Plotly charts to keep their state
-        # when the frontend component gets unmounted and remounted.
-        plotly_chart_proto.id = compute_and_register_element_id(
-            "plotly_chart",
-            user_key=key,
-            key_as_main_identity=False,
-            dg=self.dg,
-            plotly_spec=plotly_chart_proto.spec,
-            plotly_config=plotly_chart_proto.config,
-            selection_mode=selection_mode,
-            is_selection_activated=is_selection_activated,
-            theme=theme,
-            width=width,
-            height=height,
-        )
+        if is_selection_activated:
+            # Interactive Plotly charts are widgets. Keep their existing,
+            # content-derived identity behavior for compatibility.
+            plotly_chart_proto.id = compute_and_register_element_id(
+                "plotly_chart",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                plotly_spec=plotly_chart_proto.spec,
+                plotly_config=plotly_chart_proto.config,
+                selection_mode=selection_mode,
+                is_selection_activated=is_selection_activated,
+                theme=theme,
+                width=width,
+                height=height,
+            )
+        elif key is not None:
+            # A keyed passive chart has stable identity across content updates,
+            # which lets the frontend restore state after a remount.
+            plotly_chart_proto.id = compute_and_register_element_id(
+                "plotly_chart",
+                user_key=key,
+                key_as_main_identity=True,
+                dg=self.dg,
+            )
 
         # Handle "content" width and height by inspecting the figure's natural dimensions
         final_width = _resolve_content_width(width, figure)

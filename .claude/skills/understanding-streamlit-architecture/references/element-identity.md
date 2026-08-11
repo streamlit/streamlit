@@ -72,7 +72,7 @@ API:
 
 Current examples include:
 
-- Plotly figure state
+- Plotly figure state for interactive or explicitly keyed charts
 - Vega view state
 - audio/video autoplay guards
 
