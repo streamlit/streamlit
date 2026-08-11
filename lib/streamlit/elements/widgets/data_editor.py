@@ -1685,12 +1685,15 @@ class DataEditorMixin:
                     )
                 )
                 # Success: render the committed frame and signal the frontend to
-                # clear its pending edits.
+                # clear its pending edits. Set `clear_edits` only after the Arrow
+                # serialization succeeds, so a failure there falls through to the
+                # exception handler with the edits preserved (instead of telling
+                # the frontend to wipe them while the baseline is rendered).
                 render_df = committed_df
-                proto.clear_edits = True
                 proto.arrow_data.data = (
                     dataframe_util.convert_arrow_table_to_arrow_bytes(committed_arrow)
                 )
+                proto.clear_edits = True
             except ScriptControlException:
                 # st.rerun()/st.stop() inside the callback: preserve the pending
                 # edits and keep normal control flow.

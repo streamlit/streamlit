@@ -31,6 +31,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit import dataframe_util
 from streamlit.dataframe_util import (
     DataFormat,
     convert_arrow_bytes_to_pandas_df,
@@ -2181,6 +2182,56 @@ class DataEditorCommitEditsFlowTest(DeltaGeneratorTestCase):
 
         assert proto2.clear_edits is False
         assert list(result.columns) == ["a", "b"]
+        assert any(
+            delta.new_element.HasField("exception")
+            for delta in self.get_all_deltas_from_queue()
+        )
+        stored = self.script_run_ctx.session_state["editor"]
+        assert stored["edited_rows"] == {0: {"a": 5}}
+
+    def test_serialization_failure_after_commit_preserves_edits(self) -> None:
+        """If serializing the committed frame fails, edits are preserved.
+
+        Regression guard: ``clear_edits`` must not be set if the Arrow
+        serialization of the committed frame raises. Otherwise the frontend
+        would wipe the preserved edits even though the baseline (not the
+        committed frame) is rendered.
+        """
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            committed = source.copy()
+            committed["a"] *= 10
+            return committed
+
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+
+        real_convert = dataframe_util.convert_arrow_table_to_arrow_bytes
+        call_count = {"n": 0}
+
+        def failing_convert(table: pa.Table) -> bytes:
+            call_count["n"] += 1
+            # The first call serializes the baseline frame; fail only on the
+            # second call, which serializes the committed frame on the success
+            # path (right before clear_edits would be set).
+            if call_count["n"] >= 2:
+                raise RuntimeError("arrow serialization failed")
+            return real_convert(table)
+
+        with patch.object(
+            dataframe_util,
+            "convert_arrow_table_to_arrow_bytes",
+            side_effect=failing_convert,
+        ):
+            result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        # The failure is treated as a failed commit: edits preserved, clear_edits
+        # unset, baseline rendered, and the exception surfaced.
+        assert proto2.clear_edits is False
+        assert result["a"].tolist() == [1, 2]
         assert any(
             delta.new_element.HasField("exception")
             for delta in self.get_all_deltas_from_queue()
