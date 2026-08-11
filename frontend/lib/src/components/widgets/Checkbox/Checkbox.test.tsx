@@ -22,6 +22,11 @@ import {
   LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -451,5 +456,61 @@ describe("Checkbox query param binding", () => {
       false,
       undefined
     )
+  })
+})
+
+describe("Checkbox wrap", () => {
+  const LONG_LABEL = "A very long checkbox label that should ellipsize"
+
+  const horizontalContext: IFlexContext = {
+    direction: Direction.HORIZONTAL,
+    isInHorizontalLayout: true,
+    isInRoot: false,
+    isInContentWidthContainer: false,
+  }
+
+  it.each([
+    ["checkbox", CheckboxProto.StyleType.DEFAULT],
+    ["toggle", CheckboxProto.StyleType.TOGGLE],
+  ])(
+    "sets a native title with the full label when %s wrap is false",
+    (_name, type) => {
+      render(
+        <Checkbox {...getProps({ type, wrap: false, label: LONG_LABEL })} />
+      )
+      expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+    }
+  )
+
+  it("does not set a title by default outside a horizontal layout", () => {
+    render(<Checkbox {...getProps({ label: LONG_LABEL })} />)
+    expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+  })
+
+  it("auto default sets a title inside a horizontal layout", () => {
+    render(
+      <FlexContext.Provider value={horizontalContext}>
+        <Checkbox {...getProps({ label: LONG_LABEL })} />
+      </FlexContext.Provider>
+    )
+    expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+  })
+
+  it("explicit wrap=true keeps wrapping inside a horizontal layout", () => {
+    render(
+      <FlexContext.Provider value={horizontalContext}>
+        <Checkbox {...getProps({ wrap: true, label: LONG_LABEL })} />
+      </FlexContext.Provider>
+    )
+    expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+  })
+
+  it("does not set a title when help is set (help tooltip takes over)", () => {
+    render(
+      <Checkbox
+        {...getProps({ wrap: false, label: LONG_LABEL, help: "Help wins" })}
+      />
+    )
+    expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
   })
 })

@@ -18,6 +18,7 @@ import { memo, ReactElement, useCallback } from "react"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
 
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
@@ -25,6 +26,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -86,9 +88,35 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
+  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
+  // wrap resolves to no-wrap, the label ellipsizes on one line and the full
+  // label is revealed on hover via a native title, skipped when help is set
+  // since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const truncate = !wrap
+  const addTitleTooltip = truncate && !element.help
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(
+    addTitleTooltip,
+    element.label
+  )
+
   const labelContent = (
-    <StyledContent visibility={labelVisibility} data-testid="stWidgetLabel">
-      <StreamlitMarkdown source={element.label} allowHTML={false} isLabel />
+    <StyledContent
+      ref={titleRef}
+      visibility={labelVisibility}
+      $truncate={truncate}
+      data-testid="stWidgetLabel"
+    >
+      {/* Wrap the label so we can read its plain text for the native title
+          without picking up the help icon. `display: contents` adds no box. */}
+      <span ref={labelTextRef} style={{ display: "contents" }}>
+        <StreamlitMarkdown
+          source={element.label}
+          allowHTML={false}
+          isLabel
+          truncate={truncate}
+        />
+      </span>
       {element.help && (
         <WidgetLabelHelpIconInline
           content={element.help}
@@ -110,6 +138,7 @@ function Checkbox({
           isDisabled={disabled}
           onChange={handleChange}
           aria-label={element.label}
+          $truncate={truncate}
         >
           {({ isSelected, isHovered, isDisabled: isDisab }) => (
             <>
@@ -138,6 +167,7 @@ function Checkbox({
         isDisabled={disabled}
         onChange={handleChange}
         aria-label={element.label}
+        $truncate={truncate}
       >
         {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
           <>

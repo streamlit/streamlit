@@ -21,7 +21,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitValueError,
+)
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.widgets import register_widget_from_metadata
@@ -455,3 +459,43 @@ hello
             widget_func("the label", persist_state="session")
 
         assert "must have a unique 'key' parameter" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_wrap_default(self, _name: str, widget_func: object) -> None:
+        """By default wrap is left unset (auto) so the frontend resolves it from
+        the layout."""
+        widget_func("the label")
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert not c.HasField("wrap")
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox, True),
+            ("checkbox", st.checkbox, False),
+            ("toggle", st.toggle, True),
+            ("toggle", st.toggle, False),
+        ]
+    )
+    def test_wrap(self, _name: str, widget_func: object, wrap_value: bool) -> None:
+        """The wrap parameter is forwarded to the checkbox proto."""
+        widget_func("the label", wrap=wrap_value)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.wrap is wrap_value
+
+    def test_wrap_excluded_from_id(self) -> None:
+        """wrap is layout-only and must not change the element id.
+
+        Two otherwise-identical checkboxes that differ only in wrap collide on
+        the same auto-generated id, proving wrap is excluded from id computation
+        and so preserves widget state when toggled.
+        """
+        st.checkbox("same label")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.checkbox("same label", wrap=False)

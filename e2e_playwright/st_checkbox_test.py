@@ -26,14 +26,18 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     click_toggle,
     expect_help_tooltip,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_checkbox,
     get_element_by_key,
     get_expander,
+    reset_hovering,
 )
 
-CHECKBOX_ELEMENTS = 20
+CHECKBOX_ELEMENTS = 24
+
+WRAP_LABEL = "Include archived projects from the last several quarters"
 
 
 def test_checkbox_widget_display(
@@ -158,6 +162,44 @@ def test_grouped_checkboxes_height(app: Page, assert_snapshot: ImageCompareFunct
     expect(get_checkbox(expander_details, "checkbox group - 1")).to_have_css(
         "height", "24px"
     )
+
+
+def test_wrap_false_single_row_and_auto_resolution(app: Page):
+    """wrap=False keeps the checkbox on one row and exposes the full label via a
+    native title, while the auto default (wrap=None) wraps and grows taller in a
+    vertical layout but ellipsizes with a title inside a horizontal container.
+    """
+    wrap_false = get_element_by_key(app, "wrap_false_checkbox")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_checkbox")
+
+    # wrap=False: label ellipsized and full label exposed via a native title.
+    expect_label_truncated(wrap_false)
+    expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+    # Auto default in a vertical layout wraps onto another line and adds no title.
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    false_box = wrap_false.get_by_test_id("stCheckbox").bounding_box()
+    auto_box = wrap_auto_vertical.get_by_test_id("stCheckbox").bounding_box()
+    assert false_box is not None
+    assert auto_box is not None
+    # The 4px margin absorbs sub-pixel rounding so the wrapped (two-line) checkbox
+    # is clearly taller than the single-row one, not just larger by rounding.
+    assert auto_box["height"] > false_box["height"] + 4
+
+    # Auto default inside a horizontal container keeps one row with a title.
+    wrap_auto_horizontal = get_element_by_key(app, "wrap_auto_checkbox")
+    expect_label_truncated(wrap_auto_horizontal)
+    expect(wrap_auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_wrap_false_help_takes_precedence_over_title(app: Page):
+    """When help is set, no native title is added and the help tooltip shows."""
+    container = get_element_by_key(app, "wrap_help_checkbox")
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    reset_hovering(app)
+    expect_help_tooltip(app, container, "wrap help text")
 
 
 def test_check_top_level_class(app: Page):

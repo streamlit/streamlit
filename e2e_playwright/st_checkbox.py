@@ -75,6 +75,28 @@ st.checkbox("checkbox with content width", width="content")
 st.checkbox("checkbox with stretch width", width="stretch")
 st.checkbox("checkbox with 200px width", width=200)
 
+# wrap=False keeps the checkbox on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title (skipped when help is set). A narrow
+# fixed width forces the long label to overflow, so the auto default (wrap=None)
+# in a vertical layout wraps and grows taller while wrap=False stays single-row.
+_WRAP_LABEL = "Include archived projects from the last several quarters"
+with st.container(key="wrap_checkboxes"):
+    st.checkbox(_WRAP_LABEL, width=200, wrap=False, key="wrap_false_checkbox")
+    st.checkbox(_WRAP_LABEL, width=200, key="wrap_auto_vertical_checkbox")
+    st.checkbox(
+        _WRAP_LABEL,
+        width=200,
+        wrap=False,
+        help="wrap help text",
+        key="wrap_help_checkbox",
+    )
+
+# Default (auto) wrap: inside a horizontal container the label does not wrap; it
+# ellipsizes and exposes the full label via a native title. A fixed container
+# width narrower than the label forces the overflow.
+with st.container(horizontal=True, width=250, key="wrap_auto_horizontal_checkbox"):
+    st.checkbox(_WRAP_LABEL, key="wrap_auto_checkbox")
+
 st.markdown("Dynamic checkbox:")
 
 if st.toggle("Update checkbox props"):
