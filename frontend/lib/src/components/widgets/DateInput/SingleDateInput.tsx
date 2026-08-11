@@ -303,9 +303,29 @@ function SingleDateInput({
         setIsCalendarActive(false)
         // Synchronous form commit: outside-click dismiss can race form submit
         // (the close-commit effect fires after paint). Mirrors handleBlur.
-        if (formCommit && displayValueRef.current) {
-          if (!datesEqual(displayValueRef.current, value)) {
-            formCommit(displayValueRef.current)
+        if (formCommit) {
+          const segments = triggerRef.current?.querySelectorAll(
+            '[role="spinbutton"]'
+          )
+          const placeholders = triggerRef.current?.querySelectorAll(
+            '[role="spinbutton"][data-placeholder="true"]'
+          )
+          const isPartiallyTyped =
+            segments &&
+            placeholders &&
+            placeholders.length > 0 &&
+            placeholders.length < segments.length
+          const isFullyCleared =
+            segments &&
+            segments.length > 0 &&
+            placeholders?.length === segments.length
+          if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+            // Will revert on next render — don't commit stale/invalid state.
+          } else {
+            const pending = isFullyCleared ? null : displayValueRef.current
+            if (!datesEqual(pending, value)) {
+              formCommit(pending)
+            }
           }
         }
       },
