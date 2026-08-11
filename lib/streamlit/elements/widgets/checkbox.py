@@ -181,8 +181,8 @@ class CheckboxMixin:
               label that is too wide is truncated with an ellipsis.
 
             When the checkbox keeps a single-row label, hovering the label
-            reveals the full label in a tooltip. The checkbox indicator and help
-            icon remain visible.
+            reveals the full label in a tooltip, including when ``help`` is set.
+            The checkbox indicator and help icon remain visible.
 
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
@@ -371,8 +371,8 @@ class CheckboxMixin:
               label that is too wide is truncated with an ellipsis.
 
             When the toggle keeps a single-row label, hovering the label reveals
-            the full label in a tooltip. The toggle switch and help icon remain
-            visible.
+            the full label in a tooltip, including when ``help`` is set. The
+            toggle switch and help icon remain visible.
 
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
