@@ -98,12 +98,23 @@ colors.
 
 `type` answers "does the app look light or dark?" Resolve from the active theme/section:
 
-1. If `backgroundColor` is a 6-digit hex → use luminance (authoritative: what is painted).
+1. If `backgroundColor` is a valid hex color (`#rgb`, `#rgba`, `#rrggbb`, or `#rrggbbaa`)
+   → use luminance (authoritative: what is painted). Short forms are expanded before
+   computing luminance (e.g. `#fff` → `#ffffff`); alpha channels are ignored.
 2. Else if `base` is `"light"` or `"dark"` → use it (determines which preset bg fills in).
    For dual themes, `base` is always present — the FE forces it from the section variant
    name via `handleSectionInheritance` (e.g. `"dark"` for `[theme.dark]`), so step 2
    always applies unless a hex `backgroundColor` is set (step 1).
 3. Else `"light"` (the frontend default for single `[theme]` when `base` is unspecified).
+
+**Sidebar-only configs:** Setting only `[theme.sidebar]` (without any main-area keys in
+`[theme]`, `[theme.light]`, or `[theme.dark]`) still creates a custom theme on the FE —
+the main area inherits from `lightTheme` and always paints light. The resolver detects
+sidebar sections and enters the single-custom-theme path (returning `"light"` via the
+fallback), which matches what is painted. Similarly, `[theme.light.sidebar]` or
+`[theme.dark.sidebar]` trigger dual-theme mode on the FE (the FE's `hasThemeSectionConfigs`
+recursively checks nested objects); the resolver mirrors this by entering the dual-theme
+path when sidebar subsections are present.
 
 - Pros: Matches today's docs; matches the primary "contrast my content" use case; single dark custom theme
   correctly reports `"dark"` even if OS preference is light.
@@ -143,9 +154,11 @@ docstring wording change.
 | Presets only                                         | `"light"` / `"dark"` | Same as preference           |
 | Single `[theme]` with `base = "dark"`                | `"light"`            | `"dark"`                     |
 | Single `[theme]` with `#121212` bg, no `base`        | `"light"`            | `"dark"` (hex luminance)     |
+| Single `[theme]` with `#fff` bg, no `base`           | `"light"`            | `"light"` (short hex → luminance) |
 | Single `[theme]` with non-hex bg, no `base`          | `"light"`            | `"light"` (fallback)         |
 | `[theme.light]` + `[theme.dark]`, both well-authored | `"dark"`             | `"dark"` (section bg or forced variant base) |
 | `[theme.dark]` with light hex bg (pathological)      | `"dark"`             | `"light"` (what is painted)  |
+| Only `[theme.sidebar]` set (no main-area config)     | `"dark"`             | `"light"` (main area = lightTheme) |
 | Host dark theme (SiS/Cloud) overriding config        | `"dark"` (host)      | `"dark"` (host wins)         |
 
 ### User-facing behavior (reliability)
