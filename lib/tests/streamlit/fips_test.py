@@ -42,6 +42,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS = 30
+# Deadline for the WebSocket smoke session (rerun request to script finish),
+# kept separate from the server-startup timeout so each reads independently.
+_FIPS_SMOKE_SESSION_TIMEOUT_SECS = 30
 # Number of times to retry starting the server on a fresh port, guarding against
 # the small window where the chosen port is claimed between selection and bind.
 _SERVER_START_ATTEMPTS = 3
@@ -247,6 +250,11 @@ def _start_streamlit_server(
 
 
 def _run_streamlit_websocket_session(port: int) -> None:
+    """Drive a rerun over the WebSocket and assert the smoke session succeeds.
+
+    Sends a ``BackMsg`` rerun request, then asserts that the app emits the
+    smoke-marker markdown and a ``FINISHED_SUCCESSFULLY`` script status.
+    """
     websocket_url = f"ws://127.0.0.1:{port}/_stcore/stream"
     rerun_request = BackMsg(rerun_script=ClientState()).SerializeToString()
     saw_smoke_marker = False
@@ -259,7 +267,7 @@ def _run_streamlit_websocket_session(port: int) -> None:
     ) as websocket:
         websocket.send(rerun_request)
 
-        deadline = time.monotonic() + _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS
+        deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
         while time.monotonic() < deadline:
             try:
                 payload = websocket.recv(timeout=max(0.1, deadline - time.monotonic()))
@@ -288,7 +296,11 @@ def _run_streamlit_websocket_session(port: int) -> None:
 def _wait_for_streamlit_health(
     process: subprocess.Popen[str], port: int, log_path: Path
 ) -> bool:
-    """Poll the health endpoint, returning ``False`` if the server exits early."""
+    """Poll the health endpoint until it returns 'ok'.
+
+    Returns ``False`` if the process exits early; calls ``pytest.fail`` on
+    timeout after terminating the still-running server.
+    """
     deadline = time.monotonic() + _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS
     health_url = f"http://127.0.0.1:{port}/_stcore/health"
     # Bypass any configured proxy so the loopback request is not routed away.
@@ -308,6 +320,9 @@ def _wait_for_streamlit_health(
 
         time.sleep(0.2)
 
+    # Tear down the still-running server so a timeout does not leak a live
+    # child process into subsequent tests.
+    _terminate(process)
     output = log_path.read_text(encoding="utf-8", errors="replace")
     pytest.fail(
         f"Streamlit did not serve {health_url} within "

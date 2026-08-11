@@ -361,7 +361,7 @@ ban-relative-imports = "all"
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "hashlib.md5".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
-"hashlib.sha1".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.sha1".msg = "Use an approved constructor or streamlit.util.create_fast_hasher; only use SHA-1 directly when a protocol requires it."
 "hashlib.blake2b".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
 "hashlib.blake2s".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
 "hashlib.new".msg = "Use a named approved constructor or streamlit.util.create_fast_hasher."
