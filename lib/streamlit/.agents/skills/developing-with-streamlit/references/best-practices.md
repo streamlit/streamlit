@@ -247,7 +247,7 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly. When you do use `st.pyplot`, always pass a Matplotlib `Figure` — calling without `fig` is not supported.
+Prefer Vega-based charts over pyplot and Plotly.
 
 ```python
 # GOOD: Native charts for common cases
