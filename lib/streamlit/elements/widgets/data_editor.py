@@ -1113,6 +1113,11 @@ class DataEditorMixin:
                 specific rows when the data is reordered. Omit ``key`` to reset
                 all edits whenever the data changes.
 
+                When ``commit_edits`` is set, the widget's identity is based on
+                the schema only, so the row count and index labels *can* change
+                (for example, from a committed result) without resetting the
+                widget or orphaning the next edit.
+
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
 
@@ -1157,11 +1162,22 @@ class DataEditorMixin:
             Session State, a database, or a cache) is the app's responsibility;
             the result is the baseline for the current render only.
 
+            .. note::
+                The edits are cleared on the frontend without an immediate
+                rerun, so ``st.session_state[key]`` reflects the cleared state
+                only on the next rerun. Within the committing run itself,
+                ``st.session_state[key]`` still reports the batch that was just
+                committed. Use the ``edits`` argument (not
+                ``st.session_state[key]``) to inspect the committed batch inside
+                the callback.
+
             ``commit_edits`` has the following requirements and constraints:
 
             - A ``key`` is required so edit state can be preserved across
               reruns.
-            - It can't be combined with ``on_change``.
+            - It can't be combined with ``on_change``. Because ``args`` and
+              ``kwargs`` are only forwarded to ``on_change``, they have no
+              effect when ``commit_edits`` is set.
             - It isn't supported inside ``st.form`` or with ``pandas.Styler``
               input.
             - Async callbacks aren't supported.

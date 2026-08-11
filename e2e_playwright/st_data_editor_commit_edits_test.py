@@ -54,6 +54,14 @@ def _add_row_button(editor: Locator) -> Locator:
     )
 
 
+def _delete_row_button(editor: Locator) -> Locator:
+    return (
+        editor.get_by_test_id("stElementToolbar")
+        .get_by_test_id("stElementToolbarButton")
+        .get_by_label("Delete row(s)")
+    )
+
+
 def _rerun(app: Page) -> None:
     """Trigger an unrelated full-script rerun via the app's "Rerun app" button."""
     unfocus_dataframe(app)
@@ -157,8 +165,11 @@ def test_commit_dynamic_add_and_delete_rows(app: Page) -> None:
     expect(_marker(app, "orders-count")).to_have_text("2")
 
     # Delete a row from the pristine editor: select it, then use the delete hotkey.
+    # Wait deterministically for the selection to register -- the "Delete row(s)"
+    # toolbar action only appears once a row is selected -- instead of a fixed
+    # timeout, so the delete keypress is not timing-dependent in CI.
     select_row(editor, 1)
-    app.wait_for_timeout(100)
+    expect(_delete_row_button(editor)).to_be_visible()
     editor.press("Delete")
     wait_for_app_run(app)
     expect(_marker(app, "orders-count")).to_have_text("1")
