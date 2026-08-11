@@ -207,5 +207,5 @@ These need explicit reviewer sign-off before (or as) the implementation PR:
    appearance can both be queried?
 3. **System + OS change:** When selection is System and the OS theme flips, should that always trigger an auto-rerun
    (proposed: yes, as an allowlisted source)?
-4. **SiS / embedded hosts:** Any host-specific constraints on sending preference or auto-rerunning on `SET_THEME` /
-   theme messages beyond the hostframe E2E?
+4. **SiS / embedded hosts:** Any host-specific constraints on sending preference or auto-rerunning on
+   `SET_CUSTOM_THEME_CONFIG` / theme messages beyond the hostframe E2E?

@@ -170,6 +170,13 @@ def _type_from_bg_or_base(opts: dict, *, fallback: str) -> str:
     return fallback
 ```
 
+**`_hex_luminance` must match the frontend formula exactly:** Use WCAG relative luminance
+(sRGB linearization + BT.709 coefficients) with threshold `> 0.5`, identical to the
+frontend's `hasLightBackgroundColor` / color2k `getLuminance`. A divergent Python
+implementation would disagree with painted appearance for near-threshold hex backgrounds.
+Add a cross-check unit test comparing Python `_hex_luminance` against known FE outputs
+for boundary colors (e.g. `#7f7f7f`, `#808080`).
+
 **`_has_section_content`** returns True when the section has at least one option with a
 non-None value. `get_options_for_section` returns all registered option keys for the
 section (even when the user didn't write that TOML header), so checking truthiness of
@@ -207,14 +214,20 @@ if client_state.HasField("context_info"):
             ctx.color_scheme = resolve_theme_type(ctx.theme_preference)
 ```
 
-**Critical:** `RerunData.context_info` must be sourced from `self._client_state` (the
-resolved copy), not from the incoming `client_state` parameter. After the snippet above,
-all downstream code that builds `RerunData` reads from `self._client_state.context_info`
-which now has the correct `color_scheme`. Verify that the existing `_create_rerun_data`
-helper (or equivalent) already uses `self._client_state` — if it reads the raw parameter
-instead, the resolved value never reaches the script.
+**Critical — required wiring change:** Today `request_rerun` builds
+`RerunData(context_info=client_state.context_info)` from the incoming parameter (not
+`self._client_state`). This must be changed: after resolving `color_scheme` on
+`self._client_state.context_info` (snippet above), `_create_rerun_data` (or equivalent)
+must pass `self._client_state.context_info` into `RerunData` so the resolved value
+reaches the script. Without this change, the script still sees the unresolved
+`color_scheme` from the raw BackMsg.
 
 Applies to **full-script and fragment** reruns alike.
+
+**Required unit test:** Assert that when two distinct `client_state` BackMsg objects arrive
+(simulating a preference change), the `RerunData.context_info.color_scheme` exposed to
+the script equals the BE-resolved value (from `self._client_state`), not the raw value
+from the incoming parameter.
 
 If product picks **Option A**, this collapses to
 `color_scheme = theme_preference`. If **Option B** (theme identity), return a
@@ -228,8 +241,32 @@ In [`App.sendRerunBackMsg`](../../frontend/app/src/App.tsx) / `contextInfo`:
 
 ```ts
 themePreference: this.getResolvedThemePreference(), // "light" | "dark"
-hostThemeActive: this.hostThemePreference != null && !this.hasEmbedThemeOverride(),
+hostThemeActive: this.isHostThemePainted(),
 ```
+
+`isHostThemePainted()` returns `true` only when the host-imported theme is what is
+currently rendered — i.e. the theme installed by `handleThemeMessage` has not been
+replaced by a menu selection, config.toml theme, or embed override:
+
+```ts
+private isHostThemePainted(): boolean {
+  if (this.hostThemePreference == null) return false
+  if (this.hasEmbedThemeOverride()) return false
+  // The active custom theme name must still be the host-imported one
+  return this.props.theme.activeTheme.name === this.hostImportedThemeName
+}
+```
+
+`hostImportedThemeName` is set in `handleThemeMessage` alongside `hostThemePreference`.
+This avoids a sticky flag: if the user picks a different theme from the menu (which calls
+`setAndSendTheme`), the active theme name changes and `isHostThemePainted()` returns
+false — no need to explicitly clear `hostThemePreference` in every non-host path.
+
+`hasEmbedThemeOverride()` returns `true` when embed query params (`embed_options=light_theme`
+or `embed_options=dark_theme`) are present — these already exist in the codebase and force
+a preset theme regardless of host or menu selection. When an embed override is active, the
+FE paints the preset variant (not the host custom theme), so config.toml resolution on the
+BE remains correct and `hostThemeActive` must be false.
 
 **Source of truth** (do not reverse-engineer from active custom theme name after
 `processThemeInput`):
@@ -239,9 +276,9 @@ hostThemeActive: this.hostThemePreference != null && !this.hasEmbedThemeOverride
    if present.
 2. Host-provided custom theme (`SET_CUSTOM_THEME_CONFIG` / `handleThemeMessage`) →
    resolve appearance from `themeInfo.backgroundColor` luminance. Store as
-   `hostThemePreference` on the App instance in `handleThemeMessage` after applying
-   the theme. This covers SiS / Cloud hosts that push themes without going through the
-   menu or embed queries.
+   `hostThemePreference` (and `hostImportedThemeName`) on the App instance in
+   `handleThemeMessage` after applying the theme. This covers SiS / Cloud hosts that
+   push themes without going through the menu or embed queries.
 3. Else tracked `ThemeSelection` (`Light` / `Dark` / `System`), with
    `System` → `getSystemThemePreference()`.
 4. `getCachedThemeSelection()` only for initial hydrate.
@@ -284,7 +321,7 @@ require a new protocol where the host pushes theme to the server, not just the i
 
 ### 4. MPA-safe auto-rerun on appearance change
 
-#### Design: unified `componentDidUpdate` preference-diff with suppression flag
+#### Design: unified `componentDidUpdate` appearance-diff with suppression flag
 
 All three trigger sources (menu toggle, host message, OS preference change) produce
 the same observable: `props.theme.activeTheme` changes its visual appearance in
@@ -293,12 +330,14 @@ suppress is `processThemeInput` (called during `handleNewSession`).
 
 #### Implementation
 
-**1. Three instance fields:**
+**1. Instance fields:**
 
 ```tsx
 private lastRerunAppearance: "light" | "dark" | null = null
 private skipNextThemeUpdate: boolean = false
 private pendingThemeRerun: boolean = false
+private hostThemePreference: "light" | "dark" | null = null
+private hostImportedThemeName: string | null = null
 ```
 
 - `lastRerunAppearance` — tracks the **painted appearance** (luminance) at the time
@@ -322,25 +361,31 @@ private pendingThemeRerun: boolean = false
 ```tsx
 this.skipNextThemeUpdate = true
 this.hostThemePreference = null  // config.toml theme replaces host theme
+this.hostImportedThemeName = null
 ```
 
 `skipNextThemeUpdate` only set when the theme actually changes (hash differs), so it
 will not stick around to suppress a later legitimate change. Clearing
-`hostThemePreference` ensures `hostThemeActive` goes false on the next BackMsg — the BE
-resumes config.toml resolution since the FE is now painting the config theme, not the
-host theme. If the host later sends another `SET_CUSTOM_THEME_CONFIG`, `handleThemeMessage`
-re-sets `hostThemePreference` and the flag flips back to true.
+`hostThemePreference` and `hostImportedThemeName` ensures `isHostThemePainted()` returns
+false on the next BackMsg — the BE resumes config.toml resolution since the FE is now
+painting the config theme, not the host theme. If the host later sends another
+`SET_CUSTOM_THEME_CONFIG`, `handleThemeMessage` re-sets both fields and the flag flips
+back to true.
+
+Note: even without this explicit clear, `isHostThemePainted()` would return false because
+the active theme name changed to the config.toml theme. The clear is belt-and-suspenders
+to avoid stale state.
 
 **3. In `componentDidUpdate`, appended after the existing `scriptRunState` handling:**
 
 ```tsx
-// --- Theme preference diff ---
-const prevPreference = hasLightBackgroundColor(prevProps.theme.activeTheme.emotion)
+// --- Theme appearance diff ---
+const prevAppearance = hasLightBackgroundColor(prevProps.theme.activeTheme.emotion)
   ? "light" : "dark"
-const currPreference = hasLightBackgroundColor(this.props.theme.activeTheme.emotion)
+const currAppearance = hasLightBackgroundColor(this.props.theme.activeTheme.emotion)
   ? "light" : "dark"
 
-if (prevPreference !== currPreference && !this.skipNextThemeUpdate) {
+if (prevAppearance !== currAppearance && !this.skipNextThemeUpdate) {
   this.maybeRerunForThemeChange()
 }
 if (this.skipNextThemeUpdate) {
@@ -361,11 +406,11 @@ if (
 
 ```tsx
 private maybeRerunForThemeChange = (): void => {
-  const currentPreference = hasLightBackgroundColor(
+  const currentAppearance = hasLightBackgroundColor(
     this.props.theme.activeTheme.emotion
   ) ? "light" : "dark"
 
-  if (currentPreference === this.lastRerunAppearance) return
+  if (currentAppearance === this.lastRerunAppearance) return
   if (!this.isServerConnected()) return
   if (
     this.state.scriptRunState === ScriptRunState.RUNNING ||
@@ -431,20 +476,23 @@ this.lastRerunAppearance = hasLightBackgroundColor(
 
 #### Minor modification to `handleThemeMessage`
 
-After applying the host theme, store the resolved preference for
-`getResolvedThemePreference()`:
+After applying the host theme, store the resolved preference and imported theme name for
+`isHostThemePainted()` / `getResolvedThemePreference()`:
 
 ```tsx
 this.hostThemePreference = hasLightBackgroundColor(newTheme.emotion)
   ? "light" : "dark"
+this.hostImportedThemeName = newTheme.name  // used by isHostThemePainted()
 ```
 
 #### No changes needed to
 
-- `setAndSendTheme` (signature unchanged)
 - `ThemeContext` or `ThemeManager` interface
 - `useThemeManager` hook (the `matchMedia` listener stays as-is)
 - The `setTheme` prop passed through context (stays as `this.setAndSendTheme`)
+- `setAndSendTheme` (signature unchanged — when the user picks a different theme from
+  the menu, the active theme name changes, so `isHostThemePainted()` naturally returns
+  false without needing any code in `setAndSendTheme`)
 
 #### Key files
 
@@ -476,15 +524,19 @@ chosen product meaning. Drop stale first-load / settings caveats; keep CSS-overr
 
 - Preference serialization (System→OS, Light, Dark, embed query, host theme); not
   from remapped custom theme name.
-- `componentDidUpdate` preference-diff: fires rerun on light↔dark flip; suppressed
+- `componentDidUpdate` appearance-diff: fires rerun on light↔dark flip; suppressed
   when `skipNextThemeUpdate` is set; no-op when `lastRerunAppearance` matches;
   deferred when script is running.
 - `pendingThemeRerun`: theme change during `RUNNING` sets pending; transition to
   `NOT_RUNNING` drains it by calling `maybeRerunForThemeChange`.
 - `processThemeInput` sets `skipNextThemeUpdate` — verify that `componentDidUpdate`
   after `handleNewSession` / page navigation does NOT trigger rerun.
-- `handleThemeMessage` stores `hostThemePreference` and
-  `getResolvedThemePreference()` returns it when set.
+- `handleThemeMessage` stores `hostThemePreference` and `hostImportedThemeName`;
+  `getResolvedThemePreference()` returns host preference when set;
+  `isHostThemePainted()` returns true only when active theme matches
+  `hostImportedThemeName`.
+- `isHostThemePainted()` returns false after user selects a different theme from
+  the menu (non-sticky host activation).
 - Regression: theme **name** change alone must not call `sendRerunBackMsg`.
 
 **E2E** (`make run-e2e-test`)
@@ -533,8 +585,8 @@ BE work.
 
 | Risk | Mitigation |
 |------|------------|
-| Auto-rerun reintroduces #11797 | `skipNextThemeUpdate` suppresses `processThemeInput` renders; preference-diff (not name); `sendUpdateWidgetsMessage` preserves page context; MPA E2E required |
-| BE luminance disagrees with FE | Prefer `base`; hex-only luminance; fall back to preference |
+| Auto-rerun reintroduces #11797 | `skipNextThemeUpdate` suppresses `processThemeInput` renders; appearance-diff (not name); `sendUpdateWidgetsMessage` preserves page context; MPA E2E required |
+| BE luminance disagrees with FE | Use identical WCAG formula (sRGB linearization + BT.709, threshold `> 0.5`); cross-check unit test against FE boundary values; hex-only; fall back to `base`/preference |
 | Preference tracking drifts after `processThemeInput` | Track explicit `ThemeSelection`, never reverse from theme name |
 | Host/SiS theme messages ignored | Explicit `handleThemeMessage` path; re-enable hostframe E2E |
 | Option A/B chosen late | §2 is the only major rewrite; proto + auto-rerun stay |
