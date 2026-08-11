@@ -76,9 +76,10 @@ st.checkbox("checkbox with stretch width", width="stretch")
 st.checkbox("checkbox with 200px width", width=200)
 
 # wrap=False keeps the checkbox on one row and ellipsizes an overflowing label,
-# exposing the full label via a native title (skipped when help is set). A narrow
-# fixed width forces the long label to overflow, so the auto default (wrap=None)
-# in a vertical layout wraps and grows taller while wrap=False stays single-row.
+# exposing the full label via a native title on the label (help lives on a
+# separate icon, so both coexist). A narrow fixed width forces the long label to
+# overflow, so the auto default (wrap=None) in a vertical layout wraps and grows
+# taller while wrap=False stays single-row.
 _WRAP_LABEL = "Include archived projects from the last several quarters"
 with st.container(key="wrap_checkboxes"):
     st.checkbox(_WRAP_LABEL, width=200, wrap=False, key="wrap_false_checkbox")

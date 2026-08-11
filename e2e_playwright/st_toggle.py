@@ -66,9 +66,10 @@ st.toggle("toggle with stretch width", width="stretch")
 st.toggle("toggle with 150px width", width=150)
 
 # wrap=False keeps the toggle on one row and ellipsizes an overflowing label,
-# exposing the full label via a native title (skipped when help is set). A narrow
-# fixed width forces the long label to overflow, so the auto default (wrap=None)
-# in a vertical layout wraps and grows taller while wrap=False stays single-row.
+# exposing the full label via a native title on the label (help lives on a
+# separate icon, so both coexist). A narrow fixed width forces the long label to
+# overflow, so the auto default (wrap=None) in a vertical layout wraps and grows
+# taller while wrap=False stays single-row.
 _WRAP_LABEL = "Enable live updates for every connected data source right now"
 with st.container(key="wrap_toggles"):
     st.toggle(_WRAP_LABEL, width=200, wrap=False, key="wrap_false_toggle")
