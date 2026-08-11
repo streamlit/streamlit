@@ -108,10 +108,11 @@ def _is_media_path(path: str, base_url: str = "") -> bool:
     The media route serves audio, video, images, and downloads. On Starlette
     versions before 1.5.0 this path is bypassed entirely, because those versions
     cannot exclude already-compressed media by content type and would corrupt
-    range-based playback by compressing partial responses. On newer versions the
-    stock middleware handles those cases, so this path is compressed like any
-    other route (already-compressed types are excluded by content type, and
-    partial 206 responses are skipped natively).
+    range-based playback by compressing partial (206) responses. On newer
+    versions the stock middleware applies instead: it excludes already-compressed
+    types by content type and skips 206 responses natively, so only the
+    compressible payloads on this path (e.g. text or octet-stream downloads) are
+    still gzipped.
     """
     path = _strip_base_url(path, base_url)
     return path.startswith(f"/{BASE_ROUTE_MEDIA}/")

@@ -218,6 +218,31 @@ class TestBypass:
         assert response.status_code == 200
         assert response.headers.get("content-encoding") == "gzip"
 
+    def test_media_content_type_excluded_outside_media_path(self) -> None:
+        """Already-compressed media outside /media/ depends on the version.
+
+        The point of delegating to the stock middleware is that it excludes
+        already-compressed content types wherever they are served, not just
+        under /media/ (e.g. a custom component asset or an /app/static/ file).
+        Starlette >= 1.5 skips a video/mp4 body on this non-media, non-static
+        path via its default content-type exclusion, so nothing here relies on
+        the /media/ path bypass. Starlette < 1.5 has no such exclusion, so the
+        same body is compressed.
+        """
+        client = _build_client(
+            _text_route("/app/static/clip.mp4", content_type="video/mp4")
+        )
+
+        response = client.get(
+            "/app/static/clip.mp4", headers={"Accept-Encoding": "gzip"}
+        )
+
+        assert response.status_code == 200
+        if _STARLETTE_HANDLES_MEDIA_AND_RANGE:
+            assert response.headers.get("content-encoding") is None
+        else:
+            assert response.headers.get("content-encoding") == "gzip"
+
     def test_media_with_base_url_not_compressed(self) -> None:
         """Media is not compressed even when a base URL prefix is configured.
 
