@@ -375,8 +375,8 @@ def _test_number_cell_editing(
 
     # Change the value
     input_field.fill("9876.54")
-    # Ensure React onChange has applied before Enter. Without the glide patch,
-    # Enter's setTimeout(0) commit can still see a stale tempValue closure.
+    # Wait for the fill value to be applied before pressing Enter,
+    # to avoid a race where Enter commits the previous value.
     expect(input_field).to_have_value("9876.54")
     input_field.press("Enter")
     wait_for_app_run(themed_app)
