@@ -51,7 +51,7 @@ export const StyledContent = styled.div<StyledContentProps>(
 )
 
 interface StyledRootProps {
-  /** When true, the control fills its width so the label can be constrained. */
+  /** When true, the control can shrink within its container so the label can ellipsize. */
   $truncate?: boolean
 }
 

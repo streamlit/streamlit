@@ -480,10 +480,10 @@ hello
 
     @parameterized.expand(
         [
-            ("checkbox", st.checkbox, True),
-            ("checkbox", st.checkbox, False),
-            ("toggle", st.toggle, True),
-            ("toggle", st.toggle, False),
+            ("checkbox_true", st.checkbox, True),
+            ("checkbox_false", st.checkbox, False),
+            ("toggle_true", st.toggle, True),
+            ("toggle_false", st.toggle, False),
         ]
     )
     def test_wrap(self, _name: str, widget_func: object, wrap_value: bool) -> None:
