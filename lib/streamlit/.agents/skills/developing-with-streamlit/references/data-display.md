@@ -56,6 +56,21 @@ st.altair_chart(chart)
 - Interactive tooltips
 - Layered visualizations
 
+## `st.pyplot` requires a Figure
+
+**Always pass a Matplotlib `Figure` to `st.pyplot`.** Calling `st.pyplot()` without `fig` (relying on Matplotlib's global figure) is not supported.
+
+```python
+# BAD: uses removed global figure support
+plt.plot([1, 2, 3])
+st.pyplot()
+
+# GOOD: pass an explicit Figure
+fig, ax = plt.subplots()
+ax.plot([1, 2, 3])
+st.pyplot(fig)
+```
+
 ## Deprecated: `use_container_width`
 
 **Do not use `use_container_width`.** It is deprecated — Streamlit elements now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.

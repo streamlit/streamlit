@@ -67,8 +67,8 @@ class PyplotMixin:
     @gather_metrics("pyplot")
     def pyplot(
         self,
-        fig: Figure | None = None,
-        clear_figure: bool | None = None,
+        fig: Figure,
+        clear_figure: bool = False,
         *,
         width: Width = "stretch",
         use_container_width: bool | None = None,
@@ -94,21 +94,12 @@ class PyplotMixin:
         fig : Matplotlib Figure
             The Matplotlib ``Figure`` object to render. See
             https://matplotlib.org/stable/gallery/index.html for examples.
-
-            .. note::
-                When this argument isn't specified, this function will render the global
-                Matplotlib figure object. However, this feature is deprecated and
-                will be removed in a later version.
+            This argument is required.
 
         clear_figure : bool
-            If True, the figure will be cleared after being rendered.
-            If False, the figure will not be cleared after being rendered.
-            If left unspecified, we pick a default based on the value of ``fig``.
-
-            - If ``fig`` is set, defaults to ``False``.
-
-            - If ``fig`` is not set, defaults to ``True``. This simulates Jupyter's
-              approach to matplotlib rendering.
+            Whether to clear the figure after rendering it. If ``True``,
+            Streamlit calls ``fig.clf()`` after the figure is displayed.
+            Defaults to ``False``.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -194,25 +185,6 @@ class PyplotMixin:
                 show_in_browser=True,
             )
 
-        if not fig:
-            show_deprecation_warning("""
-Calling `st.pyplot()` without providing a figure argument has been deprecated
-and will be removed in a later version as it requires the use of Matplotlib's
-global figure object, which is not thread-safe.
-
-To future-proof this code, you should pass in a figure as shown below:
-
-```python
-fig, ax = plt.subplots()
-ax.scatter([1, 2, 3], [1, 2, 3])
-# other plotting actions...
-st.pyplot(fig)
-```
-
-If you have a specific use case that requires this functionality, please let us
-know via [issue on Github](https://github.com/streamlit/streamlit/issues).
-""")
-
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
         image_list_proto = ImageListProto()
@@ -236,8 +208,8 @@ def marshall(
     coordinates: str,
     image_list_proto: ImageListProto,
     layout_config: LayoutConfig,
-    fig: Figure | None = None,
-    clear_figure: bool | None = True,
+    fig: Figure,
+    clear_figure: bool = False,
     **kwargs: Any,
 ) -> None:
     try:
@@ -246,14 +218,6 @@ def marshall(
         plt.ioff()
     except ImportError:  # pragma: no cover - optional dep
         raise ImportError("pyplot() command requires matplotlib")
-
-    # You can call .savefig() on a Figure object or directly on the pyplot
-    # module, in which case you're doing it to the latest Figure.
-    if not fig:
-        if clear_figure is None:
-            clear_figure = True
-
-        fig = cast("Figure", plt)
 
     # Apply Streamlit defaults, then let deprecated kwargs override them.
     savefig_kwargs = {**_DEFAULT_SAVEFIG_OPTIONS, **kwargs}
@@ -289,7 +253,6 @@ def marshall(
         output_format="PNG",
     )
 
-    # Clear the figure after rendering it. This means that subsequent
-    # plt calls will be starting fresh.
+    # Clear the figure after rendering so later draws on this figure start empty.
     if clear_figure:
         fig.clf()

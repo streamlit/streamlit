@@ -111,6 +111,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Do not put expensive work unguarded inside `st.tabs` or `st.expander`; hidden or collapsed content still computes unless you use dynamic open-state gating or an explicit conditional.
 - Use `st.secrets` for credentials. Never hard-code secrets in app code, never commit `.streamlit/secrets.toml`, and use parameterized queries for user-provided values.
 - Prefer Vega-based charts (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart`, `st.bar_chart`, `st.vega_lite_chart`) over `st.pyplot` and Plotly.
+- Always pass a Matplotlib `Figure` to `st.pyplot` (`fig` is required). Do not call `st.pyplot()` without a figure.
 - Prefer `st.segmented_control` over `st.radio(..., horizontal=True)`.
 - Use `st.pills` for a multiselect with a small number of options that fit on one line.
 - Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
