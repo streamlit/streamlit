@@ -160,8 +160,8 @@ Any state -> DISCONNECTED_FOREVER (on fatal error)
 - Maintains message ordering via index queue
 - Handles session reconnection via tokens
 - Passes host auth token or `_streamlit_xsrf` cookie (plus optional last session id) via `Sec-WebSocket-Protocol` because browsers cannot set arbitrary WebSocket headers; the server selects the `"streamlit"` subprotocol in reply.
-- Those tokens share one subprotocol slot (`hostAuthToken ?? xsrfCookie`). When XSRF is enabled, a host-auth token in that slot fails double-submit validation and the server hard-rejects with `1008` before accept.
-- Embeds that use `useExternalAuthToken` must either send a matching XSRF cookie/token pair or run with XSRF disabled until the shared-slot contract is redesigned.
+- The host auth token and `_streamlit_xsrf` cookie share one subprotocol slot (`hostAuthToken ?? xsrfCookie`). When XSRF is enabled, a host-auth token in that slot fails double-submit validation and the server hard-rejects with `1008` before accept.
+- With that client preference, `useExternalAuthToken` embeds that supply a host auth token cannot also send the XSRF token and must disable XSRF (or wait for a protocol that can carry both) under default-on protection.
 
 ### ForwardMsgCache (`ForwardMessageCache.ts`)
 

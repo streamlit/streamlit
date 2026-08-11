@@ -1110,12 +1110,13 @@ _create_option(
         ``Origin`` header are not subject to that check, so programmatic
         clients that omit ``Origin`` continue to work. The frontend currently
         shares that subprotocol slot with host auth tokens
-        (``hostAuthToken ?? xsrfCookie``); embeds that use
-        ``useExternalAuthToken`` must send a matching XSRF cookie/token pair
-        or disable XSRF until that shared-slot contract is redesigned. This
-        option does not enable ``server.enableCORS``; keep CORS enabled (and
-        configure ``server.corsAllowedOrigins``) if you need to limit which
-        origins may attempt a WebSocket connection.
+        (``hostAuthToken ?? xsrfCookie``); when a host auth token is present it
+        occupies the slot, so ``useExternalAuthToken`` embeds cannot also send
+        the XSRF token and must disable XSRF (or wait for a protocol that can
+        carry both) under default-on protection. This option does not enable
+        ``server.enableCORS``; keep CORS enabled (and configure
+        ``server.corsAllowedOrigins``) if you need to limit which origins may
+        attempt a WebSocket connection.
     """,
     default_val=True,
     type_=bool,

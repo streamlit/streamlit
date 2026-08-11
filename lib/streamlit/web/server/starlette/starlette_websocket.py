@@ -458,7 +458,10 @@ def create_websocket_handler(runtime: Runtime) -> Any:
             xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
             if not starlette_app_utils.validate_xsrf_token(xsrf_token, xsrf_cookie):
                 _LOGGER.warning(
-                    "Rejecting WebSocket connection with missing or invalid XSRF token"
+                    "Rejecting WebSocket connection with missing or invalid "
+                    "XSRF token (token_present=%s, cookie_present=%s)",
+                    bool(xsrf_token),
+                    bool(xsrf_cookie),
                 )
                 await websocket.close(code=1008)  # 1008 = Policy Violation
                 return

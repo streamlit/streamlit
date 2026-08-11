@@ -138,11 +138,10 @@ def create_streamlit_static_handler(
                 served_path = "index.html"
 
             self._apply_cache_headers(response, served_path)
-            # Set the XSRF cookie on HTML navigations so browser clients have
-            # it before JavaScript opens the WebSocket. Bypass mode connects
-            # in parallel with health/host-config pings; without this, the
-            # first handshake can race ahead of the health cookie and fail
-            # hard-reject admission.
+            # Ensure the XSRF cookie is available before the frontend opens the
+            # WebSocket. Without this, bypass-mode clients that connect in
+            # parallel with health/host-config pings can race ahead of the
+            # health cookie and fail hard-reject admission.
             normalized = served_path.replace("\\", "/").lstrip("./")
             is_html_navigation = response.status_code == 200 and (
                 not normalized or normalized.endswith(".html")
