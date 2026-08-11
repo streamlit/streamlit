@@ -391,11 +391,12 @@ class SliderTest(DeltaGeneratorTestCase):
         ]
     )
     def test_timelike_value_near_type_limits_reports_the_range(self, _name, value):
-        """A value within the default 14-day window of the type limits still reports.
+        """A bare ``value`` near ``date``/``datetime``'s limits reports the range.
 
-        The default ``min_value``/``max_value`` are computed as ``value`` +/- 14 days
-        even when bounds are passed explicitly, and that arithmetic overflows next to
-        ``date.min``/``date.max``. It used to surface as a bare ``OverflowError``.
+        The default ``min_value``/``max_value`` are ``value`` +/- 14 days, and next to
+        the type's own limits that arithmetic overflowed before validation could run,
+        surfacing as a bare ``OverflowError``. It should report the representable range
+        instead.
         """
         with pytest.raises(StreamlitAPIException) as exc:
             st.slider("Label", value=value)
