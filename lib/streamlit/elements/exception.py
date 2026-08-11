@@ -98,10 +98,15 @@ def _exception(
     dg: DeltaGenerator,
     exception: BaseException,
     width: WidthWithoutContent = "stretch",
-    is_uncaught_app_exception: bool = False,
+    apply_show_error_details: bool = False,
 ) -> DeltaGenerator:
     exception_proto = ExceptionProto()
-    marshall(exception_proto, exception, width, is_uncaught_app_exception)
+    marshall(
+        exception_proto,
+        exception,
+        width,
+        apply_show_error_details=apply_show_error_details,
+    )
     return dg._enqueue("exception", exception_proto)
 
 
@@ -109,7 +114,7 @@ def marshall(
     exception_proto: ExceptionProto,
     exception: BaseException,
     width: WidthWithoutContent = "stretch",
-    is_uncaught_app_exception: bool = False,
+    apply_show_error_details: bool = False,
 ) -> None:
     """Marshalls an Exception.proto message.
 
@@ -125,8 +130,11 @@ def marshall(
         The width of the exception display. Can be either an integer (pixels) or "stretch".
         Defaults to "stretch".
 
-    is_uncaught_app_exception: bool
-        The exception originates from an uncaught error during script execution.
+    apply_show_error_details: bool
+        Redact the message, type, and stack trace of the exception as the
+        `client.showErrorDetails` config option requires. Set this for any
+        exception that Streamlit itself sends to the browser, because the
+        traceback can expose internal file paths.
     """
     validate_width(width)
 
@@ -189,7 +197,7 @@ Traceback:
             "\n".join(_get_stack_trace_str_list(str_exception)),
         )
 
-    if is_uncaught_app_exception:
+    if apply_show_error_details:
         show_error_details = config.get_option("client.showErrorDetails")
 
         show_message = (

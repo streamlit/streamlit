@@ -89,6 +89,11 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   paddingLeft: theme.spacing.md,
   paddingRight: theme.spacing.sm,
   "::placeholder": { color: theme.colors.fadedText60 },
+  // `type="search"` inputs otherwise render a browser-native clear (×) control
+  // that clashes with Streamlit's styling. Hide it so we can show our own
+  // consistent clear button (see StyledClearButton) instead.
+  "::-webkit-search-cancel-button": { display: "none" },
+  "::-webkit-search-decoration": { display: "none" },
   "&[disabled]": {
     cursor: "not-allowed",
     color: theme.colors.fadedText40,
@@ -129,24 +134,54 @@ export const StyledErrorEnhancer = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.sm,
 }))
 
+/**
+ * Clear (×) button shown for `type="search"` inputs that hold a value. Mirrors
+ * the clear-button styling used by other input widgets (e.g. st.number_input).
+ */
+export const StyledClearButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  // Match the password toggle's horizontal padding so trailing controls sit a
+  // consistent distance from the input's right edge.
+  padding: `0 ${theme.spacing.sm}`,
+  color: theme.colors.grayTextColor,
+  flexShrink: 0,
+  "&:hover:not(:disabled)": {
+    color: theme.colors.bodyText,
+  },
+  "&:disabled": {
+    cursor: "not-allowed",
+  },
+}))
+
 interface StyledInputInstructionsContainerProps {
   $hasErrorIcon: boolean
+  $hasClearButton: boolean
   $hasPasswordToggle: boolean
 }
 
 /**
  * Positions the input instructions (e.g. "Press Enter to apply") so they don't
- * overlap the end enhancers (validation error icon and/or password visibility
- * toggle) anchored to the right edge of the input. The `right` offset clears
- * the combined width of whichever end enhancers are currently shown.
+ * overlap the end enhancers (validation error icon, clear button, and/or
+ * password visibility toggle) anchored to the right edge of the input. The
+ * `right` offset clears the combined width of whichever end enhancers are
+ * currently shown.
  */
 export const StyledInputInstructionsContainer =
   styled.div<StyledInputInstructionsContainerProps>(
-    ({ theme, $hasErrorIcon, $hasPasswordToggle }) => {
+    ({ theme, $hasErrorIcon, $hasClearButton, $hasPasswordToggle }) => {
       const enhancerWidths: string[] = []
       if ($hasErrorIcon) {
         enhancerWidths.push(
           `${theme.spacing.xs} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
+        )
+      }
+      if ($hasClearButton) {
+        enhancerWidths.push(
+          `${theme.spacing.sm} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
         )
       }
       if ($hasPasswordToggle) {

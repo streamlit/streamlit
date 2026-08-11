@@ -19,7 +19,10 @@ from typing import cast
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    wait_for_datepicker_popover_animation,
+)
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 
@@ -74,7 +77,7 @@ def test_sidebar_date_input_popover(
     expect(date_inputs.first).to_be_visible()
     date_inputs.first.click()
     calendar_popover = themed_app.locator("[data-baseweb='calendar']")
-    expect(calendar_popover).to_be_visible()
+    wait_for_datepicker_popover_animation(themed_app, calendar_popover)
     assert_snapshot(calendar_popover, name="st_sidebar-date_popover")
 
 

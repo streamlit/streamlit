@@ -50,12 +50,18 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", value=None, key="my_input"), str | None)
 
     # =====================================================================
-    # Test type parameter ("default" or "password")
+    # Test type parameter ("default", "password", "email", "url", "phone",
+    # "search")
     # =====================================================================
 
     assert_type(text_input("Enter text", type="default"), str)
     assert_type(text_input("Enter text", type="password"), str)
+    assert_type(text_input("Email", type="email"), str)
+    assert_type(text_input("URL", type="url"), str)
+    assert_type(text_input("Phone", type="phone"), str)
+    assert_type(text_input("Search", type="search"), str)
     assert_type(text_input("Enter password", value=None, type="password"), str | None)
+    assert_type(text_input("Email", value=None, type="email"), str | None)
 
     # =====================================================================
     # Test max_chars parameter

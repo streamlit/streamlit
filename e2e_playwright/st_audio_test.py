@@ -54,7 +54,7 @@ def test_audio_has_correct_properties(app: Page):
     expect(audio_elements).to_have_count(8)
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
-    expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))
+    expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*mp3"))
 
 
 @pytest.mark.skip_browser("webkit")

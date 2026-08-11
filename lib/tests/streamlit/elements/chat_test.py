@@ -31,6 +31,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -251,12 +252,12 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.accept_file == expected
 
     def test_chat_input_invalid_accept_file(self):
-        with pytest.raises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitValueError) as ex:
             st.chat_input(accept_file="invalid")
 
         assert (
             str(ex.value)
-            == "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
         )
 
     def test_file_type(self):
@@ -699,13 +700,10 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_accept_file_invalid_value(self):
         """Test that invalid accept_file values raise an error."""
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitValueError) as cm:
             st.chat_input("the label", accept_file="invalid")
 
-        assert (
-            "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
-            in str(cm.value)
-        )
+        assert "Invalid `accept_file` value" in str(cm.value)
 
     def test_directory_upload_with_callback(self):
         """Test directory upload with on_submit callback."""
@@ -838,9 +836,9 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_input_audio_sample_rate_invalid(self):
         """Test that invalid audio_sample_rate raises an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input(accept_audio=True, audio_sample_rate=12345)
-        assert "Invalid audio_sample_rate" in str(exc.value)
+        assert "Invalid `audio_sample_rate` value" in str(exc.value)
 
     @parameterized.expand(
         [
@@ -1275,12 +1273,12 @@ class ChatInputSubmitModeTest(DeltaGeneratorTestCase):
 
     def test_submit_mode_invalid(self):
         """Test that invalid submit_mode values raise an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("Placeholder", submit_mode="invalid")
-        assert "The `submit_mode` parameter must be" in str(exc.value)
+        assert "Invalid `submit_mode` value" in str(exc.value)
 
     def test_submit_mode_bool_not_allowed(self):
         """Test that bool values are not accepted for submit_mode."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("Placeholder", submit_mode=True)
-        assert "The `submit_mode` parameter must be" in str(exc.value)
+        assert "Invalid `submit_mode` value" in str(exc.value)

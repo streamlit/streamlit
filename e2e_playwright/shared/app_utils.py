@@ -1666,3 +1666,40 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         }""",
         timeout=timeout,
     )
+
+
+def wait_for_datepicker_popover_animation(app: Page, calendar: Locator) -> None:
+    """Wait until a BaseWeb datepicker popover open animation has finished.
+
+    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
+    a ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
+    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
+    Chromium as ~8% pixel diffs).
+
+    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
+    transform share the 0.1s open transition, but a subsequent Popper
+    reposition can still nudge the calendar after opacity settles. Require a
+    stable calendar bounding box before screenshotting.
+    """
+    expect(calendar).to_be_visible()
+    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
+    expect(popover).to_have_css("opacity", "1")
+
+    previous: tuple[float, float, float, float] | None = None
+
+    def _calendar_box_is_stable() -> bool:
+        nonlocal previous
+        box = calendar.bounding_box()
+        if box is None:
+            return False
+        current = (box["x"], box["y"], box["width"], box["height"])
+        if previous is None:
+            previous = current
+            return False
+        stable = all(
+            abs(prev - curr) < 0.5 for prev, curr in zip(previous, current, strict=True)
+        )
+        previous = current
+        return stable
+
+    wait_until(app, _calendar_box_is_stable)

@@ -974,7 +974,12 @@ class AppSession:
     def _create_exception_message(self, e: BaseException) -> ForwardMsg:
         """Create and return an Exception ForwardMsg."""
         msg = ForwardMsg()
-        exception_utils.marshall(msg.delta.new_element.exception, e)
+        # The apply_show_error_details flag applies the client.showErrorDetails
+        # redaction. Without this flag, the session sends the internal message,
+        # type, and stack trace of the error to the browser.
+        exception_utils.marshall(
+            msg.delta.new_element.exception, e, apply_show_error_details=True
+        )
         return msg
 
     def _handle_git_information_request(self) -> None:

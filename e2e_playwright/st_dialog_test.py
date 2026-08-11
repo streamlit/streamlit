@@ -727,7 +727,17 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     """
     open_non_dismissible_dialog(app)
     main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+
+    # Wait for dialog content so the non-dismissible keyboard handler is armed
+    # before we exercise Escape / R (important on WebKit).
+    expect(
+        main_dialog.get_by_text("This dialog cannot be dismissed", exact=False)
+    ).to_be_visible()
+    # Opening the dialog is one script rerun (count 2). Any later R-hotkey
+    # leak would bump this and unmount the dialog — assert it stays put.
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
     # Verify the close button (X) is not present
     expect(app.get_by_label("Close")).not_to_be_attached()
@@ -738,20 +748,24 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     # Dialog should still be visible
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
     # Click on body element outside dialog
     app.locator("body").click(position={"x": 50, "y": 50}, force=True)
 
-    # Dialog should still be visible
+    # Dialog should still be visible, and the outside click must not rerun.
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
-    # Press R hotkey:
+    # Press R hotkey — must not rerun/dismiss a non-dismissible dialog
+    # (even when focus is outside the dialog after the backdrop click above).
     app.keyboard.press("R")
 
-    # Dialog should still be visible
-    expect(main_dialog).to_be_visible()
-    expect(main_dialog).to_have_count(1)
+    # Dialog should still be visible, and R must not have triggered a rerun.
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
+    expect(app.get_by_test_id(modal_test_id)).to_have_count(1)
+    expect(app.get_by_test_id(modal_test_id)).to_be_visible()
 
 
 def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):

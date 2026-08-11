@@ -32,6 +32,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import (
     create_page_profile_message,
+    format_uncaught_exception,
     to_microseconds,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -881,7 +882,7 @@ class ScriptRunner:
                             exec_time=to_microseconds(timer() - start_time),
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(
-                                type(uncaught_exception).__name__
+                                format_uncaught_exception(uncaught_exception)
                                 if uncaught_exception
                                 else None
                             ),

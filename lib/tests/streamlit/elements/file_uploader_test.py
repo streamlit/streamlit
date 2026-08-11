@@ -25,7 +25,11 @@ from streamlit.elements.widgets.file_uploader import (
     FileUploaderSerde,
     _get_upload_files,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
 )
@@ -265,11 +269,11 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.file_uploader("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):

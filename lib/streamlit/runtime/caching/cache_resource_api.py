@@ -33,7 +33,7 @@ from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -639,9 +639,7 @@ class CacheResourceAPI:
         """
 
         if scope not in {"global", "session"}:
-            raise StreamlitAPIException(
-                f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
-            )
+            raise StreamlitValueError("scope", ["'global'", "'session'"])
 
         validate_refresh_mode(
             refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)
