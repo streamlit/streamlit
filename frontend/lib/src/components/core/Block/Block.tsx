@@ -166,8 +166,8 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
-  // This is also backwards compatible since previously wrap was not added
-  // to the flex container.
+  // Absent wrap on a FlexContainer message means nowrap. This is also
+  // backwards compatible, since older messages did not set wrap.
   const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
   // A horizontal container with `wrap=false` keeps its elements in a single
   // row and scrolls horizontally when they don't fit, instead of wrapping.

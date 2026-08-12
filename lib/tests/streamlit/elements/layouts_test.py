@@ -842,7 +842,8 @@ class ContainerTest(DeltaGeneratorTestCase):
         [
             # Each case is horizontal, then the wrap argument, then the expected
             # resolved wrap value on the proto.
-            # A vertical container always resolves wrap to False.
+            # With wrap=None (default), a vertical container resolves proto wrap
+            # to False.
             (False, None, False),
             # A horizontal container keeps the default wrapping behavior for
             # wrap=None and wrap=True, and a single row for wrap=False.

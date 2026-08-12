@@ -43,9 +43,19 @@ def test_horizontal_no_wrap_container_scrolls(app: Page):
     # scrollable row.
     expect(no_wrap_container).to_have_css("overflow-x", "auto")
     expect(no_wrap_container).to_have_css("flex-wrap", "nowrap")
+    # Assert the row actually overflows its container (and is therefore
+    # scrollable), not just that the CSS intent is set. Wait for the overflow to
+    # settle so scrollWidth / clientWidth are stable before measuring.
+    app.wait_for_function(
+        "el => el && el.scrollWidth > el.clientWidth",
+        arg=no_wrap_container.element_handle(),
+    )
 
     # The comparison container with wrap=True wraps onto additional rows and
     # must not become horizontally scrollable.
     wrap_container = get_element_by_key(app, "container-horizontal-wrap")
     expect(wrap_container).to_have_css("flex-wrap", "wrap")
     expect(wrap_container).not_to_have_css("overflow-x", "auto")
+    # The wrapped container fits its content within its own width, so it must
+    # not overflow horizontally.
+    assert wrap_container.evaluate("el => el.scrollWidth <= el.clientWidth")
