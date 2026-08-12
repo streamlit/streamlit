@@ -48,6 +48,15 @@ function Toast({ element, toastId }: Readonly<ToastProps>): ReactElement {
     // component is keyed by scriptRunId), so we keep the existing one instead of
     // stacking a duplicate. Distinct st.toast() calls live at distinct delta
     // paths, so this never suppresses legitimately separate toasts.
+    //
+    // Caveat: toastId is the delta path, which is a *position* in the shared
+    // EVENT container (toasts and dialogs are interleaved there by call order).
+    // If another EVENT element (e.g. a conditionally-shown st.dialog declared
+    // before a toast) changes this toast's index across reruns while the toast
+    // is still visible, it looks like a new position and can briefly show a
+    // duplicate. This is a rare, self-healing edge case (toasts auto-expire);
+    // switching de-dupe to the toast parameters would avoid it but would also
+    // collapse intentionally-identical toasts (e.g. the "Three cheers" example).
     if (
       toastQueue.visibleToasts.some(toast => toast.content.toastId === toastId)
     ) {
