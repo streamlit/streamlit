@@ -2559,8 +2559,9 @@ describe("createEmotionTheme", () => {
       fiveXL: "3rem",
       sixXL: "4rem",
     })
-    // minElementHeight is 2.5rem at the default scale
+    // minElementHeight / dropdownItemHeight are 2.5rem at the default scale
     expect(theme.sizes.minElementHeight).toBe("1.25rem")
+    expect(theme.sizes.dropdownItemHeight).toBe("1.25rem")
     // Derived size tokens that embed spacing / min height stay in sync
     expect(theme.sizes.elementHighlightHeight).toBe(
       `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`
@@ -2577,6 +2578,9 @@ describe("createEmotionTheme", () => {
     expect(theme.sizes.minElementHeight).toBe(
       baseTheme.emotion.sizes.minElementHeight
     )
+    expect(theme.sizes.dropdownItemHeight).toBe(
+      baseTheme.emotion.sizes.dropdownItemHeight
+    )
   })
 
   it.each([0, -1, NaN, Infinity])(
@@ -2586,11 +2590,14 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme({ spacingScale })
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid spacing scale: ${spacingScale}. Falling back to default spacing.`
+        `Invalid spacingScale: ${spacingScale}. Falling back to default spacing.`
       )
       expect(theme.spacing).toEqual(baseTheme.emotion.spacing)
       expect(theme.sizes.minElementHeight).toBe(
         baseTheme.emotion.sizes.minElementHeight
+      )
+      expect(theme.sizes.dropdownItemHeight).toBe(
+        baseTheme.emotion.sizes.dropdownItemHeight
       )
     }
   )
@@ -4687,6 +4694,21 @@ describe("Sidebar theme creation", () => {
 
       // Should apply sidebar primary color override
       expect(sidebarTheme.emotion.colors.primary).toBe("blue")
+    })
+
+    it("inherits main spacingScale when sidebar theme is rebuilt", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        spacingScale: 0.5,
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.spacing.lg).toBe("0.5rem")
+      expect(sidebarTheme.emotion.sizes.minElementHeight).toBe("1.25rem")
+      expect(sidebarTheme.emotion.sizes.dropdownItemHeight).toBe("1.25rem")
+      expect(sidebarTheme.emotion.sizes.elementHighlightHeight).toBe(
+        `calc(${sidebarTheme.emotion.sizes.minElementHeight} - 2 * ${sidebarTheme.emotion.spacing.xs})`
+      )
     })
 
     it("uses default sidebar heading font sizes when not configured", () => {

@@ -977,7 +977,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(spacingScale)) {
     if (!Number.isFinite(spacingScale) || spacingScale <= 0) {
       LOG.warn(
-        `Invalid spacing scale: ${spacingScale}. Falling back to default spacing.`
+        `Invalid spacingScale: ${spacingScale}. Falling back to default spacing.`
       )
     } else {
       const baseSpacing = baseThemeConfig.emotion.spacing
@@ -1002,11 +1002,16 @@ export const createEmotionTheme = (
 
       conditionalOverrides.spacing = scaledSpacing
 
-      // Also scale min control height so density affects widget chrome, not only gaps.
+      // Scale min control height and matching dropdown row height so density
+      // affects widget chrome and list rows that host highlight pills.
       const scaledMinElementHeight = scaleRem(
         parseFloat(baseThemeConfig.emotion.sizes.minElementHeight)
       )
+      const scaledDropdownItemHeight = scaleRem(
+        parseFloat(baseThemeConfig.emotion.sizes.dropdownItemHeight)
+      )
       conditionalOverrides.sizes.minElementHeight = scaledMinElementHeight
+      conditionalOverrides.sizes.dropdownItemHeight = scaledDropdownItemHeight
 
       // Keep derived size tokens that embed spacing / min height in sync.
       conditionalOverrides.sizes.elementHighlightHeight = `calc(${scaledMinElementHeight} - 2 * ${scaledSpacing.xs})`
