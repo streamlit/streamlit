@@ -2138,10 +2138,11 @@ _create_theme_options(
         The spacing scale multiplier for the app.
 
         This scales padding, margins, and gaps from the theme spacing tokens,
-        plus the minimum widget/control height. Other size tokens (for example
-        tab or dropdown heights) are unchanged. Values less than ``1.0``
-        produce a more compact UI; values greater than ``1.0`` produce a
-        roomier UI. This is a positive finite float.
+        plus widget/control heights (``minElementHeight``,
+        ``largestElementHeight``, and matching dropdown row height). Other size
+        tokens (for example tab height) are unchanged. Values less than
+        ``1.0`` produce a more compact UI; values greater than ``1.0`` produce
+        a roomier UI. This is a positive finite float.
 
         Unlike ``baseFontSize``, this does not change root typography size.
 

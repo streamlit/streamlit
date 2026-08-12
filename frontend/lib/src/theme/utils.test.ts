@@ -2559,9 +2559,10 @@ describe("createEmotionTheme", () => {
       fiveXL: "3rem",
       sixXL: "4rem",
     })
-    // minElementHeight / dropdownItemHeight are 2.5rem at the default scale
+    // minElementHeight / dropdownItemHeight are 2.5rem; largestElementHeight is 4.25rem
     expect(theme.sizes.minElementHeight).toBe("1.25rem")
     expect(theme.sizes.dropdownItemHeight).toBe("1.25rem")
+    expect(theme.sizes.largestElementHeight).toBe("2.13rem")
     // Derived size tokens that embed spacing / min height stay in sync
     expect(theme.sizes.elementHighlightHeight).toBe(
       `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`
@@ -2581,6 +2582,9 @@ describe("createEmotionTheme", () => {
     expect(theme.sizes.dropdownItemHeight).toBe(
       baseTheme.emotion.sizes.dropdownItemHeight
     )
+    expect(theme.sizes.largestElementHeight).toBe(
+      baseTheme.emotion.sizes.largestElementHeight
+    )
   })
 
   it.each([0, -1, NaN, Infinity])(
@@ -2598,6 +2602,9 @@ describe("createEmotionTheme", () => {
       )
       expect(theme.sizes.dropdownItemHeight).toBe(
         baseTheme.emotion.sizes.dropdownItemHeight
+      )
+      expect(theme.sizes.largestElementHeight).toBe(
+        baseTheme.emotion.sizes.largestElementHeight
       )
     }
   )
@@ -4706,6 +4713,7 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.spacing.lg).toBe("0.5rem")
       expect(sidebarTheme.emotion.sizes.minElementHeight).toBe("1.25rem")
       expect(sidebarTheme.emotion.sizes.dropdownItemHeight).toBe("1.25rem")
+      expect(sidebarTheme.emotion.sizes.largestElementHeight).toBe("2.13rem")
       expect(sidebarTheme.emotion.sizes.elementHighlightHeight).toBe(
         `calc(${sidebarTheme.emotion.sizes.minElementHeight} - 2 * ${sidebarTheme.emotion.spacing.xs})`
       )

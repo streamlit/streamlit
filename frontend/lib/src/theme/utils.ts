@@ -1002,16 +1002,21 @@ export const createEmotionTheme = (
 
       conditionalOverrides.spacing = scaledSpacing
 
-      // Scale min control height and matching dropdown row height so density
-      // affects widget chrome and list rows that host highlight pills.
+      // Scale control heights used by standard widgets, dropdown rows, and tall
+      // controls (text area / audio / file uploader) so density stays consistent.
       const scaledMinElementHeight = scaleRem(
         parseFloat(baseThemeConfig.emotion.sizes.minElementHeight)
       )
       const scaledDropdownItemHeight = scaleRem(
         parseFloat(baseThemeConfig.emotion.sizes.dropdownItemHeight)
       )
+      const scaledLargestElementHeight = scaleRem(
+        parseFloat(baseThemeConfig.emotion.sizes.largestElementHeight)
+      )
       conditionalOverrides.sizes.minElementHeight = scaledMinElementHeight
       conditionalOverrides.sizes.dropdownItemHeight = scaledDropdownItemHeight
+      conditionalOverrides.sizes.largestElementHeight =
+        scaledLargestElementHeight
 
       // Keep derived size tokens that embed spacing / min height in sync.
       conditionalOverrides.sizes.elementHighlightHeight = `calc(${scaledMinElementHeight} - 2 * ${scaledSpacing.xs})`
