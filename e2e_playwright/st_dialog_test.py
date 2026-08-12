@@ -216,13 +216,13 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     dialog = app.get_by_role("dialog")
     expect(dialog).to_be_visible()
 
-    dialog.get_by_test_id("stDateInput").locator("input").click()
-    calendar = app.locator('[data-baseweb="calendar"]').first
+    dialog.get_by_test_id("stDateInput").get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
 
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Tuesday, January 2nd 2024."]'
-    ).first.click()
+    calendar.get_by_label("Tuesday, January 2, 2024").click()
     wait_for_app_run(app)
 
     expect_markdown(dialog, "Due Date Value: 2024-01-02")
