@@ -57,5 +57,9 @@ def test_horizontal_no_wrap_container_scrolls(app: Page):
     expect(wrap_container).to_have_css("flex-wrap", "wrap")
     expect(wrap_container).not_to_have_css("overflow-x", "auto")
     # The wrapped container fits its content within its own width, so it must
-    # not overflow horizontally.
-    assert wrap_container.evaluate("el => el.scrollWidth <= el.clientWidth")
+    # not overflow horizontally. Wait for the layout to settle rather than
+    # taking a one-shot measurement, to avoid flaking on a still-settling layout.
+    app.wait_for_function(
+        "el => el && el.scrollWidth <= el.clientWidth",
+        arg=wrap_container.element_handle(),
+    )

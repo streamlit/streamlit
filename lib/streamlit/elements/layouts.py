@@ -176,8 +176,9 @@ class LayoutsMixin:
             Whether to use horizontal flexbox layout. If this is ``False``
             (default), the container's elements are laid out vertically. If
             this is ``True``, the container's elements are laid out
-            horizontally and will overflow to the next line if they don't fit
-            within the container's width.
+            horizontally and, by default, wrap onto additional rows if they
+            don't fit within the container's width. Use ``wrap`` to instead
+            keep the elements in a single, horizontally scrolling row.
 
         wrap : bool or None
             Whether the elements in a horizontal container can wrap onto
