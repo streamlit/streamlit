@@ -29,13 +29,16 @@ def test_default_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(2).hover()
+    # Locate by content rather than index: toasts persist across the rerun
+    # triggered above, so their stacking order is not a stable contract.
+    default_toast = toasts.filter(has_text="This is a default toast message")
+    default_toast.hover()
 
-    expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
+    expect(default_toast).to_contain_text("🐶This is a default toast message")
     # Verify close button is accessible
-    close_button = toasts.nth(2).get_by_role("button", name="Close")
+    close_button = default_toast.get_by_role("button", name="Close")
     expect(close_button).to_be_visible()
-    assert_snapshot(toasts.nth(2), name="toast-default")
+    assert_snapshot(default_toast, name="toast-default")
 
 
 def test_collapsed_toast_rendering(
@@ -48,13 +51,16 @@ def test_collapsed_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(1).hover()
+    # Locate by content rather than index: toasts persist across the rerun
+    # triggered above, so their stacking order is not a stable contract.
+    long_toast = toasts.filter(has_text="Random toast message")
+    long_toast.hover()
 
-    expect(toasts.nth(1)).to_contain_text(
+    expect(long_toast).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
         "really long message, going way past the 3 line limitview more"
     )
-    assert_snapshot(toasts.nth(1), name="toast-collapsed")
+    assert_snapshot(long_toast, name="toast-collapsed")
 
 
 def test_expanded_toast_rendering(
@@ -67,18 +73,21 @@ def test_expanded_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(1).hover()
+    # Locate by content rather than index: toasts persist across the rerun
+    # triggered above, so their stacking order is not a stable contract.
+    long_toast = toasts.filter(has_text="Random toast message")
+    long_toast.hover()
 
-    expand = toasts.nth(1).get_by_text("view more")
+    expand = long_toast.get_by_text("view more")
     expect(expand).to_be_visible()
     expand.click()
 
-    expect(toasts.nth(1)).to_contain_text(
+    expect(long_toast).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
         "really long message, going way past the 3 line limitview less"
     )
     reset_hovering(themed_app)
-    assert_snapshot(toasts.nth(1), name="toast-expanded")
+    assert_snapshot(long_toast, name="toast-expanded")
 
 
 def test_toast_with_material_icon_rendering(
@@ -91,10 +100,13 @@ def test_toast_with_material_icon_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(0).hover()
+    # Locate by content rather than index: toasts persist across the rerun
+    # triggered above, so their stacking order is not a stable contract.
+    material_icon_toast = toasts.filter(has_text="Your edited image was saved!")
+    material_icon_toast.hover()
 
-    expect(toasts.nth(0)).to_contain_text("cabinYour edited image was saved!")
-    assert_snapshot(toasts.nth(0), name="toast-material-icon")
+    expect(material_icon_toast).to_contain_text("cabinYour edited image was saved!")
+    assert_snapshot(material_icon_toast, name="toast-material-icon")
 
 
 def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
@@ -153,8 +165,7 @@ def test_toast_persists_through_rerun(app: Page):
     expect(toast).to_have_count(1)
 
     # It still auto-hides after its (default 4s) duration rather than lingering.
-    app.wait_for_timeout(4500)
-    expect(toast).not_to_be_visible()
+    expect(toast).not_to_be_visible(timeout=5000)
 
 
 def test_toast_adjusts_for_custom_theme(
