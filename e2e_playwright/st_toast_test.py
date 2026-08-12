@@ -142,6 +142,21 @@ def test_toast_duration(app: Page):
     expect(persistent_toast).to_be_visible()
 
 
+def test_toast_persists_through_rerun(app: Page):
+    """Test that a toast emitted right before st.rerun() still appears (#7740)."""
+    click_button(app, "Toast and rerun")
+
+    toast = app.get_by_test_id("stToast").filter(has_text="Toast survives rerun")
+    # The toast survives the immediately-following st.rerun()...
+    expect(toast).to_be_visible()
+    # ...and is not duplicated by the rerun re-processing the delta.
+    expect(toast).to_have_count(1)
+
+    # It still auto-hides after its (default 4s) duration rather than lingering.
+    app.wait_for_timeout(4500)
+    expect(toast).not_to_be_visible()
+
+
 def test_toast_adjusts_for_custom_theme(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

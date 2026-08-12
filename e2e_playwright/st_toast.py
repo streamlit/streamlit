@@ -30,6 +30,10 @@ if st.button("Show duration toasts"):
     st.toast("I am a toast with a long duration", duration="long")
     st.toast("I am a persistent toast", duration="infinite")
 
+if st.button("Toast and rerun"):
+    st.toast("Toast survives rerun", icon="🚀")
+    st.rerun()
+
 
 @st.dialog("Streamlit Toast Notification")
 def toast_notification():

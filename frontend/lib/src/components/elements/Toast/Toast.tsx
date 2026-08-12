@@ -27,14 +27,30 @@ import { toastQueue } from "./toastQueue"
 
 export interface ToastProps {
   element: ToastProto
+  /**
+   * Stable identity of this toast (its delta path). Toasts at the same position
+   * across reruns share a ``toastId``; distinct ``st.toast()`` calls do not.
+   */
+  toastId: string
 }
 
-function Toast({ element }: Readonly<ToastProps>): ReactElement {
+function Toast({ element, toastId }: Readonly<ToastProps>): ReactElement {
   const { body, icon, duration } = element
   const theme = useEmotionTheme()
 
   useEffect(() => {
     if (theme.inSidebar) {
+      return
+    }
+
+    // De-dupe by position: if a toast for this delta path is already visible,
+    // this is a remount caused by a rerun re-emitting the same toast (the
+    // component is keyed by scriptRunId), so we keep the existing one instead of
+    // stacking a duplicate. Distinct st.toast() calls live at distinct delta
+    // paths, so this never suppresses legitimately separate toasts.
+    if (
+      toastQueue.visibleToasts.some(toast => toast.content.toastId === toastId)
+    ) {
       return
     }
 
@@ -45,14 +61,15 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
         : duration * 1_000
       : 4_000
 
-    const key = toastQueue.add({ body, icon: icon || undefined }, { timeout })
+    // Intentionally no unmount cleanup: a toast's lifetime is governed by its
+    // react-aria timeout (or manual dismissal), not the React component
+    // lifecycle. This lets a toast survive the stale-node unmount that happens
+    // when st.toast() is immediately followed by st.rerun() (issue #7740).
+    toastQueue.add({ body, icon: icon || undefined, toastId }, { timeout })
 
-    return () => {
-      toastQueue.close(key)
-    }
-
-    // Mount/unmount only — Streamlit creates a new Toast element per st.toast() call;
-    // the component never receives updated props for the same toast instance.
+    // Mount only — Streamlit creates a new Toast element (keyed by scriptRunId)
+    // per st.toast() call; the component never receives updated props for the
+    // same toast instance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -20,6 +20,14 @@ import { UNSTABLE_ToastQueue as ToastQueue } from "react-aria-components/Toast"
 export interface StreamlitToastContent {
   body: string
   icon?: string
+  /**
+   * Stable identity of the toast within the element tree (its delta path). Set
+   * by the ``Toast`` component and used to de-dupe the same toast across the
+   * component remounts that happen on every rerun, so an unconditionally
+   * re-emitted toast does not stack up. Optional because it is only relevant to
+   * that de-dupe path, not to rendering an individual toast.
+   */
+  toastId?: string
 }
 
 export const toastQueue = new ToastQueue<StreamlitToastContent>({
