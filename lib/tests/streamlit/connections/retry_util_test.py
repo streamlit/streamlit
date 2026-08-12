@@ -243,3 +243,24 @@ def test_preserves_wrapped_function_metadata() -> None:
     # `functools.wraps` exposes the original function so `inspect.signature`
     # (used by `st.cache_data` to build cache keys) resolves the true params.
     assert wrapped.__wrapped__ is original
+
+
+@pytest.mark.parametrize("max_attempts", [0, -1])
+def test_rejects_max_attempts_below_one(max_attempts: int) -> None:
+    """Constructing the decorator with fewer than one attempt fails fast."""
+    with pytest.raises(ValueError, match="max_attempts must be at least 1"):
+        retry_util.retry(
+            max_attempts=max_attempts,
+            wait_seconds=1,
+            retry_on_exception=_retry_only_retryable,
+        )
+
+
+def test_rejects_negative_wait_seconds() -> None:
+    """Constructing the decorator with a negative wait time fails fast."""
+    with pytest.raises(ValueError, match="wait_seconds must be non-negative"):
+        retry_util.retry(
+            max_attempts=3,
+            wait_seconds=-1,
+            retry_on_exception=_retry_only_retryable,
+        )

@@ -87,7 +87,16 @@ def retry(
     -------
     Callable
         A decorator that wraps a function with the configured retry behavior.
+
+    Raises
+    ------
+    ValueError
+        If ``max_attempts`` is less than ``1`` or ``wait_seconds`` is negative.
     """
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be at least 1, got {max_attempts!r}.")
+    if wait_seconds < 0:
+        raise ValueError(f"wait_seconds must be non-negative, got {wait_seconds!r}.")
 
     def decorator(func: Callable[_P, _R]) -> Callable[_P, _R]:
         @functools.wraps(func)
@@ -97,9 +106,8 @@ def retry(
                 try:
                     return func(*args, **kwargs)
                 except Exception as exc:  # noqa: PERF203
-                    # Exceptions the predicate rejects (and non-Exception
-                    # BaseExceptions like KeyboardInterrupt) propagate
-                    # immediately without any retry or `after` callback.
+                    # The predicate rejected this exception: re-raise it
+                    # immediately with no wait or `after` callback.
                     if not retry_on_exception(exc):
                         raise
 
