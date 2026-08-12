@@ -236,6 +236,37 @@ def test_public_git_queries_contain_unexpected_failures() -> None:
             assert repo.get_repo_info() is None
 
 
+def test_ahead_commits_contains_unexpected_rev_list_failure() -> None:
+    """Return an empty list when ``rev-list`` raises after upstream is resolved."""
+    with _mock_git_repo() as repo:
+        with (
+            patch.object(
+                repo, "get_tracking_branch_remote", return_value=("origin", "main")
+            ),
+            patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")),
+        ):
+            assert repo.ahead_commits == []
+
+
+@pytest.mark.parametrize(
+    "method_name",
+    ["get_tracking_branch_remote", "get_repo_info"],
+    ids=["tracking_branch_remote", "repo_info"],
+)
+def test_git_query_contains_unexpected_is_valid_failure(method_name: str) -> None:
+    """Return None when ``is_valid`` raises during metadata discovery."""
+    with _mock_git_repo() as repo:
+        with patch.object(repo, "is_valid", side_effect=RuntimeError("boom")):
+            assert getattr(repo, method_name)() is None
+
+
+def test_get_remote_urls_contains_unexpected_failure() -> None:
+    """Return an empty list when ``remote get-url`` raises unexpectedly."""
+    with _mock_git_repo() as repo:
+        with patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")):
+            assert repo._get_remote_urls("origin") == []
+
+
 def test_get_repo_info_uses_first_github_remote_url() -> None:
     """Use the first GitHub URL when a remote has multiple URLs."""
     with _mock_git_repo(

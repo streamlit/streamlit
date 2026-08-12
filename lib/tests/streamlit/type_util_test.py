@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import sys
+import types
 import unittest
 from collections import namedtuple
 from typing import Any
@@ -228,6 +229,21 @@ def test_is_sympy_expression() -> None:
     assert type_util.is_sympy_expression("plain string") is False
 
 
+def test_is_sympy_expression_with_mocked_sympy() -> None:
+    """Return True when ``is_type`` matches and the object is a ``sympy.Expr``."""
+
+    class _FakeExpr:
+        pass
+
+    fake_sympy = types.SimpleNamespace(Expr=_FakeExpr)
+    with (
+        patch.object(type_util, "is_type", return_value=True),
+        patch.dict(sys.modules, {"sympy": fake_sympy}),
+    ):
+        assert type_util.is_sympy_expression(_FakeExpr()) is True
+        assert type_util.is_sympy_expression(object()) is False
+
+
 def test_is_plotly_chart_dict_with_graph_object_value() -> None:
     """Return True for plotly-shaped dicts whose values include a graph object."""
     trace = go.Scatter(x=[1, 2], y=[3, 4])
@@ -268,6 +284,31 @@ def test_dump_pydantic_sequence_model_dump_v2() -> None:
         {"x": 1, "y": 2},
         {"x": 3, "y": 4},
     ]
+
+
+def test_dump_pydantic_sequence_with_model_dump_objects() -> None:
+    """Use ``model_dump(mode='json')`` for objects that look like Pydantic v2 models."""
+
+    class _FakeModel:
+        def model_dump(self, *, mode: str = "python") -> dict[str, str]:
+            return {"mode": mode}
+
+    result = type_util.dump_pydantic_sequence([_FakeModel(), _FakeModel()])
+    assert result == [{"mode": "json"}, {"mode": "json"}]
+
+
+def test_get_func_parameters_pre_314_uses_plain_signature() -> None:
+    """On Python < 3.14, resolve parameters via ``inspect.signature`` without Format."""
+
+    def sample(a: int, b: str = "x") -> None:
+        pass
+
+    with patch("streamlit.type_util.sys") as mock_sys:
+        mock_sys.version_info = (3, 13, 0)
+        params = type_util.get_func_parameters(sample)
+
+    assert [p.name for p in params] == ["a", "b"]
+    assert params[1].default == "x"
 
 
 @pytest.mark.parametrize(

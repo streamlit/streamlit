@@ -17,12 +17,14 @@ from __future__ import annotations
 import enum
 import os
 import sqlite3
+import sys
+import types
 import unittest
 from collections.abc import Iterator, Mapping
 from datetime import date
 from decimal import Decimal
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -1241,6 +1243,8 @@ def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
         out = dataframe_util.convert_anything_to_pandas_df(rel, max_unevaluated_rows=4)
     assert len(out) == 4
     mock_info.assert_called_once()
+    caption = mock_info.call_args.args[0]
+    assert "Showing only" in caption
 
 
 def test_convert_dbapi_cursor_row_cap_triggers_caption() -> None:
@@ -1630,3 +1634,324 @@ def test_unify_missing_values_replaces_nan_with_none() -> None:
     df = pd.DataFrame({"a": ["x", np.nan, "y"]})
     result = dataframe_util._unify_missing_values(df)
     assert result["a"].tolist() == ["x", None, "y"]
+
+
+# ---------------------------------------------------------------------------
+# Optional-library paths covered via mocks (polars/xarray not installed).
+# ---------------------------------------------------------------------------
+
+
+def test_show_data_information_calls_caption() -> None:
+    """``_show_data_information`` captions via the main DeltaGenerator."""
+    mock_dg = MagicMock()
+    mock_singleton = MagicMock()
+    mock_singleton.main_dg = mock_dg
+    with patch(
+        "streamlit.delta_generator_singletons.get_dg_singleton_instance",
+        return_value=mock_singleton,
+    ):
+        dataframe_util._show_data_information(" truncation notice ")
+    mock_dg.caption.assert_called_once_with(" truncation notice ")
+
+
+def test_determine_arrow_column_fix_all_nan_mixed_returns_string() -> None:
+    """All-NaN object columns inferred as mixed convert to string."""
+    series = pd.Series([np.nan, None, np.nan], dtype=object)
+    with patch("pandas.api.types.infer_dtype", return_value="mixed"):
+        assert dataframe_util.determine_arrow_column_fix(series) == "string"
+
+
+def test_unify_missing_values_infer_objects_branch_forced() -> None:
+    """Force the pandas < 3.0 gate so ``infer_objects`` is exercised."""
+    df = pd.DataFrame({"a": ["x", np.nan, "y"]})
+    with (
+        patch(
+            "streamlit.dataframe_util.is_pandas_version_less_than", return_value=True
+        ),
+        patch.object(
+            pd.DataFrame,
+            "infer_objects",
+            autospec=True,
+            wraps=pd.DataFrame.infer_objects,
+        ) as mock_infer,
+    ):
+        result = dataframe_util._unify_missing_values(df)
+    mock_infer.assert_called_once()
+    assert list(result.columns) == ["a"]
+    assert len(result) == 3
+
+
+@pytest.mark.parametrize(
+    ("checker", "expected"),
+    [
+        ("is_polars_series", dataframe_util.DataFormat.POLARS_SERIES),
+        ("is_polars_dataframe", dataframe_util.DataFormat.POLARS_DATAFRAME),
+        ("is_polars_lazyframe", dataframe_util.DataFormat.POLARS_LAZYFRAME),
+        ("is_xarray_dataset", dataframe_util.DataFormat.XARRAY_DATASET),
+        ("is_xarray_data_array", dataframe_util.DataFormat.XARRAY_DATA_ARRAY),
+        ("is_duckdb_relation", dataframe_util.DataFormat.DUCKDB_RELATION),
+    ],
+    ids=[
+        "polars_series",
+        "polars_dataframe",
+        "polars_lazyframe",
+        "xarray_dataset",
+        "xarray_data_array",
+        "duckdb_relation",
+    ],
+)
+def test_determine_data_format_mocked_optional_types(
+    checker: str, expected: dataframe_util.DataFormat
+) -> None:
+    """``determine_data_format`` recognizes mocked polars/xarray/duckdb types."""
+    with patch.object(dataframe_util, checker, return_value=True):
+        assert dataframe_util.determine_data_format(object()) is expected
+
+
+def test_convert_anything_to_pandas_df_mocked_polars_dataframe() -> None:
+    """Polars DataFrame conversion uses clone/to_pandas when detected."""
+    fake = MagicMock()
+    fake.clone.return_value = fake
+    fake.to_pandas.return_value = pd.DataFrame({"a": [1, 2]})
+    with patch.object(dataframe_util, "is_polars_dataframe", return_value=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    fake.clone.assert_called_once()
+    fake.to_pandas.assert_called_once()
+    assert list(out["a"]) == [1, 2]
+
+
+def test_convert_anything_to_pandas_df_mocked_polars_series() -> None:
+    """Polars Series conversion clones and frames via to_pandas()."""
+    fake = MagicMock()
+    fake.clone.return_value = fake
+    fake.to_pandas.return_value = pd.Series([10, 20], name="s")
+    with patch.object(dataframe_util, "is_polars_series", return_value=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    fake.clone.assert_called_once()
+    assert out.shape == (2, 1)
+
+
+def test_convert_anything_to_pandas_df_mocked_polars_lazyframe_truncates() -> None:
+    """Polars LazyFrame conversion respects max rows and shows a caption."""
+    collected = pd.DataFrame({"x": list(range(5))})
+    fake = MagicMock()
+    fake.limit.return_value.collect.return_value.to_pandas.return_value = collected
+    with (
+        patch.object(dataframe_util, "is_polars_lazyframe", return_value=True),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, max_unevaluated_rows=5)
+    fake.limit.assert_called_once_with(5)
+    assert len(out) == 5
+    mock_info.assert_called_once()
+    caption = mock_info.call_args.args[0]
+    assert "Showing only" in caption
+    assert "collect()" in caption
+
+
+def test_convert_anything_to_pandas_df_mocked_xarray_dataset() -> None:
+    """Xarray Dataset conversion optionally deep-copies then to_dataframe()."""
+    fake = MagicMock()
+    fake.copy.return_value = fake
+    fake.to_dataframe.return_value = pd.DataFrame({"a": [1.0]})
+    with patch.object(dataframe_util, "is_xarray_dataset", return_value=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    fake.copy.assert_called_once_with(deep=True)
+    assert list(out["a"]) == [1.0]
+
+
+def test_convert_anything_to_pandas_df_mocked_xarray_data_array() -> None:
+    """Xarray DataArray conversion uses to_series().to_frame()."""
+    fake = MagicMock()
+    fake.copy.return_value = fake
+    fake.to_series.return_value.to_frame.return_value = pd.DataFrame({"v": [9]})
+    with patch.object(dataframe_util, "is_xarray_data_array", return_value=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    fake.copy.assert_called_once_with(deep=True)
+    assert list(out["v"]) == [9]
+
+
+def test_convert_anything_to_arrow_bytes_mocked_polars_dataframe() -> None:
+    """Direct Polars DataFrame→Arrow path uses ``to_arrow``."""
+    table = pa.table({"a": [1, 2, 3]})
+    fake = MagicMock()
+    fake.to_arrow.return_value = table
+    with patch.object(dataframe_util, "is_polars_dataframe", return_value=True):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    fake.to_arrow.assert_called_once()
+    assert isinstance(result, bytes)
+    assert pa.ipc.open_stream(result).read_all().num_rows == 3
+
+
+def test_convert_anything_to_arrow_bytes_mocked_polars_series() -> None:
+    """Direct Polars Series→Arrow path converts via ``to_frame().to_arrow()``."""
+    table = pa.table({"s": [1, 2]})
+    frame = MagicMock()
+    frame.to_arrow.return_value = table
+    fake = MagicMock()
+    fake.to_frame.return_value = frame
+    with patch.object(dataframe_util, "is_polars_series", return_value=True):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    fake.to_frame.assert_called_once()
+    assert isinstance(result, bytes)
+
+
+@pytest.mark.parametrize(
+    ("height", "expect_truncate"),
+    [(6, True), (2, False)],
+    ids=["over_limit", "under_limit"],
+)
+def test_convert_anything_to_arrow_bytes_mocked_polars_lazyframe(
+    height: int, expect_truncate: bool
+) -> None:
+    """Polars LazyFrame Arrow path truncates and captions only when over the limit."""
+    table = pa.table({"x": [0, 1, 2]})
+    collected = MagicMock()
+    collected.height = height
+    collected.head.return_value = collected
+    collected.to_arrow.return_value = table
+    fake = MagicMock()
+    fake.limit.return_value.collect.return_value = collected
+    with (
+        patch.object(dataframe_util, "is_polars_lazyframe", return_value=True),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            fake, max_unevaluated_rows=5
+        )
+    assert isinstance(result, bytes)
+    if expect_truncate:
+        fake.limit.assert_called_once_with(6)
+        collected.head.assert_called_once_with(5)
+        mock_info.assert_called_once()
+        caption = mock_info.call_args.args[0]
+        assert "Showing only" in caption
+        assert "collect()" in caption
+    else:
+        collected.head.assert_not_called()
+        mock_info.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("checker", "use_series"),
+    [
+        ("is_polars_dataframe", False),
+        ("is_polars_series", True),
+    ],
+    ids=["dataframe", "series"],
+)
+def test_convert_anything_to_arrow_bytes_polars_fallback_on_error(
+    checker: str, use_series: bool
+) -> None:
+    """Polars Arrow conversion falls back to pandas when the direct path fails."""
+    fake = MagicMock()
+    fake.clone.return_value = fake
+    if use_series:
+        fake.to_frame.return_value.to_arrow.side_effect = RuntimeError("boom")
+        fake.to_pandas.return_value = pd.Series([1, 2], name="s")
+    else:
+        fake.to_arrow.side_effect = RuntimeError("boom")
+        fake.to_pandas.return_value = pd.DataFrame({"a": [1]})
+    with patch.object(dataframe_util, checker, return_value=True):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    assert isinstance(result, bytes)
+
+
+@pytest.mark.parametrize(
+    ("data_format", "expected"),
+    [
+        (dataframe_util.DataFormat.POLARS_DATAFRAME, ("pl", (2, 1))),
+        (dataframe_util.DataFormat.POLARS_LAZYFRAME, ("pl", (2, 1))),
+        (dataframe_util.DataFormat.POLARS_SERIES, ("pl", (2,))),
+        (dataframe_util.DataFormat.XARRAY_DATASET, "dataset:(2, 1)"),
+        (dataframe_util.DataFormat.XARRAY_DATA_ARRAY, "dataarray:2"),
+    ],
+    ids=[
+        "polars_dataframe",
+        "polars_lazyframe",
+        "polars_series",
+        "xarray_dataset",
+        "xarray_data_array",
+    ],
+)
+def test_convert_pandas_df_to_data_format_mocked_polars_and_xarray(
+    data_format: dataframe_util.DataFormat, expected: object
+) -> None:
+    """``convert_pandas_df_to_data_format`` uses mocked polars/xarray modules."""
+    pdf = pd.DataFrame({"c": [1.0, 2.0]})
+    fake_pl = types.ModuleType("polars")
+    fake_pl.from_pandas = MagicMock(side_effect=lambda d: ("pl", d.shape))  # type: ignore[attr-defined]
+    fake_xr = types.ModuleType("xarray")
+
+    class _Dataset:
+        @staticmethod
+        def from_dataframe(df: pd.DataFrame) -> str:
+            return f"dataset:{df.shape}"
+
+    class _DataArray:
+        @staticmethod
+        def from_series(series: pd.Series) -> str:
+            return f"dataarray:{len(series)}"
+
+    fake_xr.Dataset = _Dataset  # type: ignore[attr-defined]
+    fake_xr.DataArray = _DataArray  # type: ignore[attr-defined]
+
+    with patch.dict(sys.modules, {"polars": fake_pl, "xarray": fake_xr}):
+        assert (
+            dataframe_util.convert_pandas_df_to_data_format(pdf, data_format)
+            == expected
+        )
+
+
+def test_convert_anything_to_arrow_bytes_polars_lazyframe_fallback_on_error() -> None:
+    """Polars LazyFrame Arrow conversion falls back to pandas on failure."""
+    collected = MagicMock()
+    collected.height = 1
+    collected.to_arrow.side_effect = RuntimeError("lazy arrow failed")
+    fake = MagicMock()
+    fake.limit.return_value.collect.return_value = collected
+    with (
+        patch.object(dataframe_util, "is_polars_lazyframe", return_value=True),
+        patch.object(
+            dataframe_util,
+            "convert_anything_to_pandas_df",
+            return_value=pd.DataFrame({"x": [1]}),
+        ),
+    ):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    assert isinstance(result, bytes)
+
+
+@pytest.mark.parametrize(
+    ("checker", "column", "values"),
+    [
+        ("is_xarray_dataset", "a", [1.0]),
+        ("is_xarray_data_array", "v", [2]),
+    ],
+    ids=["dataset", "data_array"],
+)
+def test_convert_anything_to_pandas_df_mocked_xarray_without_copy(
+    checker: str, column: str, values: list[float | int]
+) -> None:
+    """Xarray conversion skips deep copy when ``ensure_copy`` is False."""
+    fake = MagicMock()
+    if checker == "is_xarray_dataset":
+        fake.to_dataframe.return_value = pd.DataFrame({column: values})
+    else:
+        fake.to_series.return_value.to_frame.return_value = pd.DataFrame(
+            {column: values}
+        )
+    with patch.object(dataframe_util, checker, return_value=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=False)
+    fake.copy.assert_not_called()
+    assert list(out[column]) == values
+
+
+def test_convert_anything_to_pandas_df_mocked_polars_without_clone() -> None:
+    """Polars conversion skips clone when ``ensure_copy`` is False."""
+    fake = MagicMock()
+    fake.to_pandas.return_value = pd.DataFrame({"a": [3]})
+    with patch.object(dataframe_util, "is_polars_dataframe", return_value=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=False)
+    fake.clone.assert_not_called()
+    assert list(out["a"]) == [3]

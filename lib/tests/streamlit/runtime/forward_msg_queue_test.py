@@ -25,7 +25,10 @@ from streamlit.cursor import make_delta_path
 from streamlit.elements import arrow
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import (
+    ForwardMsgQueue,
+    _maybe_compose_delta_msgs,
+)
 
 # For the messages below, we don't really care about their contents so much as
 # their general type.
@@ -353,3 +356,43 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(TEXT_DELTA_MSG2)
 
         assert count == 0
+
+
+def test_get_debug_returns_queue_and_delta_paths() -> None:
+    """``get_debug`` exposes the queued messages and delta-path index map."""
+    fmq = ForwardMsgQueue()
+    fmq.enqueue(TEXT_DELTA_MSG1)
+
+    debug = fmq.get_debug()
+    assert "queue" in debug
+    assert "ids" in debug
+    assert len(debug["queue"]) == 1
+    assert len(debug["ids"]) == 1
+    assert debug["ids"][0] == tuple(TEXT_DELTA_MSG1.metadata.delta_path)
+
+
+def _delta_msg_at_root(body: str = "old") -> ForwardMsg:
+    """Build a text delta message at the root main-container path."""
+    msg = ForwardMsg()
+    msg.delta.new_element.text.body = body
+    msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+    return msg
+
+
+def test_maybe_compose_returns_ref_hash_message() -> None:
+    """Reference (``ref_hash``) messages always compose over a prior delta."""
+    new_msg = ForwardMsg()
+    new_msg.ref_hash = "abc123"
+    new_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+
+    assert _maybe_compose_delta_msgs(_delta_msg_at_root(), new_msg) is new_msg
+
+
+def test_maybe_compose_returns_none_for_incompatible_delta_types() -> None:
+    """Non-replaceable delta types fall through to ``None`` (no composition)."""
+    new_msg = ForwardMsg()
+    # new_transient is a delta type that is never composed onto another message.
+    new_msg.delta.new_transient.Clear()
+    new_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+
+    assert _maybe_compose_delta_msgs(_delta_msg_at_root(), new_msg) is None

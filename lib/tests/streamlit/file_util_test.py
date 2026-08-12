@@ -322,3 +322,17 @@ class FileInPythonPathTest(unittest.TestCase):
         assert (
             file_util.normalize_path_join("some", "random", "path", "../..") == "some"
         )
+
+    def test_get_static_dir_points_at_package_static(self) -> None:
+        """``get_static_dir`` resolves to the Streamlit package ``static`` folder."""
+        static_dir = file_util.get_static_dir()
+        assert static_dir.endswith("streamlit/static")
+        assert os.path.isabs(static_dir)
+
+    def test_get_streamlit_file_path_raises_without_home(self) -> None:
+        """``get_streamlit_file_path`` raises when ``Path.home()`` returns None."""
+        with (
+            patch("streamlit.file_util.Path.home", return_value=None),
+            pytest.raises(RuntimeError, match="No home directory"),
+        ):
+            file_util.get_streamlit_file_path("config.toml")

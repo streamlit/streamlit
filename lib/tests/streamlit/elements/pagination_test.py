@@ -191,6 +191,20 @@ class TestPaginationSessionState(DeltaGeneratorTestCase):
         val = st.pagination(10, key="pagination_key")
         assert val == 5
 
+    def test_invalid_session_state_value_resets_to_default(self) -> None:
+        """Out-of-range session_state values reset to default."""
+        st.session_state.pagination_invalid = 999
+        val = st.pagination(10, key="pagination_invalid", default=3)
+        assert val == 3
+        assert st.session_state.pagination_invalid == 3
+
+    def test_bool_session_state_value_resets_to_default(self) -> None:
+        """Bool session_state values are rejected (bool is a subclass of int)."""
+        st.session_state.pagination_bool = True
+        val = st.pagination(10, key="pagination_bool", default=2)
+        assert val == 2
+        assert st.session_state.pagination_bool == 2
+
     def test_key_types(self):
         """Test that different key types are handled correctly."""
         st.pagination(10, key="string_key")

@@ -405,6 +405,132 @@ def test_resolve_forced_lazy_unknown_row_count_native_source_raises(
         resolve_lazy_source(object(), True, is_selection_activated=False)
 
 
+def test_materialize_arrow_table_index_renames_colliding_column() -> None:
+    """Index materialization renames when ``__streamlit_lazy_index__`` already exists."""
+    df = pd.DataFrame(
+        {
+            "__streamlit_lazy_index__": [10, 20, 30],
+            "a": [1, 2, 3],
+        }
+    )
+    table = pa.Table.from_pandas(df)
+
+    materialized = dataframe_source._materialize_arrow_table_index(table)
+
+    assert "__streamlit_lazy_index__" in materialized.schema.names
+    assert "___streamlit_lazy_index__" in materialized.schema.names
+    result = convert_arrow_bytes_to_pandas_df(
+        convert_arrow_table_to_arrow_bytes(materialized)
+    )
+    assert list(result.index) == [0, 1, 2]
+    assert result["__streamlit_lazy_index__"].tolist() == [10, 20, 30]
+
+
+def test_should_lazy_load_in_memory_lazy_false_returns_false() -> None:
+    """``lazy=False`` never opts into in-memory lazy loading."""
+    assert (
+        dataframe_source._should_lazy_load_in_memory(False, AUTO_LAZY_ROW_THRESHOLD + 1)
+        is False
+    )
+
+
+class _RaisingRowCountSource:
+    """Stand-in whose ``row_count`` accessor fails."""
+
+    @property
+    def row_count(self) -> int:
+        raise RuntimeError("row count unavailable")
+
+
+@pytest.mark.parametrize(
+    ("lazy", "expect_none"),
+    [(True, False), (None, True)],
+    ids=["lazy_true_raises", "lazy_none_fallback"],
+)
+def test_get_native_row_count_handles_row_count_failure(
+    lazy: bool | None, expect_none: bool
+) -> None:
+    """Row-count failures raise for ``lazy=True`` and fall back for ``lazy=None``."""
+    source = _RaisingRowCountSource()
+    if expect_none:
+        assert dataframe_source._get_native_row_count(source, lazy) is None
+    else:
+        with pytest.raises(
+            StreamlitAPIException, match="could not determine its row count"
+        ):
+            dataframe_source._get_native_row_count(source, lazy)
+
+
+def test_resolve_forced_lazy_native_source_above_min_rows_returns_native(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=True`` keeps a native source when its row count exceeds the min threshold."""
+    native_source = InMemoryDataframeSource(_make_table(FORCED_LAZY_MIN_ROWS + 1))
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    source = resolve_lazy_source(object(), True, is_selection_activated=False)
+
+    assert source is native_source
+
+
+class _FakePolarsDataFrame:
+    """Minimal stand-in for an in-memory Polars DataFrame."""
+
+    def __init__(self, num_rows: int) -> None:
+        self.height = num_rows
+        self._table = _make_table(num_rows)
+
+    def to_arrow(self) -> pa.Table:
+        return self._table
+
+
+@pytest.mark.parametrize(
+    ("num_rows", "expect_source"),
+    [
+        (FORCED_LAZY_MIN_ROWS + 1, True),
+        (FORCED_LAZY_MIN_ROWS, False),
+    ],
+    ids=["above_min_uses_in_memory", "at_min_stays_eager"],
+)
+def test_resolve_forced_lazy_polars_dataframe(
+    monkeypatch: pytest.MonkeyPatch, num_rows: int, expect_source: bool
+) -> None:
+    """``lazy=True`` uses in-memory Arrow for large Polars frames; small ones stay eager."""
+    monkeypatch.setattr(
+        dataframe_source.dataframe_util,
+        "is_polars_dataframe",
+        lambda _data: True,
+    )
+    source = resolve_lazy_source(
+        _FakePolarsDataFrame(num_rows), True, is_selection_activated=False
+    )
+    if expect_source:
+        assert isinstance(source, InMemoryDataframeSource)
+        assert source.row_count == num_rows
+        assert source.load_rows(0, 3).column("a").to_pylist() == [0, 1, 2]
+    else:
+        assert source is None
+
+
+def test_resolve_forced_lazy_unevaluated_without_adapter_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=True`` rejects unevaluated objects that have no native adapter."""
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: None
+    )
+    monkeypatch.setattr(
+        dataframe_source.dataframe_util,
+        "is_unevaluated_data_object",
+        lambda _data: True,
+    )
+
+    with pytest.raises(StreamlitAPIException, match="no lazy adapter"):
+        resolve_lazy_source(object(), True, is_selection_activated=False)
+
+
 @pytest.mark.require_integration
 def test_resolve_polars_lazyframe_native_adapter() -> None:
     """A Polars LazyFrame uses the native lazy adapter for ``lazy=True``."""

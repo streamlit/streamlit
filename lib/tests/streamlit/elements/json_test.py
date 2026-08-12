@@ -197,3 +197,41 @@ class StJsonAPITest(DeltaGeneratorTestCase):
             assert body["email"] == "test@example.com"
             assert body["name"] == "Test User"
             assert "tokens" not in body
+
+    def test_st_json_sequence_of_pydantic_models(self) -> None:
+        """Serialize a sequence of Pydantic-like models via ``dump_pydantic_sequence``."""
+        models = [object(), object()]
+        dumped = [{"x": 1}, {"x": 2}]
+        with (
+            patch(
+                "streamlit.elements.json.is_sequence_of_pydantic_models",
+                return_value=True,
+            ),
+            patch(
+                "streamlit.elements.json.dump_pydantic_sequence",
+                return_value=dumped,
+            ) as dump_mock,
+        ):
+            st.json(models)
+
+        dump_mock.assert_called_once_with(models)
+        el = self.get_delta_from_queue().new_element
+        assert json.loads(el.json.body) == dumped
+
+    def test_st_json_pydantic_sequence_attribute_error_falls_back(self) -> None:
+        """Fall back to ``list(body)`` when ``dump_pydantic_sequence`` raises AttributeError."""
+        models = [{"a": 1}, {"b": 2}]
+        with (
+            patch(
+                "streamlit.elements.json.is_sequence_of_pydantic_models",
+                return_value=True,
+            ),
+            patch(
+                "streamlit.elements.json.dump_pydantic_sequence",
+                side_effect=AttributeError("no model_dump"),
+            ),
+        ):
+            st.json(models)
+
+        el = self.get_delta_from_queue().new_element
+        assert json.loads(el.json.body) == models

@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import time
+from unittest.mock import patch
 
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -128,3 +129,14 @@ class SpinnerTest(DeltaGeneratorTestCase):
                 == WidthConfigFields.USE_CONTENT.value
             )
             assert el.width_config.use_content is True
+
+    def test_spinner_without_session_context(self) -> None:
+        """Without a session context, spinner yields and returns without displaying."""
+        with patch(
+            "streamlit.delta_generator.DeltaGenerator._transient",
+            side_effect=NoSessionContext("no session"),
+        ):
+            entered = False
+            with st.spinner("ignored"):
+                entered = True
+            assert entered is True

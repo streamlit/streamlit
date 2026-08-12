@@ -1399,3 +1399,226 @@ def test_cache_hash_seed_moves_off_a_real_collision() -> None:
 
     with patch_config_options({"runner.cacheHashSeed": 12345}):
         assert get_hash(base) != get_hash(mutated)
+
+
+# ---------------------------------------------------------------------------
+# Polars / Pydantic hashing covered via mocks (no integration deps required).
+# ---------------------------------------------------------------------------
+
+
+class _FakePolarsHashResult:
+    """Minimal stand-in for the chain ``.hash().to_arrow().to_string()``."""
+
+    def __init__(self, value: str = "fake-hash") -> None:
+        self._value = value
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        return _FakePolarsHashResult(f"{self._value}-{seed}")
+
+    def to_arrow(self) -> _FakePolarsHashResult:
+        return self
+
+    def to_string(self) -> str:
+        return self._value
+
+
+class _FakePolarsSeries:
+    """Pickleable fake Polars Series for hashing unit tests."""
+
+    def __init__(
+        self,
+        length: int,
+        *,
+        dtype: str = "Int64",
+        hash_value: str = "series-hash",
+        raise_on_hash: bool = False,
+    ) -> None:
+        self.dtype = dtype
+        self.shape = (length,)
+        self._length = length
+        self._hash_value = hash_value
+        self._raise_on_hash = raise_on_hash
+
+    def __len__(self) -> int:
+        return self._length
+
+    def sample(self, n: int, seed: int) -> _FakePolarsSeries:
+        return _FakePolarsSeries(
+            n,
+            dtype=self.dtype,
+            hash_value=f"{self._hash_value}-sampled-{seed}",
+            raise_on_hash=self._raise_on_hash,
+        )
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        if self._raise_on_hash:
+            raise TypeError("forced polars Series hash failure")
+        return _FakePolarsHashResult(f"{self._hash_value}-{seed}")
+
+
+class _FakePolarsDataFrame:
+    """Pickleable fake Polars DataFrame for hashing unit tests."""
+
+    def __init__(
+        self,
+        length: int,
+        *,
+        schema: dict[str, str] | None = None,
+        hash_value: str = "df-hash",
+        raise_on_hash: bool = False,
+    ) -> None:
+        self.shape = (length, 1 if schema is None else len(schema))
+        self.schema = schema or {"a": "Int64"}
+        self._length = length
+        self._hash_value = hash_value
+        self._raise_on_hash = raise_on_hash
+
+    def __len__(self) -> int:
+        return self._length
+
+    def sample(self, n: int, seed: int) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(
+            n,
+            schema=self.schema,
+            hash_value=f"{self._hash_value}-sampled-{seed}",
+            raise_on_hash=self._raise_on_hash,
+        )
+
+    def hash_rows(self, seed: int = 0) -> _FakePolarsHashResult:
+        if self._raise_on_hash:
+            raise TypeError("forced polars DataFrame hash failure")
+        return _FakePolarsHashResult(f"{self._hash_value}-{seed}")
+
+
+@pytest.fixture
+def polars_hashing_mocks() -> Any:
+    """Install Polars type-check and import mocks for hashing tests."""
+    import sys
+
+    import streamlit.runtime.caching.hashing as hashing_mod
+
+    real_is_type = hashing_mod.type_util.is_type
+
+    def fake_is_type(obj: object, fqn_type_pattern: Any) -> bool:
+        if fqn_type_pattern == "polars.series.series.Series":
+            return isinstance(obj, _FakePolarsSeries)
+        if fqn_type_pattern == "polars.dataframe.frame.DataFrame":
+            return isinstance(obj, _FakePolarsDataFrame)
+        return real_is_type(obj, fqn_type_pattern)
+
+    # ``import polars`` inside hashing must succeed even when polars is absent.
+    with (
+        mock.patch.object(hashing_mod.type_util, "is_type", fake_is_type),
+        mock.patch.dict(sys.modules, {"polars": types.ModuleType("polars")}),
+    ):
+        yield
+
+
+def test_fake_polars_series_hashes_consistently(polars_hashing_mocks: None) -> None:
+    """Fake Polars Series objects hash stably and distinguish content."""
+    a = _FakePolarsSeries(3, hash_value="aaa")
+    b = _FakePolarsSeries(3, hash_value="aaa")
+    c = _FakePolarsSeries(3, hash_value="bbb")
+    assert get_hash(a) == get_hash(b)
+    assert get_hash(a) != get_hash(c)
+
+
+def test_fake_polars_dataframe_hashes_consistently(polars_hashing_mocks: None) -> None:
+    """Fake Polars DataFrame objects hash stably and distinguish schema/values."""
+    a = _FakePolarsDataFrame(2, schema={"a": "Int64"}, hash_value="df-a")
+    b = _FakePolarsDataFrame(2, schema={"a": "Int64"}, hash_value="df-a")
+    c = _FakePolarsDataFrame(2, schema={"b": "Int64"}, hash_value="df-a")
+    assert get_hash(a) == get_hash(b)
+    assert get_hash(a) != get_hash(c)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [_FakePolarsSeries, _FakePolarsDataFrame],
+    ids=["series", "dataframe"],
+)
+def test_fake_polars_large_samples_before_hash(
+    polars_hashing_mocks: None, factory: Any
+) -> None:
+    """Large Polars objects are sampled before hashing."""
+    obj = factory(_PANDAS_ROWS_LARGE, hash_value="large")
+    with mock.patch.object(obj, "sample", wraps=obj.sample) as mock_sample:
+        digest = get_hash(obj)
+    mock_sample.assert_called_once()
+    assert mock_sample.call_args.kwargs["n"] == 10_000
+    assert isinstance(digest, bytes)
+
+
+@pytest.mark.parametrize(
+    ("factory", "warning_snippet"),
+    [
+        (_FakePolarsSeries, "failed for a polars Series"),
+        (_FakePolarsDataFrame, "failed for a polars DataFrame"),
+    ],
+    ids=["series", "dataframe"],
+)
+def test_fake_polars_pickle_fallback_on_typeerror(
+    polars_hashing_mocks: None, factory: Any, warning_snippet: str
+) -> None:
+    """Polars hashing falls back to pickle when the native hash path raises TypeError."""
+    length = 3 if factory is _FakePolarsSeries else 2
+    obj = factory(length, raise_on_hash=True)
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        digest = get_hash(obj)
+    assert digest == get_hash(factory(length, raise_on_hash=True))
+    mock_warning.assert_called_once()
+    logged = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert warning_snippet in logged
+
+
+def _patch_is_pydantic_model() -> Any:
+    """Patch ``is_pydantic_model`` to treat test doubles as Pydantic models."""
+    return mock.patch(
+        "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
+        return_value=True,
+    )
+
+
+def test_fake_pydantic_v2_model_dump_json_path() -> None:
+    """Pydantic v2 models hash via ``model_dump_json``."""
+
+    class V2Model:
+        def model_dump_json(self) -> str:
+            return '{"x": 1}'
+
+    class OtherV2:
+        def model_dump_json(self) -> str:
+            return '{"x": 2}'
+
+    with _patch_is_pydantic_model():
+        assert get_hash(V2Model()) == get_hash(V2Model())
+        assert get_hash(V2Model()) != get_hash(OtherV2())
+
+
+def test_fake_pydantic_v1_json_fallback_path() -> None:
+    """Pydantic v1 models without ``model_dump_json`` hash via ``.json()``."""
+
+    class V1Model:
+        def json(self) -> str:
+            return '{"y": 1}'
+
+    class OtherV1:
+        def json(self) -> str:
+            return '{"y": 2}'
+
+    with _patch_is_pydantic_model():
+        assert get_hash(V1Model()) == get_hash(V1Model())
+        assert get_hash(V1Model()) != get_hash(OtherV1())
+
+
+def test_fake_pydantic_unhashable_raises() -> None:
+    """Serialization failures on Pydantic models raise ``UnhashableTypeError``."""
+
+    class BrokenModel:
+        def model_dump_json(self) -> str:
+            raise TypeError("cannot serialize")
+
+    with _patch_is_pydantic_model():
+        with pytest.raises(UnhashableTypeError) as exc_info:
+            get_hash(BrokenModel())
+    assert "unhashable members" in str(exc_info.value).lower()
