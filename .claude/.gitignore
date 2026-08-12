@@ -34,6 +34,9 @@ skills/*
 !skills/generating-changelog/
 !skills/improving-frontend-coverage/
 !skills/improving-python-coverage/
+!skills/reproducing-issues/
+!skills/publishing-issue-repros/
+!skills/triaging-issues/
 
 # Allow agents
 !agents/
