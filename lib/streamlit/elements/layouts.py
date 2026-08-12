@@ -109,6 +109,7 @@ class LayoutsMixin:
         width: Width = "stretch",
         height: Height = "content",
         horizontal: bool = False,
+        wrap: bool | None = None,
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
@@ -177,6 +178,23 @@ class LayoutsMixin:
             this is ``True``, the container's elements are laid out
             horizontally and will overflow to the next line if they don't fit
             within the container's width.
+
+        wrap : bool or None
+            Whether the elements in a horizontal container can wrap onto
+            additional rows. This only applies when ``horizontal`` is ``True``.
+            This can be one of the following:
+
+            - ``None`` (default): The elements wrap onto additional rows when
+              they don't fit within the container's width. This matches the
+              default horizontal layout behavior.
+            - ``True``: The elements wrap onto additional rows when they don't
+              fit within the container's width.
+            - ``False``: The elements stay in a single row. If they don't fit
+              within the container's width, the container scrolls horizontally
+              instead of wrapping.
+
+            Setting ``wrap`` with ``horizontal=False`` raises an exception,
+            since there is no horizontal row of elements to control.
 
         horizontal_alignment : "left", "center", "right", or "distribute"
             The horizontal alignment of the elements inside the container. This
@@ -339,6 +357,22 @@ class LayoutsMixin:
             https://doc-container5.streamlit.app/
             height: 250px
 
+        **Example 6: No-wrap horizontal container (toolbar)**
+
+        Use ``wrap=False`` to keep a horizontal container's elements in a single
+        row. When the elements don't fit, the container scrolls horizontally
+        instead of wrapping onto additional rows.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(horizontal=True, wrap=False):
+        ...     for label in ("Edit", "Duplicate", "Archive", "Delete"):
+        ...         st.button(label)
+
+        .. output::
+            https://doc-container6.streamlit.app/
+            height: 200px
+
         """
         key = to_key(key)
         block_proto = BlockProto()
@@ -350,8 +384,17 @@ class LayoutsMixin:
 
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
+        if wrap is not None and not horizontal:
+            raise StreamlitAPIException(
+                "The `wrap` parameter can only be used with `horizontal=True`. "
+                "A vertical container has no horizontal row of elements to wrap. "
+                "Set `horizontal=True` to use `wrap`, or remove the `wrap` argument."
+            )
         if horizontal:
-            block_proto.flex_container.wrap = True
+            # `wrap=None` (default) and `wrap=True` keep the default horizontal
+            # behavior of wrapping onto additional rows. `wrap=False` keeps the
+            # elements in a single, horizontally scrollable row.
+            block_proto.flex_container.wrap = wrap is not False
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.HORIZONTAL
             )

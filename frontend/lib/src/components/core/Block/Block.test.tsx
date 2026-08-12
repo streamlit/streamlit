@@ -282,6 +282,48 @@ describe("FlexBoxContainer layout props", () => {
     renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
   })
+
+  it("enables horizontal scrolling for a horizontal container with wrap=false", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: nowrap;")
+  })
+
+  it("does not enable horizontal scrolling for a horizontal container with wrap=true", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: true,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).not.toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: wrap;")
+  })
+
+  it("does not enable horizontal scrolling for a vertical container with wrap=false", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        wrap: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    expect(screen.getByTestId("stVerticalBlock")).not.toHaveStyle(
+      "overflow-x: auto;"
+    )
+  })
 })
 
 describe("BlockNodeRenderer CSS key class placement", () => {

@@ -840,15 +840,36 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
+            # Each case is horizontal, then the wrap argument, then the expected
+            # resolved wrap value on the proto.
+            # A vertical container always resolves wrap to False.
+            (False, None, False),
+            # A horizontal container keeps the default wrapping behavior for
+            # wrap=None and wrap=True, and a single row for wrap=False.
+            (True, None, True),
+            (True, True, True),
+            (True, False, False),
         ],
     )
-    def test_container_wrap(self, direction: bool, wrap: bool) -> None:
+    def test_container_wrap(
+        self, horizontal: bool, wrap_arg: bool | None, expected_wrap: bool
+    ) -> None:
         """Test that st.container sets the wrap property correctly."""
-        st.container(horizontal=direction)
+        st.container(horizontal=horizontal, wrap=wrap_arg)
         container_block = self.get_delta_from_queue()
-        assert container_block.add_block.flex_container.wrap == wrap
+        assert container_block.add_block.flex_container.wrap == expected_wrap
+
+    @parameterized.expand(
+        [
+            (True,),
+            (False,),
+        ],
+    )
+    def test_container_wrap_without_horizontal_raises(self, wrap: bool) -> None:
+        """Test that st.container raises when wrap is set without horizontal=True."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.container(horizontal=False, wrap=wrap)
+        assert "horizontal=True" in str(exc.value)
 
     @parameterized.expand(
         [

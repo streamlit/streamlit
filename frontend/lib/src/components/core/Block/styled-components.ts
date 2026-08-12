@@ -259,6 +259,13 @@ export interface StyledFlexContainerBlockProps {
   align?: BlockProto.FlexContainer.Align | null
   justify?: BlockProto.FlexContainer.Justify | null
   overflow?: React.CSSProperties["overflow"]
+  /**
+   * Horizontal overflow behavior. Set to "auto" for a horizontal container
+   * with `wrap=false` so its elements stay in a single, horizontally
+   * scrollable row. Applied after `overflow` so it takes precedence on the
+   * horizontal axis.
+   */
+  overflowX?: React.CSSProperties["overflowX"]
 }
 
 export const StyledFlexContainerBlock =
@@ -274,6 +281,7 @@ export const StyledFlexContainerBlock =
       align,
       justify,
       overflow,
+      overflowX,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -298,6 +306,18 @@ export const StyledFlexContainerBlock =
           padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
         }),
         overflow,
+        ...(overflowX !== undefined && {
+          overflowX,
+          // The browser coerces the cross-axis overflow to "auto" when one
+          // axis scrolls, which would clip child focus rings and shadows.
+          // A bordered container already has enough internal padding; an
+          // unbordered one gets vertical breathing room (cancelled by a
+          // negative margin so the outer layout is unchanged).
+          ...(!border && {
+            paddingBlock: theme.sizes.focusRingWidth,
+            marginBlock: `-${theme.sizes.focusRingWidth}`,
+          }),
+        }),
       }
     }
   )
