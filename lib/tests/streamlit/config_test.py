@@ -81,6 +81,7 @@ class ConfigTest(unittest.TestCase):
             "metricValueFontSize",
             "metricValueFontWeight",
             "showSidebarBorder",
+            "spacingScale",
         ]
 
         theme_config_options = [
@@ -1217,6 +1218,7 @@ class ConfigTest(unittest.TestCase):
             "fontFaces": None,
             "baseFontSize": None,
             "baseFontWeight": None,
+            "spacingScale": None,
             "metricValueFontSize": None,
             "metricValueFontWeight": None,
             "codeTextColor": None,
@@ -1289,6 +1291,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.baseFontWeight", 300, "test")
+        config._set_option("theme.spacingScale", 0.75, "test")
         config._set_option("theme.metricValueFontSize", "32px", "test")
         config._set_option("theme.metricValueFontWeight", 600, "test")
         config._set_option("theme.headingFontWeights", [700, 600, 500], "test")
@@ -1368,6 +1371,7 @@ class ConfigTest(unittest.TestCase):
             ],
             "baseFontSize": 14,
             "baseFontWeight": 300,
+            "spacingScale": 0.75,
             "metricValueFontSize": "32px",
             "metricValueFontWeight": 600,
             "showSidebarBorder": True,

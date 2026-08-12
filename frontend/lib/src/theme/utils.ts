@@ -721,6 +721,8 @@ export const createEmotionTheme = (
     // Metric value styling
     metricValueFontSize,
     metricValueFontWeight,
+    // Pull out before customColors so it is not treated as a color override.
+    spacingScale,
     ...customColors
   } = themeInput
 
@@ -787,6 +789,8 @@ export const createEmotionTheme = (
     radii: EmotionTheme["radii"]
     fontSizes: EmotionTheme["fontSizes"]
     fontWeights: EmotionTheme["fontWeights"]
+    spacing: EmotionTheme["spacing"]
+    sizes: EmotionTheme["sizes"]
   }
 
   const conditionalOverrides: ConditionalOverrides = {
@@ -800,6 +804,8 @@ export const createEmotionTheme = (
     radii: { ...baseThemeConfig.emotion.radii },
     fontSizes: { ...baseThemeConfig.emotion.fontSizes },
     fontWeights: { ...baseThemeConfig.emotion.fontWeights },
+    spacing: { ...baseThemeConfig.emotion.spacing },
+    sizes: { ...baseThemeConfig.emotion.sizes },
   }
 
   // Conditional Overrides - Colors
@@ -963,6 +969,48 @@ export const createEmotionTheme = (
       LOG.warn(
         `Invalid button radius: ${buttonRadius}. Falling back to default button radius.`
       )
+    }
+  }
+
+  // Conditional Overrides - Spacing
+
+  if (notNullOrUndefined(spacingScale)) {
+    if (!Number.isFinite(spacingScale) || spacingScale <= 0) {
+      LOG.warn(
+        `Invalid spacing scale: ${spacingScale}. Falling back to default spacing.`
+      )
+    } else {
+      const baseSpacing = baseThemeConfig.emotion.spacing
+      const scaledSpacing = { ...baseSpacing }
+      const scaleRem = (remValue: number): string =>
+        addCssUnit(roundToTwoDecimals(remValue * spacingScale), "rem")
+
+      // Scale rem-based tokens only; leave absolute units (e.g. px) and zero alone.
+      for (const key of Object.keys(baseSpacing) as Array<
+        keyof EmotionTheme["spacing"]
+      >) {
+        const value = baseSpacing[key]
+        if (!value.endsWith("rem")) {
+          continue
+        }
+
+        const remValue = parseFloat(value)
+        if (!isNaN(remValue)) {
+          scaledSpacing[key] = scaleRem(remValue)
+        }
+      }
+
+      conditionalOverrides.spacing = scaledSpacing
+
+      // Also scale min control height so density affects widget chrome, not only gaps.
+      const scaledMinElementHeight = scaleRem(
+        parseFloat(baseThemeConfig.emotion.sizes.minElementHeight)
+      )
+      conditionalOverrides.sizes.minElementHeight = scaledMinElementHeight
+
+      // Keep derived size tokens that embed spacing / min height in sync.
+      conditionalOverrides.sizes.elementHighlightHeight = `calc(${scaledMinElementHeight} - 2 * ${scaledSpacing.xs})`
+      conditionalOverrides.sizes.tagMarginInsideBorder = `calc(${scaledSpacing.xs} - ${conditionalOverrides.sizes.borderWidth})`
     }
   }
 

@@ -2539,6 +2539,62 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  // == Theme spacing properties ==
+
+  it("scales rem spacing tokens when spacingScale is provided", () => {
+    const theme = createEmotionTheme({ spacingScale: 0.5 })
+
+    expect(theme.spacing).toEqual({
+      ...baseTheme.emotion.spacing,
+      threeXS: "0.06rem",
+      twoXS: "0.13rem",
+      xs: "0.19rem",
+      sm: "0.25rem",
+      md: "0.38rem",
+      lg: "0.5rem",
+      xl: "0.63rem",
+      twoXL: "0.75rem",
+      threeXL: "1rem",
+      fourXL: "2rem",
+      fiveXL: "3rem",
+      sixXL: "4rem",
+    })
+    // minElementHeight is 2.5rem at the default scale
+    expect(theme.sizes.minElementHeight).toBe("1.25rem")
+    // Derived size tokens that embed spacing / min height stay in sync
+    expect(theme.sizes.elementHighlightHeight).toBe(
+      `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`
+    )
+    expect(theme.sizes.tagMarginInsideBorder).toBe(
+      `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`
+    )
+  })
+
+  it("keeps default spacing when spacingScale is unset", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.spacing).toEqual(baseTheme.emotion.spacing)
+    expect(theme.sizes.minElementHeight).toBe(
+      baseTheme.emotion.sizes.minElementHeight
+    )
+  })
+
+  it.each([0, -1, NaN, Infinity])(
+    "logs a warning and falls back to default for invalid spacingScale '%s'",
+    spacingScale => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({ spacingScale })
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid spacing scale: ${spacingScale}. Falling back to default spacing.`
+      )
+      expect(theme.spacing).toEqual(baseTheme.emotion.spacing)
+      expect(theme.sizes.minElementHeight).toBe(
+        baseTheme.emotion.sizes.minElementHeight
+      )
+    }
+  )
+
   // == Theme radii properties ==
 
   it("adapts the radii theme props if baseRadius is provided", () => {

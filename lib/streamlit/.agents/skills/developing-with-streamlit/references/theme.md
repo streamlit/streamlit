@@ -158,6 +158,17 @@ headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
 headingFontWeights = [600, 600, 600, 500, 500, 500]
 ```
 
+### Spacing scale
+
+```toml
+[theme]
+spacingScale = 0.75                # Compact (< 1); roomier (> 1). Default: 1.0
+```
+
+`spacingScale` multiplies rem-based theme spacing tokens (padding, margins, gaps) and minimum widget/control height (`minElementHeight`). Values below `1.0` tighten the layout; values above `1.0` loosen it. Unlike `baseFontSize`, it does not change root typography size. If unset, the default scale is `1.0`.
+
+Main-theme only — set it under `[theme]`, not `[theme.sidebar]`, `[theme.light]`, or `[theme.dark]`.
+
 ### Link styling
 
 ```toml
