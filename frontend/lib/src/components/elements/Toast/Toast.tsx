@@ -29,7 +29,7 @@ export interface ToastProps {
   element: ToastProto
   /**
    * Stable identity of this toast (its delta path). Toasts at the same position
-   * across reruns share a ``toastId``; distinct ``st.toast()`` calls do not.
+   * across reruns share a `toastId`; distinct `st.toast()` calls do not.
    */
   toastId: string
 }
@@ -57,6 +57,13 @@ function Toast({ element, toastId }: Readonly<ToastProps>): ReactElement {
     // duplicate. This is a rare, self-healing edge case (toasts auto-expire);
     // switching de-dupe to the toast parameters would avoid it but would also
     // collapse intentionally-identical toasts (e.g. the "Three cheers" example).
+    //
+    // For the same reason, if the same position re-emits *different* content
+    // while the earlier toast is still visible (e.g. st.toast("Loading…") then
+    // a quick rerun emits st.toast("Done!")), the first toast is kept and the
+    // new content is suppressed until it auto-expires. This is intentional: it
+    // is the flip side of the position-based identity that keeps identical
+    // toasts stacking, and is likewise self-healing.
     if (
       toastQueue.visibleToasts.some(toast => toast.content.toastId === toastId)
     ) {
