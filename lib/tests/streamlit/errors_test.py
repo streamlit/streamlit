@@ -223,9 +223,11 @@ def test_missing_required_parameter_error_detail_with_braces() -> None:
     exc = errors.StreamlitMissingRequiredParameterError(
         "st.dialog",
         "title",
-        detail='Example: `@st.dialog("Title")`.',
+        detail="Example: use {value}.",
     )
-    assert '`@st.dialog("Title")`' in str(exc)
+    assert str(exc) == (
+        "The `title` parameter is required for `st.dialog`. Example: use {value}."
+    )
 
 
 @pytest.mark.parametrize(

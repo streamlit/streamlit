@@ -429,10 +429,13 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
     def __init__(
         self, command: str, parameter: str, *, detail: str | None = None
     ) -> None:
-        # Format the template first so braces in ``detail`` cannot break ``.format``.
+        # Resolve command/parameter via f-string first. Escape braces in
+        # ``detail`` so LocalizableStreamlitException's later ``.format``
+        # does not treat them as placeholders (or re-substitute command/parameter).
         message = f"The `{parameter}` parameter is required for `{command}`."
         if detail:
-            message = f"{message} {detail}"
+            escaped_detail = detail.replace("{", "{{").replace("}", "}}")
+            message = f"{message} {escaped_detail}"
         super().__init__(
             message,
             command=command,
