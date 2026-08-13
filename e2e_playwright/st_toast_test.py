@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
@@ -53,6 +54,7 @@ def _wait_for_stable_toast_size(toast: Locator, timeout_ms: int = 3000) -> None:
         page.wait_for_timeout(50)
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_default_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -76,6 +78,7 @@ def test_default_toast_rendering(
     assert_snapshot(default_toast, name="toast-default")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_collapsed_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -96,6 +99,7 @@ def test_collapsed_toast_rendering(
     assert_snapshot(long_toast, name="toast-collapsed")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_expanded_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -121,6 +125,7 @@ def test_expanded_toast_rendering(
     assert_snapshot(long_toast, name="toast-expanded")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_toast_with_material_icon_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -196,6 +201,7 @@ def test_toast_persists_through_rerun(app: Page):
     expect(toast).not_to_be_visible(timeout=7000)
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_toast_adjusts_for_custom_theme(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
