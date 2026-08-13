@@ -32,12 +32,13 @@ import {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import { CalendarDate, CalendarDateTime } from "@internationalized/date"
+import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
   DateField,
   I18nProvider,
+  type TimeValue,
 } from "react-aria-components"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
@@ -47,20 +48,6 @@ import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { CalendarPopoverHeader } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
 import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
 import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
-import {
-  StyledCalendarCell,
-  StyledCalendarGrid,
-  StyledCalendarHeaderCell,
-  StyledCalendarPopover,
-  StyledCalendarRoot,
-  StyledClearButton,
-  StyledDateField,
-  StyledDateFieldContainer,
-  StyledDateInputWrapper,
-  StyledErrorIconContainer,
-  StyledTrailingIcons,
-  StyledVisuallyHidden,
-} from "~lib/components/widgets/DateInput/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   SHIFT_VIEWPORT_PADDING,
@@ -76,6 +63,25 @@ import {
   parsePastedDateTime,
   validateDateTime,
 } from "./dateTimeInputUtils"
+import {
+  StyledCalendarCell,
+  StyledCalendarGrid,
+  StyledCalendarHeaderCell,
+  StyledCalendarPopover,
+  StyledCalendarRoot,
+  StyledClearButton,
+  StyledDateField,
+  StyledDateFieldContainer,
+  StyledDateInputWrapper,
+  StyledErrorIconContainer,
+  StyledPopoverTimeField,
+  StyledPopoverTimeFieldInput,
+  StyledPopoverTimeLabel,
+  StyledPopoverTimeRow,
+  StyledPopoverTimeSegment,
+  StyledTrailingIcons,
+  StyledVisuallyHidden,
+} from "./styled-components"
 
 interface SingleDateTimeInputProps {
   value: CalendarDateTime | null
@@ -136,10 +142,6 @@ function SingleDateTimeInput({
   // Guards against `handleFocus` reopening the popover it's in the middle
   // of closing — see `restoreFocusToField` below.
   const isRestoringFocusRef = useRef(false)
-  // When an action (calendar click, paste, clear) already committed the value
-  // via onChange, the close-detection effect should skip its own commit to
-  // avoid a redundant write + backend rerun.
-  const skipCloseCommitRef = useRef(false)
 
   const [isCalendarActive, setIsCalendarActive] = useState(false)
   const isCalendarActiveRef = useRef(false)
@@ -184,9 +186,7 @@ function SingleDateTimeInput({
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
-      if (skipCloseCommitRef.current) {
-        skipCloseCommitRef.current = false
-      } else if (triggerRef.current) {
+      if (triggerRef.current) {
         const { isPartiallyTyped, isFullyCleared } = getSegmentState(
           triggerRef.current
         )
@@ -326,68 +326,20 @@ function SingleDateTimeInput({
     [onFocusChange, onValidate]
   )
 
-  // Calendar date selection: merge with existing time, commit immediately, close.
-  // Clamps time to valid range when the selected date is on a boundary.
-  const handleCalendarChange = useCallback(
-    (date: CalendarDate): void => {
-      const currentTime = displayValueRef.current
-      let hour = currentTime?.hour ?? 0
-      let minute = currentTime?.minute ?? 0
-
-      // Clamp time when on the min boundary date
-      if (
-        minDateTime &&
-        date.compare(
-          new CalendarDate(
-            minDateTime.year,
-            minDateTime.month,
-            minDateTime.day
-          )
-        ) === 0
-      ) {
-        const currentMins = hour * 60 + minute
-        const minMins = minDateTime.hour * 60 + minDateTime.minute
-        if (currentMins < minMins) {
-          hour = minDateTime.hour
-          minute = minDateTime.minute
-        }
-      }
-
-      // Clamp time when on the max boundary date
-      if (
-        maxDateTime &&
-        date.compare(
-          new CalendarDate(
-            maxDateTime.year,
-            maxDateTime.month,
-            maxDateTime.day
-          )
-        ) === 0
-      ) {
-        const currentMins = hour * 60 + minute
-        const maxMins = maxDateTime.hour * 60 + maxDateTime.minute
-        if (currentMins > maxMins) {
-          hour = maxDateTime.hour
-          minute = maxDateTime.minute
-        }
-      }
-
-      const merged = new CalendarDateTime(
+  // Calendar date selection: merge with existing time, update display only.
+  // Popover stays open so user can also adjust time before committing.
+  const handleCalendarChange = useCallback((date: CalendarDate): void => {
+    const currentTime = displayValueRef.current
+    setDisplayValue(
+      new CalendarDateTime(
         date.year,
         date.month,
         date.day,
-        hour,
-        minute
+        currentTime?.hour ?? 0,
+        currentTime?.minute ?? 0
       )
-      setDisplayValue(merged)
-      onChange(merged)
-      skipCloseCommitRef.current = true
-      setIsOpen(false)
-      restoreFocusToField()
-      setIsCalendarActive(false)
-    },
-    [onChange, restoreFocusToField, minDateTime, maxDateTime]
-  )
+    )
+  }, [])
 
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return
@@ -592,6 +544,7 @@ function SingleDateTimeInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      if (isOpen && popoverRef.current?.contains(e.relatedTarget)) return
       if (!triggerRef.current) return
       const { isPartiallyTyped, isFullyCleared } = getSegmentState(
         triggerRef.current
@@ -611,7 +564,7 @@ function SingleDateTimeInput({
       onChangeRef.current(pending)
       formCommitRef.current?.(pending)
     },
-    [value, clearable, minDateTime, maxDateTime]
+    [isOpen, value, clearable, minDateTime, maxDateTime]
   )
 
   // Calendar value for display: extract date portion from displayValue.
@@ -623,6 +576,31 @@ function SingleDateTimeInput({
       displayValue.day
     )
   }, [displayValue])
+
+  // Popover TimeField value: extract time from displayValue.
+  const popoverTimeValue = useMemo((): Time | null => {
+    if (!displayValue) return null
+    return new Time(displayValue.hour, displayValue.minute)
+  }, [displayValue])
+
+  // Popover TimeField change: merge new time with existing date.
+  const handlePopoverTimeChange = useCallback(
+    (time: TimeValue | null): void => {
+      if (!time) return
+      const current = displayValueRef.current
+      if (!current) return
+      const merged = new CalendarDateTime(
+        current.year,
+        current.month,
+        current.day,
+        time.hour,
+        time.minute
+      )
+      setDisplayValue(merged)
+      onValidate(merged)
+    },
+    [onValidate]
+  )
 
   // Min/max for calendar (date-only).
   const calendarMinDate = useMemo((): CalendarDate | undefined => {
@@ -728,8 +706,8 @@ function SingleDateTimeInput({
           >
             {isCalendarActive && (
               <StyledVisuallyHidden id={popoverDescId}>
-                Use arrow keys to navigate dates. Enter to select. Escape to
-                close.
+                Use arrow keys to navigate. Enter to select. Tab to switch
+                between calendar and time. Escape to close.
               </StyledVisuallyHidden>
             )}
             <I18nProvider locale={safeLocale}>
@@ -758,6 +736,21 @@ function SingleDateTimeInput({
                   </CalendarGridBody>
                 </StyledCalendarGrid>
               </StyledCalendarRoot>
+              <StyledPopoverTimeRow data-testid="stDateTimeInputPopoverTime">
+                <StyledPopoverTimeLabel>Time</StyledPopoverTimeLabel>
+                <StyledPopoverTimeField
+                  aria-label="Time"
+                  value={popoverTimeValue}
+                  onChange={handlePopoverTimeChange}
+                  granularity="minute"
+                  hourCycle={24}
+                  shouldForceLeadingZeros
+                >
+                  <StyledPopoverTimeFieldInput>
+                    {segment => <StyledPopoverTimeSegment segment={segment} />}
+                  </StyledPopoverTimeFieldInput>
+                </StyledPopoverTimeField>
+              </StyledPopoverTimeRow>
             </I18nProvider>
           </StyledCalendarPopover>
         </FloatingPortal>

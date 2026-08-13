@@ -146,11 +146,52 @@ def test_handles_datetime_selection_with_popover(app: Page):
     datetime_input = get_datetime_input(app, "Datetime input 1 (base)")
     datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
 
-    # Type the new value into the segmented field (replaces existing segments)
-    type_date(datetime_field, "2025", "11", "25", "09", "30")
+    # Click into segments to open the calendar popover
+    datetime_field.get_by_role("spinbutton").first.click()
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # Select a date in the calendar — popover stays open
+    calendar.get_by_role("button", name=re.compile(r"^November 25")).click()
+    expect(calendar).to_be_visible()
+
+    # Edit time via the popover TimeField
+    time_row = app.get_by_test_id("stDateTimeInputPopoverTime")
+    hour_segment = time_row.get_by_role("spinbutton").first
+    hour_segment.click()
+    # Type new hour value
+    hour_segment.press("ArrowDown")  # 16 -> 15
+
+    # Close popover by clicking outside
+    app.get_by_text("Value 1:").click()
+    expect(calendar).not_to_be_visible()
     wait_for_app_run(app)
 
-    expect_markdown(app, "Value 1: 2025-11-25 09:30:00")
+    expect_markdown(app, "Value 1: 2025-11-25 15:45:00")
+
+
+def test_popover_time_only_change(app: Page):
+    """Test that changing only the time via popover TimeField commits correctly."""
+    datetime_input = get_datetime_input(app, "Datetime input 1 (base)")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+
+    # Open popover
+    datetime_field.get_by_role("spinbutton").first.click()
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # Edit only the time in the popover (don't select a date)
+    time_row = app.get_by_test_id("stDateTimeInputPopoverTime")
+    minute_segment = time_row.get_by_role("spinbutton").last
+    minute_segment.click()
+    minute_segment.press("ArrowUp")  # 45 -> 46
+
+    # Close popover
+    app.get_by_text("Value 1:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Value 1: 2025-11-19 16:46:00")
 
 
 def test_step_interval_applied(app: Page):
