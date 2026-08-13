@@ -74,8 +74,12 @@ export const StyledTrigger = styled(Group, {
  * In single-row mode, a fade mask is applied on each edge that has off-screen
  * chips (both edges when scrolled to the middle), driven by the
  * `data-can-scroll-start`/`data-can-scroll-end` attributes, to signal that the
- * row is horizontally scrollable. The mask direction assumes an LTR layout
- * (physical scrollLeft + `to right` gradient); RTL is out of scope for now.
+ * row is horizontally scrollable. The native horizontal scrollbar is hidden
+ * (like `st.tabs`) so it doesn't consume the pinned one-row height and clip the
+ * chips; the fade is the sole scroll affordance while native scrolling via
+ * trackpad/shift-wheel/keyboard still works. The mask direction assumes an LTR
+ * layout (physical scrollLeft + `to right` gradient); RTL is out of scope for
+ * now.
  */
 export const StyledTagsContainer = styled.div<{ $wrap: boolean }>(
   ({ theme, $wrap }) => {
@@ -97,6 +101,14 @@ export const StyledTagsContainer = styled.div<{ $wrap: boolean }>(
       paddingBottom: theme.spacing.none,
       paddingRight: theme.spacing.none,
       cursor: "text",
+      // Hide the horizontal scrollbar in single-row mode so it can't reduce the
+      // fixed one-row height and clip chips/controls (the edge fade signals
+      // scrollability instead). Kept visible while wrapping, where the vertical
+      // scrollbar is the intended overflow affordance.
+      ...(!$wrap && {
+        scrollbarWidth: "none" as const,
+        "&::-webkit-scrollbar": { display: "none" as const },
+      }),
       "&[data-can-scroll-start][data-can-scroll-end]": {
         maskImage: bothMask,
         WebkitMaskImage: bothMask,

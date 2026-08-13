@@ -969,20 +969,19 @@ def test_multiselect_wrap(app: Page, assert_snapshot: ImageCompareFunction):
 
     def _height(container: Locator) -> float:
         box = container.bounding_box()
-        assert box is not None
+        assert box is not None, (
+            "Expected the wrap tags container to have a bounding box."
+        )
         return box["height"]
 
-    height_wrap_false = _height(wrap_false)
-    height_wrap_true = _height(wrap_true)
-    height_auto_horizontal = _height(auto_horizontal)
-    height_auto_vertical = _height(auto_vertical)
-
+    # Poll the layout heights instead of asserting once so transient first-paint
+    # heights don't flake the comparisons.
     # wrap=True grows onto multiple rows; wrap=False stays a single row.
-    assert height_wrap_false < height_wrap_true
+    wait_until(app, lambda: _height(wrap_false) < _height(wrap_true))
     # Auto resolves to no-wrap inside a horizontal container (like wrap=False)
     # and to wrapping in a vertical layout (like wrap=True).
-    assert height_auto_horizontal < height_wrap_true
-    assert height_auto_vertical > height_wrap_false
+    wait_until(app, lambda: _height(auto_horizontal) < _height(wrap_true))
+    wait_until(app, lambda: _height(auto_vertical) > _height(wrap_false))
 
     # wrap=False must scroll horizontally because the chips overflow the row ...
     assert wrap_false.evaluate("el => el.scrollWidth > el.clientWidth")

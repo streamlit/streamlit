@@ -1414,6 +1414,10 @@ describe("Multiselect tag accessibility", () => {
         flexWrap: "nowrap",
         overflowX: "auto",
         overflowY: "hidden",
+        // The native horizontal scrollbar is hidden (like st.tabs) so it can't
+        // consume the pinned one-row height and clip chips; the edge fade is the
+        // scroll affordance instead.
+        scrollbarWidth: "none",
       })
     })
 
@@ -1427,6 +1431,9 @@ describe("Multiselect tag accessibility", () => {
         overflowY: "auto",
         overflowX: "hidden",
       })
+      // While wrapping, the vertical scrollbar is the intended overflow
+      // affordance, so it must not be hidden.
+      expect(tagsContainer).not.toHaveStyle({ scrollbarWidth: "none" })
     })
 
     it("resolves the auto default to no-wrap inside a horizontal container", () => {
