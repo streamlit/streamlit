@@ -58,10 +58,10 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
+  computeStepSnap,
   dateTimesEqual,
   getSegmentState,
   parsePastedDateTime,
-  snapTimeStep,
   validateDateTime,
 } from "./dateTimeInputUtils"
 import {
@@ -182,6 +182,9 @@ function SingleDateTimeInput({
   formCommitRef.current = formCommit
 
   const [isOpen, setIsOpen] = useState(false)
+  // Guards against double formCommit: the overlay dismissal handler commits
+  // synchronously (to win the race with form submit clicks) and sets this true;
+  // the close-detection effect and handleBlur then skip their own formCommit.
   const dismissalCommittedRef = useRef(false)
 
   // Close-detection effect: handles commit/revert when popover closes.
@@ -428,39 +431,22 @@ function SingleDateTimeInput({
       // 1-minute increments — pre-existing behavior. Will be addressed with
       // seconds granularity and hour cycle support, consistent with TimeInput.
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        if (!displayValue) return
         const target = e.target as HTMLElement
         const segmentType = target.getAttribute("data-type")
-        const up = e.key === "ArrowUp"
-
-        if (segmentType === "minute" && step % 60 === 0) {
-          if (stepMins <= 1) return
-          if (!displayValue) return
-
+        const snapped = computeStepSnap(
+          displayValue,
+          segmentType,
+          step,
+          stepMins,
+          e.key === "ArrowUp"
+        )
+        if (snapped) {
           e.preventDefault()
           e.stopPropagation()
           e.nativeEvent.stopImmediatePropagation()
-
-          const totalMins = displayValue.hour * 60 + displayValue.minute
-          const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
-          const newDt = displayValue.set({
-            hour: Math.floor(wrapped / 60),
-            minute: wrapped % 60,
-          })
-          setDisplayValue(newDt)
-          onValidate(newDt)
-        } else if (segmentType === "hour" && step % 3600 === 0) {
-          const stepHours = step / 3600
-          if (stepHours <= 1) return
-          if (!displayValue) return
-
-          e.preventDefault()
-          e.stopPropagation()
-          e.nativeEvent.stopImmediatePropagation()
-
-          const wrapped = snapTimeStep(displayValue.hour, stepHours, up, 24)
-          const newDt = displayValue.set({ hour: wrapped, minute: 0 })
-          setDisplayValue(newDt)
-          onValidate(newDt)
+          setDisplayValue(snapped)
+          onValidate(snapped)
         }
         return
       }
@@ -555,7 +541,9 @@ function SingleDateTimeInput({
         return
       }
       onChangeRef.current(pending)
-      formCommitRef.current?.(pending)
+      if (!dismissalCommittedRef.current) {
+        formCommitRef.current?.(pending)
+      }
     },
     [isOpen, value, clearable, minDateTime, maxDateTime]
   )
@@ -577,59 +565,45 @@ function SingleDateTimeInput({
   }, [displayValue])
 
   // Popover TimeField change: merge new time with existing date.
-  // When displayValue is null (clearable empty state), seed from focusedValue
-  // so users can set time before picking a date.
   const handlePopoverTimeChange = useCallback(
     (time: TimeValue | null): void => {
       if (!time) return
       const current = displayValueRef.current
-      const date = current ?? focusedValue
+      if (!current) return
       const merged = new CalendarDateTime(
-        date.year,
-        date.month,
-        date.day,
+        current.year,
+        current.month,
+        current.day,
         time.hour,
         time.minute
       )
       setDisplayValue(merged)
       onValidate(merged)
     },
-    [focusedValue, onValidate]
+    [onValidate]
   )
 
   // Step-aware arrow keys for popover TimeField segments.
   const handlePopoverTimeKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
-      const target = e.target as HTMLElement
-      const segmentType = target.getAttribute("data-type")
-      const up = e.key === "ArrowUp"
       const current = displayValueRef.current
       if (!current) return
-
-      if (segmentType === "minute" && step % 60 === 0) {
-        if (stepMins <= 1) return
+      const target = e.target as HTMLElement
+      const segmentType = target.getAttribute("data-type")
+      const snapped = computeStepSnap(
+        current,
+        segmentType,
+        step,
+        stepMins,
+        e.key === "ArrowUp"
+      )
+      if (snapped) {
         e.preventDefault()
         e.stopPropagation()
         e.nativeEvent.stopImmediatePropagation()
-        const totalMins = current.hour * 60 + current.minute
-        const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
-        const newDt = current.set({
-          hour: Math.floor(wrapped / 60),
-          minute: wrapped % 60,
-        })
-        setDisplayValue(newDt)
-        onValidate(newDt)
-      } else if (segmentType === "hour" && step % 3600 === 0) {
-        const stepHours = step / 3600
-        if (stepHours <= 1) return
-        e.preventDefault()
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-        const wrapped = snapTimeStep(current.hour, stepHours, up, 24)
-        const newDt = current.set({ hour: wrapped, minute: 0 })
-        setDisplayValue(newDt)
-        onValidate(newDt)
+        setDisplayValue(snapped)
+        onValidate(snapped)
       }
     },
     [step, stepMins, onValidate]
@@ -734,7 +708,7 @@ function SingleDateTimeInput({
             onKeyDown={handleCalendarKeyDown}
             role={isCalendarActive ? "dialog" : undefined}
             aria-modal={isCalendarActive ? "true" : undefined}
-            aria-label={isCalendarActive ? "Choose date" : undefined}
+            aria-label={isCalendarActive ? "Choose date and time" : undefined}
             aria-describedby={isCalendarActive ? popoverDescId : undefined}
           >
             {isCalendarActive && (

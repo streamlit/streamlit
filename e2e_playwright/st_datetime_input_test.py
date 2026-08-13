@@ -159,8 +159,8 @@ def test_handles_datetime_selection_with_popover(app: Page):
     time_row = app.get_by_test_id("stDateTimeInputPopoverTime")
     hour_segment = time_row.get_by_role("spinbutton").first
     hour_segment.click()
-    # Type new hour value
-    hour_segment.press("ArrowDown")  # 16 -> 15
+    # Decrement hour via keyboard (16 -> 15)
+    hour_segment.press("ArrowDown")
 
     # Close popover by clicking outside
     app.get_by_text("Value 1:").click()

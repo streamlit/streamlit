@@ -177,6 +177,35 @@ export function snapTimeStep(
   return next
 }
 
+/**
+ * Apply step-snapping to a CalendarDateTime based on segment type and step.
+ * Returns the new datetime if snapping applies, or null if default behavior should be used.
+ */
+export function computeStepSnap(
+  current: CalendarDateTime,
+  segmentType: string | null,
+  step: number,
+  stepMins: number,
+  up: boolean
+): CalendarDateTime | null {
+  if (segmentType === "minute" && step % 60 === 0) {
+    if (stepMins <= 1) return null
+    const totalMins = current.hour * 60 + current.minute
+    const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
+    return current.set({
+      hour: Math.floor(wrapped / 60),
+      minute: wrapped % 60,
+    })
+  }
+  if (segmentType === "hour" && step % 3600 === 0) {
+    const stepHours = step / 3600
+    if (stepHours <= 1) return null
+    const wrapped = snapTimeStep(current.hour, stepHours, up, 24)
+    return current.set({ hour: wrapped, minute: 0 })
+  }
+  return null
+}
+
 // --- Segment state helper ---
 
 export interface SegmentState {
