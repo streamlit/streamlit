@@ -820,6 +820,185 @@ describe("DateTimeInput widget", () => {
     })
   })
 
+  describe("Form submit on Enter", () => {
+    it("calls submitForm on Enter when enter_to_submit is enabled and value is valid", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => true)
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      // Change value so it's different from committed
+      await user.keyboard("{ArrowUp}")
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+        "form",
+        undefined
+      )
+    })
+
+    it("does NOT call submitForm on Enter when enter_to_submit is disabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+        false
+      )
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
+
+    it("does NOT call submitForm on Enter when a validation error is showing", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-19T00:00",
+        max: "2025-11-19T18:00",
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<DateTimeInput {...props} />)
+
+      // Push the hour above max to trigger a validation error
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      // Increase hour from 16 past 18 (max) — 3 presses to reach 19
+      await user.keyboard("{ArrowUp}")
+      await user.keyboard("{ArrowUp}")
+      await user.keyboard("{ArrowUp}")
+
+      // Verify error is showing
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+      })
+
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("Boundary time clamping on calendar selection", () => {
+    it("preserves time when selecting a boundary date and time is in range", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T14:30"],
+        min: "2025-11-19T09:00",
+        max: "2025-11-19T17:00",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click the min boundary date (Nov 19 — same date, so time stays)
+      const day19 = screen.getByRole("button", { name: /19/ })
+      await user.click(day19)
+
+      // Time 14:30 is within [09:00, 17:00], so it should be preserved
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T14:30"],
+          { fromUi: true },
+          undefined
+        )
+      })
+    })
+
+    it("clamps time to max boundary when current time exceeds max on selected date", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-01T22:00"],
+        min: "2025-11-19T09:00",
+        max: "2025-11-30T17:00",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click the max boundary date (Nov 30)
+      const day30 = screen.getByRole("button", { name: /November 30/ })
+      await user.click(day30)
+
+      // 22:00 exceeds max's time of 17:00 on Nov 30, so time should be clamped
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-30T17:00"],
+          { fromUi: true },
+          undefined
+        )
+      })
+    })
+
+    it("clamps time to min boundary when current time is below min on selected date", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-25T07:00"],
+        min: "2025-11-19T09:00",
+        max: "2025-11-30T17:00",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click the min boundary date (Nov 19)
+      const day19 = screen.getByRole("button", { name: /November 19/ })
+      await user.click(day19)
+
+      // 07:00 is below min's time of 09:00 on Nov 19, so time should be clamped up
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T09:00"],
+          { fromUi: true },
+          undefined
+        )
+      })
+    })
+  })
+
   describe("Active calendar (Alt+ArrowDown)", () => {
     it("Alt+ArrowDown opens calendar in active mode with focus on grid cell", async () => {
       const user = userEvent.setup()

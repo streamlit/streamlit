@@ -94,7 +94,9 @@ export function formatCalendarDateTime(
   return `${datePart}, ${pad(dt.hour, 2)}:${pad(dt.minute, 2)}`
 }
 
-/** Build the user-facing error message for out-of-range datetimes. */
+/** Build the user-facing error message for out-of-range datetimes.
+ * afterMax always shows just the upper bound (mentioning min adds noise).
+ * beforeMin shows the full range when both bounds exist, or just min otherwise. */
 export function createDateTimeErrorMessage(
   errorType: DateTimeValidationErrorType,
   minString: string,
@@ -149,6 +151,31 @@ export function parsePastedDateTime(
     return result
   } catch {
     return null
+  }
+}
+
+// --- Segment state helper ---
+
+export interface SegmentState {
+  totalSegments: number
+  placeholderCount: number
+  isPartiallyTyped: boolean
+  isFullyCleared: boolean
+}
+
+/** Query spinbutton segments in a container to determine their placeholder state. */
+export function getSegmentState(container: HTMLElement): SegmentState {
+  const segments = container.querySelectorAll('[role="spinbutton"]')
+  const placeholders = container.querySelectorAll(
+    '[role="spinbutton"][data-placeholder="true"]'
+  )
+  const totalSegments = segments.length
+  const placeholderCount = placeholders.length
+  return {
+    totalSegments,
+    placeholderCount,
+    isPartiallyTyped: placeholderCount > 0 && placeholderCount < totalSegments,
+    isFullyCleared: totalSegments > 0 && placeholderCount === totalSegments,
   }
 }
 

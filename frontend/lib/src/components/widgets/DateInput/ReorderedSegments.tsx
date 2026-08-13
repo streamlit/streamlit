@@ -25,6 +25,9 @@ import { StyledDateFieldInput, StyledDateSegment } from "./styled-components"
 const DATE_SEGMENT_TYPES = new Set(["year", "month", "day"])
 const TIME_SEGMENT_TYPES = new Set(["hour", "minute", "second", "dayPeriod"])
 
+// These literal filters assume en-US locale with 24h cycle: `, ` separates
+// date from time and `:` separates time parts. Update when locale/hourCycle
+// support is added.
 function buildDateTimeSegments(
   segments: readonly IDateSegment[],
   format: string

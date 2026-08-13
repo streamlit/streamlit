@@ -70,7 +70,11 @@ import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { dateTimesEqual, parsePastedDateTime } from "./dateTimeInputUtils"
+import {
+  dateTimesEqual,
+  getSegmentState,
+  parsePastedDateTime,
+} from "./dateTimeInputUtils"
 
 interface SingleDateTimeInputProps {
   value: CalendarDateTime | null
@@ -170,28 +174,16 @@ function SingleDateTimeInput({
     if (wasOpenRef.current && !isOpen) {
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
-      } else {
-        const segments = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"]'
+      } else if (triggerRef.current) {
+        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+          triggerRef.current
         )
-        const placeholders = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"][data-placeholder="true"]'
-        )
-        const isPartiallyTyped =
-          segments &&
-          placeholders &&
-          placeholders.length > 0 &&
-          placeholders.length < segments.length
-        const allCleared =
-          segments &&
-          segments.length > 0 &&
-          placeholders?.length === segments.length
 
-        if (isPartiallyTyped || (allCleared && !clearable)) {
+        if (isPartiallyTyped || (isFullyCleared && !clearable)) {
           setDisplayValue(value)
           onCloseRef.current(true)
         } else {
-          const pending = allCleared ? null : displayValueRef.current
+          const pending = isFullyCleared ? null : displayValueRef.current
           if (!dateTimesEqual(pending, value)) {
             onChangeRef.current(pending)
           }
@@ -258,22 +250,10 @@ function SingleDateTimeInput({
       onClose: () => {
         setIsOpen(false)
         setIsCalendarActive(false)
-        if (formCommit) {
-          const segments = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"]'
+        if (formCommit && triggerRef.current) {
+          const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+            triggerRef.current
           )
-          const placeholders = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"][data-placeholder="true"]'
-          )
-          const isPartiallyTyped =
-            segments &&
-            placeholders &&
-            placeholders.length > 0 &&
-            placeholders.length < segments.length
-          const isFullyCleared =
-            segments &&
-            segments.length > 0 &&
-            placeholders?.length === segments.length
           if (isPartiallyTyped || (isFullyCleared && !clearable)) {
             // Will revert on next render — don't commit stale/invalid state.
           } else {
@@ -287,6 +267,7 @@ function SingleDateTimeInput({
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
+      // Exclude the month/year picker popover so Escape closes it first, not the whole calendar.
       excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
       excludeEscape: true,
     })
@@ -433,21 +414,10 @@ function SingleDateTimeInput({
 
       if (e.key === "Enter") {
         e.preventDefault()
-        const segments = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"]'
+        if (!triggerRef.current) return
+        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+          triggerRef.current
         )
-        const placeholders = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"][data-placeholder="true"]'
-        )
-        const isPartiallyTyped =
-          segments &&
-          placeholders &&
-          placeholders.length > 0 &&
-          placeholders.length < segments.length
-        const isFullyCleared =
-          segments &&
-          segments.length > 0 &&
-          placeholders?.length === segments.length
         if (isPartiallyTyped || (isFullyCleared && !clearable)) return
 
         const pending = isFullyCleared ? null : displayValueRef.current
@@ -592,17 +562,11 @@ function SingleDateTimeInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      const segments = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"]'
-      )
-      const placeholders = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"][data-placeholder="true"]'
-      )
-      if (segments && placeholders) {
-        const isPartiallyTyped =
-          placeholders.length > 0 && placeholders.length < segments.length
+      if (triggerRef.current) {
+        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+          triggerRef.current
+        )
         if (isPartiallyTyped) return
-        const isFullyCleared = placeholders.length === segments.length
         if (isFullyCleared && !clearable) return
       }
       const pending = displayValueRef.current

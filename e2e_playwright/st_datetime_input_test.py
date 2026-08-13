@@ -196,7 +196,7 @@ def test_form_submission_resets_value(app: Page):
     form_field = get_datetime_input(app, "Datetime input 13 (form)").get_by_test_id(
         "stDateTimeInputField"
     )
-    # Type into segments (commit with Escape to buffer value in widget state)
+    # Type into segments (type_date commits via Escape)
     type_date(form_field, "2025", "12", "24", "12", "00")
 
     # Click submit button to submit the form (no rerun until form submit in st.form)
