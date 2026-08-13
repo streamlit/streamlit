@@ -478,9 +478,12 @@ describe("useWidgetState hook", () => {
 
       // Should use the mapped index (5) instead of visual index (0)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.anything(),
+        "test-id",
         expect.stringContaining('"rows":[5]'),
-        expect.anything()
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
       )
     })
 
@@ -531,9 +534,12 @@ describe("useWidgetState hook", () => {
       // order and does not trigger a spurious rerun when only the display order
       // changes.
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.anything(),
+        "test-id",
         expect.stringContaining('"rows":[2,5]'),
-        expect.anything()
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
       )
     })
   })
