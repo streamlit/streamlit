@@ -64,6 +64,18 @@ countries = st.multiselect(
 )
 ```
 
+Control how the selected-value chips overflow with `wrap`. By default (`wrap=None`), chips wrap onto additional rows, except inside a horizontal container, where they stay in a single, horizontally-scrollable row. Set `wrap=True` to always wrap onto more rows (the widget grows taller), or `wrap=False` to keep a fixed-height single row that scrolls. Changing `wrap` is layout-only and never resets the widget's value.
+
+```python
+# Keep selected chips in one fixed-height, scrollable row
+regions = st.multiselect(
+    "Regions",
+    ["Africa", "Asia", "Europe", "North America", "Oceania", "South America"],
+    default=["Asia", "Europe", "North America"],
+    wrap=False,
+)
+```
+
 ## Toggle vs checkbox
 
 Use `st.toggle` for settings that trigger changes in the app. Reserve `st.checkbox` for forms.

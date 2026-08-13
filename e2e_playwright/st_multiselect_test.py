@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     open_popover,
 )
 
-MULTISELECT_COUNT = 29
+MULTISELECT_COUNT = 33
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -943,4 +943,64 @@ def test_multiselect_selected_tags_have_working_tooltips(app: Page):
     )
     assert water_pointer_events == "auto", (
         f"Expected pointer-events: auto, got: {water_pointer_events}"
+    )
+
+
+def _wrap_tags_container(page: Page, key: str) -> Locator:
+    """Return the scrollable tags container of a keyed wrap multiselect."""
+    return get_element_by_key(page, key).get_by_test_id("stMultiSelectTagsContainer")
+
+
+def test_multiselect_wrap(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test the wrap parameter for st.multiselect.
+
+    ``wrap=False`` keeps the selected chips in a single, horizontally scrollable
+    row (deterministic one-row height), while ``wrap=True`` lets them wrap onto
+    additional rows. The auto default (``wrap=None``) resolves to no-wrap inside
+    a horizontal container and to wrapping in a normal vertical layout.
+    """
+    wrap_false = _wrap_tags_container(app, "multiselect_wrap_false")
+    wrap_true = _wrap_tags_container(app, "multiselect_wrap_true")
+    auto_horizontal = _wrap_tags_container(app, "multiselect_wrap_auto_horizontal")
+    auto_vertical = _wrap_tags_container(app, "multiselect_wrap_auto_vertical")
+
+    for container in (wrap_false, wrap_true, auto_horizontal, auto_vertical):
+        expect(container).to_be_visible()
+
+    def _height(container: Locator) -> float:
+        box = container.bounding_box()
+        assert box is not None
+        return box["height"]
+
+    height_wrap_false = _height(wrap_false)
+    height_wrap_true = _height(wrap_true)
+    height_auto_horizontal = _height(auto_horizontal)
+    height_auto_vertical = _height(auto_vertical)
+
+    # wrap=True grows onto multiple rows; wrap=False stays a single row.
+    assert height_wrap_false < height_wrap_true
+    # Auto resolves to no-wrap inside a horizontal container (like wrap=False)
+    # and to wrapping in a vertical layout (like wrap=True).
+    assert height_auto_horizontal < height_wrap_true
+    assert height_auto_vertical > height_wrap_false
+
+    # wrap=False must scroll horizontally because the chips overflow the row ...
+    assert wrap_false.evaluate("el => el.scrollWidth > el.clientWidth")
+    # ... and must NOT stack into multiple rows (no vertical overflow / growth).
+    assert not wrap_false.evaluate("el => el.scrollHeight > el.clientHeight + 2")
+
+    # The single-row control shows a fade affordance on the overflowing edge ...
+    expect(wrap_false).to_have_attribute("data-can-scroll-end", "")
+    # ... and the wrapping control never shows a scroll fade.
+    expect(wrap_true).not_to_have_attribute("data-can-scroll-end", "")
+
+    # The clear and dropdown controls stay pinned outside the scrolling chip area.
+    wrap_false_widget = get_element_by_key(app, "multiselect_wrap_false")
+    expect(wrap_false_widget.get_by_role("button", name="Clear all")).to_be_visible()
+    expect(wrap_false_widget.get_by_role("button", name="Open")).to_be_visible()
+
+    assert_snapshot(wrap_false_widget, name="st_multiselect-wrap_false")
+    assert_snapshot(
+        get_element_by_key(app, "multiselect_wrap_true"),
+        name="st_multiselect-wrap_true",
     )

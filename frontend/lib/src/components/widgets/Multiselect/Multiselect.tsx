@@ -45,6 +45,7 @@ import {
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -202,6 +203,9 @@ const preventInputEvent = (e: React.SyntheticEvent): void => {
   e.preventDefault()
 }
 
+/** Slack (in px) to absorb sub-pixel rounding when comparing scroll offsets. */
+const SCROLL_TOLERANCE = 1
+
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
@@ -211,8 +215,18 @@ const Multiselect: FC<Props> = props => {
   const tagsContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
+  const scrollLeftRef = useRef(0)
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
+
+  // Whether the single-row chip area has off-screen chips to either side, used
+  // to render a fade mask that signals the row is horizontally scrollable. The
+  // refs mirror the state so scroll/resize handlers only trigger a re-render
+  // when the affordance actually changes.
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+  const canScrollLeftRef = useRef(false)
+  const canScrollRightRef = useRef(false)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -304,11 +318,24 @@ const Multiselect: FC<Props> = props => {
 
   const disabled = props.disabled || placeholderDisable
 
-  // Max height: cut through 5th tag row
+  // Resolve the tri-state wrap proto field: true = chips wrap onto multiple
+  // rows (grows vertically), false = chips stay in a single, horizontally
+  // scrollable row. Absent (auto) resolves to no-wrap inside a horizontal
+  // container and wrap otherwise.
+  const wrap = useResolvedWrap(element.wrap)
+
+  // Max height. When wrapping, cut through the 5th tag row so the control can
+  // grow and scroll vertically. When not wrapping, pin the control to a single
+  // row height so it stays aligned regardless of the selection count.
   const maxHeight = useMemo(() => {
+    if (!wrap) {
+      return theme.sizes.minElementHeight
+    }
     const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
     return `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
   }, [
+    wrap,
+    theme.sizes.minElementHeight,
     theme.sizes.elementHighlightHeight,
     theme.sizes.tagMarginInsideBorder,
     theme.sizes.borderWidth,
@@ -331,24 +358,98 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  // Preserve scroll position when tags are removed via UI interaction.
+  // Tracks the previous selection count to distinguish additions from removals.
+  const prevValueLengthRef = useRef(value.length)
+
+  // Preserve scroll position when tags are removed via UI interaction, and
+  // reveal the newest chip + input when a tag is added in single-row mode.
   useLayoutEffect(() => {
-    if (!scrollLockRef.current) return
-    const savedScroll = scrollTopRef.current
-    scrollLockRef.current = false
+    const prevLength = prevValueLengthRef.current
+    prevValueLengthRef.current = value.length
     const container = tagsContainerRef.current
     if (!container) return
-    requestAnimationFrame(() => {
-      container.scrollTop = savedScroll
-      scrollTopRef.current = savedScroll
-    })
-  }, [value])
+
+    if (scrollLockRef.current) {
+      const savedTop = scrollTopRef.current
+      const savedLeft = scrollLeftRef.current
+      scrollLockRef.current = false
+      requestAnimationFrame(() => {
+        container.scrollTop = savedTop
+        container.scrollLeft = savedLeft
+        scrollTopRef.current = savedTop
+        scrollLeftRef.current = savedLeft
+      })
+      return
+    }
+
+    // A selection was added while chips are in a single row: scroll to the end
+    // so the newest chip and the input stay visible.
+    if (!wrap && value.length > prevLength) {
+      requestAnimationFrame(() => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        container.scrollLeft = container.scrollWidth
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
+      })
+    }
+  }, [value, wrap])
 
   const handleTagsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (scrollLockRef.current) return
+    const target = e.currentTarget
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-    scrollTopRef.current = e.currentTarget.scrollTop
+    scrollTopRef.current = target.scrollTop
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+    scrollLeftRef.current = target.scrollLeft
   }, [])
+
+  // Recompute whether the single-row chip area can scroll left/right so the
+  // fade mask reflects the current overflow. Always false while wrapping.
+  const updateScrollAffordance = useCallback((): void => {
+    const container = tagsContainerRef.current
+    let nextLeft = false
+    let nextRight = false
+    if (container && !wrap) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+      const { scrollLeft, scrollWidth, clientWidth } = container
+      nextLeft = scrollLeft > SCROLL_TOLERANCE
+      nextRight = scrollLeft + clientWidth < scrollWidth - SCROLL_TOLERANCE
+    }
+    // Only re-render when the affordance actually changes, so scroll/resize
+    // events don't schedule redundant state updates.
+    if (canScrollLeftRef.current !== nextLeft) {
+      canScrollLeftRef.current = nextLeft
+      setCanScrollLeft(nextLeft)
+    }
+    if (canScrollRightRef.current !== nextRight) {
+      canScrollRightRef.current = nextRight
+      setCanScrollRight(nextRight)
+    }
+  }, [wrap])
+
+  // Keep the fade mask in sync with the scroll position and container size.
+  useEffect(() => {
+    const container = tagsContainerRef.current
+    if (!container) return undefined
+    container.addEventListener("scroll", updateScrollAffordance, {
+      passive: true,
+    })
+    const resizeObserver = new ResizeObserver(() => updateScrollAffordance())
+    resizeObserver.observe(container)
+    // Measure after layout settles (chips may mount in a later frame).
+    const rafId = requestAnimationFrame(updateScrollAffordance)
+    return () => {
+      container.removeEventListener("scroll", updateScrollAffordance)
+      resizeObserver.disconnect()
+      cancelAnimationFrame(rafId)
+    }
+  }, [updateScrollAffordance])
+
+  // Re-measure when the selection changes, since adding/removing chips changes
+  // the scrollable width without necessarily resizing the container.
+  useEffect(() => {
+    updateScrollAffordance()
+  }, [updateScrollAffordance, value])
 
   const handleChange = useCallback(
     (keys: Key[]): void => {
@@ -455,9 +556,12 @@ const Multiselect: FC<Props> = props => {
   const handleTagGroupRemove = useCallback(
     (keys: Set<Key>): void => {
       scrollLockRef.current = true
-      if (tagsContainerRef.current) {
+      const container = tagsContainerRef.current
+      if (container) {
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-        scrollTopRef.current = tagsContainerRef.current.scrollTop
+        scrollTopRef.current = container.scrollTop
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
       }
       const keysToRemove = new Set([...keys].map(String))
       const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
@@ -662,9 +766,12 @@ const Multiselect: FC<Props> = props => {
       ) {
         e.preventDefault()
         scrollLockRef.current = true
-        if (tagsContainerRef.current) {
+        const container = tagsContainerRef.current
+        if (container) {
           // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-          scrollTopRef.current = tagsContainerRef.current.scrollTop
+          scrollTopRef.current = container.scrollTop
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+          scrollLeftRef.current = container.scrollLeft
         }
         const newValue = valueRef.current.slice(0, -1)
         valueRef.current = newValue
@@ -756,6 +863,9 @@ const Multiselect: FC<Props> = props => {
               ref={tagsContainerRef}
               onScroll={handleTagsScroll}
               data-testid="stMultiSelectTagsContainer"
+              $wrap={wrap}
+              data-can-scroll-start={canScrollLeft ? "" : undefined}
+              data-can-scroll-end={canScrollRight ? "" : undefined}
             >
               {value.length > 0 && (
                 <StyledTagGroup role="group" aria-label="Selected values">
@@ -765,6 +875,7 @@ const Multiselect: FC<Props> = props => {
                       tabIndex={!disabled && idx === clampedTagIndex ? 0 : -1}
                       aria-label={v}
                       $disabled={disabled}
+                      $wrap={wrap}
                       data-tag=""
                       data-tag-index={idx}
                       onKeyDown={disabled ? undefined : handleTagKeyDown}
