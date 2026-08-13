@@ -1021,6 +1021,11 @@ describe("DateTimeInput widget", () => {
       const day30 = screen.getByRole("button", { name: /November 30/ })
       await user.click(day30)
 
+      // Live validation: error shows immediately after boundary pick
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+      })
+
       // Close the popover — 22:00 on Nov 30 exceeds max (17:00), so display reverts
       await user.click(screen.getByTestId("outside"))
 
@@ -1057,6 +1062,11 @@ describe("DateTimeInput widget", () => {
       // Click the min boundary date (Nov 19)
       const day19 = screen.getByRole("button", { name: /November 19/ })
       await user.click(day19)
+
+      // Live validation: error shows immediately after boundary pick
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+      })
 
       // Close the popover — 07:00 on Nov 19 is below min (09:00), so display reverts
       await user.click(screen.getByTestId("outside"))

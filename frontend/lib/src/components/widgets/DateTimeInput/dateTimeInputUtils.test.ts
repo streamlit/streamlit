@@ -29,6 +29,7 @@ import {
   formatCalendarDateTime,
   isoToCalendarDateTime,
   parsePastedDateTime,
+  snapTimeStep,
   updateWidgetMgrState,
   validateDateTime,
 } from "./dateTimeInputUtils"
@@ -254,5 +255,87 @@ describe("updateWidgetMgrState", () => {
       { fromUi: false },
       undefined
     )
+  })
+})
+
+describe("snapTimeStep", () => {
+  describe("minute-granular (max=1440)", () => {
+    it("snaps up from aligned position", () => {
+      // 16:00 (960 min), step=15 → 16:15 (975)
+      expect(snapTimeStep(960, 15, true, 1440)).toBe(975)
+    })
+
+    it("snaps up from unaligned position", () => {
+      // 16:45 (1005 min), step=15 → 17:00 (1020)
+      expect(snapTimeStep(1005, 15, true, 1440)).toBe(1020)
+    })
+
+    it("snaps down from aligned position", () => {
+      // 16:15 (975 min), step=15 → 16:00 (960)
+      expect(snapTimeStep(975, 15, false, 1440)).toBe(960)
+    })
+
+    it("snaps down from unaligned position", () => {
+      // 16:47 (1007 min), step=15 → 16:45 (1005)
+      expect(snapTimeStep(1007, 15, false, 1440)).toBe(1005)
+    })
+
+    it("wraps past midnight on ArrowUp", () => {
+      // 23:45 (1425 min), step=15 → 00:00 (0)
+      expect(snapTimeStep(1425, 15, true, 1440)).toBe(0)
+    })
+
+    it("wraps below zero on ArrowDown", () => {
+      // 00:00 (0 min), step=15 → 23:45 (1425)
+      expect(snapTimeStep(0, 15, false, 1440)).toBe(1425)
+    })
+
+    it("handles step=30 correctly", () => {
+      // 10:15 (615 min), step=30, up → 10:30 (630)
+      expect(snapTimeStep(615, 30, true, 1440)).toBe(630)
+      // 10:15 (615 min), step=30, down → 10:00 (600)
+      expect(snapTimeStep(615, 30, false, 1440)).toBe(600)
+    })
+
+    it("already on boundary goes to next/prev", () => {
+      // 10:00 (600 min), step=15, up → 10:15 (615)
+      expect(snapTimeStep(600, 15, true, 1440)).toBe(615)
+      // 10:00 (600 min), step=15, down → 09:45 (585)
+      expect(snapTimeStep(600, 15, false, 1440)).toBe(585)
+    })
+  })
+
+  describe("hour-granular (max=24)", () => {
+    it("snaps up from aligned hour", () => {
+      // hour=6, step=3 → 9
+      expect(snapTimeStep(6, 3, true, 24)).toBe(9)
+    })
+
+    it("snaps up from unaligned hour", () => {
+      // hour=10, step=3 → 12
+      expect(snapTimeStep(10, 3, true, 24)).toBe(12)
+    })
+
+    it("snaps down from aligned hour", () => {
+      // hour=9, step=3 → 6
+      expect(snapTimeStep(9, 3, false, 24)).toBe(6)
+    })
+
+    it("wraps past 24 on ArrowUp", () => {
+      // hour=23, step=3 → 0
+      expect(snapTimeStep(23, 3, true, 24)).toBe(0)
+    })
+
+    it("wraps below zero on ArrowDown", () => {
+      // hour=0, step=3 → 21
+      expect(snapTimeStep(0, 3, false, 24)).toBe(21)
+    })
+
+    it("handles step=2 correctly", () => {
+      // hour=5, step=2, up → 6
+      expect(snapTimeStep(5, 2, true, 24)).toBe(6)
+      // hour=5, step=2, down → 4
+      expect(snapTimeStep(5, 2, false, 24)).toBe(4)
+    })
   })
 })

@@ -577,22 +577,24 @@ function SingleDateTimeInput({
   }, [displayValue])
 
   // Popover TimeField change: merge new time with existing date.
+  // When displayValue is null (clearable empty state), seed from focusedValue
+  // so users can set time before picking a date.
   const handlePopoverTimeChange = useCallback(
     (time: TimeValue | null): void => {
       if (!time) return
       const current = displayValueRef.current
-      if (!current) return
+      const date = current ?? focusedValue
       const merged = new CalendarDateTime(
-        current.year,
-        current.month,
-        current.day,
+        date.year,
+        date.month,
+        date.day,
         time.hour,
         time.minute
       )
       setDisplayValue(merged)
       onValidate(merged)
     },
-    [onValidate]
+    [focusedValue, onValidate]
   )
 
   // Step-aware arrow keys for popover TimeField segments.
@@ -771,9 +773,11 @@ function SingleDateTimeInput({
                 data-testid="stDateTimeInputPopoverTime"
                 onKeyDownCapture={handlePopoverTimeKeyDown}
               >
-                <StyledPopoverTimeLabel>Time</StyledPopoverTimeLabel>
+                <StyledPopoverTimeLabel id={`${id}-time-label`}>
+                  Time
+                </StyledPopoverTimeLabel>
                 <StyledPopoverTimeField
-                  aria-label="Time"
+                  aria-labelledby={`${id}-time-label`}
                   value={popoverTimeValue}
                   onChange={handlePopoverTimeChange}
                   granularity="minute"
