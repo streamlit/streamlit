@@ -177,8 +177,8 @@ function DateTimeInput({
   )
 
   const handleClose = useCallback(
-    (hasPlaceholderSegments?: boolean): void => {
-      if (!hasPlaceholderSegments) return
+    (shouldClearError?: boolean): void => {
+      if (!shouldClearError) return
       resetError()
     },
     [resetError]

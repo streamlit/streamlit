@@ -74,6 +74,7 @@ import {
   dateTimesEqual,
   getSegmentState,
   parsePastedDateTime,
+  validateDateTime,
 } from "./dateTimeInputUtils"
 
 interface SingleDateTimeInputProps {
@@ -92,7 +93,7 @@ interface SingleDateTimeInputProps {
   focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
   onValidate: (dt: CalendarDateTime | null) => void
-  onClose: (hasPlaceholderSegments: boolean) => void
+  onClose: (shouldClearError: boolean) => void
   formCommit?: (value: CalendarDateTime | null) => void
   /** When inside a form with enter_to_submit=True, submits the form.
    * Called after formCommit on Enter key. */
@@ -166,6 +167,9 @@ function SingleDateTimeInput({
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
+  const formCommitRef = useRef(formCommit)
+  formCommitRef.current = formCommit
+
   const [isOpen, setIsOpen] = useState(false)
 
   // Close-detection effect: handles commit/revert when popover closes.
@@ -184,14 +188,24 @@ function SingleDateTimeInput({
           onCloseRef.current(true)
         } else {
           const pending = isFullyCleared ? null : displayValueRef.current
-          if (!dateTimesEqual(pending, value)) {
+          const isOutOfBounds = !!validateDateTime(
+            pending,
+            minDateTime,
+            maxDateTime
+          )
+
+          if (isOutOfBounds) {
+            setDisplayValue(value)
+            onCloseRef.current(true)
+          } else if (!dateTimesEqual(pending, value)) {
             onChangeRef.current(pending)
+            formCommitRef.current?.(pending)
           }
         }
       }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, value, clearable])
+  }, [isOpen, value, clearable, minDateTime, maxDateTime])
 
   // Focus active calendar cell on active mode entry.
   useEffect(() => {
@@ -250,19 +264,6 @@ function SingleDateTimeInput({
       onClose: () => {
         setIsOpen(false)
         setIsCalendarActive(false)
-        if (formCommit && triggerRef.current) {
-          const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-            triggerRef.current
-          )
-          if (isPartiallyTyped || (isFullyCleared && !clearable)) {
-            // Will revert on next render — don't commit stale/invalid state.
-          } else {
-            const pending = isFullyCleared ? null : displayValueRef.current
-            if (!dateTimesEqual(pending, value)) {
-              formCommit(pending)
-            }
-          }
-        }
       },
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
@@ -421,11 +422,16 @@ function SingleDateTimeInput({
         if (isPartiallyTyped || (isFullyCleared && !clearable)) return
 
         const pending = isFullyCleared ? null : displayValueRef.current
+        if (validateDateTime(pending, minDateTime, maxDateTime)) {
+          setDisplayValue(value)
+          onCloseRef.current(true)
+          return
+        }
         if (!dateTimesEqual(pending, value)) {
           onChangeRef.current(pending)
-          formCommit?.(pending)
+          formCommitRef.current?.(pending)
         } else {
-          formCommit?.(pending)
+          formCommitRef.current?.(pending)
         }
         if (!error) {
           formSubmit?.()
@@ -510,8 +516,9 @@ function SingleDateTimeInput({
       displayValue,
       clearable,
       error,
-      formCommit,
       formSubmit,
+      minDateTime,
+      maxDateTime,
       step,
       stepMins,
       onValidate,
@@ -571,10 +578,15 @@ function SingleDateTimeInput({
       }
       const pending = displayValueRef.current
       if (dateTimesEqual(pending, value)) return
+      if (validateDateTime(pending, minDateTime, maxDateTime)) {
+        setDisplayValue(value)
+        onCloseRef.current(true)
+        return
+      }
       onChangeRef.current(pending)
-      formCommit?.(pending)
+      formCommitRef.current?.(pending)
     },
-    [formCommit, value, clearable]
+    [value, clearable, minDateTime, maxDateTime]
   )
 
   // Calendar value for display: extract date portion from displayValue.

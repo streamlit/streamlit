@@ -244,8 +244,8 @@ function DateInput({
   // here we only clear the validation error. No setValueWithSource needed
   // because the committed value never changed (edits were buffered locally).
   const handleClose = useCallback(
-    (hasPlaceholderSegments?: boolean): void => {
-      if (!hasPlaceholderSegments) {
+    (shouldClearError?: boolean): void => {
+      if (!shouldClearError) {
         return
       }
       resetError()

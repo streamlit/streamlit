@@ -446,7 +446,7 @@ describe("DateTimeInput widget", () => {
   })
 
   describe("Error tooltip display", () => {
-    it("displays error when entered value is below min", async () => {
+    it("shows error during editing then reverts on blur when below min", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: ["2025-11-19T16:45"],
@@ -461,16 +461,20 @@ describe("DateTimeInput widget", () => {
       )
       await user.click(yearSegment as HTMLElement)
 
-      // Type a year below min
+      // ArrowDown decrements year below min — error shown during editing
       await user.keyboard("{ArrowDown}")
-      await user.keyboard("{ArrowDown}")
-      await user.keyboard("{ArrowDown}")
-
-      await user.click(document.body)
-
       await waitFor(() => {
         expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
       })
+
+      // Blur reverts display to committed value and clears error
+      await user.click(document.body)
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputError")
+        ).not.toBeInTheDocument()
+      })
+      expect(yearSegment).toHaveTextContent("2025")
     })
   })
 
@@ -996,6 +1000,110 @@ describe("DateTimeInput widget", () => {
           undefined
         )
       })
+    })
+  })
+
+  describe("Out-of-bounds revert on close", () => {
+    it("reverts display and clears error when year is decremented below min and Escape is pressed", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-03-15T10:30"],
+        min: "2025-01-01T00:00",
+        max: "2025-12-31T23:59",
+      })
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      const yearSegment = segments.find(
+        s => s.getAttribute("data-type") === "year"
+      )
+      await user.click(yearSegment as HTMLElement)
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Decrement year below min (2025 → 2024)
+      await user.keyboard("{ArrowDown}")
+
+      // Escape closes and reverts
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputError")
+        ).not.toBeInTheDocument()
+      })
+      expect(yearSegment).toHaveTextContent("2025")
+    })
+
+    it("reverts display when incomplete year digits are entered and user clicks outside", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2020-01-01T00:00",
+        max: "2030-12-31T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      const yearSegment = segments.find(
+        s => s.getAttribute("data-type") === "year"
+      )
+      await user.click(yearSegment as HTMLElement)
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Type incomplete year (3 digits → year=202 which is below min)
+      await user.tripleClick(yearSegment as HTMLElement)
+      await user.keyboard("202")
+
+      // Click outside to close
+      await user.click(document.body)
+
+      // Display reverts, no error, no commit
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputError")
+        ).not.toBeInTheDocument()
+      })
+      expect(yearSegment).toHaveTextContent("2025")
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("does not revert valid edits on close", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2020-01-01T00:00",
+        max: "2030-12-31T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      const yearSegment = segments.find(
+        s => s.getAttribute("data-type") === "year"
+      )
+      await user.click(yearSegment as HTMLElement)
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // ArrowUp year to valid 2026
+      await user.keyboard("{ArrowUp}")
+
+      // Click outside to close — should commit, not revert
+      await user.click(document.body)
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2026-11-19T16:45"],
+          { fromUi: true },
+          undefined
+        )
+      })
+      expect(
+        screen.queryByTestId("stDateTimeInputError")
+      ).not.toBeInTheDocument()
     })
   })
 
