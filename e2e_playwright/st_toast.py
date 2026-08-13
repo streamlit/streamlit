@@ -16,14 +16,18 @@ import streamlit as st
 
 st.set_page_config(layout="wide")
 st.chat_input("input here")
-st.toast("This is a default toast message", icon="🐶")
+# Infinite duration keeps snapshot/rendering tests stable: default 4s toasts can be
+# mid-dismiss by the time Playwright screenshots (and remounts no longer reset the
+# timer once toast lifetime is decoupled from the element tree).
+st.toast("This is a default toast message", icon="🐶", duration="infinite")
 st.toast(
     "Random toast message that is a really really really really really really "
     "really long message, going way past the 3 line limit",
     icon="🦄",
+    duration="infinite",
 )
 
-st.toast("Your edited image was saved!", icon=":material/cabin:")
+st.toast("Your edited image was saved!", icon=":material/cabin:", duration="infinite")
 
 if st.button("Show duration toasts"):
     st.toast("I am a toast with a short duration", duration=2)
