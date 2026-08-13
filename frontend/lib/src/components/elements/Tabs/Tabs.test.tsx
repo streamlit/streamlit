@@ -419,8 +419,7 @@ describe("st.tabs", () => {
       expect(setStringValueSpy).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
-        { fromUser: true },
-        expect.anything()
+        expect.objectContaining({ fromUser: true })
       )
     })
   })

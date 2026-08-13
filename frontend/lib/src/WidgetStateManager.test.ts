@@ -396,7 +396,7 @@ describe("Widget State Manager", () => {
       })
     })
 
-    it("is a no-op inside a form: value is batched and delivered on submit", () => {
+    it("ignores triggerRerun inside a form: value is batched and delivered on submit", () => {
       const formId = "mockFormId"
       widgetMgr.addSubmitButton(
         formId,

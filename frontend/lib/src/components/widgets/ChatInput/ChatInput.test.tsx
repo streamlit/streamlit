@@ -264,9 +264,7 @@ describe("ChatInput widget", () => {
 
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "{enter}")
-    expect(spy).not.toHaveBeenCalledWith(props.element, "", {
-      fromUser: true,
-    })
+    expect(spy).not.toHaveBeenCalled()
     expect(chatInput).toHaveTextContent("")
   })
 
