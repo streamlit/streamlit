@@ -212,12 +212,9 @@ describe("ChatInput widget", () => {
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "1234567890{enter}")
     expect(spy).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       mockChatInputValue("1234567890"),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: undefined, fragmentId: undefined, fromUser: true }
     )
     expect(chatInput).toHaveTextContent("")
   })
@@ -253,12 +250,9 @@ describe("ChatInput widget", () => {
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "1234567890{enter}")
     expect(spy).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       mockChatInputValue("1234567890"),
-      {
-        fromUi: true,
-      },
-      "myFragmentId"
+      { formId: undefined, fragmentId: "myFragmentId", fromUser: true }
     )
   })
 
@@ -271,7 +265,7 @@ describe("ChatInput widget", () => {
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "{enter}")
     expect(spy).not.toHaveBeenCalledWith(props.element, "", {
-      fromUi: true,
+      fromUser: true,
     })
     expect(chatInput).toHaveTextContent("")
   })
@@ -545,13 +539,12 @@ describe("ChatInput widget", () => {
 
     await waitFor(() => {
       expect(mockSetChatInputValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         expect.objectContaining({
           data: "Test message",
           fileUploaderState: expect.any(Object),
         }),
-        { fromUi: true },
-        undefined
+        { formId: undefined, fragmentId: undefined, fromUser: true }
       )
     })
 

@@ -61,10 +61,9 @@ describe("Checkbox widget", () => {
     render(<Checkbox {...props} />)
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -142,10 +141,9 @@ describe("Checkbox widget", () => {
     await user.keyboard(" ")
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(screen.getByRole("checkbox")).toBeChecked()
   })
@@ -167,10 +165,9 @@ describe("Checkbox widget", () => {
     await user.click(screen.getByRole("checkbox"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(screen.getByRole("checkbox")).toBeChecked()
   })
@@ -185,10 +182,13 @@ describe("Checkbox widget", () => {
     await user.click(screen.getByRole("checkbox"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: true,
+      }
     )
   })
 
@@ -207,10 +207,9 @@ describe("Checkbox widget", () => {
 
     expect(screen.getByRole("checkbox")).toBeChecked()
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -221,12 +220,9 @@ describe("Checkbox widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByRole("checkbox")).not.toBeChecked()
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 })
@@ -284,10 +280,9 @@ describe("Checkbox TOGGLE type", () => {
     await user.keyboard(" ")
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(screen.getByRole("switch")).toBeChecked()
   })
@@ -299,10 +294,9 @@ describe("Checkbox TOGGLE type", () => {
     render(<Checkbox {...props} />)
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -330,10 +324,9 @@ describe("Checkbox TOGGLE type", () => {
     await user.click(screen.getByRole("switch"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(screen.getByRole("switch")).toBeChecked()
   })

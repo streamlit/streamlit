@@ -357,10 +357,9 @@ describe("st.tabs", () => {
       await user.click(tabs[2])
 
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        { id: widgetId, formId: "" },
+        widgetId,
         "Tab 2",
-        { fromUi: true },
-        undefined
+        { formId: "", fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -409,19 +408,18 @@ describe("st.tabs", () => {
       expect(tabs[2]).toHaveAttribute("aria-selected", "true")
       expect(tabs[0]).toHaveAttribute("aria-selected", "false")
 
-      // The widget manager must be updated with the new tab label and fromUi:false
+      // The widget manager must be updated with the new tab label and fromUser:false
       // so subsequent reruns don't send a stale value and break tab.open (gh issue #15458).
-      expect(setStringValueSpy).toHaveBeenCalledWith(
-        { id: widgetId, formId: "" },
-        "Tab 2",
-        { fromUi: false },
-        undefined
-      )
-      // Must NOT use fromUi:true — that would schedule a spurious rerun
+      expect(setStringValueSpy).toHaveBeenCalledWith(widgetId, "Tab 2", {
+        formId: "",
+        fragmentId: undefined,
+        fromUser: false,
+      })
+      // Must NOT use fromUser:true — that would schedule a spurious rerun
       expect(setStringValueSpy).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
-        { fromUi: true },
+        { fromUser: true },
         expect.anything()
       )
     })

@@ -74,12 +74,9 @@ describe("Multiselect widget", () => {
 
     render(<Multiselect {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default.map(index => props.element.options[index]),
-      {
-        fromUi: false,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -103,12 +100,13 @@ describe("Multiselect widget", () => {
 
     render(<Multiselect {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default.map(index => props.element.options[index]),
       {
-        fromUi: false,
-      },
-      "myFragmentId"
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -312,12 +310,11 @@ describe("Multiselect widget", () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })
     // Seed a user selection so there is a value to verify preservation.
-    props.widgetMgr.setStringArrayValue(
-      props.element,
-      ["b"],
-      { fromUi: true },
-      undefined
-    )
+    props.widgetMgr.setStringArrayValue(props.element.id, ["b"], {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
     render(<Multiselect {...props} />)
 
@@ -337,7 +334,7 @@ describe("Multiselect widget", () => {
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
       props.element,
       [],
-      { fromUi: true },
+      { fromUser: true },
       undefined
     )
   })
@@ -366,12 +363,9 @@ describe("Multiselect widget", () => {
     expect(remainingOptions[0]).toHaveTextContent("c")
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [props.element.options[0], props.element.options[1]],
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     act(() => {
@@ -394,12 +388,9 @@ describe("Multiselect widget", () => {
     expect(dataOptions[1]).toHaveTextContent("c")
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default.map(index => props.element.options[index]),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -725,10 +716,9 @@ describe("Multiselect widget", () => {
       await user.type(selectboxInput, "mobile new option")
       await user.keyboard("{enter}")
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["a", "mobile new option"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -763,10 +753,9 @@ describe("Multiselect widget", () => {
 
       // All options should be selected
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["a", "b", "c"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -786,10 +775,9 @@ describe("Multiselect widget", () => {
 
       // All options should be selected (a was already selected, b and c added)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["a", "b", "c"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -812,10 +800,9 @@ describe("Multiselect widget", () => {
 
       // Only matching options should be selected
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["apple", "apricot"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -838,10 +825,9 @@ describe("Multiselect widget", () => {
 
       // Only matching options should be selected
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["apple", "apricot", "grape"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -864,10 +850,9 @@ describe("Multiselect widget", () => {
 
       // Only first 3 options should be selected (respecting maxSelections)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["a", "b", "c"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -890,10 +875,9 @@ describe("Multiselect widget", () => {
 
       // Only 2 more options should be added (a + 2 = 3 = maxSelections)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["a", "b", "c"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -917,10 +901,9 @@ describe("Multiselect widget", () => {
 
       // Only first 2 matches should be selected (respecting maxSelections)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["apple", "apricot"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -1248,10 +1231,9 @@ describe("Multiselect tag accessibility", () => {
     // Delete removes first tag
     await user.keyboard("{Delete}")
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       ["b", "c"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1274,10 +1256,9 @@ describe("Multiselect tag accessibility", () => {
     // Backspace removes focused tag; left neighbor gets tabindex=0
     await user.keyboard("{Backspace}")
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       ["a", "c"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // Simulate rerender with updated value (same widgetMgr instance)
@@ -1316,10 +1297,9 @@ describe("Multiselect tag accessibility", () => {
     // Backspace last tag — no right neighbor, so left gets focus
     await user.keyboard("{Backspace}")
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       ["a", "b"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     rerender(

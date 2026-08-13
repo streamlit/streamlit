@@ -76,7 +76,7 @@ function Checkbox({
 
   const handleChange = useCallback(
     (isSelected: boolean): void => {
-      setValueWithSource({ value: isSelected, fromUi: true })
+      setValueWithSource({ value: isSelected, fromUser: true })
     },
     [setValueWithSource]
   )
@@ -181,12 +181,11 @@ function updateWidgetMgrState(
   vws: ValueWithSource<boolean>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setBoolValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setBoolValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 export default memo(Checkbox)

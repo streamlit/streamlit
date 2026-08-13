@@ -101,10 +101,9 @@ describe("MenuButton widget", () => {
     })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "Option B",
-      { fromUi: true },
-      undefined
+      { formId: undefined, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -127,10 +126,9 @@ describe("MenuButton widget", () => {
     })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "Option A",
-      { fromUi: true },
-      "myFragmentId"
+      { formId: undefined, fragmentId: "myFragmentId", fromUser: true }
     )
   })
 

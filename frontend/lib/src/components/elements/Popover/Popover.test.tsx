@@ -416,12 +416,11 @@ describe("Dynamic popover (widget mode)", () => {
 
     await user.click(screen.getByText("label"))
 
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: widgetId },
-      true,
-      { fromUi: true },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, true, {
+      formId: undefined,
+      fragmentId,
+      fromUser: true,
+    })
   })
 
   it("does NOT call widgetMgr.setBoolValue for non-widget popovers", async () => {
@@ -458,20 +457,18 @@ describe("Dynamic popover (widget mode)", () => {
     )
 
     await user.click(screen.getByText("label"))
-    expect(setBoolValueSpy).toHaveBeenLastCalledWith(
-      { id: widgetId },
-      true,
-      { fromUi: true },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, true, {
+      formId: undefined,
+      fragmentId,
+      fromUser: true,
+    })
 
     await user.click(screen.getByText("label"))
-    expect(setBoolValueSpy).toHaveBeenLastCalledWith(
-      { id: widgetId },
-      false,
-      { fromUi: true },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId,
+      fromUser: true,
+    })
   })
 
   it.each([
@@ -524,12 +521,11 @@ describe("Dynamic popover (widget mode)", () => {
       await dismiss(user)
 
       expect(screen.queryByText("content")).not.toBeInTheDocument()
-      expect(setBoolValueSpy).toHaveBeenLastCalledWith(
-        { id: widgetId },
-        false,
-        { fromUi: true },
-        fragmentId
-      )
+      expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
     }
   )
 
@@ -592,15 +588,14 @@ describe("Dynamic popover (widget mode)", () => {
     )
 
     expect(button).toHaveAttribute("aria-expanded", "true")
-    // The widget manager state should also be updated (with fromUi: false
+    // The widget manager state should also be updated (with fromUser: false
     // to avoid triggering a rerun) so that subsequent reruns send the
     // correct value back to the backend.
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: widgetId },
-      true,
-      { fromUi: false },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, true, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   })
 
   it("syncs widget manager state on programmatic close to prevent stale reopens", () => {
@@ -640,12 +635,11 @@ describe("Dynamic popover (widget mode)", () => {
     expect(button).toHaveAttribute("aria-expanded", "false")
     // The widget manager must be updated with false so that the next rerun
     // (triggered by e.g. another popover) does not send stale "true" back.
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: widgetId },
-      false,
-      { fromUi: false },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   })
 })
 

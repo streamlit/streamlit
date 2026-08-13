@@ -99,16 +99,15 @@ describe("updateWidgetMgrState", () => {
     const widgetMgr = makeWidgetMgr()
     const vws: ValueWithSource<string | null> = {
       value: "2024/06/01, 12:00",
-      fromUi: true,
+      fromUser: true,
     }
 
     updateWidgetMgrState(element, widgetMgr, vws, "fragment")
 
     expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      element,
+      element.id,
       ["2024/06/01, 12:00"],
-      { fromUi: true },
-      "fragment"
+      { formId: element.formId, fragmentId: "fragment", fromUser: true }
     )
   })
 
@@ -116,7 +115,7 @@ describe("updateWidgetMgrState", () => {
     const widgetMgr = makeWidgetMgr()
     const vws: ValueWithSource<string | null> = {
       value: "2025/01/01, 12:00",
-      fromUi: true,
+      fromUser: true,
     }
 
     updateWidgetMgrState(element, widgetMgr, vws, undefined)
@@ -128,16 +127,15 @@ describe("updateWidgetMgrState", () => {
     const widgetMgr = makeWidgetMgr()
     const vws: ValueWithSource<string | null> = {
       value: null,
-      fromUi: false,
+      fromUser: false,
     }
 
     updateWidgetMgrState(element, widgetMgr, vws, undefined)
 
     expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      element,
+      element.id,
       [],
-      { fromUi: false },
-      undefined
+      { formId: element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 })

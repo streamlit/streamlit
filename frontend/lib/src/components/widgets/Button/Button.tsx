@@ -59,7 +59,11 @@ function Button(props: Props): ReactElement {
       return
     }
 
-    void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+    void widgetMgr.setTriggerValue(element.id, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }, [disabled, widgetMgr, element, fragmentId])
 
   useRegisterShortcut({

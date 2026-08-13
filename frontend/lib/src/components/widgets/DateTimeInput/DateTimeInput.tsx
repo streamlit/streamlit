@@ -216,7 +216,7 @@ function DateTimeInput({
     const hasChanged = newValue !== value
 
     if (hasChanged) {
-      setValueWithSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUser: true })
     }
   }, [pendingDate, value, setValueWithSource])
 

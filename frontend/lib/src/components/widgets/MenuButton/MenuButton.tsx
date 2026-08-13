@@ -144,12 +144,12 @@ function MenuButton(props: Props): ReactElement {
       }
       // Strip the instance prefix added for DOM id uniqueness
       const value = String(key).slice(instanceId.length)
-      widgetMgr.setStringTriggerValue(
-        element,
-        value,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setStringTriggerValue(element.id, value, {
+        // Menu buttons cannot be placed inside a form.
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
       setIsOpen(false)
     },
     [buttonDisabled, element, widgetMgr, fragmentId, instanceId]

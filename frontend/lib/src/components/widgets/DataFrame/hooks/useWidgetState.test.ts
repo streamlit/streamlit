@@ -292,10 +292,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"rows":[0]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -339,10 +338,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"columns":["col2"]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -390,10 +388,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[[2,"col2"]]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -437,10 +434,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -484,7 +480,6 @@ describe("useWidgetState hook", () => {
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
         expect.anything(),
         expect.stringContaining('"rows":[5]'),
-        expect.anything(),
         expect.anything()
       )
     })
@@ -538,7 +533,6 @@ describe("useWidgetState hook", () => {
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
         expect.anything(),
         expect.stringContaining('"rows":[2,5]'),
-        expect.anything(),
         expect.anything()
       )
     })
@@ -710,10 +704,12 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.columns.length).toBe(0)
       expect(initialSelection?.current).toBeUndefined()
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionDefault,
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -844,7 +840,7 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.current).toBeUndefined()
       // Verify the selection was synced to the widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         JSON.stringify({
           selection: {
             rows: [0],
@@ -852,8 +848,10 @@ describe("useWidgetState hook", () => {
             cells: [],
           },
         }),
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -1180,10 +1178,12 @@ describe("useWidgetState hook", () => {
 
       // Should have synced to widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionStateStr,
-        expect.objectContaining({ fromUi: false }),
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 

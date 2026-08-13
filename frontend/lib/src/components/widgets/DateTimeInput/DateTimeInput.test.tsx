@@ -118,12 +118,11 @@ describe("DateTimeInput widget", () => {
 
     render(<DateTimeInput {...props} />)
 
-    expect(spy).toHaveBeenCalledWith(
-      props.element,
-      props.element.default,
-      { fromUi: false },
-      undefined
-    )
+    expect(spy).toHaveBeenCalledWith(props.element.id, props.element.default, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: false,
+    })
   })
 
   it("can be disabled", () => {
@@ -159,10 +158,13 @@ describe("DateTimeInput widget", () => {
 
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["2026-01-01T09:30"],
-        { fromUi: true },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
       )
     })
   })
@@ -198,10 +200,13 @@ describe("DateTimeInput widget", () => {
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     props.widgetMgr.setStringArrayValue(
-      props.element,
+      props.element.id,
       ["2026-02-01T10:15"],
-      { fromUi: true },
-      props.fragmentId
+      {
+        formId: props.element.formId,
+        fragmentId: props.fragmentId,
+        fromUser: true,
+      }
     )
 
     render(<DateTimeInput {...props} />)
@@ -652,10 +657,13 @@ describe("DateTimeInput widget", () => {
 
       // Verify fragmentId is passed to setStringValue
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
-        { fromUi: false },
-        "test-fragment-id"
+        {
+          formId: props.element.formId,
+          fragmentId: "test-fragment-id",
+          fromUser: false,
+        }
       )
     })
   })

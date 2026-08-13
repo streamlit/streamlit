@@ -40,14 +40,60 @@ import {
   isValidFormId,
   notNullOrUndefined,
 } from "~lib/util/utils"
+/**
+ * Describes the origin and intended delivery of a widget value change.
+ */
 export interface Source {
-  fromUi: boolean
+  /**
+   * True if the change came from a user interaction in the browser; false for
+   * programmatic writes (e.g. mount defaults, session_state updates, or
+   * backend-driven changes).
+   *
+   * This is provenance only: it decides whether the change is batched into a
+   * form's pending changes. It does NOT by itself decide whether a rerun is
+   * scheduled — see `triggerRerun`.
+   */
+  fromUser: boolean
+
+  /**
+   * Whether the change should be committed to the backend by scheduling a
+   * rerun. Defaults to `fromUser` when omitted.
+   *
+   * Widgets using `on_change="ignore"` pass `false` to buffer the value in the
+   * frontend without rerunning; the value is delivered on the next rerun
+   * triggered by another interaction. This flag is ignored for widgets inside a
+   * form, because the form owns commit timing (values are sent on submit).
+   */
+  triggerRerun?: boolean
+}
+
+/**
+ * Whether a value change should be committed to the backend by scheduling a
+ * rerun. Defaults to the change's provenance (`fromUser`) unless a widget
+ * explicitly overrides delivery (e.g. `on_change="ignore"` passes `false`).
+ */
+function shouldTriggerRerun(source: Source): boolean {
+  return source.triggerRerun ?? source.fromUser
 }
 
 /** Common widget protobuf fields that are used by the WidgetStateManager. */
 export interface WidgetInfo {
   id: string
   formId?: string
+}
+
+/**
+ * Metadata describing a single widget value change (a write).
+ *
+ * Bundles the widget's scope (form/fragment) together with the change's
+ * provenance and delivery so callers pass them by name rather than as
+ * easily-swapped positional arguments.
+ */
+export interface WidgetUpdate extends Source {
+  /** Form the widget belongs to; `undefined` or `""` means it is not in a form. */
+  formId: string | undefined
+  /** Fragment scope for the resulting rerun; `undefined` means a full-app rerun. */
+  fragmentId: string | undefined
 }
 
 type FormSubmitValidator = () => boolean
@@ -410,7 +456,7 @@ export class WidgetStateManager {
 
     if (selectedSubmitButton) {
       this.createWidgetState(selectedSubmitButton, {
-        fromUi: true,
+        fromUser: true,
       }).triggerValue = true
     }
 
@@ -439,10 +485,9 @@ export class WidgetStateManager {
   }
 
   public setChatInputValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: IChatInputValue,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
     // ------------------------------------------------------------------
     // ChatInput behaves like a trigger widget: its value should be sent to
@@ -450,11 +495,13 @@ export class WidgetStateManager {
     // reruns receive an "empty" value. With the introduction of batched
     // trigger handling, we align ChatInput with the same mechanism used by
     // `setTriggerValue` to avoid race conditions when multiple updates are
-    // emitted within the same macrotask.
+    // emitted within the same macrotask. Like other trigger setters, it always
+    // schedules a flush and ignores `update.triggerRerun`.
     // ------------------------------------------------------------------
 
     // 1. Store the value in a temporary WidgetState proto.
-    this.createWidgetState(widget, source).chatInputValue = new ChatInputValue(
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).chatInputValue = new ChatInputValue(
       value
     )
 
@@ -462,12 +509,12 @@ export class WidgetStateManager {
     //    batch flush. The `scheduleFlush` helper already takes care of
     //    deleting all IDs present in `pendingTriggerIds` once the update
     //    message has been sent.
-    this.pendingTriggerIds.add(widget.id)
+    this.pendingTriggerIds.add(elementId)
 
     // 3. Schedule (or reuse) a macrotask-level flush so that ChatInput
     //    updates are coalesced with other trigger/value updates that happen
     //    during the same event loop tick.
-    this.scheduleFlush(fragmentId)
+    this.scheduleFlush(update.fragmentId)
   }
 
   /**
@@ -475,26 +522,29 @@ export class WidgetStateManager {
    * like boolean triggers - they are sent to the backend once and then
    * auto-reset to null after each script run. Use this for trigger-based
    * widgets that need to return a string value (e.g., menu button selections).
+   *
+   * Like other trigger setters, this always schedules a flush and ignores
+   * `update.triggerRerun`.
    */
   public setStringTriggerValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: string,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).stringTriggerValue =
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).stringTriggerValue =
       new StringTriggerValue({ data: value })
 
-    this.pendingTriggerIds.add(widget.id)
-    this.scheduleFlush(fragmentId)
+    this.pendingTriggerIds.add(elementId)
+    this.scheduleFlush(update.fragmentId)
   }
 
   /**
    * 1. Boolean trigger
-   *    setTriggerValue(widgetInfo, { fromUi: true }, fragmentId)
+   *    setTriggerValue(elementId, update)
    *
    * 2. Payload (JSON-encoded) trigger
-   *    setTriggerValue(widgetInfo, { fromUi: true }, fragmentId, payload)
+   *    setTriggerValue(elementId, update, payload)
    *
    *    `payload` can be any JSON-serialisable value. For Bidi Component v2
    *    we always transport payloads via the protobuf `json_trigger_value`
@@ -502,20 +552,24 @@ export class WidgetStateManager {
    *    within the same macrotask are batched into that array. If `payload`
    *    is omitted (or `undefined`) we fall back to the boolean
    *    `trigger_value=true` behaviour.
+   *
+   * Note: a trigger only exists during the rerun it causes, so there is nothing
+   * to buffer — `update.triggerRerun` is intentionally ignored here and a flush
+   * is always scheduled.
    */
 
   public setTriggerValue<T extends Record<string, unknown>>(
-    widget: WidgetInfo,
-    source: Source,
-    fragmentId: string | undefined,
+    elementId: string,
+    update: WidgetUpdate,
     value?: T
   ): Promise<void> {
+    const widget = { id: elementId, formId: update.formId }
     // If we already have a pending trigger for this widget in the current
     // macrotask, append to it instead of overwriting so multiple triggers are
     // delivered in a single backend message.
     let widgetState = this.getWidgetState(widget)
     if (widgetState === undefined) {
-      widgetState = this.createWidgetState(widget, source)
+      widgetState = this.createWidgetState(widget, update)
     }
 
     if (value === undefined) {
@@ -558,14 +612,14 @@ export class WidgetStateManager {
     // --------------------------------------------------------------
     // Batch trigger updates fired during the same JavaScript macrotask.
     // --------------------------------------------------------------
-    this.pendingTriggerIds.add(widget.id)
+    this.pendingTriggerIds.add(elementId)
 
     return new Promise(resolve => {
       // Queue resolver so callers still get the same promise-based API.
       this.triggerFlushResolvers.push(resolve)
 
       // Schedule (or reuse) a macrotask-level flush.
-      this.scheduleFlush(fragmentId)
+      this.scheduleFlush(update.fragmentId)
     })
   }
 
@@ -579,14 +633,14 @@ export class WidgetStateManager {
   }
 
   public setBoolValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: boolean,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).boolValue = value
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
-    this.maybeSyncValueToUrl(widget.id, source, value)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).boolValue = value
+    this.onWidgetValueChanged(update)
+    this.maybeSyncValueToUrl(widget, update, value)
   }
 
   public getIntValue(widget: WidgetInfo): number | undefined {
@@ -599,14 +653,14 @@ export class WidgetStateManager {
   }
 
   public setIntValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: number | null,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).intValue = value
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
-    this.maybeSyncValueToUrl(widget.id, source, value)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).intValue = value
+    this.onWidgetValueChanged(update)
+    this.maybeSyncValueToUrl(widget, update, value)
   }
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
@@ -619,14 +673,14 @@ export class WidgetStateManager {
   }
 
   public setDoubleValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: number | null,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).doubleValue = value
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
-    this.maybeSyncValueToUrl(widget.id, source, value)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).doubleValue = value
+    this.onWidgetValueChanged(update)
+    this.maybeSyncValueToUrl(widget, update, value)
   }
 
   public getStringValue(widget: WidgetInfo): string | undefined {
@@ -639,27 +693,27 @@ export class WidgetStateManager {
   }
 
   public setStringValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: string | null,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).stringValue = value
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
-    this.maybeSyncValueToUrl(widget.id, source, value)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).stringValue = value
+    this.onWidgetValueChanged(update)
+    this.maybeSyncValueToUrl(widget, update, value)
   }
 
   public setStringArrayValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: string[],
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).stringArrayValue = new StringArray({
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).stringArrayValue = new StringArray({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
-    this.maybeSyncValueToUrl(widget.id, source, value)
+    this.onWidgetValueChanged(update)
+    this.maybeSyncValueToUrl(widget, update, value)
   }
 
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
@@ -691,11 +745,11 @@ export class WidgetStateManager {
   }
 
   public setDoubleArrayValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: number[],
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
+    const widget = { id: elementId, formId: update.formId }
     // Filter out invalid values (NaN, undefined, null) before storing.
     const validValue = value.filter(
       v => v !== undefined && v !== null && !Number.isNaN(v)
@@ -705,16 +759,16 @@ export class WidgetStateManager {
     if (validValue.length === 0) {
       LOG.warn(
         `setDoubleArrayValue: All values were invalid (NaN/null/undefined) ` +
-          `for widget "${widget.id}". Preserving previous state.`
+          `for widget "${elementId}". Preserving previous state.`
       )
-      this.maybeSyncValueToUrl(widget.id, source, [])
+      this.maybeSyncValueToUrl(widget, update, [])
       return
     }
-    this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
+    this.createWidgetState(widget, update).doubleArrayValue = new DoubleArray({
       data: validValue,
     })
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
-    this.maybeSyncValueToUrl(widget.id, source, validValue)
+    this.onWidgetValueChanged(update)
+    this.maybeSyncValueToUrl(widget, update, validValue)
   }
 
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
@@ -732,16 +786,16 @@ export class WidgetStateManager {
   }
 
   public setIntArrayValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: number[],
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).intArrayValue = new SInt64Array({
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).intArrayValue = new SInt64Array({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
-    this.maybeSyncValueToUrl(widget.id, source, value)
+    this.onWidgetValueChanged(update)
+    this.maybeSyncValueToUrl(widget, update, value)
   }
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
@@ -754,23 +808,23 @@ export class WidgetStateManager {
   }
 
   public setJsonValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: unknown,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).jsonValue = JSON.stringify(value)
+    this.onWidgetValueChanged(update)
   }
 
   public setArrowValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: IArrowTable,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).arrowValue = value
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).arrowValue = value
+    this.onWidgetValueChanged(update)
   }
 
   public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
@@ -787,13 +841,13 @@ export class WidgetStateManager {
   }
 
   public setBytesValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: Uint8Array,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).bytesValue = value
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).bytesValue = value
+    this.onWidgetValueChanged(update)
   }
 
   public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
@@ -806,13 +860,13 @@ export class WidgetStateManager {
   }
 
   public setFileUploaderStateValue(
-    widget: WidgetInfo,
+    elementId: string,
     value: IFileUploaderState,
-    source: Source,
-    fragmentId: string | undefined
+    update: WidgetUpdate
   ): void {
-    this.createWidgetState(widget, source).fileUploaderStateValue = value
-    this.onWidgetValueChanged(widget.formId, source, fragmentId)
+    const widget = { id: elementId, formId: update.formId }
+    this.createWidgetState(widget, update).fileUploaderStateValue = value
+    this.onWidgetValueChanged(update)
   }
 
   public getFileUploaderStateValue(
@@ -831,23 +885,20 @@ export class WidgetStateManager {
 
   /**
    * Perform housekeeping every time a widget value changes.
-   * - If the widget does not belong to a form, and the value update came from
-   *   a user action, send the "updateWidgets" message
-   * - If the widget belongs to a form, dispatch the "pendingFormsChanged"
-   *   callback if needed.
+   * - If the widget belongs to a form, update its pending-changes state (the
+   *   form defers committing values until it is submitted).
+   * - Otherwise, if the change should trigger a rerun (see `shouldTriggerRerun`),
+   *   send the "updateWidgets" message. Changes with `triggerRerun: false`
+   *   (e.g. on_change="ignore") are buffered without rerunning.
    *
    * Called by every "setValue" function.
    */
-  private onWidgetValueChanged(
-    formId: string | undefined,
-    source: Source,
-    fragmentId: string | undefined
-  ): void {
-    if (isValidFormId(formId)) {
+  private onWidgetValueChanged(update: WidgetUpdate): void {
+    if (isValidFormId(update.formId)) {
       this.syncFormsWithPendingChanges()
-    } else if (source.fromUi) {
+    } else if (shouldTriggerRerun(update)) {
       // Batch value changes that occur within the same JavaScript macrotask.
-      this.scheduleFlush(fragmentId)
+      this.scheduleFlush(update.fragmentId)
     }
   }
 
@@ -911,7 +962,7 @@ export class WidgetStateManager {
    * the WidgetState will be created inside the form's WidgetStateDict.
    */
   private createWidgetState(widget: WidgetInfo, source: Source): WidgetState {
-    const addToForm = isValidFormId(widget.formId) && source.fromUi
+    const addToForm = isValidFormId(widget.formId) && source.fromUser
     const widgetStateDict = addToForm
       ? this.getOrCreateFormState(widget.formId as string).widgetStates
       : this.widgetStates
@@ -1442,17 +1493,27 @@ export class WidgetStateManager {
   }
 
   /**
-   * Sync widget value to URL if bound and change is from UI.
+   * Sync widget value to URL if bound and the change should be reflected there.
    * Orchestrates pure conversion and side-effect URL update.
+   *
+   * The URL is synced for genuine user changes that are either committed to the
+   * backend (see `shouldTriggerRerun`) or batched inside a form (which commits
+   * on submit). An ignored change (`triggerRerun: false`) outside a form must
+   * NOT touch the URL, so the URL never diverges from the value the backend has
+   * actually received.
    */
   private maybeSyncValueToUrl(
-    widgetId: string,
+    widget: WidgetInfo,
     source: Source,
     value: unknown
   ): void {
-    if (!source.fromUi) return
+    if (!source.fromUser) return
+    // Inside a form the value is committed on submit, so keep syncing the URL
+    // live (matching non-form behavior); outside a form, an ignored change must
+    // not update the URL.
+    if (!isValidFormId(widget.formId) && !shouldTriggerRerun(source)) return
 
-    const binding = this.boundWidgets.get(widgetId)
+    const binding = this.boundWidgets.get(widget.id)
     if (!binding) return
 
     // Pure: Convert value to URL format
