@@ -182,6 +182,7 @@ function SingleDateTimeInput({
   formCommitRef.current = formCommit
 
   const [isOpen, setIsOpen] = useState(false)
+  const dismissalCommittedRef = useRef(false)
 
   // Close-detection effect: handles commit/revert when popover closes.
   const wasOpenRef = useRef(isOpen)
@@ -208,10 +209,13 @@ function SingleDateTimeInput({
             onCloseRef.current(true)
           } else if (!dateTimesEqual(pending, value)) {
             onChangeRef.current(pending)
-            formCommitRef.current?.(pending)
+            if (!dismissalCommittedRef.current) {
+              formCommitRef.current?.(pending)
+            }
           }
         }
       }
+      dismissalCommittedRef.current = false
     }
     wasOpenRef.current = isOpen
   }, [isOpen, value, clearable, minDateTime, maxDateTime])
@@ -287,6 +291,7 @@ function SingleDateTimeInput({
               // Out of bounds — close-detection effect will revert.
             } else if (!dateTimesEqual(pending, value)) {
               formCommitRef.current(pending)
+              dismissalCommittedRef.current = true
             }
           }
         }
@@ -329,18 +334,21 @@ function SingleDateTimeInput({
 
   // Calendar date selection: merge with existing time, update display only.
   // Popover stays open so user can also adjust time before committing.
-  const handleCalendarChange = useCallback((date: CalendarDate): void => {
-    const currentTime = displayValueRef.current
-    setDisplayValue(
-      new CalendarDateTime(
+  const handleCalendarChange = useCallback(
+    (date: CalendarDate): void => {
+      const currentTime = displayValueRef.current
+      const merged = new CalendarDateTime(
         date.year,
         date.month,
         date.day,
         currentTime?.hour ?? 0,
         currentTime?.minute ?? 0
       )
-    )
-  }, [])
+      setDisplayValue(merged)
+      onValidate(merged)
+    },
+    [onValidate]
+  )
 
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return

@@ -181,17 +181,18 @@ def test_popover_time_only_change(app: Page):
     expect(calendar).to_be_visible()
 
     # Edit only the time in the popover (don't select a date)
+    # Default step=900 (15 min), so ArrowUp on minute snaps 45 → 00 (next 15-min boundary = 17:00)
     time_row = app.get_by_test_id("stDateTimeInputPopoverTime")
     minute_segment = time_row.get_by_role("spinbutton").last
     minute_segment.click()
-    minute_segment.press("ArrowUp")  # 45 -> 46
+    minute_segment.press("ArrowUp")
 
     # Close popover
     app.get_by_text("Value 1:").click()
     expect(calendar).not_to_be_visible()
     wait_for_app_run(app)
 
-    expect_markdown(app, "Value 1: 2025-11-19 16:46:00")
+    expect_markdown(app, "Value 1: 2025-11-19 17:00:00")
 
 
 def test_step_interval_applied(app: Page):
