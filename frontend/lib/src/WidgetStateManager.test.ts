@@ -1836,7 +1836,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
       it("keeps syncing the URL for a bound widget inside a form even when triggerRerun is false", () => {
         // Inside a form the value is committed on submit, so URL sync stays live
-        // (ignore is a no-op within forms).
+        // (triggerRerun: false does not suppress URL sync inside forms).
         const widget = { id: "formWidget", formId: "mockFormId" }
         widgetMgr.registerQueryParamBinding(
           "formWidget",

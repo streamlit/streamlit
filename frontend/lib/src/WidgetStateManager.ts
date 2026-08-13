@@ -49,9 +49,9 @@ export interface Source {
    * programmatic writes (e.g. mount defaults, session_state updates, or
    * backend-driven changes).
    *
-   * This is provenance only: it decides whether the change is batched into a
-   * form's pending changes. It does NOT by itself decide whether a rerun is
-   * scheduled — see `triggerRerun`.
+   * This is provenance only: it controls form pending-change batching and
+   * URL-sync eligibility. It does NOT by itself decide whether a rerun is
+   * scheduled — see `triggerRerun` (which defaults to this value when omitted).
    */
   fromUser: boolean
 
