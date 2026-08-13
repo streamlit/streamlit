@@ -484,21 +484,20 @@ export class WidgetStateManager {
     return true
   }
 
+  /**
+   * Sets a ChatInput value. ChatInput is trigger-like: it always schedules a
+   * flush and ignores `update.triggerRerun`.
+   *
+   * The value is sent to the backend exactly once and then cleared so that
+   * subsequent reruns receive an "empty" value. As with `setTriggerValue`, the
+   * write is coalesced into a macrotask-level batch to avoid race conditions
+   * when multiple updates are emitted within the same tick.
+   */
   public setChatInputValue(
     elementId: string,
     value: IChatInputValue,
     update: WidgetUpdate
   ): void {
-    // ------------------------------------------------------------------
-    // ChatInput behaves like a trigger widget: its value should be sent to
-    // the backend exactly once and then be cleared so that subsequent
-    // reruns receive an "empty" value. With the introduction of batched
-    // trigger handling, we align ChatInput with the same mechanism used by
-    // `setTriggerValue` to avoid race conditions when multiple updates are
-    // emitted within the same macrotask. Like other trigger setters, it always
-    // schedules a flush and ignores `update.triggerRerun`.
-    // ------------------------------------------------------------------
-
     // 1. Store the value in a temporary WidgetState proto.
     const widget = { id: elementId, formId: update.formId }
     this.createWidgetState(widget, update).chatInputValue = new ChatInputValue(

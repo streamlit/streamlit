@@ -332,10 +332,9 @@ describe("Multiselect widget", () => {
 
     expect(screen.getByRole("button", { name: "Remove b" })).toBeVisible()
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [],
-      { fromUser: true },
-      undefined
+      expect.objectContaining({ fromUser: true })
     )
   })
 
