@@ -396,6 +396,23 @@ describe("Widget State Manager", () => {
       })
     })
 
+    it("does not schedule a rerun when triggerRerun is omitted and fromUser is false", async () => {
+      // The other half of `triggerRerun ?? fromUser`: a programmatic write
+      // (fromUser: false) defaults triggerRerun to false, so the value is
+      // stored without scheduling a flush/rerun.
+      widgetMgr.setBoolValue(MOCK_WIDGET.id, true, {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: false,
+      })
+
+      expect(widgetMgr.getBoolValue(MOCK_WIDGET)).toBe(true)
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
     it("ignores triggerRerun inside a form: value is batched and delivered on submit", () => {
       const formId = "mockFormId"
       widgetMgr.addSubmitButton(
