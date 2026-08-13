@@ -19,45 +19,29 @@ import { ReactElement, useContext } from "react"
 import { DateFieldStateContext } from "react-aria-components"
 import type { DateSegment as IDateSegment } from "react-stately"
 
-import { reorderSegments } from "~lib/components/widgets/DateInput/dateInputUtils"
-
+import { reorderSegments } from "./dateInputUtils"
 import { StyledDateFieldInput, StyledDateSegment } from "./styled-components"
 
 const DATE_SEGMENT_TYPES = new Set(["year", "month", "day"])
 const TIME_SEGMENT_TYPES = new Set(["hour", "minute", "second", "dayPeriod"])
 
-/**
- * Renders date segments reordered per `format`, then appends a ", " literal
- * separator followed by time segments in their natural order. Must be a child
- * of `DateField<CalendarDateTime>` to read `DateFieldStateContext`.
- */
-export function ReorderedDateTimeSegments({
-  format,
-}: {
+function buildDateTimeSegments(
+  segments: readonly IDateSegment[],
   format: string
-}): ReactElement | null {
-  const state = useContext(DateFieldStateContext)
-  if (!state) return null
-
-  // Extract only the date segments for reordering.
-  const dateSegments = state.segments.filter(
-    seg => DATE_SEGMENT_TYPES.has(seg.type) || seg.type === "literal"
+): IDateSegment[] {
+  const dateSegments = segments.filter(
+    seg =>
+      DATE_SEGMENT_TYPES.has(seg.type) ||
+      (seg.type === "literal" && seg.text !== ", ")
   )
-  // Filter out the time-related literal separators that got included.
-  // We only want date literals (the ones between date segments).
-  const reorderedDate = reorderSegments(
-    dateSegments.filter(seg => seg.type !== "literal" || seg.text !== ", "),
-    format
-  )
+  const reorderedDate = reorderSegments(dateSegments, format)
 
-  // Time segments in their natural order from state.
-  const timeSegments = state.segments.filter(
+  const timeSegments = segments.filter(
     seg =>
       TIME_SEGMENT_TYPES.has(seg.type) ||
       (seg.type === "literal" && seg.text === ":")
   )
 
-  // Build combined segment list: date + ", " + time.
   const commaLiteral: IDateSegment = {
     type: "literal",
     text: ", ",
@@ -66,12 +50,34 @@ export function ReorderedDateTimeSegments({
     isEditable: false,
   }
 
-  const combined = [...reorderedDate, commaLiteral, ...timeSegments]
+  return [...reorderedDate, commaLiteral, ...timeSegments]
+}
+
+/**
+ * Renders date segments reordered per `format`. When `includeTime` is true,
+ * appends a ", " literal separator followed by time segments in their natural
+ * order. Must be a child of `DateField` to read `DateFieldStateContext`.
+ */
+export function ReorderedSegments({
+  format,
+  isRange,
+  includeTime,
+}: {
+  format: string
+  isRange?: boolean
+  includeTime?: boolean
+}): ReactElement | null {
+  const state = useContext(DateFieldStateContext)
+  if (!state) return null
+
+  const segments = includeTime
+    ? buildDateTimeSegments(state.segments, format)
+    : reorderSegments(state.segments, format)
 
   return (
-    <StyledDateFieldInput>
-      {combined.map((segment, i) => (
-        // Index key is safe: segments is a fixed-length, fixed-order array.
+    <StyledDateFieldInput $isRange={isRange}>
+      {segments.map((segment, i) => (
+        // Index key is safe: segments is a fixed-length, fixed-order array derived from format.
         // eslint-disable-next-line @eslint-react/no-array-index-key
         <StyledDateSegment key={`${segment.type}-${i}`} segment={segment} />
       ))}

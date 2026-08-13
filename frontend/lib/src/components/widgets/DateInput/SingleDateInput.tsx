@@ -61,7 +61,7 @@ import {
   parsePartialSegmentPaste,
   parsePastedDate,
 } from "./dateInputUtils"
-import { ReorderedDateSegments } from "./ReorderedDateSegments"
+import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -570,7 +570,7 @@ function SingleDateInput({
               shouldForceLeadingZeros
               isDisabled={disabled}
             >
-              <ReorderedDateSegments format={format} />
+              <ReorderedSegments format={format} />
             </DateField>
           </StyledDateField>
         </I18nProvider>

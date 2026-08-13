@@ -69,7 +69,7 @@ import {
   parsePastedDate,
   validateDate,
 } from "./dateInputUtils"
-import { ReorderedDateSegments } from "./ReorderedDateSegments"
+import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -825,7 +825,7 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} isRange />
+                <ReorderedSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>
@@ -843,7 +843,7 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} isRange />
+                <ReorderedSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>

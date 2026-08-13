@@ -46,17 +46,7 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { CalendarPopoverHeader } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
 import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import {
-  SHIFT_VIEWPORT_PADDING,
-  useFloatingOverlay,
-} from "~lib/hooks/useFloatingOverlay"
-import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
-import { convertRemToPx } from "~lib/theme/utils"
-import { isNullOrUndefined } from "~lib/util/utils"
-
-import { dateTimesEqual, parsePastedDateTime } from "./dateTimeInputUtils"
-import { ReorderedDateTimeSegments } from "./ReorderedDateTimeSegments"
+import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -70,7 +60,17 @@ import {
   StyledErrorIconContainer,
   StyledTrailingIcons,
   StyledVisuallyHidden,
-} from "./styled-components"
+} from "~lib/components/widgets/DateInput/styled-components"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
+import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
+import { convertRemToPx } from "~lib/theme/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
+
+import { dateTimesEqual, parsePastedDateTime } from "./dateTimeInputUtils"
 
 interface SingleDateTimeInputProps {
   value: CalendarDateTime | null
@@ -90,6 +90,9 @@ interface SingleDateTimeInputProps {
   onValidate: (dt: CalendarDateTime | null) => void
   onClose: (hasPlaceholderSegments: boolean) => void
   formCommit?: (value: CalendarDateTime | null) => void
+  /** When inside a form with enter_to_submit=True, submits the form.
+   * Called after formCommit on Enter key. */
+  formSubmit?: () => void
   formResetKey: number
 }
 
@@ -111,6 +114,7 @@ function SingleDateTimeInput({
   onValidate,
   onClose,
   formCommit,
+  formSubmit,
   formResetKey,
 }: SingleDateTimeInputProps): ReactElement {
   const theme = useEmotionTheme()
@@ -316,15 +320,57 @@ function SingleDateTimeInput({
   )
 
   // Calendar date selection: merge with existing time, commit immediately, close.
+  // Clamps time to valid range when the selected date is on a boundary.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
       const currentTime = displayValueRef.current
+      let hour = currentTime?.hour ?? 0
+      let minute = currentTime?.minute ?? 0
+
+      // Clamp time when on the min boundary date
+      if (
+        minDateTime &&
+        date.compare(
+          new CalendarDate(
+            minDateTime.year,
+            minDateTime.month,
+            minDateTime.day
+          )
+        ) === 0
+      ) {
+        const currentMins = hour * 60 + minute
+        const minMins = minDateTime.hour * 60 + minDateTime.minute
+        if (currentMins < minMins) {
+          hour = minDateTime.hour
+          minute = minDateTime.minute
+        }
+      }
+
+      // Clamp time when on the max boundary date
+      if (
+        maxDateTime &&
+        date.compare(
+          new CalendarDate(
+            maxDateTime.year,
+            maxDateTime.month,
+            maxDateTime.day
+          )
+        ) === 0
+      ) {
+        const currentMins = hour * 60 + minute
+        const maxMins = maxDateTime.hour * 60 + maxDateTime.minute
+        if (currentMins > maxMins) {
+          hour = maxDateTime.hour
+          minute = maxDateTime.minute
+        }
+      }
+
       const merged = new CalendarDateTime(
         date.year,
         date.month,
         date.day,
-        currentTime?.hour ?? 0,
-        currentTime?.minute ?? 0
+        hour,
+        minute
       )
       setDisplayValue(merged)
       onChange(merged)
@@ -333,7 +379,7 @@ function SingleDateTimeInput({
       restoreFocusToField()
       setIsCalendarActive(false)
     },
-    [onChange, restoreFocusToField]
+    [onChange, restoreFocusToField, minDateTime, maxDateTime]
   )
 
   const handleFocus = useCallback((): void => {
@@ -411,10 +457,16 @@ function SingleDateTimeInput({
         } else {
           formCommit?.(pending)
         }
+        if (!error) {
+          formSubmit?.()
+        }
         return
       }
 
-      // Step-aware arrow keys for time segments
+      // Step-aware arrow keys for time segments.
+      // TODO: Steps not divisible by 60 (e.g. step=90) fall through to default
+      // 1-minute increments — pre-existing behavior. Will be addressed with
+      // seconds granularity and hour cycle support, consistent with TimeInput.
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
         const target = e.target as HTMLElement
         const segmentType = target.getAttribute("data-type")
@@ -487,7 +539,9 @@ function SingleDateTimeInput({
       value,
       displayValue,
       clearable,
+      error,
       formCommit,
+      formSubmit,
       step,
       stepMins,
       onValidate,
@@ -620,7 +674,7 @@ function SingleDateTimeInput({
               shouldForceLeadingZeros
               isDisabled={disabled}
             >
-              <ReorderedDateTimeSegments format={format} />
+              <ReorderedSegments format={format} includeTime />
             </DateField>
           </StyledDateField>
         </I18nProvider>

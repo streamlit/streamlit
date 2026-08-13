@@ -819,4 +819,86 @@ describe("DateTimeInput widget", () => {
       })
     })
   })
+
+  describe("Active calendar (Alt+ArrowDown)", () => {
+    it("Alt+ArrowDown opens calendar in active mode with focus on grid cell", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+      await waitFor(() => {
+        const calendar = screen.getByTestId("stDateTimeInputCalendar")
+        expect(calendar).toHaveAttribute("role", "dialog")
+        expect(calendar).toHaveAttribute("aria-modal", "true")
+        // Focus should be inside the calendar grid
+        const focused = document.activeElement
+        expect(calendar.contains(focused)).toBe(true)
+        expect(focused?.getAttribute("tabindex")).toBe("0")
+      })
+    })
+
+    it("Escape from active calendar closes it and returns focus to the field", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[1])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+      await waitFor(() => {
+        const calendar = screen.getByTestId("stDateTimeInputCalendar")
+        expect(calendar).toHaveAttribute("role", "dialog")
+      })
+
+      // Escape should close and return focus to the originating segment
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(segments[1]).toHaveFocus()
+    })
+
+    it("Alt+ArrowDown opens calendar even when popover was previously closed", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Close by tabbing through all segments and out
+      for (let i = 0; i < segments.length; i++) {
+        await user.tab()
+      }
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+
+      // Go back and use Alt+ArrowDown
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+      await waitFor(() => {
+        const calendar = screen.getByTestId("stDateTimeInputCalendar")
+        expect(calendar).toHaveAttribute("role", "dialog")
+        expect(calendar).toHaveAttribute("aria-modal", "true")
+      })
+    })
+  })
 })

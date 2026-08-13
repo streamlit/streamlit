@@ -199,6 +199,14 @@ function DateTimeInput({
     [inForm, element, widgetMgr, fragmentId]
   )
 
+  const handleFormSubmit = useCallback((): void => {
+    widgetMgr.submitForm(element.formId, fragmentId)
+  }, [element.formId, widgetMgr, fragmentId])
+
+  const allowEnterToSubmit = inForm
+    ? widgetMgr.allowFormEnterToSubmit(element.formId)
+    : false
+
   // Seed the calendar's focused date from the current value or today.
   const [focusedValue, setFocusedValue] = useState<CalendarDate>(() => {
     if (currentValue) {
@@ -276,6 +284,7 @@ function DateTimeInput({
         onValidate={handleValidate}
         onClose={handleClose}
         formCommit={inForm ? handleFormCommit : undefined}
+        formSubmit={allowEnterToSubmit ? handleFormSubmit : undefined}
         formResetKey={formResetKey}
       />
     </div>
