@@ -26,12 +26,14 @@ function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
 }
 
-/** Parse an ISO datetime string (`YYYY-MM-DDTHH:mm`) into a CalendarDateTime. */
+/** Parse an ISO datetime string (`YYYY-MM-DDTHH:mm` or `YYYY-MM-DDTHH:mm:ss`) into a CalendarDateTime. Seconds are accepted but discarded. */
 export function isoToCalendarDateTime(
   value: string | null | undefined
 ): CalendarDateTime | null {
   if (!value) return null
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim())
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2})?$/.exec(
+    value.trim()
+  )
   if (!match) return null
   const [, yearStr, monthStr, dayStr, hourStr, minuteStr] = match
   const year = Number(yearStr)

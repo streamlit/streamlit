@@ -906,6 +906,50 @@ describe("DateTimeInput widget", () => {
 
       expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
     })
+
+    it("synchronous formCommit fires on outside-click from active calendar (race guard)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        formId: "form",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Submit</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Edit a segment value
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Enter active calendar mode (focus moves into grid)
+      await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+      await waitFor(() => {
+        const calendar = screen.getByTestId("stDateTimeInputCalendar")
+        expect(calendar).toHaveAttribute("role", "dialog")
+      })
+
+      // Click outside (simulates clicking Submit button) — formCommit must fire synchronously
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T17:45"],
+          { fromUi: true },
+          undefined
+        )
+      })
+    })
   })
 
   describe("Boundary time clamping on calendar selection", () => {

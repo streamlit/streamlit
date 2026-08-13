@@ -264,6 +264,23 @@ function SingleDateTimeInput({
       onClose: () => {
         setIsOpen(false)
         setIsCalendarActive(false)
+        // Synchronous form commit: outside-click dismiss can race form submit
+        // (the close-commit effect fires after paint). Mirrors handleBlur.
+        if (formCommitRef.current && triggerRef.current) {
+          const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+            triggerRef.current
+          )
+          if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+            // Will revert on next render — don't commit stale/invalid state.
+          } else {
+            const pending = isFullyCleared ? null : displayValueRef.current
+            if (validateDateTime(pending, minDateTime, maxDateTime)) {
+              // Out of bounds — close-detection effect will revert.
+            } else if (!dateTimesEqual(pending, value)) {
+              formCommitRef.current(pending)
+            }
+          }
+        }
       },
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,

@@ -59,8 +59,15 @@ describe("isoToCalendarDateTime", () => {
     expect(isoToCalendarDateTime("2024-01-01T00:60")).toBeNull()
   })
 
-  it("rejects values with seconds (wrong format)", () => {
-    expect(isoToCalendarDateTime("2024-01-01T00:00:00")).toBeNull()
+  it("accepts ISO with seconds (discards seconds)", () => {
+    const result = isoToCalendarDateTime("2024-07-04T08:15:30")
+    expect(result).toMatchObject({
+      year: 2024,
+      month: 7,
+      day: 4,
+      hour: 8,
+      minute: 15,
+    })
   })
 })
 
