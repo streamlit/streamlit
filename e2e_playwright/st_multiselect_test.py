@@ -978,15 +978,30 @@ def test_multiselect_wrap(app: Page, assert_snapshot: ImageCompareFunction):
     # heights don't flake the comparisons.
     # wrap=True grows onto multiple rows; wrap=False stays a single row.
     wait_until(app, lambda: _height(wrap_false) < _height(wrap_true))
-    # Auto resolves to no-wrap inside a horizontal container (like wrap=False)
-    # and to wrapping in a vertical layout (like wrap=True).
-    wait_until(app, lambda: _height(auto_horizontal) < _height(wrap_true))
-    wait_until(app, lambda: _height(auto_vertical) > _height(wrap_false))
+    # Auto must match the height of the mode it resolves to (a stronger check
+    # than a one-sided inequality, which a broken resolution landing between the
+    # two modes could still satisfy): no-wrap inside a horizontal container (like
+    # wrap=False) and wrapping in a vertical layout (like wrap=True). A small
+    # tolerance absorbs sub-pixel rounding.
+    height_tolerance = 2
+    wait_until(
+        app,
+        lambda: abs(_height(auto_horizontal) - _height(wrap_false)) <= height_tolerance,
+    )
+    wait_until(
+        app,
+        lambda: abs(_height(auto_vertical) - _height(wrap_true)) <= height_tolerance,
+    )
 
     # wrap=False must scroll horizontally because the chips overflow the row ...
-    assert wrap_false.evaluate("el => el.scrollWidth > el.clientWidth")
+    wait_until(
+        app, lambda: wrap_false.evaluate("el => el.scrollWidth > el.clientWidth")
+    )
     # ... and must NOT stack into multiple rows (no vertical overflow / growth).
-    assert not wrap_false.evaluate("el => el.scrollHeight > el.clientHeight + 2")
+    wait_until(
+        app,
+        lambda: not wrap_false.evaluate("el => el.scrollHeight > el.clientHeight + 2"),
+    )
 
     # The single-row control shows a fade affordance on the overflowing edge ...
     expect(wrap_false).to_have_attribute("data-can-scroll-end", "")

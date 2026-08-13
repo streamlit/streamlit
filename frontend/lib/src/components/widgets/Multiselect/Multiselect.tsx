@@ -203,7 +203,7 @@ const preventInputEvent = (e: React.SyntheticEvent): void => {
   e.preventDefault()
 }
 
-/** Slack (in px) to absorb sub-pixel rounding when comparing scroll offsets. */
+/** Pixel tolerance for scroll-edge comparisons to absorb sub-pixel rounding. */
 const SCROLL_TOLERANCE = 1
 
 const Multiselect: FC<Props> = props => {
