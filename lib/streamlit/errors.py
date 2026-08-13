@@ -423,13 +423,20 @@ class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
         )
 
 
-# st.page_link
-class StreamlitMissingPageLabelError(LocalizableStreamlitException):
-    """Exception raised when a page_link is created without a label."""
+class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
+    """Raised when a required parameter is missing, ``None``, or empty."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, command: str, parameter: str, *, detail: str | None = None
+    ) -> None:
+        # Format the template first so braces in ``detail`` cannot break ``.format``.
+        message = f"The `{parameter}` parameter is required for `{command}`."
+        if detail:
+            message = f"{message} {detail}"
         super().__init__(
-            "The `label` param is required for external links used with `st.page_link` - please provide a `label`."
+            message,
+            command=command,
+            parameter=parameter,
         )
 
 
@@ -628,50 +635,6 @@ class StreamlitValueError(LocalizableStreamlitException):
         )
 
 
-# Deprecated specialized subclasses kept for isinstance/except compatibility.
-# Prefer raising StreamlitValueError directly for new validation paths.
-# Construction uses StreamlitValueError(parameter, valid_values); old
-# single-arg constructors are not supported.
-class StreamlitInvalidPageLayoutError(StreamlitValueError):
-    """Deprecated alias of StreamlitValueError for invalid ``layout`` values.
-
-    Kept so existing ``except StreamlitInvalidPageLayoutError`` handlers still
-    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
-    legacy single-arg constructors are unsupported. Prefer raising
-    ``StreamlitValueError`` directly in new code.
-    """
-
-
-class StreamlitInvalidTextAlignmentError(StreamlitValueError):
-    """Deprecated alias of StreamlitValueError for invalid ``text_alignment``.
-
-    Kept so existing ``except StreamlitInvalidTextAlignmentError`` handlers still
-    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
-    legacy single-arg constructors are unsupported. Prefer raising
-    ``StreamlitValueError`` directly in new code.
-    """
-
-
-class StreamlitInvalidBindValueError(StreamlitValueError):
-    """Deprecated alias of StreamlitValueError for invalid ``bind`` values.
-
-    Kept so existing ``except StreamlitInvalidBindValueError`` handlers still
-    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
-    legacy single-arg constructors are unsupported. Prefer raising
-    ``StreamlitValueError`` directly in new code.
-    """
-
-
-class StreamlitInvalidPersistStateError(StreamlitValueError):
-    """Deprecated alias of StreamlitValueError for invalid ``persist_state``.
-
-    Kept so existing ``except StreamlitInvalidPersistStateError`` handlers still
-    match. Construct via ``StreamlitValueError(parameter, valid_values)`` args —
-    legacy single-arg constructors are unsupported. Prefer raising
-    ``StreamlitValueError`` directly in new code.
-    """
-
-
 # config
 class StreamlitInvalidThemeError(LocalizableStreamlitException):
     """Exception raised for general theme errors."""
@@ -702,3 +665,12 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
             option_name=option_name,
             file_path_or_url=file_path_or_url,
         )
+
+
+# Deprecated aliases kept only so user apps' isinstance checks and imports do not
+# break. Do not initialize these names; raise the shared types directly instead.
+StreamlitInvalidPageLayoutError = StreamlitValueError
+StreamlitInvalidTextAlignmentError = StreamlitValueError
+StreamlitInvalidBindValueError = StreamlitValueError
+StreamlitInvalidPersistStateError = StreamlitValueError
+StreamlitMissingPageLabelError = StreamlitMissingRequiredParameterError

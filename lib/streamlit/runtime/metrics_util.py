@@ -27,7 +27,10 @@ from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import (
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -496,6 +499,8 @@ def format_uncaught_exception(exc: BaseException) -> str:
 
     - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
     - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+    - ``StreamlitMissingRequiredParameterError`` →
+      ``"StreamlitMissingRequiredParameterError:<param>"``
 
     Enrichment failures are swallowed so telemetry cannot interrupt script
     execution or drop the page-profile payload.
@@ -506,7 +511,9 @@ def format_uncaught_exception(exc: BaseException) -> str:
             match = _UNEXPECTED_KWARG_RE.search(str(exc))
             if match:
                 return f"{name}:{match.group(1)}"
-        elif isinstance(exc, StreamlitValueError):
+        elif isinstance(
+            exc, (StreamlitValueError, StreamlitMissingRequiredParameterError)
+        ):
             parameter = exc.exec_kwargs.get("parameter")
             if isinstance(parameter, str) and parameter:
                 return f"{name}:{parameter}"

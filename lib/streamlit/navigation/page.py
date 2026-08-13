@@ -20,7 +20,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from streamlit import env_util
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -260,15 +264,14 @@ class Page:
 
         # Check if page is an external URL
         if isinstance(page, str) and is_url(page):
-            if title is None:
-                raise StreamlitAPIException(
-                    "External URL pages require a `title` parameter. "
-                    f"Please provide a title for the URL: {page}"
-                )
-            if title.strip() == "":
-                raise StreamlitAPIException(
-                    "External URL pages require a non-empty `title` parameter. "
-                    f"Please provide a title for the URL: {page}"
+            if title is None or title.strip() == "":
+                raise StreamlitMissingRequiredParameterError(
+                    "st.Page",
+                    "title",
+                    detail=(
+                        "External URL pages require a non-empty title. "
+                        f"Please provide a title for the URL: {page}"
+                    ),
                 )
             if default:
                 raise StreamlitAPIException(
@@ -339,8 +342,10 @@ class Page:
             # but in special cases (e.g. a callable class instance), one may
             # not exist. In that case, we should inform the user the title is
             # mandatory.
-            raise StreamlitAPIException(
-                "Cannot infer page title for Callable. Set the `title=` keyword argument."
+            raise StreamlitMissingRequiredParameterError(
+                "st.Page",
+                "title",
+                detail="Cannot infer page title for Callable. Set the `title=` keyword argument.",
             )
 
         self._page = page
@@ -352,8 +357,10 @@ class Page:
         self._icon = icon or inferred_icon
 
         if self._title.strip() == "":
-            raise StreamlitAPIException(
-                "The title of the page cannot be empty or consist of underscores/spaces only"
+            raise StreamlitMissingRequiredParameterError(
+                "st.Page",
+                "title",
+                detail="It cannot be empty or consist of underscores/spaces only.",
             )
 
         self._url_path = inferred_name

@@ -33,7 +33,10 @@ import streamlit.components.v1 as components
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import (
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
@@ -846,12 +849,17 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             StreamlitValueError("width", ["stretch", "content"]),
             "StreamlitValueError:width",
         ),
+        (
+            StreamlitMissingRequiredParameterError("st.expander", "label"),
+            "StreamlitMissingRequiredParameterError:label",
+        ),
         (ValueError("boom"), "ValueError"),
         (TypeError("other"), "TypeError"),
     ],
     ids=[
         "unexpected-kwarg",
         "streamlit-value-error",
+        "streamlit-missing-required-parameter",
         "plain-value-error",
         "other-type-error",
     ],
@@ -878,6 +886,8 @@ def test_format_uncaught_exception_swallows_enrichment_errors() -> None:
         == "BrokenTypeError"
     )
     # Bypass StreamlitValueError.__init__; only the type is needed for isinstance.
+    # Covers the shared StreamlitValueError /
+    # StreamlitMissingRequiredParameterError enrichment path.
     broken_value_error = BrokenStreamlitValueError.__new__(BrokenStreamlitValueError)
     assert (
         metrics_util.format_uncaught_exception(broken_value_error)

@@ -352,7 +352,7 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc_info:
             st.Page("https://docs.streamlit.io")
 
-        assert "External URL pages require a `title` parameter" in str(exc_info.value)
+        assert "External URL pages require a non-empty title" in str(exc_info.value)
 
     def test_external_url_with_title(self):
         """Test that external URL pages can be created with a title."""

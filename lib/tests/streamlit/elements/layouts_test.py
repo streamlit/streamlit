@@ -28,6 +28,7 @@ from streamlit.errors import (
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -360,10 +361,10 @@ class ExpanderTest(DeltaGeneratorTestCase):
             st.expander()
 
     def test_label_none_raises(self):
-        """Test that an explicit label=None raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
             st.expander(None)
-        assert "A label is required for an expander" in str(e.value)
+        assert "The `label` parameter is required for `st.expander`" in str(e.value)
 
     def test_just_label(self):
         """Test that it can be called with no params"""
@@ -944,10 +945,10 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             st.popover()
 
     def test_label_none_raises(self):
-        """Test that an explicit label=None raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
             st.popover(None)
-        assert "A label is required for a popover" in str(e.value)
+        assert "The `label` parameter is required for `st.popover`" in str(e.value)
 
     def test_invalid_type_raises(self):
         """Test that an unsupported button type raises a StreamlitValueError."""
@@ -2192,7 +2193,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog()
 
-        assert e.value.args[0].startswith("A non-empty `title`")
+        assert "The `title` parameter is required for `st.dialog`" in e.value.args[0]
 
     def test_dialog_decorator_must_be_called_like_a_function_with_a_title(self):
         """Test that the decorator must be called like a function."""

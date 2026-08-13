@@ -42,6 +42,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidVerticalAlignmentError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -1247,7 +1248,7 @@ class LayoutsMixin:
 
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for an expander")
+            raise StreamlitMissingRequiredParameterError("st.expander", "label")
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
@@ -1636,7 +1637,7 @@ class LayoutsMixin:
 
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for a popover")
+            raise StreamlitMissingRequiredParameterError("st.popover", "label")
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"

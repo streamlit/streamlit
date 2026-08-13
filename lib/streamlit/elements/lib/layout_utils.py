@@ -21,9 +21,9 @@ from streamlit.errors import (
     StreamlitInvalidHeightError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidSizeError,
-    StreamlitInvalidTextAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
@@ -356,12 +356,12 @@ def validate_text_alignment(text_alignment: TextAlignment) -> None:
 
     Raises
     ------
-    StreamlitInvalidTextAlignmentError
+    StreamlitValueError
         If the text_alignment value is invalid.
     """
     valid_alignments = ["left", "center", "right", "justify"]
     if text_alignment not in valid_alignments:
-        raise StreamlitInvalidTextAlignmentError(
+        raise StreamlitValueError(
             "text_alignment", ["'left'", "'center'", "'right'", "'justify'"]
         )
 

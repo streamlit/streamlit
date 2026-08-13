@@ -214,7 +214,9 @@ class PdfTest(DeltaGeneratorTestCase):
 
     def test_pdf_with_none_data(self):
         """Test PDF with None data."""
-        with pytest.raises(StreamlitAPIException, match="The PDF data cannot be None"):
+        with pytest.raises(
+            StreamlitAPIException, match=r"`data` parameter is required"
+        ):
             st.pdf(None)
 
     def test_pdf_with_unsupported_data_type(self):

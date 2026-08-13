@@ -110,6 +110,9 @@ generic `StreamlitAPIException` with a one-off message.
 - `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
   an invalid value from a known finite set (Literal / enum-like options). Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
+- `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
+  use when a required parameter is missing, `None`, or empty. Example:
+  `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
   - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
@@ -122,10 +125,15 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
+- Do not raise the deprecated aliases kept for compatibility
+  (`StreamlitMissingPageLabelError`, `StreamlitInvalidPageLayoutError`,
+  `StreamlitInvalidTextAlignmentError`, `StreamlitInvalidBindValueError`,
+  `StreamlitInvalidPersistStateError`); raise
+  `StreamlitMissingRequiredParameterError` or `StreamlitValueError` instead.
 
 Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
-type (missing required args, incompatible option combinations, nesting rules,
-serialization failures, and similar).
+type (incompatible option combinations, nesting rules, serialization failures,
+and similar).
 
 ## Theming and Layout
 
