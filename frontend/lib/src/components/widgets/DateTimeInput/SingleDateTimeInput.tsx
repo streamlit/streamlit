@@ -88,6 +88,9 @@ interface SingleDateTimeInputProps {
   clearable: boolean
   label: string
   error: string | null
+  /** App-wide locale (`LibConfigContext`), used only to localize the
+   * calendar popover's month/weekday text — the typed field is always
+   * pinned to `en-US` (see `I18nProvider locale="en-US"` below). */
   locale: string
   isInSidebar: boolean
   focusedValue: CalendarDate
@@ -130,7 +133,12 @@ function SingleDateTimeInput({
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
+  // Guards against `handleFocus` reopening the popover it's in the middle
+  // of closing — see `restoreFocusToField` below.
   const isRestoringFocusRef = useRef(false)
+  // When an action (calendar click, paste, clear) already committed the value
+  // via onChange, the close-detection effect should skip its own commit to
+  // avoid a redundant write + backend rerun.
   const skipCloseCommitRef = useRef(false)
 
   const [isCalendarActive, setIsCalendarActive] = useState(false)
@@ -446,10 +454,8 @@ function SingleDateTimeInput({
         }
         if (!dateTimesEqual(pending, value)) {
           onChangeRef.current(pending)
-          formCommitRef.current?.(pending)
-        } else {
-          formCommitRef.current?.(pending)
         }
+        formCommitRef.current?.(pending)
         if (!error) {
           formSubmit?.()
         }
@@ -466,7 +472,7 @@ function SingleDateTimeInput({
         const up = e.key === "ArrowUp"
 
         if (segmentType === "minute" && step % 60 === 0) {
-          if (!Number.isInteger(stepMins) || stepMins <= 1) return
+          if (stepMins <= 1) return
           if (!displayValue) return
 
           e.preventDefault()
@@ -491,7 +497,7 @@ function SingleDateTimeInput({
           onValidate(newDt)
         } else if (segmentType === "hour" && step % 3600 === 0) {
           const stepHours = step / 3600
-          if (!Number.isInteger(stepHours) || stepHours <= 1) return
+          if (stepHours <= 1) return
           if (!displayValue) return
 
           e.preventDefault()
