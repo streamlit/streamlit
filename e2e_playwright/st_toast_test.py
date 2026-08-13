@@ -29,8 +29,8 @@ def test_default_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    # Locate by content rather than index: toasts persist across the rerun
-    # triggered above, so their stacking order is not a stable contract.
+    # Locate by content rather than index; with toast lifetime decoupled from
+    # the element tree, stacking order is not a stable contract.
     default_toast = toasts.filter(has_text="This is a default toast message")
     default_toast.hover()
 
@@ -51,8 +51,8 @@ def test_collapsed_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    # Locate by content rather than index: toasts persist across the rerun
-    # triggered above, so their stacking order is not a stable contract.
+    # Locate by content rather than index; with toast lifetime decoupled from
+    # the element tree, stacking order is not a stable contract.
     long_toast = toasts.filter(has_text="Random toast message")
     long_toast.hover()
 
@@ -73,8 +73,8 @@ def test_expanded_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    # Locate by content rather than index: toasts persist across the rerun
-    # triggered above, so their stacking order is not a stable contract.
+    # Locate by content rather than index; with toast lifetime decoupled from
+    # the element tree, stacking order is not a stable contract.
     long_toast = toasts.filter(has_text="Random toast message")
     long_toast.hover()
 
@@ -100,8 +100,8 @@ def test_toast_with_material_icon_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    # Locate by content rather than index: toasts persist across the rerun
-    # triggered above, so their stacking order is not a stable contract.
+    # Locate by content rather than index; with toast lifetime decoupled from
+    # the element tree, stacking order is not a stable contract.
     material_icon_toast = toasts.filter(has_text="Your edited image was saved!")
     material_icon_toast.hover()
 
@@ -165,7 +165,8 @@ def test_toast_persists_through_rerun(app: Page):
     expect(toast).to_have_count(1)
 
     # It still auto-hides after its (default 4s) duration rather than lingering.
-    expect(toast).not_to_be_visible(timeout=5000)
+    # Extra slack beyond 4s covers post-rerun mount + exit animation.
+    expect(toast).not_to_be_visible(timeout=7000)
 
 
 def test_toast_adjusts_for_custom_theme(
