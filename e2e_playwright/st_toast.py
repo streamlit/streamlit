@@ -16,15 +16,11 @@ import streamlit as st
 
 st.set_page_config(layout="wide")
 st.chat_input("input here")
-# Infinite duration keeps snapshot/rendering tests stable: default 4s toasts can be
-# mid-dismiss by the time Playwright screenshots (and remounts no longer reset the
-# timer once toast lifetime is decoupled from the element tree).
-st.toast("This is a default toast message", icon="🐶", duration="infinite")
+st.toast("This is a default toast message", icon="🐶")
 st.toast(
     "Random toast message that is a really really really really really really "
     "really long message, going way past the 3 line limit",
     icon="🦄",
-    duration="infinite",
 )
 
 # Emit the material-icon toast on demand so the snapshot test can wait for the

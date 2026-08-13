@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import click_button, expect_font, reset_hovering
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-# Startup script emits two infinite-duration emoji toasts used by rendering tests.
+# Startup script emits two default-duration emoji toasts used by rendering tests.
 _STARTUP_TOAST_COUNT = 2
 
 
@@ -29,13 +29,28 @@ def _prepare_toast_snapshots(page: Page) -> None:
     page.wait_for_timeout(250)
 
 
-def _dismiss_startup_toasts(page: Page) -> None:
-    """Close the infinite-duration startup toasts."""
-    startup_toasts = page.get_by_test_id("stToast")
-    expect(startup_toasts).to_have_count(_STARTUP_TOAST_COUNT)
-    for _ in range(_STARTUP_TOAST_COUNT):
-        startup_toasts.first.get_by_role("button", name="Close").click()
-    expect(startup_toasts).to_have_count(0)
+def _wait_for_stable_toast_size(toast: Locator, timeout_ms: int = 3000) -> None:
+    """Wait until the toast bounding box height stops changing (font/layout settle)."""
+    page = toast.page
+    expect(toast).to_be_visible()
+    last_height: float | None = None
+    stable_iters = 0
+    deadline = page.evaluate("Date.now()") + timeout_ms
+    while page.evaluate("Date.now()") < deadline:
+        box = toast.bounding_box()
+        height = None if box is None else box["height"]
+        if (
+            height is not None
+            and last_height is not None
+            and abs(height - last_height) < 0.5
+        ):
+            stable_iters += 1
+            if stable_iters >= 4:
+                return
+        else:
+            stable_iters = 0
+        last_height = height
+        page.wait_for_timeout(50)
 
 
 def test_default_toast_rendering(
@@ -52,6 +67,7 @@ def test_default_toast_rendering(
     # the element tree, stacking order is not a stable contract.
     default_toast = toasts.filter(has_text="This is a default toast message")
     default_toast.hover()
+    _wait_for_stable_toast_size(default_toast)
 
     expect(default_toast).to_contain_text("🐶This is a default toast message")
     # Verify close button is accessible
@@ -71,6 +87,7 @@ def test_collapsed_toast_rendering(
     # the element tree, stacking order is not a stable contract.
     long_toast = toasts.filter(has_text="Random toast message")
     long_toast.hover()
+    _wait_for_stable_toast_size(long_toast)
 
     expect(long_toast).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
@@ -100,6 +117,7 @@ def test_expanded_toast_rendering(
         "really long message, going way past the 3 line limitview less"
     )
     reset_hovering(themed_app)
+    _wait_for_stable_toast_size(long_toast)
     assert_snapshot(long_toast, name="toast-expanded")
 
 
@@ -116,6 +134,7 @@ def test_toast_with_material_icon_rendering(
     )
     expect(material_icon_toast).to_be_visible()
     material_icon_toast.hover()
+    _wait_for_stable_toast_size(material_icon_toast)
 
     expect(material_icon_toast).to_contain_text("cabinYour edited image was saved!")
     assert_snapshot(material_icon_toast, name="toast-material-icon")
@@ -126,12 +145,12 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     # Set viewport size to better show dialog/toast interaction
     app.set_viewport_size({"width": 650, "height": 958})
 
-    # Opening the dialog triggers a full rerun that re-emits the infinite startup
-    # toasts, so dismiss them after that rerun (not before).
+    # Trigger dialog
     app.get_by_text("Trigger dialog").click()
-    _dismiss_startup_toasts(app)
+    # Ensure previous (default-duration) toasts have timed out
+    app.wait_for_timeout(4500)
 
-    # Trigger toast from dialog (fragment-scoped; does not re-emit startup toasts).
+    # Trigger toast from dialog
     app.get_by_text("Toast from dialog").click()
 
     toasts = app.get_by_test_id("stToast")
@@ -196,5 +215,6 @@ def test_toast_adjusts_for_custom_theme(
     toast = toasts.filter(has_text="🐶This is a default toast message")
     expect(toast).to_be_visible()
     toast.hover()
+    _wait_for_stable_toast_size(toast)
 
     assert_snapshot(toast, name="toast-custom-theme")
