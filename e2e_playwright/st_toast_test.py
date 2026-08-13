@@ -23,10 +23,9 @@ def test_default_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that toasts are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
+    # Snapshot against the initial-load toasts. Do not press "r" first: with toast
+    # lifetime decoupled from the element tree, a rerun keeps the original timer
+    # running and can leave the toast mid-dismiss when we screenshot.
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
     # Locate by content rather than index; with toast lifetime decoupled from
@@ -45,10 +44,6 @@ def test_collapsed_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test collapsed long toasts are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
     # Locate by content rather than index; with toast lifetime decoupled from
@@ -67,10 +62,6 @@ def test_expanded_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test expanded long toasts are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
     # Locate by content rather than index; with toast lifetime decoupled from
@@ -94,10 +85,6 @@ def test_toast_with_material_icon_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that toasts with material icons are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
     # Locate by content rather than index; with toast lifetime decoupled from
@@ -113,10 +100,6 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that toasts are correctly rendered above dialog."""
     # Set viewport size to better show dialog/toast interaction
     app.set_viewport_size({"width": 650, "height": 958})
-
-    app.keyboard.press("r")
-    wait_for_app_loaded(app)
-    app.wait_for_timeout(250)
 
     # Trigger dialog
     app.get_by_text("Trigger dialog").click()
