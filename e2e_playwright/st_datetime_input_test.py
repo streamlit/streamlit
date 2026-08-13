@@ -152,7 +152,7 @@ def test_handles_datetime_selection_with_popover(app: Page):
     expect(calendar).to_be_visible()
 
     # Select a date in the calendar — popover stays open
-    calendar.get_by_role("button", name=re.compile(r"^November 25")).click()
+    calendar.get_by_role("button", name=re.compile(r"November 25")).click()
     expect(calendar).to_be_visible()
 
     # Edit time via the popover TimeField
