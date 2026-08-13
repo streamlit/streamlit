@@ -156,6 +156,27 @@ export function parsePastedDateTime(
   }
 }
 
+// --- Step-snapping arithmetic ---
+
+/**
+ * Compute the next step-snapped value given the current total, step size,
+ * direction, and wrap boundary. Used for minute-granular (max=1440) and
+ * hour-only (max=24) step snapping on ArrowUp/ArrowDown.
+ */
+export function snapTimeStep(
+  current: number,
+  step: number,
+  up: boolean,
+  max: number
+): number {
+  const next = up
+    ? Math.floor(current / step) * step + step
+    : Math.ceil(current / step) * step - step
+  if (next >= max) return 0
+  if (next < 0) return Math.floor((max - 1) / step) * step
+  return next
+}
+
 // --- Segment state helper ---
 
 export interface SegmentState {

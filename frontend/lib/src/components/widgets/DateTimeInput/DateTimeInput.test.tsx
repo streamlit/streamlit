@@ -1374,11 +1374,11 @@ describe("DateTimeInput widget", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("popover TimeField uses default ±1 increments (not step-snapped)", async () => {
+    it("popover TimeField applies step-snapping on ArrowUp/Down", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: ["2025-11-19T16:00"],
-        step: 900, // 15-min step for inline segments
+        step: 900, // 15-min step
         min: "2025-11-01T00:00",
         max: "2025-11-30T23:59",
       })
@@ -1396,7 +1396,7 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // ArrowUp on popover minute should increment by 1, not 15
+      // ArrowUp on popover minute should snap by 15 (step=900)
       const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
       const popoverMinute = timeRow.querySelector(
         '[data-type="minute"]'
@@ -1404,13 +1404,56 @@ describe("DateTimeInput widget", () => {
       await user.click(popoverMinute)
       await user.keyboard("{ArrowUp}")
 
-      // Close to commit
+      // Close to commit — should snap from 16:00 to 16:15
       await user.click(screen.getByTestId("outside"))
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
           props.element,
-          ["2025-11-19T16:01"],
+          ["2025-11-19T16:15"],
+          { fromUi: true },
+          undefined
+        )
+      })
+    })
+
+    it("popover TimeField step-snapping with hour steps", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T10:00"],
+        step: 10800, // 3-hour step
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // ArrowUp on popover hour should snap by 3 (step=10800)
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverHour = timeRow.querySelector(
+        '[data-type="hour"]'
+      ) as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("{ArrowUp}")
+
+      // Close to commit — should snap from 10:00 to 12:00
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T12:00"],
           { fromUi: true },
           undefined
         )

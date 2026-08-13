@@ -61,6 +61,7 @@ import {
   dateTimesEqual,
   getSegmentState,
   parsePastedDateTime,
+  snapTimeStep,
   validateDateTime,
 } from "./dateTimeInputUtils"
 import {
@@ -432,15 +433,7 @@ function SingleDateTimeInput({
           e.nativeEvent.stopImmediatePropagation()
 
           const totalMins = displayValue.hour * 60 + displayValue.minute
-          const next = up
-            ? Math.floor(totalMins / stepMins) * stepMins + stepMins
-            : Math.ceil(totalMins / stepMins) * stepMins - stepMins
-          const wrapped =
-            next >= 1440
-              ? 0
-              : next < 0
-                ? Math.floor(1439 / stepMins) * stepMins
-                : next
+          const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
           const newDt = displayValue.set({
             hour: Math.floor(wrapped / 60),
             minute: wrapped % 60,
@@ -456,15 +449,7 @@ function SingleDateTimeInput({
           e.stopPropagation()
           e.nativeEvent.stopImmediatePropagation()
 
-          const next = up
-            ? Math.floor(displayValue.hour / stepHours) * stepHours + stepHours
-            : Math.ceil(displayValue.hour / stepHours) * stepHours - stepHours
-          const wrapped =
-            next >= 24
-              ? 0
-              : next < 0
-                ? Math.floor(23 / stepHours) * stepHours
-                : next
+          const wrapped = snapTimeStep(displayValue.hour, stepHours, up, 24)
           const newDt = displayValue.set({ hour: wrapped, minute: 0 })
           setDisplayValue(newDt)
           onValidate(newDt)
@@ -602,6 +587,44 @@ function SingleDateTimeInput({
     [onValidate]
   )
 
+  // Step-aware arrow keys for popover TimeField segments.
+  const handlePopoverTimeKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
+      const target = e.target as HTMLElement
+      const segmentType = target.getAttribute("data-type")
+      const up = e.key === "ArrowUp"
+      const current = displayValueRef.current
+      if (!current) return
+
+      if (segmentType === "minute" && step % 60 === 0) {
+        if (stepMins <= 1) return
+        e.preventDefault()
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+        const totalMins = current.hour * 60 + current.minute
+        const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
+        const newDt = current.set({
+          hour: Math.floor(wrapped / 60),
+          minute: wrapped % 60,
+        })
+        setDisplayValue(newDt)
+        onValidate(newDt)
+      } else if (segmentType === "hour" && step % 3600 === 0) {
+        const stepHours = step / 3600
+        if (stepHours <= 1) return
+        e.preventDefault()
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+        const wrapped = snapTimeStep(current.hour, stepHours, up, 24)
+        const newDt = current.set({ hour: wrapped, minute: 0 })
+        setDisplayValue(newDt)
+        onValidate(newDt)
+      }
+    },
+    [step, stepMins, onValidate]
+  )
+
   // Min/max for calendar (date-only).
   const calendarMinDate = useMemo((): CalendarDate | undefined => {
     if (!minDateTime) return undefined
@@ -736,7 +759,10 @@ function SingleDateTimeInput({
                   </CalendarGridBody>
                 </StyledCalendarGrid>
               </StyledCalendarRoot>
-              <StyledPopoverTimeRow data-testid="stDateTimeInputPopoverTime">
+              <StyledPopoverTimeRow
+                data-testid="stDateTimeInputPopoverTime"
+                onKeyDownCapture={handlePopoverTimeKeyDown}
+              >
                 <StyledPopoverTimeLabel>Time</StyledPopoverTimeLabel>
                 <StyledPopoverTimeField
                   aria-label="Time"
