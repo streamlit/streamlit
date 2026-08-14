@@ -25,6 +25,7 @@ from e2e_playwright.conftest import (
     start_app_server,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import reset_hovering
 
@@ -120,6 +121,40 @@ def verify_expand_button_visible(app: Page) -> None:
     expect(expand_button).to_be_visible()
 
 
+def wait_for_sidebar_animation(app: Page, *, expanded: bool) -> None:
+    """Wait for the sidebar CSS transform transition (300ms) to finish.
+
+    aria-expanded flips immediately on click, but the sidebar still slides via
+    transform. Snapshotting mid-transition causes pixel flakiness (especially
+    on webkit), so wait until transform settles before screenshots.
+    """
+    sidebar = app.get_by_test_id("stSidebar")
+    if expanded:
+        # Expanded settles to transform: none (or an identity matrix).
+        wait_until(
+            app,
+            lambda: sidebar.evaluate(
+                """el => {
+                    const t = getComputedStyle(el).transform;
+                    return t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)';
+                }"""
+            ),
+        )
+    else:
+        # Collapsed is translated off-screen (negative translateX).
+        wait_until(
+            app,
+            lambda: sidebar.evaluate(
+                """el => {
+                    const t = getComputedStyle(el).transform;
+                    if (!t.startsWith('matrix')) return false;
+                    const tx = parseFloat(t.split(',')[4]);
+                    return Number.isFinite(tx) && tx < 0;
+                }"""
+            ),
+        )
+
+
 # Consolidated test for basic sidebar states across different modes and viewports
 @pytest.mark.parametrize(
     ("sidebar_mode", "viewport", "expected_expanded", "test_name"),
@@ -178,6 +213,7 @@ def test_sidebar_auto_mobile_expand_interaction(
     # Verify expanded state
     verify_sidebar_state(app, True)
     verify_sidebar_content_visibility(app, True)
+    wait_for_sidebar_animation(app, expanded=True)
 
     # Take snapshot of expanded state
     assert_snapshot(app, name="st_main_layout-auto_mobile_expanded")
@@ -205,6 +241,7 @@ def test_sidebar_auto_desktop_collapse_interaction(
     # Verify collapsed state
     verify_sidebar_state(app, False)
     verify_expand_button_visible(app)
+    wait_for_sidebar_animation(app, expanded=False)
 
     # Take snapshot of collapsed desktop state
     assert_snapshot(app, name="st_main_layout-auto_desktop_collapsed")
