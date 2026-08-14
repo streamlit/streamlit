@@ -764,8 +764,11 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
 
-    # Navigate to a different date and select it with Enter
+    # Navigate to a different date and select it with Enter.
+    # Wait for focus to move before pressing Enter (webkit processes events
+    # faster than React flushes the focus update without this).
     app.keyboard.press("ArrowRight")
+    expect(calendar.get_by_role("gridcell", name="2")).to_be_focused()
     app.keyboard.press("Enter")
 
     expect(calendar).not_to_be_visible()
