@@ -260,6 +260,9 @@ function SingleDateTimeInput({
 
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
+    // Escape/Tab-from-popover restore focus without a blur event, so clear the
+    // ref here — otherwise it leaks and swallows the next handleBlur commit.
+    overlayCommittedRef.current = false
     if (isCalendarActiveRef.current && activeOriginRef.current) {
       activeOriginRef.current.focus()
     } else {
@@ -730,7 +733,7 @@ function SingleDateTimeInput({
             )}
             <I18nProvider locale={safeLocale}>
               <StyledCalendarRoot
-                aria-label="Choose date"
+                aria-label="Choose date and time"
                 value={calendarDisplayValue}
                 onChange={handleCalendarChange}
                 minValue={calendarMinDate}
@@ -768,6 +771,7 @@ function SingleDateTimeInput({
                   granularity="minute"
                   hourCycle={24}
                   shouldForceLeadingZeros
+                  isDisabled={!displayValue}
                 >
                   <StyledPopoverTimeFieldInput>
                     {segment => <StyledPopoverTimeSegment segment={segment} />}

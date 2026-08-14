@@ -1199,6 +1199,61 @@ describe("DateTimeInput widget", () => {
       )
       expect(matchingCalls).toHaveLength(1)
     })
+
+    it("Escape does not block subsequent Tab-away commit (no leaked ref)", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+
+      // Open popover, edit hour, then Escape to dismiss (commits 17:45)
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T17:45"],
+          { fromUi: true },
+          "fragment"
+        )
+      })
+
+      spy.mockClear()
+
+      // After Escape, focus is restored to the last segment (minute).
+      // Edit again via ArrowUp (step-snap 17:45 → 18:00) without reopening.
+      await user.keyboard("{ArrowUp}")
+      // Tab away from last segment — must still commit the new value.
+      await user.tab()
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T18:00"],
+          { fromUi: true },
+          "fragment"
+        )
+      })
+    })
   })
 
   describe("Boundary time on calendar selection", () => {
