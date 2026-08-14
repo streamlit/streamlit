@@ -364,7 +364,7 @@ def test_marshall_is_streamlit_exception_follows_type_redaction(
     with testutil.patch_config_options({"client.showErrorDetails": show_error_details}):
         proto = ExceptionProto()
         exception.marshall(
-            proto, StreamlitAPIException("boom"), is_uncaught_app_exception=True
+            proto, StreamlitAPIException("boom"), apply_show_error_details=True
         )
         assert proto.type == expected_type
         assert proto.is_streamlit_exception is expected_flag
