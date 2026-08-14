@@ -229,6 +229,15 @@ removes itself on success; the permanent opt-out lives on the toast.
 - **Telemetry.** Adds a `surface` dimension to the existing install `MetricsEvent`
   (`toast` vs `errorCallout`) so the shown → installed funnel is attributable per
   surface.
+- **`make debug` cannot demo this feature.** The debug target runs the app with
+  `--server.headless=true`, and `nudge_suppression_reason()` returns `"headless"` for
+  that — suppressing both the toast and the callout. To exercise it by hand you need a
+  non-headless server, a temp `HOME` containing an agent config dir (e.g. `.claude`) with
+  no installed skills, and an app run from a project dir outside this checkout (skill
+  detection scans the app dir, its git root, and the nearest agent-config ancestor, so
+  running in place picks up the repo's own skills).
+  `start_agent_home_app_server` in `e2e_playwright/shared/skills_install_app.py` builds
+  exactly that setup and is the reference for a manual run.
 
 ## Out of scope / Follow-ups
 
