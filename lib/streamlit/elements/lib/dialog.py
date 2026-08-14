@@ -20,7 +20,7 @@ from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -92,9 +92,8 @@ class Dialog(DeltaGenerator):
     ) -> Dialog:
         # Validation for on_dismiss parameter
         if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
-            raise StreamlitAPIException(
-                f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
-                "'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_dismiss", ["'ignore'", "'rerun'", "a callback function"]
             )
 
         block_proto = BlockProto()

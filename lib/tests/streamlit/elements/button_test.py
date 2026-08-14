@@ -33,6 +33,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
     StreamlitPageNotFoundError,
+    StreamlitValueError,
 )
 from streamlit.navigation.page import Page
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
@@ -152,7 +153,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         self, name: str, command: Callable[..., Any]
     ) -> None:
         """Test that invalid icon_position values raise an error."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
             command(icon_position="center")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -576,9 +577,9 @@ class ButtonTest(DeltaGeneratorTestCase):
     )
     def test_invalid_type(self, name: str, command: Callable[..., Any]):
         """Test with invalid type parameter."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             command(type="invalid")
-        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
+        assert "Invalid `type` value" in str(exc_info.value)
 
     @parameterized.expand(
         [

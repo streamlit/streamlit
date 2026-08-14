@@ -60,10 +60,10 @@ def _check_expected_elements_disabled(app: Page):
     expect(app.get_by_test_id("stTimeInput").locator("input")).to_have_attribute(
         "disabled", ""
     )
-    # Date input
-    expect(app.get_by_test_id("stDateInput").locator("input")).to_have_attribute(
-        "disabled", ""
-    )
+    # Date input (React Aria DateField uses spinbutton segments, not <input>)
+    expect(
+        app.get_by_test_id("stDateInput").get_by_role("spinbutton").first
+    ).to_have_attribute("aria-disabled", "true")
 
     # Non-widget elements:
     # Link button

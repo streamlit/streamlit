@@ -21,7 +21,7 @@ from typing import Literal
 from streamlit import url_util
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Logo_pb2 import Logo as LogoProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -240,10 +240,7 @@ def logo(
             if image_size in valid_sizes:
                 return image_size
 
-        raise StreamlitAPIException(
-            f'The size argument to st.logo must be "small", "medium", or "large". \n'
-            f"The argument passed was {size}."
-        )
+        raise StreamlitValueError("size", ["'small'", "'medium'", "'large'"])
 
     fwd_msg.logo.size = validate_size(size)
 

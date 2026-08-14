@@ -84,13 +84,10 @@ dependencies = [
   "toml>=0.10.1,<2",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
-  # ASGI web-framework. 0.46.0 is the first version exposing
-  # `DEFAULT_EXCLUDED_CONTENT_TYPES` from `starlette.middleware.gzip`, which our
-  # gzip middleware imports.
-  # Starlette 1.4.0 changed GZipResponder's constructor (added required
-  # thread_minimum_size), which breaks our custom gzip middleware.
-  # See: https://github.com/streamlit/streamlit/issues/16341
-  "starlette>=0.46.0,<1.4.0",
+  # ASGI web-framework. 0.46.0 is the first version whose `GZipMiddleware`
+  # excludes `DEFAULT_EXCLUDED_CONTENT_TYPES` (e.g. `text/event-stream`) from
+  # compression, which our gzip wrapper relies on.
+  "starlette>=0.46.0,<2",
   # ASGI server:
   "uvicorn>=0.30.0,<1",
   # Faster http parsing for Starlette server:

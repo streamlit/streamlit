@@ -21,7 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.widgets import register_widget_from_metadata
@@ -127,11 +127,11 @@ hello
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.checkbox("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_empty_label_warning(self):
@@ -415,11 +415,11 @@ hello
     def test_invalid_bind_value_raises_exception(
         self, _name: str, widget_func: object
     ) -> None:
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
             widget_func("the label", key="my_widget", bind="invalid-value")
 
-        assert "invalid-value" in str(exc.value)
+        assert "Invalid `bind` value" in str(exc.value)
         assert "query-params" in str(exc.value)
 
     @parameterized.expand(

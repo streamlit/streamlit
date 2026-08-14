@@ -16,7 +16,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -92,7 +92,7 @@ class StHeaderTest(DeltaGeneratorTestCase):
 
     def test_st_header_with_invalid_divider(self):
         """Test st.header with invalid divider."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.header("some header", divider="corgi")
 
     def test_st_header_with_width(self):
@@ -227,7 +227,7 @@ class StSubheaderTest(DeltaGeneratorTestCase):
 
     def test_st_subheader_with_invalid_divider(self):
         """Test st.subheader with invalid divider."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.subheader("some header", divider="corgi")
 
     def test_st_subheader_with_width(self):
@@ -446,7 +446,7 @@ class StTitleTextAlignmentTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.title("Title text", text_alignment="bottom")
 
-        assert 'Invalid text_alignment value: "bottom"' in str(exc.value)
+        assert "Invalid `text_alignment` value" in str(exc.value)
 
 
 class StHeaderTextAlignmentTest(DeltaGeneratorTestCase):
@@ -480,7 +480,7 @@ class StHeaderTextAlignmentTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.header("Header text", text_alignment="start")
 
-        assert 'Invalid text_alignment value: "start"' in str(exc.value)
+        assert "Invalid `text_alignment` value" in str(exc.value)
 
 
 class StSubheaderTextAlignmentTest(DeltaGeneratorTestCase):
@@ -514,4 +514,4 @@ class StSubheaderTextAlignmentTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.subheader("Subheader text", text_alignment="middle")
 
-        assert 'Invalid text_alignment value: "middle"' in str(exc.value)
+        assert "Invalid `text_alignment` value" in str(exc.value)

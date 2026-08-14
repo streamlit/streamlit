@@ -46,7 +46,7 @@ keyboards, and browser autofill can't recognize the field.
 
 - Email / URL fields in contact, signup, and settings forms with instant format feedback.
 - Phone number fields that bring up the numeric keypad on mobile.
-- Search boxes with the native "clear" affordance and search-optimized keyboard.
+- Search boxes with a clear ("×") affordance and search-optimized keyboard.
 - Forms that want browser autofill (email, phone, url) to work correctly.
 
 **Consistency gap:**
@@ -87,7 +87,7 @@ compatible.
 | `"email"` | `email` | Email addresses. |
 | `"url"` | `url` | Web addresses. |
 | `"phone"` | `tel` | Phone numbers (numeric keypad on mobile). |
-| `"search"` | `search` | Free-text search, with the browser's native clear button. |
+| `"search"` | `search` | Free-text search, with a clear ("×") button. |
 
 Each specialized type:
 
@@ -155,7 +155,7 @@ across platforms). The honest hint depends on Streamlit's *Enter behavior*, not 
   default is the most accurate, and `"go"`/`"done"` could mislead.
 
 Because the value is purely cosmetic and driven by form/submit context rather than the input type, we
-don't auto-derive it from `type` in the MVP. The one low-risk, type-aligned tweak we may include is
+don't auto-derive it from `type` in the MVP. The one low-risk, type-aligned tweak we include is
 `enterKeyHint="search"` for `type="search"`. General `enterKeyHint` control belongs with Streamlit's
 existing Enter-to-submit logic and is deferred (see [Out of scope](#out-of-scope-future-work)).
 
@@ -207,6 +207,13 @@ the user's rule must be a complete check).
 `user@host`). That matches the emails almost all Streamlit apps collect (contact, signup, settings).
 Apps that need to allow bare hosts can pass their own `validate` (or `validate=""` to turn the
 default off). Exact regexes are an implementation detail to finalize during build.
+
+**URL flexibility:** require a dotted host but make the `http(s)://` scheme **optional**, so both
+`example.com` and `https://example.com` pass (the scheme is commonly omitted when typing a URL);
+obvious non-URLs (plain words, values with spaces) are still rejected. The check is intentionally
+permissive — it only needs to catch clear mistakes, not enforce RFC-strict URLs — and apps wanting
+stricter rules (e.g. requiring `https://`) can pass their own `validate` (or `validate=""` to turn
+the default off).
 
 We considered browser-native `ValidityState.typeMismatch` instead: zero regex maintenance and exact
 native `type` semantics, but it would require a *second* frontend validation channel (shipped
@@ -312,6 +319,10 @@ email = st.text_input(
   mechanism (Streamlit forms don't perform native form submits), so the frontend suppresses the
   browser's native constraint-validation styling to avoid double error UI. The user sees exactly one
   error treatment.
+- **Search clear button:** the `search` type shows a clear ("×") button while the field holds a
+  value; clicking it empties the field and commits the change. The browser's native search-clear
+  control is hidden and replaced with a Streamlit-styled button (reusing the clear-button styling
+  from other input widgets) so it matches the rest of the UI.
 - **Empty values:** consistent with the shipped `validate` feature, empty strings / `None` skip
   validation, so an optional `type="email"` field doesn't error until the user types something.
 - **`bind="query-params"`:** allowed for `email`, `url`, `phone`, and `search` (only `password` is

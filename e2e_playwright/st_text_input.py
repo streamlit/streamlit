@@ -100,6 +100,28 @@ st.text_input(
     "text input 16 - material icon", placeholder="Placeholder", icon=":material/search:"
 )
 
+st.markdown("Specialized input types:")
+
+email_value = st.text_input("Email", key="email_input", type="email")
+st.write("email value:", email_value)
+
+url_value = st.text_input("URL", key="url_input", type="url")
+st.write("url value:", url_value)
+
+st.text_input("Phone", key="phone_input", type="phone")
+st.text_input("Search", key="search_input", type="search", bind="query-params")
+
+override_value = st.text_input(
+    "Work email (overrides)",
+    key="email_override_input",
+    type="email",
+    icon=":material/work:",
+    placeholder="name@company.com",
+    validate=(r"^[\w.+-]+@company\.com$", "Use your @company.com address."),
+    autocomplete="off",
+)
+st.write("override value:", override_value)
+
 st.text_input("text input 17 (width=200px)", "width test", width=200)
 st.text_input("text input 18 (width='stretch')", "width test", width="stretch")
 

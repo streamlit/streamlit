@@ -69,16 +69,26 @@ def repr_(self: Any) -> str:
 def create_fast_hasher() -> _Hash:
     """Create a fast hasher for incremental hashing.
 
-    Uses BLAKE2b which produces 32-character hex digests (16 bytes).
+    Prefers BLAKE2b with a 16-byte digest. If the platform BLAKE2b provider
+    rejects a custom ``digest_size`` (common on FIPS/OpenSSL builds), falls
+    back to MD5. Both produce 32-character hex digests (16 bytes).
     """
-    return hashlib.blake2b(digest_size=16, usedforsecurity=False)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
+    try:
+        return hashlib.blake2b(  # type: ignore[return-value]  # ty: ignore[invalid-return-type]  # noqa: TID251
+            digest_size=16, usedforsecurity=False
+        )
+    except (TypeError, ValueError):
+        # Some FIPS-enabled Python builds replace the standard BLAKE2b
+        # implementation with an OpenSSL wrapper that rejects a custom digest
+        # size, raising TypeError or ValueError depending on the provider.
+        return hashlib.new("md5", usedforsecurity=False)  # noqa: TID251
 
 
 def calc_hash(s: bytes | str) -> str:
     """Return a fast hash of the given string.
 
-    Uses BLAKE2b (~2.4x faster than MD5) and produces 32-character hex digests.
-    This should not be used for security-related purposes.
+    Uses BLAKE2b (~2.4x faster than MD5) where supported, with an MD5 fallback
+    for limited FIPS providers. This should not be used for security purposes.
     """
     b = s.encode("utf-8") if isinstance(s, str) else s
     h = create_fast_hasher()

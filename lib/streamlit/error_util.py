@@ -82,7 +82,7 @@ def _print_rich_exception(e: BaseException) -> None:
 def show_uncaught_app_exception(ex: BaseException) -> None:
     """Show the exception on the frontend."""
     main_delta_generator = get_dg_singleton_instance().main_dg
-    exception._exception(main_delta_generator, ex, is_uncaught_app_exception=True)
+    exception._exception(main_delta_generator, ex, apply_show_error_details=True)
 
 
 def _log_uncaught_app_exception(ex: BaseException) -> None:

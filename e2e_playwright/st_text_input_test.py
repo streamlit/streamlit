@@ -36,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 28
+TEXT_INPUT_ELEMENTS = 33
 
 
 def test_text_input_widget_rendering(
@@ -101,6 +101,26 @@ def test_text_input_widget_rendering(
     assert_snapshot(
         get_text_input(themed_app, "text input 16 - material icon"),
         name="st_text_input-material_icon",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "email_input"),
+        name="st_text_input-type_email",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "url_input"),
+        name="st_text_input-type_url",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "phone_input"),
+        name="st_text_input-type_phone",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "search_input"),
+        name="st_text_input-type_search",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "email_override_input"),
+        name="st_text_input-type_email_overrides",
     )
     assert_snapshot(
         get_text_input(themed_app, "text input 17 (width=200px)"),
@@ -310,6 +330,138 @@ def test_text_input_validation_error_state_rendering(
     expect(error_icon).to_be_visible()
 
     assert_snapshot(validated_widget, name="st_text_input-validation_error")
+
+
+def test_text_input_specialized_types_attributes(app: Page):
+    """Specialized types set the native input type and their smart defaults."""
+    email_widget = get_element_by_key(app, "email_input")
+    email_input = email_widget.locator("input").first
+    expect(email_input).to_have_attribute("type", "email")
+    expect(email_input).to_have_attribute("placeholder", "you@example.com")
+    expect(email_input).to_have_attribute("autocomplete", "email")
+    expect(email_widget.get_by_test_id("stTextInputIcon")).to_be_visible()
+    expect(email_widget.get_by_test_id("stIconMaterial")).to_have_text("mail")
+
+    url_input = get_element_by_key(app, "url_input").locator("input").first
+    expect(url_input).to_have_attribute("type", "url")
+    expect(url_input).to_have_attribute("placeholder", "https://example.com")
+    expect(url_input).to_have_attribute("autocomplete", "url")
+
+    phone_input = get_element_by_key(app, "phone_input").locator("input").first
+    expect(phone_input).to_have_attribute("type", "tel")
+    expect(phone_input).to_have_attribute("placeholder", "+1 234 567 8900")
+    expect(phone_input).to_have_attribute("autocomplete", "tel")
+
+    search_input = get_element_by_key(app, "search_input").locator("input").first
+    expect(search_input).to_have_attribute("type", "search")
+    expect(search_input).to_have_attribute("placeholder", "Search")
+    expect(search_input).to_have_attribute("autocomplete", "off")
+
+    # Explicit overrides win over the type defaults (icon, placeholder,
+    # autocomplete, and custom validate message).
+    override_widget = get_element_by_key(app, "email_override_input")
+    override_input = override_widget.locator("input").first
+    expect(override_input).to_have_attribute("type", "email")
+    expect(override_input).to_have_attribute("placeholder", "name@company.com")
+    expect(override_input).to_have_attribute("autocomplete", "off")
+    expect(override_widget.get_by_test_id("stIconMaterial")).to_have_text("work")
+
+    override_input.fill("user@example.com")
+    override_input.blur()
+    expect(
+        app.get_by_text("override value: user@example.com", exact=True)
+    ).to_have_count(0)
+    override_error_icon = override_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(override_error_icon).to_be_visible()
+    override_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Use your @company.com address."
+    )
+
+
+def test_text_input_search_clear_button(app: Page):
+    """The search type shows a clear (x) button that empties the input on click.
+
+    ``search_input`` is ``bind="query-params"``, so the clear-button path (which
+    bypasses the Enter/blur commit flow) must also drop the value from the URL.
+    """
+    search_widget = get_element_by_key(app, "search_input")
+    search_field = search_widget.locator("input").first
+
+    clear_button = search_widget.get_by_test_id("stTextInputClearButton")
+    # Empty search input: no clear button yet, and no bound query param.
+    expect(clear_button).not_to_be_visible()
+    expect(app).not_to_have_url(re.compile(r"[?&]search_input="))
+
+    # Commit a value so it is reflected in the bound query param.
+    search_field.fill("laptops")
+    search_field.press("Enter")
+    wait_for_app_run(app)
+    expect(clear_button).to_be_visible()
+    expect(app).to_have_url(re.compile(r"search_input=laptops"))
+
+    clear_button.click()
+    wait_for_app_run(app)
+
+    expect(search_field).to_have_value("")
+    expect(clear_button).not_to_be_visible()
+    # Clearing via the button also removes the value from the bound query param.
+    expect(app).not_to_have_url(re.compile(r"[?&]search_input="))
+
+
+def test_text_input_email_default_validation(app: Page):
+    """The email type validates by default: it blocks invalid and commits valid values."""
+    email_widget = get_element_by_key(app, "email_input")
+    email_field = email_widget.locator("input").first
+
+    # An invalid value is blocked from committing and surfaces an error. The
+    # committed value stays empty, so the invalid text must not appear in the
+    # `st.write` output.
+    email_field.fill("abc")
+    email_field.blur()
+    expect(app.get_by_text("email value: abc", exact=True)).to_have_count(0)
+
+    error_icon = email_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    # Streamlit owns the single error treatment: tooltip text is the shipped
+    # email message (not a native constraint bubble).
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Enter a valid email address."
+    )
+    expect(email_widget.get_by_test_id("stTextInputErrorIcon")).to_have_count(1)
+
+    # A valid value commits and clears the error.
+    email_field.fill("a@b.co")
+    email_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "email value: a@b.co")
+    expect(error_icon).not_to_be_visible()
+
+
+def test_text_input_url_default_validation(app: Page):
+    """The url type validates by default: it blocks invalid and commits valid values."""
+    url_widget = get_element_by_key(app, "url_input")
+    url_field = url_widget.locator("input").first
+
+    url_field.fill("not a url")
+    url_field.blur()
+    expect(app.get_by_text("url value: not a url", exact=True)).to_have_count(0)
+
+    error_icon = url_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Enter a valid URL."
+    )
+
+    url_field.fill("example.com")
+    url_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "url value: example.com")
+    expect(error_icon).not_to_be_visible()
 
 
 def test_text_input_validation_blocks_form_submit_and_recovers(app: Page):

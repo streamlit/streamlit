@@ -57,6 +57,77 @@ _PANDAS_SAMPLE_SIZE: Final = 10_000
 _NP_SIZE_LARGE: Final = 500_000
 _NP_SAMPLE_SIZE: Final = 100_000
 
+# Largest seed accepted by all sampling backends below. numpy's RandomState (and
+# pandas' `random_state=`, which defers to it) rejects anything outside
+# [0, 2**32 - 1]; polars' `seed=` takes a u64, so this bound satisfies both.
+_MAX_SAMPLE_SEED: Final = 2**32 - 1
+
+# Seed values already warned about. `_sample_seed` runs on every large-object
+# hash, so warning unconditionally would flood the log for one misconfiguration.
+_warned_sample_seeds: Final[set[str]] = set()
+
+
+def _warn_unusable_sample_seed(configured: object) -> None:
+    """Warn that ``runner.cacheHashSeed`` is being ignored, once per distinct value.
+
+    Keyed on the repr so a quoted and an unquoted TOML value are reported as the
+    user wrote them, and so an unhashable value cannot raise from here.
+    """
+    key = repr(configured)
+    if key in _warned_sample_seeds:
+        return
+    _warned_sample_seeds.add(key)
+    _LOGGER.warning(
+        "Ignoring runner.cacheHashSeed=%s: it must be a whole number from 0 to %s. "
+        "Falling back to the default seed of 0.",
+        key,
+        _MAX_SAMPLE_SEED,
+    )
+
+
+def _sample_seed() -> int:
+    """Return the RNG seed used when sampling large objects for cache hashing.
+
+    Reads ``runner.cacheHashSeed``, converting to an int so a quoted TOML value
+    works the same as an unquoted one. A value that cannot be converted, or that
+    falls outside ``[0, _MAX_SAMPLE_SEED]``, falls back to ``0`` -- the seed used
+    before the option existed -- so a malformed value reverts to the historical
+    sample positions instead of raising from the hashing path.
+
+    Two TOML values need handling that ``int()`` alone does not give: ``true`` is a
+    ``bool``, which is an ``int`` subclass and would convert to a usable ``1``; and
+    ``inf`` raises ``OverflowError``, which is not a ``ValueError``.
+
+    Out-of-range values are rejected rather than wrapped into range: wrapping
+    would silently sample by a seed the user never chose, which is harder to
+    debug than falling back to the documented default. The fallback warns rather
+    than passing silently, since this option exists precisely to diagnose cache
+    hits that are already silent.
+
+    Read per call rather than cached at import so the value stays correct after
+    ``config`` is (re)parsed, and so tests can vary it.
+    """
+    from streamlit import config
+
+    configured = config.get_option("runner.cacheHashSeed")
+    # `bool` is an `int` subclass, so `cacheHashSeed = true` would otherwise convert
+    # to a seed of 1 and silently invalidate every large-object cache key.
+    if isinstance(configured, bool):
+        _warn_unusable_sample_seed(configured)
+        return 0
+    try:
+        seed = int(configured)
+    except (TypeError, ValueError, OverflowError):
+        # `OverflowError` is not a `ValueError` subclass and comes from
+        # `int(float("inf"))`, which TOML can produce as `cacheHashSeed = inf`.
+        _warn_unusable_sample_seed(configured)
+        return 0
+    if not 0 <= seed <= _MAX_SAMPLE_SEED:
+        _warn_unusable_sample_seed(configured)
+        return 0
+    return seed
+
+
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
@@ -427,7 +498,9 @@ class _CacheFuncHasher:
             self.update(h, series_obj.dtype.name)
 
             if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                series_obj = series_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE, random_state=_sample_seed()
+                )
 
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
@@ -450,7 +523,9 @@ class _CacheFuncHasher:
             self.update(h, df_obj.shape)
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                df_obj = df_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE, random_state=_sample_seed()
+                )
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
@@ -478,7 +553,7 @@ class _CacheFuncHasher:
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=_sample_seed())
 
             try:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
@@ -502,7 +577,7 @@ class _CacheFuncHasher:
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=_sample_seed())
             try:
                 for c, t in obj.schema.items():
                     self.update(h, c.encode())
@@ -534,7 +609,7 @@ class _CacheFuncHasher:
             if np_obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
-                state = np.random.RandomState(0)
+                state = np.random.RandomState(_sample_seed())
                 np_obj = state.choice(np_obj.flat, size=_NP_SAMPLE_SIZE)
 
             self.update(h, np_obj.tobytes())
