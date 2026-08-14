@@ -210,11 +210,12 @@ function SingleDateTimeInput({
           if (isOutOfBounds) {
             setDisplayValue(value)
             onCloseRef.current(true)
-          } else if (!dateTimesEqual(pending, value)) {
+          } else if (
+            !dateTimesEqual(pending, value) &&
+            !dismissalCommittedRef.current
+          ) {
             onChangeRef.current(pending)
-            if (!dismissalCommittedRef.current) {
-              formCommitRef.current?.(pending)
-            }
+            formCommitRef.current?.(pending)
           }
         }
       }
@@ -280,9 +281,11 @@ function SingleDateTimeInput({
       onClose: () => {
         setIsOpen(false)
         setIsCalendarActive(false)
-        // Synchronous form commit: outside-click dismiss can race form submit
-        // (the close-commit effect fires after paint). Mirrors handleBlur.
-        if (formCommitRef.current && triggerRef.current) {
+        // Synchronous commit: outside-click dismiss can race form submit
+        // (the close-detection effect fires after paint). Commit both
+        // onChange (state sync) and formCommit (form staging) here so the
+        // effect can skip its own write via dismissalCommittedRef.
+        if (triggerRef.current) {
           const { isPartiallyTyped, isFullyCleared } = getSegmentState(
             triggerRef.current
           )
@@ -293,7 +296,8 @@ function SingleDateTimeInput({
             if (validateDateTime(pending, minDateTime, maxDateTime)) {
               // Out of bounds — close-detection effect will revert.
             } else if (!dateTimesEqual(pending, value)) {
-              formCommitRef.current(pending)
+              onChangeRef.current(pending)
+              formCommitRef.current?.(pending)
               dismissalCommittedRef.current = true
             }
           }
@@ -523,7 +527,11 @@ function SingleDateTimeInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (isOpen) return
+      if (
+        isOpen &&
+        (!e.relatedTarget || popoverRef.current?.contains(e.relatedTarget))
+      )
+        return
       if (!triggerRef.current) return
       const { isPartiallyTyped, isFullyCleared } = getSegmentState(
         triggerRef.current
