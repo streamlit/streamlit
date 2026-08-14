@@ -2459,8 +2459,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2489,8 +2487,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2570,8 +2566,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2606,8 +2600,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2700,8 +2692,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2738,8 +2728,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2897,8 +2885,6 @@ describe("App", () => {
         name: CUSTOM_THEME_DARK_NAME,
         displayName: "Dark",
         emotion: { ...darkTheme.emotion },
-        basewebTheme: darkTheme.basewebTheme,
-        primitives: darkTheme.primitives,
         themeInput: customTheme,
       }
       renderApp(props)
