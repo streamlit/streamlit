@@ -721,9 +721,14 @@ const MenuContent = memo(function MenuContent({
           // Footer with CopyButton exists — both Tab and Shift+Tab route to
           // CopyButton (2-element contained cycle: menu item ↔ CopyButton).
           // Forward Tab from CopyButton exits via handleFooterKeyDown.
-          footerRef.current
-            ?.querySelector<HTMLElement>(".stMenuVersionCopyButton")
-            ?.focus()
+          const copyBtn = footerRef.current?.querySelector<HTMLElement>(
+            ".stMenuVersionCopyButton"
+          )
+          if (copyBtn) {
+            copyBtn.focus()
+          } else {
+            closeMenu(event.shiftKey ? "shift-tab" : "tab")
+          }
         } else {
           closeMenu(event.shiftKey ? "shift-tab" : "tab")
         }

@@ -90,6 +90,18 @@ describe("focusNextTabbable", () => {
     expect(document.activeElement).toBe(c)
   })
 
+  it("descends into non-tabbable wrapper elements", () => {
+    setup(`
+      <button id="a">A</button>
+      <div><span><button id="b">B</button></span></div>
+    `)
+    const a = document.getElementById("a") as HTMLElement
+    const b = document.getElementById("b") as HTMLElement
+
+    focusNextTabbable(a)
+    expect(document.activeElement).toBe(b)
+  })
+
   it("does nothing when no next tabbable element exists", () => {
     setup(`
       <button id="a">A</button>

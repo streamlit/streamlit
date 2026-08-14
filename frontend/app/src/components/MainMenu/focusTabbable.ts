@@ -16,14 +16,14 @@
 
 /**
  * TreeWalker filter that accepts tabbable elements: non-negative tabIndex,
- * not disabled, not hidden, and not inside an inert subtree (FILTER_REJECT
+ * not disabled, not hidden, visible (checkVisibility gate for display:none /
+ * visibility:hidden ancestors), and not inside an inert subtree (FILTER_REJECT
  * prunes the entire inert subtree so descendants are never visited).
  *
- * This intentionally checks only HTML attributes (hidden, disabled, inert) —
- * not CSS visibility (display:none, visibility:hidden) or aria-hidden. This is
- * sufficient for MainMenu's focus routing (header-bar neighbors are always
- * visible) but should not be reused as a general-purpose tabbable check
- * without adding a visibility gate (e.g. el.offsetParent !== null).
+ * Note: this uses document order, not tab order — positive tabIndex values
+ * are not visited first. This is sufficient for MainMenu's focus routing
+ * (header-bar neighbors use no positive tabIndex) but should not be reused
+ * as a general-purpose tab-order utility without sorting by tabIndex.
  */
 function acceptTabbableNode(node: Node): number {
   if (!(node instanceof HTMLElement)) return NodeFilter.FILTER_SKIP
@@ -32,6 +32,8 @@ function acceptTabbableNode(node: Node): number {
     return NodeFilter.FILTER_SKIP
   if (node.hidden) return NodeFilter.FILTER_SKIP
   if (node.closest("[inert]")) return NodeFilter.FILTER_REJECT
+  if ("checkVisibility" in node && !node.checkVisibility())
+    return NodeFilter.FILTER_SKIP
   return NodeFilter.FILTER_ACCEPT
 }
 
