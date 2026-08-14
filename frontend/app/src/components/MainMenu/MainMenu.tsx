@@ -21,6 +21,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -28,9 +29,7 @@ import {
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import { focusNextElement, focusPrevElement } from "focus-lock"
 import { getLogger } from "loglevel"
-import FocusLock from "react-focus-lock"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -51,6 +50,7 @@ import {
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
 
+import { focusNextTabbable, focusPrevTabbable } from "./focusTabbable"
 import {
   StyledMainMenuContainer,
   StyledMainMenuPopoverBody,
@@ -624,6 +624,7 @@ const MenuContent = memo(function MenuContent({
   const theme = useEmotionTheme()
   // Store button refs so roving tabindex can move focus without DOM queries.
   const menuItemButtonsRef = useRef<Array<HTMLElement | null>>([])
+  const footerRef = useRef<HTMLDivElement>(null)
   // Flatten sections to preserve visual grouping but allow linear navigation.
   // All items are focusable, including disabled ones (WAI-ARIA: every menuitem
   // in a menu is focusable, whether or not it is disabled).
@@ -715,15 +716,13 @@ const MenuContent = memo(function MenuContent({
         break
       }
       case "Tab": {
-        if (streamlitVersion) {
-          // A CopyButton exists in the version footer outside role="menu"
-          // but inside the popover's focus-lock.  Let focus-lock move
-          // focus there instead of closing the menu immediately.
-          break
-        }
-        // No footer — close the menu and advance focus per WAI-ARIA.
         event.preventDefault()
-        closeMenu(event.shiftKey ? "shift-tab" : "tab")
+        if (streamlitVersion) {
+          // Footer with CopyButton exists — cycle focus within the popover.
+          footerRef.current?.querySelector<HTMLElement>("button")?.focus()
+        } else {
+          closeMenu(event.shiftKey ? "shift-tab" : "tab")
+        }
         break
       }
       default:
@@ -732,14 +731,13 @@ const MenuContent = memo(function MenuContent({
   }
 
   const handleFooterKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === "Tab" && !event.shiftKey) {
-      // Forward Tab from the footer: close menu and advance focus
-      // past the trigger, same as Tab from a bare menu.
-      // Escape is handled by the capture-phase document listener in MainMenu.
-      event.preventDefault()
+    if (event.key !== "Tab") return
+    event.preventDefault()
+    if (event.shiftKey) {
+      menuItemButtonsRef.current[clampedIndex]?.focus()
+    } else {
       closeMenu("tab")
     }
-    // Shift+Tab: focus-lock moves focus back into the menu.
   }
 
   // Render sections with dividers between non-empty sections.
@@ -836,7 +834,10 @@ const MenuContent = memo(function MenuContent({
         {elements}
       </StyledMenuContainer>
       {streamlitVersion && (
-        <StyledMenuVersionFooter onKeyDown={handleFooterKeyDown}>
+        <StyledMenuVersionFooter
+          ref={footerRef}
+          onKeyDown={handleFooterKeyDown}
+        >
           <StyledMenuVersionRow>
             <StyledMenuVersionText>
               Made with Streamlit v{formatDisplayVersion(streamlitVersion)}
@@ -938,7 +939,6 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // Track popover open state for aria-expanded on the menu button.
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  // triggerRef is still needed by handleReturnFocus for Tab/Shift+Tab focus routing.
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
   const { refs, floatingStyles } = useFloatingOverlay({
@@ -947,8 +947,6 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     offsetPx: convertRemToPx(theme.spacing.twoXS),
   })
 
-  // Tracks *why* the menu was closed so handleReturnFocus can route focus.
-  // Set by closeMenu, read + reset in handleReturnFocus.
   const closeReasonRef = useRef<CloseReason>("other")
 
   // Stable close callback — MenuContent holds a stable reference so its memo
@@ -962,37 +960,27 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     setIsMenuOpen(prev => !prev)
   }, [])
 
-  // Passed to FocusLock's returnFocus prop. FocusLock internally uses a
-  // setTimeout to restore focus after unmount; this callback intercepts that
-  // restoration to route focus correctly.
-  //
-  // - Escape / item click / outside-click ("other"): focus returns to trigger.
-  // - Tab: focus advances to the next tabbable element after the trigger.
-  // - Shift+Tab: focus moves to the previous tabbable element.
-  //
-  // Returning false prevents FocusLock's default restoration (which targets
-  // the wrong element due to DOM ordering).
-  const handleReturnFocus = useCallback((_returnTo: Element): false => {
-    const reason = closeReasonRef.current
-    closeReasonRef.current = "other"
-
-    const button = triggerRef.current
-    if (button) {
-      if (reason === "tab") {
-        focusNextElement(button)
-      } else if (reason === "shift-tab") {
-        focusPrevElement(button)
-      } else {
-        button.focus()
+  // Route focus when the menu closes. Runs in useLayoutEffect so it fires
+  // synchronously after the portal unmounts (no flash of focus on body).
+  const prevOpenRef = useRef(false)
+  useLayoutEffect(() => {
+    if (prevOpenRef.current && !isMenuOpen) {
+      const reason = closeReasonRef.current
+      closeReasonRef.current = "other"
+      const button = triggerRef.current
+      if (button) {
+        if (reason === "tab") {
+          focusNextTabbable(button)
+        } else if (reason === "shift-tab") {
+          focusPrevTabbable(button)
+        } else {
+          button.focus()
+        }
       }
     }
-    return false
-  }, [])
+    prevOpenRef.current = isMenuOpen
+  }, [isMenuOpen])
 
-  // FocusLock's handleReturnFocus manages focus restoration — omit restoreFocusFn.
-  // useOverlayDismissal calls onClose() without a reason argument, so closeMenu()
-  // defaults to reason "other". handleReturnFocus routes "other" to button.focus(),
-  // the same as "escape", so the focus behaviour is identical.
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: isMenuOpen,
     onClose: closeMenu,
@@ -1000,7 +988,6 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     referenceSetFn: refs.setReference,
   })
 
-  // Attach triggerRef (for handleReturnFocus focus routing) alongside setReferenceRef.
   const setTriggerAndReferenceRef = useCallback(
     (node: HTMLButtonElement | null): void => {
       triggerRef.current = node
@@ -1047,14 +1034,12 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
             data-testid="stMainMenuPopover"
             className="stMainMenuPopover"
           >
-            <FocusLock returnFocus={handleReturnFocus}>
-              <MenuContent
-                sections={sections}
-                closeMenu={closeMenu}
-                metricsMgr={metricsMgr}
-                streamlitVersion={streamlitVersion}
-              />
-            </FocusLock>
+            <MenuContent
+              sections={sections}
+              closeMenu={closeMenu}
+              metricsMgr={metricsMgr}
+              streamlitVersion={streamlitVersion}
+            />
           </StyledMainMenuPopoverBody>
         </FloatingPortal>
       )}

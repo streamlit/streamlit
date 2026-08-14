@@ -3437,7 +3437,6 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     react-feather: "npm:^2.0.10"
-    react-focus-lock: "npm:^2.13.2"
     react-helmet-async: "npm:^3.0.0"
     react-hot-keys: "npm:^3.0.0"
     react-transition-group: "npm:^4.4.5"
@@ -15170,7 +15169,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-focus-lock@npm:^2.13.2, react-focus-lock@npm:^2.7.1":
+"react-focus-lock@npm:^2.7.1":
   version: 2.13.7
   resolution: "react-focus-lock@npm:2.13.7"
   dependencies:
