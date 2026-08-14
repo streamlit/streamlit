@@ -14,7 +14,17 @@
  * limitations under the License.
  */
 
-function isTabbable(node: Node): number {
+/**
+ * TreeWalker filter that accepts tabbable elements: non-negative tabIndex,
+ * not disabled, not hidden, and not inside an inert subtree.
+ *
+ * This intentionally checks only HTML attributes (hidden, disabled, inert) —
+ * not CSS visibility (display:none, visibility:hidden) or aria-hidden. This is
+ * sufficient for MainMenu's focus routing (header-bar neighbors are always
+ * visible) but should not be reused as a general-purpose tabbable check
+ * without adding a visibility gate (e.g. el.offsetParent !== null).
+ */
+function acceptTabbableNode(node: Node): number {
   if (!(node instanceof HTMLElement)) return NodeFilter.FILTER_SKIP
   if (node.tabIndex < 0) return NodeFilter.FILTER_SKIP
   if ("disabled" in node && (node as HTMLButtonElement).disabled)
@@ -29,7 +39,7 @@ export function focusNextTabbable(fromElement: HTMLElement): void {
   const walker = document.createTreeWalker(
     document.body,
     NodeFilter.SHOW_ELEMENT,
-    { acceptNode: isTabbable }
+    { acceptNode: acceptTabbableNode }
   )
   walker.currentNode = fromElement
   const next = walker.nextNode() as HTMLElement | null
@@ -41,7 +51,7 @@ export function focusPrevTabbable(fromElement: HTMLElement): void {
   const walker = document.createTreeWalker(
     document.body,
     NodeFilter.SHOW_ELEMENT,
-    { acceptNode: isTabbable }
+    { acceptNode: acceptTabbableNode }
   )
   walker.currentNode = fromElement
   const prev = walker.previousNode() as HTMLElement | null

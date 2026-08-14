@@ -718,7 +718,9 @@ const MenuContent = memo(function MenuContent({
       case "Tab": {
         event.preventDefault()
         if (streamlitVersion) {
-          // Footer with CopyButton exists — cycle focus within the popover.
+          // Footer with CopyButton exists — both Tab and Shift+Tab route to
+          // CopyButton (2-element contained cycle: menu item ↔ CopyButton).
+          // Forward Tab from CopyButton exits via handleFooterKeyDown.
           footerRef.current?.querySelector<HTMLElement>("button")?.focus()
         } else {
           closeMenu(event.shiftKey ? "shift-tab" : "tab")
