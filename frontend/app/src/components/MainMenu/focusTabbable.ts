@@ -16,7 +16,8 @@
 
 /**
  * TreeWalker filter that accepts tabbable elements: non-negative tabIndex,
- * not disabled, not hidden, and not inside an inert subtree.
+ * not disabled, not hidden, and not inside an inert subtree (FILTER_REJECT
+ * prunes the entire inert subtree so descendants are never visited).
  *
  * This intentionally checks only HTML attributes (hidden, disabled, inert) —
  * not CSS visibility (display:none, visibility:hidden) or aria-hidden. This is
@@ -30,7 +31,7 @@ function acceptTabbableNode(node: Node): number {
   if ("disabled" in node && (node as HTMLButtonElement).disabled)
     return NodeFilter.FILTER_SKIP
   if (node.hidden) return NodeFilter.FILTER_SKIP
-  if (node.closest("[inert]")) return NodeFilter.FILTER_SKIP
+  if (node.closest("[inert]")) return NodeFilter.FILTER_REJECT
   return NodeFilter.FILTER_ACCEPT
 }
 

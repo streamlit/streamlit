@@ -98,7 +98,7 @@ describe("focusNextTabbable", () => {
     a.focus()
 
     focusNextTabbable(a)
-    // Focus stays where it was (on body, since next?.focus() is a no-op)
+    // No next candidate — focus stays on a
     expect(document.activeElement).toBe(a)
   })
 })
