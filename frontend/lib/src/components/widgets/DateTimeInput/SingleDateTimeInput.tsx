@@ -523,7 +523,7 @@ function SingleDateTimeInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (isOpen && popoverRef.current?.contains(e.relatedTarget)) return
+      if (isOpen) return
       if (!triggerRef.current) return
       const { isPartiallyTyped, isFullyCleared } = getSegmentState(
         triggerRef.current
