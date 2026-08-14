@@ -592,14 +592,16 @@ function SingleDateTimeInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (triggerRef.current) {
-        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-          triggerRef.current
-        )
-        if (isPartiallyTyped) return
-        if (isFullyCleared && !clearable) return
+      if (!triggerRef.current) return
+      const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+        triggerRef.current
+      )
+      if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+        setDisplayValue(value)
+        onCloseRef.current(true)
+        return
       }
-      const pending = displayValueRef.current
+      const pending = isFullyCleared ? null : displayValueRef.current
       if (dateTimesEqual(pending, value)) return
       if (validateDateTime(pending, minDateTime, maxDateTime)) {
         setDisplayValue(value)
