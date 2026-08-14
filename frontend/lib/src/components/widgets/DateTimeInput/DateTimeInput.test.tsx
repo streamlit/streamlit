@@ -956,6 +956,251 @@ describe("DateTimeInput widget", () => {
     })
   })
 
+  describe("No double widget-manager writes on dismissal", () => {
+    it("outside-click commits exactly once (not twice) in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Edit a value so pending differs from committed
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click outside to dismiss — this triggers overlay onClose + blur
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T17:45"],
+          { fromUi: true },
+          "fragment"
+        )
+      })
+
+      // The critical assertion: exactly ONE write, not two
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
+      )
+      expect(matchingCalls).toHaveLength(1)
+    })
+
+    it("Tab-away from last segment commits exactly once (not twice) in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Edit a value
+      const segments = screen.getAllByRole("spinbutton")
+      const minuteSegment = segments.find(
+        s => s.getAttribute("data-type") === "minute"
+      )
+      await user.click(minuteSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Tab away from the last segment — this closes popover + triggers blur
+      await user.tab()
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T17:00"],
+          { fromUi: true },
+          "fragment"
+        )
+      })
+
+      // The critical assertion: exactly ONE write, not two
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
+      )
+      expect(matchingCalls).toHaveLength(1)
+    })
+
+    it("Escape commits exactly once (not twice) in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      // Edit a value
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Escape to dismiss
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T17:45"],
+          { fromUi: true },
+          "fragment"
+        )
+      })
+
+      // The critical assertion: exactly ONE write, not two
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
+      )
+      expect(matchingCalls).toHaveLength(1)
+    })
+
+    it("outside-click from popover TimeField commits exactly once in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Open popover and navigate to the TimeField
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Click into popover TimeField and edit time
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverMinute = timeRow.querySelectorAll('[role="spinbutton"]')[1]
+      await user.click(popoverMinute)
+      await user.keyboard("{ArrowUp}")
+
+      // Click outside to dismiss
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T17:00"],
+          { fromUi: true },
+          "fragment"
+        )
+      })
+
+      // The critical assertion: exactly ONE write
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
+      )
+      expect(matchingCalls).toHaveLength(1)
+    })
+
+    it("outside-click commits exactly once in non-form mode (no double onChange)", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+        }),
+        fragmentId: "fragment",
+      }
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Edit a value so pending differs from committed
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click outside to dismiss — this triggers overlay onClose + blur
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element,
+          ["2025-11-19T17:45"],
+          { fromUi: true },
+          "fragment"
+        )
+      })
+
+      // The critical assertion: exactly ONE write, not two
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
+      )
+      expect(matchingCalls).toHaveLength(1)
+    })
+  })
+
   describe("Boundary time on calendar selection", () => {
     it("preserves time when selecting a non-boundary date", async () => {
       const user = userEvent.setup()

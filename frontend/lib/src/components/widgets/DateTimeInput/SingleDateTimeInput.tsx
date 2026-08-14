@@ -182,16 +182,24 @@ function SingleDateTimeInput({
   formCommitRef.current = formCommit
 
   const [isOpen, setIsOpen] = useState(false)
-  // Guards against double formCommit: the overlay dismissal handler commits
-  // synchronously (to win the race with form submit clicks) and sets this true;
-  // the close-detection effect and handleBlur then skip their own formCommit.
-  const dismissalCommittedRef = useRef(false)
+  // When an action (overlay onClose, handleBlur) already committed the value
+  // via formCommit, the close-detection effect should skip its own commit to
+  // avoid a redundant write + backend rerun.
+  const skipCloseCommitRef = useRef(false)
+  // Prevents handleBlur from re-committing when overlay onClose already
+  // handled the commit (outside-click fires both onClose and blur).
+  const overlayCommittedRef = useRef(false)
 
   // Close-detection effect: handles commit/revert when popover closes.
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
+    if (!wasOpenRef.current && isOpen) {
+      overlayCommittedRef.current = false
+    }
     if (wasOpenRef.current && !isOpen) {
-      if (triggerRef.current) {
+      if (skipCloseCommitRef.current) {
+        skipCloseCommitRef.current = false
+      } else if (triggerRef.current) {
         const { isPartiallyTyped, isFullyCleared } = getSegmentState(
           triggerRef.current
         )
@@ -210,16 +218,11 @@ function SingleDateTimeInput({
           if (isOutOfBounds) {
             setDisplayValue(value)
             onCloseRef.current(true)
-          } else if (
-            !dateTimesEqual(pending, value) &&
-            !dismissalCommittedRef.current
-          ) {
+          } else if (!dateTimesEqual(pending, value)) {
             onChangeRef.current(pending)
-            formCommitRef.current?.(pending)
           }
         }
       }
-      dismissalCommittedRef.current = false
     }
     wasOpenRef.current = isOpen
   }, [isOpen, value, clearable, minDateTime, maxDateTime])
@@ -281,25 +284,20 @@ function SingleDateTimeInput({
       onClose: () => {
         setIsOpen(false)
         setIsCalendarActive(false)
-        // Synchronous commit: outside-click dismiss can race form submit
-        // (the close-detection effect fires after paint). Commit both
-        // onChange (state sync) and formCommit (form staging) here so the
-        // effect can skip its own write via dismissalCommittedRef.
-        if (triggerRef.current) {
-          const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-            triggerRef.current
-          )
-          if (isPartiallyTyped || (isFullyCleared && !clearable)) {
-            // Will revert on next render — don't commit stale/invalid state.
-          } else {
-            const pending = isFullyCleared ? null : displayValueRef.current
-            if (validateDateTime(pending, minDateTime, maxDateTime)) {
-              // Out of bounds — close-detection effect will revert.
-            } else if (!dateTimesEqual(pending, value)) {
-              onChangeRef.current(pending)
-              formCommitRef.current?.(pending)
-              dismissalCommittedRef.current = true
-            }
+        if (!triggerRef.current) return
+        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+          triggerRef.current
+        )
+        if (isPartiallyTyped || (isFullyCleared && !clearable)) return
+        const pending = isFullyCleared ? null : displayValueRef.current
+        if (validateDateTime(pending, minDateTime, maxDateTime)) return
+        if (!dateTimesEqual(pending, value)) {
+          // Signal handleBlur to skip — the close-detection effect (non-form)
+          // or formCommit below (form) will handle this commit.
+          overlayCommittedRef.current = true
+          if (formCommitRef.current) {
+            formCommitRef.current(pending)
+            skipCloseCommitRef.current = true
           }
         }
       },
@@ -548,9 +546,14 @@ function SingleDateTimeInput({
         onCloseRef.current(true)
         return
       }
+      if (overlayCommittedRef.current) {
+        overlayCommittedRef.current = false
+        return
+      }
       onChangeRef.current(pending)
-      if (!dismissalCommittedRef.current) {
-        formCommitRef.current?.(pending)
+      formCommitRef.current?.(pending)
+      if (isOpen) {
+        skipCloseCommitRef.current = true
       }
     },
     [isOpen, value, clearable, minDateTime, maxDateTime]
