@@ -769,8 +769,8 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     expect(calendar.locator(":focus")).to_be_visible()
 
     # Navigate to a different date and select it with Enter.
-    # Wait for React Aria to move internal focus to January 2 before
-    # pressing Enter — without this, Enter fires before the state update.
+    # Wait until React Aria has moved calendar focus to January 2 before Enter.
+    # Without this, Enter can fire before the internal focus state updates.
     app.keyboard.press("ArrowRight")
     expect(calendar.locator("td [data-focused]")).to_have_text("2")
     app.keyboard.press("Enter")

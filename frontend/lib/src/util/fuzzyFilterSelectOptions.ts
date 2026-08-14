@@ -32,7 +32,8 @@ export function getSelectFilterMode(
   return filterMode ?? streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY
 }
 
-// Filter options based on labels only (not indices).
+// Filter and fuzzy-rank options by label only (not by index) so typing "1"
+// does not match the first item by position.
 // More details: https://github.com/streamlit/streamlit/issues/1010
 export function fuzzyFilterSelectOptions<T extends LabeledOption>(
   options: readonly T[],
