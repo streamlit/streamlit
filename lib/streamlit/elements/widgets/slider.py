@@ -152,25 +152,31 @@ def _date_to_datetime(date_: date) -> datetime:
     return datetime.combine(date_, time())
 
 
-def _window_around(anchor: date, window: timedelta) -> tuple[Any, Any]:
-    """Return ``anchor`` -/+ ``window``, kept inside the representable range.
+def _window_around(anchor: date, window: timedelta) -> tuple[date, date]:
+    """Return ``anchor`` -/+ ``window``, clamped to the representable range.
 
-    This feeds the default ``min_value``/``max_value``, which are computed even when
-    the caller passed both explicitly, so it has to hold for any ``anchor``.
+    Used for the default ``min_value``/``max_value``, which are computed even when
+    the caller passed both explicitly, so this has to hold for any ``anchor``.
 
-    Two things constrain the result. The arithmetic itself overflows within ``window``
-    of ``date``/``datetime``'s own limits. And a window that merely avoids overflow can
-    still land outside the frontend's representable range, which would reject a bound
-    the caller never set -- including for an ``anchor`` this module's own error message
-    recommends.
+    Clamping covers two failure modes:
 
-    The clamp never moves a bound past ``anchor``, so an ``anchor`` that is itself
-    unrepresentable still reaches the range check below and is reported as the
-    out-of-range value it is, rather than as an inverted window.
+    - Arithmetic that overflows near ``date``/``datetime``'s own limits.
+    - A window that avoids overflow but still falls outside the frontend's
+      representable range, which would reject a bound the caller never set --
+      including for an ``anchor`` this module's own error message recommends.
+
+    A bound is never moved past ``anchor``, so an unrepresentable ``anchor`` still
+    reaches the range check below as itself rather than as an inverted window.
     """
     floor: date
     ceiling: date
     if isinstance(anchor, datetime):
+        # The limits carry ``anchor``'s tzinfo so the comparisons below are
+        # like-for-like, and ``_datetime_to_micros`` later reads wall-clock fields as
+        # UTC rather than converting -- so wall-clock is what has to land in range. For
+        # a zone whose offset varies by date the two can disagree, but only by that
+        # offset, and the day of slack these constants keep from the true limit
+        # (~23h48m at each end) is wider than any real-world offset.
         floor = datetime.combine(_MIN_SAFE_DAY, time.min, tzinfo=anchor.tzinfo)
         ceiling = datetime.combine(_MAX_SAFE_DAY, time.max, tzinfo=anchor.tzinfo)
     else:
@@ -552,6 +558,12 @@ class SliderMixin:
             between the Python server and JavaScript client. You must handle
             such numbers as floats, leading to a loss in precision.
 
+            The same constraint bounds ``date`` and ``datetime`` values, which
+            are serialized as microseconds since the epoch: only values from
+            1684-07-29 to 2255-06-04 can be represented exactly. Streamlit
+            raises an error for a bound outside that range rather than
+            silently shifting it.
+
         Parameters
         ----------
         label : str
@@ -919,8 +931,10 @@ class SliderMixin:
             else value_to_generic_type(prepared_value[0])
         )
 
-        datetime_min: datetime | time = time.min
-        datetime_max: datetime | time = time.max
+        # `date` rather than `datetime`, because the DATE path still holds plain
+        # `date` values here -- they are not converted until further down.
+        datetime_min: date | time = time.min
+        datetime_max: date | time = time.max
         if data_type == SliderProto.TIME:
             prepared_value = cast("Sequence[time]", prepared_value)
 

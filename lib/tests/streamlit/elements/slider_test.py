@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import MagicMock, patch
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
@@ -339,6 +340,30 @@ class SliderTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.slider
         assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
         assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    @parameterized.expand(
+        [
+            # A zone whose offset varies by date, and the two extreme fixed offsets.
+            ("dst_zone", ZoneInfo("America/Los_Angeles")),
+            ("plus_14", ZoneInfo("Pacific/Kiritimati")),
+            ("minus_12", ZoneInfo("Etc/GMT+12")),
+        ]
+    )
+    def test_advertised_bounds_survive_offset_extremes(self, _name, tz):
+        """Zone offset never pushes an advertised bound out of range.
+
+        The clamp compares wall-clock datetimes while ``_datetime_to_micros`` reads
+        wall-clock fields as UTC, so for a zone whose offset varies by date the two can
+        disagree -- by at most that offset. The whole-day slack in ``_MIN_SAFE_DAY`` /
+        ``_MAX_SAFE_DAY`` has to be wider than any real offset for that to stay safe.
+        """
+        for day in (_MIN_SAFE_DAY, _MAX_SAFE_DAY):
+            for tod in (time.min, time(23, 59)):
+                st.slider("Label", value=datetime.combine(day, tod, tzinfo=tz))
+
+                proto = self.get_delta_from_queue().new_element.slider
+                assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+                assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
 
     def test_advertised_range_is_the_widest_whole_day_span(self):
         """One day beyond either advertised bound is rejected by the range check.
