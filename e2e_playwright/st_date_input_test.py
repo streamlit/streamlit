@@ -738,7 +738,7 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     first_segment.click()
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
-    # Wait for rAF to transfer focus into the calendar grid.
+    # Wait until keyboard focus has moved into the calendar grid.
     expect(calendar.locator(":focus")).to_be_visible()
 
     # Tab to the month picker trigger and activate it.
@@ -765,7 +765,7 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     second_segment.click()
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
-    # Wait for rAF to transfer focus into the calendar grid.
+    # Wait until keyboard focus has moved into the calendar grid.
     expect(calendar.locator(":focus")).to_be_visible()
 
     # Navigate to a different date and select it with Enter.
