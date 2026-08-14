@@ -3603,7 +3603,7 @@ __metadata:
     re-resizable: "npm:^6.11.2"
     react-aria-components: "npm:^1.20.0"
     react-color: "npm:^2.18.1"
-    react-dropzone: "npm:^20.0.0"
+    react-dropzone: "npm:^20.1.0"
     react-feather: "npm:^2.0.10"
     react-map-gl: "npm:^5.3.21"
     react-markdown: "npm:^10.1.0"
@@ -15093,9 +15093,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dropzone@npm:^20.0.0":
-  version: 20.0.0
-  resolution: "react-dropzone@npm:20.0.0"
+"react-dropzone@npm:^20.1.0":
+  version: 20.1.0
+  resolution: "react-dropzone@npm:20.1.0"
   dependencies:
     attr-accept: "npm:^2.2.5"
     file-selector: "npm:^4.1.0"
@@ -15105,7 +15105,7 @@ __metadata:
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10c0/8a430bd22ba0350ecfc4872da80f27ddd7061a45d66d7b1612d94d82afa1c3fbff7476a8bf30582c38449f136223cfa5e052cbb6072800dc61f01ceea6770dd6
+  checksum: 10c0/4471359696e6288bae7ba074165ac499e17be5a4198d744eec8bdefdf1fc72f186d36177e43c7325a67856fa81533316e17008ab2b499f036bd17677d8c6e3c5
   languageName: node
   linkType: hard
 
