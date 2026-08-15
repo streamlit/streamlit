@@ -182,9 +182,9 @@ function SingleDateTimeInput({
   formCommitRef.current = formCommit
 
   const [isOpen, setIsOpen] = useState(false)
-  // When an action (overlay onClose, handleBlur) already committed the value
-  // via formCommit, the close-detection effect should skip its own commit to
-  // avoid a redundant write + backend rerun.
+  // When overlay onClose or handleBlur already committed the pending value,
+  // the close-detection effect should skip its own write to avoid a duplicate
+  // widget-manager update.
   const skipCloseCommitRef = useRef(false)
   // Prevents handleBlur from re-committing when overlay onClose already
   // handled the commit (outside-click fires both onClose and blur).
@@ -396,6 +396,34 @@ function SingleDateTimeInput({
     [disabled, format, onChange]
   )
 
+  // Shared step-snap handler for ArrowUp/ArrowDown on time segments.
+  const applyStepSnap = useCallback(
+    (
+      e: KeyboardEvent<HTMLDivElement>,
+      current: CalendarDateTime | null
+    ): void => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
+      if (!current) return
+      const target = e.target as HTMLElement
+      const segmentType = target.getAttribute("data-type")
+      const snapped = computeStepSnap(
+        current,
+        segmentType,
+        step,
+        stepMins,
+        e.key === "ArrowUp"
+      )
+      if (snapped) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.nativeEvent.stopImmediatePropagation()
+        setDisplayValue(snapped)
+        onValidate(snapped)
+      }
+    },
+    [step, stepMins, onValidate]
+  )
+
   // Capture-phase keydown: step-aware time arrows, Alt+ArrowDown, Tab closing, Enter commit.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
@@ -432,27 +460,8 @@ function SingleDateTimeInput({
       }
 
       // Step-aware arrow keys for time segments.
-      // TODO: Steps not divisible by 60 (e.g. step=90) fall through to default
-      // 1-minute increments — pre-existing behavior. Will be addressed with
-      // seconds granularity and hour cycle support, consistent with TimeInput.
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        if (!displayValue) return
-        const target = e.target as HTMLElement
-        const segmentType = target.getAttribute("data-type")
-        const snapped = computeStepSnap(
-          displayValue,
-          segmentType,
-          step,
-          stepMins,
-          e.key === "ArrowUp"
-        )
-        if (snapped) {
-          e.preventDefault()
-          e.stopPropagation()
-          e.nativeEvent.stopImmediatePropagation()
-          setDisplayValue(snapped)
-          onValidate(snapped)
-        }
+        applyStepSnap(e, displayValue)
         return
       }
 
@@ -478,9 +487,7 @@ function SingleDateTimeInput({
       formSubmit,
       minDateTime,
       maxDateTime,
-      step,
-      stepMins,
-      onValidate,
+      applyStepSnap,
     ]
   )
 
@@ -597,30 +604,11 @@ function SingleDateTimeInput({
     [onValidate]
   )
 
-  // Step-aware arrow keys for popover TimeField segments.
   const handlePopoverTimeKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
-      const current = displayValueRef.current
-      if (!current) return
-      const target = e.target as HTMLElement
-      const segmentType = target.getAttribute("data-type")
-      const snapped = computeStepSnap(
-        current,
-        segmentType,
-        step,
-        stepMins,
-        e.key === "ArrowUp"
-      )
-      if (snapped) {
-        e.preventDefault()
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-        setDisplayValue(snapped)
-        onValidate(snapped)
-      }
+      applyStepSnap(e, displayValueRef.current)
     },
-    [step, stepMins, onValidate]
+    [applyStepSnap]
   )
 
   // Min/max for calendar (date-only).
@@ -764,19 +752,25 @@ function SingleDateTimeInput({
                 <StyledPopoverTimeLabel id={`${id}-time-label`}>
                   Time
                 </StyledPopoverTimeLabel>
-                <StyledPopoverTimeField
-                  aria-labelledby={`${id}-time-label`}
-                  value={popoverTimeValue}
-                  onChange={handlePopoverTimeChange}
-                  granularity="minute"
-                  hourCycle={24}
-                  shouldForceLeadingZeros
-                  isDisabled={!displayValue}
-                >
-                  <StyledPopoverTimeFieldInput>
-                    {segment => <StyledPopoverTimeSegment segment={segment} />}
-                  </StyledPopoverTimeFieldInput>
-                </StyledPopoverTimeField>
+                <I18nProvider locale="en-US">
+                  <StyledPopoverTimeField
+                    aria-labelledby={`${id}-time-label`}
+                    aria-describedby={error ? errorId : undefined}
+                    isInvalid={!!error}
+                    value={popoverTimeValue}
+                    onChange={handlePopoverTimeChange}
+                    granularity="minute"
+                    hourCycle={24}
+                    shouldForceLeadingZeros
+                    isDisabled={!displayValue}
+                  >
+                    <StyledPopoverTimeFieldInput>
+                      {segment => (
+                        <StyledPopoverTimeSegment segment={segment} />
+                      )}
+                    </StyledPopoverTimeFieldInput>
+                  </StyledPopoverTimeField>
+                </I18nProvider>
               </StyledPopoverTimeRow>
             </I18nProvider>
           </StyledCalendarPopover>

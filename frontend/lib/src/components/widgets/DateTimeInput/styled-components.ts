@@ -18,6 +18,9 @@ import styled from "@emotion/styled"
 import { getLuminance } from "color2k"
 import { DateInput, DateSegment, TimeField } from "react-aria-components"
 
+// Reuse DateInput's quick-select row/label for the popover Time row (shared
+// divider + muted-label styling). Changes to DateInput's quick-select will
+// propagate here intentionally.
 export {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -35,10 +38,14 @@ export {
   StyledVisuallyHidden,
 } from "../DateInput/styled-components"
 
-export const StyledPopoverTimeField = styled(TimeField)({
+export const StyledPopoverTimeField = styled(TimeField)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-})
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
+}))
 
 export const StyledPopoverTimeFieldInput = styled(DateInput)(({ theme }) => ({
   display: "flex",
@@ -67,6 +74,9 @@ export const StyledPopoverTimeSegment = styled(DateSegment)(({ theme }) => {
     "&[data-focused]": {
       backgroundColor: theme.colors.primary,
       color: isLightPrimary ? theme.colors.black : theme.colors.white,
+    },
+    "&[data-disabled]": {
+      color: "inherit",
     },
   }
 })
