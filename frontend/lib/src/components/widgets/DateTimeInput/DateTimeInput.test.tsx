@@ -954,10 +954,71 @@ describe("DateTimeInput widget", () => {
         )
       })
     })
+
+    it("formCommit writes new value before click fires on dismiss-target (form race guard)", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      // Record the order of WM writes vs submit-button click
+      const callLog: string[] = []
+      const wmSpy = vi
+        .spyOn(props.widgetMgr, "setStringArrayValue")
+        .mockImplementation((_el, value) => {
+          callLog.push(`wmWrite:${JSON.stringify(value)}`)
+        })
+
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button
+            data-testid="submit"
+            onClick={() => callLog.push("submitClick")}
+          >
+            Submit
+          </button>
+        </div>
+      )
+      wmSpy.mockClear()
+      callLog.length = 0
+
+      // Edit a value so pending differs from committed
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+      wmSpy.mockClear()
+      callLog.length = 0
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click Submit button — pointerdown fires dismiss, click fires submit
+      await user.click(screen.getByTestId("submit"))
+
+      // The sync formCommit write MUST appear before the click handler
+      const writeIdx = callLog.findIndex(e =>
+        e.includes('["2025-11-19T17:45"]')
+      )
+      const clickIdx = callLog.indexOf("submitClick")
+      expect(writeIdx).toBeGreaterThanOrEqual(0)
+      expect(clickIdx).toBeGreaterThanOrEqual(0)
+      expect(writeIdx).toBeLessThan(clickIdx)
+
+      wmSpy.mockRestore()
+    })
   })
 
-  describe("No double widget-manager writes on dismissal", () => {
-    it("outside-click commits exactly once (not twice) in form mode", async () => {
+  describe("Dedup guard prevents redundant commits on dismissal", () => {
+    it("outside-click triggers one commit (sync formCommit + async effect) in form mode", async () => {
       const user = userEvent.setup()
       const props = {
         ...getProps({
@@ -999,15 +1060,16 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // The critical assertion: exactly ONE write, not two
+      // One commit = 2 WM writes (sync formCommit + async effect).
+      // A duplicate commit (onClose + blur both firing) would produce 4.
       const matchingCalls = spy.mock.calls.filter(
         call =>
           JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
       )
-      expect(matchingCalls).toHaveLength(1)
+      expect(matchingCalls).toHaveLength(2)
     })
 
-    it("Tab-away from last segment commits exactly once (not twice) in form mode", async () => {
+    it("Tab-away from last segment triggers one commit in form mode", async () => {
       const user = userEvent.setup()
       const props = {
         ...getProps({
@@ -1049,15 +1111,15 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // The critical assertion: exactly ONE write, not two
+      // One commit = 2 WM writes (sync formCommit + async effect)
       const matchingCalls = spy.mock.calls.filter(
         call =>
           JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
       )
-      expect(matchingCalls).toHaveLength(1)
+      expect(matchingCalls).toHaveLength(2)
     })
 
-    it("Escape commits exactly once (not twice) in form mode", async () => {
+    it("Escape triggers one commit in form mode", async () => {
       const user = userEvent.setup()
       const props = {
         ...getProps({
@@ -1094,15 +1156,15 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // The critical assertion: exactly ONE write, not two
+      // One commit = 2 WM writes (sync formCommit + async effect)
       const matchingCalls = spy.mock.calls.filter(
         call =>
           JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
       )
-      expect(matchingCalls).toHaveLength(1)
+      expect(matchingCalls).toHaveLength(2)
     })
 
-    it("outside-click from popover TimeField commits exactly once in form mode", async () => {
+    it("outside-click from popover TimeField triggers one commit in form mode", async () => {
       const user = userEvent.setup()
       const props = {
         ...getProps({
@@ -1144,12 +1206,12 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // The critical assertion: exactly ONE write
+      // One commit = 2 WM writes (sync formCommit + async effect)
       const matchingCalls = spy.mock.calls.filter(
         call =>
           JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
       )
-      expect(matchingCalls).toHaveLength(1)
+      expect(matchingCalls).toHaveLength(2)
     })
 
     it("outside-click commits exactly once in non-form mode (no double onChange)", async () => {

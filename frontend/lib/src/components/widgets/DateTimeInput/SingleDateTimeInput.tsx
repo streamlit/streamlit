@@ -219,13 +219,12 @@ function SingleDateTimeInput({
 
     lastCommittedRef.current = pending
     onChangeRef.current(pending)
+    formCommitRef.current?.(pending)
     return true
   }, [value, clearable, minDateTime, maxDateTime])
 
-  // Close-detection effect: commits when the popover closes via a path that
-  // doesn't go through useOverlayDismissal's onClose (e.g. Tab from calendar).
-  // For overlay-dismiss (Escape/outside-click), onClose already committed
-  // synchronously — the lastCommittedRef guard makes this a no-op.
+  // Reset the commit-dedup guard when the popover opens so a later dismiss
+  // commit isn't treated as a duplicate of a prior interaction's commit.
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (!wasOpenRef.current && isOpen) {
@@ -429,10 +428,7 @@ function SingleDateTimeInput({
       if (e.key === "Enter") {
         e.preventDefault()
         const valid = commitOrRevert()
-        if (valid) {
-          formCommitRef.current?.(displayValueRef.current)
-          if (!error) formSubmit?.()
-        }
+        if (valid && !error) formSubmit?.()
         return
       }
 
