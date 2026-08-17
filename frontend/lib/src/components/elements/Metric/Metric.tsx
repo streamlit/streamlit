@@ -19,6 +19,7 @@ import { memo, ReactElement, useEffect, useId, useRef } from "react"
 import { Global } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
+import { getLogger } from "loglevel"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { TopLevelSpec } from "vega-lite"
@@ -50,6 +51,8 @@ import {
   StyledMetricLabelText,
   StyledMetricValueText,
 } from "./styled-components"
+
+const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
@@ -301,8 +304,6 @@ export interface MetricProps {
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
-  const { width: chartWidth, elementRef: chartContainerRef } =
-    useCalculatedDimensions()
 
   const { MetricDirection } = MetricProto
   const {
@@ -320,6 +321,12 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     deltaDescription,
     icon,
   } = element
+
+  const hasChartData = Boolean(chartData?.length)
+  // Re-attach ResizeObserver when the chart container remounts. Otherwise an
+  // empty-to-data transition keeps width at the -1 fallback and vega-embed never runs.
+  const { width: chartWidth, elementRef: chartContainerRef } =
+    useCalculatedDimensions([hasChartData])
 
   // Apply number formatting if a format is specified and the value is numeric
   const formattedMetricValue =
@@ -352,36 +359,58 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   useEffect(() => {
     if (
-      chartData &&
-      chartData.length > 0 &&
-      chartRef.current &&
+      !chartData?.length ||
+      !chartRef.current ||
       // Having a chart width <= 0 causes issues with vega-embed:
-      chartWidth > 0
+      chartWidth <= 0
     ) {
-      const spec = getMetricChartSpec(
-        chartData,
-        chartType,
-        chartWidth,
-        theme,
-        color
-      )
-
-      void embed(chartRef.current, spec, {
-        actions: false,
-        renderer: "svg",
-        ast: true,
-        expr: expressionInterpreter,
-        tooltip: {
-          theme: "custom",
-          formatTooltip: (value: { y: number }) => {
-            // Only show the y value in the tooltip since
-            // the x value is just the numeric index of the point:
-            return `${value.y}`
-          },
-        },
-      })
+      return
     }
-  }, [chartData, color, theme, chartWidth, chartType, chartRef])
+
+    const spec = getMetricChartSpec(
+      chartData,
+      chartType,
+      chartWidth,
+      theme,
+      color
+    )
+
+    let isCancelled = false
+    let finalizeEmbed: (() => void) | undefined
+
+    void embed(chartRef.current, spec, {
+      actions: false,
+      renderer: "svg",
+      ast: true,
+      expr: expressionInterpreter,
+      tooltip: {
+        theme: "custom",
+        formatTooltip: (value: { y: number }) => {
+          // Only show the y value in the tooltip since
+          // the x value is just the numeric index of the point:
+          return `${value.y}`
+        },
+      },
+    })
+      .then(result => {
+        if (isCancelled) {
+          // Embed resolved after this effect was cancelled; drop the view.
+          result.finalize()
+        } else {
+          finalizeEmbed = result.finalize
+        }
+      })
+      .catch((error: unknown) => {
+        // Embed can reject if this effect cleaned up mid-flight. Log so a bad
+        // spec is still visible in development without surfacing it to users.
+        LOG.debug("Failed to embed metric chart:", error)
+      })
+
+    return () => {
+      isCancelled = true
+      finalizeEmbed?.()
+    }
+  }, [chartData, color, theme, chartWidth, chartType])
 
   return (
     <StyledMetricContainer
@@ -476,7 +505,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           </StyledDeltaContainer>
         )}
       </StyledMetricContent>
-      {chartData && chartData.length > 0 && (
+      {hasChartData && (
         <div ref={chartContainerRef}>
           <Global styles={StyledVegaLiteChartTooltips} />
           <StyledMetricChart

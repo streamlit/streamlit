@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     get_element_by_key,
     get_metric,
@@ -351,3 +352,24 @@ def test_metric_with_icon(themed_app: Page, assert_snapshot: ImageCompareFunctio
     metric = get_metric(themed_app, "Temperature")
     expect(metric.get_by_test_id("stMetricIcon")).to_be_visible()
     assert_snapshot(metric, name="st_metric-with_icon")
+
+
+def test_metric_chart_renders_after_empty_to_data_transition(app: Page):
+    """Chart SVG remounts after chart_data is cleared then restored.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16539
+    """
+    metric = get_metric(app, "Sparkline toggle")
+    chart_svg = metric.get_by_test_id("stMetricChart").locator("svg")
+    expect(chart_svg).to_be_visible()
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("42")
+
+    click_toggle(app, "Show sparkline data")
+    expect(metric.get_by_test_id("stMetricChart")).to_have_count(0)
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("0")
+
+    click_toggle(app, "Show sparkline data")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("42")
+    expect(chart_svg).to_be_visible()
+    # One sparkline, not missing or duplicated.
+    expect(chart_svg).to_have_count(1)
