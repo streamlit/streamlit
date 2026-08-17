@@ -20,8 +20,8 @@ on:
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
   MODEL_INPUT: ${{ github.event.inputs.model || '' }}
-  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.3-codex-high,claude-4.6-opus-high-thinking,cursor-grok-4.5-high' }}
-  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.4-xhigh,cursor-grok-4.5-high,claude-opus-4-8-thinking-xhigh"
+  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.6-terra-xhigh,claude-opus-5-thinking-high,cursor-grok-4.6-xhigh' }}
+  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-sol-xhigh,cursor-grok-4.6-xhigh,claude-opus-5-thinking-xhigh"
 
 jobs:
   # Job 1: Parse model list and check for API key
