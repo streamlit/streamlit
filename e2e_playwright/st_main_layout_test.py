@@ -126,33 +126,48 @@ def wait_for_sidebar_animation(app: Page, *, expanded: bool) -> None:
 
     aria-expanded flips immediately on click, but the sidebar still slides via
     transform. Snapshotting mid-transition causes pixel flakiness (especially
-    on webkit), so wait until transform settles before screenshots.
+    on webkit), so wait until the transform reaches its final state and stops
+    changing before screenshots.
+
+    Collapsing animates translateX from 0 toward a negative offset, so the
+    intermediate frames already report a negative translateX. Checking the
+    direction alone would therefore return mid-slide, so we additionally require
+    the transform to be unchanged across two consecutive animation frames.
     """
     sidebar = app.get_by_test_id("stSidebar")
-    if expanded:
-        # Expanded settles to transform: none (or an identity matrix).
-        wait_until(
-            app,
-            lambda: sidebar.evaluate(
-                """el => {
-                    const t = getComputedStyle(el).transform;
-                    return t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)';
-                }"""
-            ),
+
+    def _transform_settled() -> bool:
+        return bool(
+            sidebar.evaluate(
+                """(el, isExpanded) => new Promise((resolve) => {
+                    const readTransform = () => getComputedStyle(el).transform;
+                    const inFinalState = (t) => {
+                        if (isExpanded) {
+                            // Expanded settles to transform: none (identity).
+                            return (
+                                t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'
+                            );
+                        }
+                        // Collapsed is translated off-screen (negative translateX).
+                        if (!t.startsWith('matrix')) return false;
+                        const tx = parseFloat(t.split(',')[4]);
+                        return Number.isFinite(tx) && tx < 0;
+                    };
+                    // Sample across two frames so an in-progress transition
+                    // (whose transform keeps changing) is not treated as settled.
+                    const first = readTransform();
+                    requestAnimationFrame(() =>
+                        requestAnimationFrame(() => {
+                            const second = readTransform();
+                            resolve(inFinalState(second) && second === first);
+                        })
+                    );
+                })""",
+                expanded,
+            )
         )
-    else:
-        # Collapsed is translated off-screen (negative translateX).
-        wait_until(
-            app,
-            lambda: sidebar.evaluate(
-                """el => {
-                    const t = getComputedStyle(el).transform;
-                    if (!t.startsWith('matrix')) return false;
-                    const tx = parseFloat(t.split(',')[4]);
-                    return Number.isFinite(tx) && tx < 0;
-                }"""
-            ),
-        )
+
+    wait_until(app, _transform_settled)
 
 
 # Consolidated test for basic sidebar states across different modes and viewports
