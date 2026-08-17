@@ -605,6 +605,32 @@ The container has `role="toolbar"` and `aria-label`. Tab moves focus INTO the to
 (landing on the focused pill) and OUT to the "Add filter" button. Arrow keys move
 between pills within the toolbar. This matches the WAI-ARIA toolbar pattern.
 
+#### Popover and Filter Accessibility
+
+Each filter popover uses specific ARIA patterns depending on filter type:
+
+**Multiselect (checkbox list)**:
+- Option list has `role="listbox"` with `aria-multiselectable="true"`
+- Each option has `role="option"` with `aria-selected` reflecting checked state
+- The search input has `aria-controls` pointing to the listbox
+- "Select all" / "Clear all" actions are standard buttons outside the listbox
+
+**Operator selector**:
+- Trigger button has `aria-haspopup="listbox"` and `aria-expanded`
+- Menu uses `role="listbox"` with `aria-activedescendant` for keyboard highlighting
+- Arrow keys navigate options; Enter/Space selects; Escape closes
+
+**Popover container**:
+- Has `role="dialog"` with `aria-labelledby` pointing to the filter column name
+- Escape closes the popover and returns focus to the triggering pill
+- Focus is trapped inside the popover while open (Tab cycles within)
+
+**Live region for filter count**:
+- A visually-hidden `aria-live="polite"` region announces filter count changes
+  (e.g., "3 active filters" after adding/removing a filter)
+- Announcements are debounced (same 150ms as the commit debounce) to avoid
+  rapid-fire announcements during bulk operations
+
 #### Multiselect State Format
 
 V1 uses a simple include-only format (sufficient for the 100-value cardinality limit):
@@ -711,6 +737,48 @@ const shouldCommitImmediately = !element.formId
 When `formId` is set, all commit paths (immediate and debounced) still update local
 React state (so the UI is responsive) but the `widgetMgr` call is made with awareness
 that it won't trigger a rerun until form submission.
+
+#### Fragment Interaction
+
+When `st.filter_bar` is placed inside an `@st.fragment`-decorated function:
+
+- **Scoped reruns**: Filter interactions trigger a rerun of only the fragment function,
+  not the full script. This is the primary performance optimization for apps with
+  expensive data loading above the filter bar.
+- **No special handling needed**: The framework's existing fragment infrastructure handles
+  scoping automatically — `widgetMgr.setStringValue` with `fragmentId` already targets
+  the correct rerun scope.
+- **Pattern for expensive apps**:
+
+```python
+@st.cache_data
+def load_data():
+    return expensive_query()  # Runs once, cached
+
+df = load_data()
+
+@st.fragment
+def filter_section():
+    filtered = st.filter_bar(df, key="filters")
+    st.dataframe(filtered)
+
+filter_section()
+```
+
+In this pattern, filter interactions only re-execute `filter_section()` (the fragment),
+skipping `load_data()` and any other script-level code. The `fragmentId` is propagated
+through the `commitState` call to `widgetMgr.setStringValue`:
+
+```typescript
+widgetMgr.setStringValue({ id, formId }, JSON.stringify(state), { fromUi: true }, fragmentId)
+//                                                                                 ^^^^^^^^^^
+//                                                         Scopes the rerun to this fragment
+```
+
+- **Interaction with `on_change`**: The callback fires within the fragment's rerun scope,
+  not the full script. This is consistent with all other widgets inside fragments.
+- **Multiple filter bars in one fragment**: Supported; each has its own widget ID and
+  triggers the same fragment rerun. State is independent per widget key.
 
 ### Forward Message Deduplication
 

@@ -344,7 +344,7 @@ Filter results ⓘ                              (label + help tooltip)
 
 # After adding filters:
 Filter results ⓘ
-[ Status: Active, Pending  ×]  [ Price: < $30  ×]  [ + Add filter ]
+[AND] [ Status: Active, Pending ˅]  [ Price: < $30 ˅]  [Clear all]  [ + Add filter ]
 ```
 
 **Visual layout — collapsed (`expanded=False`):**
@@ -359,9 +359,9 @@ toggle at runtime.
 
 **Chip behavior:**
 
-- Active filters display as dismissible chips/pills
+- Active filters display as chips/pills (always primary-colored once added)
 - Each chip shows `Column: Value` (or `Column: Operator Value` for non-default operators)
-- Clicking `×` removes the filter; clicking a chip opens its edit popover
+- Clicking a chip opens its edit popover (which contains a delete button)
 - `+ Add filter` opens a column picker dropdown
 
 **Pill summary text:**
@@ -384,9 +384,8 @@ toggle at runtime.
 
 **Removing filters:**
 
-- Click `×` on a chip, or
-- "Clear all" (shown when 2+ filters active), or
-- Delete from within the edit popover
+- Click the delete (trash) button inside a filter's edit popover, or
+- "Clear all" (shown when 2+ filters active)
 
 **Popover interactions:**
 
@@ -419,6 +418,17 @@ toggle at runtime.
 - Only filter metadata crosses the wire (not the full DataFrame)
 - Handles 1M+ rows without startup delay
 - Works with `@st.fragment` and `@st.cache_data`
+- **Two-tier option rendering for multiselect:**
+  - ≤1,000 unique values: all shipped to frontend as plain DOM elements in a scrollable
+    list with client-side search. No virtualization — modern browsers handle 1,000
+    checkbox items without jank.
+  - \>1,000 unique values: top 1,000 shipped initially; additional values fetched via
+    server-side incremental search as the user types (debounced at 150ms).
+- **Include/exclude state model:** Multiselect filter state is serialized as
+  `{include: [...]}` or `{exclude: [...]}` — whichever is smaller. When a user deselects
+  2 of 1,000 options, the state is `{exclude: ["A", "B"]}` rather than 998 includes.
+  This minimizes wire payload (especially for `bind="query-params"` URL size) and makes
+  state diffs cheap across reruns.
 
 ### Edge Cases
 

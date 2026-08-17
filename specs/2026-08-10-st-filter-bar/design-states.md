@@ -9,11 +9,12 @@ Complete inventory of every distinct UI state that needs a design spec. Organize
 | # | Filter Type | Trigger Condition | Operators |
 |---|-------------|-------------------|-----------|
 | 1 | **Multiselect** | String column, ≤100 unique values | `is`, `is_not`, `is_null`, `is_not_null` |
-| 2 | **Text** | String column, >100 unique values | `contains`, `equals`, `starts_with`, `ends_with`, `is_null`, `is_not_null` |
-| 3 | **Range** | Numeric column (int/float) | `between`, `equals`, `greater_than`, `less_than`, `is_null`, `is_not_null` |
+| 2 | **Text** | String column, >100 unique values | `contains`, `not_contains`, `equals`, `not_equals`, `starts_with`, `ends_with`, `is_null`, `is_not_null` |
+| 3 | **Range** | Numeric column (int/float) | `between`, `not_between`, `equals`, `not_equals`, `greater_than`, `less_than`, `is_null`, `is_not_null` |
 | 4 | **Toggle** | Boolean column | `is_true`, `is_false`, `is_null` |
-| 5 | **Date/Datetime** | Date or datetime column | `between`, `before`, `after`, `equals`, `is_null`, `is_not_null` |
-| 6 | **List/Tags** | Column with list-type cells _(future)_ | `contains`, `contains_all`, `does_not_contain`, `is_empty`, `is_not_empty` |
+| 5 | **Date/Datetime** | Date or datetime column | `between`, `not_between`, `before`, `after`, `equals`, `not_equals`, `today`, `past_7_days`, `past_30_days`, `past_90_days`, `this_week`, `this_month`, `this_year`, `is_null`, `is_not_null` |
+| 6 | **Time** | Time column | `between`, `not_between`, `before`, `after`, `equals`, `not_equals`, `is_null`, `is_not_null` |
+| 7 | **List/Tags** | Column with list-type cells _(future)_ | `contains`, `contains_all`, `does_not_contain`, `is_empty`, `is_not_empty` |
 
 ### Operator Display Labels (internal → display)
 
@@ -25,10 +26,10 @@ Complete inventory of every distinct UI state that needs a design spec. Organize
 | `not_equals` | ≠ | `Revenue: ≠ 50K` |
 | `greater_than` | > | `Revenue: > 100K` |
 | `less_than` | < | `Revenue: < 500K` |
-| `contains` | contains | `Product: contains "Pro"` |
-| `not_contains` | not contains | `Product: not contains "Pro"` |
-| `starts_with` | starts with | `Product: starts with "A"` |
-| `ends_with` | ends with | `Product: ends with "Inc"` |
+| `contains` | contains | `Product: Pro` (raw query text, truncated to 20 chars) |
+| `not_contains` | not contains | `Product: Pro` (raw query text, truncated to 20 chars) |
+| `starts_with` | starts with | `Product: A` (raw query text) |
+| `ends_with` | ends with | `Product: Inc` (raw query text) |
 | `is` | = | `Industry: Tech, Finance` |
 | `is_not` | ≠ | `Industry ≠ Retail` |
 | `before` | before | `Founded: before 2020` |
@@ -80,9 +81,9 @@ Individual pill/chip for an active filter. 4 states × content variations:
 
 | # | State | Visual Description |
 |---|-------|-------------------|
-| B1 | **Empty/just added** | Pill shows column name only, no value summary. Border is neutral. |
+| B1 | **Empty/just added** | Pill shows column name + "All" summary (no values yet). Primary color border/fill — all pills are always active-styled once they exist. |
 | B2 | **Active with value** | Pill shows "Column: value summary". Has primary color border/fill. |
-| B3 | **Open (popover shown)** | Active/highlighted border to indicate its popover is open. |
+| B3 | **Open (popover shown)** | Darker background tint to indicate its popover is open. |
 | B4 | **Disabled** | Dimmed opacity, cursor default, no hover effect, no remove action. |
 
 ### Pill Content Examples
@@ -93,12 +94,12 @@ Individual pill/chip for an active filter. 4 states × content variations:
 | Multiselect (2 values) | `Industry: Tech, Finance` |
 | Multiselect (3+ values) | `Industry: 4 selected` |
 | Multiselect (is_not) | `Industry: ≠ Retail` |
-| Text | `Product: contains "Pro"` |
+| Text | `Product: Pro` (raw query, truncated to 20 chars) |
 | Range (between) | `Revenue: 10K – 500K` |
 | Range (greater_than) | `Revenue: > 100K` |
 | Toggle | `Active: True` |
-| Date range | `Founded: Jan 2020 – Dec 2023` |
-| Null operator | `Revenue: is empty` |
+| Date range | `Founded: 2020-01-01 – 2023-12-31` |
+| Null operator | `Revenue: is null` |
 
 ---
 
@@ -108,20 +109,22 @@ The menu shown when clicking "+ Add filter":
 
 | # | State | Description |
 |---|-------|-------------|
-| C1 | **Standard list** | Short list of available columns, each with an icon indicating filter type (tag for multiselect, text icon for text, number for range, toggle for boolean, calendar for date). |
-| C2 | **With search** | When many columns available, search input at top filters the list. |
-| C3 | **Empty** | All columns already have active filters — shows "No more filters available" message. |
+| C1 | **Standard list** | Short list of available columns, each with an icon indicating filter type (list for multiselect, text icon for text, number for range, toggle for boolean, calendar for date). |
+| C2 | **With search** | When >7 columns available, search input appears at top to filter the list. |
+| C3 | **Empty** | All columns already have active filters — shows "All columns have filters" message. |
 | C4 | **Disabled columns hidden** | Columns in `disabled` list are not shown in picker. |
 
 ### Column Type Icons
 
 | Filter Type | Icon |
 |-------------|------|
-| Multiselect | `:material/label:` (tag) |
+| Multiselect | `:material/list:` |
 | Text | `:material/text_fields:` |
 | Range | `:material/tag:` (number/hash) |
 | Toggle | `:material/toggle_on:` |
 | Date Range | `:material/calendar_today:` |
+| Datetime Range | `:material/schedule:` |
+| Time Range | `:material/access_time:` |
 
 ---
 
@@ -205,7 +208,7 @@ Shown for high-cardinality string columns (>100 unique values).
 | # | State | Description |
 |---|-------|-------------|
 | E9 | **Empty input** | Placeholder shown, no filtering active yet. |
-| E10 | **With value** | User has typed a query. Pill shows `Col: contains "query"`. |
+| E10 | **With value** | User has typed a query. Pill shows raw query text (truncated to 20 chars), e.g., `Col: query`. |
 | E11 | **Disabled** | Input is read-only/dimmed. |
 
 ---
@@ -275,35 +278,40 @@ Shown for boolean columns.
 
 ```
 ┌─────────────────────────────────┐
-│ Column Name          [🗑 Delete] │
+│ Column Name  [Operator ▾]  [🗑] │
 │ ─────────────────────────────── │
-│ [Operator ▾]                    │
 │                                 │
-│ ( True )  ( False )  ( Null )   │  ← segmented toggle
+│ ( All )  ( True )  ( False )    │  ← segmented toggle
 │                                 │
 └─────────────────────────────────┘
 ```
 
 ### Segmented Control Options
 
-No operator dropdown. The toggle filter renders a simple segmented control directly:
+The toggle filter renders a segmented control with three options. When operators.length > 1
+(e.g., `is_true`, `is_false`, `is_null`), an operator dropdown also appears in the header.
 
-| # | Segment | Pill Summary |
-|---|---------|--------------|
-| G1 | **True** | `Active: True` |
-| G2 | **False** | `Active: False` |
-| G3 | **Empty** | `Active: is empty` |
+| # | Segment | Meaning | Pill Summary |
+|---|---------|---------|--------------|
+| G1 | **All** | No constraint (filter exists but doesn't exclude any rows) | `Active: All` |
+| G2 | **True** | Show only `True` rows | `Active: True` |
+| G3 | **False** | Show only `False` rows | `Active: False` |
+
+When the `is_null` operator is selected via the operator dropdown, the segmented control
+is irrelevant — the filter shows only null rows regardless of segment selection.
 
 ### Interaction States
 
 | # | State | Description |
 |---|-------|-------------|
-| G4 | **No selection** | No segment highlighted, filter not yet applied. |
-| G5 | **Selected** | One segment highlighted in primary color. |
+| G4 | **"All" selected (default)** | "All" segment highlighted. Filter produces no constraint. |
+| G5 | **"True" or "False" selected** | Selected segment highlighted in primary color. |
 | G6 | **Disabled** | Segments non-interactive, dimmed. |
 
-Note: No operator selector shown for toggle. The popover header has just the column
-name and delete button — no dropdown. The segmented control IS the entire interaction.
+Note: The operator selector appears when the toggle has multiple operators (default:
+`is_true`, `is_false`, `is_null`). Selecting "All" in the segmented control resets
+the toggle value to `null` (no constraint), distinct from the `is_null` operator
+(which filters to rows where the column value is null/empty).
 
 ---
 
@@ -388,14 +396,24 @@ Used inside every filter popover to switch between operators.
 | `is_null` | is empty |
 | `is_not_null` | is not empty |
 | `contains` | contains |
+| `not_contains` | not contains |
 | `equals` | equals |
+| `not_equals` | not equals |
 | `starts_with` | starts with |
 | `ends_with` | ends with |
 | `between` | between |
+| `not_between` | not between |
 | `greater_than` | greater than |
 | `less_than` | less than |
 | `before` | before |
 | `after` | after |
+| `today` | today |
+| `past_7_days` | past 7 days |
+| `past_30_days` | past 30 days |
+| `past_90_days` | past 90 days |
+| `this_week` | this week |
+| `this_month` | this month |
+| `this_year` | this year |
 | `is_true` | is true |
 | `is_false` | is false |
 
@@ -476,94 +494,52 @@ The count badge only appears when collapsed AND filters are active.
 
 ---
 
-## Total State Count Summary
+## K. Relative Date Operators
 
-| Component | States |
-|-----------|--------|
-| Container (A) | 12 |
-| Pill (B) | 4 + content variants |
-| Column Picker (C) | 4 |
-| Multiselect Popover (D) | 9 |
-| Text Popover (E) | 9 |
-| Range Popover (F) | 8 |
-| Toggle Popover (G) | 6 |
-| Date Range Popover (H) | 10 |
-| Operator Selector (I) | 4 |
-| Shared Patterns (J) | 10 |
-| **Total unique states** | **~76** |
+For date/datetime columns, relative date operators are available directly in the operator
+dropdown — they are NOT a separate "mode" or sub-UI. Each relative date is a standalone
+operator that requires no value inputs.
 
----
+### Implementation (flat operators, not Notion-style)
 
----
-
-## K. Relative Date Filter Popover (Notion-inspired)
-
-For datetime columns, an additional operator mode: "is relative to today". Inspired by
-Notion's two-dropdown composition pattern.
-
-### Layout
-
-```
-┌───────────────────────────────────────────┐
-│ Founded                        [🗑 Delete] │
-│ ───────────────────────────────────────── │
-│ [is relative to today ▾]                  │
-│                                           │
-│ ┌─────────┐  ┌──────────┐                │
-│ │ This  ▾ │  │ week   ▾ │                │
-│ └─────────┘  └──────────┘                │
-│                                           │
-│  Direction:    Unit:                      │
-│  • Past        • day                      │
-│  • This ✓      • week ✓                   │
-│  • Next        • month                    │
-│                 • year                     │
-└───────────────────────────────────────────┘
-```
-
-### Sub-selectors
-
-| Dropdown | Options |
-|----------|---------|
-| **Direction** | `Past`, `This`, `Next` |
-| **Unit** | `day`, `week`, `month`, `year` |
-
-### Combined Expressions (9 total)
-
-| Direction | day | week | month | year |
-|-----------|-----|------|-------|------|
-| **Past** | Past day | Past week | Past month | Past year |
-| **This** | Today | This week | This month | This year |
-| **Next** | Tomorrow | Next week | Next month | Next year |
-
-### States
-
-| # | State | Description |
-|---|-------|-------------|
-| K1 | **Default** | Direction="This", Unit="week" (or last used). Both dropdowns closed. |
-| K2 | **Direction dropdown open** | Shows Past / This / Next with checkmark on current. |
-| K3 | **Unit dropdown open** | Shows day / week / month / year with checkmark on current. |
-| K4 | **Pill summary** | Shows: `Founded: this week` or `Founded: past month`. |
-| K5 | **Disabled** | Dropdowns non-interactive, dimmed. |
-
-### Operator Selector Integration
-
-The relative date mode is accessed as an operator choice in the date filter's operator dropdown:
+Relative dates appear as individual operators in the same dropdown as `between`, `before`,
+etc. When selected, no date inputs are shown (the operator alone is the full filter).
 
 ```
 ┌──────────────────┐
 │ between        ✓ │
+│ not between      │
 │ before           │
 │ after            │
 │ equals           │
-│ is relative      │  ← selects the relative mode
+│ not equals       │
+│ ─────────────── │
+│ today            │
+│ past 7 days      │
+│ past 30 days     │
+│ past 90 days     │
+│ this week        │
+│ this month       │
+│ this year        │
+│ ─────────────── │
 │ is empty         │
 │ is not empty     │
 └──────────────────┘
 ```
 
-When "is relative" is selected, the popover body switches from date inputs to the
-direction × unit dropdowns shown above.
+### States
+
+| # | State | Description |
+|---|-------|-------------|
+| K1 | **Relative operator selected** | No date inputs shown (operator is the full filter). Pill shows e.g., `Founded: past 7 days`. |
+| K2 | **Pill summary** | Shows operator label directly: `Founded: this week`, `Founded: today`, etc. |
+| K3 | **Disabled** | Operator dropdown non-interactive, dimmed. |
+
+### Resolution
+
+Relative dates are resolved server-side on each script rerun — the filter state stores only
+the operator name (e.g., `"past_7_days"`), not computed dates. "Past 7 days" always means
+the last 7 days from today. See tech spec "Relative Date Resolution" section for details.
 
 ---
 
@@ -787,7 +763,7 @@ to date/datetime ranges).
 
 | Component | States |
 |-----------|--------|
-| Container (A) | 12 |
+| Container (A) | 13 |
 | Pill (B) | 4 + content variants |
 | Column Picker (C) | 4 |
 | Multiselect Popover (D) | 9 |
@@ -797,11 +773,11 @@ to date/datetime ranges).
 | Date Popover (H) | 19 |
 | Operator Selector (I) | 4 |
 | Shared Patterns (J) | 10 |
-| Relative Date Popover (K) | 5 |
-| List/Tags Popover (L) | 9 |
+| Relative Date Operators (K) | 3 |
+| List/Tags Popover (L) | 9 (future) |
 | AND/OR Filter Groups (M) | 3 |
 | Time Range Popover (N) | 12 |
-| **Total unique states** | **~120** |
+| **Total unique states** | **~119** |
 
 ---
 
