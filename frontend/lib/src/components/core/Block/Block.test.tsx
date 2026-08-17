@@ -16,11 +16,12 @@
 
 import { ReactElement } from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { BlockNode } from "~lib/AppNode"
+import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -260,6 +261,9 @@ describe("FlexBoxContainer layout props", () => {
       { gapConfig: { gapSize: streamlit.GapSize.NONE } },
       "gap: 0;",
     ],
+    ["gap: 0 pixels", { gapConfig: { pixelGap: 0 } }, "gap: 0px;"],
+    ["gap: 20 pixels", { gapConfig: { pixelGap: 20 } }, "gap: 20px;"],
+    ["gap: 50 pixels", { gapConfig: { pixelGap: 50 } }, "gap: 50px;"],
   ])("should apply %s", (_desc, flexContainer, expectedStyle) => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer,
@@ -277,6 +281,87 @@ describe("FlexBoxContainer layout props", () => {
     })
     renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+
+  it("enables horizontal scrolling for a horizontal container with wrap=false", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: nowrap;")
+  })
+
+  it("adds focus-ring padding compensation for an unbordered horizontal scroll container", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: false,
+        border: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    // An unbordered scroll container gets vertical padding (cancelled by a
+    // negative margin) so child focus rings and shadows are not clipped by the
+    // browser-coerced cross-axis overflow.
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
+    expect(horizontalBlock).toHaveStyle("padding-block: 0.2rem;")
+    expect(horizontalBlock).toHaveStyle("margin-block: -0.2rem;")
+  })
+
+  it("omits focus-ring padding compensation for a bordered horizontal scroll container", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: false,
+        border: true,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    // A bordered container already has enough internal padding, so it must not
+    // add the extra focus-ring compensation margin.
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
+    expect(horizontalBlock).not.toHaveStyle("margin-block: -0.2rem;")
+  })
+
+  it("does not enable horizontal scrolling for a horizontal container with wrap=true", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: true,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).not.toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: wrap;")
+  })
+
+  it("does not enable horizontal scrolling for a vertical container with wrap=false", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        wrap: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    expect(screen.getByTestId("stVerticalBlock")).not.toHaveStyle(
+      "overflow-x: auto;"
+    )
   })
 })
 
@@ -326,7 +411,8 @@ describe("BlockNodeRenderer CSS key class placement", () => {
       [],
       new BlockProto({
         allowEmpty: true,
-        popover: { label: "test popover" },
+        // open: true so the popover body is mounted and stVerticalBlock is in the DOM
+        popover: { label: "test popover", open: true },
         id: "$$ID-abc123-my_popover",
       })
     )
@@ -338,5 +424,89 @@ describe("BlockNodeRenderer CSS key class placement", () => {
 
     const innerBlock = screen.getByTestId("stVerticalBlock")
     expect(innerBlock.className).not.toContain("st-key-")
+  })
+})
+
+describe("BlockNodeRenderer transparent blocks", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeBlockNodeComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("renders children directly with no wrapping container", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("transparent child")],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    expect(screen.getByText("transparent child")).toBeVisible()
+
+    expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stLayoutWrapper")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stExpander")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stColumn")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stHorizontalBlock")).not.toBeInTheDocument()
+  })
+
+  it("renders nothing when empty even with allowEmpty", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+
+    const { container } = renderWithContexts(makeBlockNodeComponent(node))
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it("column inside transparent wrapper renders directly in parent horizontal block", () => {
+    const column = makeColumn(0.5)
+    const transparentBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [column],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const horizontalBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [transparentBlock],
+      new BlockProto({
+        allowEmpty: true,
+        flexContainer: {
+          gapConfig: { gapSize: streamlit.GapSize.SMALL },
+          direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        },
+      })
+    )
+    const root = makeVerticalBlock([horizontalBlock])
+
+    renderWithContexts(makeVerticalBlockComponent(root))
+
+    const horizontalBlockEl = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlockEl).toHaveAttribute("direction", "row")
+
+    // Column is a direct descendant of the horizontal block — no transparent wrapper DOM.
+    const columnEl = within(horizontalBlockEl).getByTestId("stColumn")
+    expect(columnEl).toBeVisible()
+
+    // Transparent wrapper adds no extra stVerticalBlock.
+    expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(2)
   })
 })

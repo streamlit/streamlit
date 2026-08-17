@@ -34,7 +34,7 @@ from streamlit.elements.widgets.button import (
     IconPosition,
     _normalize_icon_position,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -96,7 +96,10 @@ class FormMixin:
 
         Forms have a few constraints:
 
-        - Every form must contain a ``st.form_submit_button``.
+        - Every form must contain at least one ``st.form_submit_button``.
+          Without a submit button, there is no way to submit the form, so the
+          values of the widgets inside it are never sent to your app and the
+          form is non-functional.
         - ``st.button`` and ``st.download_button`` cannot be added to a form.
         - Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
@@ -220,7 +223,7 @@ class FormMixin:
         form_id = key
 
         ctx = get_script_run_ctx()
-        if ctx is not None and not ctx.form_ids_this_run.check_and_add(form_id):
+        if ctx is not None and not ctx.shared.form_ids_this_run.check_and_add(form_id):
             raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
@@ -256,13 +259,16 @@ class FormMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         r"""Display a form submit button.
 
         When this button is clicked, all widget values inside the form will be
         sent from the user's browser to your Streamlit server in a batch.
 
-        Every form must have at least one ``st.form_submit_button``. An
+        Every form must have at least one ``st.form_submit_button``. It is the
+        only way to submit a form: without it, the widget values inside the
+        form are never sent to your app, so the form is non-functional. An
         ``st.form_submit_button`` cannot exist outside of a form.
 
         For more information about forms, check out our `docs
@@ -416,6 +422,24 @@ class FormMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
+
         Returns
         -------
         bool
@@ -428,14 +452,11 @@ class FormMixin:
 
         # Checks whether the entered button type is one of the allowed options
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.form_submit_button must be "primary", "secondary", or "tertiary". \n'
-                f'The argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
-        normalized_icon_position = _normalize_icon_position(
-            icon_position, "st.form_submit_button"
-        )
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self._form_submit_button(
             label=label,
@@ -451,6 +472,7 @@ class FormMixin:
             width=width,
             key=key,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     def _form_submit_button(
@@ -469,6 +491,7 @@ class FormMixin:
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = to_key(key) or f"FormSubmitter:{form_id}-{label}"
@@ -487,9 +510,10 @@ class FormMixin:
             ctx=ctx,
             width=width,
             shortcut=shortcut,
+            wrap=wrap,
         )
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

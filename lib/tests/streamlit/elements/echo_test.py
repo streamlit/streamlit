@@ -145,6 +145,41 @@ class MyClass:
         assert element.markdown.body == "Dual"
         self.clear_queue()
 
+    def test_decorated_function_as_first_statement(self):
+        """A decorated function/class as the first body statement must include
+        the @decorator lines in the echoed source (regression for #9252).
+
+        ast reports `FunctionDef.lineno` as the `def` line, so a naive
+        `body[0].lineno` skips the decorator lines above it.
+        """
+
+        def decorator(fn):
+            return fn
+
+        with st.echo():
+
+            @decorator
+            def function():
+                pass
+
+            @decorator
+            @decorator
+            class MultiDecorated:
+                pass
+
+        echo_str = """@decorator
+def function():
+    pass
+
+@decorator
+@decorator
+class MultiDecorated:
+    pass"""
+
+        element = self.get_delta_from_queue(0).new_element
+        assert echo_str == element.code.code_text
+        self.clear_queue()
+
     def test_root_level_echo(self):
         import tests.streamlit.echo_test_data.root_level_echo  # noqa: F401
 

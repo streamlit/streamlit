@@ -343,12 +343,12 @@ class SQLConnection(BaseConnection["Engine"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
-        _query = cache_data(
+        cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
         )(_query)
 
-        return _query(
+        return cached_query(
             self._connection_instance_id,
             sql,
             index_col=index_col,
@@ -401,7 +401,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
     @property
     def session(self) -> Session:
-        """Return a SQLAlchemy Session.
+        """A SQLAlchemy Session.
 
         Users of this connection should use the contextmanager pattern for writes,
         transactions, and anything more complex than simple read queries.

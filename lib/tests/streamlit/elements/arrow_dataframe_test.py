@@ -14,6 +14,7 @@
 
 """Arrow DataFrame tests."""
 
+import copy
 import enum
 import json
 from typing import Any
@@ -21,23 +22,32 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
 from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe.lazy_df_source import InMemoryDataframeSource
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     is_pandas_version_less_than,
 )
 from streamlit.elements.arrow import (
     DataframeSelectionSerde,
+    DataframeSelectionState,
+    DataframeState,
     _validate_selection_state,
     parse_selection_mode,
 )
-from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ButtonClickSerde,
+    ButtonColumnClickState,
+)
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
@@ -264,7 +274,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_dataframe_with_invalid_on_select(self):
         """Test that an exception is thrown if the on_select parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.dataframe(df, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -1174,6 +1184,99 @@ class TestValidateSelectionState:
         assert result["selection"]["rows"] == [0]
 
 
+class TestButtonClickSerde:
+    """Tests for ButtonClickSerde serialization and deserialization."""
+
+    def test_serialize_none_returns_empty_proto(self) -> None:
+        """Test that serializing None returns empty StringTriggerValue."""
+        serde = ButtonClickSerde()
+        result = serde.serialize(None)
+        assert result.data == ""
+
+    def test_serialize_click_state(self) -> None:
+        """Test that serializing click state returns StringTriggerValue with JSON data."""
+        serde = ButtonClickSerde()
+        result = serde.serialize({"row": 5, "label": "Click me"})
+        assert result.data == '{"row": 5, "label": "Click me"}'
+
+    @pytest.mark.parametrize(
+        ("ui_value", "expected"),
+        [
+            (None, None),
+            ("", None),
+            ('{"row": 3, "label": "Delete"}', {"row": 3, "label": "Delete"}),
+        ],
+        ids=["none", "empty_string", "valid_json"],
+    )
+    def test_deserialize(
+        self, ui_value: str | None, expected: dict[str, object] | None
+    ) -> None:
+        """Test deserialize returns None for empty input and parsed dict for valid JSON."""
+        serde = ButtonClickSerde()
+        assert serde.deserialize(ui_value) == expected
+
+    @pytest.mark.parametrize(
+        "ui_value",
+        [
+            "not json",  # Invalid JSON syntax
+            '"just a string"',  # Valid JSON but wrong shape (string not dict)
+            '{"row": "0", "label": "x"}',  # row is string instead of int
+            '{"row": true, "label": "x"}',  # row is bool (bool is subclass of int)
+            '{"row": 0}',  # Missing label
+            '{"label": "x"}',  # Missing row
+            "[]",  # Array instead of dict
+        ],
+        ids=[
+            "invalid_json",
+            "json_string_not_dict",
+            "row_string_not_int",
+            "row_bool_not_int",
+            "missing_label",
+            "missing_row",
+            "array_not_dict",
+        ],
+    )
+    def test_deserialize_malformed_payload_raises(self, ui_value: str) -> None:
+        """Test deserialize raises for malformed payloads with wrong shape or types."""
+        import json
+
+        from streamlit.errors import StreamlitAPIException
+
+        serde = ButtonClickSerde()
+        with pytest.raises((StreamlitAPIException, json.JSONDecodeError)):
+            serde.deserialize(ui_value)
+
+    def test_deserialize_negative_row_raises(self) -> None:
+        """Negative row indices fail the bounds check with a helpful message."""
+        serde = ButtonClickSerde()
+        with pytest.raises(StreamlitAPIException, match="Row must be >= 0"):
+            serde.deserialize('{"row": -1, "label": "x"}')
+
+    def test_roundtrip_preserves_state(self) -> None:
+        """Test that serialization roundtrip preserves the click state."""
+        serde = ButtonClickSerde()
+        original = {"row": 0, "label": ":material/edit: Edit"}
+        serialized = serde.serialize(original)
+        deserialized = serde.deserialize(serialized.data)
+        assert deserialized == original
+
+    def test_deserialize_returns_read_only_attribute_dictionary(self) -> None:
+        """Test that the click value supports attribute access and is read-only."""
+        serde = ButtonClickSerde()
+        result = serde.deserialize('{"row": 2, "label": "Delete"}')
+
+        # Attribute access must work in addition to key access.
+        assert result is not None
+        assert isinstance(result, ButtonColumnClickState)
+        assert result.row == 2
+        assert result.label == "Delete"
+        assert result["row"] == 2
+
+        # The dict is read-only; mutating it must raise.
+        with pytest.raises(TypeError):
+            result["row"] = 99  # type: ignore[index]
+
+
 _EMPTY_SELECTION = {"rows": [], "columns": [], "cells": []}
 
 
@@ -1218,14 +1321,33 @@ def test_dataframe_selection_serde_deserialize_rows(
 
 
 def test_dataframe_selection_serde_deserialize_returns_attribute_dictionary() -> None:
-    """``deserialize`` wraps the result in a read-only ``ReadOnlyAttributeDictionary``."""
+    """``deserialize`` returns typed, read-only state classes."""
     result = DataframeSelectionSerde().deserialize(None)
 
     # Attribute access must work for users (regression: #14454).
-    assert result.selection.rows == []  # type: ignore[attr-defined]
+    assert isinstance(result, DataframeState)
+    assert isinstance(result.selection, DataframeSelectionState)
+    assert result.selection.rows == []
+    assert result["selection"]["rows"] == []
+    # Nested selection must be a stable stored instance (not a per-access copy).
+    assert result["selection"] is result["selection"]
+    assert result.selection is result["selection"]
     # The dict is read-only; mutating the top-level mapping must raise.
     with pytest.raises(TypeError):
         result["selection"] = {"rows": [99], "columns": [], "cells": []}  # type: ignore[index]
+
+
+def test_dataframe_selection_serde_deserialize_survives_deepcopy() -> None:
+    """A deep-copied state keeps its typed classes.
+
+    Session State deep-copies the initial widget value, so a copy that collapsed
+    to the base ``ReadOnlyAttributeDictionary`` would make ``st.session_state[key]``
+    fail ``isinstance(..., DataframeState)`` checks (regression).
+    """
+    copied = copy.deepcopy(DataframeSelectionSerde().deserialize(None))
+
+    assert isinstance(copied, DataframeState)
+    assert isinstance(copied.selection, DataframeSelectionState)
 
 
 def test_dataframe_selection_serde_returns_empty_when_no_default() -> None:
@@ -1267,8 +1389,8 @@ def test_dataframe_selection_serde_serialize_roundtrip() -> None:
 
 
 def test_parse_selection_mode_with_invalid_mode_raises() -> None:
-    """``parse_selection_mode`` raises ``StreamlitAPIException`` for unknown modes."""
-    with pytest.raises(StreamlitAPIException, match="Invalid selection mode"):
+    """``parse_selection_mode`` raises ``StreamlitValueError`` for unknown modes."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `selection_mode` value"):
         parse_selection_mode("not-a-real-mode")  # type: ignore[arg-type]
 
 
@@ -1313,17 +1435,24 @@ def test_programmatic_selection_returns_attribute_dictionary() -> None:
         )
         # Attribute access would raise AttributeError if result is a plain dict.
         st.text(f"rows: {result.selection.rows}")
+        # Nested selection must stay identity-stable after programmatic set.
+        st.session_state["_selection_stable"] = (
+            result["selection"] is result.selection
+            and result["selection"] is result["selection"]
+        )
 
     at = AppTest.from_function(script).run()
     assert at.text[0].value == "rows: []"
 
     at = at.run()
     assert at.text[0].value == "rows: [1]"
+    assert at.session_state["_selection_stable"] is True
 
     # Third run without modifying session state: selection should persist
     # as AttributeDictionary (verifies the fix applies across subsequent reruns).
     at = at.run()
     assert at.text[0].value == "rows: [1]"
+    assert at.session_state["_selection_stable"] is True
 
 
 def test_selection_state_is_read_only() -> None:
@@ -1356,3 +1485,153 @@ def test_selection_state_is_read_only() -> None:
     assert result.selection.rows == []
     assert result.selection.columns == []
     assert result.selection.cells == []
+
+
+class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
+    """Tests for lazy delivery mode of st.dataframe."""
+
+    def _last_dataframe_proto(self) -> DataframeProto:
+        return self.get_delta_from_queue().new_element.dataframe
+
+    def test_auto_lazy_large_pandas_dataframe(self):
+        """Large in-memory pandas dataframes auto-switch to lazy for lazy=None."""
+        df = pd.DataFrame({"a": np.arange(150_001)})
+        st.dataframe(df)
+
+        proto = self._last_dataframe_proto()
+        assert proto.HasField("lazy_data")
+        assert proto.lazy_data.row_count == 150_001
+        assert proto.lazy_data.sortable is True
+        assert (
+            proto.lazy_data.access_mode == LazyDataframeProto.AccessMode.RANDOM_ACCESS
+        )
+        assert proto.lazy_data.source_id != ""
+        assert proto.lazy_data.page_size > 0
+        # The eager arrow_data field stays empty in lazy mode.
+        assert proto.arrow_data.data == b""
+        # The initial chunk carries the schema + first rows.
+        assert len(proto.lazy_data.initial_chunk.data) > 0
+
+    def test_small_pandas_dataframe_stays_eager(self):
+        """Small in-memory dataframes are not auto-lazy for lazy=None."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        st.dataframe(df)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_false_forces_eager_for_large_dataframe(self):
+        """lazy=False keeps eager rendering even for a large dataframe."""
+        df = pd.DataFrame({"a": np.arange(150_001)})
+        st.dataframe(df, lazy=False)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_true_small_dataframe_stays_eager(self):
+        """lazy=True keeps eager rendering for small inputs (<= 1000 rows)."""
+        df = pd.DataFrame({"a": np.arange(500)})
+        st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_true_medium_dataframe_is_lazy(self):
+        """lazy=True uses lazy delivery for inputs above the small threshold."""
+        df = pd.DataFrame({"a": np.arange(5_000)})
+        st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert proto.HasField("lazy_data")
+        assert proto.lazy_data.row_count == 5_000
+
+    def test_lazy_true_small_generator_is_not_consumed_twice(self):
+        """Counting a one-shot input for lazy mode preserves its eager rows."""
+        st.dataframe(({"a": value} for value in range(3)), lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)[
+            "a"
+        ].tolist() == [0, 1, 2]
+
+    def test_lazy_true_styler_raises(self):
+        """lazy=True with a pandas Styler raises a StreamlitAPIException."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(df.style.highlight_max(axis=0), lazy=True)
+
+    def test_lazy_true_multiindex_columns_raises(self):
+        """lazy=True rejects a dataframe with MultiIndex columns."""
+        columns = pd.MultiIndex.from_tuples([("g", "a"), ("g", "b")])
+        df = pd.DataFrame(np.arange(10_000).reshape(-1, 2), columns=columns)
+        with pytest.raises(StreamlitAPIException, match="multi-level"):
+            st.dataframe(df, lazy=True)
+
+    def test_lazy_true_with_on_select_raises(self):
+        """lazy=True together with on_select raises a StreamlitAPIException."""
+        df = pd.DataFrame({"a": np.arange(5_000)})
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(df, lazy=True, on_select="rerun")
+
+    def test_lazy_none_with_on_select_stays_eager(self):
+        """lazy=None falls back to eager when on_select is set, even if large."""
+        df = pd.DataFrame({"a": np.arange(150_001)})
+        st.dataframe(df, lazy=None, on_select="rerun", key="lazy_sel")
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert proto.arrow_data.data != b""
+
+    def test_lazy_dataframe_registers_source(self):
+        """Rendering a lazy dataframe registers a source in the manager."""
+        from streamlit.runtime import get_instance
+
+        df = pd.DataFrame({"a": np.arange(5_000)})
+        st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        mgr = get_instance().dataframe_source_mgr
+        # The registered source can serve a chunk for the rendered source id.
+        arrow_bytes, offset = mgr.load_chunk(
+            mgr._sources[proto.lazy_data.source_id].session_id,
+            proto.lazy_data.source_id,
+            0,
+            10,
+            None,
+        )
+        assert offset == 0
+        assert len(arrow_bytes) > 0
+
+    def test_lazy_dataframe_load_failure_does_not_register_source(self):
+        """A failed initial load leaves no orphaned manager registration."""
+        from streamlit.runtime import get_instance
+
+        source = InMemoryDataframeSource(pa.table({"a": list(range(5_000))}))
+        mgr = get_instance().dataframe_source_mgr
+        source_count = mgr.get_source_count()
+
+        with (
+            patch(
+                "streamlit.elements.arrow.dataframe_source.resolve_lazy_source",
+                return_value=source,
+            ),
+            patch.object(source, "load_rows", side_effect=RuntimeError("boom")),
+            pytest.raises(RuntimeError, match="boom"),
+        ):
+            st.dataframe(pd.DataFrame({"a": [1]}), lazy=True)
+
+        assert mgr.get_source_count() == source_count
+
+    def test_lazy_column_config_applied(self):
+        """Column configuration is applied to lazy dataframes."""
+        df = pd.DataFrame({"a": np.arange(5_000), "b": np.arange(5_000)})
+        st.dataframe(df, lazy=True, column_order=["b", "a"], hide_index=True)
+
+        proto = self._last_dataframe_proto()
+        assert proto.HasField("lazy_data")
+        assert list(proto.column_order) == ["b", "a"]
+        assert proto.columns != ""

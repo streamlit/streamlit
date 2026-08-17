@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { act, createEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
 
-import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import * as UseFloatingOverlay from "~lib/hooks/useFloatingOverlay"
 import { render } from "~lib/test_util"
-import * as Utils from "~lib/theme/utils"
 import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Selectbox, { Props } from "./Selectbox"
+import Selectbox, { getInsertedText, Props } from "./Selectbox"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -47,6 +41,27 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   ...props,
 })
 
+/** Click the Open button to reveal the ComboBox dropdown. */
+async function openDropdown(
+  user: ReturnType<typeof userEvent.setup>
+): Promise<void> {
+  await user.click(screen.getByRole("button", { name: "Open" }))
+}
+
+/** Place the caret after the committed label so the next keystroke appends instead of replacing. */
+function moveCaretToEnd(input: HTMLElement): void {
+  if (!(input instanceof HTMLInputElement)) {
+    throw new TypeError("Expected the combobox to be an input element")
+  }
+  input.setSelectionRange(input.value.length, input.value.length)
+}
+
+/** Force a non-zero viewport so the virtualizer renders a window of rows. */
+function mockVirtualizerViewport(): void {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320)
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300)
+}
+
 describe("Selectbox widget", () => {
   let props: Props
 
@@ -55,13 +70,12 @@ describe("Selectbox widget", () => {
   })
 
   beforeEach(() => {
-    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
     props = getProps()
   })
 
   it("renders without crashing", () => {
     render(<Selectbox {...props} />)
-    expect(screen.getByRole("combobox")).toBeInTheDocument()
+    expect(screen.getByRole("combobox")).toBeVisible()
   })
 
   it("has correct className", () => {
@@ -95,40 +109,65 @@ describe("Selectbox widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
-  // Placeholder tests
   it("pass placeholder prop correctly", () => {
     props = getProps({
       value: undefined,
       placeholder: "Please select",
     })
     render(<Selectbox {...props} />)
-    expect(screen.getByText("Please select")).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Please select")).toBeVisible()
   })
 
   it("integrates with placeholder utility - disabled state when no options", () => {
     props = getProps({
       options: [],
       value: undefined,
-      placeholder: "", // Empty string triggers default logic
+      placeholder: "",
     })
     render(<Selectbox {...props} />)
 
-    // Verifies integration with getSelectPlaceholder utility works
-    expect(screen.getByText("No options to select")).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("No options to select")).toBeVisible()
     expect(screen.getByRole("combobox")).toBeDisabled()
   })
 
   it("renders options", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
-    const selectbox = screen.getByRole("combobox")
-    await user.click(selectbox)
+    await openDropdown(user)
     const options = screen.getAllByRole("option")
 
     expect(options).toHaveLength(props.options.length)
     options.forEach((option, index) => {
       expect(option).toHaveTextContent(props.options[index])
     })
+  })
+
+  it("virtualizes large option lists", async () => {
+    mockVirtualizerViewport()
+    const user = userEvent.setup()
+    const largeOptions = Array.from(
+      { length: 16_000 },
+      (_, index) => `Option ${index}`
+    )
+    props = getProps({
+      options: largeOptions,
+      value: undefined,
+    })
+    render(<Selectbox {...props} />)
+
+    await openDropdown(user)
+
+    // Only a small window of the 16k options is rendered when virtualized:
+    // an upper bound guards against rendering the full list, and asserting a
+    // mid-window option is present guards against under-rendering (e.g. a
+    // single row) that an upper bound alone would not catch.
+    const renderedOptions = await screen.findAllByRole("option")
+    expect(renderedOptions.length).toBeLessThan(100)
+    expect(screen.getByRole("option", { name: "Option 0" })).toBeVisible()
+    expect(screen.getByRole("option", { name: "Option 5" })).toBeVisible()
+    expect(
+      screen.queryByRole("option", { name: "Option 15999" })
+    ).not.toBeInTheDocument()
   })
 
   it("could be disabled", () => {
@@ -139,34 +178,108 @@ describe("Selectbox widget", () => {
     expect(screen.getByRole("combobox")).toBeDisabled()
   })
 
+  it("does not open the dropdown when disabled and clicked", async () => {
+    const user = userEvent.setup()
+    props = getProps({ disabled: true })
+    render(<Selectbox {...props} />)
+    await user.click(screen.getByRole("combobox"))
+    expect(screen.queryByRole("option")).not.toBeInTheDocument()
+  })
+
+  it("does not open the dropdown when disabled and ArrowDown is pressed", async () => {
+    const user = userEvent.setup()
+    props = getProps({ disabled: true })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.keyboard("{ArrowDown}")
+    expect(screen.queryByRole("option")).not.toBeInTheDocument()
+  })
+
+  it("does not open the dropdown when no options are available", async () => {
+    const user = userEvent.setup()
+    props = getProps({ options: [], value: undefined, placeholder: "" })
+    render(<Selectbox {...props} />)
+    await user.click(screen.getByRole("combobox"))
+    expect(screen.queryByRole("option")).not.toBeInTheDocument()
+  })
+
   it("is able to select an option", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
-    const selectbox = screen.getByRole("combobox")
-    // Open the dropdown
-    await user.click(selectbox)
+    await openDropdown(user)
     const options = screen.getAllByRole("option")
     await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
-    expect(
-      within(screen.getByTestId("stSelectbox")).getByText(props.options[2])
-    ).toBeVisible()
+    expect(screen.getByDisplayValue("c")).toBeVisible()
+  })
+
+  it("selects an option via arrow-nav + Enter (racHandledEnterRef path)", async () => {
+    // Exercises the most complex keyboard path: ArrowDown navigates to "b"
+    // which RAC commits via onSelectionChange (setting racHandledEnterRef),
+    // then Enter fires our bubble-phase handler which must NOT double-commit.
+    const user = userEvent.setup()
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // With initial value "a" (index 0), ArrowDown navigates to "b" (index 1).
+    // RAC fires onSelectionChange("1") which commits "b" and sets racHandledEnterRef.
+    // Press Enter immediately after — our handler sees racHandledEnterRef=true
+    // and skips, so onChange is called exactly once total (not twice).
+    await user.keyboard("{ArrowDown}{Enter}")
+
+    await waitFor(() => {
+      expect(props.onChange).toHaveBeenCalledTimes(1)
+      expect(props.onChange).toHaveBeenCalledWith("b")
+    })
+    expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
   it("doesn't filter options based on index", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
+    const selectbox = screen.getByRole("combobox")
+    await openDropdown(user)
+    await user.clear(selectbox)
+    await user.type(selectbox, "1")
+    // None of ["a","b","c"] match "1" by label — no data options visible.
+    // The empty-state wrapper has role="option" so we check that none of the
+    // actual data options are present, and that the "No results" message shows.
+    expect(screen.queryByRole("option", { name: "a" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "b" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "c" })).not.toBeInTheDocument()
+    expect(screen.getByText("No results")).toBeVisible()
+  })
 
-    await user.type(screen.getByRole("combobox"), "1")
-    expect(screen.getByText("No results")).toBeInTheDocument()
+  it("renders a styled empty state when no options match", async () => {
+    const user = userEvent.setup()
+    render(<Selectbox {...props} />)
+    const selectbox = screen.getByRole("combobox")
+    await openDropdown(user)
+    await user.clear(selectbox)
+    await user.type(selectbox, "1")
+    // The empty state should be centered and sized like the other dropdown
+    // empty states. The literal values below map to the theme tokens used by
+    // StyledEmptyState: height => sizes.emptyDropdownHeight (5.625rem),
+    // padding => spacing.sm (0.5rem), fontSize => fontSizes.sm (0.875rem).
+    expect(screen.getByText("No results")).toHaveStyle({
+      alignItems: "center",
+      justifyContent: "center",
+      height: "5.625rem",
+      padding: "0.5rem",
+      fontSize: "0.875rem",
+    })
   })
 
   it("filters options based on label with case insensitive", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
     const selectbox = screen.getByRole("combobox")
+    await openDropdown(user)
 
+    await user.clear(selectbox)
     await user.type(selectbox, "b")
     let options = screen.getAllByRole("option")
     expect(options).toHaveLength(1)
@@ -179,21 +292,81 @@ describe("Selectbox widget", () => {
     expect(options[0]).toHaveTextContent("b")
   })
 
+  it("filters options with fuzzy (non-contiguous) matches", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/16003
+    // Without a pass-through defaultFilter, RAC's built-in "contains" filter
+    // would intersect Streamlit's fuzzy result and drop non-contiguous matches
+    // (e.g. "ape" matches "Grape" contiguously but "Apple" only fuzzily).
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.keyboard("ape")
+
+    // Both "Grape" (contains "ape") and "Apple" (fuzzy: A-p-(pl)-e) must match.
+    // Sorted by fuzzy score, "Grape" ranks first because "ape" is contiguous.
+    await waitFor(() => {
+      const options = screen.queryAllByRole("option")
+      expect(options).toHaveLength(2)
+      expect(options[0]).toHaveTextContent("Grape")
+      expect(options[1]).toHaveTextContent("Apple")
+    })
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("No results")).not.toBeInTheDocument()
+  })
+
+  it("filters options with fuzzy match when no contiguous match exists", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/16003
+    // Queries with no contiguous substring in any option would previously be
+    // filtered to empty by RAC's built-in "contains" filter, showing "No results"
+    // even when Streamlit's fuzzy matcher had a valid match.
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // "aple" is not a contiguous substring of "Apple" but is a fuzzy match
+    // (A-p(-p)-l-e). Only "Apple" should be shown.
+    await user.keyboard("aple")
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Apple" })).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("option", { name: "Grape" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("No results")).not.toBeInTheDocument()
+  })
+
   it("predictably produces case sensitive matches", async () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["aa", "Aa", "aA"],
+      value: undefined,
     })
     render(<Selectbox {...currProps} />)
     const selectboxInput = screen.getByRole("combobox")
 
     await user.type(selectboxInput, "aa")
 
-    const options = screen.queryAllByRole("option")
-    expect(options).toHaveLength(3)
-    expect(options[0]).toHaveTextContent("aa")
-    expect(options[1]).toHaveTextContent("Aa")
-    expect(options[2]).toHaveTextContent("aA")
+    await waitFor(() => {
+      const options = screen.queryAllByRole("option")
+      expect(options).toHaveLength(3)
+      expect(options[0]).toHaveTextContent("aa")
+      expect(options[1]).toHaveTextContent("Aa")
+      expect(options[2]).toHaveTextContent("aA")
+    })
   })
 
   it("filters options using contains mode", async () => {
@@ -208,13 +381,15 @@ describe("Selectbox widget", () => {
 
     await user.type(selectboxInput, "AP")
 
-    const options = screen.queryAllByRole("option")
-    expect(options).toHaveLength(2)
-    expect(options[0]).toHaveTextContent("apple")
-    expect(options[1]).toHaveTextContent("grape")
-    expect(
-      screen.queryByRole("option", { name: "banana" })
-    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      const options = screen.queryAllByRole("option")
+      expect(options).toHaveLength(2)
+      expect(options[0]).toHaveTextContent("apple")
+      expect(options[1]).toHaveTextContent("grape")
+      expect(
+        screen.queryByRole("option", { name: "banana" })
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("filters options using prefix mode", async () => {
@@ -229,16 +404,18 @@ describe("Selectbox widget", () => {
 
     await user.type(selectboxInput, "ap")
 
-    const options = screen.queryAllByRole("option")
-    expect(options).toHaveLength(2)
-    expect(options[0]).toHaveTextContent("apple")
-    expect(options[1]).toHaveTextContent("apricot")
-    expect(
-      screen.queryByRole("option", { name: "grape" })
-    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      const options = screen.queryAllByRole("option")
+      expect(options).toHaveLength(2)
+      expect(options[0]).toHaveTextContent("apple")
+      expect(options[1]).toHaveTextContent("apricot")
+      expect(
+        screen.queryByRole("option", { name: "grape" })
+      ).not.toBeInTheDocument()
+    })
   })
 
-  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+  it("keeps all options visible and blocks typing when filterMode is none", async () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["yes", "no", "maybe"],
@@ -248,23 +425,250 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...currProps} />)
     const selectboxInput = screen.getByRole("combobox")
 
-    expect(selectboxInput).toHaveAttribute("readonly")
+    // filter_mode=None uses inputMode="none" (not readOnly) to suppress the
+    // mobile software keyboard. readOnly would break both focus-on-click and
+    // React Aria's keyboard navigation, so the input must stay editable-but-focusable.
+    expect(selectboxInput).toHaveAttribute("inputmode", "none")
+    expect(selectboxInput).not.toHaveAttribute("readonly")
+
+    // Clicking focuses the input and opens the dropdown with the full list.
+    await user.click(selectboxInput)
+    await waitFor(() => {
+      expect(screen.queryAllByRole("option")).toHaveLength(3)
+    })
+
+    // Typing is blocked, so no visible text is entered and the list stays
+    // unfiltered. Using keyboard() (not type()) avoids an implicit re-click,
+    // proving the earlier click is what focused the input.
+    await user.keyboard("no")
+    expect(selectboxInput).toHaveValue("")
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
+
+    // Arrow/Enter navigation works straight after the click with no manual
+    // focus() — this catches the click-then-keyboard focus regression. Landing
+    // on "no" (the second option) rules out an auto-select-first fallback.
+    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}")
+    expect(currProps.onChange).toHaveBeenCalledWith("no")
+  })
+
+  it("blocks paste and IME composition input when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
 
     await user.click(selectboxInput)
+    await waitFor(() => {
+      expect(screen.queryAllByRole("option")).toHaveLength(3)
+    })
+
+    // Pasting must not enter text or filter the list: onPaste calls
+    // preventDefault, so the input value never changes and the full list stays.
+    await user.paste("maybe")
+    expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
-    await user.type(selectboxInput, "no")
+    // IME composition: onCompositionStart calls preventDefault as a best-effort
+    // block. Real browsers may ignore preventDefault on compositionstart, so we
+    // only assert that our handler requests cancellation (not that jsdom reports
+    // the event as canceled, which would be a jsdom-only artifact). The value and
+    // option list must stay unchanged regardless.
+    const compositionEvent = createEvent.compositionStart(selectboxInput, {
+      data: "n",
+    })
+    const preventDefaultSpy = vi.spyOn(compositionEvent, "preventDefault")
+    act(() => {
+      selectboxInput.dispatchEvent(compositionEvent)
+    })
+    expect(preventDefaultSpy).toHaveBeenCalled()
+    expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
+  })
+
+  it("replaces the committed label when typing after focus (type-to-search)", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/15985
+    // With a value already committed, focusing and typing must start a fresh
+    // search (replace the label) instead of appending behind it.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("Banana")
+
+    await user.click(input)
+    await user.keyboard("Ch")
+
+    // The committed "Banana" must be replaced, not appended to ("BananaCh").
+    expect(input).toHaveValue("Ch")
+    expect(screen.getByRole("option", { name: "Cherry" })).toBeVisible()
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("replaces the committed label when the browser appends the keystroke", async () => {
+    // Some browsers (e.g. Safari/WebKit) place the caret at the end of the
+    // committed label on click-focus, appending the first keystroke to the
+    // whole label. The change handler must still strip the label and keep only
+    // the typed character(s), regardless of caret behavior.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // Simulate the browser appending "c" behind the committed "Banana".
+    moveCaretToEnd(input)
+    await user.keyboard("c")
+
+    expect(input).toHaveValue("c")
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Cherry" })).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("filters when the typed query equals the committed label", async () => {
+    // Edge case of the type-to-search diff: committed "a", the user types "a"
+    // so the browser reports "aa" and the diff yields "a" (== committed). This
+    // is still a real edit and must activate filtering / open the dropdown,
+    // not be mistaken for RAC's unchanged-label revert.
+    const user = userEvent.setup()
+    props = getProps({ options: ["a", "ab", "b"], value: "a" })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // Simulate the browser appending "a" behind the committed "a".
+    moveCaretToEnd(input)
+    await user.keyboard("a")
+
+    expect(input).toHaveValue("a")
+    // Filtering is active: "a"/"ab" match the query, "b" is filtered out.
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "ab" })).toBeVisible()
+    })
+    expect(screen.queryByRole("option", { name: "b" })).not.toBeInTheDocument()
+  })
+
+  it("starts a fresh search over a committed value when acceptNewOptions is true", async () => {
+    // The fresh-search strip also runs with acceptNewOptions, so typing over a
+    // committed value yields the typed text ("foo" + "bar" -> "bar", offering
+    // "Add: bar") instead of the 1.59.x append bug ("foobar"). Other
+    // acceptNewOptions tests use value: undefined, so none cover this path.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["foo", "other"],
+      value: "foo",
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("foo")
+
+    await user.click(input)
+    // Simulate the browser appending the keystrokes behind the committed label.
+    moveCaretToEnd(input)
+    await user.keyboard("bar")
+
+    expect(input).toHaveValue("bar")
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: /Add: bar/i })).toBeVisible()
+    })
+  })
+
+  it("clears the typed query on Escape and restores the committed label", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/16004
+    // With a value already committed, typing a query then pressing Escape
+    // must drop the typed query and restore the committed label — matching
+    // pre-1.59 (BaseWeb) behavior. The committed value must not change.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("Banana")
+
+    await user.click(input)
+    await user.keyboard("Che")
+    // The type-to-search behavior replaces the committed label with the query.
+    expect(input).toHaveValue("Che")
+
+    await user.keyboard("{Escape}")
+
+    // The typed query is discarded; the committed label is restored.
+    expect(input).toHaveValue("Banana")
+    // No commit was made (Escape only discards the query).
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("clears the typed query on Escape when no value is committed", async () => {
+    // Same as above, but with no initial value — Escape must empty the input
+    // (restoring the empty "committed" state) rather than leaving the query.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: null,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("")
+
+    await user.click(input)
+    await user.keyboard("App")
+    expect(input).toHaveValue("App")
+
+    await user.keyboard("{Escape}")
+
+    expect(input).toHaveValue("")
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("Escape without a typed query still clears a clearable committed value", async () => {
+    // Escape has two contracts on a clearable selectbox:
+    //  - while typing: discard the query, keep the committed value (see above)
+    //  - while NOT typing: clear the committed value (pre-existing behavior,
+    //    covered by the e2e test test_empty_selectbox_behaves_correctly)
+    // This test guards the second contract so the #16004 fix does not
+    // regress it.
+    const user = userEvent.setup()
+    props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+      clearable: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    // No typing — press Escape immediately.
+    await user.keyboard("{Escape}")
+
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(props.onChange).toHaveBeenCalledWith(null)
   })
 
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
-    // Original value passed is 0
-    expect(screen.getByText(props.options[0])).toBeInTheDocument()
+    expect(screen.getByDisplayValue(props.options[0])).toBeVisible()
 
     props = getProps({ value: "b" })
     rerender(<Selectbox {...props} />)
-    expect(screen.getByText(props.options[1])).toBeInTheDocument()
+    expect(screen.getByDisplayValue(props.options[1])).toBeVisible()
   })
 
   it("preserves value after prop change and blur without selection", async () => {
@@ -274,79 +678,76 @@ describe("Selectbox widget", () => {
     const user = userEvent.setup()
     const { rerender } = render(<Selectbox {...props} />)
 
-    // Verify initial value is "a"
-    expect(screen.getByText(props.options[0])).toBeInTheDocument()
+    expect(screen.getByDisplayValue(props.options[0])).toBeVisible()
 
-    // Simulate session state changing the value to "b"
     props = getProps({ value: "b" })
     rerender(<Selectbox {...props} />)
-    expect(screen.getByText(props.options[1])).toBeInTheDocument()
+    expect(screen.getByDisplayValue(props.options[1])).toBeVisible()
 
-    // Open the dropdown
-    const selectbox = screen.getByRole("combobox")
-    await user.click(selectbox)
+    await openDropdown(user)
 
     // Close by clicking outside (blur) without making a selection
     await user.click(document.body)
 
-    // The value should still be "b" (not reverted to "a")
-    expect(screen.getByTestId("stSelectbox")).toHaveTextContent("b")
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("b")).toBeVisible()
+    })
     expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("committedValueRef blur regression: selecting then tabbing shows selected value", async () => {
+    // Validates that the committedValueRef pattern prevents the input from
+    // reverting to the stale propValue when onBlur fires after onSelectionChange.
+    const user = userEvent.setup()
+    render(<Selectbox {...props} />)
+
+    await openDropdown(user)
+    const options = screen.getAllByRole("option")
+    await user.click(options[2])
+
+    // Selection is committed synchronously — input shows "c" immediately
+    expect(screen.getByDisplayValue("c")).toBeVisible()
+
+    // Click outside to trigger blur — committedValueRef prevents revert to "a"
+    await user.click(document.body)
+
+    expect(screen.getByDisplayValue("c")).toBeVisible()
   })
 
   it("does not commit changes when clicking outside of the selectbox", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
     const selectbox = screen.getByRole("combobox")
+    await openDropdown(user)
+    await user.clear(selectbox)
     await user.type(selectbox, "b")
 
-    // Click outside of the selectbox
     await user.click(document.body)
 
-    // Check that clicking outside of the selectbox does not commit the change and the default is kept
-    // Use waitFor to ensure all async state updates from the Popover are processed
     await waitFor(() => {
-      expect(props.onChange).toHaveBeenCalledTimes(0)
-      expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
-        props.options[0]
-      )
+      expect(props.onChange).not.toHaveBeenCalled()
+      expect(screen.getByDisplayValue(props.options[0])).toBeVisible()
     })
   })
 
   it("does not call onChange when the user deletes characters", async () => {
+    const user = userEvent.setup()
     render(<Selectbox {...props} />)
-    const selectbox = screen.getByTestId("stSelectbox")
-    expect(
-      within(selectbox).getByText(props.options[0], { exact: true })
-    ).toBeInTheDocument()
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("a")
 
-    const selectboxInput = screen.getByRole("combobox")
+    await user.click(input)
+    await user.keyboard("{Backspace}")
 
-    // Simulate deleting a character
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent.keyboard("{Backspace}") causes a timeout with this BaseWeb combobox
-      fireEvent.keyDown(selectboxInput, {
-        key: "Backspace",
-        keyCode: 8,
-        code: "Backspace",
-      })
-    })
-
-    // Wait for async Popover state updates to complete
-    await waitFor(() => {
-      // ensure that onChange was not called for the remove
-      expect(props.onChange).toHaveBeenCalledTimes(0)
-      // ensure that the input value was updated
-      expect(
-        within(selectbox).queryAllByText(props.options[0], { exact: true })
-      ).toHaveLength(0)
-    })
+    expect(props.onChange).not.toHaveBeenCalled()
+    expect(input).not.toHaveValue("a")
   })
 
-  it("allows new options when acceptNewOptions is true", async () => {
+  it("allows new options when acceptNewOptions is true via Enter", async () => {
     const user = userEvent.setup()
     props = getProps({
       acceptNewOptions: true,
+      value: undefined,
     })
     render(<Selectbox {...props} />)
     const selectboxInput = screen.getByRole("combobox")
@@ -354,8 +755,34 @@ describe("Selectbox widget", () => {
     await user.keyboard("{enter}")
     expect(props.onChange).toHaveBeenCalledTimes(1)
     expect(props.onChange).toHaveBeenCalledWith("hello world!")
-    const selectbox = screen.getByTestId("stSelectbox")
-    expect(within(selectbox).getByText("hello world!")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("hello world!")).toBeVisible()
+  })
+
+  it("allows new options when acceptNewOptions is true via clicking Add option", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      acceptNewOptions: true,
+      value: undefined,
+    })
+    render(<Selectbox {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    // user.click focuses the input AND opens the dropdown (via RAC's press handler).
+    // keyboard enters text without another click or blur/focus cycle.
+    await user.click(selectboxInput)
+    await user.keyboard("hello world!")
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("option", { name: /Add: hello world!/i })
+      ).toBeVisible()
+    })
+    await user.click(
+      screen.getByRole("option", { name: /Add: hello world!/i })
+    )
+
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(props.onChange).toHaveBeenCalledWith("hello world!")
   })
 
   describe("on mobile", () => {
@@ -365,7 +792,11 @@ describe("Selectbox widget", () => {
 
     it("allows typing when acceptNewOptions is true even with few options", async () => {
       const user = userEvent.setup()
-      props = getProps({ acceptNewOptions: true, options: ["a", "b", "c"] })
+      props = getProps({
+        acceptNewOptions: true,
+        options: ["a", "b", "c"],
+        value: undefined,
+      })
       render(<Selectbox {...props} />)
       const selectboxInput = screen.getByRole("combobox")
       await user.type(selectboxInput, "mobile new option")
@@ -380,8 +811,26 @@ describe("Selectbox widget", () => {
       const input = screen.getByRole("combobox")
       expect(input).toHaveAttribute("readonly")
       await user.type(input, "should not type")
-      // No creatable option is shown, since typing is blocked
       expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
+
+    it("uses inputMode=none instead of readonly for filterMode none", () => {
+      // On mobile, a small non-creatable selectbox normally gets `readonly` to
+      // suppress the software keyboard (see the test above). filter_mode=None
+      // must opt out of that via the `!isFilterNone` term and instead rely on
+      // inputMode="none", so the input stays focusable for React Aria keyboard
+      // navigation while the mobile keyboard is still suppressed. Desktop tests
+      // run with isMobile() false, so this is the only place the mobile-gated
+      // `!isFilterNone` term is exercised.
+      props = getProps({
+        acceptNewOptions: false,
+        options: ["yes", "no", "maybe"],
+        filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+      })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("inputmode", "none")
+      expect(input).not.toHaveAttribute("readonly")
     })
   })
 
@@ -389,17 +838,17 @@ describe("Selectbox widget", () => {
     const user = userEvent.setup()
     props = getProps({
       acceptNewOptions: false,
+      value: undefined,
     })
     render(<Selectbox {...props} />)
     const selectboxInput = screen.getByRole("combobox")
     await user.type(selectboxInput, "hello world!")
     await user.keyboard("{enter}")
-    expect(props.onChange).toHaveBeenCalledTimes(0)
+    expect(props.onChange).not.toHaveBeenCalled()
   })
 })
 
 describe("Selectbox widget with optional props", () => {
-  // This goes against the previous solution to bug #3220, but that's on purpose.
   it("renders no label element if no text provided", () => {
     const props = getProps({ label: undefined })
     render(<Selectbox {...props} />)
@@ -411,7 +860,7 @@ describe("Selectbox widget with optional props", () => {
     const props = getProps({ help: "help text" })
     render(<Selectbox {...props} />)
 
-    expect(screen.getByTestId("stTooltipIcon")).toBeInTheDocument()
+    expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
   })
 
   it("allows case sensitive new options to be added", async () => {
@@ -419,12 +868,84 @@ describe("Selectbox widget with optional props", () => {
     const props = getProps({
       options: ["aa", "Aa", "aA"],
       acceptNewOptions: true,
+      value: undefined,
     })
     render(<Selectbox {...props} />)
     const selectboxInput = screen.getByRole("combobox")
 
     await user.type(selectboxInput, "AA")
 
-    expect(screen.getByText("Add: AA")).toBeInTheDocument()
+    // "AA" is case-sensitively distinct from "aa", "Aa", "aA" → Add option shown
+    expect(screen.getByRole("option", { name: /Add: AA/i })).toBeVisible()
+  })
+})
+
+describe("Selectbox dropdown positioning", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Regression test for #16181: inside the sidebar, flip stays enabled and is
+  // bounded by the viewport so a trigger near the bottom flips its dropdown up
+  // instead of opening downward and overflowing. The bug set flipOptions to
+  // false, disabling flip entirely.
+  it("keeps flip enabled with a viewport boundary inside the sidebar", () => {
+    const overlaySpy = vi.spyOn(UseFloatingOverlay, "useFloatingOverlay")
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <Selectbox {...getProps()} />
+      </IsSidebarContext.Provider>
+    )
+
+    const options = overlaySpy.mock.calls[0][0]
+    expect(options.flipOptions).toMatchObject({
+      boundary: document.documentElement,
+    })
+    // Preserve the shared shift padding when overriding shiftOptions, rather
+    // than falling back to Floating UI's 0 default (the reason the constant is
+    // exported).
+    expect(options.shiftOptions).toMatchObject({
+      boundary: document.documentElement,
+      padding: UseFloatingOverlay.SHIFT_VIEWPORT_PADDING,
+    })
+  })
+
+  it("uses default flip/shift behavior outside the sidebar", () => {
+    const overlaySpy = vi.spyOn(UseFloatingOverlay, "useFloatingOverlay")
+    render(<Selectbox {...getProps()} />)
+
+    const options = overlaySpy.mock.calls[0][0]
+    expect(options.flipOptions).toBeUndefined()
+    expect(options.shiftOptions).toBeUndefined()
+  })
+})
+
+describe("getInsertedText", () => {
+  it.each([
+    // An unchanged label is not an insertion of new characters. Returning ""
+    // here (rather than treating it as a replace) prevents the committed label
+    // from clearing itself when RAC re-reports it on close/revert.
+    ["Banana", "Banana", ""],
+    ["Banana", "Bananac", "c"],
+    ["Banana", "Bananach", "ch"],
+    // Insertions at the start or middle are detected regardless of caret.
+    ["male", "xmale", "x"],
+    ["male", "mafle", "f"],
+    // Repeated characters do not confuse the prefix/suffix diff.
+    ["aa", "aaa", "a"],
+    // Empty committed label: everything typed is the insertion.
+    ["", "abc", "abc"],
+  ])("returns %j -> %j = %j", (before, after, expected) => {
+    expect(getInsertedText(before, after)).toBe(expected)
+  })
+
+  it.each([
+    // Not pure insertions (characters removed/replaced) → null, so the caller
+    // keeps the reported text as-is.
+    ["male", "mole", null],
+    ["Banana", "Cherry", null],
+    ["male", "mal", null],
+  ])("returns null for non-insertions %j -> %j", (before, after, expected) => {
+    expect(getInsertedText(before, after)).toBe(expected)
   })
 })

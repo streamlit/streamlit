@@ -14,12 +14,9 @@
 
 """ParallelFragmentCoordinator and supporting helpers.
 
-Separated from ``fragment.py`` to break the import cycle with
-``script_run_context.py``: the coordinator imports from
-``script_run_context`` (for ``get_script_run_ctx`` and
-``SCRIPT_RUN_CONTEXT_ATTR_NAME``), and ``script_run_context`` needs to
-construct a coordinator in ``reset()``.  With the coordinator in its own
-module, ``script_run_context`` can import it at module level.
+Manages a thread pool for parallel fragment execution. The coordinator
+receives the caller's ``ScriptRunContext`` explicitly via ``submit()``
+so that worker threads can access the correct context.
 """
 
 from __future__ import annotations
@@ -34,14 +31,16 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import (
+from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
-    ScriptRunContext,
-    get_script_run_ctx,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+    )
 
 
 @contextlib.contextmanager
@@ -103,14 +102,19 @@ class ParallelFragmentCoordinator:
         self._yield_check = yield_check
         self._poll_interval = poll_interval
 
-    def submit(self, fn: Callable[..., Any], *args: Any) -> None:
+    def submit(
+        self,
+        fn: Callable[..., Any],
+        ctx: ScriptRunContext | None,
+        *args: Any,
+    ) -> None:
         """Submit a worker function to the thread pool.
 
-        Captures the caller's ``ScriptRunContext`` (thread attribute) and the
-        caller's full ``contextvars.Context`` (which includes ``FragmentThreadState``)
-        at submit time.  The worker runs inside ``copy_context().run(...)`` with a
-        scoped ctx attach so ``get_script_run_ctx()`` and ``ThreadState.get()``
-        return the parent's values for the duration of the call.  Worker-side
+        Captures the caller's full ``contextvars.Context`` (which includes
+        ``FragmentThreadState``) at submit time.  The worker runs inside
+        ``copy_context().run(...)`` with a scoped ctx attach so
+        ``get_script_run_ctx()`` and ``ThreadState.get()`` return the parent's
+        values for the duration of the call.  Worker-side
         ``ThreadState.update()`` writes stay local to the captured copy — they
         never leak back to the parent thread.
 
@@ -118,8 +122,18 @@ class ParallelFragmentCoordinator:
         submit() from inside a running worker is visible to join() before
         the parent's tracked() decrement runs. May be called from any
         thread (main thread or worker threads for nested fragments).
+
+        Parameters
+        ----------
+        fn : Callable[..., Any]
+            The worker function to execute in the thread pool.
+        ctx : ScriptRunContext | None
+            The ScriptRunContext to propagate to the worker thread so that
+            ``get_script_run_ctx()`` returns the correct context inside the
+            worker.
+        *args : Any
+            Positional arguments forwarded to ``fn``.
         """
-        ctx = get_script_run_ctx()
         captured = contextvars.copy_context()
 
         with self._join_condition:

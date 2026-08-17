@@ -614,41 +614,6 @@ def get_cookie_with_chunks(
     return reconstructed_value
 
 
-def clear_cookie_and_chunks(
-    get_single_cookie_fn: Callable[[str], bytes | None],
-    clear_single_cookie_fn: Callable[[str], None],
-    cookie_name: str,
-) -> None:
-    """Clear a cookie and any associated chunk cookies.
-
-    The main cookie always exists. If there are chunks, also clear
-    cookie_name_1, cookie_name_2, etc., and the count cookie.
-
-    Args:
-        get_single_cookie_fn: Function to get a single cookie (cookie_name) -> bytes | None
-        clear_single_cookie_fn: Function to clear a single cookie (cookie_name)
-        cookie_name: Name of the cookie
-    """
-    cookie_value = get_single_cookie_fn(cookie_name)
-    clear_single_cookie_fn(cookie_name)
-    if cookie_value is None:
-        return
-
-    match = _chunks_regex.match(cookie_value)
-    if match is None:
-        return
-
-    try:
-        chunk_count = int(match.group(1))
-        # Clear additional chunk cookies (starting from 1, since main cookie is chunk 0)
-        for i in range(1, chunk_count + 1):
-            clear_single_cookie_fn(f"{cookie_name}_{i}")
-    except (ValueError, TypeError):  # pragma: no cover - defensive
-        # If count is invalid, but we already cleared the main cookie
-        # so we can ignore it
-        pass
-
-
 def validate_auth_credentials(provider: str) -> None:
     """Validate the general auth credentials and auth credentials for the given
     provider.

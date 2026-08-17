@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     get_caption,
     get_element_by_key,
     get_markdown,
+    reset_hovering,
     tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
@@ -142,6 +143,49 @@ def test_header_attributes(app: Page):
     expect(h4).to_have_count(7)
     expect(h5).to_have_count(7)
     expect(h6).to_have_count(7)
+
+
+def test_markdown_anchors_hides_anchor_icons(app: Page):
+    """anchors=False hides the anchor link icon but keeps heading IDs for
+    URL fragment deep-linking.
+    """
+    default_block = get_element_by_key(app, "markdown_anchors_default")
+    disabled_block = get_element_by_key(app, "markdown_anchors_disabled")
+
+    # IDs are present in both cases so deep-linking still works.
+    expect(default_block.locator("h1#anchors-default-heading")).to_have_count(1)
+    expect(default_block.locator("h2#anchors-default-subheading")).to_have_count(1)
+    expect(disabled_block.locator("h1#anchors-disabled-heading")).to_have_count(1)
+    expect(disabled_block.locator("h2#anchors-disabled-subheading")).to_have_count(1)
+
+    # The anchor link is rendered (hover-revealed) by default, but absent when
+    # anchors=False.
+    expect(default_block.get_by_role("link", name="Link to heading")).to_have_count(2)
+    expect(disabled_block.get_by_role("link", name="Link to heading")).to_have_count(0)
+
+
+def test_markdown_anchors_visual(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the hovered heading state: the anchor icon appears next to the
+    default heading but not when anchors=False.
+    """
+    default_heading = themed_app.locator("h1#anchors-default-heading")
+    disabled_heading = themed_app.locator("h1#anchors-disabled-heading")
+
+    reset_hovering(themed_app)
+    default_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_default"),
+        name="st_markdown-anchors_default_hovered",
+    )
+
+    reset_hovering(themed_app)
+    disabled_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_disabled"),
+        name="st_markdown-anchors_disabled_hovered",
+    )
 
 
 def test_match_snapshot_for_headers_in_sidebar(
@@ -621,8 +665,12 @@ def test_tooltip_with_newlines_gh_13339(
     expect(element).not_to_contain_text("Line 2")
     expect(element).not_to_contain_text("Line 3")
 
-    # Hover to show tooltip
+    # Hover to show tooltip.
+    # reset_hovering primes the interaction modality to 'pointer' first — React Aria
+    # requires a document-level pointermove before pointerenter to register hover
+    # intent; Playwright teleports the cursor when the mouse starts "off-page".
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     # Verify tooltip is visible and contains the multiline content
@@ -663,7 +711,9 @@ def test_tooltip_with_complex_markdown_gh_13339(
     expect(element).not_to_contain_text("array[index]")
     expect(element).not_to_contain_text("Streamlit")
 
+    # reset_hovering primes interaction modality to 'pointer' before hover.
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     tooltip_content = app.get_by_test_id("stTooltipContent")
@@ -686,3 +736,46 @@ def test_tooltip_with_complex_markdown_gh_13339(
     assert_snapshot(
         tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
     )
+
+
+# Mermaid chart tests
+
+
+def test_mermaid_charts_render(app: Page):
+    """Test that mermaid charts are rendered correctly within markdown."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    expect(mermaid_charts).to_have_count(3)
+    # Negative assertion: only 1 error element should exist (from the invalid syntax block)
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_have_count(1)
+
+
+def test_mermaid_charts_contain_rendered_image(app: Page):
+    """Test that rendered mermaid charts contain rendered image content.
+
+    MermaidChart renders diagrams as <img> tags with blob URLs for security
+    sandboxing, rather than inline SVG elements.
+    """
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+
+    # Check that the first 2 valid diagrams contain img elements with blob URLs
+    for i in range(2):
+        img = mermaid_charts.nth(i).locator("img")
+        expect(img).to_be_visible()
+        # Verify the img has a blob URL src (security sandboxing)
+        expect(img).to_have_attribute("src", re.compile(r"^blob:"))
+
+
+def test_mermaid_invalid_syntax_shows_error(app: Page):
+    """Test that invalid mermaid syntax shows an error message."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_be_visible()
+    expect(error).to_contain_text("Mermaid diagram error")
+    # Negative assertion: error chart should not contain an img element
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    # The error chart is the 3rd one (index 2)
+    error_chart = mermaid_charts.nth(2)
+    expect(error_chart.locator("img")).to_have_count(0)

@@ -377,3 +377,9 @@ if TYPE_CHECKING:
     assert_type(slider("foo", value=5.0, bind="query-params"), float)
     assert_type(slider("foo", bind=None), int)
     assert_type(slider("foo", value=(1, 10), bind="query-params"), tuple[int, int])
+
+    # Check persist_state parameter
+    assert_type(slider("foo", persist_state="page"), int)
+    assert_type(slider("foo", value=5.0, persist_state="session"), float)
+    assert_type(slider("foo", persist_state=None), int)
+    assert_type(slider("foo", value=(1, 10), persist_state="session"), tuple[int, int])

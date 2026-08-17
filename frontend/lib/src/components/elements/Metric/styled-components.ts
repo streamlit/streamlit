@@ -125,3 +125,16 @@ export const StyledDeltaDescription = styled.div({
   flexShrink: 1,
   minWidth: 0,
 })
+
+export const StyledMetricLabelRow = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing.twoXS,
+  minWidth: 0,
+}))
+
+export const StyledMetricIcon = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+})

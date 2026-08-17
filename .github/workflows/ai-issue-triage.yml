@@ -14,12 +14,12 @@ on:
         description: "Model to use for the triage"
         required: false
         type: string
-        default: "claude-opus-4-7-thinking-xhigh"
+        default: "cursor-grok-4.5-high"
 
 # Computed issue number and model for use in jobs
 env:
   ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
-  MODEL: ${{ github.event.inputs.model || 'claude-opus-4-7-thinking-xhigh' }}
+  MODEL: ${{ github.event.inputs.model || 'cursor-grok-4.5-high' }}
 
 jobs:
   # Job 1: AI performs the triage analysis with READ-ONLY access
@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -170,7 +170,7 @@ jobs:
           " --force --model "$MODEL" --output-format=text
 
       - name: Upload triage artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: triage-output
           path: |
@@ -198,7 +198,7 @@ jobs:
 
       - name: Download triage artifacts
         id: download
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: triage-output

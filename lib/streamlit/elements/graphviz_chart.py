@@ -54,7 +54,7 @@ class GraphvizMixin:
 
         .. Important::
             You must install ``graphviz>=0.19.0`` to use this command. You can
-            install all charting dependencies (except Bokeh) as an extra with
+            install all charting dependencies as an extra with
             Streamlit:
 
             .. code-block:: shell
@@ -191,7 +191,7 @@ class GraphvizMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
@@ -206,9 +206,7 @@ def marshall(
     """
 
     if type_util.is_graphviz_chart(figure_or_dot):
-        chart = cast(
-            "graphviz.Graph | graphviz.Digraph | graphviz.Source", figure_or_dot
-        )
+        chart = figure_or_dot
         dot = chart.source
         engine = chart.engine
     elif isinstance(figure_or_dot, str):

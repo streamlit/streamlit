@@ -18,7 +18,12 @@ import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import {
+  EmotionTheme,
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+  hasLightBackgroundColor,
+} from "@streamlit/lib"
 
 const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`
 0% {
@@ -350,6 +355,18 @@ export const StyledMenuVersionRow = styled.div(({ theme }) => ({
       opacity: 1,
       pointerEvents: "auto",
     },
+}))
+
+/**
+ * Portal container for the floating main menu popover body.
+ * Receives `position: fixed` placement from Floating UI via the `style` prop.
+ */
+export const StyledMainMenuPopoverBody = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  backgroundColor: theme.colors.bgColor,
+  zIndex: getOverlayZIndex(theme),
+  maxHeight: "70vh",
+  overflow: "auto",
 }))
 
 export const StyledMenuVersionText = styled.span(({ theme }) => ({

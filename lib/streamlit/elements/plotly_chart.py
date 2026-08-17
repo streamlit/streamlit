@@ -22,13 +22,10 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypedDict,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import type_util
 from streamlit.deprecation_util import (
@@ -48,13 +45,13 @@ from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -89,13 +86,13 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
 _LOGGER: Final = get_logger(__name__)
 
 
-class PlotlySelectionState(TypedDict, total=False):
+class PlotlySelectionState(ReadOnlyAttributeDictionary):
     """
     The schema for the Plotly chart selection state.
 
-    The selection state is stored in a dictionary-like object that supports both
-    key and attribute notation. Selection states cannot be programmatically
-    changed or set through Session State.
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
+    programmatically changed or set through Session State.
 
     Attributes
     ----------
@@ -171,19 +168,39 @@ class PlotlySelectionState(TypedDict, total=False):
 
     """
 
-    points: Required[list[dict[str, Any]]]
-    point_indices: Required[list[int]]
-    box: Required[list[dict[str, Any]]]
-    lasso: Required[list[dict[str, Any]]]
+    points: list[dict[str, Any]]
+    point_indices: list[int]
+    box: list[dict[str, Any]]
+    lasso: list[dict[str, Any]]
+
+    @overload
+    def __getitem__(self, key: Literal["points"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["point_indices"]) -> list[int]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["box"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["lasso"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
-class PlotlyState(TypedDict, total=False):
+class PlotlyState(ReadOnlyAttributeDictionary):
     """
     The schema for the Plotly chart event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -192,8 +209,7 @@ class PlotlyState(TypedDict, total=False):
     selection : dict
         The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
-        The attributes are described by the ``PlotlySelectionState`` dictionary
-        schema.
+        The attributes are described by ``PlotlySelectionState``.
 
     Example
     -------
@@ -217,7 +233,27 @@ class PlotlyState(TypedDict, total=False):
 
     """
 
-    selection: Required[PlotlySelectionState]
+    selection: PlotlySelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed as
+    # PlotlySelectionState. Use dict.__getitem__ for the selection key so the
+    # read-only base class does not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> PlotlySelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, PlotlySelectionState):
+                item = PlotlySelectionState(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -227,25 +263,30 @@ class PlotlyChartSelectionSerde:
     """
 
     def deserialize(self, ui_value: str | None) -> PlotlyState:
-        empty_selection_state: PlotlyState = {
-            "selection": {
-                "points": [],
-                "point_indices": [],
-                "box": [],
-                "lasso": [],
-            },
-        }
-
-        selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast("PlotlyState", AttributeDictionary(json.loads(ui_value)))
+        empty_selection_state = PlotlyState(
+            {
+                "selection": PlotlySelectionState(
+                    {
+                        "points": [],
+                        "point_indices": [],
+                        "box": [],
+                        "lasso": [],
+                    }
+                ),
+            }
         )
 
-        if "selection" not in selection_state:
-            selection_state = empty_selection_state  # type: ignore[unreachable]
+        if ui_value is None:
+            return empty_selection_state
 
-        return cast("PlotlyState", AttributeDictionary(selection_state))
+        parsed = json.loads(ui_value)
+        if "selection" not in parsed:  # pragma: no cover - defensive
+            return empty_selection_state
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        parsed["selection"] = PlotlySelectionState(parsed["selection"])
+        return PlotlyState(parsed)
 
     def serialize(self, selection_state: PlotlyState) -> str:
         return json.dumps(selection_state, default=str)
@@ -263,9 +304,9 @@ def parse_selection_mode(
         selection_mode_set = set(selection_mode)
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
     parsed_selection_modes = []
@@ -440,7 +481,7 @@ class PlotlyMixin:
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
             performance may be enhanced by installing ``orjson`` as well. You
-            can install all charting dependencies (except Bokeh) as an extra
+            can install all charting dependencies as an extra
             with Streamlit:
 
             .. code-block:: shell
@@ -571,12 +612,12 @@ class PlotlyMixin:
 
         Returns
         -------
-        element or dict
+        element or PlotlyState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``PlotlyState`` dictionary schema.
+            returns a ``PlotlyState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -660,16 +701,11 @@ class PlotlyMixin:
         # keep it in sync with what Plotly calls it.
 
         if theme not in {"streamlit", None}:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support '
-                "theme=”streamlit” or theme=None to fallback to the default "
-                "library theme."
-            )
+            raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         key = to_key(key)
@@ -682,7 +718,9 @@ class PlotlyMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -757,5 +795,5 @@ class PlotlyMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

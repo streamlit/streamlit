@@ -106,9 +106,6 @@ export class AppNavigation {
       this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
     }
 
-    // We do not know the page name, so use an empty string version
-    document.title = getTitle("")
-
     return [
       {
         // Set current page script hash to handle SPA case

@@ -64,6 +64,31 @@ describe("Markdown element", () => {
   })
 })
 
+describe("Markdown headings with anchors", () => {
+  it("renders the anchor link icon and heading id by default", () => {
+    const props = getProps({ body: "# My Heading" })
+    render(<Markdown {...props} />)
+
+    const heading = screen.getByRole("heading", { name: "My Heading" })
+    expect(heading).toHaveAttribute("id", "my-heading")
+    // The hover-revealed anchor link is in the DOM (visibility is controlled by hover CSS).
+    expect(
+      screen.getByRole("link", { name: "Link to heading" })
+    ).toBeInTheDocument()
+  })
+
+  it("keeps heading id but hides the anchor link icon when hideAnchors is set", () => {
+    const props = getProps({ body: "# My Heading", hideAnchors: true })
+    render(<Markdown {...props} />)
+
+    const heading = screen.getByRole("heading", { name: "My Heading" })
+    expect(heading).toHaveAttribute("id", "my-heading")
+    expect(
+      screen.queryByRole("link", { name: "Link to heading" })
+    ).not.toBeInTheDocument()
+  })
+})
+
 describe("Markdown element with help", () => {
   it("renders markdown with help tooltip as expected", async () => {
     const user = userEvent.setup()

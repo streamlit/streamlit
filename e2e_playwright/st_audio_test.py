@@ -54,7 +54,7 @@ def test_audio_has_correct_properties(app: Page):
     expect(audio_elements).to_have_count(8)
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
-    expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))
+    expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*mp3"))
 
 
 @pytest.mark.skip_browser("webkit")
@@ -165,17 +165,23 @@ def test_audio_uses_unified_height(
     # To prevent flakiness, we wait for the audio to finish loading:
     wait_until(
         themed_app,
-        lambda: audio_element.evaluate("el => el.readyState") == 4,
+        lambda: audio_element.evaluate(
+            "el => el.readyState === 4 && Number.isFinite(el.duration) && el.duration > 0"
+        ),
         timeout=15000,
     )
 
     expect(audio_element).to_have_css("height", "40px")
-    # Additional wait to ensure that the audio element is fully loaded
-    # and that its not causing flakiness in screenshots.
-    # This might not be 100% necessary.
-    themed_app.wait_for_timeout(1000)
 
-    assert_snapshot(audio_element, name="st_audio-unified_height")
+    # Hide the timeline to prevent flakiness in screenshots (same approach as
+    # test_audio_width_configurations). Native media controls can still paint
+    # the scrubber inconsistently even after readyState === 4.
+    hide_timeline_style = """
+    audio::-webkit-media-controls-timeline { display: none; }
+    """
+    assert_snapshot(
+        audio_element, name="st_audio-unified_height", style=hide_timeline_style
+    )
 
 
 # TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.

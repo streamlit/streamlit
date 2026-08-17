@@ -1,4 +1,3 @@
-
 # Streamlit performance
 
 Performance is the biggest win. Without caching and fragments, your app reruns everything on every interaction.
@@ -13,6 +12,7 @@ Use for any function that loads or computes data.
 # BAD: Recomputes on every rerun
 def load_data(path):
     return pd.read_csv(path)
+
 
 # GOOD: Cached
 @st.cache_data
@@ -29,6 +29,7 @@ Use for connections, API clients, ML models—objects that can't be serialized.
 def get_client():
     return OpenAI(api_key=st.secrets["openai_key"])
 
+
 @st.cache_resource
 def load_model():
     return torch.load("model.pt")
@@ -43,16 +44,43 @@ Note: `st.connection()` already handles caching internally — don't wrap it in 
 def get_metrics():
     return api.fetch()
 
+
 @st.cache_data(ttl="1h")  # 1 hour
 def load_reference_data():
     return pd.read_csv("large_reference.csv")
 ```
 
 **Guidelines:**
+
 - Real-time dashboards → `ttl="1m"` or less
 - Metrics/reports → `ttl="5m"` to `ttl="15m"`
 - Reference data → `ttl="1h"` or more
 - Static data → No TTL
+
+### Background refresh (serve stale while updating)
+
+By default, when a cached entry's `ttl` expires, the next call blocks while the function
+recomputes. Use `refresh_mode="background"` to instead return the expired value immediately
+and recompute in the background—ideal when slightly stale data is acceptable but latency
+isn't.
+
+```python
+@st.cache_data(ttl="5m", refresh_mode="background")
+def get_metrics():
+    return api.fetch()
+```
+
+Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
+combined with `persist`. The function can't use session-specific features (e.g.
+`st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
+with both `st.cache_data` and `st.cache_resource`.
+
+Background refresh is access-driven: it starts only after a call observes an expired entry,
+so the caller may briefly receive stale data. For advanced cases that need the server to
+initiate background refreshes for specific global cache keys even without user traffic, use
+an `st.App` lifespan task to periodically call the cached function with those arguments. See
+[Scheduled background refresh for specific
+keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
 
 ### Prevent unbounded cache growth
 
@@ -64,10 +92,12 @@ def load_reference_data():
 def get_user_data(user_id):
     return fetch_user(user_id)
 
+
 # GOOD: Bounded cache with TTL
 @st.cache_data(ttl="1h")
 def get_user_data(user_id):
     return fetch_user(user_id)
+
 
 # GOOD: Bounded cache with max entries
 @st.cache_data(max_entries=100)
@@ -87,25 +117,92 @@ st.metric("Users", get_count())
 if st.button("Refresh"):
     st.rerun()
 
+
 # GOOD: Only fragment reruns
 @st.fragment
 def live_metrics():
     st.metric("Users", get_count())
     st.button("Refresh")
 
+
 live_metrics()
 ```
 
 For auto-refreshing metrics, use `run_every`:
+
 ```python
 @st.fragment(run_every="30s")
 def auto_refresh_metrics():
     st.metric("Users", get_count())
 
+
 auto_refresh_metrics()
 ```
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
+
+### Parallel fragments
+
+Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.
+
+```python
+# BAD: Three slow queries run sequentially (~9s total)
+@st.fragment
+def revenue():
+    st.metric("Revenue", query_revenue())  # ~3s
+
+
+@st.fragment
+def users():
+    st.metric("Users", query_users())  # ~3s
+
+
+@st.fragment
+def orders():
+    st.metric("Orders", query_orders())  # ~3s
+
+
+revenue()
+users()
+orders()
+
+
+# GOOD: Three slow queries run concurrently (~3s total)
+@st.fragment(parallel=True)
+def revenue():
+    st.metric("Revenue", query_revenue())
+
+
+@st.fragment(parallel=True)
+def users():
+    st.metric("Users", query_users())
+
+
+@st.fragment(parallel=True)
+def orders():
+    st.metric("Orders", query_orders())
+
+
+revenue()
+users()
+orders()
+```
+
+**When to use `parallel=True`:**
+
+- Independent, slow operations (DB queries, API calls, model inference)
+- Multiple fragments that don't depend on each other's output
+
+**When NOT to use:**
+
+- Fragments that depend on each other's Session State writes
+
+**Thread safety rules:**
+
+- Each parallel fragment should write to its own Session State keys
+- Avoid unsynchronized mutations of shared mutable objects across fragments
+
+Note: `parallel=True` applies to full-app reruns; `run_every` triggers fragment-scoped reruns, which execute sequentially.
 
 ## Forms to batch interactions
 
@@ -128,6 +225,8 @@ if submitted:
     save_user(name, email, role)
 ```
 
+**Every form must include at least one `st.form_submit_button`.** It's the only way to submit a form—without it, the form's widget values are never sent to your app and the form is non-functional. Note that `st.button` and `st.download_button` can't be placed inside a form.
+
 Use `border=False` for seamless inline forms that don't look like forms:
 
 ```python
@@ -138,6 +237,7 @@ with st.form("search", border=False):
 ```
 
 **When to use forms:**
+
 - Multiple related inputs (signup, filters, settings)
 - Text inputs where typing triggers expensive operations
 - Any UI where "submit" semantics make sense
@@ -218,9 +318,77 @@ if st.toggle("Show advanced options"):
 ## Pre-computation
 
 Move expensive work outside the main flow:
+
 - Compute aggregations in SQL/dbt, not Python
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
+
+## Render stable UI before slow work
+
+Streamlit runs your script top to bottom and emits a UI delta as each `st.*` command runs. During a rerun, the elements from the _previous_ run stay on screen and are marked **stale** (faded to ~33% opacity after a short delay) until the new run reaches the same delta paths or finishes and clears the leftovers. So if slow code runs before the app has recreated its downstream layout, users can temporarily see faded old elements, duplicate-looking content, or a stale UI branch from a previous run.
+
+Fast reruns usually don't show this (the fade is delayed), though a rerun that runs just past the delay can briefly flash stale content. Greying is a symptom of slow work blocking rendering — fix the ordering and the slowness, not the fade.
+
+Prefer this order:
+
+1. Render stable chrome first: title, filters, tabs/containers, section headers, and output slots — plus anything that does not depend on the slow result (sidebar controls, help text, footers).
+2. Start slow work only after the page has claimed the slots where results will land.
+3. Fill those slots when the work completes.
+
+Only the parts that depend on the slow result should wait.
+
+```python
+# BAD: The chart and table depend on the report, so they must wait — but the
+# sidebar and footer below don't, yet they stay faded/stale until it returns.
+st.title("Account report")
+account = st.selectbox("Account", accounts)
+
+report = load_report(account)  # Slow query/API/model call
+
+st.line_chart(report.history)  # Depends on report
+st.dataframe(report.transactions)  # Depends on report
+
+with st.sidebar:  # Independent of the report, but stuck behind it
+    st.date_input("Date range")
+    st.multiselect("Regions", regions)
+st.caption(
+    "Data refreshes hourly. Email support@example.com for access."
+)  # Independent
+```
+
+```python
+# GOOD: Everything that doesn't depend on the report renders immediately. The chart
+# waits in a reserved slot that shows a skeleton while it loads and keeps its state.
+st.title("Account report")
+account = st.selectbox("Account", accounts)
+
+with st.sidebar:  # Independent chrome — render it before the slow call
+    st.date_input("Date range")
+    st.multiselect("Regions", regions)
+
+chart_slot = st.container()  # Reserve the chart's position up front
+
+st.caption("Data refreshes hourly. Email support@example.com for access.")
+
+with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work runs
+    report = load_report(account)  # Slow work runs after the page is painted
+    chart_slot.line_chart(report.history)  # Renders into the reserved slot; keeps state
+```
+
+`st.container()` claims the chart's position up front, so the caption paints immediately instead of waiting behind `load_report`. The chart then renders into that reserved slot at a stable position, so it goes **stale** (greyed) and updates in place rather than remounting — keeping its scroll, sort, and selection. `chart_slot.skeleton()` (context manager) shows a skeleton while the block runs; write results explicitly to the container (`chart_slot.line_chart(...)`), since the block doesn't redirect bare `st.*` calls into it.
+
+Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
+
+For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that slot during the initial full-app run.
+
+## Perceived performance (loading states)
+
+The techniques above keep the UI fresh and responsive during slow work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments to cut the _actual_ work. See `layouts.md` for details:
+
+- `st.spinner` — lightweight indicator wrapped around a block of slow work.
+- `st.skeleton` — animated placeholder that reserves layout space while content loads.
+- `st.progress` — determinate progress bar when you can report percent complete (e.g., looping over a known number of steps).
+- `st.status` — progress and intermediate output for multi-step, long-running tasks.
 
 ## References
 

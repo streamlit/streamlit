@@ -22,9 +22,12 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_prefixed_markdown,
     get_element_by_key,
+    reset_hovering,
     select_selectbox_option,
+    type_time,
 )
 
 
@@ -45,22 +48,24 @@ def change_widget_values(app: Page):
     click_checkbox(app, "Checkbox")
 
     # Change the date input value.
-    form_1.get_by_test_id("stDateInput").locator("input").click()
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 17th 2019."]'
+    form_1.get_by_test_id("stDateInput").get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
     ).first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Wednesday, July 17, 2019"
+    ).click()
 
     # Change the multiselect value.
     form_1.get_by_test_id("stMultiSelect").locator("input").click()
-    app.locator("[data-baseweb='popover'] >> li").nth(0).click()
+    app.get_by_role("option").first.click()
 
     # Change the number input value.
     form_1.get_by_test_id("stNumberInput").locator("input").fill("42")
 
     # Change the radio value.
-    form_1.get_by_test_id("stRadio").locator('label[data-baseweb="radio"]').nth(
-        1
-    ).click(force=True)
+    form_1.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1).click(
+        force=True
+    )
 
     # Change the selectbox value.
     select_selectbox_option(app, "Selectbox", "bar")
@@ -78,8 +83,10 @@ def change_widget_values(app: Page):
     form_1.get_by_test_id("stTextInput").locator("input").fill("bar")
 
     # Change the time input value.
-    form_1.get_by_test_id("stTimeInput").locator("input").click()
-    app.locator('[data-baseweb="popover"]').locator("li").nth(0).click()
+    time_display = form_1.get_by_test_id("stTimeInput").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(time_display, "00", "00")
 
     # Change the toggle value.
     click_toggle(app, "Toggle Input")
@@ -145,6 +152,7 @@ def test_form_with_stretched_button(
     expect(submit_buttons).to_have_count(2)
 
     submit_button = submit_buttons.nth(0)
+    reset_hovering(themed_app)
     submit_button.hover()
     expect(themed_app.get_by_test_id("stTooltipContent")).to_have_text(
         "Submit by clicking"
@@ -420,3 +428,16 @@ def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction)
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_wrap_false_submit_button_truncates_and_sets_native_title(app: Page):
+    """wrap=False ellipsizes the submit-button label and exposes the full label
+    via a native title.
+    """
+    container = get_element_by_key(app, "wrap_false_submit_button")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

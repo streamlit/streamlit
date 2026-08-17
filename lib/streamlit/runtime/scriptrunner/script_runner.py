@@ -32,6 +32,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import (
     create_page_profile_message,
+    format_uncaught_exception,
     to_microseconds,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -39,7 +40,6 @@ from streamlit.runtime.scriptrunner.exec_code import (
     exec_func_with_error_handling,
     modified_sys_path,
 )
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -133,7 +133,7 @@ def _mpa_v1(main_script_path: str) -> None:
     from pathlib import Path
 
     from streamlit.commands.navigation import PageType, _navigation
-    from streamlit.navigation.page import StreamlitPage
+    from streamlit.navigation.page import _create_page
 
     # Select the folder that should be used for the pages:
     resolved_main_script_path: Final = Path(main_script_path).resolve()
@@ -152,10 +152,8 @@ def _mpa_v1(main_script_path: str) -> None:
     )
 
     # Use this script as the main page and
-    main_page = StreamlitPage(resolved_main_script_path, default=True)
-    all_pages = [main_page] + [
-        StreamlitPage(pages_folder / page.name) for page in pages
-    ]
+    main_page = _create_page(resolved_main_script_path, default=True)
+    all_pages = [main_page] + [_create_page(pages_folder / page.name) for page in pages]
     # Initialize the navigation with all the pages:
     position: Literal["sidebar", "hidden", "top"] = (
         "hidden"
@@ -556,6 +554,17 @@ class ScriptRunner:
                 # download buttons/links to them present in the app, which will result
                 # in a 404 should the user click on them.
                 runtime.get_instance().media_file_mgr.clear_session_refs()
+                # Same reasoning for lazy dataframe sources: on a fragment rerun
+                # we keep references so sources outside the fragment stay valid.
+                runtime.get_instance().dataframe_source_mgr.clear_session_refs()
+            else:
+                # Fragment reruns redraw only the queued fragments. Drop refs
+                # owned by those fragments before they run so removed lazy
+                # dataframes are pruned, while sources in untouched fragments
+                # and the app body remain available.
+                runtime.get_instance().dataframe_source_mgr.clear_session_refs(
+                    fragment_ids=rerun_data.fragment_id_queue
+                )
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
@@ -714,7 +723,20 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:
+                        # Skip queued descendants whose ancestor already ran in
+                        # this pass — the ancestor re-renders them inline, so
+                        # running them again would duplicate their widgets and
+                        # raise StreamlitDuplicateElementId (for example, when
+                        # a parent and child both use ``run_every`` and their
+                        # auto-reruns coalesce; see #10719).
+                        executed_fragment_ids: set[str] = set()
+
                         for fragment_id in fragment_ids_this_run:
+                            if self._fragment_storage.has_ancestor_in(
+                                fragment_id, executed_fragment_ids
+                            ):
+                                continue
+
                             registration_sequence_before = (
                                 self._fragment_storage.registration_sequence()
                             )
@@ -745,6 +767,13 @@ class ScriptRunner:
                                     )
                                 continue
 
+                            # We record this before the call so a fragment
+                            # that raises still suppresses its queued
+                            # descendants: it owns their containers either way,
+                            # and rerunning them here would render them outside
+                            # the parent that just failed.
+                            executed_fragment_ids.add(fragment_id)
+
                             try:
                                 wrapped_fragment()
                             except (RerunException, StopException):
@@ -770,12 +799,31 @@ class ScriptRunner:
                                         registration_sequence_before
                                     )
                                 )
-                                self._fragment_storage.clear_stale_descendants(
-                                    fragment_id,
-                                    registered_ids,
+                                removed_fragment_ids = (
+                                    self._fragment_storage.clear_stale_descendants(
+                                        fragment_id,
+                                        registered_ids,
+                                    )
                                 )
+                                # Tell the frontend to cancel auto-rerun timers for
+                                # fragments that were evicted (e.g. a nested
+                                # ``run_every`` child that is no longer rendered), so
+                                # they don't keep sending stale rerun requests.
+                                if removed_fragment_ids:
+                                    stop_msg = ForwardMsg()
+                                    stop_msg.stop_auto_rerun.fragment_ids.extend(
+                                        removed_fragment_ids
+                                    )
+                                    ctx.enqueue(stop_msg)
 
                     else:
+                        # Drop wrappers from the previous run before the main
+                        # script recreates its outside containers as new DG
+                        # objects. Clearing here (rather than after the script
+                        # body) lets the wrappers created during this run survive
+                        # for the fragment reruns that follow it.
+                        self._fragment_storage.clear_outside_wrappers()
+
                         # Expect parallel_coordinator to be initialized;
                         # cast makes this clear to the type checker.
                         coordinator = cast(
@@ -797,7 +845,7 @@ class ScriptRunner:
                             coordinator.drain()
                             raise
                         self._fragment_storage.clear(
-                            new_fragment_ids=ctx.new_fragment_ids.snapshot()
+                            new_fragment_ids=ctx.shared.new_fragment_ids.snapshot()
                         )
 
                     self._session_state.maybe_check_serializable()
@@ -830,11 +878,11 @@ class ScriptRunner:
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
-                            commands=ctx.tracked_commands,
+                            commands=ctx.shared.tracked_commands,
                             exec_time=to_microseconds(timer() - start_time),
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(
-                                type(uncaught_exception).__name__
+                                format_uncaught_exception(uncaught_exception)
                                 if uncaught_exception
                                 else None
                             ),
@@ -866,7 +914,9 @@ class ScriptRunner:
 
         # Tell session_state to update itself in response
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())
+            self._session_state.on_script_finished(
+                ctx.shared.widget_ids_this_run.snapshot()
+            )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
@@ -875,6 +925,9 @@ class ScriptRunner:
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
         runtime.get_instance().media_file_mgr.remove_orphaned_files()
+
+        # Prune lazy dataframe sources that were not re-registered this run.
+        runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

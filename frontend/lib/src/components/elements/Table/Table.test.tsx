@@ -21,9 +21,10 @@ import { Table as TableProto } from "@streamlit/protobuf"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { MULTI } from "~lib/mocks/arrow/multi"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
+import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
-import { Table, TableProps } from "./Table"
+import { FALLBACK_HEADER_ROW_OFFSET_REM, Table, TableProps } from "./Table"
 
 const getProps = (data: Uint8Array): TableProps => ({
   element: TableProto.create({
@@ -34,6 +35,15 @@ const getProps = (data: Uint8Array): TableProps => ({
 })
 
 describe("st.table", () => {
+  it("keeps FALLBACK_HEADER_ROW_OFFSET_REM aligned with theme tokens", () => {
+    const { fontSizes, lineHeights, spacing } = mockTheme.emotion
+    const fontSizeRem = Number.parseFloat(fontSizes.sm)
+    const verticalPaddingRem = Number.parseFloat(spacing.twoXS) * 2
+    const expectedRem = fontSizeRem * lineHeights.small + verticalPaddingRem
+
+    expect(FALLBACK_HEADER_ROW_OFFSET_REM).toBe(`${expectedRem}rem`)
+  })
+
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
     render(<Table {...props} />)

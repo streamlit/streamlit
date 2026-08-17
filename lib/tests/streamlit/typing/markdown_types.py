@@ -59,6 +59,10 @@ if TYPE_CHECKING:
     assert_type(markdown("Text", text_alignment="right"), DeltaGenerator)
     assert_type(markdown("Text", text_alignment="justify"), DeltaGenerator)
 
+    # Markdown with anchors parameter (keyword-only)
+    assert_type(markdown("# H", anchors=True), DeltaGenerator)
+    assert_type(markdown("# H", anchors=False), DeltaGenerator)
+
     # Markdown with all parameters combined
     assert_type(
         markdown(
@@ -67,6 +71,7 @@ if TYPE_CHECKING:
             help="Additional information",
             width="stretch",
             text_alignment="center",
+            anchors=False,
         ),
         DeltaGenerator,
     )
@@ -82,4 +87,7 @@ if TYPE_CHECKING:
     markdown("Text", text_alignment="start")  # type: ignore[arg-type]
 
     # Passing help as positional argument (should be keyword-only)
-    markdown("Text", False, "help text")  # type: ignore[misc]
+    markdown("Text", False, "help text")  # type: ignore[call-arg]
+
+    # Invalid anchors value (must be bool)
+    markdown("# H", anchors="yes")  # type: ignore[arg-type]

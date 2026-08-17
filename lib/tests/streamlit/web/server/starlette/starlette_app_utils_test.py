@@ -75,6 +75,17 @@ class StarletteServerUtilsTest(unittest.TestCase):
         with pytest.raises(ValueError, match="invalid suffix range"):
             starlette_app_utils.parse_range_header("bytes=-5-10", 100)
 
+        # Suffix with zero length is invalid
+        with pytest.raises(ValueError, match="invalid suffix range"):
+            starlette_app_utils.parse_range_header("bytes=-0", 100)
+
+        # Suffix exceeding total returns full range
+        assert starlette_app_utils.parse_range_header("bytes=-500", 100) == (0, 99)
+
+        # Missing start position (only "=" with no start/end after partition)
+        with pytest.raises(ValueError, match="missing range start"):
+            starlette_app_utils.parse_range_header("bytes=", 100)
+
         # Start > total
         with pytest.raises(ValueError, match="start out of range"):
             starlette_app_utils.parse_range_header("bytes=150-200", 100)

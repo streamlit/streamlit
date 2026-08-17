@@ -37,10 +37,15 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile(r"stBaseButton-pills(Active)?")).filter(
-        has_text=text
-    )
+def get_pill_button(locator: Locator, text: str, *, exact: bool = False) -> Locator:
+    # exact=True anchors the match with a regex (^\s*text\s*$), not Playwright's
+    # built-in exact= parameter, so trailing whitespace the button adds is tolerated.
+    pills = locator.locator("button[data-variant='pills']")
+    if exact:
+        # Anchor the match so e.g. "D (1)" does not also match "D (10)". The
+        # \s* tolerates whitespace the button rendering may add around the label.
+        return pills.filter(has_text=re.compile(rf"^\s*{re.escape(text)}\s*$"))
+    return pills.filter(has_text=text)
 
 
 def test_pills_regression_no_wrap_at_app_start(
@@ -323,6 +328,110 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Selection should be PRESERVED since "mango" is in both option sets
     # If this was reset, it would show "apple" (initial default), not "mango"
     expect_prefixed_markdown(app, "Initial pills value:", "mango")
+
+
+# --- Dynamic format_func tests (gh-15493 regression) ---
+
+
+def test_dynamic_format_func_preserves_selection_and_suppresses_callback(
+    app: Page,
+):
+    """Changing format_func alone must not fire on_change or deselect the pill.
+
+    Regression test for gh-15493: when format_func changes (e.g. a language
+    switch) with the same raw options, the on_change callback must NOT fire and
+    the pill must remain visually selected at the new translated label.
+
+    Steps
+    -----
+    1. EN mode: verify "apple" pill is selected, callback_count == 0.
+    2. Click "Switch to ES": same raw options, format_func now maps A -> manzana.
+       - Pill must show "manzana" as selected (visual fix).
+       - callback_count must still be 0 (primary bug fix).
+    3. Click "naranja" (option B): callback fires once, value must be "B" (raw
+       option key), not the formatted string "naranja".
+    """
+    dynamic_fmt_section = get_element_by_key(app, "dynamic_fmt_pills")
+    expect(dynamic_fmt_section).to_be_visible()
+
+    # Step 1: EN mode - "apple" is selected, no callback yet
+    apple_btn = get_pill_button(dynamic_fmt_section, "apple")
+    expect(apple_btn).to_have_attribute("data-selected", "true")
+    expect_text(app, "dynamic_fmt_pills value: A")
+    expect_text(app, "dynamic_fmt_callback_count: 0")
+
+    # Step 2: switch to ES by clicking the button - format_func changes, options don't
+    click_button(app, "Switch to ES")
+
+    # "manzana" (translated "apple") must be selected - no deselection flash
+    manzana_btn = get_pill_button(dynamic_fmt_section, "manzana")
+    expect(manzana_btn).to_have_attribute("data-selected", "true")
+    # Negative assertion: "apple" must not appear in the widget (labels changed)
+    expect(dynamic_fmt_section).not_to_contain_text("apple")
+    # Primary bug fix: callback must NOT have fired
+    expect_text(app, "dynamic_fmt_callback_count: 0")
+    expect_text(app, "dynamic_fmt_pills value: A")
+
+    # Step 3: user selects "naranja" (option B) - callback should fire once
+    get_pill_button(dynamic_fmt_section, "naranja").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "dynamic_fmt_callback_count: 1")
+    # The callback value must be the original option key "B", not the display string
+    expect_text(app, "dynamic_fmt_last_value: B")
+    expect_text(app, "dynamic_fmt_pills value: B")
+    naranja_btn = get_pill_button(dynamic_fmt_section, "naranja")
+    expect(naranja_btn).to_have_attribute("data-selected", "true")
+
+
+def test_interdependent_format_func_keeps_child_pill_selected(app: Page):
+    """A child pill stays selected when a parent filter change alters its label.
+
+    Regression test for gh-16269: when clearing the parent pill changes the
+    child's format_func output (a record count embedded in the label) for the
+    still-selected option, the child must remain visually selected at its new
+    label rather than silently deselecting. The return value must be preserved.
+    Clearing the parent also expands the child's option list (mirroring a
+    dataframe that is filtered by the parent), so this covers a label change and
+    a change to the surrounding options at once.
+
+    Steps
+    -----
+    1. Select parent "A": the child options become "D (1)" / "E (1)".
+    2. Select child "D (1)": it is selected and the value is "D".
+    3. Deselect the parent by clicking "A" again: the child label becomes
+       "D (3)", a new option "F (4)" appears, and the pill must stay selected at
+       "D (3)" with the value still "D".
+    """
+    parent_section = get_element_by_key(app, "idf_parent")
+    child_section = get_element_by_key(app, "idf_child")
+    expect(parent_section).to_be_visible()
+
+    # Step 1: select the parent "A" so the child labels reflect the filtered count.
+    get_pill_button(parent_section, "A").click()
+    wait_for_app_run(app)
+    child_d_filtered = get_pill_button(child_section, "D (1)", exact=True)
+    expect(child_d_filtered).to_be_visible()
+
+    # Step 2: select the child "D (1)".
+    child_d_filtered.click()
+    wait_for_app_run(app)
+    expect(child_d_filtered).to_have_attribute("data-selected", "true")
+    expect_text(app, "idf_child value: D")
+
+    # Step 3: clear the parent by clicking "A" again. The child's label count
+    # changes from "D (1)" to "D (3)" and the option list expands to include
+    # "F (4)", all without the user touching the child.
+    get_pill_button(parent_section, "A").click()
+    wait_for_app_run(app)
+
+    # Child stays selected at its new label, keeps its value, renders the newly
+    # added option, and no longer shows the stale label (negative assertion).
+    child_d_full = get_pill_button(child_section, "D (3)", exact=True)
+    expect(child_d_full).to_have_attribute("data-selected", "true")
+    expect_text(app, "idf_child value: D")
+    expect(get_pill_button(child_section, "F (4)", exact=True)).to_be_visible()
+    expect(child_section).not_to_contain_text("D (1)")
 
 
 # --- Query parameter binding tests ---

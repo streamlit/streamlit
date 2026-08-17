@@ -30,7 +30,6 @@ from streamlit.auth_util import (
     AuthCache,
     _calculate_signing_overhead,
     _set_split_cookie,
-    clear_cookie_and_chunks,
     generate_default_provider_section,
     get_cookie_with_chunks,
     get_expose_tokens_config,
@@ -438,71 +437,6 @@ class CookieChunkingTest(unittest.TestCase):
         result = get_cookie_with_chunks(mock_get_cookie, "test_cookie")
         assert result == b"chunks-invalid"
 
-    def test_clear_cookie_and_chunks_single_cookie(self):
-        """Test clearing a single (non-chunked) cookie."""
-        cookies: dict[str, bytes] = {
-            "test_cookie": b'{"key": "value"}',
-        }
-        cleared: list[str] = []
-
-        def mock_get_cookie(name: str) -> bytes | None:
-            return cookies.get(name)
-
-        def mock_clear_cookie(name: str) -> None:
-            cleared.append(name)
-            cookies.pop(name, None)
-
-        clear_cookie_and_chunks(mock_get_cookie, mock_clear_cookie, "test_cookie")
-
-        assert "test_cookie" in cleared
-        assert len(cleared) == 1
-
-    def test_clear_cookie_and_chunks_chunked_cookie(self):
-        """Test clearing a chunked cookie."""
-        cookies: dict[str, bytes] = {
-            "test_cookie": b"chunks-3",
-            "test_cookie_1": b"chunk1",
-            "test_cookie_2": b"chunk2",
-            "test_cookie_3": b"chunk3",
-        }
-        cleared: list[str] = []
-
-        def mock_get_cookie(name: str) -> bytes | None:
-            return cookies.get(name)
-
-        def mock_clear_cookie(name: str) -> None:
-            cleared.append(name)
-            cookies.pop(name, None)
-
-        clear_cookie_and_chunks(mock_get_cookie, mock_clear_cookie, "test_cookie")
-
-        # Should clear the main cookie, additional chunks (1, 2), and the count cookie
-        assert "test_cookie" in cleared
-        assert "test_cookie_1" in cleared
-        assert "test_cookie_2" in cleared
-        assert "test_cookie_3" in cleared
-        assert len(cleared) == 4  # main, 1, 2, 3
-
-    def test_clear_cookie_and_chunks_invalid_count(self):
-        """Test clearing a chunked cookie with invalid count."""
-        cookies: dict[str, bytes] = {
-            "test_cookie": b"chunks-invalid",
-        }
-        cleared: list[str] = []
-
-        def mock_get_cookie(name: str) -> bytes | None:
-            return cookies.get(name)
-
-        def mock_clear_cookie(name: str) -> None:
-            cleared.append(name)
-            cookies.pop(name, None)
-
-        clear_cookie_and_chunks(mock_get_cookie, mock_clear_cookie, "test_cookie")
-
-        # Should clear the main cookie and the count cookie
-        assert "test_cookie" in cleared
-        assert len(cleared) == 1
-
     def test_round_trip_small_cookie(self):
         """Test setting and getting a small cookie."""
         cookies: dict[str, bytes] = {}
@@ -608,6 +542,7 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
     [
         (lambda: None, None),
         (lambda: AttrDict({}), None),
+        (lambda: AttrDict({"client_id": "abc"}), None),
         (
             lambda: AttrDict({"redirect_uri": "http://localhost:8501/callback"}),
             None,
@@ -617,7 +552,13 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
             "http://localhost:8501/oauth2callback",
         ),
     ],
-    ids=["no_section", "no_redirect_uri", "wrong_suffix", "valid_callback"],
+    ids=[
+        "no_section",
+        "no_redirect_uri",
+        "section_without_redirect_uri",
+        "wrong_suffix",
+        "valid_callback",
+    ],
 )
 def test_get_validated_redirect_uri(
     get_section: Callable[[], AttrDict | None],
@@ -652,6 +593,7 @@ def test_get_validated_redirect_uri_substitutes_port_placeholder(
     [
         (lambda: None, None),
         (lambda: AttrDict({}), None),
+        (lambda: AttrDict({"client_id": "abc"}), None),
         (
             lambda: AttrDict({"redirect_uri": "https://example.com/oauth2callback"}),
             "https://example.com",
@@ -661,7 +603,13 @@ def test_get_validated_redirect_uri_substitutes_port_placeholder(
             "http://localhost:8501",
         ),
     ],
-    ids=["no_section", "no_redirect_uri", "https_host", "localhost_port"],
+    ids=[
+        "no_section",
+        "no_redirect_uri",
+        "section_without_redirect_uri",
+        "https_host",
+        "localhost_port",
+    ],
 )
 def test_get_origin_from_redirect_uri(
     get_section: Callable[[], AttrDict | None],
@@ -1226,3 +1174,17 @@ def test_validate_auth_credentials_provider_section_not_mapping() -> None:
         with pytest.raises(StreamlitAuthError) as exc_info:
             validate_auth_credentials("google")
     assert "must be valid TOML" in str(exc_info.value)
+
+
+def test_validate_provider_token_claims_rejects_non_string_provider() -> None:
+    """A non-string ``provider`` claim is rejected with ``TypeError``."""
+    with pytest.raises(TypeError, match="provider claim is invalid"):
+        auth_util._validate_provider_token_claims({"provider": 123, "exp": 9999999999})
+
+
+def test_validate_provider_token_claims_accepts_valid_claims() -> None:
+    """Valid claims are returned as a normalized payload with an integer ``exp``."""
+    result = auth_util._validate_provider_token_claims(
+        {"provider": "google", "exp": 9999999999.0}
+    )
+    assert result == {"provider": "google", "exp": 9999999999}

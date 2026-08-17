@@ -49,7 +49,12 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunnerEvent,
     StopException,
 )
+from streamlit.runtime.scriptrunner import script_runner as script_runner_module
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.scriptrunner.script_runner import (
+    _clean_problem_modules,
+    _log_if_error,
+)
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequest,
     ScriptRequests,
@@ -63,6 +68,8 @@ from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -410,6 +417,48 @@ class ScriptRunnerTest(unittest.TestCase):
         assert not scriptrunner._fragment_storage.contains("inner")
         assert scriptrunner._fragment_storage.contains("outer")
 
+    def test_evicted_fragment_enqueues_stop_auto_rerun(self) -> None:
+        """Evicting a stale descendant enqueues a StopAutoRerun so the frontend
+        can cancel that fragment's auto-rerun timer."""
+        outer = MagicMock()
+        inner = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        stop_messages = [
+            msg
+            for msg in scriptrunner.forward_msgs()
+            if msg.HasField("stop_auto_rerun")
+        ]
+        assert len(stop_messages) == 1
+        assert list(stop_messages[0].stop_auto_rerun.fragment_ids) == ["inner"]
+
+    def test_fragment_rerun_without_eviction_enqueues_no_stop_auto_rerun(self) -> None:
+        """A fragment rerun that evicts nothing must not enqueue a StopAutoRerun."""
+        fragment = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.register("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        stop_messages = [
+            msg
+            for msg in scriptrunner.forward_msgs()
+            if msg.HasField("stop_auto_rerun")
+        ]
+        assert stop_messages == []
+
     def test_fragment_queue_preserves_fifo_for_unrelated_fragments(self):
         """Unrelated queued fragments keep FIFO ordering across fragment trees."""
         execution_order = []
@@ -444,17 +493,18 @@ class ScriptRunnerTest(unittest.TestCase):
         def run_inner() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
 
         inner = MagicMock(side_effect=run_inner)
 
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
+            inner()
 
         outer = MagicMock(side_effect=rerender_outer)
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
@@ -467,6 +517,8 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         outer.assert_called_once()
+        # The parent already re-rendered the child inline, so the child's own queue
+        # entry is skipped instead of running it a second time (#10719).
         inner.assert_called_once()
         assert scriptrunner._fragment_storage.contains("inner")
 
@@ -479,7 +531,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_middle() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("grandchild")
+            ctx.shared.new_fragment_ids.check_and_add("grandchild")
             scriptrunner._fragment_storage.register(
                 "grandchild", grandchild, parent_fragment_id="middle"
             )
@@ -490,7 +542,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("middle")
+            ctx.shared.new_fragment_ids.check_and_add("middle")
             scriptrunner._fragment_storage.register(
                 "middle", middle, parent_fragment_id="outer"
             )
@@ -512,9 +564,123 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         outer.assert_called_once()
-        assert middle.call_count == 2
-        assert grandchild.call_count == 3
+        # The outer rerun re-renders the whole chain inline, so the queued
+        # descendants are skipped rather than run again (#10719), and the
+        # grandchild must survive in storage for later reruns.
+        middle.assert_called_once()
+        grandchild.assert_called_once()
         assert scriptrunner._fragment_storage.contains("grandchild")
+
+    def test_fragment_queue_nested_widgets_are_not_duplicated(self):
+        """Coalesced parent+child auto-reruns must not re-create the child's widgets.
+
+        Regression test for issue #10719: two nested ``run_every`` fragments can have
+        their auto-reruns coalesced into a single queue. The parent re-renders the
+        child as part of its own body, so also running the child from the queue
+        registered its widgets twice and raised StreamlitDuplicateElementId.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner_errors: list[Exception] = []
+
+        def render_inner() -> None:
+            try:
+                st.button("inner button")
+            except Exception as e:
+                # Recorded rather than raised so the assertion below can name the
+                # duplicate-id failure instead of it being swallowed by the runner.
+                inner_errors.append(e)
+
+        inner = MagicMock(side_effect=render_inner)
+
+        def render_outer() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            st.button("outer button")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.register(
+                "inner", inner, parent_fragment_id="outer"
+            )
+            inner()
+
+        outer = MagicMock(side_effect=render_outer)
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert inner_errors == []
+        inner.assert_called_once()
+        button_labels = [
+            element.button.label
+            for element in scriptrunner.elements()
+            if element.WhichOneof("type") == "button"
+        ]
+        assert button_labels == ["outer button", "inner button"]
+        self._assert_no_exceptions(scriptrunner)
+
+    def test_fragment_queue_runs_descendant_when_ancestor_is_gone(self):
+        """A queued descendant still runs if its queued ancestor never executed."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner = MagicMock()
+
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        # "outer" is queued but absent from storage, so it is skipped without running
+        # and must not suppress its descendant's own queued rerun.
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        inner.assert_called_once()
+        self._assert_no_exceptions(scriptrunner)
+
+    def test_fragment_queue_skips_descendant_when_ancestor_raises(self):
+        """A failing ancestor must still suppress its queued descendant.
+
+        The ancestor is added to ``executed_fragment_ids`` *before* its own body
+        runs, so a descendant reached later in the queue is skipped by
+        ``has_ancestor_in`` even when that body raised. The ancestor owns the
+        descendant's container either way: rerunning the descendant here would
+        render it outside the parent that just failed. Moving that bookkeeping
+        after the call would let the descendant run, so this pins the ordering.
+
+        The ancestor re-registers the descendant before raising. Without that,
+        ``clear_stale_descendants`` prunes the descendant during cleanup and the
+        lookup fails, which would make this pass for the wrong reason.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner = MagicMock()
+
+        def register_child_then_explode() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.shared.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.register(
+                "inner", inner, parent_fragment_id="outer"
+            )
+            raise RuntimeError("kaboom")
+
+        outer = MagicMock(side_effect=register_child_then_explode)
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_not_called()
+        assert scriptrunner._fragment_storage.contains("inner"), (
+            "the descendant must survive cleanup, or this test passes vacuously"
+        )
 
     def test_fragment_scoped_rerun_child_first_does_not_rerun_parent(self):
         """A child-scoped rerun must not requeue an already-run parent."""
@@ -533,10 +699,11 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerender_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
+            inner()
 
         outer = MagicMock(side_effect=rerender_outer)
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
@@ -560,7 +727,7 @@ class ScriptRunnerTest(unittest.TestCase):
         def rerun_outer() -> None:
             ctx = get_script_run_ctx()
             assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
+            ctx.shared.new_fragment_ids.check_and_add("inner")
             scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
@@ -568,6 +735,8 @@ class ScriptRunnerTest(unittest.TestCase):
             with ThreadState.scoped(fragment_id="outer"):
                 if outer.call_count == 1:
                     st.rerun(scope="fragment")
+
+            inner()
 
         outer = MagicMock(side_effect=rerun_outer)
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
@@ -1580,3 +1749,79 @@ def require_widgets_deltas(
         runner.join()
 
     raise RuntimeError(err_string)
+
+
+def test_scriptrunner_repr_uses_util_repr_format() -> None:
+    """ScriptRunner.__repr__ delegates to util.repr_ and exposes its concrete class name."""
+    runner = TestScriptRunner("not_a_script.py")
+    rendered = repr(runner)
+    # util.repr_ formats instances as "<ClassName(field=value, ...)>".
+    assert rendered.startswith(f"{type(runner).__name__}(")
+
+
+@pytest.mark.parametrize(
+    "invoke",
+    [
+        pytest.param(lambda r: r._get_script_run_ctx(), id="get_script_run_ctx"),
+        # Call the base implementation directly: TestScriptRunner swallows the
+        # exception into script_thread_exceptions, hiding the guard's RuntimeError.
+        pytest.param(
+            lambda r: ScriptRunner._run_script_thread(r), id="run_script_thread"
+        ),
+        pytest.param(lambda r: r._run_script(RerunData()), id="run_script"),
+    ],
+)
+def test_script_thread_methods_raise_when_called_off_thread(
+    invoke: Callable[[TestScriptRunner], object],
+) -> None:
+    """Script-thread-only methods must raise when called from another thread."""
+    runner = TestScriptRunner("not_a_script.py")
+    with pytest.raises(RuntimeError, match="must be called from the script thread"):
+        invoke(runner)
+
+
+def test_set_execing_flag_disallows_nested_calls() -> None:
+    """_set_execing_flag raises when nested while already execing."""
+    runner = TestScriptRunner("not_a_script.py")
+    with runner._set_execing_flag():
+        with pytest.raises(RuntimeError, match="Nested set_execing_flag call"):
+            with runner._set_execing_flag():
+                pass
+
+
+@pytest.mark.parametrize(
+    "side_effect",
+    [
+        pytest.param(None, id="happy_path"),
+        # Failures in optional cleanup must never propagate.
+        pytest.param(RuntimeError("boom"), id="swallows_exceptions"),
+    ],
+)
+def test_clean_problem_modules_handles_keras_and_matplotlib(
+    side_effect: Exception | None,
+) -> None:
+    """_clean_problem_modules clears Keras + closes matplotlib, swallowing errors."""
+    fake_keras = MagicMock()
+    fake_keras.backend.clear_session.side_effect = side_effect
+    fake_plt = MagicMock()
+    fake_plt.close.side_effect = side_effect
+
+    with patch.dict(
+        sys.modules, {"keras": fake_keras, "matplotlib.pyplot": fake_plt}, clear=False
+    ):
+        _clean_problem_modules()
+
+    fake_keras.backend.clear_session.assert_called_once()
+    fake_plt.close.assert_called_once_with("all")
+
+
+def test_log_if_error_logs_exception_and_does_not_raise() -> None:
+    """_log_if_error must catch exceptions and log them instead of propagating."""
+
+    def raises() -> None:
+        raise ValueError("kaboom")
+
+    with patch.object(script_runner_module, "_LOGGER") as mock_logger:
+        _log_if_error(raises)
+
+    mock_logger.warning.assert_called_once()

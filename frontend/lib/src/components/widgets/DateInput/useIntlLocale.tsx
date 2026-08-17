@@ -19,31 +19,7 @@ import { useMemo } from "react"
 import type { Day, Locale } from "date-fns"
 import { enUS } from "date-fns/locale/en-US"
 
-type IntlWeekInfo = {
-  firstDay: number
-  weekend: number[]
-  minimalDays?: number
-}
-
-/**
- * Retrieves the week information for a given locale.
- * Note: Firefox does not yet support the `weekInfo` property /`getWeekInfo`
- * function on `Intl.Locale`.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/getWeekInfo
- * @param {Intl.Locale} intlLocale - The locale for which to retrieve week
- * information.
- */
-/** Extended Intl.Locale with weekInfo support (not yet in all TS lib versions). */
-type IntlLocaleWithWeekInfo = Intl.Locale & {
-  getWeekInfo?: () => IntlWeekInfo
-  weekInfo?: IntlWeekInfo
-}
-
-const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
-  const locale = intlLocale as IntlLocaleWithWeekInfo
-  return locale?.getWeekInfo?.() ?? locale?.weekInfo ?? null
-}
+import { getWeekInfoForLocale } from "./weekInfo"
 
 /**
  * Returns an augmented en-US locale with the weekStartsOn option set to the
@@ -52,28 +28,21 @@ const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
  * This is used as a stop-gap solution since date-fns is a large library and we
  * don't want to include all locales in the wheel file.
  *
+ * Note: this hook is consumed only by `DateTimeInput.tsx`. The `DateInput`
+ * components use `I18nProvider` for locale-aware week start instead.
+ *
  * @param locale  The locale for which to retrieve week information.
  * @returns The augmented locale, or en-US if the week information could not be
  * retrieved.
  */
 export const useIntlLocale = (locale: string): Locale => {
-  const weekInfo = useMemo(() => {
-    try {
-      return getWeekInfo(new Intl.Locale(locale))
-    } catch {
-      return getWeekInfo(new Intl.Locale("en-US"))
-    }
-  }, [locale])
+  const weekInfo = useMemo(() => getWeekInfoForLocale(locale), [locale])
 
   if (!weekInfo) {
     return enUS
   }
 
-  /**
-   * Customize the start of week day.
-   * Intl API starts with Monday on 1, but BaseWeb starts with Sunday on 0
-   * @see https://date-fns.org/v2.30.0/docs/Locale
-   */
+  // Intl API starts with Monday=1; date-fns expects Sunday=0.
   const normalizedFirstDay =
     weekInfo.firstDay >= 1 && weekInfo.firstDay <= 7 ? weekInfo.firstDay : 7
   const firstDay: Day =

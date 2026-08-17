@@ -497,6 +497,15 @@ text justification properly. The text stretches to fill the available width.""",
     help="This is a help tooltip!",
 )
 
+# anchors=False hides the anchor link icon while preserving heading IDs so URL
+# fragments still deep-link.
+st.container(key="markdown_anchors_default").markdown(
+    "# Anchors Default Heading\n## Anchors Default Subheading"
+)
+st.container(key="markdown_anchors_disabled").markdown(
+    "# Anchors Disabled Heading\n## Anchors Disabled Subheading", anchors=False
+)
+
 # Test for gh-13339: Tooltip with newlines should render correctly
 st.header("Tooltip with Newlines (gh-13339)")
 
@@ -556,4 +565,44 @@ Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 with st.container(key="shimmer_elements"):
     st.markdown(
         "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
+    )
+
+# Mermaid diagram support tests - verifies mermaid works within markdown context
+st.header("Mermaid Charts")
+
+with st.container(key="mermaid_elements"):
+    # Markdown with mermaid embedded - tests that markdown before/after mermaid works
+    st.markdown(
+        """
+Here is a **flowchart** showing a simple decision process:
+
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+```
+
+The diagram above demonstrates mermaid rendering within markdown.
+"""
+    )
+
+    # Second mermaid type to verify different diagram types work
+    st.markdown(
+        """
+```mermaid
+sequenceDiagram
+    User->>App: Click
+    App-->>User: Response
+```
+"""
+    )
+
+    # Invalid mermaid syntax (should show error)
+    st.markdown(
+        """
+```mermaid
+this is not valid mermaid syntax
+```
+"""
     )

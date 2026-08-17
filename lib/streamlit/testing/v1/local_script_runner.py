@@ -85,6 +85,17 @@ class LocalScriptRunner(ScriptRunner):
             self.events.append(event)
             self.event_data.append(kwargs)
 
+            if event == ScriptRunnerEvent.SCRIPT_STARTED:
+                # Drop stale deltas from the previous run so the element tree
+                # does not accumulate elements across (internal) reruns. This
+                # mirrors AppSession._clear_queue: fragment_ids_this_run is
+                # forwarded so that a fragment-scoped rerun preserves deltas
+                # belonging to elements outside the running fragment(s).
+                self.forward_msg_queue.clear(
+                    retain_lifecycle_msgs=True,
+                    fragment_ids_this_run=kwargs.get("fragment_ids_this_run"),
+                )
+
             # Send ENQUEUE_FORWARD_MSGs to our queue
             if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
                 forward_msg = kwargs["forward_msg"]
@@ -155,7 +166,9 @@ class LocalScriptRunner(ScriptRunner):
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())
+            self._session_state.on_script_finished(
+                ctx.shared.widget_ids_this_run.snapshot()
+            )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)

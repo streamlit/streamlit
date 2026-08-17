@@ -18,6 +18,7 @@ import type { ComponentProps, ComponentRef, ForwardedRef } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
 
 import {
   DateTimeInput as DateTimeInputProto,
@@ -269,6 +270,7 @@ describe("DateTimeInput widget", () => {
       expect(errorIcon).toBeVisible()
 
       // Hover to see error message
+      act(() => setInteractionModality("pointer"))
       await user.hover(errorIcon)
       expect(
         await screen.findByText(/Date and time set outside allowed range/i)

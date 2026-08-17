@@ -64,17 +64,7 @@ const VideoRecordedDialog: FunctionComponent<
   }
 
   return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      overrides={{
-        Dialog: {
-          style: {
-            width: "80vw",
-          },
-        },
-      }}
-    >
+    <Modal isOpen onClose={onClose} width="80vw">
       <ModalHeader>Next steps</ModalHeader>
       <ModalBody>
         <StyledDialogContainer data-testid="stVideoRecordedDialog">

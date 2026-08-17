@@ -59,6 +59,14 @@ vi.mock("./ElementContainer", async importOriginal => {
   }
 })
 
+vi.mock("~lib/components/elements/Metric/Metric", () => ({
+  default: () => null,
+}))
+
+vi.mock("~lib/components/elements/ImageList/ImageList", () => ({
+  default: () => null,
+}))
+
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function createElementNode(
@@ -405,10 +413,25 @@ describe("ElementNodeRenderer Block Component", () => {
   })
 
   describe("render Skeleton", () => {
-    it("should render with FULL_WIDTH config", () => {
+    it("should render with LARGE_ELEMENT config for regular skeleton", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const node = createElementNode(scriptRunId, "skeleton", {
         style: SkeletonProto.SkeletonStyle.ELEMENT,
+      })
+      const props = getProps({ node })
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
+        scriptRunContext: { scriptRunId },
+      })
+
+      expect(screen.getByTestId("stElementContainer")).toBeVisible()
+      const lastCall = mockElementContainer.mock.calls.at(-1)
+      expect(lastCall?.[0].config).toBe(ElementContainerConfig.LARGE_ELEMENT)
+    })
+
+    it("should render with FULL_WIDTH config for AppSkeleton", () => {
+      const scriptRunId = "SCRIPT_RUN_ID"
+      const node = createElementNode(scriptRunId, "skeleton", {
+        style: SkeletonProto.SkeletonStyle.APP,
       })
       const props = getProps({ node })
       renderWithContexts(<ElementNodeRenderer {...props} />, {

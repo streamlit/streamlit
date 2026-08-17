@@ -23,6 +23,7 @@ from streamlit.elements.dialog_decorator import dialog_decorator
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
+    StreamlitDuplicateElementId,
     StreamlitInvalidColumnGapError,
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
@@ -31,7 +32,9 @@ from streamlit.errors import (
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -266,12 +269,40 @@ class ColumnsTest(DeltaGeneratorTestCase):
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
 
+    @parameterized.expand([(0,), (5,), (20,), (100,)])
+    def test_columns_with_pixel_gap(self, gap: int):
+        """Test that non-negative integer gaps set pixel_gap on the flex container and columns."""
+
+        st.columns(3, gap=gap)
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "pixel_gap"
+        )
+        assert horizontal_container.add_block.flex_container.gap_config.pixel_gap == gap
+
+        for col_block in columns_blocks:
+            assert (
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "pixel_gap"
+            )
+            assert col_block.add_block.column.gap_config.pixel_gap == gap
+
     @parameterized.expand(
         [
             "invalid",
-            5,
             "5rem",
             "10px",
+            -1,
+            -100,
+            True,
         ]
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
@@ -327,6 +358,12 @@ class ExpanderTest(DeltaGeneratorTestCase):
         """Test that label is required"""
         with pytest.raises(TypeError):
             st.expander()
+
+    def test_label_none_raises(self):
+        """Test that an explicit label=None raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.expander(None)
+        assert "A label is required for an expander" in str(e.value)
 
     def test_just_label(self):
         """Test that it can be called with no params"""
@@ -803,15 +840,43 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
+            # Each case is horizontal, then the wrap argument, then the expected
+            # resolved wrap value on the proto.
+            # A vertical container always resolves proto wrap to False.
+            (False, True, False),
+            # A horizontal container keeps the default wrapping behavior for
+            # wrap=True and a single row for wrap=False.
+            (True, True, True),
+            (True, False, False),
         ],
     )
-    def test_container_wrap(self, direction: bool, wrap: bool) -> None:
+    def test_container_wrap(
+        self, horizontal: bool, wrap_arg: bool, expected_wrap: bool
+    ) -> None:
         """Test that st.container sets the wrap property correctly."""
-        st.container(horizontal=direction)
+        st.container(horizontal=horizontal, wrap=wrap_arg)
         container_block = self.get_delta_from_queue()
-        assert container_block.add_block.flex_container.wrap == wrap
+        assert container_block.add_block.flex_container.wrap == expected_wrap
+
+    def test_container_wrap_defaults_to_true_when_horizontal(self) -> None:
+        """Test that a horizontal container wraps by default (wrap omitted)."""
+        st.container(horizontal=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.wrap is True
+
+    def test_container_wrap_false_without_horizontal_raises(self) -> None:
+        """Test that st.container raises for wrap=False without horizontal=True."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.container(horizontal=False, wrap=False)
+        assert "horizontal=True" in str(exc.value)
+
+    def test_container_wrap_true_without_horizontal_allowed(self) -> None:
+        """Test that wrap=True on a vertical container is a no-op, not an error."""
+        st.container(horizontal=False, wrap=True)
+        container_block = self.get_delta_from_queue()
+        # wrap is layout-only and meaningless for a vertical container, so it
+        # resolves to False rather than raising.
+        assert container_block.add_block.flex_container.wrap is False
 
     @parameterized.expand(
         [
@@ -828,6 +893,23 @@ class ContainerTest(DeltaGeneratorTestCase):
         assert (
             container_block.add_block.flex_container.gap_config.gap_size == expected_gap
         )
+
+    @parameterized.expand([(0,), (5,), (20,), (100,)])
+    def test_container_pixel_gap(self, gap: int) -> None:
+        """Test that st.container sets pixel_gap for integer gap values."""
+        st.container(gap=gap)
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.WhichOneof("gap_spec")
+            == "pixel_gap"
+        )
+        assert container_block.add_block.flex_container.gap_config.pixel_gap == gap
+
+    @parameterized.expand([("invalid",), (-1,), (True,)])
+    def test_container_invalid_gap(self, invalid_gap) -> None:
+        """Test that st.container raises on invalid gap values."""
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            st.container(gap=invalid_gap)
 
     @parameterized.expand(
         [
@@ -889,6 +971,18 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(TypeError):
             st.popover()
 
+    def test_label_none_raises(self):
+        """Test that an explicit label=None raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.popover(None)
+        assert "A label is required for a popover" in str(e.value)
+
+    def test_invalid_type_raises(self):
+        """Test that an unsupported button type raises a StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
+            st.popover("label", type="invalid")
+        assert "Invalid `type` value" in str(e.value)
+
     def test_just_label(self):
         """Test that it correctly applies label param."""
         popover = st.popover("label")
@@ -903,6 +997,38 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         assert popover_block.add_block.allow_empty
         # Default width should be "content"
         assert popover_block.add_block.width_config.use_content
+
+    def test_wrap_default(self):
+        """By default wrap is left unset (auto) so the frontend resolves it."""
+        with st.popover("label"):
+            pass
+
+        popover = self.get_delta_from_queue().add_block.popover
+        assert not popover.HasField("wrap")
+
+    def test_wrap(self):
+        """Test that the wrap parameter is forwarded to the popover proto."""
+        for wrap_value in (True, False):
+            with self.subTest(wrap=wrap_value):
+                with st.popover("label", wrap=wrap_value):
+                    pass
+
+                popover = self.get_delta_from_queue().add_block.popover
+                assert popover.wrap is wrap_value
+
+    def test_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the popover element id.
+
+        A stateful popover registers an element id, so two otherwise-identical
+        popovers that differ only in wrap collide on the same auto-generated id,
+        proving wrap is excluded from id computation and so preserves widget
+        state when toggled.
+        """
+        with st.popover("same label", on_change="rerun"):
+            pass
+        with pytest.raises(StreamlitDuplicateElementId):
+            with st.popover("same label", on_change="rerun", wrap=False):
+                pass
 
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
@@ -1264,7 +1390,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
 
     def test_throws_error_on_wrong_state(self):
         """Test that it throws an error on unknown state."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.status("label", state="unknown")
 
     def test_just_label(self):
@@ -1377,6 +1503,159 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         """Test that invalid type values raise StreamlitValueError."""
         with pytest.raises(StreamlitValueError):
             st.status("label", type="invalid")
+
+
+class StatusContainerDeltaPathTest(DeltaGeneratorTestCase):
+    """Tests that `st.status` re-sends its block proto at the block's real path.
+
+    `update()` enqueues the `expandable` block proto again at the path that `_create()`
+    stored. If that stored path points at the wrapper instead of the block, the frontend
+    replaces the wrong node and drops the status contents (see issue #16281).
+    """
+
+    def _enter_fragment(
+        self, fragment_id: str = "frag", delta_path: tuple[int, ...] = (0, 99)
+    ) -> None:
+        """Make the current thread look like a running fragment."""
+        ThreadState.update(fragment_id=fragment_id, delta_path=delta_path)
+        self.addCleanup(lambda: ThreadState.update(fragment_id=None, delta_path=None))
+
+    def _add_block_paths(self, block_type: str) -> list[list[int]]:
+        """Return the delta paths of every queued `add_block` of one block type."""
+        return [
+            list(msg.metadata.delta_path)
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+            and msg.delta.WhichOneof("type") == "add_block"
+            and msg.delta.add_block.WhichOneof("type") == block_type
+        ]
+
+    def _new_element_paths(self) -> list[list[int]]:
+        """Return the delta paths of every queued `new_element` message."""
+        return [
+            list(msg.metadata.delta_path)
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta") and msg.delta.WhichOneof("type") == "new_element"
+        ]
+
+    def test_update_targets_status_block_without_fragment(self) -> None:
+        """Baseline: with no fragment, the update lands on the status block."""
+        st.title("head")
+        outside = st.container()
+
+        with outside.status("label"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.MAIN, 1, 0]
+        assert status_paths[-1] == status_paths[0]
+        # No fragment runs, so no transparent wrapper is created at all.
+        assert self._add_block_paths("transparent") == []
+
+    def test_update_targets_status_block_for_outside_container_write(self) -> None:
+        """A fragment status on an outside container updates at the block's real path.
+
+        This reproduces the reported crash: two separate `with` blocks write an
+        element after the update message.
+        """
+        st.title("head")
+        outside = st.container()
+        self._enter_fragment()
+
+        status = outside.status("query")
+        with status:
+            st.code("first")
+        with status:
+            st.text("second")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.MAIN, 1, 0, 0]
+        assert status_paths[-1] == status_paths[0]
+        # The write after the update must still resolve inside the status block.
+        second_element_path = self._new_element_paths()[-1]
+        assert second_element_path[: len(status_paths[0])] == status_paths[0]
+
+    def test_update_targets_status_block_for_single_with_block(self) -> None:
+        """One `with` block sends an update too, so its path must be right as well.
+
+        `__exit__` calls `update(state="complete")` and nothing writes afterwards, so
+        a wrong path corrupts the tree without a visible crash.
+        """
+        st.title("head")
+        outside = st.container()
+        self._enter_fragment()
+
+        with outside.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        wrapper_paths = self._add_block_paths("transparent")
+        assert len(status_paths) == 2
+        assert len(wrapper_paths) == 1
+        assert status_paths[-1] == status_paths[0]
+        assert status_paths[-1] != wrapper_paths[0]
+
+    def test_update_targets_status_block_with_two_wrapper_levels(self) -> None:
+        """Two nested wrapper levels still produce the correct update path.
+
+        A parent fragment creates a container inside an outside container, then a
+        child fragment creates a status on that container. Each fragment registers
+        its own wrapper, so the status sits two wrapper levels deep.
+        """
+        st.title("head")
+        outside = st.container()
+
+        self._enter_fragment(fragment_id="parent_frag")
+        inside = outside.container()
+
+        self._enter_fragment(fragment_id="child_frag")
+        with inside.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        wrapper_paths = self._add_block_paths("transparent")
+        assert len(wrapper_paths) == 2
+        assert len(status_paths) == 2
+        # The status lands at [MAIN, outside container, parent wrapper, inner container,
+        # child wrapper, status], so the path holds six entries.
+        assert len(status_paths[0]) == 6
+        assert status_paths[-1] == status_paths[0]
+        # A mis-stored path lands on a wrapper, so name both wrappers directly instead
+        # of trusting the length check to separate them.
+        for wrapper_path in wrapper_paths:
+            assert status_paths[-1] != wrapper_path
+
+    def test_update_targets_status_block_for_empty_outside_container(self) -> None:
+        """The update lands on the status block for an `st.empty()` outside container.
+
+        `st.empty()` gives the wrapper a locked cursor instead of a running one, so
+        this covers the second of the two wrapper cursor types.
+        """
+        st.title("head")
+        outside = st.empty()
+        self._enter_fragment()
+
+        with outside.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.MAIN, 1, 0]
+        assert status_paths[-1] == status_paths[0]
+
+    def test_update_targets_status_block_in_sidebar(self) -> None:
+        """A fragment status in the sidebar updates at the block's real path."""
+        self._enter_fragment()
+
+        with st.sidebar.status("query"):
+            st.code("first")
+
+        status_paths = self._add_block_paths("expandable")
+        assert len(status_paths) == 2
+        assert status_paths[0] == [RootContainer.SIDEBAR, 0, 0]
+        assert status_paths[-1] == status_paths[0]
 
 
 class TabsTest(DeltaGeneratorTestCase):
@@ -1742,6 +2021,65 @@ class TabsTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.tabs(["A", "B"], on_change="rerun")
 
+    def test_default_height_is_content(self) -> None:
+        """Test that the default height matches the content height."""
+        st.tabs(["A", "B"])
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        assert tab_container_block.add_block.height_config.use_content
+        assert not tab_container_block.add_block.allow_empty
+
+    def test_height_pixel(self) -> None:
+        """Test that an integer height sets pixel_height and enables allow_empty."""
+        st.tabs(["A", "B"], height=250)
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        assert tab_container_block.add_block.height_config.pixel_height == 250
+        # Fixed-height tab containers should render even when active tab is empty.
+        assert tab_container_block.add_block.allow_empty
+
+    def test_height_stretch(self) -> None:
+        """Test that height='stretch' sets use_stretch on the height config."""
+        st.tabs(["A", "B"], height="stretch")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        assert tab_container_block.add_block.height_config.use_stretch
+        # Only fixed pixel heights reserve space via allow_empty.
+        assert not tab_container_block.add_block.allow_empty
+
+    def test_height_content(self) -> None:
+        """Test that height='content' sets use_content on the height config."""
+        st.tabs(["A", "B"], height="content")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        assert tab_container_block.add_block.height_config.use_content
+
+    @parameterized.expand(
+        [
+            ("invalid",),
+            (-100,),
+            (0,),
+            (1.5,),
+        ]
+    )
+    def test_invalid_height(self, invalid_height: object) -> None:
+        """Test that invalid height values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], height=invalid_height)  # type: ignore[arg-type]
+
+    def test_height_included_in_element_id(self) -> None:
+        """Test that height participates in identity for stateful tabs so that
+        two otherwise-identical tabs with different heights get distinct ids."""
+        st.tabs(["A", "B"], on_change="rerun")
+        st.tabs(["A", "B"], on_change="rerun", height=200)
+        tab_container_blocks = [
+            delta
+            for delta in self.get_all_deltas_from_queue()
+            if delta.add_block.HasField("tab_container")
+        ]
+        assert len(tab_container_blocks) == 2
+        first_id = tab_container_blocks[0].add_block.tab_container.id
+        second_id = tab_container_blocks[1].add_block.tab_container.id
+        assert first_id != ""
+        assert second_id != ""
+        assert first_id != second_id
+
 
 class DialogTest(DeltaGeneratorTestCase):
     """Run unit tests for the non-public delta-generator dialog and also the dialog
@@ -1957,7 +2295,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_decorator_invalid_on_dismiss(self):
         """Test dialog decorator with invalid on_dismiss raises error"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
 
             @dialog_decorator("Test Dialog", on_dismiss="invalid")
             def test_dialog():
@@ -1965,7 +2303,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             test_dialog()
 
-        assert "You have passed invalid to `on_dismiss`" in str(exc_info.value)
+        assert "Invalid `on_dismiss` value" in str(exc_info.value)
 
     def test_dialog_on_dismiss_rerun(self):
         """Test that the dialog decorator with on_dismiss='rerun'."""

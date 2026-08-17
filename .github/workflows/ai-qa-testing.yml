@@ -14,11 +14,11 @@ on:
         description: "Model to use for QA testing"
         required: false
         type: string
-        default: "claude-opus-4-7-thinking-xhigh"
+        default: "cursor-grok-4.5-high"
 
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'claude-opus-4-7-thinking-xhigh' }}
+  MODEL: ${{ github.event.inputs.model || 'cursor-grok-4.5-high' }}
 
 jobs:
   check-secrets:
@@ -49,9 +49,6 @@ jobs:
       pull-requests: read
       issues: read
       actions: read
-    outputs:
-      qa_dir: ${{ steps.qa-setup.outputs.qa_dir }}
-
     concurrency:
       group: ${{ github.workflow }}-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: true
@@ -76,7 +73,7 @@ jobs:
           echo "title=$(echo "$PR_DATA" | jq -r '.title')" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.pr-info.outputs.head_sha }}
           persist-credentials: false
@@ -107,7 +104,6 @@ jobs:
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
       - name: Set up QA directory
-        id: qa-setup
         env:
           HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
         run: |
@@ -118,9 +114,8 @@ jobs:
           QA_DIR="work-tmp/qa-${FEATURE_NAME}"
           mkdir -p "$QA_DIR"
 
-          # Export for later steps and as output
+          # Export for later steps
           echo "QA_DIR=$QA_DIR" >> "$GITHUB_ENV"
-          echo "qa_dir=$QA_DIR" >> "$GITHUB_OUTPUT"
 
       - name: AI QA Testing
         env:
@@ -169,12 +164,11 @@ jobs:
           fi
 
       - name: Upload QA artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qa-testing-output
-          path: |
-            ${{ env.QA_DIR }}/qa-report.md
-            ${{ env.QA_DIR }}/verdict.txt
+          path: ${{ env.QA_DIR }}/
+          if-no-files-found: error
           retention-days: 7
 
   post-results:
@@ -196,10 +190,14 @@ jobs:
         run: |
           gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-qa-test" --repo "$REPOSITORY" || true
 
+      # The upload step uploads the $QA_DIR/ directory, so its contents
+      # (qa-report.md and verdict.txt) are stored at the artifact root and
+      # download to qa-artifacts/ directly (not qa-artifacts/$QA_DIR/). Later
+      # steps rely on these flat paths.
       - name: Download QA artifacts
         id: download
         if: needs.ai-qa-testing.result == 'success'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: qa-testing-output
@@ -230,17 +228,16 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           MODEL_NAME: ${{ env.MODEL }}
           RUN_ID: ${{ github.run_id }}
-          QA_DIR: ${{ needs.ai-qa-testing.outputs.qa_dir }}
         run: |
-          if [ -f "qa-artifacts/${QA_DIR}/qa-report.md" ]; then
+          if [ -f "qa-artifacts/qa-report.md" ]; then
             # Add footer to report
             {
               echo ""
               echo "---"
               echo "*This is an automated QA report by \`$MODEL_NAME\`.*"
-            } >> "qa-artifacts/${QA_DIR}/qa-report.md"
+            } >> "qa-artifacts/qa-report.md"
 
-            gh pr comment "$PR_NUMBER_ENV" --body-file "qa-artifacts/${QA_DIR}/qa-report.md" --repo "$REPOSITORY"
+            gh pr comment "$PR_NUMBER_ENV" --body-file "qa-artifacts/qa-report.md" --repo "$REPOSITORY"
           else
             gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI QA Testing completed but no report was generated.**
 
@@ -268,14 +265,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
-          QA_DIR: ${{ needs.ai-qa-testing.outputs.qa_dir }}
         run: |
-          if [ ! -f "qa-artifacts/${QA_DIR}/verdict.txt" ]; then
+          if [ ! -f "qa-artifacts/verdict.txt" ]; then
             echo "Warning: verdict.txt not found, skipping label"
             exit 0
           fi
 
-          VERDICT=$(cat "qa-artifacts/${QA_DIR}/verdict.txt" | tr -d '[:space:]')
+          VERDICT=$(tr -d '[:space:]' < "qa-artifacts/verdict.txt")
           case "$VERDICT" in
             FAIL)
               echo "Adding 'do-not-merge' label"
@@ -294,7 +290,6 @@ jobs:
         env:
           QA_RESULT: ${{ needs.ai-qa-testing.result }}
           HAS_KEY: ${{ needs.check-secrets.outputs.has_key }}
-          QA_DIR: ${{ needs.ai-qa-testing.outputs.qa_dir }}
         run: |
           {
             echo "## AI QA Testing Summary"
@@ -304,7 +299,7 @@ jobs:
             if [ "$HAS_KEY" = "false" ]; then
               echo "- Note: API key not available (fork PR)"
             fi
-            if [ -f "qa-artifacts/${QA_DIR}/verdict.txt" ]; then
-              echo "- Verdict: $(cat "qa-artifacts/${QA_DIR}/verdict.txt")"
+            if [ -f "qa-artifacts/verdict.txt" ]; then
+              echo "- Verdict: $(cat "qa-artifacts/verdict.txt")"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

@@ -138,6 +138,19 @@ describe("AppNavigation", () => {
     expect(newState.hideSidebarNav).toEqual(false)
   })
 
+  it("does not reset the document title on new session", () => {
+    const previousTitle = document.title
+    document.title = "Callback Test"
+
+    try {
+      appNavigation.handleNewSession(generateNewSession())
+
+      expect(document.title).toBe("Callback Test")
+    } finally {
+      document.title = previousTitle
+    }
+  })
+
   it("continues to set hideSidebarNav on new session", () => {
     const cleanAppNavigation = new AppNavigation(
       hostCommunicationMgr,

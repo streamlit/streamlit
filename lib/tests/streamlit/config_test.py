@@ -41,6 +41,11 @@ SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 
 
+def _warning_text(mock_logger: MagicMock) -> str:
+    """Join every `warning` call on a mock logger into one searchable string."""
+    return " ".join(str(call) for call in mock_logger.warning.call_args_list)
+
+
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
@@ -76,9 +81,6 @@ class ConfigTest(unittest.TestCase):
             "metricValueFontSize",
             "metricValueFontWeight",
             "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
-            "chartDivergingColors",
         ]
 
         theme_config_options = [
@@ -137,6 +139,9 @@ class ConfigTest(unittest.TestCase):
             "greenTextColor",
             "violetTextColor",
             "grayTextColor",
+            "chartCategoricalColors",
+            "chartSequentialColors",
+            "chartDivergingColors",
         ]
 
         section_config_options = []
@@ -169,6 +174,16 @@ class ConfigTest(unittest.TestCase):
             config.set_user_option(
                 "client.showErrorDetails", ShowErrorDetailsConfigOptions.FULL
             )
+
+    def test_set_user_option_disable_data_export_scriptable(self):
+        """Test that client.disableDataExport can be set from API."""
+        assert config.get_option("client.disableDataExport") is False
+
+        try:
+            config.set_user_option("client.disableDataExport", True)
+            assert config.get_option("client.disableDataExport") is True
+        finally:
+            config.set_user_option("client.disableDataExport", False)
 
     def test_set_user_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
@@ -739,6 +754,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverAddress",
                 "browser.serverPort",
                 "client.allowedOrigins",
+                "client.disableDataExport",
                 "client.showErrorDetails",
                 "client.showErrorLinks",
                 "client.showSidebarNavigation",
@@ -768,6 +784,8 @@ class ConfigTest(unittest.TestCase):
                 "logger.hideWelcomeMessage",
                 "logger.level",
                 "logger.messageFormat",
+                "runner.cacheBackgroundRefreshMaxWorkers",
+                "runner.cacheHashSeed",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",
@@ -779,24 +797,27 @@ class ConfigTest(unittest.TestCase):
                 "mapbox.token",
                 "secrets.files",
                 "server.address",
+                "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
                 "server.cookieSecret",
                 "server.corsAllowedOrigins",
                 "server.customComponentBaseUrlPath",
                 "server.disconnectedSessionTTL",
-                "server.enableArrowTruncation",
                 "server.enableCORS",
+                "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
                 "server.enableWebsocketCompression",
                 "server.websocketPingInterval",
                 "server.enableXsrfProtection",
+                "server.xsrfCookieSameSite",
                 "server.fileWatcherType",
                 "server.folderWatchBlacklist",
                 "server.folderWatchList",
                 "server.headless",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
+                "server.maxWidgetStateSize",
                 "server.port",
                 "server.runOnSave",
                 "server.scriptHealthCheckEnabled",
@@ -804,6 +825,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
+                "server.unsafeMetricsUserAttributes",
                 "ui.hideTopBar",
             ]
         )
@@ -820,12 +842,151 @@ class ConfigTest(unittest.TestCase):
             config._check_conflicts()
 
     @patch("streamlit.logger.get_logger")
-    def test_check_conflicts_server_csrf(self, get_logger):
+    def test_check_conflicts_cors_disabled_does_not_claim_an_override(self, get_logger):
+        """Disabling CORS protection must warn without claiming an override.
+
+        No code path flips server.enableCORS back to true, so the warning must
+        not say it does and _check_conflicts must not mutate the option.
+        """
         config._set_option("server.enableXsrfProtection", True, "test")
-        config._set_option("server.enableCORS", True, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", False, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        mock_logger.warning.assert_called_once()
+        assert mock_logger.warning.call_count == 1
+        warnings = _warning_text(mock_logger)
+        assert "server.enableCORS" in warnings
+        assert "overrid" not in warnings.lower()
+        assert config.get_option("server.enableCORS") is False
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_cors_disabled_warns_once_in_development_mode(
+        self, get_logger
+    ):
+        """Development mode must not add a second cross-origin warning."""
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", True, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        assert mock_logger.warning.call_count == 1
+        assert "server.enableCORS" in _warning_text(mock_logger)
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_cors_disabled_without_xsrf_is_silent(self, get_logger):
+        """Disabling both CORS and XSRF protection is a deliberate choice."""
+        config._set_option("server.enableXsrfProtection", False, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_development_mode_logs_a_debug_note(self, get_logger):
+        """Development mode only relaxes the CORS header, so it must not warn.
+
+        Development mode is on by default in a source checkout, and it leaves
+        the WebSocket origin check in place, so this is a contributor-facing
+        note rather than an operator-facing warning.
+        """
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", True, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
+        debug_messages = " ".join(
+            str(call) for call in mock_logger.debug.call_args_list
+        )
+        assert "global.developmentMode" in debug_messages
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_no_warning_when_xsrf_and_cors_both_enabled(
+        self, get_logger
+    ):
+        """XSRF and CORS protection both enabled is not a conflict."""
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
+
+    @parameterized.expand(["lax", "strict", "none", "Lax", "STRICT", "None"])
+    def test_check_conflicts_xsrf_cookie_same_site_valid(self, value):
+        """Valid (case-insensitive) xsrfCookieSameSite values must not raise."""
+        config._set_option("server.xsrfCookieSameSite", value, "test")
+        config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_same_site_invalid(self):
+        """An invalid xsrfCookieSameSite value must raise a clear error."""
+        config._set_option("server.xsrfCookieSameSite", "invalid", "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server.xsrfCookieSameSite",
+        ):
+            config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_same_site_rejects_python_none(self):
+        """A None xsrfCookieSameSite value must be rejected, not coerced to "none"."""
+        config._set_option("server.xsrfCookieSameSite", None, "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server.xsrfCookieSameSite",
+        ):
+            config._check_conflicts()
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_warns_without_ssl(
+        self, get_logger
+    ):
+        """SameSite="none" without SSL must warn about the HTTPS requirement."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", False, "test")
+        config._set_option("server.sslCertFile", None, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = _warning_text(mock_logger)
+        assert "xsrfCookieSameSite" in warnings
+        assert "HTTPS" in warnings
+
+    @patch("streamlit.web.server.server_util.is_xsrf_enabled", return_value=False)
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_warns_when_xsrf_disabled(
+        self, get_logger, _mock_is_xsrf_enabled
+    ):
+        """SameSite="none" with XSRF protection disabled must warn it has no effect."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = _warning_text(mock_logger)
+        assert "xsrfCookieSameSite" in warnings
+        assert "no effect" in warnings
+
+    @patch("streamlit.web.server.server_util.is_xsrf_enabled", return_value=True)
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_xsrf_cookie_same_site_none_skips_no_effect_warning_when_auth_enables_xsrf(
+        self, get_logger, _mock_is_xsrf_enabled
+    ):
+        """SameSite="none" must not warn "no effect" when XSRF is enabled via auth.
+
+        is_xsrf_enabled() can be True (e.g. via an [auth] secrets section) even
+        when server.enableXsrfProtection is false; the XSRF cookie is then still
+        set, so SameSite="none" does take effect.
+        """
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.enableXsrfProtection", False, "test")
+        config._set_option("server.sslCertFile", None, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = _warning_text(mock_logger)
+        assert "no effect" not in warnings
+        # It should still warn about the HTTPS/Secure requirement.
+        assert "HTTPS" in warnings
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
@@ -894,6 +1055,69 @@ class ConfigTest(unittest.TestCase):
         ):
             config._parse_trusted_user_headers()
 
+    def test_unsafe_metrics_user_attributes_option_attrs(self):
+        # The option should be a hidden, multiple-value list defaulting to [].
+        option = config._config_options["server.unsafeMetricsUserAttributes"]
+        assert option.multiple
+        assert option.default_val == []
+        assert option.visibility == "hidden"
+        assert config.get_option("server.unsafeMetricsUserAttributes") == []
+
+    def test_unsafe_metrics_user_attributes_parses_from_toml(self):
+        toml_content = """
+        [server]
+        unsafeMetricsUserAttributes = ["email", "user_name"]
+        """
+        config._update_config_with_toml(toml_content, "test")
+        assert config.get_option("server.unsafeMetricsUserAttributes") == [
+            "email",
+            "user_name",
+        ]
+
+    def test_check_metrics_user_attributes_rejects_reserved_name(self):
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "type"], "test"
+        )
+        with pytest.raises(
+            RuntimeError,
+            match=r"reserved label name.*type",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_allows_non_reserved_names(self):
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "user_name"], "test"
+        )
+        # Should not raise.
+        config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_rejects_invalid_label_name(self):
+        # A name that is not a valid OpenMetrics label (contains a hyphen) is
+        # rejected so the endpoint cannot emit malformed metrics.
+        config._set_option(
+            "server.unsafeMetricsUserAttributes", ["email", "user-name"], "test"
+        )
+        with pytest.raises(
+            RuntimeError,
+            match=r"invalid label name.*user-name",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_rejects_non_string_entries(self):
+        # Non-string entries produce a deterministic RuntimeError instead of a
+        # generic type error later when used as metric label names.
+        config._set_option("server.unsafeMetricsUserAttributes", ["email", 123], "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"must contain only strings.*123",
+        ):
+            config._check_metrics_user_attributes()
+
+    def test_check_metrics_user_attributes_noop_when_empty(self):
+        # The default empty list disables the feature and must not raise.
+        config._set_option("server.unsafeMetricsUserAttributes", [], "test")
+        config._check_metrics_user_attributes()
+
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
         assert config._maybe_convert_to_number("1234.5678") == 1234.5678
@@ -933,6 +1157,12 @@ class ConfigTest(unittest.TestCase):
 
         config._set_option("browser.gatherUsageStats", "test", "test")
         assert config.get_option("browser.gatherUsageStats") == "test"
+
+    def test_set_user_option_raises_for_unrecognized_key(self):
+        """set_user_option raises for an unknown config option key."""
+        with pytest.raises(StreamlitAPIException) as e:
+            config.set_user_option("not.a.real.option", "value")
+        assert "Unrecognized config option: not.a.real.option" in str(e.value)
 
     def test_is_manually_set(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
@@ -1262,6 +1492,9 @@ class ConfigTest(unittest.TestCase):
             "greenTextColor": "#3dd56d",
             "violetTextColor": "#9a5dff",
             "grayTextColor": "#a3a8b8",
+            "chartCategoricalColors": None,
+            "chartSequentialColors": None,
+            "chartDivergingColors": None,
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 
@@ -1537,6 +1770,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
     def test_max_message_size_default_values(self):
         assert config.get_option("server.maxMessageSize") == 200
+
+    def test_max_widget_state_size_default_values(self):
+        assert config.get_option("server.maxWidgetStateSize") == 25
 
     def test_config_options_removed_on_reparse(self):
         """Test that config options that are removed in a file are also removed
