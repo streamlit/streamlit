@@ -39,6 +39,7 @@ import "streamlit/proto/Exception.proto";
 import "streamlit/proto/Favicon.proto";
 import "streamlit/proto/Feedback.proto";
 import "streamlit/proto/FileUploader.proto";
+import "streamlit/proto/FilterBar.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Heading.proto";
 import "streamlit/proto/HeightConfig.proto";
@@ -144,7 +145,8 @@ message Element {
     Code code = 48;
     MenuButton menu_button = 64;
     Pagination pagination = 66;
-    // Next ID: 67
+    FilterBar filter_bar = 67;
+    // Next ID: 68
   }
 
   reserved 3, 9, 10, 11, 17;

@@ -1558,6 +1558,166 @@ def test_file_uploader_multiple_persists_across_runs():
     assert at.markdown[1].value == "File: file2.txt"
 
 
+def test_filter_bar():
+    """Test st.filter_bar basic AppTest integration."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+        import pandas as pd
+
+        df = pd.DataFrame({
+            "Name": ["Alice", "Bob", "Charlie"],
+            "Age": [30, 25, 35],
+            "City": ["NYC", "LA", "NYC"],
+        })
+        filtered = st.filter_bar(df, key="my_filter")
+        st.write(f"rows={len(filtered)}")
+        """,
+    )
+    sr = script.run()
+    assert sr.filter_bar[0].value == {}
+    assert sr.filter_bar[0].columns == ["Name", "Age", "City"]
+    assert sr.markdown[0].value == "rows=3"
+
+
+def test_filter_bar_set_filter():
+    """Test st.filter_bar set_filter method."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+        import pandas as pd
+
+        df = pd.DataFrame({
+            "Name": ["Alice", "Bob", "Charlie"],
+            "City": ["NYC", "LA", "NYC"],
+        })
+        filtered = st.filter_bar(df, key="fb")
+        st.write(f"rows={len(filtered)}")
+        """,
+    )
+    sr = script.run()
+    sr2 = (
+        sr.filter_bar[0]
+        .set_filter(
+            "City", {"type": "multiselect", "operator": "is", "values": ["NYC"]}
+        )
+        .run()
+    )
+    assert sr2.markdown[0].value == "rows=2"
+    assert "City" in sr2.filter_bar[0].value
+    assert sr2.filter_bar[0].value["City"]["operator"] == "is"
+
+
+def test_filter_bar_clear_filter():
+    """Test st.filter_bar clear_filter method."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+        import pandas as pd
+
+        df = pd.DataFrame({
+            "Name": ["Alice", "Bob", "Charlie"],
+            "City": ["NYC", "LA", "NYC"],
+        })
+        filtered = st.filter_bar(df, key="fb")
+        st.write(f"rows={len(filtered)}")
+        """,
+    )
+    sr = script.run()
+    sr2 = (
+        sr.filter_bar[0]
+        .set_filter(
+            "City", {"type": "multiselect", "operator": "is", "values": ["NYC"]}
+        )
+        .run()
+    )
+    assert sr2.markdown[0].value == "rows=2"
+
+    sr3 = sr2.filter_bar[0].clear_filter("City").run()
+    assert sr3.markdown[0].value == "rows=3"
+    assert "City" not in sr3.filter_bar[0].value
+
+
+def test_filter_bar_clear_all():
+    """Test st.filter_bar clear_all method."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+        import pandas as pd
+
+        df = pd.DataFrame({
+            "Name": ["Alice", "Bob", "Charlie"],
+            "City": ["NYC", "LA", "NYC"],
+        })
+        filtered = st.filter_bar(df, key="fb")
+        st.write(f"rows={len(filtered)}")
+        """,
+    )
+    sr = script.run()
+    sr2 = (
+        sr.filter_bar[0]
+        .set_filter(
+            "City", {"type": "multiselect", "operator": "is", "values": ["NYC"]}
+        )
+        .set_filter(
+            "Name", {"type": "multiselect", "operator": "is", "values": ["Alice"]}
+        )
+        .run()
+    )
+    assert sr2.markdown[0].value == "rows=1"
+
+    sr3 = sr2.filter_bar[0].clear_all().run()
+    assert sr3.markdown[0].value == "rows=3"
+    assert "City" not in sr3.filter_bar[0].value
+    assert "Name" not in sr3.filter_bar[0].value
+
+
+def test_filter_bar_set_logic():
+    """Test st.filter_bar set_logic method."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+        import pandas as pd
+
+        df = pd.DataFrame({
+            "Name": ["Alice", "Bob", "Charlie"],
+            "City": ["NYC", "LA", "SF"],
+        })
+        filtered = st.filter_bar(df, key="fb")
+        st.write(f"rows={len(filtered)}")
+        """,
+    )
+    sr = script.run()
+    sr2 = (
+        sr.filter_bar[0]
+        .set_filter(
+            "City", {"type": "multiselect", "operator": "is", "values": ["NYC"]}
+        )
+        .set_filter(
+            "Name", {"type": "multiselect", "operator": "is", "values": ["Bob"]}
+        )
+        .set_logic("or")
+        .run()
+    )
+    # OR logic: City=NYC (Alice) OR Name=Bob => 2 rows
+    assert sr2.markdown[0].value == "rows=2"
+
+
+def test_filter_bar_key_access():
+    """Test st.filter_bar accessible by key."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+        import pandas as pd
+
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        st.filter_bar(df, key="my_fb")
+        """,
+    )
+    sr = script.run()
+    assert sr.filter_bar("my_fb").columns == ["A", "B"]
+
+
 def test_segmented_control_with_none_default():
     """Test st.segmented_control with default=None works correctly. (Issue #11338)"""
 

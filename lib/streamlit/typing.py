@@ -39,6 +39,7 @@ from streamlit.elements.plotly_chart import PlotlyState
 from streamlit.elements.vega_charts import VegaLiteState
 from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.elements.widgets.data_editor import DataEditorState
+from streamlit.elements.widgets.filter_bar import FilterBarState
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "ChatInputValue",
     "DataEditorState",
     "DataframeState",
+    "FilterBarState",
     "PlotlyState",
     "PydeckState",
     "UploadedFile",

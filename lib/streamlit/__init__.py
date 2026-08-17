@@ -147,6 +147,8 @@ from streamlit.user_info import (
 
 import streamlit.column_config as _column_config
 import streamlit.typing as _typing
+from streamlit.elements.widgets.filter_bar import FilterBarState as FilterBarState
+from streamlit.elements.widgets.filter_bar import FilterConfig as FilterConfig
 
 # Modules that the user should have access to. These are imported with the "as" syntax
 # and the same name; note that renaming the import with "as" does not make it an
@@ -208,6 +210,7 @@ divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
 feedback = _main.feedback
+filter_bar = _main.filter_bar
 pydeck_chart = _main.pydeck_chart
 empty = _main.empty
 error = _main.error

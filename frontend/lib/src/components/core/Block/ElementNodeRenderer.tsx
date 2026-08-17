@@ -37,6 +37,7 @@ import {
   Exception as ExceptionProto,
   Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
+  FilterBar as FilterBarProto,
   GraphVizChart as GraphVizChartProto,
   Heading as HeadingProto,
   Help as HelpProto,
@@ -180,6 +181,9 @@ const Feedback = lazy(
 )
 const FileUploader = lazy(
   () => import("~lib/components/widgets/FileUploader/FileUploader")
+)
+const FilterBar = lazy(
+  () => import("~lib/components/widgets/FilterBar/FilterBar")
 )
 const FormSubmitContent = lazy(() =>
   import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
@@ -854,6 +858,25 @@ const RawElementNodeRenderer = (
           <Feedback
             key={feedbackProto.id}
             element={feedbackProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "filterBar": {
+      const filterBarProto = node.element.filterBar as FilterBarProto
+      widgetProps.disabled = widgetProps.disabled || filterBarProto.disabled
+
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
+          <FilterBar
+            key={filterBarProto.id}
+            element={filterBarProto}
             {...widgetProps}
           />
         </ElementContainer>

@@ -36,6 +36,7 @@ _EXPECTED_EXPORTS = {
     "ChatInputValue",
     "DataEditorState",
     "DataframeState",
+    "FilterBarState",
     "PlotlyState",
     "PydeckState",
     "UploadedFile",

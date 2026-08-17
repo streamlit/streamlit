@@ -1188,6 +1188,121 @@ class FileUploader(Widget):
         return state[self.id]
 
 
+FilterState: TypeAlias = dict[str, Any]
+
+
+@dataclass(repr=False)
+class FilterBar(Widget):
+    """A representation of ``st.filter_bar``.
+
+    The value is a dict mapping column names to filter configurations,
+    plus a ``_groups`` key for logic state.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     import pandas as pd
+    ...     df = pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [30, 25]})
+    ...     filtered = st.filter_bar(df)
+    ... ''')
+    >>> at.run()
+    >>> at.filter_bar[0].set_filter("Name", {"operator": "is", "values": ["Alice"]})
+    >>> at.run()
+    """
+
+    _value: FilterState | InitialValue | None
+
+    proto: Any = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: Any, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "filter_bar"
+
+    @property
+    def columns(self) -> list[str]:
+        """The available column names for filtering. (list)"""  # noqa: D400
+        return [col.name for col in self.proto.columns]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        if self.value:
+            import json
+
+            ws.string_value = json.dumps(self.value, default=str)
+        return ws
+
+    @property
+    def value(self) -> FilterState:
+        """The current filter state as a dict. (dict)"""  # noqa: D400
+        if not isinstance(self._value, InitialValue):
+            return self._value or {}
+        state = self.root.session_state
+        assert state
+        val = state[self.id]
+        if val is None:
+            return {}
+        if isinstance(val, dict):
+            return val
+        return dict(val)
+
+    def set_value(self, v: FilterState | None) -> FilterBar:
+        """Set the entire filter state."""
+        self._value = v
+        return self
+
+    def set_filter(self, column: str, config: dict[str, Any]) -> FilterBar:
+        """Set a filter for a specific column.
+
+        Parameters
+        ----------
+        column
+            The column name to filter.
+        config
+            Filter configuration dict with keys like ``operator`` and
+            ``values`` / ``value`` / ``min`` / ``max``.
+        """
+        current = dict(self.value)
+        current[column] = config
+        groups = current.get("_groups", [{"logic": "and", "columns": []}])
+        if column not in groups[0]["columns"]:
+            groups[0]["columns"].append(column)
+        current["_groups"] = groups
+        self._value = current
+        return self
+
+    def clear_filter(self, column: str) -> FilterBar:
+        """Remove the filter for a specific column."""
+        current = dict(self.value)
+        current.pop(column, None)
+        groups = current.get("_groups", [{"logic": "and", "columns": []}])
+        if column in groups[0]["columns"]:
+            groups[0]["columns"].remove(column)
+        current["_groups"] = groups
+        self._value = current
+        return self
+
+    def clear_all(self) -> FilterBar:
+        """Remove all active filters."""
+        self._value = {"_groups": [{"logic": "and", "columns": []}]}
+        return self
+
+    def set_logic(self, logic: str) -> FilterBar:
+        """Set the filter logic to 'and' or 'or'."""
+        current = dict(self.value)
+        groups = current.get("_groups", [{"logic": "and", "columns": []}])
+        groups[0]["logic"] = logic
+        current["_groups"] = groups
+        self._value = current
+        return self
+
+
 @dataclass(repr=False)
 class MenuButton(Widget, Generic[T]):
     """A representation of ``st.menu_button``."""
@@ -2132,6 +2247,10 @@ class Block:
         return WidgetList(self.get("file_uploader"))  # type: ignore
 
     @property
+    def filter_bar(self) -> WidgetList[FilterBar]:
+        return WidgetList(self.get("filter_bar"))  # type: ignore
+
+    @property
     def expander(self) -> Sequence[Expander]:
         return self.get("expander")  # type: ignore
 
@@ -2603,6 +2722,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Feedback(elt.feedback, root=root)
             elif ty == "file_uploader":
                 new_node = FileUploader(elt.file_uploader, root=root)
+            elif ty == "filter_bar":
+                new_node = FilterBar(elt.filter_bar, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)

@@ -60,6 +60,7 @@ from streamlit.testing.v1.element_tree import (
     Expander,
     Feedback,
     FileUploader,
+    FilterBar,
     Header,
     Image,
     Info,
@@ -818,6 +819,20 @@ class AppTest:
             ``at.file_uploader(key="my_key")`` for a widget with a given key.
         """
         return self._tree.file_uploader
+
+    @property
+    def filter_bar(self) -> WidgetList[FilterBar]:
+        """Sequence of all ``st.filter_bar`` widgets.
+
+        Returns
+        -------
+        WidgetList of FilterBar
+            Sequence of all ``st.filter_bar`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.filter_bar[0]`` for the first widget or
+            ``at.filter_bar(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.filter_bar
 
     @property
     def expander(self) -> Sequence[Expander]:

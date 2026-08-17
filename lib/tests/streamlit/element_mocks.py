@@ -64,6 +64,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
     ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
+    ("filter_bar", lambda: st.filter_bar(pd.DataFrame({"a": ["x", "y"]}))),
     # other widgets
     ("color_picker", lambda: st.color_picker("Pick a color")),
     # media manager
