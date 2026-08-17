@@ -157,10 +157,15 @@ function SingleDateTimeInput({
     value
   )
 
+  const lastCommittedRef = useRef<CalendarDateTime | null | undefined>(
+    undefined
+  )
+
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
     setDisplayValue(value)
+    lastCommittedRef.current = undefined
   }
 
   const [prevResetKey, setPrevResetKey] = useState(formResetKey)
@@ -182,50 +187,52 @@ function SingleDateTimeInput({
   formCommitRef.current = formCommit
 
   const [isOpen, setIsOpen] = useState(false)
-  // When overlay onClose or handleBlur already committed the pending value,
-  // the close-detection effect should skip its own write to avoid a duplicate
-  // widget-manager update.
-  const skipCloseCommitRef = useRef(false)
-  // Prevents handleBlur from re-committing when overlay onClose already
-  // handled the commit (outside-click fires both onClose and blur).
-  const overlayCommittedRef = useRef(false)
 
-  // Close-detection effect: handles commit/revert when popover closes.
+  const commitOrRevert = useCallback((): boolean => {
+    if (!triggerRef.current) return false
+    const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+      triggerRef.current
+    )
+
+    if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+      setDisplayValue(value)
+      onCloseRef.current(true)
+      return false
+    }
+
+    const pending = isFullyCleared ? null : displayValueRef.current
+
+    if (validateDateTime(pending, minDateTime, maxDateTime)) {
+      setDisplayValue(value)
+      onCloseRef.current(true)
+      return false
+    }
+
+    if (dateTimesEqual(pending, value)) return true
+
+    if (
+      lastCommittedRef.current !== undefined &&
+      dateTimesEqual(pending, lastCommittedRef.current)
+    ) {
+      return true
+    }
+
+    lastCommittedRef.current = pending
+    onChangeRef.current(pending)
+    return true
+  }, [value, clearable, minDateTime, maxDateTime])
+
+  // Close-detection effect: commits when the popover closes via a path that
+  // doesn't go through useOverlayDismissal's onClose (e.g. Tab from calendar).
+  // For overlay-dismiss (Escape/outside-click), onClose already committed
+  // synchronously — the lastCommittedRef guard makes this a no-op.
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (!wasOpenRef.current && isOpen) {
-      overlayCommittedRef.current = false
-    }
-    if (wasOpenRef.current && !isOpen) {
-      if (skipCloseCommitRef.current) {
-        skipCloseCommitRef.current = false
-      } else if (triggerRef.current) {
-        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-          triggerRef.current
-        )
-
-        if (isPartiallyTyped || (isFullyCleared && !clearable)) {
-          setDisplayValue(value)
-          onCloseRef.current(true)
-        } else {
-          const pending = isFullyCleared ? null : displayValueRef.current
-          const isOutOfBounds = !!validateDateTime(
-            pending,
-            minDateTime,
-            maxDateTime
-          )
-
-          if (isOutOfBounds) {
-            setDisplayValue(value)
-            onCloseRef.current(true)
-          } else if (!dateTimesEqual(pending, value)) {
-            onChangeRef.current(pending)
-          }
-        }
-      }
+      lastCommittedRef.current = undefined
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, value, clearable, minDateTime, maxDateTime])
+  }, [isOpen])
 
   // Focus active calendar cell on active mode entry.
   useEffect(() => {
@@ -260,9 +267,6 @@ function SingleDateTimeInput({
 
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    // Escape/Tab-from-popover restore focus without a blur event, so clear the
-    // ref here — otherwise it leaks and swallows the next handleBlur commit.
-    overlayCommittedRef.current = false
     if (isCalendarActiveRef.current && activeOriginRef.current) {
       activeOriginRef.current.focus()
     } else {
@@ -287,22 +291,7 @@ function SingleDateTimeInput({
       onClose: () => {
         setIsOpen(false)
         setIsCalendarActive(false)
-        if (!triggerRef.current) return
-        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-          triggerRef.current
-        )
-        if (isPartiallyTyped || (isFullyCleared && !clearable)) return
-        const pending = isFullyCleared ? null : displayValueRef.current
-        if (validateDateTime(pending, minDateTime, maxDateTime)) return
-        if (!dateTimesEqual(pending, value)) {
-          // Signal handleBlur to skip — the close-detection effect (non-form)
-          // or formCommit below (form) will handle this commit.
-          overlayCommittedRef.current = true
-          if (formCommitRef.current) {
-            formCommitRef.current(pending)
-            skipCloseCommitRef.current = true
-          }
-        }
+        commitOrRevert()
       },
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
@@ -374,6 +363,7 @@ function SingleDateTimeInput({
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
+    lastCommittedRef.current = null
     onChange(null)
   }, [onChange])
 
@@ -387,6 +377,7 @@ function SingleDateTimeInput({
       if (fullDateTime) {
         e.preventDefault()
         setDisplayValue(fullDateTime)
+        lastCommittedRef.current = fullDateTime
         onChange(fullDateTime)
         return
       }
@@ -437,24 +428,10 @@ function SingleDateTimeInput({
 
       if (e.key === "Enter") {
         e.preventDefault()
-        if (!triggerRef.current) return
-        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-          triggerRef.current
-        )
-        if (isPartiallyTyped || (isFullyCleared && !clearable)) return
-
-        const pending = isFullyCleared ? null : displayValueRef.current
-        if (validateDateTime(pending, minDateTime, maxDateTime)) {
-          setDisplayValue(value)
-          onCloseRef.current(true)
-          return
-        }
-        if (!dateTimesEqual(pending, value)) {
-          onChangeRef.current(pending)
-        }
-        formCommitRef.current?.(pending)
-        if (!error) {
-          formSubmit?.()
+        const valid = commitOrRevert()
+        if (valid) {
+          formCommitRef.current?.(displayValueRef.current)
+          if (!error) formSubmit?.()
         }
         return
       }
@@ -478,17 +455,7 @@ function SingleDateTimeInput({
         setIsOpen(false)
       }
     },
-    [
-      isOpen,
-      value,
-      displayValue,
-      clearable,
-      error,
-      formSubmit,
-      minDateTime,
-      maxDateTime,
-      applyStepSnap,
-    ]
+    [isOpen, displayValue, error, formSubmit, commitOrRevert, applyStepSnap]
   )
 
   // Active mode: Tab cycles within popover. Passive: Tab closes.
@@ -498,6 +465,7 @@ function SingleDateTimeInput({
       e.preventDefault()
 
       if (!isCalendarActiveRef.current) {
+        commitOrRevert()
         setIsOpen(false)
         restoreFocusToField()
         return
@@ -527,10 +495,9 @@ function SingleDateTimeInput({
       }
       focusables[nextIndex].focus()
     },
-    [restoreFocusToField]
+    [commitOrRevert, restoreFocusToField]
   )
 
-  // Commit on blur (always, not just in forms — lesson from #16460).
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
@@ -540,33 +507,9 @@ function SingleDateTimeInput({
         (!e.relatedTarget || popoverRef.current?.contains(e.relatedTarget))
       )
         return
-      if (!triggerRef.current) return
-      const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-        triggerRef.current
-      )
-      if (isPartiallyTyped || (isFullyCleared && !clearable)) {
-        setDisplayValue(value)
-        onCloseRef.current(true)
-        return
-      }
-      const pending = isFullyCleared ? null : displayValueRef.current
-      if (dateTimesEqual(pending, value)) return
-      if (validateDateTime(pending, minDateTime, maxDateTime)) {
-        setDisplayValue(value)
-        onCloseRef.current(true)
-        return
-      }
-      if (overlayCommittedRef.current) {
-        overlayCommittedRef.current = false
-        return
-      }
-      onChangeRef.current(pending)
-      formCommitRef.current?.(pending)
-      if (isOpen) {
-        skipCloseCommitRef.current = true
-      }
+      commitOrRevert()
     },
-    [isOpen, value, clearable, minDateTime, maxDateTime]
+    [isOpen, commitOrRevert]
   )
 
   // Calendar value for display: extract date portion from displayValue.
