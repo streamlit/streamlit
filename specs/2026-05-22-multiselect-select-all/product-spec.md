@@ -13,32 +13,32 @@ Add a `select_all` parameter to `st.multiselect` that allows users to control th
 
 ### Current Behavior
 
-`st.multiselect` automatically shows a "Select all" option at the top of the dropdown when there are multiple selectable options. When the user is typing a search query, this becomes "Select X matches" to select all filtered results.
+`st.multiselect` shows a "Select all" option at the top of the dropdown when there are 2 or more selectable (unselected) options. When the user is typing a search query, this becomes "Select X matches" to select all filtered results.
 
-This feature was added in PR [#13015](https://github.com/streamlit/streamlit/pull/13015) and is always enabled with no way to disable or limit it.
+This feature was added in PR [#13015](https://github.com/streamlit/streamlit/pull/13015). PR [#15301](https://github.com/streamlit/streamlit/pull/15301) later hid both bulk actions when the widget has 1000 or more **total** options, to prevent browser freezes. That gate is a hardcoded frontend constant (`SELECT_ALL_THRESHOLD = 1000` in `useMultiselectFiltering.ts`). There is still no public API to disable "Select all" for smaller lists, enable it for larger lists, or choose a different threshold.
+
+The 1000-option gate is static: it uses `len(options)`, not the number of currently selectable or filtered options. Filtering a 1000+ option widget down to a handful of matches still does not show "Select X matches".
+
+The widget was later migrated from BaseWeb to React Aria Components (PR [#16175](https://github.com/streamlit/streamlit/pull/16175)). "Select all" / "Select X matches" remain custom bulk-action rows at the top of the dropdown with the same visibility rules, labels, 2+ selectable minimum, and `max_selections` behavior. The migration did not change the product behavior this spec covers.
 
 ### User Pain Points
 
-1. **Performance Issues with Large Option Sets:** Clicking "Select all" with very large option lists (100k+ items) causes the browser to freeze. The widget must serialize all selected values, re-render tags for each selection, and send the data to the backend—all of which become prohibitively expensive at scale.
+1. **No way to disable "Select all" for typical lists:** Apps with fewer than 1000 options still always show "Select all". Some workflows require deliberate individual selections, and the shortcut undermines that. Users still resort to workarounds (below).
 
-   ```python
-   # Clicking "Select all" freezes the browser
-   items = [f"Item_{i}" for i in range(165000)]
-   st.multiselect("Select items", items)
-   ```
+2. **No way to enable "Select all" for large lists:** Apps with 1000+ options cannot opt back in, even when bulk-select is intentional and the list is not large enough to freeze the browser.
 
-2. **Cluttered UI with Many Selections:** For use cases like plotting, selecting 1000+ options creates unusable visualizations with cluttered charts and excessive rendering time.
+3. **Cluttered UI with Many Selections:** For use cases like plotting, selecting 1000+ options creates unusable visualizations with cluttered charts and excessive rendering time.
 
-3. **Confusing Interaction with `max_selections`:** When `max_selections` is set, clicking "Select all" only selects up to the limit. Users see "Select all" but not all options get selected, which is confusing.
+4. **Confusing Interaction with `max_selections`:** When `max_selections` is set, clicking "Select all" only selects up to the limit. Users see "Select all" but not all options get selected, which is confusing.
 
-4. **Unnecessary Feature for Some Workflows:** Some apps intentionally require users to make deliberate individual selections. The "Select all" shortcut undermines this design intent.
+The original freeze from clicking "Select all" on 100k+ options ([#15299](https://github.com/streamlit/streamlit/issues/15299)) is already mitigated by hiding the action at 1000+ total options. Selecting that many values would still be expensive (`select_all=True` would re-expose it), because the widget must serialize all selected values, re-render a tag per selection, and send the data to the backend.
 
 ### User Requests
 
 **Primary GitHub Issues:**
 
-- [#14918](https://github.com/streamlit/streamlit/issues/14918) — Option to enable/disable the select all option on `st.multiselect`
-- [#15299](https://github.com/streamlit/streamlit/issues/15299) — Multi Select "Select all" performance bottleneck on large datasets
+- [#14918](https://github.com/streamlit/streamlit/issues/14918) — Option to enable/disable the select all option on `st.multiselect` (closed by the hardcoded 1000 threshold; disabling for lists under 1000 is still unresolved)
+- [#15299](https://github.com/streamlit/streamlit/issues/15299) — Multi Select "Select all" performance bottleneck on large datasets (addressed by the hardcoded 1000 threshold)
 
 **User Workarounds:**
 
@@ -73,6 +73,8 @@ st.multiselect(
 ```
 
 > **Implementation note:** In Python, `bool` is a subclass of `int` (`True == 1`, `False == 0`). Implementations must check `isinstance(value, bool)` before `isinstance(value, int)` to avoid treating `True` as threshold `1` and `False` as threshold `0`.
+
+> **Implementation note:** Bulk-action visibility currently lives in `frontend/lib/src/hooks/useMultiselectFiltering.ts` (`SELECT_ALL_THRESHOLD`). The new parameter should replace that constant and be plumbed through the Python API and protobuf. React Aria's `ComboBox` has no built-in select-all; keep the existing custom bulk-action rows (`SELECT_ALL_ID` / `SELECT_MATCHES_ID`).
 
 ### Parameter: `select_all`
 
@@ -126,12 +128,12 @@ selected = st.multiselect(
 ```python
 import streamlit as st
 
-# Override the default threshold to always show
+# Override the default threshold to always show, including 1000+ option lists
 options = ["Red", "Green", "Blue", "Yellow", "Orange", "Purple"]
 selected = st.multiselect(
     "Pick colors",
     options,
-    select_all=True,  # Always show, even with default
+    select_all=True,
 )
 ```
 
@@ -145,6 +147,8 @@ The threshold is evaluated dynamically against the number of currently selectabl
 - When search query is active: threshold compared against `len(filtered_matches) - len(selected_in_filtered)`, where `selected_in_filtered` is the count of already-selected options that appear in the filtered results
 
 This means "Select all" may appear or disappear as the user selects/deselects options or types a search query. Note: This dynamic behavior is intentional—it ensures users don't accidentally bulk-select large result sets when filtering narrows the view.
+
+This is a change from today's hardcoded gate, which uses total `len(options)` only. With the proposed parameter, `select_all=1000` on a 10,000-option widget would still hide "Select all" when unfiltered, but would show "Select X matches" if a search narrows the selectable matches to 1000 or fewer. That is useful and avoids the freeze, because only the filtered subset is selected.
 
 **Interaction with "Select X matches":**
 
@@ -172,11 +176,11 @@ When `max_selections` is already reached (i.e., `len(selected) >= max_selections
 
 The default of `1000` was chosen because:
 
-1. **Performance safety:** Prevents browser freezes for very large option sets while still allowing the feature for typical use cases
-2. **Reasonable UX:** Users rarely need to select more than 1000 items at once; beyond that, server-side filtering or pagination is usually more appropriate
-3. **Compatibility for typical use cases:** Most `st.multiselect` uses have fewer than 1000 options, so existing apps won't notice a change
+1. **Matches current behavior:** PR [#15301](https://github.com/streamlit/streamlit/pull/15301) already hides bulk actions at 1000+ total options. Defaulting the new parameter to `1000` keeps today's shipped behavior for unfiltered lists.
+2. **Performance safety:** Prevents browser freezes for very large option sets while still allowing the feature for typical use cases
+3. **Reasonable UX:** Users rarely need to select more than 1000 items at once; beyond that, server-side filtering or pagination is usually more appropriate
 
-> **Note:** Apps with more than 1000 options will no longer show "Select all" by default after this change. Set `select_all=True` to restore the previous behavior.
+> **Note:** Set `select_all=True` to show "Select all" even for lists of 1000+ options. Set `select_all=False` to hide it for smaller lists. Apps that already have 1000+ options will not see a change to unfiltered "Select all" visibility.
 
 ## Alternatives Considered
 
@@ -189,12 +193,12 @@ st.multiselect(..., select_all=True)  # Default True
 **Pros:** Simpler API
 
 **Cons:**
-- Doesn't address performance issue by default (users must explicitly disable)
+- Default `True` would regress the existing 1000-option performance gate
 - No middle ground for "enable for small lists only"
 
 ### Alternative 2: Different default (e.g., `True` or a higher threshold)
 
-**Decision:** A threshold default better addresses both use cases—users who want "Select all" for small lists get it automatically, while users with large datasets are protected from performance issues.
+**Decision:** A threshold default of `1000` matches the existing hardcoded gate and addresses both use cases—users who want "Select all" for small lists get it automatically, while users with large datasets are protected from performance issues.
 
 ### Alternative 3: Separate parameter names
 
@@ -217,7 +221,7 @@ The frontend could measure device capabilities and auto-adjust the threshold.
 ## Out of Scope (Future Work)
 
 - **Custom "Select all" label:** Users might want to customize "Select all" to "Add all to cart" etc.
-- **"Select none" / "Clear all" option:** A separate dropdown option to deselect everything
+- **"Select none" / "Clear all" option:** A separate dropdown option to deselect everything. The widget already has a clear-all button on the trigger; this would be a dropdown counterpart.
 - **Confirmation dialog for large selections:** Warn users before selecting many options
 - **Server-side selection for very large datasets:** Would require architectural changes to stream selections
 
@@ -226,7 +230,7 @@ The frontend could measure device capabilities and auto-adjust the threshold.
 | Item                         | ✅ or comment |
 |------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | ✅ Yes, full-stack change (Python + proto + frontend) |
-| No breaking API changes      | ✅ Yes, new optional parameter with sensible default |
+| No breaking API changes      | ✅ Yes, new optional parameter; default matches the existing 1000-option gate |
 | No new dependencies          | ✅ Yes |
 | Metrics collected            | ✅ Track `select_all` parameter usage |
 | Any security/legal impact?   | ✅ No impact |
