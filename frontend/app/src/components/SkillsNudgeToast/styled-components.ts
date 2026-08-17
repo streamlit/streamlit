@@ -124,4 +124,16 @@ export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing.lg,
   marginTop: theme.spacing.twoXS,
+  // ``BaseButton`` centers its *line box*, and its ``lineHeights.base`` is tuned
+  // for a 16px label inside the 40px control height. At the card's 14px the line
+  // box shrinks, the cap-to-baseline band rides ~1.4px high, and the leftover
+  // room collects under the label — which reads as the button being bottom-heavy.
+  // ``tight`` puts that band back exactly where a stock ``st.button`` renders it
+  // (measured 15.00px above / 15.75px below, versus 14.00/16.75 at ``base``),
+  // for every label: the band is label-independent, so ``Install``,
+  // ``Installing…`` and ``Retry`` all move together and descenders still hang
+  // below it. The 40px height is untouched.
+  button: {
+    lineHeight: theme.lineHeights.tight,
+  },
 }))
