@@ -166,6 +166,13 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
+  // Absent wrap on a FlexContainer message means nowrap. This is also
+  // backwards compatible, since older messages did not set wrap.
+  const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
+  // A horizontal container with `wrap=false` keeps its elements in a single
+  // row and scrolls horizontally when they don't fit, instead of wrapping.
+  const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
+
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
@@ -174,10 +181,9 @@ export const FlexBoxContainer = (
         gapSize: streamlit.GapSize.SMALL,
       },
     direction: direction,
-    // This is also backwards compatible since previously wrap was not added
-    // to the flex container.
-    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    $wrap: wrap,
     overflow: layout_styles.overflow,
+    overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // We need the height on the container for scrolling.
     height: layout_styles.height,
