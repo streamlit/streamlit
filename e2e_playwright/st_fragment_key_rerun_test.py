@@ -16,7 +16,6 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     expect_exception,
@@ -26,9 +25,8 @@ from e2e_playwright.shared.app_utils import (
 
 
 def _text(app: Page, key: str) -> str:
-    """Return the text content of an element identified by its Streamlit key."""
-    locator = get_element_by_key(app, key)
-    content = locator.text_content()
+    """Return the text content of a container identified by its Streamlit key."""
+    content = get_element_by_key(app, key).text_content()
     assert content is not None
     return content
 

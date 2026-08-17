@@ -27,12 +27,14 @@ if "outside_counter" not in st.session_state:
     st.session_state.outside_counter = 0
 
 st.session_state.outside_counter += 1
-st.write(f"Outside counter: {st.session_state.outside_counter}", key="outside_counter")
+with st.container(key="outside_counter"):
+    st.write(f"Outside counter: {st.session_state.outside_counter}")
 
 
 @st.fragment(key="charts")
 def charts_fragment() -> None:
-    st.write(f"Fragment uuid: {uuid4()}", key="fragment_uuid")
+    with st.container(key="fragment_uuid"):
+        st.write(f"Fragment uuid: {uuid4()}")
 
 
 charts_fragment()
@@ -51,18 +53,21 @@ st.header("Scenario 2: multi-key rerun")
 
 @st.fragment(key="frag_alpha")
 def alpha_fragment() -> None:
-    st.write(f"Alpha uuid: {uuid4()}", key="alpha_uuid")
+    with st.container(key="alpha_uuid"):
+        st.write(f"Alpha uuid: {uuid4()}")
 
 
 @st.fragment(key="frag_beta")
 def beta_fragment() -> None:
-    st.write(f"Beta uuid: {uuid4()}", key="beta_uuid")
+    with st.container(key="beta_uuid"):
+        st.write(f"Beta uuid: {uuid4()}")
 
 
 alpha_fragment()
 beta_fragment()
 
-st.write(f"Stable text outside: {st.session_state.outside_counter}", key="stable_text")
+with st.container(key="stable_text"):
+    st.write(f"Stable text outside: {st.session_state.outside_counter}")
 
 st.button(
     "Rerun alpha and beta",
