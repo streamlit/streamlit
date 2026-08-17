@@ -401,8 +401,8 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         }
       })
       .catch((error: unknown) => {
-        // Embed can reject if this effect cleaned up mid-flight. Log so a bad
-        // spec is still visible in development without surfacing it to users.
+        // Ignore embed rejections so teardown races do not throw. LOG.debug
+        // records the error only when debug logging is enabled.
         LOG.debug("Failed to embed metric chart:", error)
       })
 

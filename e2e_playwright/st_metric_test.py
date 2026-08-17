@@ -355,7 +355,7 @@ def test_metric_with_icon(themed_app: Page, assert_snapshot: ImageCompareFunctio
 
 
 def test_metric_chart_renders_after_empty_to_data_transition(app: Page):
-    """Chart SVG remounts after chart_data is cleared then restored.
+    """Empty→data chart_data left the sparkline missing without remount.
 
     Regression test for https://github.com/streamlit/streamlit/issues/16539
     """
