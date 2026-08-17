@@ -85,25 +85,34 @@ forces developers to manually handle dtype-specific filter logic that could be i
 
 Key decisions that need PM alignment before implementation:
 
-1. **AND/OR toggle visible by default** — Tableau/Looker default to AND-only and hide OR
-   behind advanced mode. We show a flat toggle to all users. Should this be hidden by
-   default or gated behind a parameter?
+1. **API signature confirmation** — The proposed signature below has `data` as the only
+   positional arg with everything else keyword-only. Are we aligned on the full parameter
+   list? Anything to cut or add before shipping?
 
-2. **No "Apply" button — live filtering only** — Every filter change triggers a rerun
-   immediately. BI tools (Power BI, Looker) often have "Apply filters" buttons. We rely on
-   `st.form` wrapping as the batch-apply workaround. Is that sufficient?
+2. **Initial release scope** — What ships in V1 vs. what is deferred?
+   - **Standalone widget only?** We ship `st.filter_bar` as a composable standalone widget.
+     `st.dataframe(filterable=True)` integration comes later as a separate feature.
+   - **AND/OR toggle?** Should V1 include the flat AND/OR toggle, or ship AND-only and add
+     OR in a fast follow? Tableau/Looker default to AND-only and hide OR behind advanced
+     mode. We currently show a flat toggle to all users.
+   - **Grouped AND/OR (Notion-style)?** This is designed as a V2 extension (state model is
+     ready). Confirm it is out of scope for initial release.
+   - **Cascading/dependent filters?** (e.g., Country=US narrows City options) Currently out
+     of scope — confirm this stays deferred.
 
-3. **Cardinality threshold = 100** — Determines whether a string column gets multiselect
-   (nice UX) vs. text search (fallback). Is 100 the right number? Should it be
-   configurable via `FilterConfig`?
+3. **Live filtering vs. "Apply" button** — Every filter change triggers a rerun
+   immediately (standard Streamlit widget behavior). BI tools (Power BI, Looker) often
+   have "Apply filters" buttons to batch changes. We rely on `st.form` wrapping as the
+   batch-apply workaround. Is live-only the right default, or should we support an
+   explicit apply mode (e.g., `mode="live" | "batch"`)?
 
-4. **`default` parameter format** — The dict format is verbose:
-   `{"status": {"type": "multiselect", "operator": "is", "values": ["active"]}}`. Should
-   we support shorthand like `{"status": ["active"]}` for the common case?
+4. **Cardinality threshold for multiselect → text fallback** — A string column with few
+   unique values gets a multiselect (checkbox list); above the threshold it falls back to
+   text search. What should the threshold be? Should it be configurable via `FilterConfig`?
 
-5. **Standalone widget (not integrated into `st.dataframe`)** — We ship a composable
-   standalone widget first. `st.dataframe(filterable=True)` integration comes later as a
-   separate feature that reuses this component.
+5. **`placeholder` param semantics** — Currently overrides "Add filter" button text. Other
+   widgets use `placeholder` for input field placeholder text (e.g., `st.text_input`). Is
+   this naming confusing, or acceptable since the button IS the empty-state call-to-action?
 
 ## Proposal
 
@@ -165,9 +174,9 @@ st.filter_bar(
 **Type preservation:** The return type matches the input type. Polars in → Polars out.
 Pandas in → pandas out. Matches `st.data_editor` behavior.
 
-By default, filters combine with AND logic (all must match). A toggle in the UI allows
-switching to OR logic (any filter must match). Within a single multiselect filter,
-OR logic always applies (e.g., "status is Active OR Pending").
+By default, filters combine with AND logic (all must match). A UI toggle may allow
+switching to OR logic (any filter must match) — see Decisions for Review #2. Within a
+single multiselect filter, OR logic always applies (e.g., "status is Active OR Pending").
 
 ### Examples
 
@@ -263,8 +272,8 @@ dtypes using the same `ColumnDataKind` system that powers `st.dataframe`:
 
 | Column Data Kind | Filter Type | UI |
 |---|---|---|
-| `STRING` (≤ 100 unique values) | Multiselect | Searchable checklist of values |
-| `STRING` (> 100 unique values) | Text search | Text input with contains/equals operators |
+| `STRING` (low cardinality) | Multiselect | Searchable checklist of values |
+| `STRING` (high cardinality) | Text search | Text input with contains/equals operators |
 | `BOOLEAN` | Toggle | True / False / All |
 | `INTEGER`, `FLOAT`, `DECIMAL` | Range | Min/max inputs |
 | `DATE` | Date range | Date picker with before/after/between |
@@ -288,8 +297,7 @@ additionally support `is null` and `is not null`.
 | Text search | contains, not contains, equals, not equals, starts with, ends with, is null, is not null |
 | Toggle | is true, is false, is null |
 | Range | between, not between, equals, not equals, greater than, less than, is null, is not null |
-| Date/time range | between, not between, equals, not equals, before, after, is null, is not null |
-| Date/time range (relative) | today, past 7 days, past 30 days, past 90 days, this week, this month, this year |
+| Date/time range | between, not between, equals, not equals, before, after, is relative to today (direction × unit: this/past/next × day/week/month/year), is null, is not null |
 
 ### FilterConfig
 
@@ -344,7 +352,7 @@ Filter results ⓘ                              (label + help tooltip)
 
 # After adding filters:
 Filter results ⓘ
-[AND] [ Status: Active, Pending ˅]  [ Price: < $30 ˅]  [Clear all]  [ + Add filter ]
+[ Status: Active, Pending ˅]  [ Price: < $30 ˅]  [Clear all]  [ + Add filter ]
 ```
 
 **Visual layout — collapsed (`expanded=False`):**
@@ -403,7 +411,7 @@ toggle at runtime.
 
 - Active filters persist across reruns (standard widget statefulness)
 - If the input DataFrame schema changes, stale filters for removed columns are dropped
-- Changes apply live as the user interacts (no "Apply" button)
+- Proposed: changes apply live as the user interacts (see Decisions for Review #3)
 - `on_change` fires when the filter set changes (not on expand/collapse)
 
 **Null handling:**
@@ -418,17 +426,8 @@ toggle at runtime.
 - Only filter metadata crosses the wire (not the full DataFrame)
 - Handles 1M+ rows without startup delay
 - Works with `@st.fragment` and `@st.cache_data`
-- **Two-tier option rendering for multiselect:**
-  - ≤1,000 unique values: all shipped to frontend as plain DOM elements in a scrollable
-    list with client-side search. No virtualization — modern browsers handle 1,000
-    checkbox items without jank.
-  - \>1,000 unique values: top 1,000 shipped initially; additional values fetched via
-    server-side incremental search as the user types (debounced at 150ms).
-- **Include/exclude state model:** Multiselect filter state is serialized as
-  `{include: [...]}` or `{exclude: [...]}` — whichever is smaller. When a user deselects
-  2 of 1,000 options, the state is `{exclude: ["A", "B"]}` rather than 998 includes.
-  This minimizes wire payload (especially for `bind="query-params"` URL size) and makes
-  state diffs cheap across reruns.
+- High-cardinality multiselect columns scale gracefully (incremental server-side search
+  for very large option sets)
 
 ### Edge Cases
 
@@ -525,16 +524,14 @@ Cons: Breaks the `st.filter_bar(df)` one-liner; the filter bar is data-centric l
 
 **High priority (expected BI demand):**
 
-- ~~**Relative date presets**~~: **Implemented in V1.** Available as operators: `today`,
-  `past_7_days`, `past_30_days`, `past_90_days`, `this_week`, `this_month`, `this_year`.
 - **Cascading / dependent filters**: Selecting "Country=US" narrows "City" options to US
   cities. The current API cannot express inter-column dependencies; a future `depends_on`
   field in `FilterConfig` could enable this.
 
 **Medium priority:**
 
-- **Grouped AND/OR (Notion-style)**: V1 ships a flat AND/OR toggle. The state model
-  supports multi-group logic in V2 without migration.
+- **Grouped AND/OR (Notion-style)**: The state model supports multi-group logic without
+  migration. A flat AND/OR toggle may ship in V1 (see Decisions for Review #2).
 - **`st.dataframe` integration**: Embedded filter bar via `filterable=True`. Addresses
   [#6272](https://github.com/streamlit/streamlit/issues/6272) (63 upvotes),
   [#1879](https://github.com/streamlit/streamlit/issues/1879) (33 upvotes).
@@ -554,20 +551,6 @@ Cons: Breaks the `st.filter_bar(df)` one-liner; the filter bar is data-centric l
 - **Per-column help tooltips**: `help` field on `FilterConfig`.
 - **Drag-to-reorder pills**: `dnd-kit` integration.
 - **String shorthand**: `{"col": "Label"}` as `FilterConfig(label="Label")`.
-
-## Rollout
-
-- Ship directly as `st.filter_bar` (no experimental prefix) — the API is minimal enough
-  that breaking changes are unlikely.
-- Docs: API reference + "Filtering patterns" guide + gallery example.
-- Community Cloud support from day 1 (pure widget, no platform dependencies).
-
-## Success Metrics
-
-- **Adoption**: 10%+ of data apps using `st.filter_bar` within 6 months of launch.
-- **Satisfaction**: Reduction in GitHub issues requesting filtering features; positive
-  community response (Discord, forum).
-- **Engagement**: Track `filter_bar` command usage via existing command metrics pipeline.
 
 ## Checklist
 
