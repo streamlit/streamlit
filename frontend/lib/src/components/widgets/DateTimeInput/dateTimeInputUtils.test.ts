@@ -344,39 +344,39 @@ describe("snapTimeStep", () => {
 describe("computeStepSnap", () => {
   it("snaps minute segment with 15-min step", () => {
     const dt = new CalendarDateTime(2025, 11, 19, 16, 45)
-    const result = computeStepSnap(dt, "minute", 900, 15, true)
+    const result = computeStepSnap(dt, "minute", 900, true)
     expect(result).toMatchObject({ hour: 17, minute: 0 })
   })
 
   it("snaps hour segment with 3-hour step", () => {
     const dt = new CalendarDateTime(2025, 11, 19, 9, 30)
-    const result = computeStepSnap(dt, "hour", 10800, 180, true)
+    const result = computeStepSnap(dt, "hour", 10800, true)
     expect(result).toMatchObject({ hour: 12, minute: 0 })
   })
 
   it("returns null for minute segment with stepMins <= 1", () => {
     const dt = new CalendarDateTime(2025, 11, 19, 16, 45)
-    expect(computeStepSnap(dt, "minute", 60, 1, true)).toBeNull()
+    expect(computeStepSnap(dt, "minute", 60, true)).toBeNull()
   })
 
   it("returns null for hour segment with stepHours <= 1", () => {
     const dt = new CalendarDateTime(2025, 11, 19, 16, 45)
-    expect(computeStepSnap(dt, "hour", 3600, 60, true)).toBeNull()
+    expect(computeStepSnap(dt, "hour", 3600, true)).toBeNull()
   })
 
   it("returns null for non-matching segment type", () => {
     const dt = new CalendarDateTime(2025, 11, 19, 16, 45)
-    expect(computeStepSnap(dt, "year", 900, 15, true)).toBeNull()
+    expect(computeStepSnap(dt, "year", 900, true)).toBeNull()
   })
 
   it("returns null when step is not divisible by 60 (minute segment)", () => {
     const dt = new CalendarDateTime(2025, 11, 19, 16, 45)
-    expect(computeStepSnap(dt, "minute", 90, 1, true)).toBeNull()
+    expect(computeStepSnap(dt, "minute", 90, true)).toBeNull()
   })
 
   it("preserves date fields when snapping time", () => {
     const dt = new CalendarDateTime(2025, 3, 15, 10, 30)
-    const result = computeStepSnap(dt, "minute", 900, 15, false)
+    const result = computeStepSnap(dt, "minute", 900, false)
     expect(result).toMatchObject({
       year: 2025,
       month: 3,

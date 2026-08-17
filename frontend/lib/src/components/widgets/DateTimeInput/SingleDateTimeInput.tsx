@@ -150,13 +150,13 @@ function SingleDateTimeInput({
   const activeOriginRef = useRef<HTMLElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
 
-  const stepMins = step / 60
-
   // --- Two-layer state ---
   const [displayValue, setDisplayValue] = useState<CalendarDateTime | null>(
     value
   )
 
+  // Three-state: undefined = no commit yet this interaction; null = cleared;
+  // CalendarDateTime = last committed value. Prevents duplicate commits.
   const lastCommittedRef = useRef<CalendarDateTime | null | undefined>(
     undefined
   )
@@ -188,6 +188,10 @@ function SingleDateTimeInput({
 
   const [isOpen, setIsOpen] = useState(false)
 
+  /** Validate and commit the pending value, or revert to the last committed
+   * value. Returns true if the field holds a valid (committed or unchanged)
+   * value, false if it was reverted. Calls both onChange (React state) and
+   * formCommit (sync WM write) to prevent the form-submit race. */
   const commitOrRevert = useCallback((): boolean => {
     if (!triggerRef.current) return false
     const { isPartiallyTyped, isFullyCleared } = getSegmentState(
@@ -364,6 +368,7 @@ function SingleDateTimeInput({
     setDisplayValue(null)
     lastCommittedRef.current = null
     onChange(null)
+    formCommitRef.current?.(null)
   }, [onChange])
 
   // Custom paste handler: ISO datetime or display-format datetime.
@@ -378,6 +383,7 @@ function SingleDateTimeInput({
         setDisplayValue(fullDateTime)
         lastCommittedRef.current = fullDateTime
         onChange(fullDateTime)
+        formCommitRef.current?.(fullDateTime)
         return
       }
 
@@ -400,7 +406,6 @@ function SingleDateTimeInput({
         current,
         segmentType,
         step,
-        stepMins,
         e.key === "ArrowUp"
       )
       if (snapped) {
@@ -411,7 +416,7 @@ function SingleDateTimeInput({
         onValidate(snapped)
       }
     },
-    [step, stepMins, onValidate]
+    [step, onValidate]
   )
 
   // Capture-phase keydown: step-aware time arrows, Alt+ArrowDown, Tab closing, Enter commit.

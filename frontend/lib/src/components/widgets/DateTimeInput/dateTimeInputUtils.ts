@@ -185,10 +185,10 @@ export function computeStepSnap(
   current: CalendarDateTime,
   segmentType: string | null,
   step: number,
-  stepMins: number,
   up: boolean
 ): CalendarDateTime | null {
   if (segmentType === "minute" && step % 60 === 0) {
+    const stepMins = step / 60
     if (stepMins <= 1) return null
     const totalMins = current.hour * 60 + current.minute
     const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
