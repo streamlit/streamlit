@@ -12,7 +12,7 @@ Complete inventory of every distinct UI state that needs a design spec. Organize
 | 2 | **Text** | String column, >100 unique values | `contains`, `not_contains`, `equals`, `not_equals`, `starts_with`, `ends_with`, `is_null`, `is_not_null` |
 | 3 | **Range** | Numeric column (int/float) | `between`, `not_between`, `equals`, `not_equals`, `greater_than`, `less_than`, `is_null`, `is_not_null` |
 | 4 | **Toggle** | Boolean column | `is_true`, `is_false`, `is_null` |
-| 5 | **Date/Datetime** | Date or datetime column | `between`, `not_between`, `before`, `after`, `equals`, `not_equals`, `today`, `past_7_days`, `past_30_days`, `past_90_days`, `this_week`, `this_month`, `this_year`, `is_null`, `is_not_null` |
+| 5 | **Date/Datetime** | Date or datetime column | `between`, `not_between`, `before`, `after`, `equals`, `not_equals`, `is_relative_to_today`, `is_null`, `is_not_null` |
 | 6 | **Time** | Time column | `between`, `not_between`, `before`, `after`, `equals`, `not_equals`, `is_null`, `is_not_null` |
 | 7 | **List/Tags** | Column with list-type cells _(future)_ | `contains`, `contains_all`, `does_not_contain`, `is_empty`, `is_not_empty` |
 
@@ -38,13 +38,7 @@ Complete inventory of every distinct UI state that needs a design spec. Organize
 | `is_false` | = false | `Active: False` |
 | `is_null` | is empty | `Revenue: is empty` |
 | `is_not_null` | not empty | `Revenue: is not empty` |
-| `today` | today | `Founded: today` |
-| `past_7_days` | past 7 days | `Founded: past 7 days` |
-| `past_30_days` | past 30 days | `Founded: past 30 days` |
-| `past_90_days` | past 90 days | `Founded: past 90 days` |
-| `this_week` | this week | `Founded: this week` |
-| `this_month` | this month | `Founded: this month` |
-| `this_year` | this year | `Founded: this year` |
+| `is_relative_to_today` | is relative to today | `Created: This week` (composed from direction + unit) |
 
 ---
 
@@ -322,57 +316,68 @@ Shown for datetime/date columns.
 ### Layout — `between` operator
 
 ```
-┌─────────────────────────────────┐
-│ Column Name          [🗑 Delete] │
-│ ─────────────────────────────── │
-│ [Operator ▾]                    │
-│                                 │
-│ [Start date]  —  [End date]     │
-│                                 │
-└─────────────────────────────────┘
+┌───────────────────────────────────────────────┐
+│ Column Name                        [🗑 Delete] │
+│ ───────────────────────────────────────────── │
+│ [Operator ▾]                                  │
+│                                               │
+│ [Select or type a date... ▾]                  │
+│       —                                       │
+│ [Select or type a date... ▾]                  │
+│                                               │
+└───────────────────────────────────────────────┘
 ```
 
 ### Layout — single-value operators (`before`, `after`, `equals`)
 
 ```
-┌─────────────────────────────────┐
-│ Column Name          [🗑 Delete] │
-│ ─────────────────────────────── │
-│ [Operator ▾]                    │
-│                                 │
-│ [Date value]                    │
-│                                 │
-└─────────────────────────────────┘
+┌───────────────────────────────────────────────┐
+│ Column Name                        [🗑 Delete] │
+│ ───────────────────────────────────────────── │
+│ [Operator ▾]                                  │
+│                                               │
+│ [Select or type a date... ▾]                  │
+│                                               │
+│ ┌───────────────────────────────────────────┐ │
+│ │ Aug 2026                          < >     │ │
+│ │ Su  Mo  Tu  We  Th  Fr  Sa               │ │
+│ │ ...calendar...                            │ │
+│ └───────────────────────────────────────────┘ │
+└───────────────────────────────────────────────┘
 ```
+
+The date combobox is a combined input that supports typing a date directly or selecting
+from a dropdown of relative presets (Today, Yesterday, One week ago, etc.) and "Custom
+date" for calendar picking. See Section K for full preset list.
 
 ### States by Operator
 
 | # | Operator | Inputs Shown | Pill Summary |
 |---|----------|-------------|--------------|
-| H1 | `between` | Two date inputs (start, end) | `Founded: Jan 2020 – Dec 2023` |
-| H2 | `not_between` | Two date inputs (start, end) | `Founded: not between Jan 2020 – Dec 2023` |
-| H3 | `equals` | One date input | `Founded: = Jan 15, 2023` |
-| H4 | `not_equals` | One date input | `Founded: ≠ Jan 15, 2023` |
-| H5 | `before` | One date input | `Founded: before Mar 2022` |
-| H6 | `after` | One date input | `Founded: after Jun 2021` |
-| H7 | `today` | No inputs (relative) | `Founded: today` |
-| H8 | `past_7_days` | No inputs (relative) | `Founded: past 7 days` |
-| H9 | `past_30_days` | No inputs (relative) | `Founded: past 30 days` |
-| H10 | `past_90_days` | No inputs (relative) | `Founded: past 90 days` |
-| H11 | `this_week` | No inputs (relative) | `Founded: this week` |
-| H12 | `this_month` | No inputs (relative) | `Founded: this month` |
-| H13 | `this_year` | No inputs (relative) | `Founded: this year` |
-| H14 | `is_null` | No inputs | `Founded: is empty` |
-| H15 | `is_not_null` | No inputs | `Founded: is not empty` |
+| H1 | `between` | Two date combobox inputs (start, end) with presets | `Founded: Jan 2020 – Dec 2023` |
+| H2 | `not_between` | Two date combobox inputs (start, end) with presets | `Founded: not between Jan 2020 – Dec 2023` |
+| H3 | `equals` | One date combobox input with presets | `Founded: = Jan 15, 2023` |
+| H4 | `not_equals` | One date combobox input with presets | `Founded: ≠ Jan 15, 2023` |
+| H5 | `before` | One date combobox input with presets | `Founded: before Mar 2022` |
+| H6 | `after` | One date combobox input with presets | `Founded: after Jun 2021` |
+| H7 | `is_relative_to_today` | Direction dropdown + Unit dropdown + calendar preview | `Created: This week` |
+| H8 | `is_null` | No inputs | `Founded: is empty` |
+| H9 | `is_not_null` | No inputs | `Founded: is not empty` |
+
+Note: Absolute operators (H1–H6) use a combobox date input that offers relative presets
+(Today, Yesterday, One week ago, etc.) in a dropdown alongside "Custom date" for manual
+calendar selection. See Section K for full details on both the relative operator and the
+date presets UI.
 
 ### Interaction States
 
 | # | State | Description |
 |---|-------|-------------|
-| H16 | **Empty** | Date input placeholders shown. |
-| H17 | **Partial** | One date entered (open-ended range). |
-| H18 | **Complete** | Both dates set. |
-| H19 | **Disabled** | Inputs read-only/dimmed. |
+| H10 | **Empty** | Date combobox placeholder shown ("Select or type a date..."). |
+| H11 | **Preset selected** | A relative preset (e.g., "One week ago") fills the date input. Filter will update with the current date. |
+| H12 | **Custom date selected** | User picked "Custom date" and selected from the calendar. |
+| H13 | **Both bounds set** | For `between`/`not_between`: both start and end dates filled. |
+| H14 | **Disabled** | Inputs read-only/dimmed. |
 
 ---
 
@@ -407,13 +412,7 @@ Used inside every filter popover to switch between operators.
 | `less_than` | less than |
 | `before` | before |
 | `after` | after |
-| `today` | today |
-| `past_7_days` | past 7 days |
-| `past_30_days` | past 30 days |
-| `past_90_days` | past 90 days |
-| `this_week` | this week |
-| `this_month` | this month |
-| `this_year` | this year |
+| `is_relative_to_today` | is relative to today |
 | `is_true` | is true |
 | `is_false` | is false |
 
@@ -494,52 +493,140 @@ The count badge only appears when collapsed AND filters are active.
 
 ---
 
-## K. Relative Date Operators
+## K. Relative Date Selection
 
-For date/datetime columns, relative date operators are available directly in the operator
-dropdown — they are NOT a separate "mode" or sub-UI. Each relative date is a standalone
-operator that requires no value inputs.
+For date/datetime columns, the operator dropdown includes an "is relative to today" option.
+When selected, two sub-dropdowns appear for composing the relative range. This is separate
+from the absolute operators (before, after, between, etc.) which show a date input with
+preset suggestions.
 
-### Implementation (flat operators, not Notion-style)
-
-Relative dates appear as individual operators in the same dropdown as `between`, `before`,
-etc. When selected, no date inputs are shown (the operator alone is the full filter).
+### Operator Dropdown Structure
 
 ```
-┌──────────────────┐
-│ between        ✓ │
-│ not between      │
-│ before           │
-│ after            │
-│ equals           │
-│ not equals       │
-│ ─────────────── │
-│ today            │
-│ past 7 days      │
-│ past 30 days     │
-│ past 90 days     │
-│ this week        │
-│ this month       │
-│ this year        │
-│ ─────────────── │
-│ is empty         │
-│ is not empty     │
-└──────────────────┘
+┌──────────────────────┐
+│ between            ✓ │
+│ not between          │
+│ before               │
+│ after                │
+│ equals               │
+│ not equals           │
+│ ────────────────── │
+│ is relative to today │
+│ ────────────────── │
+│ is empty             │
+│ is not empty         │
+└──────────────────────┘
 ```
+
+### Layout — "is relative to today" operator
+
+When this operator is selected, two composition dropdowns appear below the header:
+
+```
+┌─────────────────────────────────────────────┐
+│ Created  [is relative to today ▾]      [🗑] │
+│ ─────────────────────────────────────────── │
+│                                             │
+│ [This ▾]        [week ▾]                    │
+│                                             │
+│ ┌─────────────────────────────────────────┐ │
+│ │ Aug 2026                        < >     │ │
+│ │ Su  Mo  Tu  We  Th  Fr  Sa             │ │
+│ │                                         │ │
+│ │ [16] [17] [18] [19] [20] [21] [22]     │ │  ← computed range highlighted
+│ │                                         │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│ Filter will update with the current date    │
+└─────────────────────────────────────────────┘
+```
+
+### Direction Dropdown (first)
+
+| Value | Meaning |
+|-------|---------|
+| **This** | Current period (this day/week/month/year) |
+| **Past** | Previous period (last day/week/month/year) |
+| **Next** | Next period (upcoming day/week/month/year) |
+
+### Unit Dropdown (second)
+
+| Value | Meaning |
+|-------|---------|
+| **day** | Single day |
+| **week** | Full calendar week (Su–Sa) |
+| **month** | Full calendar month |
+| **year** | Full calendar year |
+
+### Calendar Preview
+
+Below the dropdowns, a calendar renders the computed date range with the matching dates
+highlighted (e.g., "This week" highlights Mon–Sun of the current week, "Past month"
+highlights all days of the previous month). A footer note reads:
+"Filter will update with the current date".
+
+### Layout — absolute operators with date presets
+
+For absolute operators (before, after, equals, etc.), a combobox input appears with
+preset relative suggestions:
+
+```
+┌─────────────────────────────────────────────┐
+│ Created  [is before ▾]                 [🗑] │
+│ ─────────────────────────────────────────── │
+│                                             │
+│ [Select or type a date... ▾]                │
+│                                             │
+│ ┌─────────────────────────────────────────┐ │
+│ │ Today                                   │ │
+│ │ Tomorrow                                │ │
+│ │ Yesterday                               │ │
+│ │ One week ago                            │ │
+│ │ One week from now                       │ │
+│ │ One month ago                           │ │
+│ │ One month from now                      │ │
+│ │ Custom date                           ✓ │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│ ┌─────────────────────────────────────────┐ │
+│ │ Aug 2026                        < >     │ │
+│ │ Su  Mo  Tu  We  Th  Fr  Sa             │ │
+│ │ ...calendar...                          │ │
+│ └─────────────────────────────────────────┘ │
+└─────────────────────────────────────────────┘
+```
+
+### Date Presets (in combobox dropdown)
+
+| Preset | Resolves To |
+|--------|-------------|
+| Today | Current date |
+| Tomorrow | Current date + 1 day |
+| Yesterday | Current date − 1 day |
+| One week ago | Current date − 7 days |
+| One week from now | Current date + 7 days |
+| One month ago | Current date − 1 month |
+| One month from now | Current date + 1 month |
+| Custom date | Manual calendar selection |
 
 ### States
 
 | # | State | Description |
 |---|-------|-------------|
-| K1 | **Relative operator selected** | No date inputs shown (operator is the full filter). Pill shows e.g., `Founded: past 7 days`. |
-| K2 | **Pill summary** | Shows operator label directly: `Founded: this week`, `Founded: today`, etc. |
-| K3 | **Disabled** | Operator dropdown non-interactive, dimmed. |
+| K1 | **Relative operator selected** | Direction + unit dropdowns shown. Calendar highlights computed range. Pill shows composed label (e.g., `Created: This week`). |
+| K2 | **Direction dropdown open** | Shows "Past", "Next", "This" options. |
+| K3 | **Unit dropdown open** | Shows "day", "week", "month", "year" options. Current selection has checkmark. |
+| K4 | **Absolute operator with presets** | Combobox shows preset suggestions; selecting one fills the date value. "Custom date" option opens calendar for manual selection. |
+| K5 | **Pill summary (relative)** | Shows composed label: `Created: This week`, `Created: Past month`, `Created: Next year`. |
+| K6 | **Disabled** | Dropdowns non-interactive, dimmed. |
 
 ### Resolution
 
-Relative dates are resolved server-side on each script rerun — the filter state stores only
-the operator name (e.g., `"past_7_days"`), not computed dates. "Past 7 days" always means
-the last 7 days from today. See tech spec "Relative Date Resolution" section for details.
+Relative dates are resolved server-side on each script rerun — the filter state stores
+the direction and unit (e.g., `{"direction": "this", "unit": "week"}`), not computed
+dates. "This week" always means the current calendar week. The calendar preview and the
+"Filter will update with the current date" note communicate to users that the filter is
+dynamic. See tech spec "Relative Date Resolution" section for details.
 
 ---
 
@@ -770,36 +857,11 @@ to date/datetime ranges).
 | Text Popover (E) | 11 |
 | Range Popover (F) | 12 |
 | Toggle Popover (G) | 6 |
-| Date Popover (H) | 19 |
+| Date Popover (H) | 14 |
 | Operator Selector (I) | 4 |
 | Shared Patterns (J) | 10 |
-| Relative Date Operators (K) | 3 |
+| Relative Date Selection (K) | 6 |
 | List/Tags Popover (L) | 9 (future) |
 | AND/OR Filter Groups (M) | 3 |
 | Time Range Popover (N) | 12 |
-| **Total unique states** | **~119** |
-
----
-
-## Demo Coverage Status
-
-Our current demo app (`work-tmp/test_filter_bar.py`) covers:
-
-- [x] All 5 filter types available via auto-detection (Section 1)
-- [x] Developer-configured column subset (Section 2)
-- [x] FilterConfig per-column overrides (Section 3)
-- [x] Chart-driven filtering (Section 4)
-- [x] Text filter with high cardinality (Section 5)
-- [x] Operator restrictions (Section 6)
-- [x] Collapsed mode with disclosure pattern (Section 7)
-- [x] Per-column disabled (Section 8)
-- [x] Label visibility (Section 9)
-- [x] AND/OR filter logic toggle (Section 10)
-
-**Not shown in static screenshots** (require interaction):
-- Popover open states (must click to open)
-- Operator dropdown open
-- Pill with values (must add filter + select values)
-- "Clear all" button (must have 2+ active filters)
-- Search within column picker
-- OR mode with "or" separators between pills
+| **Total unique states** | **~117** |
