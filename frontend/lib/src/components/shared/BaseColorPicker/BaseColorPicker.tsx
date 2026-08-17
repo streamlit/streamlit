@@ -141,8 +141,8 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   // Custom dismissal via document-level DOM listeners.
   //
   // The popover is portalled into the shared overlay host (a document.body
-  // sibling of the dialog), so we handle outside-click, Escape, and Tab-out
-  // ourselves.
+  // sibling of the dialog). We handle outside-click, Escape, and Tab-out
+  // ourselves rather than via Floating UI dismiss middleware.
   //
   // We use `click` (not `pointerdown`) so that a focused input inside the
   // popover fires its blur/change handlers before we close, ensuring the
