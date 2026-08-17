@@ -294,6 +294,7 @@ describe("FlexBoxContainer layout props", () => {
 
     const horizontalBlock = screen.getByTestId("stHorizontalBlock")
     expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
     expect(horizontalBlock).toHaveStyle("flex-wrap: nowrap;")
   })
 
@@ -312,6 +313,7 @@ describe("FlexBoxContainer layout props", () => {
     // browser-coerced cross-axis overflow.
     const horizontalBlock = screen.getByTestId("stHorizontalBlock")
     expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
     expect(horizontalBlock).toHaveStyle("padding-block: 0.2rem;")
     expect(horizontalBlock).toHaveStyle("margin-block: -0.2rem;")
   })
@@ -330,6 +332,7 @@ describe("FlexBoxContainer layout props", () => {
     // add the extra focus-ring compensation margin.
     const horizontalBlock = screen.getByTestId("stHorizontalBlock")
     expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
     expect(horizontalBlock).not.toHaveStyle("margin-block: -0.2rem;")
   })
 
