@@ -20,6 +20,7 @@ import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
 import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
@@ -139,8 +140,9 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
 
   // Custom dismissal via document-level DOM listeners.
   //
-  // The popover is portalled to document.body, so we implement outside-click,
-  // Escape, and Tab-out dismissal ourselves.
+  // The popover is portalled into the shared overlay host (a document.body
+  // sibling of the dialog), so we handle outside-click, Escape, and Tab-out
+  // ourselves.
   //
   // We use `click` (not `pointerdown`) so that a focused input inside the
   // popover fires its blur/change handlers before we close, ensuring the
@@ -281,7 +283,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         )}
       </StyledColorPreview>
       {isOpen && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <FloatingFocusManager
             context={floatingContext}
             modal={false}

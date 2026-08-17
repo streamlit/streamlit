@@ -381,3 +381,15 @@ def dialog_with_popover() -> None:
 
 if st.button("Open Dialog with Popover"):
     dialog_with_popover()
+
+
+# Regression coverage for #16538: a color picker palette opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with color picker")
+def dialog_with_color_picker() -> None:
+    color = st.color_picker("Dialog color picker")
+    st.write(f"Selected color: {color}")
+
+
+if st.button("Open Dialog with Color Picker"):
+    dialog_with_color_picker()
