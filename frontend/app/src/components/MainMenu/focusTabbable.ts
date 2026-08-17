@@ -32,7 +32,10 @@ function acceptTabbableNode(node: Node): number {
     return NodeFilter.FILTER_SKIP
   if (node.hidden) return NodeFilter.FILTER_SKIP
   if (node.closest("[inert]")) return NodeFilter.FILTER_REJECT
-  if ("checkVisibility" in node && !node.checkVisibility())
+  if (
+    "checkVisibility" in node &&
+    !node.checkVisibility({ visibilityProperty: true })
+  )
     return NodeFilter.FILTER_SKIP
   return NodeFilter.FILTER_ACCEPT
 }
