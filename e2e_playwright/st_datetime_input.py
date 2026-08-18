@@ -147,7 +147,6 @@ st.datetime_input(
     width=110,
     key="narrow_datetime",
 )
-
 st.markdown("Dynamic datetime input:")
 
 if st.toggle("Update datetime input props"):

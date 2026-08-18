@@ -112,18 +112,23 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     )
 
 
-def test_date_input_narrow_rendering(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_date_input_narrow_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that date inputs render correctly in narrow containers."""
-    assert_snapshot(
-        get_element_by_key(themed_app, "narrow_single"),
-        name="st_date_input-narrow_single",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "narrow_range"),
-        name="st_date_input-narrow_range",
-    )
+    narrow_single = get_element_by_key(app, "narrow_single")
+    assert_snapshot(narrow_single, name="st_date_input-narrow_single")
+
+    narrow_range = get_element_by_key(app, "narrow_range")
+    assert_snapshot(narrow_range, name="st_date_input-narrow_range")
+
+    # Field must not overflow its container border
+    for key in ("narrow_single", "narrow_range"):
+        container = get_element_by_key(app, key).get_by_test_id("stDateInput")
+        field = container.get_by_test_id("stDateInputField")
+        container_box = container.bounding_box()
+        field_box = field.bounding_box()
+        assert container_box is not None
+        assert field_box is not None
+        assert field_box["width"] <= container_box["width"]
 
 
 def test_help_tooltip_works(app: Page):
@@ -333,8 +338,7 @@ def test_range_date_calendar_picker_rendering(
 
 def test_today_indicator_in_calendar(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that today's date is visually marked in the calendar popover."""
-    # Install fake clock and reload so React Aria uses our "today" from page start
-    app.clock.install(time=datetime(2026, 3, 7, 12, 0, 0))
+    app.clock.set_fixed_time(datetime(2026, 3, 7, 12, 0, 0))
     app.reload()
     wait_for_app_loaded(app)
 

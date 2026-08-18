@@ -62,7 +62,7 @@ export const StyledDateField = styled("div", {
   }),
 }))
 
-/** Mirrors TimeInput's StyledTimeInputWrapper for cross-widget consistency. */
+/** Outer border wrapper for date/datetime fields. Scrolls in narrow layouts. */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -73,6 +73,8 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
+  // Scroll horizontally in narrow layouts instead of overflowing the border.
+  // Hidden scrollbar avoids stealing height (same pattern as Tabs/Multiselect).
   overflowX: "auto" as const,
   overflowY: "hidden" as const,
   scrollbarWidth: "none",
@@ -615,6 +617,10 @@ export const StyledCalendarCell = styled(CalendarCell, {
       color: theme.colors.fadedText40,
     },
 
+    // React Aria sets data-today; :not([data-outside-month]) keeps the
+    // mark on the visible month only. Underline intentionally blends with
+    // the primary fill when today is also selected. Hardcoded px because
+    // text-decoration has no related theme token.
     "&[data-today]:not([data-outside-month])": {
       textDecorationLine: "underline",
       textDecorationColor: primary,
