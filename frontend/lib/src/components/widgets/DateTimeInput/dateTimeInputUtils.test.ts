@@ -69,6 +69,11 @@ describe("isoToCalendarDateTime", () => {
       minute: 15,
     })
   })
+
+  it("rejects out-of-range seconds", () => {
+    expect(isoToCalendarDateTime("2024-07-04T08:15:99")).toBeNull()
+    expect(isoToCalendarDateTime("2024-07-04T08:15:60")).toBeNull()
+  })
 })
 
 describe("calendarDateTimeToIso", () => {
