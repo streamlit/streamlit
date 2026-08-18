@@ -129,7 +129,7 @@ sql = ["SQLAlchemy>=2.0.0"]
 # Optional dependency for better performance:
 performance = [
   # httptools provides faster HTTP parsing for the Starlette server:
-  "httptools>=0.6.3,<1",
+  "httptools>=0.6.3",
   # orjson speeds up large plotly figure processing by 5-10x:
   "orjson>=3.5.0",
   # uvloop speeds up the event loop:

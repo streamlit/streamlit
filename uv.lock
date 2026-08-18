@@ -4543,7 +4543,7 @@ requires-dist = [
     { name = "blinker", specifier = ">=1.5.0,<2" },
     { name = "click", specifier = ">=7.0,<9" },
     { name = "graphviz", marker = "extra == 'charts'", specifier = ">=0.19.0" },
-    { name = "httptools", marker = "extra == 'performance'", specifier = ">=0.6.3,<1" },
+    { name = "httptools", marker = "extra == 'performance'", specifier = ">=0.6.3" },
     { name = "httpx", marker = "extra == 'auth'", specifier = ">=0.24.1" },
     { name = "itsdangerous", specifier = ">=2.1.2,<3" },
     { name = "matplotlib", marker = "extra == 'charts'", specifier = ">=3.0.0" },
