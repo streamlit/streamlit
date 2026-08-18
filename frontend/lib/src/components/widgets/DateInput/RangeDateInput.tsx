@@ -62,13 +62,14 @@ import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
 import {
   datesEqual,
   getQuickSelectPresets,
+  getSafeLocale,
   isValidSegmentValue,
   noop,
   parsePartialSegmentPaste,
   parsePastedDate,
   validateDate,
 } from "./dateInputUtils"
-import { ReorderedDateSegments } from "./ReorderedDateSegments"
+import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -91,7 +92,6 @@ import {
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { getSafeLocale } from "./weekInfo"
 
 interface RangeDateInputProps {
   startValue: CalendarDate | null
@@ -825,7 +825,7 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} isRange />
+                <ReorderedSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>
@@ -843,7 +843,7 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} isRange />
+                <ReorderedSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>

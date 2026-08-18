@@ -32,7 +32,7 @@ import {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import { CalendarDate } from "@internationalized/date"
+import { CalendarDate, CalendarDateTime } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
@@ -44,24 +44,9 @@ import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constant
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import {
-  SHIFT_VIEWPORT_PADDING,
-  useFloatingOverlay,
-} from "~lib/hooks/useFloatingOverlay"
-import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
-import { convertRemToPx } from "~lib/theme/utils"
-import { isNullOrUndefined } from "~lib/util/utils"
-
-import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
-import {
-  datesEqual,
-  getSafeLocale,
-  isValidSegmentValue,
-  parsePartialSegmentPaste,
-  parsePastedDate,
-} from "./dateInputUtils"
-import { ReorderedSegments } from "./ReorderedSegments"
+import { CalendarPopoverHeader } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
+import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
+import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -75,14 +60,30 @@ import {
   StyledErrorIconContainer,
   StyledTrailingIcons,
   StyledVisuallyHidden,
-} from "./styled-components"
+} from "~lib/components/widgets/DateInput/styled-components"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
+import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
+import { convertRemToPx } from "~lib/theme/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
 
-interface SingleDateInputProps {
-  value: CalendarDate | null
-  onChange: (value: CalendarDate | null) => void
-  minDate: CalendarDate
-  maxDate: CalendarDate | undefined
+import {
+  dateTimesEqual,
+  getSegmentState,
+  parsePastedDateTime,
+  validateDateTime,
+} from "./dateTimeInputUtils"
+
+interface SingleDateTimeInputProps {
+  value: CalendarDateTime | null
+  onChange: (value: CalendarDateTime | null) => void
+  minDateTime: CalendarDateTime | null
+  maxDateTime: CalendarDateTime | null
   format: string
+  step: number
   disabled: boolean
   clearable: boolean
   label: string
@@ -94,30 +95,22 @@ interface SingleDateInputProps {
   isInSidebar: boolean
   focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
-  /** Validates a date and updates the parent's error state without
-   * committing the value to widget state. Used for real-time error
-   * feedback during segment editing. */
-  onValidate: (date: CalendarDate | null) => void
-  /** Called when close requires parent-level cleanup (segments left in
-   * placeholder state after an edit). Parent clears the validation error;
-   * the display revert is handled locally. */
+  onValidate: (dt: CalendarDateTime | null) => void
   onClose: (shouldClearError: boolean) => void
-  /** When inside a form, writes the pending value to WidgetStateManager
-   * synchronously on blur so a concurrent form submit reads the correct
-   * value. Undefined when not in a form. */
-  formCommit?: (value: CalendarDate | null) => void
-  /** Incremented when the parent form is cleared. Signals this component to
-   * reset its local displayValue to the parent's value prop (which may not
-   * have changed if segment edits were never committed). */
+  formCommit?: (value: CalendarDateTime | null) => void
+  /** When inside a form with enter_to_submit=True, submits the form.
+   * Called after formCommit on Enter key. */
+  formSubmit?: () => void
   formResetKey: number
 }
 
-function SingleDateInput({
+function SingleDateTimeInput({
   value,
   onChange,
-  minDate,
-  maxDate,
+  minDateTime,
+  maxDateTime,
   format,
+  step,
   disabled,
   clearable,
   label,
@@ -129,8 +122,9 @@ function SingleDateInput({
   onValidate,
   onClose,
   formCommit,
+  formSubmit,
   formResetKey,
-}: SingleDateInputProps): ReactElement {
+}: SingleDateTimeInputProps): ReactElement {
   const theme = useEmotionTheme()
   const id = useId()
   const errorId = `${id}-error`
@@ -147,44 +141,31 @@ function SingleDateInput({
   // avoid a redundant write + backend rerun.
   const skipCloseCommitRef = useRef(false)
 
-  // Dual-mode state: passive (visual aid) vs active (keyboard-modal).
   const [isCalendarActive, setIsCalendarActive] = useState(false)
   const isCalendarActiveRef = useRef(false)
   isCalendarActiveRef.current = isCalendarActive
-  // Tracks which segment had focus before Alt+ArrowDown entered active mode.
   const activeOriginRef = useRef<HTMLElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
 
-  // --- Two-layer state (matches TimeInput/NumberInput pattern) ---
-  // `displayValue` tracks what the field shows during editing.
-  // Segment typing updates only displayValue; the parent's `onChange` is
-  // called only on explicit actions (calendar click, paste, clear) or when
-  // the popover closes. This prevents intermediate backspace states from
-  // triggering backend reruns and on_change callbacks.
-  const [displayValue, setDisplayValue] = useState<CalendarDate | null>(value)
+  const stepMins = step / 60
 
-  // Sync from parent when value changes externally (session_state, form
-  // clear, close-commit, calendar click). Render-time adjustment pattern per
-  // React docs. Always accept the parent's value — during editing the parent
-  // doesn't change (we buffer locally), so this only fires on real external
-  // updates.
+  // --- Two-layer state ---
+  const [displayValue, setDisplayValue] = useState<CalendarDateTime | null>(
+    value
+  )
+
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
     setDisplayValue(value)
   }
 
-  // Form clear: displayValue may have diverged (uncommitted typing) while
-  // the widget state stayed at default. The value prop won't change in that
-  // case, so watch the resetKey separately.
   const [prevResetKey, setPrevResetKey] = useState(formResetKey)
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
   }
 
-  // Ref so the close-detection effect always reads the latest displayValue
-  // without needing it in its dependency array.
   const displayValueRef = useRef(displayValue)
   displayValueRef.current = displayValue
 
@@ -194,52 +175,47 @@ function SingleDateInput({
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
+  const formCommitRef = useRef(formCommit)
+  formCommitRef.current = formCommit
+
   const [isOpen, setIsOpen] = useState(false)
 
+  // Close-detection effect: handles commit/revert when popover closes.
   const wasOpenRef = useRef(isOpen)
-  // `value` is in deps so the effect re-evaluates when the committed value
-  // changes externally (session_state, form clear), not just on isOpen toggle.
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
-      } else {
-        const segments = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"]'
+      } else if (triggerRef.current) {
+        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+          triggerRef.current
         )
-        const placeholders = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"][data-placeholder="true"]'
-        )
-        const isPartiallyTyped =
-          segments &&
-          placeholders &&
-          placeholders.length > 0 &&
-          placeholders.length < segments.length
-        const allCleared =
-          segments &&
-          segments.length > 0 &&
-          placeholders?.length === segments.length
 
-        if (isPartiallyTyped || (allCleared && !clearable)) {
-          // User left segments incomplete, or fully cleared a non-clearable
-          // widget — revert display to the committed value directly. We can't
-          // go through the parent round-trip because the widget state might
-          // already be at default (segment edits were buffered), making the
-          // parent's revert a no-op.
+        if (isPartiallyTyped || (isFullyCleared && !clearable)) {
           setDisplayValue(value)
-          onCloseRef.current(true /* shouldClearError */)
+          onCloseRef.current(true)
         } else {
-          const pending = allCleared ? null : displayValueRef.current
-          if (!datesEqual(pending, value)) {
+          const pending = isFullyCleared ? null : displayValueRef.current
+          const isOutOfBounds = !!validateDateTime(
+            pending,
+            minDateTime,
+            maxDateTime
+          )
+
+          if (isOutOfBounds) {
+            setDisplayValue(value)
+            onCloseRef.current(true)
+          } else if (!dateTimesEqual(pending, value)) {
             onChangeRef.current(pending)
+            formCommitRef.current?.(pending)
           }
         }
       }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, value, clearable])
+  }, [isOpen, value, clearable, minDateTime, maxDateTime])
 
-  // When entering active mode, move focus to the focused calendar cell.
+  // Focus active calendar cell on active mode entry.
   useEffect(() => {
     if (!isCalendarActive || !isOpen) return
     const rafId = requestAnimationFrame(() => {
@@ -251,10 +227,6 @@ function SingleDateInput({
     return () => cancelAnimationFrame(rafId)
   }, [isCalendarActive, isOpen])
 
-  // In the sidebar, flip/shift are bounded to the viewport
-  // (document.documentElement) rather than the sidebar's overflow:auto
-  // clipping rect. Otherwise the calendar cannot flip up when the trigger
-  // sits near the bottom and overflows the viewport instead.
   const overlayOptions = useMemo(() => {
     const base = {
       open: isOpen,
@@ -274,9 +246,6 @@ function SingleDateInput({
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
-  // Restores focus to the date field after the calendar closes.
-  // In active mode: returns to the segment that was focused before
-  // Alt+ArrowDown. In passive mode: returns to the last segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
     if (isCalendarActiveRef.current && activeOriginRef.current) {
@@ -305,28 +274,18 @@ function SingleDateInput({
         setIsCalendarActive(false)
         // Synchronous form commit: outside-click dismiss can race form submit
         // (the close-commit effect fires after paint). Mirrors handleBlur.
-        if (formCommit) {
-          const segments = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"]'
+        if (formCommitRef.current && triggerRef.current) {
+          const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+            triggerRef.current
           )
-          const placeholders = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"][data-placeholder="true"]'
-          )
-          const isPartiallyTyped =
-            segments &&
-            placeholders &&
-            placeholders.length > 0 &&
-            placeholders.length < segments.length
-          const isFullyCleared =
-            segments &&
-            segments.length > 0 &&
-            placeholders?.length === segments.length
           if (isPartiallyTyped || (isFullyCleared && !clearable)) {
             // Will revert on next render — don't commit stale/invalid state.
           } else {
             const pending = isFullyCleared ? null : displayValueRef.current
-            if (!datesEqual(pending, value)) {
-              formCommit(pending)
+            if (validateDateTime(pending, minDateTime, maxDateTime)) {
+              // Out of bounds — close-detection effect will revert.
+            } else if (!dateTimesEqual(pending, value)) {
+              formCommitRef.current(pending)
             }
           }
         }
@@ -334,8 +293,7 @@ function SingleDateInput({
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
-      // Exclude the month/year picker popover so Escape closes it first,
-      // not the whole calendar.
+      // Exclude the month/year picker popover so Escape closes it first, not the whole calendar.
       excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
       excludeEscape: true,
     })
@@ -356,46 +314,89 @@ function SingleDateInput({
     [setReferenceRef]
   )
 
-  // Segment typing: buffer locally, sync calendar month, show validation
-  // errors in real-time — but do NOT commit to widget state.
+  // Segment typing: buffer locally, sync calendar month, show real-time errors.
   const handleFieldChange = useCallback(
-    (date: CalendarDate | null): void => {
+    (date: CalendarDateTime | null): void => {
       setDisplayValue(date)
       onValidate(date)
       if (date) {
-        onFocusChange(date)
+        onFocusChange(new CalendarDate(date.year, date.month, date.day))
       }
     },
     [onFocusChange, onValidate]
   )
 
-  // Selecting a date commits immediately and closes the popover.
+  // Calendar date selection: merge with existing time, commit immediately, close.
+  // Clamps time to valid range when the selected date is on a boundary.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
-      setDisplayValue(date)
-      onChange(date)
+      const currentTime = displayValueRef.current
+      let hour = currentTime?.hour ?? 0
+      let minute = currentTime?.minute ?? 0
+
+      // Clamp time when on the min boundary date
+      if (
+        minDateTime &&
+        date.compare(
+          new CalendarDate(
+            minDateTime.year,
+            minDateTime.month,
+            minDateTime.day
+          )
+        ) === 0
+      ) {
+        const currentMins = hour * 60 + minute
+        const minMins = minDateTime.hour * 60 + minDateTime.minute
+        if (currentMins < minMins) {
+          hour = minDateTime.hour
+          minute = minDateTime.minute
+        }
+      }
+
+      // Clamp time when on the max boundary date
+      if (
+        maxDateTime &&
+        date.compare(
+          new CalendarDate(
+            maxDateTime.year,
+            maxDateTime.month,
+            maxDateTime.day
+          )
+        ) === 0
+      ) {
+        const currentMins = hour * 60 + minute
+        const maxMins = maxDateTime.hour * 60 + maxDateTime.minute
+        if (currentMins > maxMins) {
+          hour = maxDateTime.hour
+          minute = maxDateTime.minute
+        }
+      }
+
+      const merged = new CalendarDateTime(
+        date.year,
+        date.month,
+        date.day,
+        hour,
+        minute
+      )
+      setDisplayValue(merged)
+      onChange(merged)
       skipCloseCommitRef.current = true
       setIsOpen(false)
       restoreFocusToField()
       setIsCalendarActive(false)
     },
-    [onChange, restoreFocusToField]
+    [onChange, restoreFocusToField, minDateTime, maxDateTime]
   )
 
-  // Wired to onFocus and onClickCapture: clicking an already-focused segment
-  // doesn't re-fire onFocus. Capture phase needed because RAC stops propagation.
   const handleFocus = useCallback((): void => {
     if (isRestoringFocusRef.current) return
     if (!disabled) setIsOpen(true)
   }, [disabled])
 
-  // Capture-phase fires before the clear button's own handler; without this
-  // gate, clearing a value would immediately reopen the popover.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
-      // Pointer-only: active mode enters via rAF, so handleFocus can't reset
-      // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)
       handleFocus()
     },
@@ -407,42 +408,26 @@ function SingleDateInput({
     onChange(null)
   }, [onChange])
 
-  // Custom paste: DateField's built-in paste uses the locale-derived segment
-  // order (en-US), which is out of sync with our reordered segments.
+  // Custom paste handler: ISO datetime or display-format datetime.
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLDivElement>): void => {
       if (disabled) return
       const text = e.clipboardData.getData("text").trim()
 
-      const fullDate = parsePastedDate(text, format)
-      if (fullDate) {
+      const fullDateTime = parsePastedDateTime(text, format)
+      if (fullDateTime) {
         e.preventDefault()
-        setDisplayValue(fullDate)
-        onChange(fullDate)
+        setDisplayValue(fullDateTime)
+        onChange(fullDateTime)
         return
       }
 
-      const target = e.target as HTMLElement
-      if (target.getAttribute("role") !== "spinbutton") return
-      const partial = parsePartialSegmentPaste(
-        text,
-        target.getAttribute("data-type")
-      )
-      if (!partial) return
-      e.preventDefault()
-      if (!isValidSegmentValue(partial.segmentType, partial.value)) return
-
-      const base = displayValue ?? minDate
-      const newDate = base.set({ [partial.segmentType]: partial.value })
-      if (newDate[partial.segmentType] !== partial.value) return
-      setDisplayValue(newDate)
-      onChange(newDate)
+      // For partial segment paste, let RAC handle it (no custom partial for datetime)
     },
-    [disabled, format, onChange, displayValue, minDate]
+    [disabled, format, onChange]
   )
 
-  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
-  // closes the passive popover and lets focus leave the widget naturally.
+  // Capture-phase keydown: step-aware time arrows, Alt+ArrowDown, Tab closing, Enter commit.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -450,6 +435,88 @@ function SingleDateInput({
         activeOriginRef.current = e.target as HTMLElement
         if (!isOpen) setIsOpen(true)
         setIsCalendarActive(true)
+        return
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault()
+        if (!triggerRef.current) return
+        const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+          triggerRef.current
+        )
+        if (isPartiallyTyped || (isFullyCleared && !clearable)) return
+
+        const pending = isFullyCleared ? null : displayValueRef.current
+        if (validateDateTime(pending, minDateTime, maxDateTime)) {
+          setDisplayValue(value)
+          onCloseRef.current(true)
+          return
+        }
+        if (!dateTimesEqual(pending, value)) {
+          onChangeRef.current(pending)
+        }
+        formCommitRef.current?.(pending)
+        if (!error) {
+          formSubmit?.()
+        }
+        return
+      }
+
+      // Step-aware arrow keys for time segments.
+      // TODO: Steps not divisible by 60 (e.g. step=90) fall through to default
+      // 1-minute increments — pre-existing behavior. Will be addressed with
+      // seconds granularity and hour cycle support, consistent with TimeInput.
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        const target = e.target as HTMLElement
+        const segmentType = target.getAttribute("data-type")
+        const up = e.key === "ArrowUp"
+
+        if (segmentType === "minute" && step % 60 === 0) {
+          if (stepMins <= 1) return
+          if (!displayValue) return
+
+          e.preventDefault()
+          e.stopPropagation()
+          e.nativeEvent.stopImmediatePropagation()
+
+          const totalMins = displayValue.hour * 60 + displayValue.minute
+          const next = up
+            ? Math.floor(totalMins / stepMins) * stepMins + stepMins
+            : Math.ceil(totalMins / stepMins) * stepMins - stepMins
+          const wrapped =
+            next >= 1440
+              ? 0
+              : next < 0
+                ? Math.floor(1439 / stepMins) * stepMins
+                : next
+          const newDt = displayValue.set({
+            hour: Math.floor(wrapped / 60),
+            minute: wrapped % 60,
+          })
+          setDisplayValue(newDt)
+          onValidate(newDt)
+        } else if (segmentType === "hour" && step % 3600 === 0) {
+          const stepHours = step / 3600
+          if (stepHours <= 1) return
+          if (!displayValue) return
+
+          e.preventDefault()
+          e.stopPropagation()
+          e.nativeEvent.stopImmediatePropagation()
+
+          const next = up
+            ? Math.floor(displayValue.hour / stepHours) * stepHours + stepHours
+            : Math.ceil(displayValue.hour / stepHours) * stepHours - stepHours
+          const wrapped =
+            next >= 24
+              ? 0
+              : next < 0
+                ? Math.floor(23 / stepHours) * stepHours
+                : next
+          const newDt = displayValue.set({ hour: wrapped, minute: 0 })
+          setDisplayValue(newDt)
+          onValidate(newDt)
+        }
         return
       }
 
@@ -466,13 +533,22 @@ function SingleDateInput({
         setIsOpen(false)
       }
     },
-    [isOpen]
+    [
+      isOpen,
+      value,
+      displayValue,
+      clearable,
+      error,
+      formSubmit,
+      minDateTime,
+      maxDateTime,
+      step,
+      stepMins,
+      onValidate,
+    ]
   )
 
-  // In active mode: Tab cycles focus within the calendar (focus trap).
-  // In passive mode: Tab closes the popover and returns focus to the field.
-  // Scoped to popoverRef only — portaled month/year pickers self-dismiss on
-  // Tab (stopPropagation + restore trigger focus in CalendarPopoverHeader).
+  // Active mode: Tab cycles within popover. Passive: Tab closes.
   const handleCalendarKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.key !== "Tab") return
@@ -484,7 +560,6 @@ function SingleDateInput({
         return
       }
 
-      // Active mode: cycle through focusable elements within the popover
       const popover = popoverRef.current
       if (!popover) return
 
@@ -512,33 +587,61 @@ function SingleDateInput({
     [restoreFocusToField]
   )
 
-  // Commit buffered edits when focus leaves the field (matches TimeInput).
-  // Also writes to WidgetStateManager synchronously when inside a form so a
-  // concurrent Submit click reads the correct value.
+  // Commit on blur (always, not just in forms — lesson from #16460).
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      const segments = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"]'
+      if (!triggerRef.current) return
+      const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+        triggerRef.current
       )
-      const placeholders = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"][data-placeholder="true"]'
-      )
-      if (segments && placeholders) {
-        const isPartiallyTyped =
-          placeholders.length > 0 && placeholders.length < segments.length
-        if (isPartiallyTyped) return
-        const isFullyCleared = placeholders.length === segments.length
-        if (isFullyCleared && !clearable) return
+      if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+        setDisplayValue(value)
+        onCloseRef.current(true)
+        return
       }
-      const pending = displayValueRef.current
-      if (datesEqual(pending, value)) return
+      const pending = isFullyCleared ? null : displayValueRef.current
+      if (dateTimesEqual(pending, value)) return
+      if (validateDateTime(pending, minDateTime, maxDateTime)) {
+        setDisplayValue(value)
+        onCloseRef.current(true)
+        return
+      }
       onChangeRef.current(pending)
-      formCommit?.(pending)
+      formCommitRef.current?.(pending)
     },
-    [formCommit, value, clearable]
+    [value, clearable, minDateTime, maxDateTime]
   )
+
+  // Calendar value for display: extract date portion from displayValue.
+  const calendarDisplayValue = useMemo((): CalendarDate | null => {
+    if (!displayValue) return null
+    return new CalendarDate(
+      displayValue.year,
+      displayValue.month,
+      displayValue.day
+    )
+  }, [displayValue])
+
+  // Min/max for calendar (date-only).
+  const calendarMinDate = useMemo((): CalendarDate | undefined => {
+    if (!minDateTime) return undefined
+    return new CalendarDate(
+      minDateTime.year,
+      minDateTime.month,
+      minDateTime.day
+    )
+  }, [minDateTime])
+
+  const calendarMaxDate = useMemo((): CalendarDate | undefined => {
+    if (!maxDateTime) return undefined
+    return new CalendarDate(
+      maxDateTime.year,
+      maxDateTime.month,
+      maxDateTime.day
+    )
+  }, [maxDateTime])
 
   return (
     <StyledDateFieldContainer>
@@ -548,35 +651,37 @@ function SingleDateInput({
         aria-haspopup="dialog"
         aria-expanded={isCalendarActive}
         aria-controls={isCalendarActive ? popoverId : undefined}
-        data-testid="stDateInputField"
+        data-testid="stDateTimeInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
         onPaste={handlePaste}
-        onKeyDown={handleFieldKeyDown}
+        onKeyDownCapture={handleFieldKeyDown}
       >
         <I18nProvider locale="en-US">
           <StyledDateField>
-            <DateField
+            <DateField<CalendarDateTime>
               aria-label={label}
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}
               value={displayValue}
               onChange={handleFieldChange}
-              minValue={minDate}
-              maxValue={maxDate}
+              minValue={minDateTime ?? undefined}
+              maxValue={maxDateTime ?? undefined}
+              granularity="minute"
+              hourCycle={24}
               shouldForceLeadingZeros
               isDisabled={disabled}
             >
-              <ReorderedSegments format={format} />
+              <ReorderedSegments format={format} includeTime />
             </DateField>
           </StyledDateField>
         </I18nProvider>
         <StyledTrailingIcons>
           {error && (
-            <StyledErrorIconContainer data-testid="stDateInputError">
+            <StyledErrorIconContainer data-testid="stDateTimeInputError">
               <Tooltip
                 content={
                   <StreamlitMarkdown source={error} allowHTML={false} />
@@ -593,8 +698,8 @@ function SingleDateInput({
               ref={clearButtonRef}
               type="button"
               onClick={handleClear}
-              aria-label="Clear date"
-              data-testid="stDateInputClearButton"
+              aria-label="Clear date and time"
+              data-testid="stDateTimeInputClearButton"
               tabIndex={-1}
               onMouseDown={e => e.preventDefault()}
             >
@@ -614,7 +719,7 @@ function SingleDateInput({
             id={popoverId}
             ref={setFloatingRef}
             style={floatingStyles}
-            data-testid="stDateInputCalendar"
+            data-testid="stDateTimeInputCalendar"
             onKeyDown={handleCalendarKeyDown}
             role={isCalendarActive ? "dialog" : undefined}
             aria-modal={isCalendarActive ? "true" : undefined}
@@ -627,15 +732,13 @@ function SingleDateInput({
                 close.
               </StyledVisuallyHidden>
             )}
-            {/* Calendar locale is the visitor's locale (not the field's
-                fixed en-US). safeLocale guards against malformed tags. */}
             <I18nProvider locale={safeLocale}>
               <StyledCalendarRoot
                 aria-label="Choose date"
-                value={displayValue}
+                value={calendarDisplayValue}
                 onChange={handleCalendarChange}
-                minValue={minDate}
-                maxValue={maxDate}
+                minValue={calendarMinDate}
+                maxValue={calendarMaxDate}
                 focusedValue={focusedValue ?? undefined}
                 onFocusChange={onFocusChange}
               >
@@ -663,4 +766,4 @@ function SingleDateInput({
   )
 }
 
-export default memo(SingleDateInput)
+export default memo(SingleDateTimeInput)
