@@ -38,7 +38,10 @@ function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   )
 }
 
-function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
+function makeHorizontalBlockWithColumns(
+  numColumns: number,
+  wrap = true
+): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
@@ -51,6 +54,7 @@ function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
           gapSize: streamlit.GapSize.SMALL,
         },
         direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap,
       },
     })
   )
@@ -296,6 +300,7 @@ describe("FlexBoxContainer layout props", () => {
     expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
     expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
     expect(horizontalBlock).toHaveStyle("flex-wrap: nowrap;")
+    expect(horizontalBlock).toHaveAttribute("data-test-wrap", "false")
   })
 
   it("adds focus-ring padding compensation for an unbordered horizontal scroll container", () => {
@@ -348,6 +353,7 @@ describe("FlexBoxContainer layout props", () => {
     const horizontalBlock = screen.getByTestId("stHorizontalBlock")
     expect(horizontalBlock).not.toHaveStyle("overflow-x: auto;")
     expect(horizontalBlock).toHaveStyle("flex-wrap: wrap;")
+    expect(horizontalBlock).toHaveAttribute("data-test-wrap", "true")
   })
 
   it("does not enable horizontal scrolling for a vertical container with wrap=false", () => {
@@ -362,6 +368,32 @@ describe("FlexBoxContainer layout props", () => {
     expect(screen.getByTestId("stVerticalBlock")).not.toHaveStyle(
       "overflow-x: auto;"
     )
+  })
+
+  it("should set min-width on columns when wrap is false", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(3, false),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const columns = screen.getAllByTestId("stColumn")
+    expect(columns).toHaveLength(3)
+    for (const column of columns) {
+      expect(column).toHaveStyle("min-width: 8rem;")
+    }
+  })
+
+  it("should not set the nowrap min-width floor when wrap is true", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(3, true),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const columns = screen.getAllByTestId("stColumn")
+    expect(columns).toHaveLength(3)
+    for (const column of columns) {
+      expect(column).not.toHaveStyle("min-width: 8rem;")
+    }
   })
 })
 
