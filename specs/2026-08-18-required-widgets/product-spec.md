@@ -215,8 +215,11 @@ allowed. Empty *commit* is not. Matches `validate`.
 - Clear / search-X / backspace-to-empty updates the local field only.
 - Outside a form, on blur / Enter / change: if empty, show the error and do not send a
   value. Inside a form, blur/Enter stages locally; the error is shown at submit.
-- `type="search"` clear must **not** immediately commit `""` when `required=True`
-  (today it does, because empty bypasses `validate`).
+- `type="search"` **keeps** the clear X when `required=True`. Search is a typed widget:
+  emptying the field is how the user starts a new query. The X must **not** immediately
+  commit `""` (today it does, because empty bypasses `validate`); it only updates local
+  UI and shows the required error until the user types again. Hiding the X would mix
+  this up with selection widgets, where clear means "no choice."
 
 **Selection widgets** (`selectbox`, `radio`, `multiselect`, `pills`, `segmented_control`):
 empty is "no choice," not an in-progress edit. Once a value is selected,
@@ -244,32 +247,19 @@ block a later empty commit, same as typed/selection widgets — not only add a l
 form gate.
 
 - **Camera / audio:** treat Clear as a typed-widget empty edit. Clear updates local UI,
-  shows the required error, and does **not** commit `None` to the backend. A new
-  capture commits. Users must be able to recapture.
-  **Inside a form:** Clear stages empty locally (same as typing empty in a required
-  text input). The form-submit validator must read that local/staged capture — not
-  `WidgetStateManager`'s previous file — so submit fails with `This field is required`
-  instead of sending the stale photo or recording. Recapture replaces the staged empty.
-  On a successful submit, the validator must write that local capture into form widget
-  state **before** returning true (same as typed widgets committing dirty `uiValue` in
-  the form-submit validator), so the form sends the new photo/recording, not the
-  previous one. Recapture **upload** is in-progress from the moment the new capture is
-  shown until that file is locally uploaded (`status` ready). Block submit for that
-  upload window (today `formsWithUploads` starts only once `uploadFile` runs, which is
-  after `urltoFile` / `fetchFileURLs`). Do not show `This field is required` while a
-  recapture is visible. After the upload is ready, submit is enabled; the validator
-  then flushes the new file into form widget state so `submitForm` does not send the
-  previous file.
+  shows the required error, and does **not** commit `None`. A new capture commits.
+  Users must be able to recapture. Inside a form: Clear then submit fails required
+  (does not send the previous capture); recapture then submit sends the new capture.
+  While a recapture is still uploading, submit stays blocked and the required error
+  is not shown. Implementation details (staged local state vs widget manager, when
+  the upload window starts) live in the [tech spec](./tech-spec.md).
 - **File uploader:** once at least one file is committed, `required=True` **locks
   deleting the last file** (hide/disable that delete control), like selection widgets.
   Replacing via a new drop still works. Form submit is gated while the widget is still
   empty (`None` / `[]`).
-- **In-progress upload:** emptiness is the `WidgetStateManager` value only. Do **not**
-  treat `status === "updating"` as empty — a multi-file uploader can be uploading
-  while prior files are already committed. Form submit is already disabled while
-  `formsWithUploads` is set (`FormSubmitButton`), so an in-flight upload does not
-  produce a `This field is required` click path. After the upload completes, required
-  is evaluated on the committed files.
+- **In-progress upload:** an upload in flight is not empty. Form submit is already
+  disabled during uploads, so this is not a `This field is required` click path.
+  After the upload completes, required is evaluated on the committed files.
 
 `required=True` does **not** change defaults. `st.selectbox(options)` still starts on
 the first option; `st.number_input()` still starts at `min`. To get an empty required

@@ -79,8 +79,8 @@ same as `validate` — and the form-submit validator is what blocks the backend
 commit.
 
 `type="search"` `handleClear` currently commits `""` immediately because empty bypasses
-`validate`. When `required=True`, clear must only update local UI, set the required
-error, and not commit.
+`validate`. When `required=True`, keep the clear X (typed-widget empty-while-editing)
+but only update local UI, set the required error, and not commit.
 
 Register a form-submit validator when `required || hasValidationConfig`, not only when
 a regex is set. The validator calls the same `validateBeforeCommit`. `submitForm`
