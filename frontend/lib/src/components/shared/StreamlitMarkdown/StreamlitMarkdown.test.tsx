@@ -352,6 +352,18 @@ describe("rewriteMaterialIconPrefix", () => {
       description: "fence with an info string is left alone",
     },
     {
+      input: "```\n:material/a:\n`````",
+      expected: "```\n:material/a:\n`````",
+      description:
+        "backtick fence closed by a longer run is left alone, as CommonMark allows",
+    },
+    {
+      input: "~~~\n:material/a:\n~~~~",
+      expected: "~~~\n:material/a:\n~~~~",
+      description:
+        "tilde fence closed by a longer run is left alone, as CommonMark allows",
+    },
+    {
       input: "  ```\n  :material/a:\n  ```",
       expected: "  ```\n  :material/a:\n  ```",
       description: "indented fence is left alone",

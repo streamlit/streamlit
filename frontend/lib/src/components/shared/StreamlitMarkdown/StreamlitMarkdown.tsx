@@ -123,20 +123,25 @@ export function containsEmojiShortcodes(source: string): boolean {
  * unchanged; only the final branch substitutes.
  *
  * - Fences must begin a line (up to three spaces of indent, per CommonMark) and be
- *   closed by a matching run on its own line. Both conditions matter: without the
- *   line anchor, a mid-line ``` -- which CommonMark leaves as prose -- would open a
- *   fence, and without requiring the close it would swallow the rest of the input,
- *   so `:material/` in later prose would never be rewritten and the icon would
- *   silently stop rendering.
+ *   closed on a line of their own. Both conditions matter: without the line anchor,
+ *   a mid-line ``` -- which CommonMark leaves as prose -- would open a fence, and
+ *   without requiring the close it would swallow the rest of the input, so
+ *   `:material/` in later prose would never be rewritten and the icon would silently
+ *   stop rendering.
+ * - Backtick and tilde fences get separate branches so the closing run can be longer
+ *   than the opener, which CommonMark permits. One combined branch would need a
+ *   single backreference, and that only matches an exactly equal run.
  * - Inline spans backreference the opening backtick run, so any run length works and
  *   a shorter run inside a longer one does not terminate the span.
  *
  * Not covered: four-space indented code blocks, and fences that are never closed.
  * Those keep the old behaviour of being rewritten, so they stay mildly wrong rather
- * than becoming newly broken.
+ * than becoming newly broken. Nor is an *unterminated* inline span, which matters
+ * only while streaming: `remend` closes it after this runs, so a transient frame can
+ * show `:material_x:`. The settled source is correct.
  */
 const CODE_OR_MATERIAL_PREFIX =
-  /^[ \t]{0,3}(`{3,}|~{3,})[\s\S]*?^[ \t]{0,3}\1[ \t]*$|(`+)[\s\S]*?\2|:material\//gm
+  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(`+)[\s\S]*?\3|:material\//gm
 
 /**
  * Rewrites `:material/` to `:material_` outside of code, leaving code untouched.
@@ -155,8 +160,17 @@ const CODE_OR_MATERIAL_PREFIX =
 export function rewriteMaterialIconPrefix(source: string): string {
   return source.replace(
     CODE_OR_MATERIAL_PREFIX,
-    (match, fence: string | undefined, span: string | undefined) =>
-      fence !== undefined || span !== undefined ? match : ":material_"
+    (
+      match,
+      backtickFence: string | undefined,
+      tildeFence: string | undefined,
+      span: string | undefined
+    ) =>
+      backtickFence !== undefined ||
+      tildeFence !== undefined ||
+      span !== undefined
+        ? match
+        : ":material_"
   )
 }
 
@@ -1306,9 +1320,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const processedSource = useMemo(() => {
-    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
-    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
-    // Code spans are left alone -- see rewriteMaterialIconPrefix.
+    // Rewrite :material/ to :material_ outside code so the directive plugin can match it.
     let processed = rewriteMaterialIconPrefix(source)
 
     if (isLabel) {
