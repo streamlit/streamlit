@@ -361,6 +361,14 @@ describe("Metric element", () => {
 
   // Chart feature tests
   describe("Chart feature", () => {
+    const mockFinalize = vi.fn()
+
+    beforeEach(() => {
+      vi.mocked(embed).mockResolvedValue({
+        finalize: mockFinalize,
+      } as unknown as Awaited<ReturnType<typeof embed>>)
+    })
+
     it("renders chart when chartData is provided", () => {
       const props = getProps({
         chartData: [1, 2, 3, 4, 5],
@@ -417,6 +425,90 @@ describe("Metric element", () => {
             }),
           })
         )
+      })
+    })
+
+    it("re-embeds and finalizes after chartData is cleared then restored", async () => {
+      const chartData = [1, 2, 3, 4, 5]
+      const withChart = getProps({
+        chartData,
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const withoutChart = getProps({
+        chartData: [],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const { rerender } = render(<Metric {...withChart} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalledTimes(1)
+      })
+
+      rerender(<Metric {...withoutChart} />)
+      expect(screen.queryByTestId("stMetricChart")).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(mockFinalize).toHaveBeenCalledTimes(1)
+      })
+
+      rerender(<Metric {...withChart} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalledTimes(2)
+      })
+      expect(screen.getByTestId("stMetricChart")).toBeVisible()
+    })
+
+    it("passes chart data presence to useCalculatedDimensions", () => {
+      const withChart = getProps({
+        chartData: [1, 2, 3],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const withoutChart = getProps({
+        chartData: [],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const { rerender } = render(<Metric {...withChart} />)
+
+      expect(vi.mocked(useCalculatedDimensions)).toHaveBeenLastCalledWith([
+        true,
+      ])
+
+      rerender(<Metric {...withoutChart} />)
+      expect(vi.mocked(useCalculatedDimensions)).toHaveBeenLastCalledWith([
+        false,
+      ])
+
+      rerender(<Metric {...withChart} />)
+      expect(vi.mocked(useCalculatedDimensions)).toHaveBeenLastCalledWith([
+        true,
+      ])
+    })
+
+    it("finalizes vega-embed if it resolves after unmount", async () => {
+      const lateFinalize = vi.fn()
+      const { promise, resolve } = Promise.withResolvers<{
+        finalize: () => void
+      }>()
+      vi.mocked(embed).mockReturnValue(promise as ReturnType<typeof embed>)
+
+      const { unmount } = render(
+        <Metric
+          {...getProps({
+            chartData: [1, 2, 3],
+            chartType: MetricProto.ChartType.LINE,
+          })}
+        />
+      )
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalled()
+      })
+      unmount()
+
+      resolve({ finalize: lateFinalize })
+
+      await waitFor(() => {
+        expect(lateFinalize).toHaveBeenCalledTimes(1)
       })
     })
 
