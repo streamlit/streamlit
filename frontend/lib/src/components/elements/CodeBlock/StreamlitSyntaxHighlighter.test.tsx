@@ -19,6 +19,7 @@ import { screen, within } from "@testing-library/react"
 import { render } from "~lib/test_util"
 
 import StreamlitSyntaxHighlighter, {
+  MAX_HIGHLIGHTED_LINES,
   StreamlitSyntaxHighlighterProps,
 } from "./StreamlitSyntaxHighlighter"
 
@@ -141,5 +142,79 @@ describe("CustomCodeTag Element", () => {
       expect(row.querySelector(".linenumber")).toBeInTheDocument()
       expect(row.querySelector(":scope > span")).toBeInTheDocument()
     }
+  })
+  describe("very long input", () => {
+    const line = "lorem ipsum dolor sit amet\n"
+
+    it("highlights normally at the line limit", () => {
+      const props = getStreamlitSyntaxHighlighterProps({
+        children: line.repeat(MAX_HIGHLIGHTED_LINES - 1),
+        language: "python",
+      })
+      render(<StreamlitSyntaxHighlighter {...props} />)
+
+      expect(
+        screen.queryByTestId("stCodeUnhighlighted")
+      ).not.toBeInTheDocument()
+    })
+
+    it("falls back to unhighlighted code past the line limit", () => {
+      const props = getStreamlitSyntaxHighlighterProps({
+        children: line.repeat(MAX_HIGHLIGHTED_LINES + 1),
+        language: "python",
+      })
+      render(<StreamlitSyntaxHighlighter {...props} />)
+
+      const fallback = screen.getByTestId("stCodeUnhighlighted")
+      expect(fallback).toBeInTheDocument()
+      expect(fallback.tagName.toLowerCase()).toBe("code")
+      // The content is still all there, just not tokenized.
+      expect(fallback.textContent).toHaveLength(
+        line.length * (MAX_HIGHLIGHTED_LINES + 1)
+      )
+      expect(fallback.querySelector(".token")).not.toBeInTheDocument()
+    })
+
+    it("renders 200k lines without overflowing the stack", () => {
+      // The regression from #11996. Highlighting recurses once per line, so this
+      // input threw "Maximum call stack size exceeded" before the guard existed
+      // and no code block rendered at all.
+      const props = getStreamlitSyntaxHighlighterProps({
+        children: line.repeat(200000),
+        language: "python",
+      })
+
+      expect(() =>
+        render(<StreamlitSyntaxHighlighter {...props} />)
+      ).not.toThrow()
+      expect(screen.getByTestId("stCodeUnhighlighted")).toBeInTheDocument()
+    })
+
+    it("still highlights a large byte count spread over few lines", () => {
+      // Byte size is not what overflows the stack -- line count is. 20MB across
+      // 20k lines must keep its highlighting.
+      const props = getStreamlitSyntaxHighlighterProps({
+        children: ("x".repeat(999) + "\n").repeat(20000),
+        language: "python",
+      })
+      render(<StreamlitSyntaxHighlighter {...props} />)
+
+      expect(
+        screen.queryByTestId("stCodeUnhighlighted")
+      ).not.toBeInTheDocument()
+    })
+
+    it("keeps the copy button available in the fallback", () => {
+      const props = getStreamlitSyntaxHighlighterProps({
+        children: line.repeat(MAX_HIGHLIGHTED_LINES + 1),
+      })
+      render(<StreamlitSyntaxHighlighter {...props} />)
+
+      expect(screen.getByTestId("stCodeUnhighlighted")).toBeInTheDocument()
+      expect(
+        screen.getByTestId("stBaseButton-elementToolbar")
+      ).toBeInTheDocument()
+      expect(screen.getByTestId("stCode")).toHaveAttribute("tabindex", "0")
+    })
   })
 })

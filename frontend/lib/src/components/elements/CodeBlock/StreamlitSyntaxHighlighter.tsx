@@ -41,6 +41,46 @@ type RendererProps = Parameters<
   NonNullable<SyntaxHighlighterProps["renderer"]>
 >[0]
 
+/**
+ * Line count above which syntax highlighting is skipped.
+ *
+ * `react-syntax-highlighter`'s `processLines` recurses once per line, so a
+ * long-enough input overflows the call stack and the entire code block fails to
+ * render instead of merely rendering slowly. See
+ * https://github.com/streamlit/streamlit/issues/11996.
+ *
+ * Line count is what matters here, not byte size: 20MB spread over 20k lines
+ * renders fine, while 3.2MB over 120k lines overflows. Measured in this repo's
+ * jsdom test environment the overflow begins between 110k and 120k lines. The
+ * usable stack differs between Node and browsers, so this limit deliberately sits
+ * well below the observed edge rather than next to it, and still leaves an order
+ * of magnitude of headroom over any realistic source file.
+ */
+export const MAX_HIGHLIGHTED_LINES = 50000
+
+/**
+ * Returns whether `text` has more than `limit` lines.
+ *
+ * Counts incrementally and stops at the limit, so an oversized input costs no
+ * more than an ordinary one and nothing the size of the input is allocated --
+ * `split("\n").length` on a 20MB string would build a 20k-element array just to
+ * read its length.
+ */
+function exceedsLineLimit(text: string, limit: number): boolean {
+  let lines = 1
+  let index = text.indexOf("\n")
+
+  while (index !== -1) {
+    lines++
+    if (lines > limit) {
+      return true
+    }
+    index = text.indexOf("\n", index + 1)
+  }
+
+  return false
+}
+
 function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
@@ -90,6 +130,11 @@ function StreamlitSyntaxHighlighter({
   const isEmpty = !text || text.trim().length === 0
   const shouldShowCopyButton = !isEmpty
 
+  const isTooLongToHighlight = useMemo(
+    () => exceedsLineLimit(text, MAX_HIGHLIGHTED_LINES),
+    [text]
+  )
+
   return (
     <StyledCodeBlock
       className="stCode"
@@ -97,24 +142,31 @@ function StreamlitSyntaxHighlighter({
       tabIndex={shouldShowCopyButton ? 0 : undefined}
     >
       <StyledPre wrapLines={wrapLines ?? false}>
-        <SyntaxHighlighter
-          language={language}
-          PreTag="div"
-          customStyle={{ backgroundColor: "transparent" }}
-          // We set an empty style object here because we have our own CSS styling that
-          // reacts on our theme.
-          style={{}}
-          lineNumberStyle={{}}
-          showLineNumbers={showLineNumbers}
-          wrapLongLines={wrapLines}
-          // Fix bug with wrapLongLines+showLineNumbers (see link below) by
-          // using a renderer that wraps individual lines of code in their
-          // own spans.
-          // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
-          renderer={showLineNumbers && wrapLines ? renderer : undefined}
-        >
-          {text}
-        </SyntaxHighlighter>
+        {isTooLongToHighlight ? (
+          // Highlighting would overflow the stack, so show the code unhighlighted
+          // rather than failing to render it at all. Line numbers are dropped too,
+          // since they come from the highlighter's own row structure.
+          <code data-testid="stCodeUnhighlighted">{text}</code>
+        ) : (
+          <SyntaxHighlighter
+            language={language}
+            PreTag="div"
+            customStyle={{ backgroundColor: "transparent" }}
+            // We set an empty style object here because we have our own CSS styling that
+            // reacts on our theme.
+            style={{}}
+            lineNumberStyle={{}}
+            showLineNumbers={showLineNumbers}
+            wrapLongLines={wrapLines}
+            // Fix bug with wrapLongLines+showLineNumbers (see link below) by
+            // using a renderer that wraps individual lines of code in their
+            // own spans.
+            // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
+            renderer={showLineNumbers && wrapLines ? renderer : undefined}
+          >
+            {text}
+          </SyntaxHighlighter>
+        )}
       </StyledPre>
       {shouldShowCopyButton && <CodeBlockCopyToolbar text={text} />}
     </StyledCodeBlock>
