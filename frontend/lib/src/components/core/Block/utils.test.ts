@@ -587,8 +587,10 @@ describe("getResizableColumnNodes", () => {
   })
 
   it("looks through transparent wrappers around the columns", () => {
-    // Fragments can wrap a row's columns in a transparent block, which renders
-    // no DOM of its own.
+    // Defensive: transparent blocks render no DOM of their own, so their
+    // columns still render as direct children of the row. No producer gives a
+    // row this shape today — fragments wrap writes inside a column, not the
+    // row itself.
     const row = makeColumnsRow([
       makeBlock({ transparent: {} }, [firstColumn]),
       secondColumn,

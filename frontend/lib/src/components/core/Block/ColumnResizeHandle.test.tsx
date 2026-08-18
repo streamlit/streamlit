@@ -23,6 +23,7 @@ import { renderWithContexts } from "~lib/test_util"
 
 import ColumnResizeHandle from "./ColumnResizeHandle"
 import {
+  KEYBOARD_RESIZE_STEP_PX,
   MIN_COLUMN_WIDTH_PX,
   ResizableColumnsContext,
   ResizableColumnsContextValue,
@@ -34,6 +35,9 @@ const ROW_WIDTH = 800
 const DRAG_START_X = 100
 
 const DRAG_END_X = 160
+
+/** The id `userEvent` gives the mouse pointer. */
+const MOUSE_POINTER_ID = 1
 
 const ROW: RowMetrics = {
   width: ROW_WIDTH,
@@ -63,6 +67,18 @@ function renderHandle(
   )
 
   return { ...contextValue, unmount }
+}
+
+/**
+ * Cancels the gesture that `pointerId` started.
+ *
+ * `userEvent` cannot cancel a gesture, and jsdom has no `PointerEvent`, so
+ * `fireEvent` drops the `pointerId` the handle matches against.
+ */
+function cancelPointer(element: HTMLElement, pointerId: number): void {
+  const event = new Event("pointercancel", { bubbles: true })
+  Object.defineProperty(event, "pointerId", { value: pointerId })
+  fireEvent(element, event)
 }
 
 function getHandle(): HTMLElement {
@@ -115,6 +131,7 @@ describe("ColumnResizeHandle", () => {
     expect(handle).toHaveAttribute("aria-valuemax", "100")
     // The left column takes 75% of the pair the handle sits between.
     expect(handle).toHaveAttribute("aria-valuenow", "75")
+    expect(handle).toHaveAttribute("aria-valuetext", "75% / 25%")
     expect(handle).toHaveAttribute("tabindex", "0")
   })
 
@@ -162,13 +179,30 @@ describe("ColumnResizeHandle", () => {
 
     await user.pointer([
       { keys: "[TouchA>]", target: handle, coords: { clientX: DRAG_START_X } },
-      // A second contact must not restart the gesture from its own position,
-      // which would make the boundary jump.
+      // A second contact lands on the handle too, but it must not drag the
+      // boundary to its own position...
       {
         keys: "[TouchB>]",
         target: handle,
         coords: { clientX: DRAG_START_X + 200 },
       },
+      {
+        pointerName: "TouchB",
+        target: handle,
+        coords: { clientX: DRAG_START_X + 300 },
+      },
+      // ...and lifting it must not end a gesture the first finger still owns.
+      {
+        keys: "[/TouchB]",
+        target: handle,
+        coords: { clientX: DRAG_START_X + 300 },
+      },
+    ])
+
+    expect(resizeColumns).not.toHaveBeenCalled()
+    expect(handle).toHaveAttribute("data-dragging", "true")
+
+    await user.pointer([
       {
         pointerName: "TouchA",
         target: handle,
@@ -177,8 +211,26 @@ describe("ColumnResizeHandle", () => {
       { keys: "[/TouchA]", target: handle, coords: { clientX: DRAG_END_X } },
     ])
 
-    expect(resizeColumns).toHaveBeenLastCalledWith(
+    expect(resizeColumns).toHaveBeenCalledTimes(1)
+    expect(resizeColumns).toHaveBeenCalledWith(
       expect.objectContaining({ deltaPx: DRAG_END_X - DRAG_START_X })
+    )
+    expect(handle).not.toHaveAttribute("data-dragging")
+  })
+
+  it("takes focus on pointer down so the arrow keys work after a drag", async () => {
+    const { resizeColumns } = renderHandle()
+    const handle = getHandle()
+    expect(handle).not.toHaveFocus()
+
+    await dragHandle()
+    expect(handle).toHaveFocus()
+
+    // Without the focus the handle would need a separate Tab before the arrow
+    // keys reached it.
+    await userEvent.keyboard("{ArrowRight}")
+    expect(resizeColumns).toHaveBeenLastCalledWith(
+      expect.objectContaining({ deltaPx: KEYBOARD_RESIZE_STEP_PX })
     )
   })
 
@@ -255,7 +307,7 @@ describe("ColumnResizeHandle", () => {
       target: handle,
       coords: { clientX: DRAG_START_X },
     })
-    fireEvent.pointerCancel(handle)
+    cancelPointer(handle, MOUSE_POINTER_ID)
     await user.pointer({ target: handle, coords: { clientX: DRAG_END_X } })
 
     expect(resizeColumns).not.toHaveBeenCalled()

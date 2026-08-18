@@ -529,8 +529,10 @@ class LayoutsMixin:
             handle appears on hover between each pair of adjacent columns.
             Dragging a handle grows one column and shrinks its neighbor by the
             same amount, leaving the other columns untouched. Columns can't be
-            dragged narrower than 64 pixels, or narrower than 128 pixels if
-            ``wrap`` is ``False``.
+            dragged narrower than 64 pixels. If ``wrap`` is ``False``, they
+            can't be dragged narrower than 128 pixels at the default font
+            size, and once every column has shrunk to that width so the column
+            group scrolls, dragging a handle has no visible effect.
 
             Drag handles are keyboard accessible. Focus a handle and use the
             left and right arrow keys to resize in 10-pixel steps. To restore

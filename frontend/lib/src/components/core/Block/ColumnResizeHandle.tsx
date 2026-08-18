@@ -42,6 +42,8 @@ const ARROW_KEY_DIRECTIONS: Record<string, number> = {
 }
 
 interface DragGesture {
+  /** The pointer that holds the capture, so other pointers can be ignored. */
+  pointerId: number
   /** Pointer position the drag started at. */
   startClientX: number
   /** Row geometry measured when the drag started. */
@@ -115,6 +117,7 @@ const ColumnResizeHandle = ({
 
       pendingClientXRef.current = event.clientX
       gestureRef.current = {
+        pointerId: event.pointerId,
         startClientX: event.clientX,
         row,
         baseFractions: columnFractions,
@@ -123,6 +126,10 @@ const ColumnResizeHandle = ({
       // even once the pointer leaves it, so no window listeners are needed and
       // touch drags work the same as mouse drags.
       event.currentTarget.setPointerCapture(event.pointerId)
+      // preventDefault() above suppressed the focus a click would normally
+      // give the handle, so take it explicitly. Otherwise the arrow keys only
+      // work after tabbing to a handle the user has already dragged.
+      event.currentTarget.focus()
       setIsDragging(true)
     },
     [columnFractions, measureRow]
@@ -130,7 +137,9 @@ const ColumnResizeHandle = ({
 
   const handlePointerMove = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
-      if (!gestureRef.current) {
+      // A second finger landing on the handle hit-tests to it as well, but it
+      // must not drag the boundary away from the pointer holding the capture.
+      if (gestureRef.current?.pointerId !== event.pointerId) {
         return
       }
 
@@ -151,7 +160,9 @@ const ColumnResizeHandle = ({
 
   const handlePointerEnd = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
-      if (!gestureRef.current) {
+      // Lifting a second finger off the handle must not end the drag the
+      // capturing pointer is still in the middle of.
+      if (gestureRef.current?.pointerId !== event.pointerId) {
         return
       }
 
@@ -248,6 +259,9 @@ const ColumnResizeHandle = ({
       aria-valuenow={leftColumnShare}
       aria-valuemin={0}
       aria-valuemax={100}
+      // `aria-valuenow` alone is announced as a bare number, which does not say
+      // what the number measures.
+      aria-valuetext={`${leftColumnShare}% / ${100 - leftColumnShare}%`}
       tabIndex={0}
       data-dragging={isDragging ? "true" : undefined}
       data-testid="stColumnResizeHandle"
