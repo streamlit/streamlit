@@ -166,7 +166,7 @@ describe("CustomCodeTag Element", () => {
       render(<StreamlitSyntaxHighlighter {...props} />)
 
       const fallback = screen.getByTestId("stCodeUnhighlighted")
-      expect(fallback).toBeInTheDocument()
+      expect(fallback).toBeVisible()
       expect(fallback.tagName.toLowerCase()).toBe("code")
       // The content is still all there, just not tokenized.
       expect(fallback.textContent).toHaveLength(
@@ -176,9 +176,8 @@ describe("CustomCodeTag Element", () => {
     })
 
     it("renders 200k lines without overflowing the stack", () => {
-      // The regression from #11996. Highlighting recurses once per line, so this
-      // input threw "Maximum call stack size exceeded" before the guard existed
-      // and no code block rendered at all.
+      // Regression for #11996: without the guard the highlighter throws
+      // "Maximum call stack size exceeded" and the code block does not render.
       const props = getStreamlitSyntaxHighlighterProps({
         children: line.repeat(200000),
         language: "python",
@@ -187,7 +186,7 @@ describe("CustomCodeTag Element", () => {
       expect(() =>
         render(<StreamlitSyntaxHighlighter {...props} />)
       ).not.toThrow()
-      expect(screen.getByTestId("stCodeUnhighlighted")).toBeInTheDocument()
+      expect(screen.getByTestId("stCodeUnhighlighted")).toBeVisible()
     })
 
     it("still highlights a large byte count spread over few lines", () => {
@@ -204,13 +203,29 @@ describe("CustomCodeTag Element", () => {
       ).not.toBeInTheDocument()
     })
 
+    it("applies the cap on the wrapLines path too", () => {
+      // wrapLines: true cannot throw -- processLines returns newTree without the
+      // concat spread -- but highlighting this many lines still pins the main
+      // thread, so the cap is deliberately not conditional on it.
+      const props = getStreamlitSyntaxHighlighterProps({
+        children: line.repeat(MAX_HIGHLIGHTED_LINES + 1),
+        language: "python",
+        wrapLines: true,
+      })
+      render(<StreamlitSyntaxHighlighter {...props} />)
+
+      expect(screen.getByTestId("stCodeUnhighlighted")).toBeVisible()
+    })
+
     it("keeps the copy button available in the fallback", () => {
       const props = getStreamlitSyntaxHighlighterProps({
         children: line.repeat(MAX_HIGHLIGHTED_LINES + 1),
       })
       render(<StreamlitSyntaxHighlighter {...props} />)
 
-      expect(screen.getByTestId("stCodeUnhighlighted")).toBeInTheDocument()
+      expect(screen.getByTestId("stCodeUnhighlighted")).toBeVisible()
+      // The toolbar button is revealed on hover, so assert presence rather than
+      // visibility -- matching the existing non-fallback toolbar test above.
       expect(
         screen.getByTestId("stBaseButton-elementToolbar")
       ).toBeInTheDocument()

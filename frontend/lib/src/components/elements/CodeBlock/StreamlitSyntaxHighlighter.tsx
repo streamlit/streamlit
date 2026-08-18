@@ -25,7 +25,7 @@ import {
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import CodeBlockCopyToolbar from "./CodeBlockCopyToolbar"
-import { StyledCodeBlock, StyledPre } from "./styled-components"
+import { StyledCode, StyledCodeBlock, StyledPre } from "./styled-components"
 
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[] | undefined | null
@@ -44,27 +44,32 @@ type RendererProps = Parameters<
 /**
  * Line count above which syntax highlighting is skipped.
  *
- * `react-syntax-highlighter`'s `processLines` recurses once per line, so a
- * long-enough input overflows the call stack and the entire code block fails to
- * render instead of merely rendering slowly. See
- * https://github.com/streamlit/streamlit/issues/11996.
+ * `react-syntax-highlighter`'s `processLines` ends with
+ * `wrapLines ? newTree : [].concat.apply([], newTree)` (`highlight.js`). On the
+ * unwrapped path that spreads one array element per line into an argument list, and
+ * past roughly 120k arguments the engine rejects the call with `RangeError: Maximum
+ * call stack size exceeded` -- so the whole code block fails to render rather than
+ * merely rendering slowly. See https://github.com/streamlit/streamlit/issues/11996.
  *
- * Line count is what matters here, not byte size: 20MB spread over 20k lines
- * renders fine, while 3.2MB over 120k lines overflows. Measured in this repo's
- * jsdom test environment the overflow begins between 110k and 120k lines. The
- * usable stack differs between Node and browsers, so this limit deliberately sits
- * well below the observed edge rather than next to it, and still leaves an order
- * of magnitude of headroom over any realistic source file.
+ * That mechanism is why line count is the thing to cap and byte size is not: the
+ * argument count tracks lines. Measured here, 20MB over 20k lines renders fine while
+ * 3.2MB over 120k lines throws, with the boundary between 110k and 120k lines.
+ *
+ * The cap applies on both paths even though only the unwrapped one can throw
+ * (`wrapLines: true` returns `newTree` directly -- verified at 200k lines): above
+ * this many lines, highlighting pins the main thread long enough to be worth
+ * skipping regardless. The limit sits well below the observed boundary because the
+ * argument limit is engine-specific, and still leaves an order of magnitude of
+ * headroom over any realistic source file.
  */
 export const MAX_HIGHLIGHTED_LINES = 50000
 
 /**
  * Returns whether `text` has more than `limit` lines.
  *
- * Counts incrementally and stops at the limit, so an oversized input costs no
- * more than an ordinary one and nothing the size of the input is allocated --
- * `split("\n").length` on a 20MB string would build a 20k-element array just to
- * read its length.
+ * Stops at the first extra newline, so a huge input is no more expensive to check
+ * than a small one, and does not allocate an array of lines the way
+ * `split("\n").length` would.
  */
 function exceedsLineLimit(text: string, limit: number): boolean {
   let lines = 1
@@ -143,10 +148,16 @@ function StreamlitSyntaxHighlighter({
     >
       <StyledPre wrapLines={wrapLines ?? false}>
         {isTooLongToHighlight ? (
-          // Highlighting would overflow the stack, so show the code unhighlighted
-          // rather than failing to render it at all. Line numbers are dropped too,
-          // since they come from the highlighter's own row structure.
-          <code data-testid="stCodeUnhighlighted">{text}</code>
+          // Too many lines to hand to the highlighter -- see MAX_HIGHLIGHTED_LINES.
+          // Render the code unhighlighted instead of risking not rendering it at
+          // all. Line numbers go too, since they come from the highlighter's own row
+          // structure.
+          <StyledCode
+            wrapLines={wrapLines ?? false}
+            data-testid="stCodeUnhighlighted"
+          >
+            {text}
+          </StyledCode>
         ) : (
           <SyntaxHighlighter
             language={language}
