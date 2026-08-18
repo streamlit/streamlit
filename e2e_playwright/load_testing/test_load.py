@@ -29,7 +29,9 @@ Run with:
 from __future__ import annotations
 
 import multiprocessing
+import socket
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from multiprocessing import Pool
@@ -37,6 +39,7 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
+from e2e_playwright.conftest import is_port_available
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
     get_scenario_path,
@@ -70,6 +73,30 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
     ScenarioConfig("fragment_app"),
     ScenarioConfig("many_messages_app"),
 ]
+
+
+def test_port_availability_check_rejects_active_client_port() -> None:
+    """Ensure active ephemeral client ports aren't selected for a server.
+
+    On Linux CI (where the load-test flake was observed), SO_REUSEADDR still
+    cannot bind over a live client ephemeral port. On macOS/BSD, SO_REUSEADDR
+    can, matching Streamlit's server socket options — so skip there.
+    """
+    if sys.platform == "darwin":
+        pytest.skip(
+            "macOS SO_REUSEADDR allows binding over live client ephemeral ports"
+        )
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("localhost", 0))
+        listener.listen()
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+            client.connect(listener.getsockname())
+            connection, _ = listener.accept()
+            with connection:
+                client_port = client.getsockname()[1]
+                assert not is_port_available(client_port, "localhost")
 
 
 def _terminate_process(process: subprocess.Popen[str], timeout: int = 10) -> None:
