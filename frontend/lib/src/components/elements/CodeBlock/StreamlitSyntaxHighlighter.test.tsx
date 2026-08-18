@@ -190,10 +190,11 @@ describe("CustomCodeTag Element", () => {
     })
 
     it("still highlights a large byte count spread over few lines", () => {
-      // Byte size is not what overflows the stack -- line count is. 20MB across
-      // 20k lines must keep its highlighting.
+      // Byte size is not what overflows the stack -- line count is. 5MB across 5k
+      // lines is well over any plausible byte threshold while staying far below the
+      // line cap, and is a quarter of the tokenizing cost of a 20MB fixture.
       const props = getStreamlitSyntaxHighlighterProps({
-        children: ("x".repeat(999) + "\n").repeat(20000),
+        children: ("x".repeat(999) + "\n").repeat(5000),
         language: "python",
       })
       render(<StreamlitSyntaxHighlighter {...props} />)
