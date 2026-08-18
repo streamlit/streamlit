@@ -175,7 +175,7 @@ One pipeline, two checks, required first:
 | Current value | `required` | `validate` | Commit / form submit |
 | --- | --- | --- | --- |
 | `""` / `None` | `False` (default) | any | Allowed; `validate` is skipped (today's behavior) |
-| Whitespace-only (`"   "`) | `False` (default) | any | Allowed; `validate` still runs on the raw string (today's behavior) |
+| Whitespace-only (`"   "`) | `False` (default) | any | `required` passes; `validate` runs on the raw string and decides (today's behavior) |
 | `""` / `None` / whitespace-only | `True` | any | **Blocked.** Message: `This field is required`. `validate` does not run |
 | Non-empty after strip, invalid | any | regex / tuple | **Blocked.** `validate` message (today's behavior) |
 | Non-empty after strip, valid | any | regex / tuple / none | Allowed |
@@ -221,13 +221,18 @@ allowed. Empty *commit* is not. Matches `validate`.
   required check (same as `validate`); the error is shown at submit.
 - Incomplete range `st.date_input` while the picker is still open is in-progress
   editing, not a failed commit. Keep the incomplete range in local UI and do not
-  commit. Show the required error only on blur / close / form submit — not when the
-  user picks the first bound.
+  commit. No required error when the user picks the first bound. Outside a form,
+  blur or calendar close of an incomplete range shows the required error.
+  Inside a form, that error waits until submit (same as other typed empty
+  fields). Re-editing a complete range down to one bound must not submit the
+  previous `(start, end)`.
 - `type="search"` **keeps** the clear X when `required=True`. Search is a typed widget:
   emptying the field is how the user starts a new query. The X must **not** immediately
-  commit `""` (today it does, because empty bypasses `validate`); it only updates local
-  UI and shows the required error until the user types again. Hiding the X would mix
-  this up with selection widgets, where clear means "no choice."
+  commit `""` (today it does, because empty bypasses `validate`). Outside a form, X
+  is an empty-commit gesture: local UI + required error, no `""` write. Inside a
+  form, X matches backspace: stage into form pending, no error until submit.
+  Hiding the X would mix this up with selection widgets, where clear means "no
+  choice."
 
 **Selection widgets** (`selectbox`, `radio`, `multiselect`, `pills`, `segmented_control`):
 empty is "no choice," not an in-progress edit. Once a value is selected,
@@ -267,11 +272,12 @@ form gate.
   deleting the last file** (hide/disable that delete control), like selection widgets.
   Replacing via a new drop still works. Form submit is gated while the widget is still
   empty (`None` / `[]`).
-- **In-progress upload:** an upload in flight is not empty. Gate **every** form
-  submit path for that window (submit button, its shortcut, and Enter /
-  `submitForm`) — `formsWithUploads` today only disables `FormSubmitButton`. This
-  is not a `This field is required` click path. After a **successful** upload,
-  required is evaluated on the committed files.
+- **In-progress upload:** an upload in flight is not empty. That includes a first
+  file on an empty required uploader: in-flight local files are not
+  required-empty. Gate **every** form submit path for that window (submit button,
+  its shortcut, and Enter / `submitForm`) — `formsWithUploads` today only
+  disables `FormSubmitButton`. This is not a `This field is required` click path.
+  After a **successful** upload, required is evaluated on the committed files.
 
 `required=True` does **not** change defaults. `st.selectbox(options)` still starts on
 the first option; `st.number_input()` still starts at `min`. To get an empty required
@@ -426,11 +432,12 @@ with st.form("upload"):
 - **Widget identity.** Changing `required` must not reset the widget (same as
   `disabled`). Do not hash `required` into the element ID.
 - **`st.form(clear_on_submit=True)`.** Clear only runs after a successful submit.
-- **Range `st.date_input`.** An incomplete range counts as empty, so with
-  `required=True` the intermediate single-date commit (which reruns the app today)
-  is suppressed until both bounds are selected. While the picker is open, picking
-  the first bound is in-progress editing: no required error yet. The error appears
-  on blur, calendar close, or form submit if the range is still incomplete.
+- **Range `st.date_input`.** An incomplete range counts as empty. With
+  `required=True`, the intermediate single-date commit (which reruns the app today)
+  is suppressed until both bounds are selected. Error timing matches typed widgets
+  (picker-open first bound is in-progress; outside-form blur/close vs in-form
+  submit). Form submit uses the local/staged bounds: an incomplete re-edit of a
+  previously complete range fails required and does not send the old pair.
 - **`type="email"` / `"url"` without `required`.** Unchanged: empty still allowed.
 
 ## Out of Scope (Future Work)
@@ -475,6 +482,12 @@ selection widgets additionally locking the last value when `required=True`.
 **Only ship on `st.text_input`.** Too narrow given #7165 (forms) and the pills
 precedent. Specify the full input-widget API; implementation can still land in waves
 (see the [tech spec](./tech-spec.md)).
+
+**Skip `required` when `disabled=True` (HTML constraint-validation precedent).**
+Rejected for v1: `validate` does not skip disabled widgets either, and skipping
+here would make `required` and `validate` diverge without a product call. A
+disabled empty required field can trap a form; document that footgun rather than
+special-casing.
 
 ## Checklist
 

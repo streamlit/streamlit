@@ -54,7 +54,7 @@ are not the same predicate for text:
 | Number / date / time / datetime | `value == null` (range date: `()`, missing either bound, or a one-element `tuple[date]`) | n/a |
 | Single select / radio / pills | no selection | n/a |
 | Multi select / multi pills | `length === 0` | n/a |
-| File uploader | no uploaded value in `WidgetStateManager` | n/a |
+| File uploader | no uploaded value in `WidgetStateManager` **and** no in-flight local files | n/a |
 | Camera / audio | no local/staged capture (Clear is empty even if `WidgetStateManager` still holds the previous file) | n/a |
 
 Do not fold whitespace into the validate-skip path. When `required=False`, `"   "` still
@@ -78,12 +78,15 @@ Outside a form, a `false` result skips `commitWidgetValue` / `setValueWithSource
 running the required check — the same as `validate` (`TextInput.handleBlur` calls
 `commitWidgetValue()`, and `useOnInputChange` writes form pending on every
 keystroke). The form-submit validator is what blocks the backend commit.
-Implementers who take "local field only" literally will skip the WidgetStateManager
-write, which breaks widgets that do not already have a separate `uiValue`.
+"Local field only" means "no backend commit," not "no `WidgetStateManager` write":
+widgets without a separate `uiValue` lose the user's edit if the form-pending
+write is skipped.
 
 `type="search"` `handleClear` currently commits `""` immediately because empty bypasses
 `validate`. When `required=True`, keep the clear X (typed-widget empty-while-editing)
-but only update local UI, set the required error, and not commit.
+but do not commit `""`. Outside a form, update local UI and set the required error.
+Inside a form, stage into form pending with no error until submit (same as
+backspace).
 
 Register a form-submit validator when `required || hasValidationConfig`, not only when
 a regex is set. The validator calls the same `validateBeforeCommit`. `submitForm`
@@ -154,13 +157,17 @@ spec:
   that replaces still commits. Register a form-submit validator that fails when
   `WidgetStateManager` is empty and `required=True`. Last-file lock also avoids the
   race where local UI is empty but widget state still holds the previous file.
-- In-progress upload: for `st.file_uploader`, emptiness is the `WidgetStateManager`
-  value, not `status === "updating"` (a multi-file widget can be updating while
-  already holding committed files). Do not add a separate required-error path for
-  in-flight uploads. Gate every submit path as specified above — not only
-  `FormSubmitButton`. Do not treat FileUploader component-local pending files as
-  uploaded. Camera/audio Clear is a different local state: that staged empty **is**
-  the submit-time source of truth, as specified above.
+- In-progress upload: for `st.file_uploader`, required-empty is
+  `WidgetStateManager` empty **and** no in-flight local files. Do not treat
+  `status === "updating"` alone as empty (a multi-file widget can be updating
+  while already holding committed files). A first-file upload to an empty
+  required uploader has empty widget state plus local pending files: that is
+  not required-empty, so the required validator must not paint
+  `This field is required` even if a central upload gate also returns false.
+  Local pending files stay not-uploaded (do not flush them). Gate every submit
+  path as specified above — not only `FormSubmitButton`. Camera/audio Clear is
+  a different local state: that staged empty **is** the submit-time source of
+  truth, as specified above.
 
 Show the error on the dropzone / control. Use the visually hidden `role="alert"` pattern
 from `TextInput`. On widgets whose root role ignores `aria-required`, include
@@ -189,14 +196,19 @@ partial implementation:
 2. **`st.text_area`** — same commit path, no `validate` yet.
 3. **`st.number_input` / `st.date_input` / `st.time_input` / `st.datetime_input`** —
    empty/`None` commit already exists for clearable instances; add the required gate
-   next to range errors. For range `st.date_input`, `handleChange` currently writes
-   every BaseUI selection through `setValueWithSource`, including a one-element
-   range. Wave 3 must keep the incomplete range in DateInput local state (the
-   calendar `value` today is the committed widget state, so skipping that write
-   without a local display snaps back to the last committed parent value and the
-   start date is lost). Skip the widget-manager write until both bounds exist, or
-   until blur/close/submit, which then fails required. Do not only "add the required
-   gate" next to the first-bound `setValueWithSource`.
+   next to range errors. For range `st.date_input`:
+
+   - Keep the incomplete range in DateInput local state. Today's calendar `value`
+     is the committed widget state, so skipping the `setValueWithSource` write
+     without a local display snaps back to the last committed parent value and
+     the start date is lost.
+   - Skip the widget-manager write until both bounds exist.
+   - On blur/close **outside** a form, fail required if the range is still
+     incomplete (no backend commit).
+   - Inside a form, blur/close does not run the required check (same as other
+     typed widgets). The form-submit validator reads **local/staged** bounds, not
+     `WidgetStateManager`. Submit fails required if either bound is missing and
+     must not serialize a previously committed `(start, end)`.
 4. **`st.selectbox` / `st.radio` / `st.multiselect`** — lock last value + form gate.
 5. **`st.pills` / `st.segmented_control`** — form gate, label, error if still empty,
    allow multi-select `required`.
@@ -220,8 +232,12 @@ extension of an existing parameter, not a new one.
   submit without a required-empty error; failed or cancelled recapture stays
   uncommittable and does not restore or submit the prior capture; Enter during a
   replacement upload does not submit the stale committed file (covers `submitForm`,
-  not only `FormSubmitButton`); range `st.date_input` first bound is visible with no
-  rerun and no required error until blur/close/submit.
+  not only `FormSubmitButton`); first-file in-flight on an empty required
+  `st.file_uploader` blocks submit without a required-empty error; range
+  `st.date_input` first bound is visible with no rerun and no required error until
+  outside-form blur/close or form submit; re-edit a complete required range and
+  submit after only the first bound fails required and does not send the previous
+  bounds.
 - Python: proto field set; pills multi-select no longer raises; `required` not in
   widget ID.
 - Public typing tests (`lib/tests/streamlit/typing/`) for every affected widget,
@@ -231,7 +247,9 @@ extension of an existing parameter, not a new one.
   does not rerun on empty blur; email `type` + `required` (empty vs invalid vs valid);
   pills required still cannot deselect; empty required pills blocks form submit;
   range `st.date_input` with `required=True` does not rerun on the first bound and
-  does not show the required error until blur/close/submit;
+  does not show the required error until outside-form blur/close or form submit;
+  re-editing a complete required range and submitting after only the first bound
+  fails required;
   failed form submit exposes the required error via the visually hidden `role="alert"`.
 
 ## Alternatives considered
