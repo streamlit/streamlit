@@ -3455,7 +3455,7 @@ __metadata:
     vite-plugin-svgr: "npm:^5.2.0"
     vite-plugin-terminal: "npm:^1.4.0"
     vitest: "npm:^4.1.10"
-    vitest-canvas-mock: "npm:^1.1.4"
+    vitest-canvas-mock: "npm:^1.1.5"
     vitest-websocket-mock: "npm:^0.7.0"
   languageName: unknown
   linkType: soft
@@ -3618,7 +3618,7 @@ __metadata:
     vite-plugin-dts: "npm:^5.0.3"
     vite-plugin-svgr: "npm:^5.2.0"
     vitest: "npm:^4.1.10"
-    vitest-canvas-mock: "npm:^1.1.4"
+    vitest-canvas-mock: "npm:^1.1.5"
     vitest-fetch-mock: "npm:^0.4.5"
     wavesurfer.js: "npm:^7.12.11"
     xxhashjs: "npm:^0.2.2"
@@ -18640,15 +18640,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest-canvas-mock@npm:^1.1.4":
-  version: 1.1.4
-  resolution: "vitest-canvas-mock@npm:1.1.4"
+"vitest-canvas-mock@npm:^1.1.5":
+  version: 1.1.5
+  resolution: "vitest-canvas-mock@npm:1.1.5"
   dependencies:
     cssfontparser: "npm:^1.2.1"
     moo-color: "npm:^1.0.3"
   peerDependencies:
     vitest: ^3.0.0 || ^4.0.0
-  checksum: 10c0/f0a6de8541533e0316dae7690d9ca8ee9cd3f775099a528e7ce21a3eb93ef7793ef4a7edee1fe65f6bdf92c771cf34602d2b7ad9f3bade4b1f040f584d0ba262
+  checksum: 10c0/84fd5bedc7714a33cc559937e368aa9531a87807303d0fcc06b6c84b7720981de5f23da1092782d229833482a214670b7d13ceb00593b5c742948e5c8f7ed792
   languageName: node
   linkType: hard
 

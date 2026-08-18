@@ -172,7 +172,7 @@
     "vite-plugin-dts": "^5.0.3",
     "vite-plugin-svgr": "^5.2.0",
     "vitest": "^4.1.10",
-    "vitest-canvas-mock": "^1.1.4",
+    "vitest-canvas-mock": "^1.1.5",
     "vitest-fetch-mock": "^0.4.5"
   },
   "resolutions": {
