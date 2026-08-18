@@ -4490,7 +4490,6 @@ dependencies = [
     { name = "anyio" },
     { name = "blinker" },
     { name = "click" },
-    { name = "httptools" },
     { name = "itsdangerous" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.15'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.15'" },
@@ -4527,6 +4526,7 @@ pdf = [
     { name = "streamlit-pdf" },
 ]
 performance = [
+    { name = "httptools" },
     { name = "orjson" },
     { name = "uvloop", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'" },
 ]
@@ -4543,7 +4543,7 @@ requires-dist = [
     { name = "blinker", specifier = ">=1.5.0,<2" },
     { name = "click", specifier = ">=7.0,<9" },
     { name = "graphviz", marker = "extra == 'charts'", specifier = ">=0.19.0" },
-    { name = "httptools", specifier = ">=0.6.3,<1" },
+    { name = "httptools", marker = "extra == 'performance'", specifier = ">=0.6.3,<1" },
     { name = "httpx", marker = "extra == 'auth'", specifier = ">=0.24.1" },
     { name = "itsdangerous", specifier = ">=2.1.2,<3" },
     { name = "matplotlib", marker = "extra == 'charts'", specifier = ">=3.0.0" },

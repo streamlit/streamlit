@@ -89,8 +89,6 @@ dependencies = [
   "starlette>=0.46.0,<2",
   # ASGI server:
   "uvicorn>=0.30.0,<1",
-  # Faster http parsing for Starlette server:
-  "httptools>=0.6.3,<1",
   # Required by starlette:
   "anyio>=4.0.0,<5",
   # Required for file-upload support:
@@ -130,6 +128,8 @@ charts = [
 sql = ["SQLAlchemy>=2.0.0"]
 # Optional dependency for better performance:
 performance = [
+  # httptools provides faster HTTP parsing for the Starlette server:
+  "httptools>=0.6.3,<1",
   # orjson speeds up large plotly figure processing by 5-10x:
   "orjson>=3.5.0",
   # uvloop speeds up the event loop:
