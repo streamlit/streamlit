@@ -166,15 +166,13 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
-  // Prefer flexContainer.wrap when present. The ?? false fallback only applies
-  // to legacy vertical/horizontal proto messages without flexContainer.
+  // Absent wrap on a FlexContainer message means nowrap. This is also
+  // backwards compatible, since older messages did not set wrap.
   const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
-  // Horizontal nowrap rows (e.g. st.columns(wrap=False)) scroll locally
-  // instead of overflowing the page.
-  const overflow =
-    direction === Direction.HORIZONTAL && !wrap
-      ? "auto"
-      : layout_styles.overflow
+  // A horizontal container with `wrap=false` (including st.columns(wrap=False))
+  // keeps its elements in a single row and scrolls horizontally when they
+  // don't fit, instead of wrapping.
+  const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
 
   const styles = {
     gap:
@@ -185,7 +183,8 @@ export const FlexBoxContainer = (
       },
     direction: direction,
     $wrap: wrap,
-    overflow,
+    overflow: layout_styles.overflow,
+    overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // We need the height on the container for scrolling.
     height: layout_styles.height,

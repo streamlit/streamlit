@@ -29,7 +29,7 @@ from streamlit.elements.lib.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.errors import Error, StreamlitAPIException
+from streamlit.errors import Error, StreamlitAPIException, StreamlitValueError
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
@@ -117,15 +117,12 @@ def _needs_field_alias(name: str) -> bool:
     return any(ch in name for ch in _VEGA_LITE_FIELD_SPECIAL_CHARS)
 
 
-def maybe_raise_stack_warning(
-    stack: bool | ChartStackType | None, command: str | None, docs_link: str
-) -> None:
-    # Check that the stack parameter is valid, raise more informative error if not
+def maybe_raise_stack_warning(stack: bool | ChartStackType | None) -> None:
+    # Reject values outside the supported stack options.
     if stack not in {None, True, False, "normalize", "center", "layered"}:
-        raise StreamlitAPIException(
-            f"Invalid value for stack parameter: {stack}. Stack must be one of True, "
-            'False, "normalize", "center", "layered" or None. See documentation '
-            f"for `{command}` [here]({docs_link}) for more information."
+        raise StreamlitValueError(
+            "stack",
+            ["True", "False", "'normalize'", "'center'", "'layered'", "None"],
         )
 
 

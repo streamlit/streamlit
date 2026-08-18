@@ -61,6 +61,8 @@ class DeletedFile(NamedTuple):
 class UploadedFile(io.BytesIO):
     """A mutable uploaded file.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     This class extends BytesIO, which has copy-on-write semantics when
     initialized with `bytes`.
     """

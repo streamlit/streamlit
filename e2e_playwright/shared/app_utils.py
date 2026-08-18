@@ -377,6 +377,44 @@ def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
+def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> None:
+    """Type digits into a DateInput's segments and optionally commit.
+
+    For React Aria segmented ``st.date_input`` fields (single and range),
+    values are typed segment-by-segment into ``role="spinbutton"`` segments
+    rather than a single free-text ``<input>``.
+
+    Segment edits are buffered locally until the popover closes (the
+    commit-on-close pattern). By default this helper closes the popover via
+    Escape after typing so the value is committed to widget state — matching
+    ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
+    the popover open (e.g. for error-state tests that inspect UI before commit).
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The ``stDateInputField`` locator (the segmented field container).
+
+    *parts : str
+        Digit strings for each segment, in the same left-to-right order the
+        segments are rendered in (which follows the widget's ``format``).
+        Pass 3 parts for a single-date field, 6 for a range field (start +
+        end segments), e.g.
+        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+
+    commit : bool
+        If True (default), press Escape after typing to close the popover and
+        commit the buffered value to widget state. Set to False when you need
+        the popover to remain open (e.g. to test real-time error feedback
+        during editing).
+    """
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i, part in enumerate(parts):
+        spinbuttons.nth(i).press_sequentially(part)
+    if commit:
+        date_input_field.page.keyboard.press("Escape")
+
+
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a slider with the given label.
 
@@ -1611,3 +1649,40 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         }""",
         timeout=timeout,
     )
+
+
+def wait_for_datepicker_popover_animation(app: Page, calendar: Locator) -> None:
+    """Wait until a BaseWeb datepicker popover open animation has finished.
+
+    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
+    a ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
+    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
+    Chromium as ~8% pixel diffs).
+
+    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
+    transform share the 0.1s open transition, but a subsequent Popper
+    reposition can still nudge the calendar after opacity settles. Require a
+    stable calendar bounding box before screenshotting.
+    """
+    expect(calendar).to_be_visible()
+    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
+    expect(popover).to_have_css("opacity", "1")
+
+    previous: tuple[float, float, float, float] | None = None
+
+    def _calendar_box_is_stable() -> bool:
+        nonlocal previous
+        box = calendar.bounding_box()
+        if box is None:
+            return False
+        current = (box["x"], box["y"], box["width"], box["height"])
+        if previous is None:
+            previous = current
+            return False
+        stable = all(
+            abs(prev - curr) < 0.5 for prev, curr in zip(previous, current, strict=True)
+        )
+        previous = current
+        return stable
+
+    wait_until(app, _calendar_box_is_stable)

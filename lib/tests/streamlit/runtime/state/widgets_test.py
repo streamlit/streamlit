@@ -705,7 +705,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             )
 
     def test_bind_invalid_value_raises(self) -> None:
-        """Test that invalid bind values raise StreamlitInvalidBindValueError."""
+        """Invalid bind values raise StreamlitInvalidBindValueError."""
         with pytest.raises(
             errors.StreamlitInvalidBindValueError, match="Invalid `bind` value"
         ):

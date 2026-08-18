@@ -444,6 +444,8 @@ ButtonColumnMapping: TypeAlias = dict[str, ButtonColumnResult]
 class ButtonColumnClickState(ReadOnlyAttributeDictionary):
     """The schema for button click state in ButtonColumn.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     Read-only dict-like click payload with attribute and key access
     (``click.row`` / ``click["row"]``). Both fields are always present when a
     button click occurs.

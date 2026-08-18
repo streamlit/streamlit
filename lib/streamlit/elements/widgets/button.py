@@ -47,6 +47,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingPageLabelError,
     StreamlitPageNotFoundError,
+    StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import Page, _validate_registered_page
@@ -98,16 +99,13 @@ _VALID_ICON_POSITIONS: Final[tuple[IconPosition, ...]] = ("left", "right")
 
 
 def _normalize_icon_position(
-    icon_position: IconPosition | str | None, command: str
+    icon_position: IconPosition | str | None,
 ) -> IconPosition:
     if icon_position is None:
         return _DEFAULT_ICON_POSITION
 
     if icon_position not in _VALID_ICON_POSITIONS:
-        raise StreamlitAPIException(
-            f'The icon_position argument to {command} must be "left" or "right". \n'
-            f'The argument passed was "{icon_position}".'
-        )
+        raise StreamlitValueError("icon_position", ["'left'", "'right'"])
 
     return icon_position
 
@@ -392,12 +390,11 @@ class ButtonMixin:
 
         # Checks whether the entered button type is one of the allowed options
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.button must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
-        normalized_icon_position = _normalize_icon_position(icon_position, "st.button")
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self.dg._button(
             label,
@@ -810,14 +807,11 @@ class ButtonMixin:
             width = "stretch" if use_container_width else "content"
 
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.download_button must be "primary", "secondary", or "tertiary". \n'
-                f'The argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
-        normalized_icon_position = _normalize_icon_position(
-            icon_position, "st.download_button"
-        )
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self._download_button(
             label=label,
@@ -1124,15 +1118,12 @@ class ButtonMixin:
 
         """
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.link_button must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
         ctx = get_script_run_ctx()
-        normalized_icon_position = _normalize_icon_position(
-            icon_position, "st.link_button"
-        )
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
@@ -1358,9 +1349,7 @@ class ButtonMixin:
             # Sidebar page links should always be stretch width.
             width = "stretch"
 
-        normalized_icon_position = _normalize_icon_position(
-            icon_position, "st.page_link"
-        )
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self._page_link(
             page=page,

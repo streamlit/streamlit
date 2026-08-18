@@ -873,15 +873,43 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
+            # Each case is horizontal, then the wrap argument, then the expected
+            # resolved wrap value on the proto.
+            # A vertical container always resolves proto wrap to False.
+            (False, True, False),
+            # A horizontal container keeps the default wrapping behavior for
+            # wrap=True and a single row for wrap=False.
+            (True, True, True),
+            (True, False, False),
         ],
     )
-    def test_container_wrap(self, direction: bool, wrap: bool) -> None:
+    def test_container_wrap(
+        self, horizontal: bool, wrap_arg: bool, expected_wrap: bool
+    ) -> None:
         """Test that st.container sets the wrap property correctly."""
-        st.container(horizontal=direction)
+        st.container(horizontal=horizontal, wrap=wrap_arg)
         container_block = self.get_delta_from_queue()
-        assert container_block.add_block.flex_container.wrap == wrap
+        assert container_block.add_block.flex_container.wrap == expected_wrap
+
+    def test_container_wrap_defaults_to_true_when_horizontal(self) -> None:
+        """Test that a horizontal container wraps by default (wrap omitted)."""
+        st.container(horizontal=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.wrap is True
+
+    def test_container_wrap_false_without_horizontal_raises(self) -> None:
+        """Test that st.container raises for wrap=False without horizontal=True."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.container(horizontal=False, wrap=False)
+        assert "horizontal=True" in str(exc.value)
+
+    def test_container_wrap_true_without_horizontal_allowed(self) -> None:
+        """Test that wrap=True on a vertical container is a no-op, not an error."""
+        st.container(horizontal=False, wrap=True)
+        container_block = self.get_delta_from_queue()
+        # wrap is layout-only and meaningless for a vertical container, so it
+        # resolves to False rather than raising.
+        assert container_block.add_block.flex_container.wrap is False
 
     @parameterized.expand(
         [
@@ -983,10 +1011,10 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         assert "A label is required for a popover" in str(e.value)
 
     def test_invalid_type_raises(self):
-        """Test that an unsupported button type raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an unsupported button type raises a StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.popover("label", type="invalid")
-        assert "must be" in str(e.value)
+        assert "Invalid `type` value" in str(e.value)
 
     def test_just_label(self):
         """Test that it correctly applies label param."""
@@ -1395,7 +1423,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
 
     def test_throws_error_on_wrong_state(self):
         """Test that it throws an error on unknown state."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.status("label", state="unknown")
 
     def test_just_label(self):
@@ -2300,7 +2328,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_decorator_invalid_on_dismiss(self):
         """Test dialog decorator with invalid on_dismiss raises error"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
 
             @dialog_decorator("Test Dialog", on_dismiss="invalid")
             def test_dialog():
@@ -2308,7 +2336,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             test_dialog()
 
-        assert "You have passed invalid to `on_dismiss`" in str(exc_info.value)
+        assert "Invalid `on_dismiss` value" in str(exc_info.value)
 
     def test_dialog_on_dismiss_rerun(self):
         """Test that the dialog decorator with on_dismiss='rerun'."""
