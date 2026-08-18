@@ -56,6 +56,9 @@ export const StyledDateField = styled("div", {
     "&:first-of-type": {
       paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
     },
+    "&[data-range-field='end']": {
+      paddingRight: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+    },
   }),
 }))
 
@@ -70,6 +73,10 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
+  overflowX: "auto" as const,
+  overflowY: "hidden" as const,
+  scrollbarWidth: "none",
+  "&::-webkit-scrollbar": { display: "none" },
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
@@ -604,6 +611,13 @@ export const StyledCalendarCell = styled(CalendarCell, {
 
     "&[data-outside-month]": {
       color: theme.colors.fadedText40,
+    },
+
+    "&[data-today]:not([data-outside-month])": {
+      textDecorationLine: "underline",
+      textDecorationColor: primary,
+      textDecorationThickness: "2px",
+      textUnderlineOffset: "3px",
     },
   }
 })

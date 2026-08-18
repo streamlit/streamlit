@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 22
+NUM_DATE_INPUTS = 24
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -109,6 +109,23 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     assert_snapshot(
         get_date_input(themed_app, "Date input 17 (width='stretch')"),
         name="st_date_input-width_stretch",
+    )
+
+
+def test_date_input_sidebar_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that date inputs render correctly in the narrow sidebar."""
+    sidebar = themed_app.get_by_test_id("stSidebar")
+    sidebar.hover()
+
+    assert_snapshot(
+        get_element_by_key(themed_app, "sidebar_single"),
+        name="st_date_input-sidebar_single",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "sidebar_range"),
+        name="st_date_input-sidebar_range",
     )
 
 
