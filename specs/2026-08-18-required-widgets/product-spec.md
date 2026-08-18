@@ -140,7 +140,10 @@ In range-mode `st.date_input`, `required` treats a complete `(start, end)` as no
 
 **Not in scope:** `st.checkbox` / `st.toggle` (boolean, not emptiness), sliders and
 `st.color_picker` (always a value), buttons, `st.chat_input` (trigger widget),
-`st.feedback`, `st.data_editor` (column `required` already exists).
+`st.feedback` (sentiment/rating control; empty means "no opinion yet," which is a
+valid response — requiring a rating is a "must rate" question like checkbox
+"must be checked," not a missing form value), `st.data_editor` (column `required`
+already exists).
 
 ### Core behavior
 
@@ -155,7 +158,7 @@ This is **not** "the script waits until the field is filled." Commands stay non-
 | --- | --- | --- |
 | Initial render | Yes (default empty) | No error, no blocked script. Return value is the empty default. |
 | User tries to commit empty **outside** a form (blur / Enter / change) | Yes | Error state. **No rerun.** Backend keeps the last committed value. |
-| User blurs an empty field **inside** a form | Yes | No error yet — the value stages locally (same as `validate`) and gating happens at submit. |
+| User blurs an empty field **inside** a form | Yes | No error yet — the value stages into form pending state without running the required check (same as `validate`). Gating happens at submit. |
 | Form submit with any required field empty | Yes | Submit aborted (no rerun, no `clear_on_submit`). Every failing field shows its error. |
 | User commits a non-empty value | No | Normal commit / submit. Then `validate` runs if configured. |
 
@@ -214,7 +217,12 @@ allowed. Empty *commit* is not. Matches `validate`.
 
 - Clear / search-X / backspace-to-empty updates the local field only.
 - Outside a form, on blur / Enter / change: if empty, show the error and do not send a
-  value. Inside a form, blur/Enter stages locally; the error is shown at submit.
+  value. Inside a form, blur/Enter stages into form pending state without running the
+  required check (same as `validate`); the error is shown at submit.
+- Incomplete range `st.date_input` while the picker is still open is in-progress
+  editing, not a failed commit. Keep the incomplete range in local UI and do not
+  commit. Show the required error only on blur / close / form submit — not when the
+  user picks the first bound.
 - `type="search"` **keeps** the clear X when `required=True`. Search is a typed widget:
   emptying the field is how the user starts a new query. The X must **not** immediately
   commit `""` (today it does, because empty bypasses `validate`); it only updates local
@@ -251,15 +259,19 @@ form gate.
   Users must be able to recapture. Inside a form: Clear then submit fails required
   (does not send the previous capture); recapture then submit sends the new capture.
   While a recapture is still uploading, submit stays blocked and the required error
-  is not shown. Implementation details (staged local state vs widget manager, when
-  the upload window starts) live in the [tech spec](./tech-spec.md).
+  is not shown. A failed or cancelled recapture stays uncommittable (do not restore
+  or submit the prior capture). Implementation details (staged local state vs widget
+  manager, when the upload window starts, and gating every submit path) live in the
+  [tech spec](./tech-spec.md).
 - **File uploader:** once at least one file is committed, `required=True` **locks
   deleting the last file** (hide/disable that delete control), like selection widgets.
   Replacing via a new drop still works. Form submit is gated while the widget is still
   empty (`None` / `[]`).
-- **In-progress upload:** an upload in flight is not empty. Form submit is already
-  disabled during uploads, so this is not a `This field is required` click path.
-  After the upload completes, required is evaluated on the committed files.
+- **In-progress upload:** an upload in flight is not empty. Gate **every** form
+  submit path for that window (submit button, its shortcut, and Enter /
+  `submitForm`) — `formsWithUploads` today only disables `FormSubmitButton`. This
+  is not a `This field is required` click path. After a **successful** upload,
+  required is evaluated on the committed files.
 
 `required=True` does **not** change defaults. `st.selectbox(options)` still starts on
 the first option; `st.number_input()` still starts at `min`. To get an empty required
@@ -416,7 +428,9 @@ with st.form("upload"):
 - **`st.form(clear_on_submit=True)`.** Clear only runs after a successful submit.
 - **Range `st.date_input`.** An incomplete range counts as empty, so with
   `required=True` the intermediate single-date commit (which reruns the app today)
-  is suppressed until both bounds are selected.
+  is suppressed until both bounds are selected. While the picker is open, picking
+  the first bound is in-progress editing: no required error yet. The error appears
+  on blur, calendar close, or form submit if the range is still incomplete.
 - **`type="email"` / `"url"` without `required`.** Unchanged: empty still allowed.
 
 ## Out of Scope (Future Work)
@@ -429,6 +443,9 @@ with st.form("upload"):
 - **`required` on checkbox/toggle** ("must be checked") — different meaning than
   emptiness.
 - **`st.chat_input`** — trigger widget; empty submit is a separate interaction model.
+- **`st.feedback`** — empty means no opinion yet, not a missing data field.
+  Requiring a rating is a distinct "must rate" product (like checkbox must-be-checked)
+  and can be added later if demand appears.
 - **Widget-level `required` on `st.data_editor`** — columns already have it.
 - **Native HTML `required` / browser bubble** — Streamlit forms are not native `<form>`
   submits; `validate` already rejected React Aria/native constraint validation for this
