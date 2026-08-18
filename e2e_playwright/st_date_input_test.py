@@ -333,8 +333,10 @@ def test_range_date_calendar_picker_rendering(
 
 def test_today_indicator_in_calendar(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that today's date is visually marked in the calendar popover."""
-    # Freeze browser clock so "today" is always March 7, 2026
-    app.clock.set_fixed_time(datetime(2026, 3, 7, 12, 0, 0))
+    # Install fake clock and reload so React Aria uses our "today" from page start
+    app.clock.install(time=datetime(2026, 3, 7, 12, 0, 0))
+    app.reload()
+    wait_for_app_loaded(app)
 
     date_field = get_date_input(app, "Empty value").get_by_test_id("stDateInputField")
     date_field.get_by_role("spinbutton").first.click()
