@@ -116,6 +116,32 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
+ * Rewrites `:material/` to `:material_` outside of code, leaving code untouched.
+ *
+ * The icon directive plugin matches on `:material_` because a `/` conflicts with
+ * directive syntax, so the prefix has to be rewritten before parsing. Code is a
+ * special case: the plugin walks mdast `text` nodes, so it never reaches
+ * `inlineCode` or `code` nodes to begin with. Rewriting inside them therefore buys
+ * nothing and corrupts the literal text the user asked to display.
+ *
+ * See: https://github.com/streamlit/streamlit/issues/10365
+ *
+ * @param source - The markdown source string to rewrite
+ * @returns The source with `:material/` rewritten outside code spans only
+ */
+export function rewriteMaterialIconPrefix(source: string): string {
+  // The code alternatives come first so they are consumed whole and returned via the
+  // capture group unchanged; only the trailing bare-prefix branch substitutes. They
+  // are ordered longest-delimiter first so a fenced block is not read as two
+  // single-backtick spans, and an unterminated fence still runs to end of input --
+  // which is how markdown itself treats it.
+  return source.replace(
+    /(```[\s\S]*?(?:```|$)|``[^`]*``|`[^`]*`)|:material\//g,
+    (_match, code: string | undefined) => code ?? ":material_"
+  )
+}
+
+/**
  * Detects if the markdown source contains math syntax that requires KaTeX.
  * Checks for inline math ($...$) and display math ($$...$$) patterns.
  * For inline math, ensures no whitespace immediately after opening $ or before closing $
@@ -1263,7 +1289,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   const processedSource = useMemo(() => {
     // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
     // The material icon regex in createMaterialIconPlugin uses :material_ to match.
-    let processed = source.replaceAll(":material/", ":material_")
+    // Code spans are left alone -- see rewriteMaterialIconPrefix.
+    let processed = rewriteMaterialIconPrefix(source)
 
     if (isLabel) {
       // Escape markdown syntax that would be stripped in labels, leaving empty content.

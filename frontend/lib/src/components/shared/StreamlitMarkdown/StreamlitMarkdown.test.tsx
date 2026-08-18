@@ -39,6 +39,7 @@ import StreamlitMarkdown, {
   HeadingWithActionElements,
   isValidCssColor,
   LinkWithTargetBlank,
+  rewriteMaterialIconPrefix,
 } from "./StreamlitMarkdown"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
@@ -293,6 +294,54 @@ describe("containsEmojiShortcodes", () => {
       expect(containsEmojiShortcodes(input)).toBe(expected)
     }
   )
+})
+
+describe("rewriteMaterialIconPrefix", () => {
+  it.each([
+    {
+      input: ":material/search: hello",
+      expected: ":material_search: hello",
+      description: "bare prefix in prose",
+    },
+    {
+      input: "a :material/one: b :material/two:",
+      expected: "a :material_one: b :material_two:",
+      description: "every occurrence in prose",
+    },
+    {
+      input: "`:material/search:`",
+      expected: "`:material/search:`",
+      description: "single-backtick code span is left alone",
+    },
+    {
+      input: "``:material/search:``",
+      expected: "``:material/search:``",
+      description: "double-backtick code span is left alone",
+    },
+    {
+      input: "```\n:material/search:\n```",
+      expected: "```\n:material/search:\n```",
+      description: "fenced code block is left alone",
+    },
+    {
+      input: "```\n:material/a:",
+      expected: "```\n:material/a:",
+      description:
+        "unterminated fence runs to end of input, as markdown treats it",
+    },
+    {
+      input: ":material/one: `:material/two:` :material/three:",
+      expected: ":material_one: `:material/two:` :material_three:",
+      description: "rewrites around a code span without touching it",
+    },
+    {
+      input: "no icons here",
+      expected: "no icons here",
+      description: "source without the prefix is unchanged",
+    },
+  ])("$description", ({ input, expected }) => {
+    expect(rewriteMaterialIconPrefix(input)).toBe(expected)
+  })
 })
 
 describe("isValidCssColor", () => {
@@ -1035,6 +1084,27 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveStyle(`user-select: none`)
     expect(markdown).toHaveStyle(`vertical-align: bottom`)
     expect(markdown).toHaveAttribute("translate", "no")
+  })
+
+  it("preserves a material icon name inside inline code", () => {
+    // The icon plugin only visits text nodes, so a code span can never become an
+    // icon -- it must render the literal text the user typed, slash included.
+    // See: https://github.com/streamlit/streamlit/issues/10365
+    const source = "`:material/search:`"
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const code = screen.getByText(":material/search:")
+    expect(code.nodeName.toLowerCase()).toBe("code")
+  })
+
+  it("renders an icon outside code while preserving one inside code", () => {
+    const source = ":material/search: and `:material/search:`"
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    // The prose occurrence became an icon span holding just the name...
+    expect(screen.getByText("search").nodeName.toLowerCase()).toBe("span")
+    // ...while the code occurrence kept its literal text.
+    expect(screen.getByText(":material/search:").nodeName.toLowerCase()).toBe(
+      "code"
+    )
   })
 
   it("does not remove unknown directive", () => {
