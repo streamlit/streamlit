@@ -573,6 +573,91 @@ def test_callbacks_with_rerun():
     assert at.session_state["body_runs"] == 2
 
 
+def test_callback_rerun_keeps_widget_values() -> None:
+    """A callback-queued st.rerun() must not discard the interaction's widget values.
+
+    The preempted run never executes its body, so no widget re-registers. Stale-widget
+    cleanup would therefore treat every widget as unseen and drop the values that
+    ``set_widgets_from_proto`` just applied — including widgets the user never touched.
+    """
+
+    def script():
+        import streamlit as st
+
+        def callback():
+            st.rerun()
+
+        st.text_input("touched", key="touched", on_change=callback)
+        st.text_input("untouched", key="untouched")
+
+    at = AppTest.from_function(script).run()
+    at.text_input(key="untouched").input("keep me").run()
+
+    at.text_input(key="touched").input("hello").run()
+
+    assert at.text_input(key="touched").value == "hello"
+    assert at.session_state["touched"] == "hello"
+    # An unrelated widget's value must survive the rerun too.
+    assert at.session_state["untouched"] == "keep me"
+
+
+def test_callback_rerun_resets_triggers() -> None:
+    """A trigger fires its callback once and is not replayed to the rerun's body.
+
+    ``st.rerun()`` counts as a script completion so triggers reset (see
+    ``exec_func_with_error_handling``). The click is delivered to the callback; the
+    body of the resulting rerun belongs to a new interaction and must see False.
+    """
+
+    def script():
+        import streamlit as st
+
+        def on_click():
+            st.session_state["clicks"] = st.session_state.get("clicks", 0) + 1
+            st.rerun()
+
+        st.session_state["body_saw_click"] = st.button("go", on_click=on_click)
+
+    at = AppTest.from_function(script).run()
+
+    at.button[0].click().run()
+    assert at.session_state["clicks"] == 1
+    assert at.session_state["body_saw_click"] is False
+
+    # The trigger is not stuck: a second click still fires the callback.
+    at.button[0].click().run()
+    assert at.session_state["clicks"] == 2
+
+
+def test_on_script_finished_can_skip_stale_widget_removal() -> None:
+    """``remove_stale_widgets=False`` resets triggers but keeps unseen widget values."""
+
+    ss = SessionState()
+    for wid, value_type, value in [
+        ("w-val", "int_value", 5),
+        ("w-trig", "trigger_value", True),
+    ]:
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type=value_type,
+            )
+        )
+        ss._new_widget_state.set_from_value(wid, value)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    ):
+        # No widget registered this run, so every widget looks stale.
+        ss.on_script_finished(frozenset(), remove_stale_widgets=False)
+
+    assert ss["w-val"] == 5
+    assert ss["w-trig"] is False
+
+
 def test_callback_run_location_resets_after_rerun_exception() -> None:
     """ThreadState leaves CALLBACK after a callback raises RerunException.
 

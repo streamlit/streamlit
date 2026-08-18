@@ -917,7 +917,8 @@ class ScriptRunner:
         # Tell session_state to update itself in response
         if not premature_stop:
             self._session_state.on_script_finished(
-                ctx.shared.widget_ids_this_run.snapshot()
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=ctx.script_started,
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS

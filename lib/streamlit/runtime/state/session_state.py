@@ -1120,7 +1120,12 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
-    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
+    def on_script_finished(
+        self,
+        widget_ids_this_run: frozenset[str],
+        *,
+        remove_stale_widgets: bool = True,
+    ) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.
 
@@ -1130,9 +1135,16 @@ class SessionState:
             The IDs of the widgets that were accessed during the script
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
+        remove_stale_widgets: bool
+            Whether to drop the stale widget state. Pass False when the run
+            never executed its body, since no widget re-registered and every
+            widget would look stale. The next run that renders cleans up
+            instead. Triggers still reset either way, so a fired callback's
+            event is never delivered twice.
         """
         self._reset_triggers()
-        self._remove_stale_widgets(widget_ids_this_run)
+        if remove_stale_widgets:
+            self._remove_stale_widgets(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:
         """Set all trigger values in our state dictionary to False."""

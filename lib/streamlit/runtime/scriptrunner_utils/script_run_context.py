@@ -315,6 +315,16 @@ class ScriptRunContext:
                 qp.set_initial_query_params(query_string)
                 qp.populate_from_query_string(query_string)
 
+    @property
+    def script_started(self) -> bool:
+        """Whether this run got as far as executing the script body.
+
+        False when a widget callback queued an ``st.rerun()`` that preempted
+        the run before its body. Stale-widget cleanup relies on the body having
+        re-registered its widgets, so it must be skipped in that case.
+        """
+        return self._has_script_started
+
     def on_script_start(self) -> None:
         self._has_script_started = True
 
