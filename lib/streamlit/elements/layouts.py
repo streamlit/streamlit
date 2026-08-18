@@ -448,6 +448,7 @@ class LayoutsMixin:
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -511,6 +512,14 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the column group matches the
               width of the parent container.
+
+        wrap : bool
+            Whether columns may stack vertically on narrow viewports. If this
+            is ``True`` (default), columns stack when the viewport is at most
+            ``640px`` wide. If this is ``False``, stacking is disabled and
+            columns stay in a single row. Columns shrink until a usable
+            minimum width, then the column group scrolls horizontally instead
+            of overflowing the page.
 
         Returns
         -------
@@ -616,6 +625,29 @@ class LayoutsMixin:
             https://doc-columns-borders.streamlit.app/
             height: 250px
 
+        **Example 6: Disable wrapping for a thumbnail row**
+
+        Use ``wrap=False`` to keep columns in one row and scroll horizontally
+        when they do not fit.
+
+        >>> import streamlit as st
+        >>>
+        >>> images = [
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ... ]
+        >>> thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
+        >>> for column, image in zip(thumbnail_columns, images):
+        ...     column.image(image)
+
+        .. output::
+            https://doc-columns-wrap-false.streamlit.app/
+            height: 250px
+
         """
         weights = spec
         if isinstance(weights, int):
@@ -626,6 +658,9 @@ class LayoutsMixin:
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise StreamlitInvalidColumnSpecError()
+
+        if not isinstance(wrap, bool):
+            raise StreamlitValueError("wrap", ["True", "False"])
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -658,7 +693,7 @@ class LayoutsMixin:
         block_proto.flex_container.direction = (
             BlockProto.FlexContainer.Direction.HORIZONTAL
         )
-        block_proto.flex_container.wrap = True
+        block_proto.flex_container.wrap = wrap
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
         block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH

@@ -7,16 +7,17 @@ created: 2026-07-23
 
 ## Summary
 
-Add a keyword-only `wrap: bool | None = None` parameter to horizontal layout
-collections, multi-item controls, and wrapping button-like commands. Setting `wrap=False`
-keeps the controlled content to one row: collections use local horizontal scrolling, while
-a button keeps its standard height and ellipsizes its label. For controls placed inside a
-layout, the default `wrap=None` is "auto": Streamlit picks `False` when the control is
-inside a horizontal container and `True` otherwise, so a control stays on one row exactly
-where compact rows matter most (toolbars, `st.container(horizontal=True)`), following the
-`st.markdown(width="auto")` precedent. The layout containers `st.container` and `st.columns`
-do not use this adaptive resolution: their `wrap=None` keeps today's wrapping and stacking,
-and a single row is requested only with an explicit `wrap=False`.
+Add a keyword-only `wrap` parameter to horizontal layout collections, multi-item
+controls, and wrapping button-like commands. Setting `wrap=False` keeps the controlled
+content to one row: collections use local horizontal scrolling, while a button keeps its
+standard height and ellipsizes its label. For controls placed inside a layout, the
+default is `wrap: bool | None = None` ("auto"): Streamlit picks `False` when the control
+is inside a horizontal container and `True` otherwise, so a control stays on one row
+exactly where compact rows matter most (toolbars, `st.container(horizontal=True)`),
+following the `st.markdown(width="auto")` precedent. The layout containers `st.container`
+and `st.columns` do not use this adaptive resolution: they take `wrap: bool = True`
+(today's wrapping and stacking), and a single row is requested only with an explicit
+`wrap=False`.
 
 This is a layout control with an adaptive default. Existing apps keep their current
 behavior everywhere except for controls inside horizontal containers, where the auto
@@ -126,7 +127,7 @@ Add `wrap` as a keyword-only parameter:
 st.container(
     ...,
     horizontal: bool = False,
-    wrap: bool | None = None,  # NEW
+    wrap: bool = True,  # NEW
     ...,
 )
 
@@ -134,7 +135,7 @@ st.columns(
     spec,
     *,
     ...,
-    wrap: bool | None = None,  # NEW
+    wrap: bool = True,  # NEW
 )
 
 st.multiselect(
@@ -188,8 +189,8 @@ st.menu_button(
 
 | Value | Collections and multi-item controls | Single-label controls |
 | --- | --- | --- |
-| `None` (default) | Layout containers (`st.container`, `st.columns`) keep today's behavior (wrap or stack); request a single row with an explicit `wrap=False`. Multi-item controls use auto: `False` inside a horizontal container and `True` in any other layout. | Auto: behaves like `False` inside a horizontal container and `True` in any other layout. |
-| `True` | Items move to additional rows when they cannot fit. | The label can wrap and increase the control height. |
+| `None` (default for controls) | Multi-item controls use auto: `False` inside a horizontal container and `True` in any other layout. Not used by layout containers. | Auto: behaves like `False` inside a horizontal container and `True` in any other layout. |
+| `True` (default for `st.container` / `st.columns`) | Items move to additional rows when they cannot fit (or, for `st.columns`, stack at the responsive breakpoint). | The label can wrap and increase the control height. |
 | `False` | Items remain in one row and the element scrolls horizontally if needed. | The control keeps its standard height and ellipsizes an overflowing label. |
 
 The auto default applies to controls placed inside a layout — the single-label controls and
@@ -200,11 +201,12 @@ toolbars) and `True` everywhere else. A button placed directly in `st.columns` (
 column) still defaults to wrapping; use an explicit `wrap=False` there.
 
 The layout containers themselves — `st.container` and `st.columns` — do not use this
-adaptive resolution. Their `wrap=None` keeps today's behavior (a horizontal container wraps
-its children onto more rows; `st.columns` stacks responsively), and a single row is
-requested only with an explicit `wrap=False`. Resolving a container's own default from
-whether it happens to be nested in another horizontal container would be surprising and
-could silently change existing layouts.
+adaptive resolution. Because `None` would not differ from today's wrapping/stacking
+behavior, they use a plain boolean default of `wrap=True` (a horizontal container wraps
+its children onto more rows; `st.columns` stacks responsively). A single row is requested
+only with an explicit `wrap=False`. Resolving a container's own default from whether it
+happens to be nested in another horizontal container would be surprising and could
+silently change existing layouts.
 
 `wrap` is layout-only. Changing it must not reset a widget's value or session state.
 
@@ -320,7 +322,7 @@ container scrolls horizontally.
 
 Passing an explicit `wrap=False` with `horizontal=False` raises a `StreamlitAPIException`
 explaining that no horizontal collection exists to wrap. `st.container` does not use the
-adaptive auto resolution: `wrap=None` always keeps today's behavior — a horizontal
+adaptive auto resolution: `wrap=True` (the default) keeps today's behavior — a horizontal
 container wraps its children onto additional rows — regardless of whether the container is
 itself nested in another horizontal container. Existing calls therefore do not need to
 specify `wrap`; keep the children in one row with an explicit `wrap=False`.
@@ -345,10 +347,11 @@ for column, image in zip(thumbnail_columns, images):
   column can shrink toward zero), not a reference to an existing CSS `min-width`. Once the
   columns reach that minimum and still do not fit, the column group scrolls horizontally
   rather than overflowing the page, so content is never shrunk below a readable width.
-- `wrap=None` (the default) and `wrap=True` keep the current breakpoint and stacking
-  behavior. `st.columns` does not use the adaptive auto resolution, so placing it inside a
+- `wrap=True` (the default) keeps the current breakpoint and stacking behavior.
+  `st.columns` does not use the adaptive auto resolution, so placing it inside a
   horizontal container does not disable stacking; opt out only with an explicit
-  `wrap=False`.
+  `wrap=False`. Because there is no distinct auto mode for columns, the parameter is a
+  plain `bool` defaulting to `True` rather than `bool | None`.
 
 This addresses the request to disable column responsiveness in #5003. It does not address
 the opposite request in #6592 to wrap sooner or at a configurable threshold.
@@ -486,8 +489,9 @@ inside a horizontal container, whereas wrapping is the safer default elsewhere. 
 keeping explicit `True`/`False` for full control. This mirrors the existing
 `st.markdown(width="auto")` default, which likewise resolves to `content` inside horizontal
 containers and `stretch` otherwise. This adaptive resolution applies only to controls placed
-inside a layout; the layout containers `st.container` and `st.columns` keep a fixed `None`
-default (today's wrapping and stacking), because deriving a container's own wrapping from
+inside a layout; the layout containers `st.container` and `st.columns` use a fixed
+`wrap=True` default (today's wrapping and stacking), because they have no distinct auto
+mode — `None` would behave identically to `True` — and deriving a container's wrapping from
 whether it is nested in another horizontal container would be surprising and could silently
 change existing layouts.
 
@@ -614,8 +618,8 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
   for Markdown labels.
 - Add tests that the auto default (`wrap=None`) resolves to no-wrap inside a horizontal
   container and to wrapping in other layouts for single-label and multi-item controls, and
-  that `st.container` and `st.columns` keep their fixed default (today's wrapping and
-  stacking) regardless of the surrounding layout.
+  that `st.container` and `st.columns` keep their fixed `wrap=True` default (today's
+  wrapping and stacking) regardless of the surrounding layout.
 - Add checkbox and toggle tests for ellipsis, fixed indicators, help icons, label
   visibility, and accessible names.
 - Add E2E coverage at desktop, intermediate, and phone widths in Chromium, Firefox, and
@@ -625,7 +629,8 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
   contexts.
 - Verify protobuf messages with an absent `wrap` field resolve via the auto default for
   controls — wrapping in vertical layouts and staying single-row inside horizontal
-  containers — while `st.container` and `st.columns` keep today's wrapping and stacking.
+  containers — while `st.container` and `st.columns` keep today's wrapping and stacking
+  via their fixed `wrap=True` default.
 
 ## Checklist
 
