@@ -392,6 +392,22 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert self._storage.ids_registered_after(snapshot) == frozenset({"some_key"})
 
+    def test_has_ancestor_in_finds_transitive_ancestor(self):
+        """Any ancestor along the chain counts, not just the immediate parent."""
+        self._set_fragment_chain("outer", "middle", "inner")
+
+        assert self._storage.has_ancestor_in("inner", {"outer"})
+        assert self._storage.has_ancestor_in("inner", {"middle"})
+        assert self._storage.has_ancestor_in("middle", {"outer"})
+
+    def test_has_ancestor_in_excludes_self_and_descendants(self):
+        """A fragment is not its own ancestor, and descendants don't count."""
+        self._set_fragment_chain("outer", "inner")
+
+        assert not self._storage.has_ancestor_in("inner", {"inner"})
+        assert not self._storage.has_ancestor_in("outer", {"inner"})
+        assert not self._storage.has_ancestor_in("inner", set())
+
     def test_order_fragment_ids_empty_input_returns_empty_list(self):
         """An empty input list yields an empty ordering."""
         assert self._storage.order_fragment_ids([]) == []
@@ -1518,6 +1534,7 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("registration_sequence", (), {}),
         ("ids_registered_after", (0,), {}),
         ("order_fragment_ids", ([],), {}),
+        ("has_ancestor_in", ("frag", set()), {}),
         ("delete", ("key",), {}),
         ("contains", ("key",), {}),
         ("register_outside_wrapper", ("frag", "container", object()), {}),

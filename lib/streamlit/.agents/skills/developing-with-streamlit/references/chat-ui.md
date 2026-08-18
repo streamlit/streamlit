@@ -142,6 +142,16 @@ if prompt:
 
 Use `accept_file="multiple"` to allow multiple files.
 
+For typed helpers, import `ChatInputValue` and `UploadedFile` from the public `streamlit.typing` namespace instead of Streamlit's internal modules:
+
+```python
+from streamlit.typing import ChatInputValue, UploadedFile
+
+
+def first_file(submission: ChatInputValue) -> UploadedFile | None:
+    return submission.files[0] if "files" in submission and submission.files else None
+```
+
 ## Audio input
 
 Enable voice recording with `accept_audio`. The recorded audio is available as a WAV file:

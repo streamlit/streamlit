@@ -39,6 +39,7 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import {
   DynamicIcon,
   isMenuStyleIconLabel,
@@ -46,7 +47,10 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -56,6 +60,38 @@ import {
   StyledPopoverExpansionIcon,
   StyledPopoverLabelContainer,
 } from "./styled-components"
+
+/**
+ * Fit the popover inside the available space without exceeding the design caps,
+ * and stop CSS `min-width` from defeating that.
+ *
+ * `designMaxWidthPx` and `cssMinWidthPx` mirror StyledPopoverBody; see the call
+ * site for how they are derived.
+ */
+export function clampPopoverSize({
+  availableWidth,
+  availableHeight,
+  designMaxWidthPx,
+  cssMinWidthPx,
+}: {
+  availableWidth: number
+  availableHeight: number
+  designMaxWidthPx: number
+  cssMinWidthPx: number
+}): { maxWidth: string; maxHeight: string; minWidth: string } {
+  const maxWidthPx = Math.min(
+    Math.max(Math.floor(availableWidth), 0),
+    designMaxWidthPx
+  )
+  return {
+    maxWidth: `${maxWidthPx}px`,
+    maxHeight: `min(${Math.max(Math.floor(availableHeight), 0)}px, 70vh)`,
+    // CSS prefers min-width over max-width when they conflict, so lower it.
+    // Compared against the capped width, not the raw available space, so a
+    // stretch popover sized between the design cap and the viewport is caught.
+    minWidth: cssMinWidthPx > maxWidthPx ? `${maxWidthPx}px` : "",
+  }
+}
 
 export interface PopoverProps {
   element: BlockProto.Popover
@@ -123,6 +159,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // match it when stretchWidth is true. A ResizeObserver is required because
   // the popover is portalled to document.body (no CSS parent-child sizing).
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
+
+  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
+  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
+  // skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
 
   // Timestamp of the last open action — used by the outside-click handler to
   // ignore clicks that occur in the same tick as opening. In production
@@ -195,57 +237,83 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // keyboard activation, which can dispatch a `click` with no prior pointerdown.
   const interactionInsideRef = useRef(false)
 
-  // When inside the sidebar, adjust Floating UI middleware so the popover can
-  // escape the sidebar's `overflow: auto` clipping rect and stay within the
-  // viewport. Two things are needed:
+  // Keep the popover inside the viewport for narrow embeds (#9340) and
+  // sidebar overflow clipping (#9387). Two middleware adjustments by scope:
   //
-  // 1. Override the shift/flip boundary to `document.documentElement` so the
-  //    popover (portalled to document.body with `position: fixed`) is bounded
-  //    by the viewport rather than the sidebar. `document.documentElement`
-  //    (the <html> element) is used rather than `document.body` because
-  //    Streamlit's `.stApp` uses `position: absolute; inset: 0`, which leaves
-  //    document.body sized 0x0 — a body boundary would always report overflow
-  //    and re-introduce the same flip. Without this override, shift squishes
-  //    the popover (whose min-width exceeds the sidebar column) against the
-  //    sidebar's edge.
+  // - **Always**: `size` clamps max-height/max-width to available space at the
+  //   chosen placement, and lowers min-width when the CSS min would exceed
+  //   that clamp.
+  //   - Without the height clamp, a tall popover extends off-screen (#9387).
+  //   - Without the width clamp, the ~704px design max-width overflows a
+  //     narrow oEmbed iframe: `shift` pins one edge and the host clips the
+  //     other (#9340).
+  //   - `size` runs after `flip` so it measures against the final side;
+  //     `StyledPopoverBody`'s `overflow: auto` scrolls when clamped.
   //
-  // 2. Add a `size` middleware that clamps the popover's maxHeight to the
-  //    available space at the chosen placement. Without this, when the popover
-  //    is taller than the space both above and below the trigger, `flip` picks
-  //    the less-overflowing side and the popover extends off-screen (bug in
-  //    #9387: popover clipped above the viewport top). `size` sits after
-  //    `flip` so it constrains the height to whichever side `flip` landed on,
-  //    causing the internal `overflow: auto` on StyledPopoverBody to kick in.
-  const shiftPadding = 8
+  // - **Sidebar only**: override the shift/flip `boundary` to
+  //   `document.documentElement` so Floating UI uses the viewport, not the
+  //   sidebar's `overflow: auto` rect. Prefer `<html>` over `document.body`
+  //   because `.stApp`'s `position: absolute; inset: 0` leaves body at 0x0 —
+  //   a body boundary would always report overflow. Without this override,
+  //   shift squishes the popover against the sidebar edge.
   const overlayOptions = useMemo(() => {
     const base = {
       open,
       placement: "bottom-start" as const,
       offsetPx: convertRemToPx(theme.spacing.twoXS),
     }
-    if (!isInSidebar || typeof document === "undefined") {
+    if (typeof document === "undefined") {
       return base
     }
     const boundary = document.documentElement
+    // Mirrors StyledPopoverBody — keep in sync with styled-components.ts.
+    // Reading these back from the DOM would force a style recomputation on
+    // every position update. `contentMaxWidth` is a px token; `spacing.lg` is
+    // rem — hence parseFloat vs convertRemToPx.
+    const designMaxWidthPx =
+      parseFloat(theme.sizes.contentMaxWidth) -
+      2 * convertRemToPx(theme.spacing.lg)
+    const cssMinWidthPx = stretchWidth
+      ? Math.max(calculatedWidth, convertRemToPx("10rem"))
+      : convertRemToPx(theme.sizes.minPopupWidth)
     const sizeMiddleware: Middleware = size({
-      padding: shiftPadding,
+      padding: SHIFT_VIEWPORT_PADDING,
       boundary,
-      apply({ availableHeight, elements }) {
-        // Clamp strictly to Floating UI's measured space so the popover never
-        // extends past the viewport, even in very short viewports where both
-        // sides of the trigger have limited room. The internal `overflow:
-        // auto` on StyledPopoverBody handles the scroll.
-        const clampedHeight = Math.max(Math.floor(availableHeight), 0)
-        elements.floating.style.maxHeight = `${clampedHeight}px`
+      apply({ availableHeight, availableWidth, elements }) {
+        const { maxWidth, maxHeight, minWidth } = clampPopoverSize({
+          availableWidth,
+          availableHeight,
+          designMaxWidthPx,
+          cssMinWidthPx,
+        })
+        Object.assign(elements.floating.style, {
+          maxWidth,
+          maxHeight,
+          minWidth,
+        })
       },
     })
+    if (!isInSidebar) {
+      // Still apply `size` for narrow embeds, but skip the flip/shift boundary
+      // override — defaults already use the viewport for `position: fixed`.
+      return { ...base, extraMiddleware: [sizeMiddleware] }
+    }
     return {
       ...base,
       flipOptions: { boundary },
-      shiftOptions: { padding: shiftPadding, boundary },
+      shiftOptions: { padding: SHIFT_VIEWPORT_PADDING, boundary },
       extraMiddleware: [sizeMiddleware],
     }
-  }, [open, theme.spacing.twoXS, isInSidebar])
+  }, [
+    open,
+    theme.spacing.twoXS,
+    theme.spacing.lg,
+    theme.sizes.minPopupWidth,
+    theme.sizes.contentMaxWidth,
+    isInSidebar,
+    stretchWidth,
+    calculatedWidth,
+  ])
 
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Popover has no collection
@@ -384,8 +452,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             aria-expanded={open}
             aria-haspopup="dialog"
           >
-            <StyledPopoverLabelContainer $hideChevron={hideChevron}>
-              <DynamicButtonLabel icon={element.icon} label={element.label} />
+            <StyledPopoverLabelContainer
+              $hideChevron={hideChevron}
+              $truncate={!wrap}
+            >
+              <DynamicButtonLabel
+                icon={element.icon}
+                label={element.label}
+                wrap={wrap}
+                addTitleTooltip={addTitleTooltip}
+              />
               {!hideChevron && (
                 <StyledPopoverExpansionIcon aria-hidden="true">
                   <DynamicIcon

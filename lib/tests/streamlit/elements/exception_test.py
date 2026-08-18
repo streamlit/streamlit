@@ -58,7 +58,7 @@ SyntaxError: invalid syntax
         assert expected.strip() == _format_syntax_error_message(err)
 
     @parameterized.expand([(True,), (False,)])
-    def test_markdown_flag(self, is_uncaught_app_exception):
+    def test_markdown_flag(self, apply_show_error_details):
         """Test that ExceptionProtos for StreamlitAPIExceptions (and
         subclasses) have the "message_is_markdown" flag set.
         """
@@ -66,7 +66,7 @@ SyntaxError: invalid syntax
         exception.marshall(
             proto,
             RuntimeError("oh no!"),
-            is_uncaught_app_exception=is_uncaught_app_exception,
+            apply_show_error_details=apply_show_error_details,
         )
         assert not proto.message_is_markdown
 
@@ -74,7 +74,7 @@ SyntaxError: invalid syntax
         exception.marshall(
             proto,
             StreamlitAPIException("oh no!"),
-            is_uncaught_app_exception=is_uncaught_app_exception,
+            apply_show_error_details=apply_show_error_details,
         )
         assert proto.message_is_markdown
 
@@ -82,7 +82,7 @@ SyntaxError: invalid syntax
         exception.marshall(
             proto,
             errors.DuplicateWidgetID("oh no!"),
-            is_uncaught_app_exception=is_uncaught_app_exception,
+            apply_show_error_details=apply_show_error_details,
         )
         assert proto.message_is_markdown
 
@@ -118,9 +118,7 @@ SyntaxError: invalid syntax
 
         # Marshall it.
         proto = ExceptionProto()
-        exception.marshall(
-            proto, cast("Exception", err), is_uncaught_app_exception=True
-        )
+        exception.marshall(proto, cast("Exception", err), apply_show_error_details=True)
 
         user_module_path = os.path.join(os.path.realpath(user_module_path), "")
         assert user_module_path in proto.stack_trace[0], "Stack not stripped"
@@ -158,7 +156,7 @@ SyntaxError: invalid syntax
         # Marshall it.
         proto = ExceptionProto()
         exception.marshall(
-            proto, cast("Exception", err), is_uncaught_app_exception=False
+            proto, cast("Exception", err), apply_show_error_details=False
         )
 
         user_module_path = os.path.join(os.path.realpath(user_module_path), "")
@@ -183,7 +181,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == "module 'streamlit' has no attribute 'format'"
             assert len(proto.stack_trace) > 0
@@ -203,7 +201,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) > 0
@@ -220,7 +218,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) > 0
@@ -237,7 +235,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) == 0
@@ -254,7 +252,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) == 0

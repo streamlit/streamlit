@@ -688,9 +688,13 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <Toast
-            // React key needed so toasts triggered on re-run
+            // Keyed by scriptRunId so the toast remounts on each run; a
+            // still-visible toast at the same position is de-duped in Toast.
             key={node.scriptRunId}
             element={toastProto}
+            // The delta path is a stable per-position identity used to de-dupe
+            // the toast across the remounts that happen on every rerun.
+            toastId={node.metadata.deltaPath.join("-")}
             {...elementProps}
           />
         </ElementContainer>

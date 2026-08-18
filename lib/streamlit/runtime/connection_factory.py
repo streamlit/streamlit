@@ -111,7 +111,7 @@ def _create_connection(
     def on_release_wrapped(connection: ConnectionClass) -> None:
         connection.close()
 
-    __create_connection = cache_resource(
+    cached_create_connection = cache_resource(
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
@@ -119,7 +119,7 @@ def _create_connection(
         on_release=on_release_wrapped,
     )(__create_connection)
 
-    return __create_connection(name, connection_class, **kwargs)
+    return cached_create_connection(name, connection_class, **kwargs)
 
 
 def _get_first_party_connection(connection_class: str) -> type[BaseConnection[Any]]:

@@ -44,36 +44,6 @@ vi.mock("@streamlit/app/src/util/ScreenCastRecorder", () => ({
   },
 }))
 
-// Simulate FocusLock without its real implementation. The real library restores
-// focus via an internal setTimeout that fires outside act() in tests, causing
-// spurious React warnings. This mock invokes returnFocus synchronously during
-// useLayoutEffect cleanup (same commit-phase timing) to keep updates in act().
-vi.mock("react-focus-lock", async () => {
-  const { useLayoutEffect, useRef, createElement, Fragment } =
-    await import("react")
-  type ReactNode = ReturnType<typeof createElement> | string | null | undefined
-  function MockFocusLock({
-    children,
-    returnFocus,
-  }: {
-    children: ReactNode
-    returnFocus?: ((returnTo: Element) => false) | boolean
-  }): ReturnType<typeof createElement> {
-    const returnFocusRef = useRef(returnFocus)
-    returnFocusRef.current = returnFocus
-    useLayoutEffect(() => {
-      return () => {
-        const fn = returnFocusRef.current
-        if (typeof fn === "function") {
-          fn(document.activeElement ?? document.body)
-        }
-      }
-    }, [])
-    return createElement(Fragment, null, children)
-  }
-  return { default: MockFocusLock }
-})
-
 const mockCopyToClipboard = vi.fn()
 vi.mock("~lib/hooks/useCopyToClipboard", () => ({
   useCopyToClipboard: () => ({

@@ -23,7 +23,11 @@ from streamlit.commands.execution_control import (
     rerun,
     switch_page,
 )
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page
 from streamlit.runtime.scriptrunner import RerunData
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
@@ -114,7 +118,7 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx)
 
 
 def test_st_rerun_invalid_scope_throws_error():
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitValueError):
         rerun(scope="foo")
 
 

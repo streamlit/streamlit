@@ -18,7 +18,7 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Container, Iterator
 from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
@@ -37,6 +37,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
@@ -153,6 +154,11 @@ class FragmentStorage(Protocol):
     @abstractmethod
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Return a stable ordering that keeps queued ancestors before descendants."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``."""
         raise NotImplementedError
 
     @abstractmethod
@@ -330,15 +336,6 @@ class MemoryFragmentStorage(FragmentStorage):
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Run queued ancestors before descendants while preserving FIFO otherwise."""
         with self._lock:
-
-            def has_queued_ancestor(
-                fragment_id: str, queued_fragment_ids: set[str]
-            ) -> bool:
-                return any(
-                    ancestor_id in queued_fragment_ids
-                    for ancestor_id in self._iter_ancestor_ids(fragment_id)
-                )
-
             remaining_fragment_ids = list(fragment_ids)
             ordered_fragment_ids = []
 
@@ -346,7 +343,9 @@ class MemoryFragmentStorage(FragmentStorage):
                 queued_fragment_ids = set(remaining_fragment_ids)
 
                 for index, fragment_id in enumerate(remaining_fragment_ids):
-                    if not has_queued_ancestor(fragment_id, queued_fragment_ids):
+                    if not self._has_ancestor_in_unlocked(
+                        fragment_id, queued_fragment_ids
+                    ):
                         ordered_fragment_ids.append(fragment_id)
                         del remaining_fragment_ids[index]
                         break
@@ -356,6 +355,25 @@ class MemoryFragmentStorage(FragmentStorage):
                     break
 
             return ordered_fragment_ids
+
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        with self._lock:
+            return self._has_ancestor_in_unlocked(fragment_id, candidate_ids)
+
+    def _has_ancestor_in_unlocked(
+        self, fragment_id: str, candidate_ids: Container[str]
+    ) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``.
+
+        Callers must hold ``self._lock``; use ``has_ancestor_in`` from outside
+        the lock. Extracted so ``order_fragment_ids`` (which already holds the
+        lock while walking the queue) and ``has_ancestor_in`` can share the
+        same predicate without deadlocking or drifting apart.
+        """
+        return any(
+            ancestor_id in candidate_ids
+            for ancestor_id in self._iter_ancestor_ids(fragment_id)
+        )
 
     def delete(self, key: str) -> None:
         with self._lock:
@@ -563,7 +581,11 @@ def _fragment(
             # is established below, this will be initialized with the fragment's
             # delta path. Without this, we would inherit the delta path from the
             # parent scope.
-            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
+            with ThreadState.scoped(
+                fragment_id=fragment_id,
+                delta_path=None,
+                run_location=RunLocation.FRAGMENT,
+            ):
                 result = None
                 with active_hash_context:
                     container_ctx = (

@@ -20,6 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
     reset_hovering,
@@ -50,7 +51,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 19  # Including sidebar, fragment, and menu-style icons
+TOTAL_MENU_BUTTONS = 20  # Including sidebar, fragment, and menu-style icons
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -295,3 +296,19 @@ def test_menu_button_menu_style_icons_hide_chevron(
 
     # Snapshot the container with all three menu-style icon buttons
     assert_snapshot(container, name="st_menu_button-menu_style_icons")
+
+
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
+    """
+    container = get_element_by_key(app, "wrap_false_menu_button")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()
+    expect(container.get_by_test_id("stMenuButtonButton")).to_contain_text(
+        "expand_more"
+    )

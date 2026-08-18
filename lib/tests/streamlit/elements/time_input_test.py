@@ -29,8 +29,8 @@ from streamlit.elements.widgets.time_widgets import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -119,11 +119,11 @@ class TimeInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.time_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_st_time_input(self):
@@ -370,8 +370,8 @@ class TimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
             st.time_input("the label", bind="query-params")
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.time_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_explicit_value(self):
@@ -641,8 +641,8 @@ class TestFormatProtoField(DeltaGeneratorTestCase):
         assert el.time_input.format == "localized"
 
     def test_invalid_format_raises(self):
-        """Invalid format values raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
+        """Invalid format values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `format` value"):
             st.time_input("label", time(8, 45), format="6h", key="fmt_6h")  # type: ignore[arg-type]
-        with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `format` value"):
             st.time_input("label", time(8, 45), format="auto", key="fmt_auto")  # type: ignore[arg-type]

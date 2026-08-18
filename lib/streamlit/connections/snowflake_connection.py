@@ -121,22 +121,19 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> st.dataframe(df)
 
         """
-        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+        from streamlit.connections import retry_util
 
-        @retry(
-            after=lambda _: self.reset(),
-            stop=stop_after_attempt(3),
-            reraise=True,
+        @retry_util.retry(
+            max_attempts=3,
+            wait_seconds=1,
             # We don't have to implement retries ourself for most error types as the
             # `snowflake-connector-python` library already implements retries for
             # retryable HTTP errors.
-            retry=retry_if_exception(
-                lambda e: (
-                    hasattr(e, "sqlstate")
-                    and e.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
-                )
+            retry_on_exception=lambda exc: (
+                hasattr(exc, "sqlstate")
+                and exc.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
             ),
-            wait=wait_fixed(1),
+            after=self.reset,
         )
         # `params` must be an explicit parameter (not captured from closure) so that
         # `@st.cache_data` includes it in the cache key.
@@ -158,12 +155,12 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
-        _query = cache_data(
+        cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
         )(_query)
 
-        return _query(self._connection_instance_id, sql, params)
+        return cached_query(self._connection_instance_id, sql, params)
 
     def write_pandas(
         self,

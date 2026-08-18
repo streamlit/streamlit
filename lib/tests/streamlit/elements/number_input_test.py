@@ -24,10 +24,10 @@ from streamlit.elements.lib.js_number import JSNumber
 from streamlit.elements.widgets.number_input import NumberInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
     StreamlitMixedNumericTypesError,
     StreamlitValueAboveMaxError,
+    StreamlitValueError,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
@@ -403,11 +403,11 @@ class NumberInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.number_input("the label", label_visibility="wrong_value")  # type: ignore[call-arg]
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_width_config_default(self):
@@ -809,8 +809,8 @@ class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.default == 0
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.number_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_int_value(self):

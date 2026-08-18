@@ -32,6 +32,7 @@ const ContextConsumer: FC = () => {
         {String(context?.isInHorizontalLayout)}
       </div>
       <div data-testid="isInRoot">{String(context?.isInRoot)}</div>
+      <div data-testid="wrap">{String(context?.wrap)}</div>
       <div data-testid="parentWidth">
         {context?.parentWidth ?? "undefined"}
       </div>
@@ -78,6 +79,7 @@ describe("FlexContextProvider", () => {
         "true"
       )
       expect(screen.getByTestId("isInRoot").textContent).toBe("false")
+      expect(screen.getByTestId("wrap").textContent).toBe("true")
       expect(screen.getByTestId("parentWidth").textContent).toBe("undefined")
     })
 
@@ -94,6 +96,17 @@ describe("FlexContextProvider", () => {
       expect(screen.getByTestId("isInHorizontalLayout").textContent).toBe(
         "false"
       )
+      expect(screen.getByTestId("wrap").textContent).toBe("true")
+    })
+
+    it("should set wrap when provided", () => {
+      render(
+        <FlexContextProvider direction={Direction.HORIZONTAL} wrap={false}>
+          <ContextConsumer />
+        </FlexContextProvider>
+      )
+
+      expect(screen.getByTestId("wrap").textContent).toBe("false")
     })
 
     it("should set isInRoot when provided", () => {

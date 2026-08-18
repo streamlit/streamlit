@@ -95,6 +95,8 @@ jobs:
           RUFF_OUTPUT_FORMAT: github
       - name: Run Type Checkers
         run: make python-types
+        env:
+          TY_OUTPUT_FORMAT: github
       - name: Run Python Tests
         run: make python-tests
       - name: CLI Smoke Tests

@@ -22,7 +22,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
 
 import streamlit as st
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitValueError,
+)
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import Page, _validate_registered_page
 from streamlit.runtime.fragment import _check_not_parallel_worker
@@ -166,9 +170,7 @@ def rerun(  # type: ignore[misc]
     """
 
     if scope not in {"app", "fragment"}:
-        raise StreamlitAPIException(
-            f"'{scope}'is not a valid rerun scope. Valid scopes are 'app' and 'fragment'."
-        )
+        raise StreamlitValueError("scope", ["'app'", "'fragment'"])
 
     ctx = get_script_run_ctx()
 

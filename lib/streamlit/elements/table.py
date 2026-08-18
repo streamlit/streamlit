@@ -114,7 +114,7 @@ def _compute_hide_index(
     # For Styler objects, check the underlying data
     if dataframe_util.is_pandas_styler(data):
         # Styler.data is the underlying DataFrame
-        return dataframe_util.has_range_index(data.data)  # type: ignore[attr-defined]
+        return dataframe_util.has_range_index(data.data)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
     # If data is already a pandas DataFrame, check directly without conversion
     if isinstance(data, pd.DataFrame):

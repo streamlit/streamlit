@@ -54,6 +54,26 @@ arrow.marshall(
 )
 DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
+TOAST_DELTA_MSG = ForwardMsg()
+TOAST_DELTA_MSG.delta.new_element.toast.body = "toast body"
+TOAST_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.EVENT, (), 0)
+
+# A toast emitted from within a fragment (its delta carries the fragment id).
+FRAGMENT_TOAST_DELTA_MSG = ForwardMsg()
+FRAGMENT_TOAST_DELTA_MSG.delta.new_element.toast.body = "fragment toast body"
+FRAGMENT_TOAST_DELTA_MSG.delta.fragment_id = "some_fragment"
+FRAGMENT_TOAST_DELTA_MSG.metadata.delta_path[:] = make_delta_path(
+    RootContainer.EVENT, (), 0
+)
+
+# A regular (non-toast) delta emitted from within the same fragment.
+FRAGMENT_TEXT_DELTA_MSG = ForwardMsg()
+FRAGMENT_TEXT_DELTA_MSG.delta.new_element.text.body = "fragment text"
+FRAGMENT_TEXT_DELTA_MSG.delta.fragment_id = "some_fragment"
+FRAGMENT_TEXT_DELTA_MSG.metadata.delta_path[:] = make_delta_path(
+    RootContainer.MAIN, (), 0
+)
+
 
 class ForwardMsgQueueTest(unittest.TestCase):
     def test_simple_enqueue(self):
@@ -233,6 +253,63 @@ class ForwardMsgQueueTest(unittest.TestCase):
         assert fmq._queue == expected_retained_messages
 
         fmq.clear()
+        assert fmq._queue == []
+
+    def test_clear_retains_toast_deltas(self):
+        """Toast deltas survive a lifecycle-retaining clear (issue #7740).
+
+        A ``st.toast()`` immediately followed by ``st.rerun()`` interrupts the
+        run and clears the queue with ``retain_lifecycle_msgs=True`` before it is
+        flushed. The toast delta must be preserved so the toast still reaches the
+        browser, while regular (non-toast) deltas are still dropped.
+        """
+        fmq = ForwardMsgQueue()
+
+        fmq.enqueue(NEW_SESSION_MSG)
+        fmq.enqueue(TEXT_DELTA_MSG1)
+        fmq.enqueue(TOAST_DELTA_MSG)
+
+        fmq.clear(retain_lifecycle_msgs=True)
+
+        # The toast delta is retained, the regular text delta is dropped.
+        assert NEW_SESSION_MSG in fmq._queue
+        assert TOAST_DELTA_MSG in fmq._queue
+        assert TEXT_DELTA_MSG1 not in fmq._queue
+
+    def test_clear_retains_toast_deltas_during_fragment_rerun(self):
+        """Toast deltas survive a fragment-scoped lifecycle-retaining clear.
+
+        ``_is_toast_delta`` is a top-level condition, so a toast is retained even
+        during a fragment rerun - including a toast emitted by the running
+        fragment itself, which would otherwise be dropped so it can be re-run.
+        This locks in that ``st.toast()`` + ``st.rerun()`` inside a
+        ``@st.fragment`` is covered too. Regular deltas of the running fragment
+        are still dropped.
+        """
+        fmq = ForwardMsgQueue()
+
+        fmq.enqueue(NEW_SESSION_MSG)
+        fmq.enqueue(FRAGMENT_TEXT_DELTA_MSG)
+        fmq.enqueue(FRAGMENT_TOAST_DELTA_MSG)
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["some_fragment"])
+
+        # The fragment's toast is retained even though it belongs to the running
+        # fragment, while the fragment's regular text delta is dropped.
+        assert FRAGMENT_TOAST_DELTA_MSG in fmq._queue
+        assert FRAGMENT_TEXT_DELTA_MSG not in fmq._queue
+
+    def test_clear_without_retain_drops_toast_deltas(self):
+        """A full (non-lifecycle) clear still drops toast deltas.
+
+        Toast retention is specific to lifecycle-retaining clears (rerun/
+        interrupt); a normal flush must not leave stale toast deltas behind.
+        """
+        fmq = ForwardMsgQueue()
+
+        fmq.enqueue(TOAST_DELTA_MSG)
+        fmq.clear()
+
         assert fmq._queue == []
 
     def test_clear_with_fragmentid_preserve_unrelated_delta_messages(self):
