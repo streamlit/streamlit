@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, cast
+from typing import Final, Literal, TypeAlias, cast
 
 from streamlit.errors import (
     StreamlitInvalidColumnGapError,
@@ -59,6 +59,13 @@ SIZE_TO_REM_MAPPING = {
     "large": 4.25,  # Height of large widget without label
     "xlarge": 6,  # Aligns with gap "xlarge" (96px)
     "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
+}
+
+# Shared by st.expander and st.status, which render through the same proto.
+EXPANDABLE_TYPE_TO_PROTO_MAPPING: Final[dict[str, Block.Expandable.Type.ValueType]] = {
+    "default": Block.Expandable.Type.DEFAULT,
+    "compact": Block.Expandable.Type.COMPACT,
+    "step": Block.Expandable.Type.STEP,
 }
 
 

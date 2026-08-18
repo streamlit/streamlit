@@ -2420,13 +2420,11 @@ class Status(Block):
 
     @property
     def state(self) -> str:
-        if self.icon == "spinner":
-            return "running"
-        if self.icon == ":material/check:":
-            return "complete"
-        if self.icon == ":material/error:":
-            return "error"
-        raise ValueError("Unknown Status state")
+        # Blocks are classified as a status by the presence of an icon, so an
+        # st.expander with a custom icon lands here without a state.
+        if self.proto.state == self.proto.State.STATE_UNDEFINED:
+            raise ValueError("Unknown Status state")
+        return self.proto.State.Name(self.proto.state).lower()
 
 
 @dataclass(repr=False)

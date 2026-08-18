@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    EXPANDABLE_TYPE_TO_PROTO_MAPPING,
     Gap,
     Height,
     HorizontalAlignment,
@@ -1103,7 +1104,7 @@ class LayoutsMixin:
         *,
         key: Key | None = None,
         icon: str | None = None,
-        type: Literal["default", "compact"] = "default",
+        type: Literal["default", "compact", "step"] = "default",
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1187,12 +1188,19 @@ class LayoutsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
-        type : "default" or "compact"
-            The visual style of the expander. If ``"default"`` (default), the
-            expander is displayed with a border and background. If ``"compact"``,
-            the expander is rendered as a minimal inline toggle, ideal for
-            displaying AI reasoning, thoughts, or collapsible metadata without
-            visual clutter.
+        type : "default", "compact", or "step"
+            The visual style of the expander. This can be one of the following:
+
+            - ``"default"`` (default): The expander is displayed with a border
+              and background.
+            - ``"compact"``: The expander is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning, thoughts, or
+              collapsible metadata without visual clutter.
+            - ``"step"``: The expander is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline.
 
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
@@ -1323,6 +1331,29 @@ class LayoutsMixin:
             https://doc-expander-callback.streamlit.app/
             height: 300px
 
+        **Example 4: Display a timeline of steps**
+
+        Use ``type="step"`` to turn consecutive expanders into a connected
+        timeline. The last step is empty, so it terminates the timeline.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            with st.expander("Understanding the question", type="step"):
+                st.write("Parsed: 'What is the weather in NYC?'")
+
+            with st.expander("Searching for information", type="step"):
+                st.json({"sources": ["weather.gov", "accuweather.com"]})
+
+            # A step with no content terminates the timeline.
+            st.expander("Generating response", type="step")
+
+        .. output::
+            https://doc-expander-step.streamlit.app/
+            height: 300px
+
         """
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
@@ -1332,8 +1363,10 @@ class LayoutsMixin:
                 "on_change", ["'rerun'", "'ignore'", "a callback function"]
             )
 
-        if type not in {"default", "compact"}:
-            raise StreamlitValueError("type", ["'default'", "'compact'"])
+        if type not in EXPANDABLE_TYPE_TO_PROTO_MAPPING:
+            raise StreamlitValueError(
+                "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
+            )
 
         key = to_key(key)
         is_stateful = on_change != "ignore"
@@ -1395,11 +1428,7 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
-        expandable_proto.type = (
-            BlockProto.Expandable.Type.COMPACT
-            if type == "compact"
-            else BlockProto.Expandable.Type.DEFAULT
-        )
+        expandable_proto.type = EXPANDABLE_TYPE_TO_PROTO_MAPPING[type]
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
@@ -1834,7 +1863,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-        type: Literal["default", "compact"] = "default",
+        type: Literal["default", "compact", "step"] = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
@@ -1891,12 +1920,20 @@ class LayoutsMixin:
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
 
-        type : "default" or "compact"
-            The visual style of the status container. If ``"default"`` (default),
-            the container is displayed with a border and background. If
-            ``"compact"``, the container is rendered as a minimal inline
-            toggle, ideal for displaying AI reasoning or task progress without
-            visual clutter.
+        type : "default", "compact", or "step"
+            The visual style of the status container. This can be one of the
+            following:
+
+            - ``"default"`` (default): The container is displayed with a border
+              and background.
+            - ``"compact"``: The container is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning or task progress
+              without visual clutter.
+            - ``"step"``: The container is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
@@ -1956,6 +1993,31 @@ class LayoutsMixin:
 
         .. output::
             https://doc-status-update.streamlit.app/
+            height: 300px
+
+        With ``type="step"``, consecutive status containers form a connected
+        timeline. The last step is empty, so it terminates the timeline:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import time
+
+            import streamlit as st
+
+            with st.status("Loading data", type="step"):
+                time.sleep(1)
+                st.write("Loaded 1,234 records.")
+
+            with st.status("Analyzing data", type="step"):
+                time.sleep(1)
+                st.write("Found 3 anomalies.")
+
+            # A step with no content terminates the timeline.
+            st.status("Report ready", state="complete", type="step")
+
+        .. output::
+            https://doc-status-step.streamlit.app/
             height: 300px
 
         """

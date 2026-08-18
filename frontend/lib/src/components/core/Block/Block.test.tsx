@@ -20,7 +20,8 @@ import { screen, within } from "@testing-library/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import { AppNode, BlockNode } from "~lib/AppNode"
+import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
@@ -456,6 +457,110 @@ describe("BlockNodeRenderer CSS key class placement", () => {
 
     const innerBlock = screen.getByTestId("stVerticalBlock")
     expect(innerBlock.className).not.toContain("st-key-")
+  })
+})
+
+describe("BlockNodeRenderer step blocks", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeStepNodeComponent(
+    type: BlockProto.Expandable.Type,
+    children: AppNode[]
+  ): ReactElement {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        expandable: { label: "my step", expanded: true, type },
+      })
+    )
+
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("marks a step block and renders its connector", () => {
+    renderWithContexts(
+      makeStepNodeComponent(BlockProto.Expandable.Type.STEP, [
+        text("step child"),
+      ])
+    )
+
+    expect(screen.getByTestId("stLayoutWrapper")).toHaveAttribute(
+      STEP_BLOCK_ATTRIBUTE,
+      "true"
+    )
+    expect(screen.getByTestId("stExpanderStepConnector")).toBeVisible()
+  })
+
+  it("does not mark a default expander block as a step", () => {
+    renderWithContexts(
+      makeStepNodeComponent(BlockProto.Expandable.Type.DEFAULT, [
+        text("expander child"),
+      ])
+    )
+
+    expect(screen.getByTestId("stLayoutWrapper")).not.toHaveAttribute(
+      STEP_BLOCK_ATTRIBUTE
+    )
+  })
+
+  it("puts the step marker and the CSS key class on the same wrapper", () => {
+    // The connector CSS selects step wrappers as direct children of the flex
+    // container, so a key must not move the marker onto a different element.
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("step child")],
+      new BlockProto({
+        allowEmpty: true,
+        expandable: {
+          label: "my step",
+          expanded: true,
+          type: BlockProto.Expandable.Type.STEP,
+        },
+        id: "$$ID-abc123-my_step",
+      })
+    )
+
+    renderWithContexts(
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveAttribute(STEP_BLOCK_ATTRIBUTE, "true")
+    expect(layoutWrapper).toHaveClass("st-key-my_step")
+  })
+
+  it("renders a step without children as a plain header with no connector", () => {
+    renderWithContexts(
+      makeStepNodeComponent(BlockProto.Expandable.Type.STEP, [])
+    )
+
+    expect(screen.getByText("my step")).toBeVisible()
+    expect(
+      screen.queryByTestId("stExpanderStepConnector")
+    ).not.toBeInTheDocument()
   })
 })
 
