@@ -306,6 +306,20 @@ describe("metrics helpers", () => {
     checkDefaultEventData(menuClickProto)
     // Additional Menu Click Event Fields
     expect(menuClickProto.label).toEqual("mockLabel")
+    // surface is left empty when not provided.
+    expect(menuClickProto.surface).toEqual("")
+  })
+
+  it("buildEventProto sets the surface dimension when provided - menuClick", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+    mm.setAppHash("mockAppHash")
+    const menuClickProto = mm.buildEventProto("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "errorCallout",
+    })
+    expect(menuClickProto.label).toEqual("skillsNudgeInstall")
+    expect(menuClickProto.surface).toEqual("errorCallout")
   })
 
   it("getAnonymousId is called on initialization, saves uuid to this.anonymousId", async () => {
