@@ -56,5 +56,9 @@ message Video {
 
   optional streamlit.WidthConfig width_config = 13;
 
+  // Author-provided description of the video, exposed to assistive
+  // technologies as the accessible name. Empty if not provided.
+  string alt = 14;
+
   reserved 1, 2, 4;
 }

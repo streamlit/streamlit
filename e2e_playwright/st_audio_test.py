@@ -25,10 +25,11 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    get_element_by_key,
     goto_app,
 )
 
-AUDIO_ELEMENTS_WITH_PATH = 3
+AUDIO_ELEMENTS_WITH_PATH = 5
 AUDIO_ELEMENTS_WITH_URL = 3
 
 
@@ -51,10 +52,28 @@ def check_audio_source_error_count(messages: list[str], expected_count: int):
 def test_audio_has_correct_properties(app: Page):
     """Test that `st.audio` renders correct properties."""
     audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements).to_have_count(8)
+    expect(audio_elements).to_have_count(10)
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
     expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*mp3"))
+
+
+def test_audio_alt_sets_accessible_name(app: Page):
+    """Test that `st.audio` exposes `alt` as the player's accessible name.
+
+    Asserts the *computed* accessible name rather than just the attribute, since
+    `<audio>` has no mapped ARIA role and the name computation for media
+    elements is less well specified than for role-bearing elements.
+    """
+    audio_element = get_element_by_key(app, "audio_alt").get_by_test_id("stAudio")
+    expect(audio_element).to_have_attribute("aria-label", "A cat purring contentedly")
+    expect(audio_element).to_have_accessible_name("A cat purring contentedly")
+
+    # Audio without `alt` must not get an accessible name at all - an empty
+    # aria-label would be worse than none.
+    unlabeled_audio = get_element_by_key(app, "audio_no_alt").get_by_test_id("stAudio")
+    expect(unlabeled_audio).not_to_have_attribute("aria-label", re.compile(r".*"))
+    expect(unlabeled_audio).to_have_accessible_name("")
 
 
 @pytest.mark.skip_browser("webkit")
