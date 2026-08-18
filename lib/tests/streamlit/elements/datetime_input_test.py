@@ -26,8 +26,8 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateTimeInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -129,7 +129,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
 
     def test_label_visibility_wrong_value(self):
         """Test that invalid label visibility raises."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.datetime_input("the label", label_visibility="wrong_value")
 
     def test_step_validation(self):
@@ -656,8 +656,8 @@ class DateTimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
             st.datetime_input("the label", bind="query-params")
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.datetime_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_explicit_value(self):

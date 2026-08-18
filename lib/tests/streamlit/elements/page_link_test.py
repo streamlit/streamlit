@@ -200,8 +200,8 @@ class PageLinkTest(DeltaGeneratorTestCase):
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_none_icon(self):
-        """Test that st.page_link handles None icon from StreamlitPage correctly"""
-        # None icon defaults to empty string in StreamlitPage
+        """Test that st.page_link handles None icon from Page correctly."""
+        # None icon defaults to empty string in Page
         page = st.Page("foo.py", title="Bar Test", icon=None)
         st.page_link(page=page)
 
@@ -215,7 +215,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.help == ""
 
     def test_external_streamlit_page(self):
-        """Test that st.page_link works with an external StreamlitPage object."""
+        """Test that st.page_link works with an external Page object."""
         page = st.Page("https://docs.streamlit.io", title="Docs", icon="📖")
         st.page_link(page=page)
 
@@ -227,7 +227,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert not c.disabled
 
     def test_external_streamlit_page_with_label_override(self):
-        """Test that st.page_link label overrides external StreamlitPage title."""
+        """Test that st.page_link label overrides an external Page title."""
         page = st.Page("https://docs.streamlit.io", title="Docs")
         st.page_link(page=page, label="Custom Label")
 
@@ -251,3 +251,55 @@ class PageLinkTest(DeltaGeneratorTestCase):
             st.page_link(page="https://example.com", label="Test", icon="   ")
 
         assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_with_mismatched_file_path_raises(self):
+        """Linking to an ``st.Page`` whose file path does not match the page
+        registered under the same ``url_path`` raises.
+
+        Regression coverage for https://github.com/streamlit/streamlit/issues/10572.
+        """
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        bad_page = st.Page("other.py", url_path="foo")
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.page_link(bad_page)
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_with_inferred_url_path_mismatch_raises(self):
+        """Linking to ``st.Page("foo.py")`` (url_path inferred as ``foo``)
+        raises when a different file is registered under ``url_path="foo"``."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.page_link(st.Page("foo.py"))
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_callable_with_file_registered_raises(self):
+        """Linking to a callable-based ``st.Page`` raises when the registered
+        page sharing its ``url_path`` is file-based."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        def some_callable() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match=r"is a callable"):
+            st.page_link(st.Page(some_callable, url_path="foo"))
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_matching_source_does_not_raise(self):
+        """An ``st.Page`` whose source matches the registered page is accepted
+        by validation."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        matching = st.Page("page1.py", url_path="foo")
+        st.page_link(matching)
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_unregistered_url_path_does_not_raise(self):
+        """If no page with the given ``url_path`` is registered (no hash
+        collision), validation is skipped — preserving previous behavior for
+        apps that don't use ``st.navigation``."""
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        st.page_link(st.Page("other.py", url_path="bar"))

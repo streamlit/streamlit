@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
 
@@ -135,6 +135,24 @@ describe("ImageList Element", () => {
       const caption = screen.getByTestId("stImageCaption")
       expect(caption).toHaveTextContent("Test caption")
     })
+
+    it.each([
+      "javascript:alert(1)",
+      "JAVASCRIPT:alert(1)",
+      "java\nscript:alert(1)",
+      "vbscript:msgbox(1)",
+    ])("blocks dangerous link URLs: %s", linkUrl => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: linkUrl,
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("href", "#")
+      expect(link).toHaveAttribute("target", "_self")
+      expect(link).toHaveAttribute("rel", "noreferrer")
+    })
   })
 
   describe("New width configuration system", () => {
@@ -238,8 +256,7 @@ describe("ImageList Element", () => {
     const images = screen.getAllByRole("img")
     expect(images).toHaveLength(2)
 
-    // Trigger the error event on the first image using fireEvent
-    fireEvent.error(images[0])
+    images[0].dispatchEvent(new Event("error"))
 
     // Verify the error was sent with correct parameters
     expect(sendClientErrorToHost).toHaveBeenCalledWith(

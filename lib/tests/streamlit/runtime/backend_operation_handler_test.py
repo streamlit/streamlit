@@ -15,7 +15,11 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
+
+import click
+import pytest
 
 from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 from streamlit.proto.ForwardMsg_pb2 import (
@@ -23,9 +27,31 @@ from streamlit.proto.ForwardMsg_pb2 import (
     DeferredFileResponsePayload,
 )
 from streamlit.runtime.backend_operation_handler import (
+    _UNEXPECTED_REASON_PREFIX,
     BackendOperationDispatcher,
     DeferredFileHandler,
+    DismissSkillsNudgeHandler,
+    InstallSkillsHandler,
+    _exception_reason,
+    connection_locality,
 )
+from streamlit.web import skills
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+
+@pytest.fixture(autouse=True)
+def _default_loopback_connection() -> Iterator[None]:
+    """Default the skills-nudge connection-locality gate to ``"loopback"`` so the
+    install/dismiss handler tests exercise their action paths. Tests that probe
+    the non-loopback refusal override this with their own patch."""
+    with patch(
+        "streamlit.runtime.backend_operation_handler.connection_locality",
+        return_value="loopback",
+    ):
+        yield
 
 
 def _create_deferred_file_request(
@@ -114,6 +140,12 @@ def test_dispatch_returns_error_when_handler_fails() -> None:
 
     assert response.request_id == "request-id"
     assert response.error_msg == "Failed to process backend operation"
+    # The dispatcher's catch-all used to return no reason at all, so a handler that
+    # raised past its own try/except produced a bare telemetry label -
+    # indistinguishable from a pre-1.61 client and silent about the operation
+    # possibly never having run. ``dispatch`` is the deepest Streamlit frame here:
+    # the handler that raised lives in this test module, which is correctly skipped.
+    assert response.error_reason == "unhandled_RuntimeError_in_dispatch"
     assert not response.HasField("deferred_file")
 
 
@@ -147,3 +179,571 @@ def test_deferred_file_handler_returns_error_response() -> None:
     assert response.request_id == "request-id"
     assert response.error_msg == "Failed to generate file for download"
     assert not response.HasField("deferred_file")
+
+
+def _install_skills_request(
+    *, request_id: str = "request-id", session_id: str = "session-id"
+) -> BackendOperationRequest:
+    request = BackendOperationRequest(request_id=request_id, session_id=session_id)
+    request.install_skills.SetInParent()
+    return request
+
+
+def _dismiss_nudge_request(
+    *, request_id: str = "request-id", session_id: str = "session-id"
+) -> BackendOperationRequest:
+    request = BackendOperationRequest(request_id=request_id, session_id=session_id)
+    request.dismiss_skills_nudge.SetInParent()
+    return request
+
+
+def test_install_skills_handler_installs_in_project_mode() -> None:
+    """A successful install returns a payload, a summary, and clears the cache."""
+    install_result = skills._InstallResult(
+        installed=[".agents/skills/foo", ".claude/skills/foo"]
+    )
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills", return_value=install_result
+        ) as mock_install,
+        patch.object(skills, "clear_installed_skills_cache") as mock_clear,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    # Install resolves its root from the app dir so it lands in the tree the
+    # nudge detected against (not the server's cwd).
+    mock_install.assert_called_once_with(
+        global_mode=False, yes=True, app_dir="/app/dir"
+    )
+    # The cache is invalidated so a later session doesn't re-show the nudge.
+    mock_clear.assert_called_once()
+    assert response.request_id == "request-id"
+    assert response.HasField("install_skills")
+    # The result is summarized into a user-facing detail message for the toast.
+    assert (
+        response.install_skills.detail == "Installed to .agents/skills, .claude/skills."
+    )
+    assert response.error_msg == ""
+    # A normal project (symlink) install did not take the global fallback.
+    assert response.install_skills.fallback_reason == ""
+
+
+def test_install_skills_handler_forwards_global_fallback_flag() -> None:
+    """A fallback install forwards WHICH fallback route it took, so the frontend can
+    emit skillsNudgeInstallSucceeded:<fallback_reason> and the two causes stay
+    separable in the funnel.
+    """
+    install_result = skills._InstallResult(
+        installed=["~/.agents/skills/foo"], fallback_reason="symlink_failed"
+    )
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", return_value=install_result),
+        patch.object(skills, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.HasField("install_skills")
+    assert response.install_skills.fallback_reason == "symlink_failed"
+
+
+def test_install_skills_handler_reports_failure() -> None:
+    """Install failures are returned via the response's error message."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=click.ClickException("No skills found"),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_msg == "No skills found"
+    # A ``ClickException`` that is not an ``InstallError`` carries no vocabulary
+    # reason, so the reason names its class and origin rather than "unknown".
+    assert response.error_reason == "unexpected_ClickException_in_handle"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_forwards_failure_reason() -> None:
+    """A ``skills.InstallError`` propagates its machine-readable ``reason`` into
+    the response's ``error_reason`` so the client can split install-failure
+    telemetry by cause (e.g. conflict vs. write_failed vs. source_missing)."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=skills.InstallError(
+                "developing-with-streamlit already exists. Remove it and try again.",
+                reason="conflict",
+            ),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_msg == (
+        "developing-with-streamlit already exists. Remove it and try again."
+    )
+    assert response.error_reason == "conflict"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_does_not_leak_os_error_path() -> None:
+    """A non-``ClickException`` ``OSError`` yields a generic message but a
+    ``write_failed`` reason.
+
+    ``click.ClickException`` messages are developer-authored and safe to show in
+    the browser toast, but a raw ``OSError`` can embed an absolute server path -
+    so the message is replaced with a generic string. The reason, however, is
+    still meaningful: a bare ``OSError`` escaping the installer (e.g. a
+    permission error creating the target dir, before the copy's own try/except)
+    is a filesystem write failure, so it's classified ``write_failed`` rather
+    than buried in ``unknown``.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=OSError("/absolute/server/path/.agents/skills is not writable"),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_msg == "Failed to install skills."
+    assert "/absolute/server/path" not in response.error_msg
+    assert response.error_reason == "write_failed"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
+    """A non-InstallError exception exposing a str ``.reason`` must NOT be emitted.
+
+    The handler used to read the reason with ``getattr(ex, 'reason')``, so any
+    exception carrying a free-form str ``.reason`` (``UnicodeDecodeError`` and
+    several stdlib errors do) would emit an unbounded telemetry label and break the
+    fixed vocabulary. The reason is now trusted ONLY from skills.InstallError; a
+    non-OSError foreign exception is named by its class instead.
+    """
+    foreign = ValueError("boom")
+    foreign.reason = "some-unbounded-string"  # type: ignore[attr-defined]
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", side_effect=foreign),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unexpected_ValueError_in_handle"
+    assert "some-unbounded-string" not in response.error_reason
+
+
+def test_install_skills_handler_names_unclassified_exception_class() -> None:
+    """An exception no vocabulary entry covers is reported by class and origin.
+
+    Every such failure used to collapse into one ``unknown`` bucket, which made the
+    largest share of install failures undiagnosable from telemetry - the traceback is
+    logged server-side but never leaves the machine. Class name and raising function
+    are code identifiers, so they split the bucket without carrying a path or any
+    user data.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=RuntimeError("/absolute/server/path exploded"),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unexpected_RuntimeError_in_handle"
+    # The identifiers are safe; the *message* is not, and is never part of the reason.
+    assert "/absolute/server/path" not in response.error_reason
+    assert response.error_msg == "Failed to install skills."
+
+
+def test_install_skills_handler_names_deepest_streamlit_frame() -> None:
+    """The reason names the *deepest* Streamlit frame, not the outermost one.
+
+    Naming ``handle`` for every failure would be barely better than ``unknown`` - the
+    point is to localize the bug. Here the real installer runs and its innermost step
+    raises, so the reason must name ``_install_project_skills`` (the Streamlit function
+    that made the failing call) rather than the handler that started it all.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch.object(
+            skills, "_get_source_skills_dir", side_effect=RuntimeError("boom")
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unexpected_RuntimeError_in__install_project_skills"
+
+
+def test_exception_reason_falls_back_to_class_without_traceback() -> None:
+    """An exception that was never raised has no traceback, so only the class is named.
+
+    The prefix and class stay in the same position either way, so a
+    ``unexpected_ValueError%`` prefix match works whether or not a frame resolved.
+    """
+    reason = _exception_reason(_UNEXPECTED_REASON_PREFIX, ValueError("never raised"))
+
+    assert reason == "unexpected_ValueError"
+
+
+def test_exception_reason_skips_non_streamlit_frames() -> None:
+    """Only frames inside the ``streamlit`` package may be named.
+
+    This is what keeps a function from the *user's own app* out of the label: their
+    module never sits under ``streamlit``, so a traceback made up entirely of
+    third-party and user frames resolves to no function at all.
+    """
+
+    def _raise_outside_streamlit() -> None:
+        raise ValueError("from a test module, not streamlit")
+
+    try:
+        _raise_outside_streamlit()
+    except ValueError as ex:
+        reason = _exception_reason(_UNEXPECTED_REASON_PREFIX, ex)
+
+    assert reason == "unexpected_ValueError"
+
+
+def test_install_skills_handler_bounds_hostile_exception_class_name() -> None:
+    """The class name is sanitized and length-capped before becoming a label.
+
+    Class names are Python identifiers in practice, but a dynamically built class can
+    carry arbitrary text, and this value ends up as a telemetry label suffix. Anything
+    outside identifier characters is dropped - including the ``:`` that downstream
+    ``split_part(label, ':', 2)`` queries would otherwise truncate on.
+    """
+    hostile = type("Bad: name\nwith 💥 junk" + "X" * 80, (Exception,), {})
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", side_effect=hostile("boom")),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    reason = response.error_reason
+    assert reason == "unexpected_BadnamewithjunkXXXXXXXXXXXXXXXXXXXXXXXXX_in_handle"
+    # The class portion is capped at 40 chars, independent of the frame suffix.
+    assert len(reason.removeprefix("unexpected_").removesuffix("_in_handle")) == 40
+    assert ":" not in reason
+    assert "\n" not in reason
+
+
+def test_install_skills_handler_refuses_without_agent_harness() -> None:
+    """The install ACTION is gated on safety, not the nudge's display predicate:
+    with no agent harness present (and not headless) the request is anomalous,
+    so the install is refused and never attempted.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=[]),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    mock_install.assert_not_called()
+    assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "refused:no_agent"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_refuses_non_loopback_connection() -> None:
+    """The install is refused when the browser is not on a direct-loopback
+    connection (Docker/VM/tunnel), even with an agent present and not headless,
+    so a shared/deployed-ish app can never trigger a filesystem write."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="private",
+        ),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    mock_install.assert_not_called()
+    assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "refused:non_loopback"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_allows_idempotent_retry_when_already_installed() -> (
+    None
+):
+    """Regression: the action must NOT be gated on "skills already installed".
+
+    A retry after a dropped connection whose first attempt completed
+    server-side must succeed (the re-install reports "up to date"), not be
+    refused — otherwise a success is surfaced as an unrecoverable error and
+    logged as a failed install. So with an agent present and not headless, the
+    handler installs even though detection would already report the skills.
+    """
+    up_to_date = skills._InstallResult(up_to_date=[".agents/skills/foo"])
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        # Skills already present (the nudge's display predicate would be False)...
+        patch.object(
+            skills,
+            "detect_installed_skills",
+            return_value=["app:claude:developing-with-streamlit"],
+        ),
+        patch(
+            "streamlit.web.skills.install_skills", return_value=up_to_date
+        ) as mock_install,
+        patch.object(skills, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    # ...the retry still runs and reports a clean idempotent success.
+    mock_install.assert_called_once_with(
+        global_mode=False, yes=True, app_dir="/app/dir"
+    )
+    assert response.error_msg == ""
+    assert response.error_reason == ""
+    assert response.HasField("install_skills")
+    assert response.install_skills.detail == "Skills are already up to date."
+
+
+def test_install_skills_handler_refuses_in_headless_mode() -> None:
+    """End-to-end gate check: with headless on, the handler refuses without
+    attempting an install (the nudge is never shown in headless mode).
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=True),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    mock_install.assert_not_called()
+    assert response.error_msg == "Skills install is not available in this environment."
+    assert response.error_reason == "refused:headless"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
+    """End-to-end: the handler runs the real installer and reports where skills
+    landed, so a click on the nudge actually creates the symlinks.
+    """
+    # Skip on systems without symlink support (e.g. Windows without Dev Mode).
+    try:
+        (tmp_path / ".symlink_probe").symlink_to(tmp_path)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported on this platform")
+
+    source_dir = tmp_path / "streamlit" / ".agents" / "skills"
+    skill_dir = source_dir / "developing-with-streamlit"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
+
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
+        patch("pathlib.Path.cwd", return_value=project_dir),
+        # No ~/.claude, so only .agents/skills is targeted.
+        patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        patch.object(skills, "clear_installed_skills_cache"),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: str(project_dir)).handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    # The symlink was actually created in the project directory (resolved from
+    # the app dir the handler was given)...
+    installed = project_dir / ".agents" / "skills" / "developing-with-streamlit"
+    assert installed.is_symlink()
+    # ...and the response reports it back to the nudge for display.
+    assert response.error_msg == ""
+    assert response.HasField("install_skills")
+    assert response.install_skills.detail == "Installed to .agents/skills."
+
+
+def test_dismiss_skills_nudge_handler_writes_marker() -> None:
+    """Dismissing the nudge persists the marker and acknowledges success."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write,
+    ):
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    mock_write.assert_called_once_with()
+    assert response.request_id == "request-id"
+    assert response.error_msg == ""
+    assert response.HasField("dismiss_skills_nudge")
+
+
+def test_dismiss_skills_nudge_handler_refuses_non_loopback_connection() -> None:
+    """The dismiss marker is never written from a non-loopback connection
+    (mirrors the install gate)."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="other",
+        ),
+        patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write,
+    ):
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    mock_write.assert_not_called()
+    assert response.error_msg == "Skills nudge is not available in this environment."
+    assert not response.HasField("dismiss_skills_nudge")
+
+
+def test_dismiss_skills_nudge_handler_refuses_in_headless_mode() -> None:
+    """The marker is never written in headless mode (mirrors the install gate)."""
+    with (
+        patch("streamlit.config.get_option", return_value=True),
+        patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write,
+    ):
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    mock_write.assert_not_called()
+    assert not response.HasField("dismiss_skills_nudge")
+    assert response.error_msg == "Skills nudge is not available in this environment."
+
+
+def test_dismiss_skills_nudge_handler_reports_failure() -> None:
+    """Marker write failures are surfaced as an error response."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch(
+            "streamlit.web.skills.write_nudge_dismissed_marker",
+            side_effect=OSError("disk full"),
+        ),
+    ):
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    assert response.error_msg == "Failed to save your preference."
+
+
+@pytest.mark.parametrize(
+    ("remote_ip", "expected"),
+    [
+        ("127.0.0.1", "loopback"),
+        ("::1", "loopback"),
+        ("10.0.0.5", "private"),
+        ("172.17.0.1", "private"),  # Docker bridge gateway
+        ("192.168.1.10", "private"),
+        ("169.254.1.1", "private"),  # link-local
+        ("8.8.8.8", "other"),
+        ("2606:4700:4700::1111", "other"),
+        ("not-an-ip", "unknown"),
+        (None, "unknown"),
+    ],
+)
+def test_connection_locality_classifies_peer_ip(
+    remote_ip: str | None, expected: str
+) -> None:
+    """``connection_locality`` maps the raw websocket peer IP to a coarse class.
+
+    Uses the raw ``remote_ip`` (loopback is "127.0.0.1"/"::1", NOT normalized to
+    None like ``st.context.ip_address``), so a genuine loopback dev connection
+    is distinguished from Docker/VM/LAN (private) and public (other) peers.
+    """
+    client = MagicMock()
+    client.client_context.remote_ip = remote_ip
+    instance = MagicMock()
+    instance.get_client.return_value = client
+    with (
+        patch("streamlit.runtime.exists", return_value=True),
+        patch("streamlit.runtime.get_instance", return_value=instance),
+    ):
+        assert connection_locality("session-id") == expected
+
+
+def test_connection_locality_unknown_when_runtime_absent() -> None:
+    """No running runtime (e.g. ``python app.py`` raw mode) → unknown, no raise."""
+    with patch("streamlit.runtime.exists", return_value=False):
+        assert connection_locality("session-id") == "unknown"
+
+
+def test_connection_locality_unknown_when_no_client() -> None:
+    """An unknown/closed session (no client) → unknown rather than raising."""
+    instance = MagicMock()
+    instance.get_client.return_value = None
+    with (
+        patch("streamlit.runtime.exists", return_value=True),
+        patch("streamlit.runtime.get_instance", return_value=instance),
+    ):
+        assert connection_locality("missing") == "unknown"

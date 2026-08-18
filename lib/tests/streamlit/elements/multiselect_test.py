@@ -30,7 +30,6 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
@@ -321,11 +320,11 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.multiselect("the label", ("m", "f"), label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_max_selections(self):
@@ -688,6 +687,28 @@ class TestMultiSelectSerde:
         res = serde.serialize(["A", "Option C"])
         assert res == ["Format: A", "Format: Option C"]
 
+    def test_serialize_falls_back_to_str_when_format_func_raises(self):
+        """When format_func raises, serialize falls back to str(value)."""
+        options = [{"id": "a"}, {"id": "b"}]
+
+        def format_func(x):
+            return x["id"]
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # A bare string value makes format_func raise a TypeError, triggering the
+        # str(value) fallback path.
+        res = serde.serialize(["free text"])
+        assert res == ["free text"]
+
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
         formatted_options, formatted_option_to_option_index = create_mappings(options)
@@ -931,8 +952,8 @@ class MultiSelectBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.multiselect("the label", ["a", "b"], key="my_key", bind="invalid-value")
 
     def test_bind_with_format_func(self):

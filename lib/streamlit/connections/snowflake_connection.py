@@ -121,22 +121,19 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> st.dataframe(df)
 
         """
-        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+        from streamlit.connections import retry_util
 
-        @retry(
-            after=lambda _: self.reset(),
-            stop=stop_after_attempt(3),
-            reraise=True,
+        @retry_util.retry(
+            max_attempts=3,
+            wait_seconds=1,
             # We don't have to implement retries ourself for most error types as the
             # `snowflake-connector-python` library already implements retries for
             # retryable HTTP errors.
-            retry=retry_if_exception(
-                lambda e: (
-                    hasattr(e, "sqlstate")
-                    and e.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
-                )
+            retry_on_exception=lambda exc: (
+                hasattr(exc, "sqlstate")
+                and exc.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
             ),
-            wait=wait_fixed(1),
+            after=self.reset,
         )
         # `params` must be an explicit parameter (not captured from closure) so that
         # `@st.cache_data` includes it in the cache key.
@@ -158,12 +155,12 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
-        _query = cache_data(
+        cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
         )(_query)
 
-        return _query(self._connection_instance_id, sql, params)
+        return cached_query(self._connection_instance_id, sql, params)
 
     def write_pandas(
         self,
@@ -428,7 +425,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     `key-pair authentication <https://docs.snowflake.com/en/user-guide/key-pair-auth>`_.
 
     .. code-block:: toml
-        :filename: ~/.snowflake/connections.toml
+        :filename: .streamlit/secrets.toml
 
         [connections.snowflake]
         account = "xxx-xxx"
@@ -485,8 +482,11 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     Snowflake's Python Connector supports a `connection configuration file
     <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file>`_,
     which is well integrated with Streamlit's ``SnowflakeConnection``. If you
-    already have one or more connections configured, all you need to do is pass
-    the name of the connection to use.
+    already have one or more connections configured, you can pass the name of
+    the connection to use. When you use a custom name with no
+    ``[connections.<name>]`` Streamlit secrets and no connection keyword
+    arguments, Streamlit passes the name to Snowflake's Python Connector as
+    ``connection_name``.
 
     .. code-block:: toml
         :filename: ~/.snowflake/connections.toml
@@ -506,6 +506,10 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
         conn = st.connection("my_connection", type="snowflake")
         df = conn.query("SELECT * FROM my_table")
+
+    Snowflake's CLI uses ``[connections.my_connection]`` sections in
+    ``config.toml``. The shared ``connections.toml`` file used by the Python
+    Connector omits the ``connections.`` prefix, as shown above.
 
     **Example 4: Named connection with Streamlit secrets and Snowflake's connection configuration file**
 
@@ -538,10 +542,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     ``my_connection`` as in Example 3, you can set an environment variable to
     declare it as the default Snowflake connection.
 
-    .. code-block:: toml
-        :filename: .streamlit/secrets.toml
+    .. code-block:: shell
 
-        SNOWFLAKE_DEFAULT_CONNECTION_NAME = "my_connection"
+        export SNOWFLAKE_DEFAULT_CONNECTION_NAME="my_connection"
 
     .. code-block:: python
         :filename: streamlit_app.py
@@ -659,6 +662,16 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                     "in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
                 )
                 return snowflake.connector.connect()
+
+            # Use a named connection defined in the Snowflake connections.toml file.
+            if self._connection_name and not kwargs:
+                _LOGGER.info(
+                    "Connecting to Snowflake using connection_name=%s.",
+                    self._connection_name,
+                )
+                return snowflake.connector.connect(
+                    connection_name=self._connection_name
+                )
 
             return snowflake.connector.connect(**kwargs)
         except SnowflakeError:

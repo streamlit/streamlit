@@ -16,42 +16,28 @@
 
 import { ReactElement, ReactNode } from "react"
 
-import { ModalBody as UIModalBody } from "baseui/modal"
-import { CloseSource } from "baseui/modal/types"
+import styled from "@emotion/styled"
 
-import { Modal, ModalHeader, useEmotionTheme } from "@streamlit/lib"
+import { Modal, ModalHeader } from "@streamlit/lib"
 
 interface IDeployModalProps {
   children: React.ReactNode
-  onClose: (a: { closeSource?: CloseSource }) => unknown
+  onClose: () => void
 }
 
 interface ModalBodyProps {
   children: ReactNode
 }
 
-function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
-  const { colors, fontSizes, spacing } = useEmotionTheme()
+const StyledDeployModalBody = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.md,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.md,
+  overflowY: "auto",
+}))
 
-  return (
-    <UIModalBody
-      style={{
-        marginTop: spacing.none,
-        marginLeft: spacing.none,
-        marginRight: spacing.none,
-        marginBottom: spacing.none,
-        paddingTop: spacing.md,
-        paddingRight: spacing.none,
-        paddingBottom: spacing.none,
-        paddingLeft: spacing.none,
-        color: colors.bodyText,
-        fontSize: fontSizes.md,
-        overflowY: "auto",
-      }}
-    >
-      {children}
-    </UIModalBody>
-  )
+function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
+  return <StyledDeployModalBody>{children}</StyledDeployModalBody>
 }
 
 function DeployModal(

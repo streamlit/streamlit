@@ -25,8 +25,10 @@ import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
-import type { UseLayoutStylesArgs } from "~lib/components/core/Layout/useLayoutStyles"
+import {
+  extractLayoutSubElement,
+  useLayoutStyles,
+} from "~lib/components/core/Layout/useLayoutStyles"
 import {
   Direction,
   getDirectionOfBlock,
@@ -59,7 +61,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getColumnGapSize,
+  getColumnGapConfig,
   getKeyFromId,
   isComponentStale,
   shouldActivateScrollToBottom,
@@ -109,46 +111,6 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   return <>{elements}</>
 }
 
-/**
- * Extract only layout-relevant fields from a block submessage to satisfy
- * `useLayoutStyles`'s `subElement` shape while being robust to unrelated block
- * types like TabContainer.
- */
-const getLayoutSubElement = (
-  block: BlockProto
-): UseLayoutStylesArgs["subElement"] => {
-  const typeKey = block.type as keyof typeof block | undefined
-  const raw = typeKey
-    ? (block as unknown as Record<string, unknown>)[typeKey]
-    : undefined
-  if (!raw || typeof raw !== "object") return undefined
-
-  const candidate = raw as Record<string, unknown>
-  const subElement = {
-    useContainerWidth: candidate.useContainerWidth as
-      | boolean
-      | null
-      | undefined,
-    height: candidate.height as number | undefined,
-    width: candidate.width as number | undefined,
-    widthConfig: candidate.widthConfig as
-      | streamlit.IWidthConfig
-      | null
-      | undefined,
-  }
-
-  if (
-    subElement.useContainerWidth === undefined &&
-    subElement.height === undefined &&
-    subElement.width === undefined &&
-    subElement.widthConfig === undefined
-  ) {
-    return undefined
-  }
-
-  return subElement
-}
-
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
@@ -163,7 +125,7 @@ export const ContainerContentsWrapper = (
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
-    gap: streamlit.GapSize.SMALL,
+    gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
@@ -201,20 +163,28 @@ export const FlexBoxContainer = (
 
   const layout_styles = useLayoutStyles({
     element: props.node.deltaBlock,
-    subElement: getLayoutSubElement(props.node.deltaBlock),
+    subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
+
+  // Absent wrap on a FlexContainer message means nowrap. This is also
+  // backwards compatible, since older messages did not set wrap.
+  const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
+  // A horizontal container with `wrap=false` (including st.columns(wrap=False))
+  // keeps its elements in a single row and scrolls horizontally when they
+  // don't fit, instead of wrapping.
+  const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
 
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
       // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+      props.node.deltaBlock.flexContainer?.gapConfig ?? {
+        gapSize: streamlit.GapSize.SMALL,
+      },
     direction: direction,
-    // This is also backwards compatible since previously wrap was not added
-    // to the flex container.
-    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    $wrap: wrap,
     overflow: layout_styles.overflow,
+    overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // We need the height on the container for scrolling.
     height: layout_styles.height,
@@ -240,6 +210,7 @@ export const FlexBoxContainer = (
   return (
     <FlexContextProvider
       direction={direction}
+      wrap={wrap}
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
@@ -252,6 +223,7 @@ export const FlexBoxContainer = (
           convertKeyToClassName(userKey)
         )}
         data-testid={getClassnamePrefix(direction)}
+        data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
@@ -276,6 +248,7 @@ export const BlockNodeRenderer = (
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
+  const flexContext = useContext(FlexContext)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
@@ -298,7 +271,7 @@ export const BlockNodeRenderer = (
 
   const styles = useLayoutStyles({
     element: node.deltaBlock,
-    subElement: getLayoutSubElement(node.deltaBlock),
+    subElement: extractLayoutSubElement(node.deltaBlock),
     minStretchBehavior,
   })
 
@@ -324,6 +297,17 @@ export const BlockNodeRenderer = (
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
+
+  // Transparent blocks group elements in the backend tree without adding DOM.
+  // Children render directly in the parent's flex context.
+  if (node.deltaBlock.transparent) {
+    return (
+      <ChildRenderer
+        {...childProps}
+        disableFullscreenMode={disableFullscreenMode}
+      />
+    )
+  }
 
   let containerElement: ReactElement | undefined
   // Whether the CSS key class (st-key-*) is applied on StyledLayoutWrapper.
@@ -421,11 +405,13 @@ export const BlockNodeRenderer = (
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={getColumnGapSize(node.deltaBlock.column)}
+        gap={getColumnGapConfig(node.deltaBlock.column)}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
         showBorder={node.deltaBlock.column.showBorder ?? false}
+        // Inherit parent row wrap; default true when FlexContext is absent.
+        $wrap={flexContext?.wrap ?? true}
         className="stColumn"
         data-testid="stColumn"
       >
@@ -435,11 +421,25 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.tabContainer) {
+    // Only pixel / stretch heights actually constrain the tab container. A
+    // `height="content"` config yields `styles.height === "auto"`, which
+    // shouldn't switch tabs into the fill-and-scroll layout — that would clip
+    // content that legitimately overflows (tooltips, focus rings, drop
+    // shadows).
+    const heightConfig = node.deltaBlock.heightConfig
+    const hasConstrainingHeight =
+      notNullOrUndefined(heightConfig) && !heightConfig.useContent
+    const contentHeight = hasConstrainingHeight ? "100%" : "auto"
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
       // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
-      return <ContainerContentsWrapper {...mappedChildProps} height="auto" />
+      return (
+        <ContainerContentsWrapper
+          {...mappedChildProps}
+          height={contentHeight}
+        />
+      )
     }
     // We can't use StyledLayoutWrapper for tabs currently because of the horizontal scrolling
     // management that is handled in the Tabs component. TODO(lwilby): Investigate whether it makes
@@ -449,6 +449,7 @@ export const BlockNodeRenderer = (
       isStale,
       renderTabContent,
       width: styles.width,
+      height: hasConstrainingHeight ? styles.height : undefined,
       flex: styles.flex,
       fragmentId: node.fragmentId,
     }

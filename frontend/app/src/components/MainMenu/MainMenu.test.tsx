@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen } from "@testing-library/react"
+import { act, cleanup, screen, waitFor } from "@testing-library/react"
 import {
   PointerEventsCheckLevel,
   userEvent,
@@ -74,13 +74,13 @@ const getProps = (extend?: Partial<Props>): Props => ({
 })
 
 describe("MainMenu", () => {
-  // BaseWeb's StatefulPopover uses timers internally, so we need fake timers
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
-
   afterEach(() => {
-    vi.useRealTimers()
+    // Guard: run cleanup inside act() before RTL's automatic afterEach fires.
+    // Floating UI's autoUpdate disconnect calls flushSync internally,
+    // which triggers a React warning if it fires outside an act boundary.
+    act(() => {
+      cleanup()
+    })
   })
 
   it("renders without crashing", () => {
@@ -90,31 +90,51 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
   })
 
-  // userEvent only emits modern key values; legacy Spacebar variants are handled
-  // in production but not emitted by userEvent in tests.
-  it.each([["{Enter}"], ["{Space}"]])(
-    "opens the menu with keyboard (%s)",
-    async key => {
-      const props = getProps()
-      render(<MainMenu {...props} />)
+  it("opens the menu when the trigger button is clicked", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const menuButton = screen.getByRole("button", { name: "Main menu" })
-      menuButton.focus()
+    await openMenu()
 
-      await user.keyboard(key)
-      vi.runOnlyPendingTimers()
+    expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+  })
 
+  it("opens the menu with Enter key", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    const user = userEvent.setup()
+    const menuButton = screen.getByRole("button", { name: "Main menu" })
+    menuButton.focus()
+
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
       expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
-    }
-  )
+    })
+  })
+
+  it("opens the menu with Space key", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    const user = userEvent.setup()
+    const menuButton = screen.getByRole("button", { name: "Main menu" })
+    menuButton.focus()
+
+    await user.keyboard(" ")
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+    })
+  })
 
   it("moves focus with arrow keys", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
     const toggleItem = screen.getByRole("menuitemcheckbox", {
       name: /Auto rerun/,
@@ -137,7 +157,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     const menuItems = screen.getAllByRole("menuitem")
 
     await user.keyboard("{End}")
@@ -152,7 +172,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     const menuItems = screen.getAllByRole("menuitem")
 
     await user.keyboard("{End}")
@@ -176,7 +196,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
 
     // Rerun is the first item in the default context (no theme radios)
@@ -216,7 +236,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
     const clearCacheItem = screen.getByRole("menuitem", {
       name: /Clear cache/,
@@ -248,7 +268,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
 
     // Rerun is the first item (no theme radios in default context)
     const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
@@ -264,7 +284,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
 
     // Rerun is the first item (no theme radios in default context)
     const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
@@ -280,29 +300,45 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
 
     // Press Escape while focus is inside the menu
     await user.keyboard("{Escape}")
-    // Flush React state updates and BaseWeb's animateOut timers
-    act(() => {
-      vi.runAllTimers()
+
+    expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+  })
+
+  it("closes the menu when clicking outside", async () => {
+    const props = getProps()
+    render(
+      <>
+        <MainMenu {...props} />
+        <button data-testid="outside-element">Outside</button>
+      </>
+    )
+    await openMenu()
+
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
     })
+    await user.click(screen.getByTestId("outside-element"))
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
   })
 
   it("closes the menu when Tab is pressed without returning focus to trigger", async () => {
     const props = getProps()
-    render(<MainMenu {...props} />)
+    render(
+      <>
+        <MainMenu {...props} />
+        <button data-testid="next-focusable">Next</button>
+      </>
+    )
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
 
     await user.keyboard("{Tab}")
-    act(() => {
-      vi.runAllTimers()
-    })
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
     // Per WAI-ARIA, Tab should let focus advance — not force it back to trigger
@@ -311,15 +347,17 @@ describe("MainMenu", () => {
 
   it("closes the menu when Shift+Tab is pressed without returning focus to trigger", async () => {
     const props = getProps()
-    render(<MainMenu {...props} />)
+    render(
+      <>
+        <button data-testid="prev-focusable">Prev</button>
+        <MainMenu {...props} />
+      </>
+    )
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
 
     await user.keyboard("{Shift>}{Tab}{/Shift}")
-    act(() => {
-      vi.runAllTimers()
-    })
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
     // Per WAI-ARIA, Shift+Tab should let focus move back — not force it to trigger
@@ -332,14 +370,8 @@ describe("MainMenu", () => {
 
     await openMenu()
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     await user.keyboard("{Escape}")
-
-    // Flush BaseWeb's animateOut timers so the popover unmounts and
-    // react-focus-lock invokes our returnFocus callback synchronously.
-    act(() => {
-      vi.runAllTimers()
-    })
 
     expect(screen.getByRole("button", { name: "Main menu" })).toHaveFocus()
   })
@@ -350,17 +382,9 @@ describe("MainMenu", () => {
 
     await openMenu()
 
-    // Click a menu item to close the popover (triggers onClose → handlePopoverClose)
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     await user.click(screen.getByRole("menuitem", { name: /Rerun/ }))
 
-    // Flush BaseWeb's animateOut timers so the popover unmounts and
-    // react-focus-lock invokes our returnFocus callback synchronously.
-    act(() => {
-      vi.runAllTimers()
-    })
-
-    // Get a fresh reference since DOM may have been recreated during re-renders
     expect(screen.getByRole("button", { name: "Main menu" })).toHaveFocus()
   })
 
@@ -380,7 +404,7 @@ describe("MainMenu", () => {
     }
 
     // Navigate down - tabindex should follow focus (next item is Auto-rerun toggle)
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     await user.keyboard("{ArrowDown}")
 
     const toggleItem = screen.getByRole("menuitemcheckbox", {
@@ -396,7 +420,7 @@ describe("MainMenu", () => {
     await openMenu()
 
     const menuItems = screen.getAllByRole("menuitem")
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
 
     // Simulate mouse-driven focus by directly focusing item at index 2.
     // The onFocus delegation handler should sync focusedIndex so the
@@ -507,16 +531,8 @@ describe("MainMenu", () => {
     )
 
     // Close the menu by clicking a menu item
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     await user.click(screen.getByRole("menuitem", { name: /Rerun/ }))
-
-    // Flush BaseWeb's animateOut and our 50ms focus-return timer
-    act(() => {
-      vi.advanceTimersByTime(30)
-    })
-    act(() => {
-      vi.advanceTimersByTime(30)
-    })
 
     expect(screen.getByRole("button", { name: "Main menu" })).toHaveAttribute(
       "aria-expanded",
@@ -636,7 +652,9 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByRole("menuitem", { name: "About" }).click()
+    act(() => {
+      screen.getByRole("menuitem", { name: "About" }).click()
+    })
 
     expect(props.aboutCallback).toHaveBeenCalled()
   })
@@ -652,7 +670,9 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByRole("menuitem", { name: "Get help" }).click()
+    act(() => {
+      screen.getByRole("menuitem", { name: "Get help" }).click()
+    })
 
     expect(windowOpenSpy).toHaveBeenCalledWith(
       "https://example.com/help",
@@ -672,7 +692,9 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByRole("menuitem", { name: "Report a bug" }).click()
+    act(() => {
+      screen.getByRole("menuitem", { name: "Report a bug" }).click()
+    })
 
     expect(windowOpenSpy).toHaveBeenCalledWith(
       "https://example.com/bug",
@@ -892,7 +914,9 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByRole("menuitem", { name: /Rerun/ }).click()
+    act(() => {
+      screen.getByRole("menuitem", { name: /Rerun/ }).click()
+    })
 
     expect(props.quickRerunCallback).toHaveBeenCalled()
   })
@@ -975,7 +999,9 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByRole("menuitem", { name: /Rerun/ }).click()
+    act(() => {
+      screen.getByRole("menuitem", { name: /Rerun/ }).click()
+    })
 
     expect(enqueueSpy).toHaveBeenCalledWith("menuClick", { label: "Rerun" })
   })
@@ -1084,7 +1110,9 @@ describe("MainMenu", () => {
     await openMenu()
 
     // Click disabled Rerun button
-    screen.getByRole("menuitem", { name: /Rerun/ }).click()
+    act(() => {
+      screen.getByRole("menuitem", { name: /Rerun/ }).click()
+    })
 
     // Callback should not have been called
     expect(props.quickRerunCallback).not.toHaveBeenCalled()
@@ -1204,7 +1232,7 @@ describe("MainMenu", () => {
         // Click a *different* radio to verify setTheme is called
         const targetIndex = (index + 1) % 3
         const targetTheme = [autoTheme, lightTheme, darkTheme][targetIndex]
-        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        const user = userEvent.setup()
         await user.click(radioItems[targetIndex])
 
         expect(setTheme).toHaveBeenCalledWith(targetTheme)
@@ -1215,8 +1243,7 @@ describe("MainMenu", () => {
     )
 
     // Note: " " (literal space) is used instead of "{Space}" because JSDOM
-    // does not fire click on <button> elements for {Space} keyUp. The menu
-    // button test uses {Space} because BaseWeb's popover handles it directly.
+    // does not fire click on <button> elements for {Space} keyUp.
     it.each([["{Enter}"], [" "]])(
       "activates a theme radio item with keyboard (%s)",
       async key => {
@@ -1224,7 +1251,7 @@ describe("MainMenu", () => {
         renderWithThemes(undefined, { setTheme })
         await openMenu()
 
-        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        const user = userEvent.setup()
         const radioItems = screen.getAllByRole("menuitemradio")
 
         // Navigate to Dark (third radio item)
@@ -1241,7 +1268,7 @@ describe("MainMenu", () => {
       renderWithThemes(undefined, { setTheme })
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const radioItems = screen.getAllByRole("menuitemradio")
 
       // Navigate to Dark (third radio item) and select it
@@ -1268,7 +1295,7 @@ describe("MainMenu", () => {
       await openMenu()
 
       const lightRadio = screen.getByRole("menuitemradio", { name: /Light/ })
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       await user.click(lightRadio)
 
       expect(enqueueSpy).toHaveBeenCalledWith("menuClick", {
@@ -1280,7 +1307,7 @@ describe("MainMenu", () => {
       renderWithThemes()
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const radioItems = screen.getAllByRole("menuitemradio")
       const actionItems = screen.getAllByRole("menuitem")
 
@@ -1303,7 +1330,7 @@ describe("MainMenu", () => {
       renderWithThemes()
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const radioItems = screen.getAllByRole("menuitemradio")
       const actionItems = screen.getAllByRole("menuitem")
 
@@ -1320,7 +1347,7 @@ describe("MainMenu", () => {
       renderWithThemes()
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const radioItems = screen.getAllByRole("menuitemradio")
       const actionItems = screen.getAllByRole("menuitem")
 
@@ -1337,7 +1364,7 @@ describe("MainMenu", () => {
       renderWithThemes()
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const radioItems = screen.getAllByRole("menuitemradio")
       const actionItems = screen.getAllByRole("menuitem")
 
@@ -1364,7 +1391,7 @@ describe("MainMenu", () => {
       expect(actionItems[0]).toHaveAttribute("tabindex", "-1")
 
       // Navigate to an action item
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
       expect(actionItems[0]).toHaveFocus()
 
@@ -1454,7 +1481,7 @@ describe("MainMenu", () => {
       render(<MainMenu {...props} />)
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const toggle = screen.getByRole("menuitemcheckbox", {
         name: /Auto rerun/,
       })
@@ -1473,7 +1500,7 @@ describe("MainMenu", () => {
       render(<MainMenu {...props} />)
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const toggle = screen.getByRole("menuitemcheckbox", {
         name: /Auto rerun/,
       })
@@ -1510,7 +1537,7 @@ describe("MainMenu", () => {
       expect(toggle).toHaveAttribute("tabindex", "-1")
 
       // Navigate to the toggle: Rerun(0) → toggle(1)
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       await user.keyboard("{ArrowDown}")
       expect(toggle).toHaveFocus()
       expect(toggle).toHaveAttribute("tabindex", "0")
@@ -1525,7 +1552,7 @@ describe("MainMenu", () => {
       render(<MainMenu {...props} />)
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       const toggle = screen.getByRole("menuitemcheckbox", {
         name: /Auto rerun/,
       })
@@ -1580,7 +1607,6 @@ describe("MainMenu", () => {
 
     it("copies the full (untruncated) version string to clipboard", async () => {
       const user = userEvent.setup({
-        advanceTimers: vi.advanceTimersByTime,
         pointerEventsCheck: PointerEventsCheckLevel.Never,
       })
 
@@ -1627,12 +1653,9 @@ describe("MainMenu", () => {
       render(<MainMenu {...props} />)
       await openMenu()
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
 
       await user.keyboard("{Tab}")
-      act(() => {
-        vi.runAllTimers()
-      })
 
       expect(screen.getByTestId("stMainMenuPopover")).toBeInTheDocument()
     })
@@ -1649,11 +1672,8 @@ describe("MainMenu", () => {
         copyButton.focus()
       })
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       await user.keyboard("{Tab}")
-      act(() => {
-        vi.runAllTimers()
-      })
 
       expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
     })
@@ -1670,11 +1690,8 @@ describe("MainMenu", () => {
         copyButton.focus()
       })
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       await user.keyboard("{Shift>}{Tab}{/Shift}")
-      act(() => {
-        vi.runAllTimers()
-      })
 
       expect(screen.getByTestId("stMainMenuPopover")).toBeInTheDocument()
     })
@@ -1691,11 +1708,8 @@ describe("MainMenu", () => {
         copyButton.focus()
       })
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const user = userEvent.setup()
       await user.keyboard("{Escape}")
-      act(() => {
-        vi.runAllTimers()
-      })
 
       expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
     })

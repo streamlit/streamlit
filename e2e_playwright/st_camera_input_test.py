@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_CAMERA_INPUT_WIDGETS = 5
+NUM_CAMERA_INPUT_WIDGETS = 6
 
 
 def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
@@ -134,6 +134,28 @@ def test_take_photo_button_styling(app: Page):
     expect(take_photo_button).to_have_css("color", "rgba(49, 51, 63, 0.4)")
     expect(take_photo_button).to_have_css("border-color", "rgba(49, 51, 63, 0.2)")
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
+
+
+@pytest.mark.only_browser("chromium")
+def test_captures_photo_with_720p_resolution(app: Page):
+    """A resolution='720p' capture is encoded at the requested 720px height.
+
+    The app script opens the uploaded file and writes its pixel height, so this
+    asserts the dimensions of the actual captured image (not just the on-screen
+    preview). The Chromium fake camera streams 1280x720 for an ideal-720 height
+    request, and ``forceScreenshotSourceSize`` makes the screenshot use the
+    stream's intrinsic size.
+    """
+    camera = get_element_by_key(app, "camera_720p").get_by_test_id("stCameraInput")
+    take_photo_button = camera.get_by_test_id("stCameraInputButton").first
+    # Wait until the fake video stream is ready (button becomes enabled)
+    expect(take_photo_button).to_be_enabled()
+    # Capture a photo
+    take_photo_button.click()
+    # Verify a photo was captured (Clear photo button appears)
+    expect(camera.get_by_text("Clear photo")).to_be_visible()
+    # The captured JPEG is encoded at the requested 720px height.
+    expect_prefixed_markdown(app, "720p captured height:", "720")
 
 
 def test_check_top_level_class(app: Page):

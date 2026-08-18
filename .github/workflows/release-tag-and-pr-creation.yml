@@ -28,25 +28,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set Python version vars
-        uses: ./.github/actions/build_info
-
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-
-      - name: Install Python deps for notifications
-        run: |
-          uv pip install --system requests
+      # Sync before switching to the release branch, which may have older
+      # dependency metadata.
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
       - name: Configure Git
         env:
@@ -82,7 +72,7 @@ jobs:
       - name: Check for existing open PR for release
         if: ${{ inputs.dry_run != true }}
         id: check_existing_pr
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -141,7 +131,7 @@ jobs:
       - name: Create PR to merge release branch into develop
         id: create_pr
         if: ${{ inputs.dry_run != true }}
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -204,4 +194,4 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           PR_URL: ${{ steps.create_pr.outputs.pr_url }}
         run: |
-          python scripts/slack_notifications.py release_automation tag_pr_created
+          uv run --no-sync python scripts/slack_notifications.py release_automation tag_pr_created

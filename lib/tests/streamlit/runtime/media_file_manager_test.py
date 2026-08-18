@@ -26,7 +26,11 @@ from unittest.mock import MagicMock, call, mock_open
 
 import pytest
 
-from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.media_file_manager import (
+    MediaFileManager,
+    MediaFileMetadata,
+    _get_session_id,
+)
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
     MemoryFile,
@@ -862,3 +866,66 @@ class MediaFileManagerDeferredTest(TestCase):
         filename = url.split("/")[-1]
         stored = self.storage.get_file(filename)
         assert stored.mimetype == "application/octet-stream"
+
+
+def test_media_file_metadata_defaults_to_media_kind() -> None:
+    """``MediaFileMetadata`` defaults to ``MediaFileKind.MEDIA`` and is not
+    initially marked for deletion."""
+    metadata = MediaFileMetadata()
+    assert metadata.kind == MediaFileKind.MEDIA
+    assert metadata.is_marked_for_delete is False
+
+
+def test_media_file_metadata_mark_for_delete_flips_flag() -> None:
+    """``mark_for_delete`` flips ``is_marked_for_delete`` to ``True``."""
+    metadata = MediaFileMetadata(MediaFileKind.DOWNLOADABLE)
+    assert metadata.kind == MediaFileKind.DOWNLOADABLE
+
+    metadata.mark_for_delete()
+    assert metadata.is_marked_for_delete is True
+
+
+@pytest.mark.parametrize(
+    ("ctx", "expected"),
+    [(None, "dontcare"), (MagicMock(session_id="real_session"), "real_session")],
+    ids=["no_context", "with_context"],
+)
+def test_get_session_id(ctx: object, expected: str) -> None:
+    """``_get_session_id`` returns the session ID, or ``"dontcare"`` when no ctx."""
+    with mock.patch(
+        "streamlit.runtime.scriptrunner_utils.script_run_context.get_script_run_ctx",
+        return_value=ctx,
+    ):
+        assert _get_session_id() == expected
+
+
+@mock.patch(
+    "streamlit.runtime.media_file_manager._get_session_id",
+    MagicMock(return_value="mock_session_id"),
+)
+def test_downloadable_file_marked_then_deleted_on_second_sweep() -> None:
+    """Orphaned ``DOWNLOADABLE`` files survive the first sweep (marked) and
+    are deleted on the second sweep, mirroring ``st.download_button`` behavior."""
+    storage = MemoryMediaFileStorage("/mock/endpoint")
+    manager = MediaFileManager(storage)
+    storage_delete_spy = MagicMock(side_effect=storage.delete_file)
+    storage.delete_file = storage_delete_spy
+
+    content, mimetype, filename = b"download me", "text/plain", "report.txt"
+    manager.add(content, mimetype, "1.2.3", filename, is_for_static_download=True)
+    file_id = _calculate_file_id(content, mimetype, filename)
+    metadata = manager._file_metadata[file_id]
+    assert metadata.kind == MediaFileKind.DOWNLOADABLE
+    assert metadata.is_marked_for_delete is False
+
+    manager.clear_session_refs("mock_session_id")
+    manager.remove_orphaned_files()
+
+    assert file_id in manager._file_metadata
+    assert metadata.is_marked_for_delete is True
+    storage_delete_spy.assert_not_called()
+
+    manager.remove_orphaned_files()
+
+    assert file_id not in manager._file_metadata
+    storage_delete_spy.assert_called_once_with(file_id)

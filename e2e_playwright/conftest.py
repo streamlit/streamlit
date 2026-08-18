@@ -322,6 +322,17 @@ class AsyncSubprocess:
 
     def terminate(self) -> str | None:
         """Terminate the process and return its stdout/stderr in a string."""
+        if self._proc is not None:
+            returncode = self._proc.poll()
+            if returncode is not None:
+                signal = -returncode if returncode < 0 else None
+                print(
+                    f"Process exited before teardown: pid={self._proc.pid} "
+                    f"returncode={returncode} signal={signal} "
+                    f"command={shlex.join(self.args)}",
+                    flush=True,
+                )
+
         self._stop_process()
 
         # Read the stdout file and close it
@@ -382,9 +393,21 @@ def hash_to_range(
 
 
 def is_port_available(port: int, host: str) -> bool:
-    """Check if a port is available on the given host."""
+    """Check if a server can bind to a port on the given host."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        return sock.connect_ex((host, port)) != 0
+        try:
+            # Bind to verify the port is free. connect_ex only detects listeners,
+            # so ports held by active client sockets look free but cannot be bound.
+            # Match Streamlit's server socket options so TIME_WAIT ports that the
+            # real server could reuse (via SO_REUSEADDR) are not treated as busy.
+            # Skip SO_REUSEADDR on Windows for the same reason as starlette_server:
+            # there it can allow binding over a live listener.
+            if os.name != "nt":
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((host, port))
+        except OSError:
+            return False
+        return True
 
 
 def find_available_port(
@@ -955,8 +978,8 @@ font-src {app_url_for_endpoints}/static/fonts/ {app_url_for_endpoints}/static/me
                 </head>
                 <body style="height: 100%;">
                     <iframe
-                        src={src}
-                        id={_iframe_element_attrs.element_id or ""}
+                        src="{src}"
+                        id="{_iframe_element_attrs.element_id or ""}"
                         title="Iframed Streamlit App"
                         allow="clipboard-read; clipboard-write; microphone; camera;"
                         sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
@@ -974,7 +997,6 @@ font-src {app_url_for_endpoints}/static/fonts/ {app_url_for_endpoints}/static/me
 
         def fulfill_iframe_request(route: Route) -> None:
             """Return as response an iframe that loads the actual Streamlit app."""
-
             browser = page.context.browser
             # webkit requires the iframe's parent to have "blob:" set, for example if we
             # want to download a CSV via the blob: url; Chrome seems to be more lax
@@ -1057,6 +1079,13 @@ def browser_type_launch_args(
             "args": [
                 "--use-fake-device-for-media-stream",
                 "--use-fake-ui-for-media-stream",
+                # Disable Private Network Access / Local Network Access checks that block
+                # WebSocket connections from iframe content to localhost in Chromium 148+.
+                # This is needed because the iframe tests load content from a fake server
+                # (localhost:1345) which then tries to connect via WebSocket to the
+                # Streamlit server on a different localhost port.
+                # https://developer.chrome.com/blog/private-network-access-update
+                "--disable-features=LocalNetworkAccessChecks,PrivateNetworkAccessSendPreflights",
             ],
         }
 
@@ -1171,7 +1200,7 @@ class ResilientBrowser:
 
     @property
     def contexts(self) -> list[BrowserContext]:
-        """Return list of browser contexts."""
+        """The browser contexts."""
         if self._browser is None or not self._browser.is_connected():
             return []
         try:
@@ -1183,7 +1212,7 @@ class ResilientBrowser:
 
     @property
     def browser_type(self) -> BrowserType:
-        """Return the browser type."""
+        """The browser type."""
         return self._browser_type
 
     def is_connected(self) -> bool:
@@ -1511,7 +1540,11 @@ def assert_snapshot(
             )
 
             total_pixels = img_a.size[0] * img_a.size[1]
-            max_diff_pixels = int(image_threshold * total_pixels)
+            # Use max(1, ...) so that very small images (where the percentage
+            # rounds to 0) still produce a non-zero threshold. Without this,
+            # max_diff_pixels == 0 makes mismatch < 0 the pass condition, which
+            # is never true — causing exact-match snapshots to fail spuriously.
+            max_diff_pixels = max(1, int(image_threshold * total_pixels))
 
             if mismatch < max_diff_pixels:
                 return

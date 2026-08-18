@@ -27,7 +27,7 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     WidthWithoutContent,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -45,7 +45,6 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import register_widget
@@ -110,6 +109,7 @@ class LayoutsMixin:
         width: Width = "stretch",
         height: Height = "content",
         horizontal: bool = False,
+        wrap: bool = True,
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
@@ -176,8 +176,24 @@ class LayoutsMixin:
             Whether to use horizontal flexbox layout. If this is ``False``
             (default), the container's elements are laid out vertically. If
             this is ``True``, the container's elements are laid out
-            horizontally and will overflow to the next line if they don't fit
-            within the container's width.
+            horizontally and, by default, wrap onto additional rows if they
+            don't fit within the container's width. Use ``wrap`` to instead
+            keep the elements in a single, horizontally scrolling row.
+
+        wrap : bool
+            Whether the elements in a horizontal container can wrap onto
+            additional rows. This only applies when ``horizontal`` is ``True``.
+            This can be one of the following:
+
+            - ``True`` (default): The elements wrap onto additional rows when
+              they don't fit within the container's width.
+            - ``False``: The elements stay in a single row. If they don't fit
+              within the container's width, the container scrolls horizontally
+              instead of wrapping.
+
+            Setting ``wrap=False`` with ``horizontal=False`` raises an
+            exception, since there is no horizontal row of elements to keep in a
+            single, scrolling row.
 
         horizontal_alignment : "left", "center", "right", or "distribute"
             The horizontal alignment of the elements inside the container. This
@@ -215,7 +231,7 @@ class LayoutsMixin:
               When ``horizontal`` is ``True``, ``"distribute"`` aligns the
               elements the same as ``"top"``.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
             This can be one of the following:
 
@@ -226,6 +242,8 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the elements.
             - ``"xlarge"``: 6rem gap between the elements.
             - ``"xxlarge"``: 8rem gap between the elements.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the elements.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -338,19 +356,45 @@ class LayoutsMixin:
             https://doc-container5.streamlit.app/
             height: 250px
 
+        **Example 6: No-wrap horizontal container (toolbar)**
+
+        Use ``wrap=False`` to keep a horizontal container's elements in a single
+        row. When the elements don't fit, the container scrolls horizontally
+        instead of wrapping onto additional rows.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(horizontal=True, wrap=False):
+        ...     for label in ("Edit", "Duplicate", "Archive", "Delete"):
+        ...         st.button(label)
+
+        .. output::
+            https://doc-container6.streamlit.app/
+            height: 200px
+
         """
         key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.gap_size = get_gap_size(
-            gap, "st.container"
+        block_proto.flex_container.gap_config.CopyFrom(
+            get_gap_config(gap, "st.container")
         )
 
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
+        if wrap is False and not horizontal:
+            raise StreamlitAPIException(
+                "`wrap=False` can only be used with `horizontal=True`. "
+                "A vertical container has no horizontal row of elements to keep "
+                "in a single, scrolling row. Set `horizontal=True` to use "
+                "`wrap=False`, or remove the `wrap` argument."
+            )
         if horizontal:
-            block_proto.flex_container.wrap = True
+            # `wrap=True` (default) keeps the default horizontal behavior of
+            # wrapping onto additional rows. `wrap=False` keeps the elements in
+            # a single, horizontally scrollable row.
+            block_proto.flex_container.wrap = wrap
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.HORIZONTAL
             )
@@ -404,6 +448,7 @@ class LayoutsMixin:
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -431,7 +476,7 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The size of the gap between the columns. This can be one of the
             following:
 
@@ -442,6 +487,8 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the columns.
             - ``"xlarge"``: 6rem gap between the columns.
             - ``"xxlarge"``: 8rem gap between the columns.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the columns.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -465,6 +512,14 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the column group matches the
               width of the parent container.
+
+        wrap : bool
+            Whether columns may stack vertically on narrow viewports. If this
+            is ``True`` (default), columns stack when the viewport is at most
+            ``640px`` wide. If this is ``False``, stacking is disabled and
+            columns stay in a single row. Columns shrink until a usable
+            minimum width, then the column group scrolls horizontally instead
+            of overflowing the page.
 
         Returns
         -------
@@ -570,6 +625,29 @@ class LayoutsMixin:
             https://doc-columns-borders.streamlit.app/
             height: 250px
 
+        **Example 6: Disable wrapping for a thumbnail row**
+
+        Use ``wrap=False`` to keep columns in one row and scroll horizontally
+        when they do not fit.
+
+        >>> import streamlit as st
+        >>>
+        >>> images = [
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ... ]
+        >>> thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
+        >>> for column, image in zip(thumbnail_columns, images):
+        ...     column.image(image)
+
+        .. output::
+            https://doc-columns-wrap-false.streamlit.app/
+            height: 250px
+
         """
         weights = spec
         if isinstance(weights, int):
@@ -580,6 +658,9 @@ class LayoutsMixin:
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise StreamlitInvalidColumnSpecError()
+
+        if not isinstance(wrap, bool):
+            raise StreamlitValueError("wrap", ["True", "False"])
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -595,9 +676,7 @@ class LayoutsMixin:
                 element_type="st.columns",
             )
 
-        gap_size = get_gap_size(gap, "st.columns")
-        gap_config = GapConfig()
-        gap_config.gap_size = gap_size
+        gap_config = get_gap_config(gap, "st.columns")
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
@@ -614,7 +693,7 @@ class LayoutsMixin:
         block_proto.flex_container.direction = (
             BlockProto.FlexContainer.Direction.HORIZONTAL
         )
-        block_proto.flex_container.wrap = True
+        block_proto.flex_container.wrap = wrap
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
         block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH
@@ -632,6 +711,7 @@ class LayoutsMixin:
         tabs: Sequence[str],
         *,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
         default: str | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -685,6 +765,27 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
               of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the tab container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container matches the height
+              of the parent container, and content that overflows scrolls
+              inside the active tab panel. If the container is not in a
+              fixed-height parent, the height of the container matches the
+              height of its content.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled inside the active tab panel.
+
+            .. note::
+                Use scrolling tab panels sparingly. If you use scrolling tab
+                panels, avoid heights that exceed 500 pixels. Otherwise, the
+                scroll surface of the tab panel might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         default : str or None
             The default tab to select. If this is ``None`` (default), the first
@@ -901,7 +1002,9 @@ class LayoutsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -916,6 +1019,7 @@ class LayoutsMixin:
                 dg=self.dg,
                 tabs=tuple(tabs),
                 width=width,
+                height=height,
                 default=default,
             )
             block_id = element_id
@@ -954,6 +1058,13 @@ class LayoutsMixin:
         block_proto.tab_container.SetInParent()
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
+        if isinstance(height, int):
+            # Ensure the fixed-height tab container renders even when the
+            # active tab is empty, so the reserved space is preserved.
+            block_proto.allow_empty = True
 
         # Compute the current tab index from the label
         try:
@@ -1218,7 +1329,7 @@ class LayoutsMixin:
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
-                "on_change", ["'rerun'", "'ignore'", "a callable"]
+                "on_change", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         if type not in {"default", "compact"}:
@@ -1236,7 +1347,9 @@ class LayoutsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1326,6 +1439,7 @@ class LayoutsMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1451,6 +1565,24 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
+
+        wrap : bool or None
+            Whether the popover button's label can wrap onto multiple lines.
+            This can be one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. The icon and chevron remain
+            visible.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -1589,9 +1721,8 @@ class LayoutsMixin:
 
         # Checks whether the entered button type is one of the allowed options
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
@@ -1611,7 +1742,9 @@ class LayoutsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1644,6 +1777,7 @@ class LayoutsMixin:
                 on_change_handler=on_change if callable(on_change) else None,
                 args=args if callable(on_change) else None,
                 kwargs=kwargs if callable(on_change) else None,
+                disabled=disabled,
             )
 
             current_open = popover_state.value
@@ -1660,6 +1794,8 @@ class LayoutsMixin:
         popover_proto.disabled = disabled
         popover_proto.type = type
         popover_proto.open = current_open
+        if wrap is not None:
+            popover_proto.wrap = wrap
         if help:
             popover_proto.help = str(help)
         if icon is not None:
@@ -1852,5 +1988,5 @@ class LayoutsMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

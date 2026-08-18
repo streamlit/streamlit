@@ -18,7 +18,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -357,7 +357,7 @@ class HeadingMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
     @staticmethod
@@ -376,9 +376,10 @@ class HeadingMixin:
             "rainbow",
         ]
         if divider in valid_colors:
-            return cast("str", divider)  # ty: ignore[redundant-cast]
-        raise StreamlitAPIException(
-            f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
+            return divider
+        raise StreamlitValueError(
+            "divider",
+            ["True"] + [f"'{c}'" for c in valid_colors],
         )
 
     @staticmethod

@@ -26,11 +26,15 @@ if "selected_project" not in st.session_state:
     st.session_state.selected_project = None
 
 # Define navigation
-page = st.navigation([
-    st.Page("app_pages/home.py", title="Home", icon=":material/home:"),
-    st.Page("app_pages/analytics.py", title="Analytics", icon=":material/bar_chart:"),
-    st.Page("app_pages/settings.py", title="Settings", icon=":material/settings:"),
-])
+page = st.navigation(
+    [
+        st.Page("app_pages/home.py", title="Home", icon=":material/home:"),
+        st.Page(
+            "app_pages/analytics.py", title="Analytics", icon=":material/bar_chart:"
+        ),
+        st.Page("app_pages/settings.py", title="Settings", icon=":material/settings:"),
+    ]
+)
 
 # App-level UI runs before page content
 # Useful for shared elements like titles
@@ -54,16 +58,19 @@ Creates a clean horizontal menu. Great for simple apps. Sections are supported t
 **Many pages or nested sections → Sidebar:**
 
 ```python
-page = st.navigation({
-    "Main": [
-        st.Page("app_pages/home.py", title="Home"),
-        st.Page("app_pages/analytics.py", title="Analytics"),
-    ],
-    "Admin": [
-        st.Page("app_pages/settings.py", title="Settings"),
-        st.Page("app_pages/users.py", title="Users"),
-    ],
-}, position="sidebar")
+page = st.navigation(
+    {
+        "Main": [
+            st.Page("app_pages/home.py", title="Home"),
+            st.Page("app_pages/analytics.py", title="Analytics"),
+        ],
+        "Admin": [
+            st.Page("app_pages/settings.py", title="Settings"),
+            st.Page("app_pages/users.py", title="Users"),
+        ],
+    },
+    position="sidebar",
+)
 ```
 
 **Mixed: Some pages ungrouped:**
@@ -71,16 +78,19 @@ page = st.navigation({
 Use an empty string key `""` for pages that shouldn't be in a section. These ungrouped pages always appear first, before any named groups. Put all ungrouped pages in a single `""` key:
 
 ```python
-page = st.navigation({
-    "": [
-        st.Page("app_pages/home.py", title="Home"),
-        st.Page("app_pages/about.py", title="About"),
-    ],
-    "Analytics": [
-        st.Page("app_pages/dashboard.py", title="Dashboard"),
-        st.Page("app_pages/reports.py", title="Reports"),
-    ],
-}, position="top")
+page = st.navigation(
+    {
+        "": [
+            st.Page("app_pages/home.py", title="Home"),
+            st.Page("app_pages/about.py", title="About"),
+        ],
+        "Analytics": [
+            st.Page("app_pages/dashboard.py", title="Dashboard"),
+            st.Page("app_pages/reports.py", title="Reports"),
+        ],
+    },
+    position="top",
+)
 ```
 
 ## Page modules
@@ -109,6 +119,7 @@ Initialize state in the main module only if it's needed across multiple pages:
 @st.cache_resource
 def get_api_client():
     return init_client()
+
 
 # User-specific state — use session_state
 st.session_state.user = get_user()
@@ -143,10 +154,16 @@ import streamlit as st
 pages = [st.Page("app_pages/home.py", title="Home", icon=":material/home:")]
 
 if st.user.is_logged_in:
-    pages.append(st.Page("app_pages/dashboard.py", title="Dashboard", icon=":material/bar_chart:"))
+    pages.append(
+        st.Page(
+            "app_pages/dashboard.py", title="Dashboard", icon=":material/bar_chart:"
+        )
+    )
 
 if st.session_state.get("is_admin"):
-    pages.append(st.Page("app_pages/admin.py", title="Admin", icon=":material/settings:"))
+    pages.append(
+        st.Page("app_pages/admin.py", title="Admin", icon=":material/settings:")
+    )
 
 page = st.navigation(pages)
 page.run()

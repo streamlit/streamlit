@@ -51,26 +51,7 @@ function CameraInputButton({
           <ProgressBar
             value={progress}
             size={ProgressBarSize.EXTRASMALL}
-            overrides={{
-              Bar: {
-                style: {
-                  borderTopLeftRadius: 0,
-                  borderTopRightRadius: 0,
-                },
-              },
-              BarProgress: {
-                style: {
-                  borderTopLeftRadius: 0,
-                  borderTopRightRadius: 0,
-                },
-              },
-              BarContainer: {
-                style: {
-                  borderTopLeftRadius: 0,
-                  borderTopRightRadius: 0,
-                },
-              },
-            }}
+            squareTopCorners
           />
         </StyledProgressBar>
       ) : null}

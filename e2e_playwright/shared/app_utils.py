@@ -21,7 +21,7 @@ from typing import Literal, Protocol, cast
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run, wait_until
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
@@ -97,6 +97,46 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     element = locator.get_by_test_id("stTimeInput").filter(has_text=label)
     expect(element).to_be_visible()
     return element
+
+
+def type_time(
+    time_display: Locator, hour: str, minute: str, second: str | None = None
+) -> None:
+    """Type a time into a TimeInput's spinbutton segments.
+
+    Uses press_sequentially (key events per character) rather than fill() to
+    exercise the real keystroke handling path through React Aria's digit
+    buffering logic.
+
+    After typing, blurs the last segment so the widget commits the value
+    to the backend (commit is deferred to blur, matching st.number_input
+    semantics).
+
+    Parameters
+    ----------
+    time_display : Locator
+        The stTimeInputTimeDisplay locator containing the spinbuttons.
+
+    hour : str
+        Two-digit hour string (e.g. "08").
+
+    minute : str
+        Two-digit minute string (e.g. "45").
+
+    second : str or None
+        Two-digit second string (e.g. "30"). Only applicable when the widget
+        has sub-minute step (seconds granularity). If None, the seconds segment
+        is not interacted with.
+    """
+    spinbuttons = time_display.get_by_role("spinbutton")
+    spinbuttons.first.press_sequentially(hour)
+    spinbuttons.nth(1).press_sequentially(minute)
+    if second is not None:
+        spinbuttons.nth(2).press_sequentially(second)
+        spinbuttons.nth(2).blur()
+    else:
+        spinbuttons.nth(1).blur()
+    # Blur triggers the deferred commit to the backend.
 
 
 def get_datetime_input(
@@ -254,7 +294,14 @@ def select_selectbox_option(
     # Type to filter the dropdown (handles virtualized lists where options
     # may not be rendered until scrolled into view)
     selectbox_input = selectbox.locator("input")
+
+    # Wait for the React component to be fully initialized before interacting
+    selectbox_input.wait_for(state="visible")
     selectbox_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    # Note: this shifts focus to the first option, so the initially-selected item
+    # will not be highlighted when the dropdown first opens.
+    selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing
     dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
@@ -268,8 +315,8 @@ def select_selectbox_option(
 
     wait_for_app_run(page)
 
-    # Verify the selection was applied
-    expect(selectbox).to_contain_text(option)
+    # Verify the selection was applied (value is in the input's value attribute)
+    expect(selectbox.locator("input")).to_have_value(option)
 
 
 def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -328,6 +375,44 @@ def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     element = locator.get_by_test_id("stDateInput").filter(has=label_locator)
     expect(element).to_be_visible()
     return element
+
+
+def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> None:
+    """Type digits into a DateInput's segments and optionally commit.
+
+    For React Aria segmented ``st.date_input`` fields (single and range),
+    values are typed segment-by-segment into ``role="spinbutton"`` segments
+    rather than a single free-text ``<input>``.
+
+    Segment edits are buffered locally until the popover closes (the
+    commit-on-close pattern). By default this helper closes the popover via
+    Escape after typing so the value is committed to widget state — matching
+    ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
+    the popover open (e.g. for error-state tests that inspect UI before commit).
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The ``stDateInputField`` locator (the segmented field container).
+
+    *parts : str
+        Digit strings for each segment, in the same left-to-right order the
+        segments are rendered in (which follows the widget's ``format``).
+        Pass 3 parts for a single-date field, 6 for a range field (start +
+        end segments), e.g.
+        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+
+    commit : bool
+        If True (default), press Escape after typing to close the popover and
+        commit the buffered value to widget state. Set to False when you need
+        the popover to remain open (e.g. to test real-time error feedback
+        during editing).
+    """
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i, part in enumerate(parts):
+        spinbuttons.nth(i).press_sequentially(part)
+    if commit:
+        date_input_field.page.keyboard.press("Escape")
 
 
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -417,7 +502,7 @@ def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> L
     Locator
         The element.
     """
-    element = locator.locator('[data-baseweb="radio"]').filter(has_text=label)
+    element = locator.get_by_test_id("stRadioOption").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
@@ -860,9 +945,11 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    # Click the checkbox label to be more reliable:
-    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
+    checkbox_element.locator("label").first.click()
     wait_for_app_run(page)
+    # Blur the active element after the app run so that focus rings from this
+    # interaction don't bleed into subsequent snapshot assertions.
+    page.evaluate("document.activeElement?.blur()")
 
 
 def click_toggle(
@@ -1020,6 +1107,30 @@ def expect_help_tooltip(
     # reset the hovering in case this method is called multiple times in the same test
     reset_hovering(app)
     expect(tooltip_content).not_to_be_attached()
+
+
+def expect_label_truncated(element: Locator) -> None:
+    """Expect the markdown label inside ``element`` to be ellipsized.
+
+    Verifies the rendered label is actually clipped (its content is wider than the
+    space available for it), rather than only checking that a ``wrap``/``title``
+    attribute was set. Use this together with a fixed width narrower than the
+    label so the truncation is deterministic.
+
+    Parameters
+    ----------
+    element : Locator
+        A locator whose subtree contains a single label markdown container
+        (e.g. a button, popover trigger, or menu-button trigger).
+    """
+    label = element.get_by_test_id("stMarkdownContainer").locator("p").first
+    expect(label).to_be_visible()
+    # Retry until layout is stable — a one-shot evaluate can race with flex
+    # sizing even after the label is visible.
+    wait_until(
+        element.page,
+        lambda: label.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
 
 
 def reset_hovering(locator: LocatorContext) -> None:
@@ -1457,9 +1568,9 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     Locator
         The segment button.
     """
-    return locator.get_by_test_id(
-        re.compile(r"stBaseButton-segmented_control(Active)?")
-    ).filter(has_text=text)
+    return locator.locator("button[data-variant='segmented_control']").filter(
+        has_text=text
+    )
 
 
 def goto_app(page: Page, url: str) -> None:
@@ -1538,3 +1649,40 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         }""",
         timeout=timeout,
     )
+
+
+def wait_for_datepicker_popover_animation(app: Page, calendar: Locator) -> None:
+    """Wait until a BaseWeb datepicker popover open animation has finished.
+
+    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
+    a ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
+    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
+    Chromium as ~8% pixel diffs).
+
+    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
+    transform share the 0.1s open transition, but a subsequent Popper
+    reposition can still nudge the calendar after opacity settles. Require a
+    stable calendar bounding box before screenshotting.
+    """
+    expect(calendar).to_be_visible()
+    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
+    expect(popover).to_have_css("opacity", "1")
+
+    previous: tuple[float, float, float, float] | None = None
+
+    def _calendar_box_is_stable() -> bool:
+        nonlocal previous
+        box = calendar.bounding_box()
+        if box is None:
+            return False
+        current = (box["x"], box["y"], box["width"], box["height"])
+        if previous is None:
+            previous = current
+            return False
+        stable = all(
+            abs(prev - curr) < 0.5 for prev, curr in zip(previous, current, strict=True)
+        )
+        previous = current
+        return stable
+
+    wait_until(app, _calendar_box_is_stable)

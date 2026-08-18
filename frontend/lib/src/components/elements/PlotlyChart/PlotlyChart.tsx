@@ -24,6 +24,8 @@ import {
   useState,
 } from "react"
 
+import type * as Plotly from "plotly.js"
+
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"

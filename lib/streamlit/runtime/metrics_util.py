@@ -17,15 +17,17 @@ from __future__ import annotations
 import contextlib
 import inspect
 import os
+import re
 import sys
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sized
+from collections.abc import Callable, Sequence, Sized
 from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
+from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -53,10 +55,8 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.Index": "PandasIndex",
     "pandas.Series": "PandasSeries",
     "plotly.graph_objs._figure.Figure": "PlotlyFigure",
-    "bokeh.plotting.figure.Figure": "BokehFigure",
     "matplotlib.figure.Figure": "MatplotlibFigure",
     "pandas.io.formats.style.Styler": "PandasStyler",
-    "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
     "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
 
@@ -207,7 +207,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "snowflake",
     "pydantic",
     "fastapi",
-    "starlette",
     "playwright",
     "folium",
     "geopandas",
@@ -244,126 +243,10 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
-_STREAMLIT_SKILL_NAMES: Final = (
-    "developing-with-streamlit",
-    "developing-with-streamlit-in-snowflake",
+# Matches CPython's ``got an unexpected keyword argument 'name'`` TypeError.
+_UNEXPECTED_KWARG_RE: Final = re.compile(
+    r"got an unexpected keyword argument '([^']+)'"
 )
-_SKILL_MARKER_FILENAME: Final = "SKILL.md"
-# (harness, project_skills_dir, home_skills_dir, agent_home_dir) - skill dirs
-# are checked for the SKILL.md marker; agent_home_dir is checked for existence
-# to detect the harness itself independent of Streamlit skills.
-_HARNESSES: Final = (
-    ("agents", ".agents/skills", ".agents/skills", ".agents"),
-    ("claude", ".claude/skills", ".claude/skills", ".claude"),
-    ("codex", ".codex/skills", ".codex/skills", ".codex"),
-    ("cortex", ".cortex/skills", ".snowflake/cortex/skills", ".snowflake/cortex"),
-    ("cursor", ".cursor/skills", ".cursor/skills", ".cursor"),
-    ("gemini", ".gemini/skills", ".gemini/skills", ".gemini"),
-    ("opencode", ".opencode/skills", ".config/opencode/skills", ".config/opencode"),
-)
-# Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
-# to avoid scanning the entire filesystem on pathological layouts.
-_MAX_REPO_ROOT_WALK_DEPTH: Final = 20
-
-
-def _find_git_root(start: str) -> str | None:
-    """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
-
-    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
-    GitPython. GitPython's cold import adds ~170ms on first call, which shows
-    up on every hosted-app startup via the ``create_page_profile_message``
-    code path — for a signal that almost always resolves to ``None`` in those
-    environments. The stdlib walk is ~1ms cold and returns the same path we
-    need.
-    """
-    current = os.path.abspath(start)
-    for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
-        if os.path.exists(os.path.join(current, ".git")):
-            return current
-        parent = os.path.dirname(current)
-        if parent == current:
-            return None
-        current = parent
-    return None
-
-
-def _detect_installed_skills(app_dir: str | None) -> list[str]:
-    """Detect Streamlit-shipped agent skills in well-known locations.
-
-    Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
-    tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is one
-    of ``agents``, ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``,
-    or ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
-    Never raises: filesystem errors are swallowed and produce an empty list.
-
-    The result is cached per ``app_dir`` for the lifetime of the process.
-    """
-    return list(_detect_installed_skills_cached(app_dir))
-
-
-@lru_cache(maxsize=1)
-def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
-    try:
-        home = os.path.expanduser("~")
-        app = os.path.abspath(app_dir) if app_dir else os.getcwd()
-        repo = _find_git_root(app)
-
-        roots: dict[str, str] = {"home": home, "app": app}
-        # Skip ``repo`` when it matches ``app`` to avoid double-counting the
-        # common case where the app script lives at the repo root. ``normcase``
-        # handles case-insensitive filesystems (Windows, default macOS).
-        if repo is not None and os.path.normcase(repo) != os.path.normcase(app):
-            roots["repo"] = repo
-
-        tokens: set[str] = set()
-        for location, root in roots.items():
-            for harness, project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
-                # At home level, skip harnesses that aren't installed at all
-                # (saves 2 isfile calls per absent harness — common on hosted
-                # apps where no skills or harnesses exist).
-                if location == "home" and not os.path.isdir(
-                    os.path.join(root, agent_home_dir)
-                ):
-                    continue
-                harness_dir = home_skills_dir if location == "home" else project_dir
-                for skill in _STREAMLIT_SKILL_NAMES:
-                    marker = os.path.join(
-                        root, harness_dir, skill, _SKILL_MARKER_FILENAME
-                    )
-                    if os.path.isfile(marker):
-                        tokens.add(f"{location}:{harness}:{skill}")
-        return tuple(sorted(tokens))
-    except Exception as ex:  # pragma: no cover - defensive
-        _LOGGER.debug("Failed to detect installed Streamlit skills", exc_info=ex)
-        return ()
-
-
-def _detect_installed_agents() -> list[str]:
-    """Detect agent harnesses installed under the user's home directory.
-
-    Returns a sorted, deduplicated list of harness name tokens (``agents``,
-    ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
-    for each harness whose home-level config directory exists. Independent
-    of whether Streamlit-specific skills are installed for that harness.
-
-    The result is cached for the lifetime of the process. Never raises:
-    filesystem errors are swallowed and produce an empty list.
-    """
-    return list(_detect_installed_agents_cached())
-
-
-@lru_cache(maxsize=1)
-def _detect_installed_agents_cached() -> tuple[str, ...]:
-    try:
-        home = os.path.expanduser("~")
-        tokens: set[str] = set()
-        for harness, _project_dir, _home_skills_dir, agent_home_dir in _HARNESSES:
-            if os.path.isdir(os.path.join(home, agent_home_dir)):
-                tokens.add(harness)
-        return tuple(sorted(tokens))
-    except Exception as ex:  # pragma: no cover - defensive
-        _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
-        return ()
 
 
 def _get_machine_id_v3() -> str:
@@ -537,7 +420,11 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
 
 
 def _get_command_telemetry(
-    _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
+    _command_func: Callable[..., Any],
+    _command_name: str,
+    *args: Any,
+    _positional_arg_offset: int = 0,
+    **kwargs: Any,
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
     arg_keywords = _get_arg_keywords(_command_func)
@@ -547,7 +434,10 @@ def _get_command_telemetry(
     name = _command_name
 
     for i, arg in enumerate(args):
-        pos = i
+        # Offset the recorded position so a decorated method's first real
+        # argument lands at position 0, matching a plain-function command that
+        # has no leading ``self`` argument (see ``_positional_arg_offset``).
+        pos = i - _positional_arg_offset
         if is_method:
             # If func is a method, ignore the first argument (self)
             i += 1  # noqa: PLW2901
@@ -598,6 +488,31 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+def format_uncaught_exception(exc: BaseException) -> str:
+    """Return a page-profile label for an uncaught exception.
+
+    Uses the exception type name, appending ``:<param>`` when the failing
+    parameter is known:
+
+    - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
+    - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+
+    Enrichment failures are swallowed so telemetry cannot interrupt script
+    execution or drop the page-profile payload.
+    """
+    name = type(exc).__name__
+    with contextlib.suppress(Exception):
+        if isinstance(exc, TypeError):
+            match = _UNEXPECTED_KWARG_RE.search(str(exc))
+            if match:
+                return f"{name}:{match.group(1)}"
+        elif isinstance(exc, StreamlitValueError):
+            parameter = exc.exec_kwargs.get("parameter")
+            if isinstance(parameter, str) and parameter:
+                return f"{name}:{parameter}"
+    return name
+
+
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -605,6 +520,8 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(
     name: str,
     func: F,
+    *,
+    _positional_arg_offset: int = 0,
 ) -> F: ...
 
 
@@ -612,10 +529,17 @@ def gather_metrics(
 def gather_metrics(
     name: str,
     func: None = None,
+    *,
+    _positional_arg_offset: int = 0,
 ) -> Callable[[F], F]: ...
 
 
-def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
+def gather_metrics(
+    name: str,
+    func: F | None = None,
+    *,
+    _positional_arg_offset: int = 0,
+) -> Callable[[F], F] | F:
     """Function decorator to add telemetry tracking to commands.
 
     Parameters
@@ -625,6 +549,13 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
     func : callable or None
         The function to track for telemetry. If ``None`` (default), returns a
         decorator that can be applied to a function.
+    _positional_arg_offset : int
+        How many leading positional arguments to skip when assigning recorded
+        position indexes. The arguments are still tracked; only their stored
+        position (``p``) is shifted. Set this to ``1`` when decorating a method
+        (such as a class ``__init__``) so that its first real argument is
+        recorded at position ``0``, matching an equivalent plain-function
+        command.
 
     Examples
     --------
@@ -643,6 +574,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             return gather_metrics(
                 name=name,
                 func=f,
+                _positional_arg_offset=_positional_arg_offset,
             )
 
         return wrapper
@@ -660,7 +592,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             ctx is not None
             and ctx.gather_usage_stats
             and not ctx.command_tracking_deactivated
-            and len(ctx.tracked_commands)
+            and ctx.shared.tracked_commands_count
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
@@ -674,16 +606,14 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         if ctx and tracking_activated:
             try:
                 command_telemetry = _get_command_telemetry(
-                    non_optional_func, name, *args, **kwargs
+                    non_optional_func,
+                    name,
+                    *args,
+                    _positional_arg_offset=_positional_arg_offset,
+                    **kwargs,
                 )
 
-                if (
-                    command_telemetry.name not in ctx.tracked_commands_counter
-                    or ctx.tracked_commands_counter[command_telemetry.name]
-                    < _MAX_TRACKED_PER_COMMAND
-                ):
-                    ctx.tracked_commands.append(command_telemetry)
-                ctx.tracked_commands_counter.update([command_telemetry.name])
+                ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
                 # The ctx.command_tracking_deactivated flag was set to True,
@@ -726,7 +656,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
 
 def create_page_profile_message(
-    commands: list[Command],
+    commands: Sequence[Command],
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,
@@ -780,7 +710,12 @@ def create_page_profile_message(
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)
 
-    page_profile.installed_skills.extend(_detect_installed_skills(app_dir))
-    page_profile.installed_agents.extend(_detect_installed_agents())
+    # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
+    # the installer it must stay aligned with); imported lazily to avoid a
+    # module-load dependency from runtime onto web.
+    from streamlit.web import skills
+
+    page_profile.installed_skills.extend(skills.detect_installed_skills(app_dir))
+    page_profile.installed_agents.extend(skills.detect_installed_agents())
 
     return msg

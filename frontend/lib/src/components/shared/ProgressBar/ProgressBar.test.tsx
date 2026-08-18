@@ -18,19 +18,81 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import ProgressBar from "./ProgressBar"
+import ProgressBar, { Size } from "./ProgressBar"
 
 describe("ProgressBar component", () => {
   it("renders without crashing", () => {
     render(<ProgressBar value={50} />)
-
-    const progressBarElement = screen.getByRole("progressbar")
-    expect(progressBarElement).toBeInTheDocument()
+    expect(screen.getByRole("progressbar")).toBeVisible()
   })
 
-  it("sets the value correctly", () => {
+  it("sets aria-valuenow correctly", () => {
     render(<ProgressBar value={75} />)
-    const progressBarElement = screen.getByRole("progressbar")
-    expect(progressBarElement).toHaveAttribute("aria-valuenow", "75")
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "75"
+    )
   })
+
+  it("sets aria-valuemin and aria-valuemax defaults", () => {
+    render(<ProgressBar value={50} />)
+    const bar = screen.getByRole("progressbar")
+    expect(bar).toHaveAttribute("aria-valuemin", "0")
+    expect(bar).toHaveAttribute("aria-valuemax", "100")
+  })
+
+  it("clamps value above 100", () => {
+    render(<ProgressBar value={150} />)
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "100"
+    )
+  })
+
+  it("clamps value below 0", () => {
+    render(<ProgressBar value={-10} />)
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "0"
+    )
+  })
+
+  it("forwards a custom aria-label", () => {
+    render(<ProgressBar value={50} aria-label="Uploading" />)
+    expect(
+      screen.getByRole("progressbar", { name: "Uploading" })
+    ).toBeVisible()
+  })
+
+  it("uses the default aria-label when none is provided", () => {
+    render(<ProgressBar value={50} />)
+    expect(screen.getByRole("progressbar", { name: "progress" })).toBeVisible()
+  })
+
+  it("renders the track element", () => {
+    render(<ProgressBar value={50} />)
+    expect(screen.getByTestId("stProgressBarTrack")).toBeVisible()
+  })
+
+  it("does not square top corners by default", () => {
+    render(<ProgressBar value={50} />)
+    expect(screen.getByTestId("stProgressBarTrack")).not.toHaveStyle({
+      borderTopLeftRadius: "0",
+    })
+  })
+
+  it("squares top corners when squareTopCorners is true", () => {
+    render(<ProgressBar value={50} squareTopCorners />)
+    const track = screen.getByTestId("stProgressBarTrack")
+    expect(track).toHaveStyle({ borderTopLeftRadius: "0" })
+    expect(track).toHaveStyle({ borderTopRightRadius: "0" })
+  })
+
+  it.each([Size.EXTRASMALL, Size.SMALL])(
+    "renders with size %s without crashing",
+    size => {
+      render(<ProgressBar value={50} size={size} />)
+      expect(screen.getByRole("progressbar")).toBeVisible()
+    }
+  )
 })

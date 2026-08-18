@@ -18,13 +18,18 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Container, Iterator
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_user_script_exception
-from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.errors import (
+    FragmentHandledException,
+    FragmentStorageKeyError,
+    StreamlitAPIException,
+)
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import (
@@ -32,6 +37,8 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
+    ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
 )
@@ -41,6 +48,30 @@ from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from datetime import timedelta
+
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
+
+_LOGGER: Final = get_logger(__name__)
+
+
+def _check_not_parallel_worker(api_name: str) -> None:
+    """Raise StreamlitAPIException if called from a parallel fragment worker."""
+    try:
+        ts = ThreadState.get()
+    except RuntimeError:
+        return
+
+    if ts.is_parallel_worker:
+        raise StreamlitAPIException(
+            f"`{api_name}` cannot be called from a parallel fragment during "
+            f"the initial page load, because parallel fragments run "
+            f"concurrently on separate threads where `{api_name}` is not "
+            f"safe.\n\n"
+            f"To fix this, gate the call behind a widget interaction "
+            f"(e.g., `if st.button(...):`) so it runs during a sequential "
+            f"fragment rerun instead."
+        )
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -100,12 +131,13 @@ class FragmentStorage(Protocol):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
+    ) -> list[str]:
         """Remove stored fragments that are strict descendants of ``root_fragment_id``
         but were not re-registered during the latest run of that root.
 
         Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
-        removed ``run_every`` child) do not keep stale closures in storage.
+        removed ``run_every`` child) do not keep stale closures in storage. Returns
+        the list of removed fragment IDs.
         """
         raise NotImplementedError
 
@@ -125,6 +157,11 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``."""
+        raise NotImplementedError
+
+    @abstractmethod
     def delete(self, key: str) -> None:
         """Delete the fragment corresponding to the given key.
 
@@ -139,6 +176,44 @@ class FragmentStorage(Protocol):
 
         May be called from non-script threads (e.g. the event loop). Implementations
         should be safe to call without external synchronization.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def register_outside_wrapper(
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
+    ) -> None:
+        """Store the implicit wrapper for a (fragment, outside container) pair."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_outside_wrapper(
+        self, fragment_id: str, container_id: str
+    ) -> OutsideContainerWrapper | None:
+        """Return the cached wrapper for a (fragment, outside container) pair."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
+        """Return all wrapper records belonging to the given fragment."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        """Drop every wrapper whose outside container was created by the given
+        fragment's scope. Called when that fragment reruns and is about to rebuild
+        those containers.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_outside_wrappers(self) -> None:
+        """Drop every stored wrapper record.
+
+        Called at the start of a full app run, before the main script recreates
+        its outside containers as new DG objects. Wrappers must survive a full
+        run so the fragment reruns that follow it can reuse them, so clearing
+        happens before — not after — the script body executes.
         """
         raise NotImplementedError
 
@@ -163,6 +238,7 @@ class MemoryFragmentStorage(FragmentStorage):
         self._parent_by_id: dict[str, str | None] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
+        self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -181,10 +257,16 @@ class MemoryFragmentStorage(FragmentStorage):
             seen_ids.add(parent_id)
             current = parent_id
 
-    def _remove(self, fragment_id: str) -> None:
+    def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
+        if evict_wrappers:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if key[0] != fragment_id
+            }
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -193,7 +275,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
             for fragment_id in list(self._fragments):
                 if fragment_id not in new_fragment_ids:
-                    self._remove(fragment_id)
+                    self._remove(fragment_id, evict_wrappers=False)
 
     def lookup(self, key: str) -> Fragment:
         try:
@@ -218,8 +300,12 @@ class MemoryFragmentStorage(FragmentStorage):
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
-    ) -> None:
-        """Drop descendant fragments under ``root_fragment_id`` not seen this run."""
+    ) -> list[str]:
+        """Drop descendant fragments under ``root_fragment_id`` not seen this run.
+
+        Returns the list of fragment IDs that were removed so the caller can, for
+        example, tell the frontend to cancel their auto-rerun timers.
+        """
 
         with self._lock:
             to_remove = [
@@ -231,6 +317,7 @@ class MemoryFragmentStorage(FragmentStorage):
             ]
             for fragment_id in to_remove:
                 self._remove(fragment_id)
+            return to_remove
 
     def registration_sequence(self) -> int:
         with self._lock:
@@ -249,15 +336,6 @@ class MemoryFragmentStorage(FragmentStorage):
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Run queued ancestors before descendants while preserving FIFO otherwise."""
         with self._lock:
-
-            def has_queued_ancestor(
-                fragment_id: str, queued_fragment_ids: set[str]
-            ) -> bool:
-                return any(
-                    ancestor_id in queued_fragment_ids
-                    for ancestor_id in self._iter_ancestor_ids(fragment_id)
-                )
-
             remaining_fragment_ids = list(fragment_ids)
             ordered_fragment_ids = []
 
@@ -265,7 +343,9 @@ class MemoryFragmentStorage(FragmentStorage):
                 queued_fragment_ids = set(remaining_fragment_ids)
 
                 for index, fragment_id in enumerate(remaining_fragment_ids):
-                    if not has_queued_ancestor(fragment_id, queued_fragment_ids):
+                    if not self._has_ancestor_in_unlocked(
+                        fragment_id, queued_fragment_ids
+                    ):
                         ordered_fragment_ids.append(fragment_id)
                         del remaining_fragment_ids[index]
                         break
@@ -275,6 +355,25 @@ class MemoryFragmentStorage(FragmentStorage):
                     break
 
             return ordered_fragment_ids
+
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        with self._lock:
+            return self._has_ancestor_in_unlocked(fragment_id, candidate_ids)
+
+    def _has_ancestor_in_unlocked(
+        self, fragment_id: str, candidate_ids: Container[str]
+    ) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``.
+
+        Callers must hold ``self._lock``; use ``has_ancestor_in`` from outside
+        the lock. Extracted so ``order_fragment_ids`` (which already holds the
+        lock while walking the queue) and ``has_ancestor_in`` can share the
+        same predicate without deadlocking or drifting apart.
+        """
+        return any(
+            ancestor_id in candidate_ids
+            for ancestor_id in self._iter_ancestor_ids(fragment_id)
+        )
 
     def delete(self, key: str) -> None:
         with self._lock:
@@ -286,6 +385,41 @@ class MemoryFragmentStorage(FragmentStorage):
     def contains(self, key: str) -> bool:
         with self._lock:
             return key in self._fragments
+
+    def register_outside_wrapper(
+        self, fragment_id: str, container_id: str, wrapper: OutsideContainerWrapper
+    ) -> None:
+        with self._lock:
+            self._outside_wrappers[fragment_id, container_id] = wrapper
+
+    def get_outside_wrapper(
+        self, fragment_id: str, container_id: str
+    ) -> OutsideContainerWrapper | None:
+        with self._lock:
+            return self._outside_wrappers.get((fragment_id, container_id))
+
+    def outside_wrappers_for(self, fragment_id: str) -> list[OutsideContainerWrapper]:
+        with self._lock:
+            return [
+                wrapper
+                for (
+                    stored_fragment_id,
+                    _container_id,
+                ), wrapper in self._outside_wrappers.items()
+                if stored_fragment_id == fragment_id
+            ]
+
+    def evict_outside_wrappers_created_by(self, fragment_id: str) -> None:
+        with self._lock:
+            self._outside_wrappers = {
+                key: wrapper
+                for key, wrapper in self._outside_wrappers.items()
+                if wrapper.creating_fragment_id != fragment_id
+            }
+
+    def clear_outside_wrappers(self) -> None:
+        with self._lock:
+            self._outside_wrappers.clear()
 
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
@@ -300,10 +434,40 @@ class MemoryFragmentStorage(FragmentStorage):
         )
 
 
+def _reset_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
+    """Re-emit and reset every wrapper belonging to a fragment before it reruns.
+
+    Re-emitting sends a fresh add_block delta so the frontend doesn't garbage-
+    collect the wrapper as stale. Resetting the cursor returns its index to 0 so
+    the fragment's children overwrite in place instead of accumulating.
+
+    Each re-emitted delta carries ``fragment_id`` so the frontend's
+    ``ClearStaleNodeVisitor`` can recognize the wrapper as fragment-owned and
+    garbage-collect children that weren't re-emitted — otherwise a fragment
+    that shrinks its element count leaves stale children behind.
+    """
+    from streamlit.cursor import RunningCursor
+    from streamlit.delta_generator import _enqueue_add_block
+
+    # See docstring — tag wrappers with fragment_id for stale-child GC.
+    with ThreadState.scoped(fragment_id=fragment_id):
+        for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
+            _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+
+            wrapper_cursor = wrapper.delta_generator._cursor
+            if not isinstance(wrapper_cursor, RunningCursor):
+                # LockedCursor (st.empty wrappers) always points at index 0.
+                continue
+            wrapper_cursor.reset()
+
+
 def _fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
     additional_hash_info: str = "",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
@@ -319,6 +483,7 @@ def _fragment(
             return fragment(
                 func=f,
                 run_every=run_every,
+                parallel=parallel,
             )
 
         return wrapper
@@ -355,18 +520,47 @@ def _fragment(
             if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
-            if ctx.fragment_ids_this_run:
-                # This script run is a run of one or more fragments. We restore the
-                # state of ctx.cursors and dg_stack to the snapshots we took when this
-                # fragment was declared.
+            # True only when the ScriptRunner invokes this fragment directly as a
+            # queued top-level rerun. ``fragment_id is None`` distinguishes that
+            # from an inline call via ``wrap`` from an enclosing fragment, which
+            # matters when a parent and its own descendant are both queued: the
+            # descendant's id is still in ``fragment_ids_this_run`` while the
+            # parent runs it inline, so queue membership alone is not enough.
+            is_queued_toplevel_rerun = bool(
+                ctx.fragment_ids_this_run
+                and fragment_id in ctx.fragment_ids_this_run
+                and ThreadState.get().fragment_id is None
+            )
+
+            if is_queued_toplevel_rerun:
+                # Restore ctx.cursors and dg_stack to the snapshots taken when
+                # this fragment was declared. Nested fragments called via ``wrap``
+                # from an already-rerunning parent must keep the parent's
+                # already-advanced cursor state instead; replacing the dg_stack
+                # with deep copies would sever their writes from the enclosing
+                # scope, making sibling nested fragments compute colliding
+                # fragment ids and overwrite each other's deltas (see #12514).
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
+
+            if ctx.fragment_ids_this_run:
+                # Wrapper bookkeeping runs for every fragment executing during a
+                # fragment rerun, including nested ones reached via ``wrap``:
+                # their outside-container wrappers still need their cursors reset
+                # so writes overwrite in place rather than accumulate.
+                #
+                # Evict wrappers whose outside containers will be rebuilt by this
+                # fragment, then re-emit and reset the surviving wrappers. Order
+                # matters: eviction must happen first so we don't re-emit a wrapper
+                # that's about to be replaced.
+                ctx.fragment_storage.evict_outside_wrappers_created_by(fragment_id)
+                _reset_outside_wrappers(ctx.fragment_storage, fragment_id)
 
             # Always add the fragment id to new_fragment_ids. For full app runs
             # we need to add them anyways and for fragment runs we add them
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
-            ctx.new_fragment_ids.check_and_add(fragment_id)
+            ctx.shared.new_fragment_ids.check_and_add(fragment_id)
             # Pin the active script hash to the value captured at fragment
             # definition (consistent widget IDs across reruns). Computed
             # above ThreadState.scoped() so the comparison isn't coupled
@@ -377,10 +571,27 @@ def _fragment(
                 != ThreadState.get().active_script_hash
                 else contextlib.nullcontext()
             )
-            with ThreadState.scoped(fragment_id=fragment_id):
+
+            ts = ThreadState.get()
+            skip_container = ts.pre_allocated_container_fragment_id == fragment_id
+            if skip_container:
+                ThreadState.update(pre_allocated_container_fragment_id=None)
+
+            # Set delta_path initial value to None. When the fragment container
+            # is established below, this will be initialized with the fragment's
+            # delta path. Without this, we would inherit the delta path from the
+            # parent scope.
+            with ThreadState.scoped(
+                fragment_id=fragment_id,
+                delta_path=None,
+                run_location=RunLocation.FRAGMENT,
+            ):
                 result = None
                 with active_hash_context:
-                    with st.container():
+                    container_ctx = (
+                        contextlib.nullcontext() if skip_container else st.container()
+                    )
+                    with container_ctx:
                         try:
                             # use dg_stack instead of active_dg to have correct copy
                             # during execution (otherwise we can run into concurrency
@@ -427,7 +638,9 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        # Immediate execute the wrapped fragment since we are in a full app run
+        if parallel and not ctx.fragment_ids_this_run:
+            _dispatch_parallel_fragment(ctx, fragment_id, wrapped_fragment)
+            return None
         return wrapped_fragment()
 
     with contextlib.suppress(AttributeError, NameError):
@@ -446,6 +659,7 @@ def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> F: ...
 
 
@@ -456,6 +670,7 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F]: ...
 
 
@@ -464,6 +679,7 @@ def fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -482,24 +698,23 @@ def fragment(
     When Streamlit element commands are called directly in a fragment, the
     elements are cleared and redrawn on each fragment rerun, just like all
     elements are redrawn on each app rerun. The rest of the app is persisted
-    during a fragment rerun. When a fragment renders elements into externally
-    created containers, the elements will not be cleared with each fragment
-    rerun. Instead, elements will accumulate in those containers with each
-    fragment rerun, until the next app rerun.
+    during a fragment rerun.
 
-    Calling ``st.sidebar`` in a fragment is not supported. To write elements to
-    the sidebar with a fragment, call your fragment function inside a
-    ``with st.sidebar`` context manager.
+    A fragment can also write elements and widgets into a container created
+    outside of it, including directly to ``st.sidebar`` or ``st.bottom``. The
+    fragment's writes to that outside container are cleared and redrawn in
+    place on each fragment rerun, while content written to the same container
+    outside of the fragment keeps its position and is unaffected. Interacting
+    with a widget that a fragment rendered into an outside container reruns the
+    writing fragment, not the full app.
+
+    To populate an outside container from a fragment, the container must first
+    receive at least one write during the initial full app run.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
     interactions are additive across multiple fragment reruns. You are
     responsible for handling any side effects of that behavior.
-
-    .. warning::
-
-        - Fragments can only contain widgets in their main body. Fragments
-          can't render widgets to externally created containers.
 
     Parameters
     ----------
@@ -514,13 +729,38 @@ def fragment(
             - An ``int`` or ``float`` specifying the interval in seconds.
             - A string specifying the time in a format supported by `Pandas'
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
-              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``.
+              e.g. ``"1D"``, ``"1.5 days"``, or ``"1h23s"``.
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(days=1)``.
 
         If ``run_every`` is ``None``, the fragment will only rerun from
         user-triggered events.
+
+    parallel : bool
+        Whether to execute the fragment in parallel during full app reruns.
+        If ``True``, the fragment is dispatched to a thread pool and may execute
+        concurrently with other parallel fragments and the rest of the app script.
+        If ``False`` (default), the fragment executes inline on the main thread.
+
+        Parallel fragments are useful for independent, slow operations that
+        should not block overall app throughput. Full app reruns may overlap
+        several parallel fragments with the main script; reruns confined to a
+        single fragment (such as those triggered after widget interactions)
+        remain sequential so state updates stay deterministic.
+
+        During the initial parallel run, some Streamlit commands are
+        restricted because they are not safe to call from concurrent
+        threads. These include ``st.dialog``, ``st.switch_page``, and
+        writing to containers created outside the fragment. These
+        commands work normally during sequential fragment reruns
+        (e.g., after a widget interaction).
+
+        .. warning::
+
+            Fragments dispatched in parallel can run concurrently. Avoid
+            unsynchronized mutations of shared mutable resources across fragments
+            unless you coordinate access explicitly.
 
     Examples
     --------
@@ -603,4 +843,95 @@ def fragment(
         height: 400px
 
     """
-    return _fragment(func, run_every=run_every)
+    return _fragment(func, run_every=run_every, parallel=parallel)
+
+
+def _prepare_dg_stack_for_worker(
+    dg_stack: tuple[DeltaGenerator, ...],
+) -> tuple[DeltaGenerator, ...]:
+    """Deep-copy the DG stack for dispatch to a parallel worker thread.
+
+    The deepcopy creates independent cursor state (separate _index, parent_path,
+    etc.) so the worker doesn't race with the main thread. Each worker operates
+    in its own cursor space within a pre-allocated container.
+    """
+    return deepcopy(dg_stack)
+
+
+def _dispatch_parallel_fragment(
+    ctx: ScriptRunContext,
+    fragment_id: str,
+    wrapped_fragment: Callable[[], Any],
+) -> None:
+    """Dispatch a parallel fragment to the coordinator's thread pool.
+
+    Pre-allocates the fragment's container on the main thread (so the frontend
+    sees the container delta immediately), then submits the fragment body to
+    run on a worker thread.
+
+    The coordinator's submit() handles context propagation: the caller passes
+    ctx explicitly and submit() captures copy_context() at submit time, and the
+    worker runs inside captured.run() with _scoped_ctx_attach().
+    """
+    import streamlit as st
+    from streamlit.delta_generator_singletons import context_dg_stack
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:  # pragma: no cover - defensive
+        _LOGGER.warning(
+            "Parallel coordinator not available for fragment %s, skipping dispatch",
+            fragment_id,
+        )
+        return
+
+    with st.container():
+        dg_stack_with_container = _prepare_dg_stack_for_worker(context_dg_stack.get())
+
+    coordinator.submit(
+        _run_parallel_fragment,
+        ctx,
+        fragment_id,
+        wrapped_fragment,
+        dg_stack_with_container,
+    )
+
+
+def _run_parallel_fragment(
+    fragment_id: str,
+    wrapped_fragment: Callable[[], Any],
+    dg_stack_snapshot: tuple[DeltaGenerator, ...],
+) -> None:
+    """Worker entry point for parallel fragment execution.
+
+    Runs inside the coordinator's context propagation boundary (copy_context +
+    _scoped_ctx_attach). Sets up the skip signal for container pre-allocation
+    and handles control flow exceptions.
+    """
+    from streamlit.delta_generator_singletons import context_dg_stack
+
+    ctx = get_script_run_ctx(suppress_warning=True)
+    if ctx is None:  # pragma: no cover - defensive
+        return
+
+    context_dg_stack.set(dg_stack_snapshot)
+    ThreadState.update(
+        pre_allocated_container_fragment_id=fragment_id,
+        is_parallel_worker=True,
+    )
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:  # pragma: no cover - defensive
+        return
+
+    try:
+        wrapped_fragment()
+    except RerunException as e:
+        coordinator.request_rerun(e)
+    except StopException:
+        coordinator.request_stop()
+    except FragmentHandledException:
+        # This exception indicates fragment-level handling already occurred.
+        # Intentionally swallow it at the worker boundary.
+        return
+    except Exception:  # pragma: no cover - defensive
+        _LOGGER.exception("Uncaught exception in parallel fragment worker")

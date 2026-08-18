@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import unittest
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -39,12 +40,14 @@ from streamlit.elements.lib.built_in_chart_utils import (
     StreamlitColumnNotFoundError,
 )
 from streamlit.elements.vega_charts import (
+    VegaLiteState,
+    VegaLiteStateSerde,
     _extract_selection_parameters,
     _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -55,6 +58,38 @@ if TYPE_CHECKING:
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
+
+
+def test_vega_lite_serde_returns_typed_state() -> None:
+    """The Vega-Lite serde returns a typed event state."""
+    result = VegaLiteStateSerde(["brush"]).deserialize(None)
+
+    assert isinstance(result, VegaLiteState)
+    assert result.selection.brush == {}
+    assert result["selection"]["brush"] == {}
+    # Nested selection must be a stable stored instance (not a per-access copy).
+    assert result["selection"] is result["selection"]
+    assert result.selection is result["selection"]
+
+
+def test_vega_lite_state_is_read_only() -> None:
+    """The Vega-Lite event state is read-only at the top and nested levels.
+
+    It also keeps its typed class through deepcopy, since Session State
+    deep-copies the initial widget value.
+    """
+    result = VegaLiteStateSerde(["brush"]).deserialize(None)
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"] = {}
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection = {}  # type: ignore[misc]
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"]["brush"] = {"x": 1}
+
+    # Read access still works, and deepcopy preserves the concrete type.
+    assert result.selection.brush == {}
+    assert isinstance(copy.deepcopy(result), VegaLiteState)
 
 
 def merge_dicts(x, y):
@@ -161,7 +196,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.altair_chart(chart, theme="bad_theme")
 
     def test_works_with_element_replay(self):
@@ -261,7 +296,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.altair_chart(chart, on_select=on_select)
 
     @unittest.skipIf(
@@ -492,6 +527,103 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         # Verify the selection state is returned
         assert hasattr(event, "selection")
+
+    def test_chart_from_json_data_survives_roundtrip(self) -> None:
+        """A from_json chart's data must be delivered, and delivered correctly.
+
+        Charts rebuilt with ``alt.Chart.from_json`` carry their data as inline
+        datasets referenced by name from the spec. Streamlit used to overwrite the
+        chart's ``datasets`` with only the Arrow-serialized ones it collected
+        itself, which is empty in this case, so the spec referenced a dataset that
+        was never sent and the chart rendered with axes but no data. See #6269.
+        """
+        df = pd.DataFrame({"x": [0, 1, 2], "y": [3, 4, 5]})
+        chart = alt.Chart(df).mark_line().encode(x=alt.X("x"), y=alt.Y("y"))
+
+        st.altair_chart(alt.Chart.from_json(chart.to_json()))
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+
+        # The spec references its data by name, so that name must resolve to a
+        # dataset that was actually sent on the proto.
+        data_name = spec["data"]["name"]
+        sent_names = [dataset.name for dataset in proto.datasets]
+        assert data_name in sent_names, (
+            f"spec references dataset {data_name!r} but only {sent_names} were sent"
+        )
+
+        # The delivered data must match the original frame, not merely be non-empty.
+        sent = proto.datasets[sent_names.index(data_name)]
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(sent.data.data),
+            df,
+            check_dtype=False,
+        )
+
+    def test_layered_chart_from_json_keeps_its_inline_datasets(self) -> None:
+        """Layered from_json charts must keep every named dataset the layers reference.
+
+        A layered chart shares one named dataset across its layers, so the same
+        overwrite left every layer without data. See #6269.
+        """
+        df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
+        base = alt.Chart(df)
+        layered = alt.layer(
+            base.mark_line().encode(x="x", y="y"),
+            base.mark_point().encode(x="x", y="y"),
+        )
+
+        st.altair_chart(alt.Chart.from_json(layered.to_json()))
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        sent_names = [dataset.name for dataset in proto.datasets]
+
+        # Collect every dataset name referenced anywhere in the spec (top level
+        # plus each layer), and require all of them to have been delivered.
+        referenced = set()
+        for view in [spec, *spec.get("layer", [])]:
+            data_spec = view.get("data")
+            if isinstance(data_spec, dict) and "name" in data_spec:
+                referenced.add(data_spec["name"])
+
+        assert referenced, "layered spec referenced no named data at all"
+        missing = referenced - set(sent_names)
+        assert not missing, f"spec references {missing} but only {sent_names} were sent"
+        for name in referenced:
+            sent = proto.datasets[sent_names.index(name)]
+            pd.testing.assert_frame_equal(
+                convert_arrow_bytes_to_pandas_df(sent.data.data),
+                df,
+                check_dtype=False,
+            )
+
+    def test_regular_chart_datasets_still_arrow_serialized(self) -> None:
+        """The normal (non-from_json) path must be unchanged by the merge.
+
+        A chart built directly from a dataframe should still have its data routed
+        through the Arrow dataset transformer rather than inlined into the spec.
+        """
+        df = pd.DataFrame({"x": [0, 1, 2], "y": [0, 1, 2]})
+        chart = alt.Chart(df).mark_line().encode(x=alt.X("x"), y=alt.Y("y"))
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        # Data is still passed by reference, and the referenced dataset is
+        # delivered as an Arrow dataset on the proto (not inlined in the spec).
+        assert "name" in spec["data"]
+        assert len(proto.datasets) == 1
+        assert proto.datasets[0].name == spec["data"]["name"]
+        # Decode it to confirm the payload really is Arrow bytes for this df, so
+        # this cannot pass on a merge that left raw JSON values in place.
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data),
+            df,
+            check_dtype=False,
+        )
 
 
 class AltairChartWidthTest(DeltaGeneratorTestCase):
@@ -1436,7 +1568,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert el.vega_lite_chart.theme == proto_value
 
     def test_bad_theme(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.vega_lite_chart(df1, theme="bad_theme")
 
     def test_width_inside_spec(self):
@@ -1510,7 +1642,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         ]
     )
     def test_vega_lite_on_select_invalid(self, on_select: Any):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.vega_lite_chart(
                 df1,
                 {
@@ -2569,6 +2701,169 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitColumnNotFoundError):
             st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
+
+    def test_bar_chart_single_column_with_dot_in_name_renders(self):
+        """Regression test for #7714: a single column whose name contains '.'
+        should render normally.
+
+        Vega-Lite treats '.' inside a field string as nested-object access, so
+        the raw column name must not be used as the field. Streamlit should
+        instead rename the column to a safe internal alias.
+        """
+        df = pd.DataFrame({"col.name": [1, 2, 3, 4]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        y_field = chart_spec["encoding"]["y"]["field"]
+        # Field must not contain '.', '[', ']', or '\' - otherwise Vega-Lite
+        # would interpret it as nested-object / property access.
+        assert not any(ch in y_field for ch in (".", "[", "]", "\\"))
+        # And it must not be the raw user-supplied name (which would be broken).
+        assert y_field != "col.name"
+        # The data column names in the proto payload must match the aliased
+        # field the spec references.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert y_field in data_frame.columns
+
+    def test_bar_chart_single_column_with_brackets_renders(self):
+        """Regression test for #7714 companion report: column names containing
+        square brackets (e.g. 'CO2 Storage [t]') must also render.
+        """
+        df = pd.DataFrame({"CO2 Storage [t]": [1, 2, 3, 4]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        y_field = chart_spec["encoding"]["y"]["field"]
+        assert not any(ch in y_field for ch in (".", "[", "]", "\\"))
+
+    def test_bar_chart_dotted_column_tooltip_shows_original_name(self):
+        """The tooltip title for a renamed column should be the original,
+        user-facing column name so the user still sees their column label.
+        """
+        df = pd.DataFrame({"a.b": [1, 2, 3, 4]})
+
+        st.bar_chart(df, y="a.b")
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        y_tooltip = next(
+            t
+            for t in chart_spec["encoding"]["tooltip"]
+            if t["field"] == chart_spec["encoding"]["y"]["field"]
+        )
+        assert y_tooltip["title"] == "a.b"
+        # And the axis title (only shown because y was explicitly passed) should
+        # also be the original name.
+        assert chart_spec["encoding"]["y"]["title"] == "a.b"
+
+    def test_bar_chart_multi_dotted_columns_legend_shows_originals(self):
+        """When multiple y columns contain '.', the melted-color column data
+        values must be rewritten back to the original names so the legend and
+        the tooltip both display 'a.b' / 'c.d' rather than internal aliases.
+        """
+        df = pd.DataFrame({"a.b": [1, 2, 3], "c.d": [4, 5, 6]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # The melted color column data values must be the original names, not
+        # the internal aliases. That way both the legend and the melted-color
+        # tooltip pick them up naturally.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        color_field = chart_spec["encoding"]["color"]["field"]
+        color_values = set(data_frame[color_field].unique())
+        assert color_values == {"a.b", "c.d"}
+        # And the color legend must not carry a stale labelExpr — a leftover
+        # alias-to-original remap would be a signal that data and encoding
+        # went out of sync.
+        legend = chart_spec["encoding"]["color"]["legend"]
+        assert "labelExpr" not in legend
+
+    def test_bar_chart_multi_dotted_columns_tooltip_shows_originals(self):
+        """The melted-color tooltip must display the original column names,
+        not the internal aliases.
+        """
+        df = pd.DataFrame({"a.b": [1, 2, 3], "c.d": [4, 5, 6]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # The melted-color tooltip references the color field directly, so what
+        # the user sees on hover is the raw data value. Assert those values
+        # cannot leak internal aliases.
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        color_field = chart_spec["encoding"]["color"]["field"]
+        for value in data_frame[color_field].unique():
+            assert "streamlit-generated" not in str(value)
+
+    def test_bar_chart_plain_column_names_are_not_aliased(self):
+        """Anti-regression: columns without special characters must keep their
+        original names (no aliasing applied).
+        """
+        df = pd.DataFrame({"plain": [1, 2, 3, 4]})
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        assert chart_spec["encoding"]["y"]["field"] == "plain"
+
+    def test_bar_chart_sort_by_dotted_column_uses_alias(self):
+        """When sorting by a column whose name contains '.', the sort field
+        must reference the aliased column so Vega-Lite finds the actual field.
+        """
+        df = pd.DataFrame(
+            {
+                "cat": ["foo", "bar", "baz"],
+                "num.value": [3, 1, 2],
+            }
+        )
+
+        st.bar_chart(df, x="cat", y="num.value", sort="-num.value")
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        sort = chart_spec["encoding"]["x"]["sort"]
+        assert not any(ch in sort["field"] for ch in (".", "[", "]", "\\"))
+        assert sort["order"] == "descending"
+
+    def test_bar_chart_columns_with_colliding_stringified_names_get_distinct_aliases(
+        self,
+    ):
+        """Two columns whose stringified names collide (e.g. literal duplicate
+        ``"a.b"`` labels, which is a legal pandas construct) must each receive
+        their own alias so both columns survive as distinct series through
+        aliasing and melting.
+        """
+        df = pd.DataFrame([[1, 10], [2, 20], [3, 30]])
+        df.columns = pd.Index(["a.b", "a.b"])
+
+        st.bar_chart(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+        data_frame = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        # Both columns must survive the melt: the first contributes 1, 2, 3
+        # and the second contributes 10, 20, 30. Duplicate y-list remap
+        # collapsing to a single alias would produce only one of these sets
+        # (or duplicate one), leaving a value column that doesn't cover
+        # both ranges.
+        y_field = chart_spec["encoding"]["y"]["field"]
+        assert sorted(data_frame[y_field].tolist()) == [1, 2, 3, 10, 20, 30]
 
 
 class ChartWidthHeightTest(DeltaGeneratorTestCase):

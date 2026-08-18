@@ -50,12 +50,18 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", value=None, key="my_input"), str | None)
 
     # =====================================================================
-    # Test type parameter ("default" or "password")
+    # Test type parameter ("default", "password", "email", "url", "phone",
+    # "search")
     # =====================================================================
 
     assert_type(text_input("Enter text", type="default"), str)
     assert_type(text_input("Enter text", type="password"), str)
+    assert_type(text_input("Email", type="email"), str)
+    assert_type(text_input("URL", type="url"), str)
+    assert_type(text_input("Phone", type="phone"), str)
+    assert_type(text_input("Search", type="search"), str)
     assert_type(text_input("Enter password", value=None, type="password"), str | None)
+    assert_type(text_input("Email", value=None, type="email"), str | None)
 
     # =====================================================================
     # Test max_chars parameter
@@ -118,6 +124,15 @@ if TYPE_CHECKING:
     assert_type(text_input("Search", icon=":material/search:"), str)
     assert_type(text_input("Search", icon=None), str)
     assert_type(text_input("Search", value=None, icon=":material/search:"), str | None)
+
+    # =====================================================================
+    # Test validate parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_input("Label", validate="^x$"), str)
+    assert_type(text_input("Label", value=None, validate="^x$"), str | None)
+    assert_type(text_input("Label", validate=("^x$", "msg")), str)
+    assert_type(text_input("Label", value=None, validate=("^x$", "msg")), str | None)
 
     # =====================================================================
     # Test width parameter (keyword-only)

@@ -662,6 +662,7 @@ const CameraInput = ({
           setClearPhotoInProgress={setClearPhotoInProgress}
           facingMode={facingMode}
           setFacingMode={handleSetFacingMode}
+          resolutionHeight={element.resolutionHeight ?? undefined}
           testOverride={testOverride}
         />
       )}

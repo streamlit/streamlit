@@ -19,6 +19,18 @@ from __future__ import annotations
 import binascii
 import os
 import time
+from typing import Final
+
+from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
+)
+
+# Allow a small server-side grace period beyond the browser cookie max-age so
+# recently expired auth cookies can still be decoded during edge-case timing.
+_AUTH_COOKIE_GRACE_PERIOD_SECONDS: Final = 24 * 60 * 60
+_DEFAULT_SIGNED_VALUE_MAX_AGE_DAYS: Final = (
+    AUTH_COOKIE_MAX_AGE_SECONDS + _AUTH_COOKIE_GRACE_PERIOD_SECONDS
+) / 86400
 
 
 def parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
@@ -138,7 +150,7 @@ def decode_signed_value(
     secret: str,
     name: str,
     value: str | bytes,
-    max_age_days: float = 31,
+    max_age_days: float = _DEFAULT_SIGNED_VALUE_MAX_AGE_DAYS,
 ) -> bytes | None:
     """Decode a signed cookie value using itsdangerous.
 
@@ -151,7 +163,8 @@ def decode_signed_value(
     value
         The signed value to decode.
     max_age_days
-        Maximum age of the cookie in days (default: 31).
+        Maximum age of the cookie in days. Defaults to the auth cookie lifetime
+        plus a 1-day grace period.
 
     Returns
     -------
@@ -171,10 +184,10 @@ def decode_signed_value(
         decoded = serializer.loads(value, max_age=int(max_age_days * 86400))
         if isinstance(decoded, str):
             return decoded.encode("utf-8")
-        if isinstance(decoded, bytes):
+        if isinstance(decoded, bytes):  # pragma: no cover - defensive
             return decoded
         # Unexpected type from deserializer — treat as invalid
-        return None
+        return None  # pragma: no cover - defensive
     except (BadSignature, SignatureExpired, UnicodeDecodeError):
         return None
 
@@ -249,7 +262,9 @@ def decode_xsrf_token_string(
         # TODO(lukasmasuch): This is likely unused in Streamlit since only V2 tokens
         # are used. We might be able to just remove this part.
         token = binascii.a2b_hex(value.encode("ascii"))
-        if not token:
+        if (
+            not token
+        ):  # pragma: no cover - defensive, non-empty hex never decodes to empty
             return None, None
         # V1 tokens don't have an embedded timestamp, so we use current time
         # as a placeholder. This timestamp is informational only and not used

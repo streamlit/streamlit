@@ -110,7 +110,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
 
     @property
     def _secrets(self) -> AttrDict:
-        """Get the secrets for this connection from the corresponding st.secrets section.
+        """The secrets for this connection from the corresponding st.secrets section.
 
         We expect this property to be used primarily by connection authors when they
         are implementing their class' ``_connect`` method. User scripts should, for the
@@ -152,7 +152,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
 
     @property
     def _instance(self) -> RawConnectionT:
-        """Get an instance of the underlying connection, creating a new one if needed."""
+        """An instance of the underlying connection, creating a new one if needed."""
         if self._raw_instance is None:
             self._raw_instance = self._connect(**self._kwargs)
 

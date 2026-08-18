@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { Mock, MockInstance } from "vitest"
 
 import {
@@ -67,6 +67,13 @@ vi.mock("~lib/WidgetStateManager")
 const MOCK_COMPONENT_URL = "http://a.mock.url"
 const MOCK_WIDGET_ID = "mock_widget_id"
 const MOCK_COMPONENT_NAME = "mock_component_name"
+
+/** Dispatch a window MessageEvent inside act() so ComponentInstance state updates flush. */
+const dispatchMessageEvent = (event: MessageEvent): void => {
+  act(() => {
+    window.dispatchEvent(event)
+  })
+}
 
 describe("ComponentInstance", () => {
   let logWarnSpy: MockInstance
@@ -227,7 +234,8 @@ describe("ComponentInstance", () => {
     )
     const skeleton = screen.getByTestId("stSkeleton")
     expect(skeleton).toBeInTheDocument()
-    expect(skeleton).toHaveStyle("height: 2.75rem")
+    // Defaults to the standard widget height (theme.sizes.minElementHeight).
+    expect(skeleton).toHaveStyle("height: 2.5rem")
 
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute("height", "0")
@@ -275,8 +283,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -309,8 +316,7 @@ describe("ComponentInstance", () => {
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
 
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -370,8 +376,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -383,8 +388,7 @@ describe("ComponentInstance", () => {
         })
       )
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -418,8 +422,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -474,8 +477,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -530,8 +532,7 @@ describe("ComponentInstance", () => {
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -677,8 +678,7 @@ describe("ComponentInstance", () => {
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -690,8 +690,7 @@ describe("ComponentInstance", () => {
         })
       )
       // SET COMPONENT_VALUE
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -738,8 +737,7 @@ describe("ComponentInstance", () => {
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -753,8 +751,7 @@ describe("ComponentInstance", () => {
 
       const bytesValue = new Uint8Array([0, 1, 2])
       // SET COMPONENT_VALUE
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -802,8 +799,7 @@ describe("ComponentInstance", () => {
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_VALUE
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -844,8 +840,7 @@ describe("ComponentInstance", () => {
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET COMPONENT_READY
-        fireEvent(
-          window,
+        dispatchMessageEvent(
           new MessageEvent("message", {
             data: {
               isStreamlitMessage: true,
@@ -857,8 +852,7 @@ describe("ComponentInstance", () => {
           })
         )
         // SET IFRAME_HEIGHT
-        fireEvent(
-          window,
+        dispatchMessageEvent(
           new MessageEvent("message", {
             data: {
               isStreamlitMessage: true,
@@ -901,8 +895,7 @@ describe("ComponentInstance", () => {
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET IFRAME_HEIGHT
-        fireEvent(
-          window,
+        dispatchMessageEvent(
           new MessageEvent("message", {
             data: {
               isStreamlitMessage: true,

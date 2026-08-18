@@ -56,6 +56,8 @@ import CreatableSelect from "react-select/creatable"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
+
 type SelectOption = { value: string; label?: string; color?: string }
 
 interface MultiSelectCellProps {
@@ -261,9 +263,9 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
   // Use document.getElementById for the portal target.
   // The portalElementRef from glide-data-grid is not used here to avoid
   // accessing refs during render, which violates React best practices.
-  // The "portal" element is the standard fallback used by glide-data-grid.
+  // The element with this id is the standard fallback used by glide-data-grid.
   const [portalTarget] = useState<HTMLElement | null>(() =>
-    document.getElementById("portal")
+    document.getElementById(DATAFRAME_PORTAL_ID)
   )
 
   const options = useMemo(() => {

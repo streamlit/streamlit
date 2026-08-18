@@ -18,11 +18,12 @@ syntax = "proto3";
 
 import "streamlit/proto/ClientState.proto";
 import "streamlit/proto/Common.proto";
+import "streamlit/proto/Dataframe.proto";
 
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
-    // Requests that the app's @st_cache be cleared
+    // Requests that the app's cached data and resources be cleared
     bool clear_cache = 5;
 
     // Requests that the runOnSave behavior for this app be set
@@ -78,10 +79,40 @@ message BackendOperationRequest {
   oneof payload {
     // Deferred file download request
     DeferredFileRequestPayload deferred_file = 3;
+
+    // One-click install of the bundled Streamlit agent skills
+    InstallSkillsRequestPayload install_skills = 4;
+
+    // Permanently dismiss the "install skills" nudge (writes a server-side
+    // marker so it is not shown again)
+    DismissSkillsNudgeRequestPayload dismiss_skills_nudge = 5;
+
+    // Lazy dataframe row chunk request
+    DataframeChunkRequestPayload dataframe_chunk = 6;
   }
 }
 
 // Payload for deferred file requests
 message DeferredFileRequestPayload {
   string file_id = 1;
+}
+
+// Payload for one-click skills install. Currently carries no options; the
+// server installs in project mode by default.
+message InstallSkillsRequestPayload {}
+
+// Payload to permanently dismiss the "install skills" nudge.
+message DismissSkillsNudgeRequestPayload {}
+
+// Payload for lazy dataframe row chunk requests. Asks the backend to return a
+// range of rows for a registered lazy dataframe source without a script rerun.
+message DataframeChunkRequestPayload {
+  // Session-scoped id of the lazy dataframe source.
+  string source_id = 1;
+  // Row offset of the first requested row.
+  uint64 offset = 2;
+  // Maximum number of rows to return (the server enforces an upper bound).
+  uint32 limit = 3;
+  // Optional server-side sort state to apply before slicing.
+  optional SortState sort = 4;
 }

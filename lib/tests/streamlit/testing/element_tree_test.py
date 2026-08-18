@@ -15,13 +15,21 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
+from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import _format_value_for_widget
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_alert():
@@ -48,6 +56,49 @@ def test_alert():
     repr(at.warning[0])
 
 
+def test_app_test_discovers_installed_v2_components_with_file_backed_assets(
+    tmp_path: Path,
+):
+    """Installed CCv2 components with file-backed assets resolve under AppTest."""
+    package_root = tmp_path / "apptest_pkg"
+    asset_dir = package_root / "assets"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "style.css").write_text("#demo { color: purple; }")
+    (asset_dir / "script.js").write_text("console.log('loaded');")
+
+    manifest = ComponentManifest(
+        name="apptest_pkg",
+        version="0.0.1",
+        components=[ComponentConfig(name="demo", asset_dir="assets")],
+    )
+
+    def script():
+        import streamlit as st
+        from streamlit.components.v2 import component
+
+        component(
+            "apptest_pkg.demo",
+            html='<div id="demo">hi</div>',
+            css="style.css",
+            js="script.js",
+        )
+        st.success("Done")
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner.scan_component_manifests",
+        return_value=[(manifest, package_root)],
+    ) as scan_mock:
+        at = AppTest.from_function(script)
+        at.run()
+        # Rerun to ensure the discovered component manager is cached on the
+        # AppTest instance and components are not rescanned on every rerun.
+        at.run()
+
+    assert at.success[0].value == "Done"
+    assert not at.exception
+    assert scan_mock.call_count == 1
+
+
 def test_button():
     def script():
         import streamlit as st
@@ -68,6 +119,35 @@ def test_button():
     assert sr3.button[1].value is False
 
     repr(sr.button[0])
+
+
+def test_download_button():
+    def script():
+        import streamlit as st
+
+        clicked = st.download_button(
+            "Download",
+            data="contents",
+            file_name="example.txt",
+            mime="text/plain",
+            key="download",
+        )
+        st.write(clicked)
+
+    at = AppTest.from_function(script).run()
+    assert at.download_button[0].label == "Download"
+    assert at.download_button(key="download").value is False
+    assert at.markdown[0].value == "`False`"
+
+    at.download_button[0].click().run()
+    assert at.download_button[0].value is True
+    assert at.markdown[0].value == "`True`"
+
+    at.run()
+    assert at.download_button[0].value is False
+    assert at.markdown[0].value == "`False`"
+
+    repr(at.download_button[0])
 
 
 def test_chat():
@@ -154,6 +234,35 @@ def test_columns():
     repr(at.columns[0])
 
 
+def test_image():
+    def script():
+        import streamlit as st
+
+        st.image("https://example.com/image.png", caption="A caption")
+        st.image(
+            [
+                "https://example.com/first.png",
+                "https://example.com/second.png",
+            ],
+            caption=["First", "Second"],
+        )
+        st.image("https://example.com/no_caption.png")
+
+    at = AppTest.from_function(script).run()
+    assert at.image.len == 3
+    assert at.image[0].value == ["https://example.com/image.png"]
+    assert at.image[0].captions == ["A caption"]
+    assert at.image[1].value == [
+        "https://example.com/first.png",
+        "https://example.com/second.png",
+    ]
+    assert at.image[1].captions == ["First", "Second"]
+    assert at.image[2].value == ["https://example.com/no_caption.png"]
+    assert at.image[2].captions == [""]
+
+    repr(at.image[0])
+
+
 def test_dataframe():
     def script():
         import numpy as np
@@ -179,6 +288,40 @@ def test_dataframe():
     )
 
     repr(at.dataframe[0])
+
+
+def test_dataframe_value_keeps_auto_lazy_candidates_eager_in_app_test(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(dataframe_source, "AUTO_LAZY_ROW_THRESHOLD", 3)
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3, 4]}))
+
+    at = AppTest.from_function(script).run()
+    dataframe = at.dataframe[0]
+
+    assert not dataframe.proto.HasField("lazy_data")
+    assert dataframe.value["a"].tolist() == [1, 2, 3, 4]
+
+
+def test_dataframe_value_keeps_explicit_lazy_data_complete():
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": range(1001)}), lazy=True)
+
+    at = AppTest.from_function(script).run()
+    dataframe = at.dataframe[0]
+
+    assert not dataframe.proto.HasField("lazy_data")
+    assert dataframe.value["a"].tolist() == list(range(1001))
 
 
 def test_date_input():
@@ -709,6 +852,115 @@ def test_format_func():
     assert at.select_slider("s").value == (2, 5)
 
     assert not at.exception
+
+
+def test_format_func_accepts_formatted_labels():
+    """Selection widgets accept already-formatted labels via format_func (#9476)."""
+    expected_inventories = [
+        {"id_inventory": 1, "description": "Inventory 1"},
+        {"id_inventory": 2, "description": "Inventory 2"},
+        {"id_inventory": 3, "description": "Inventory 3"},
+    ]
+
+    def script():
+        import streamlit as st
+
+        inventories = [
+            {"id_inventory": 1, "description": "Inventory 1"},
+            {"id_inventory": 2, "description": "Inventory 2"},
+            {"id_inventory": 3, "description": "Inventory 3"},
+        ]
+
+        selected_items = st.multiselect(
+            "Multi inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="multi_inventory",
+        )
+        st.button(
+            "Run multi",
+            disabled=not selected_items,
+            key="multi_button",
+            on_click=lambda: st.session_state.update(multi_clicked=True),
+        )
+
+        selected_item = st.selectbox(
+            "Single inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="single_inventory",
+        )
+        st.button(
+            "Run single",
+            disabled=selected_item["description"] == "Inventory 1",
+            key="single_button",
+        )
+
+        st.radio(
+            "Radio inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="radio_inventory",
+        )
+
+        st.segmented_control(
+            "Segmented inventory",
+            inventories,
+            format_func=lambda x: x["description"],
+            key="segmented_inventory",
+        )
+
+    at = AppTest.from_function(script).run()
+
+    # The "Run multi" button is disabled until an item is selected, so it must
+    # re-register as enabled in a separate run before it can be clicked: disabled-
+    # widget callbacks are suppressed server-side, and callbacks run against the
+    # previous run's metadata. This mirrors the browser, where a disabled button
+    # cannot be clicked until a rerun enables it.
+    at = at.multiselect("multi_inventory").set_value(["Inventory 1"]).run()
+    at = at.button("multi_button").click().run()
+
+    assert at.session_state.multi_clicked
+    assert at.multiselect("multi_inventory").value == [expected_inventories[0]]
+    assert at.multiselect("multi_inventory").indices == [0]
+    assert not at.button("multi_button").disabled
+
+    at = at.selectbox("single_inventory").set_value("Inventory 2").run()
+
+    assert at.selectbox("single_inventory").value == expected_inventories[1]
+    assert at.selectbox("single_inventory").index == 1
+    assert not at.button("single_button").disabled
+
+    at = at.radio("radio_inventory").set_value("Inventory 3").run()
+
+    assert at.radio("radio_inventory").value == expected_inventories[2]
+    assert at.radio("radio_inventory").index == 2
+
+    at = at.segmented_control("segmented_inventory").set_value("Inventory 1").run()
+
+    assert at.segmented_control("segmented_inventory").value == expected_inventories[0]
+    assert not at.exception
+
+
+def test_format_value_for_widget_error_semantics():
+    """_format_value_for_widget falls back only for string labels, else re-raises."""
+
+    def format_func(value: dict[str, str]) -> str:
+        return value["description"]
+
+    # Raw option formats normally.
+    assert format_func({"description": "Inventory 1"}) == "Inventory 1"
+    assert (
+        _format_value_for_widget(format_func, {"description": "Inventory 1"})
+        == "Inventory 1"
+    )
+
+    # Formatted string label is accepted.
+    assert _format_value_for_widget(format_func, "Inventory 1") == "Inventory 1"
+
+    # Non-string value with a raising format_func is a real bug and must propagate.
+    with pytest.raises(TypeError):
+        _format_value_for_widget(format_func, 123)
 
 
 def test_select_slider():
@@ -1457,3 +1709,247 @@ def test_dataframe_non_interactive_has_no_key():
 
     # Non-interactive dataframes don't store the key in proto.id
     assert at.dataframe[0].key is None
+
+
+def test_element_list_slice_repr_and_equality():
+    """ElementList supports slicing, repr, and equality against plain lists."""
+
+    def script():
+        import streamlit as st
+
+        st.markdown("a")
+        st.markdown("b")
+
+    at = AppTest.from_function(script).run()
+
+    # Slicing an ElementList returns a new ElementList (not a bare list).
+    subset = at.markdown[0:1]
+    assert isinstance(subset, type(at.markdown))
+    assert subset.len == 1
+
+    # repr must not raise and should mention the values.
+    assert "a" in repr(at.markdown)
+
+    # Equality against a non-ElementList (plain list) compares the underlying
+    # elements and must not raise; a mismatched list is unequal.
+    assert at.markdown != ["not", "matching"]
+
+
+def test_button_value_reflects_set_value_before_run():
+    """Button.value returns the locally set value before a rerun commits it."""
+
+    def script():
+        import streamlit as st
+
+        st.button("b")
+
+    at = AppTest.from_function(script).run()
+    at.button[0].set_value(True)
+    # The value property short-circuits to the pending value without a rerun.
+    assert at.button[0].value is True
+
+
+def test_download_button_value_reflects_set_value_before_run():
+    """DownloadButton.value returns the pending value before a rerun."""
+
+    def script():
+        import streamlit as st
+
+        st.download_button("d", data="x")
+
+    at = AppTest.from_function(script).run()
+    at.download_button[0].set_value(True)
+    assert at.download_button[0].value is True
+
+
+def test_chat_input_value_reflects_set_value_before_run():
+    """ChatInput.value returns the pending value before a rerun."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("say something")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].set_value("hello")
+    assert at.chat_input[0].value == "hello"
+
+
+def test_color_picker_pick_adds_hash_prefix():
+    """ColorPicker.pick prepends '#' when the value omits it."""
+
+    def script():
+        import streamlit as st
+
+        st.color_picker("color")
+
+    at = AppTest.from_function(script).run()
+    at.color_picker[0].pick("112233").run()
+    assert at.color_picker[0].value == "#112233"
+
+
+def test_menu_button_value_reflects_click_before_run():
+    """MenuButton.value returns the clicked option before a rerun."""
+
+    def script():
+        import streamlit as st
+
+        st.menu_button("Actions", ["A", "B", "C"])
+
+    at = AppTest.from_function(script).run()
+    at.menu_button[0].click("B")
+    assert at.menu_button[0].value == "B"
+
+
+def test_multiselect_select_and_unselect_are_idempotent():
+    """Multiselect.select/unselect no-op when already (de)selected."""
+
+    def script():
+        import streamlit as st
+
+        st.multiselect("m", options=["a", "b", "c"])
+
+    at = AppTest.from_function(script).run()
+    # Selecting the same value twice keeps a single entry.
+    at.multiselect[0].select("a").select("a").run()
+    assert at.multiselect[0].value == ["a"]
+
+    # Unselecting a value that isn't selected is a no-op.
+    at.multiselect[0].unselect("c").run()
+    assert at.multiselect[0].value == ["a"]
+
+
+def test_button_group_multi_select_and_unselect_edge_cases():
+    """ButtonGroup (multi) ignores duplicate selects and absent unselects."""
+
+    def script():
+        import streamlit as st
+
+        st.pills("p", options=["X", "Y", "Z"], selection_mode="multi", key="multi")
+
+    at = AppTest.from_function(script).run()
+    # Re-selecting an already selected value is a no-op.
+    at.pills[0].select("X").select("X").run()
+    assert at.pills[0].value == ["X"]
+
+    # Unselecting a value that is not selected is a no-op.
+    at.pills[0].unselect("Z").run()
+    assert at.pills[0].value == ["X"]
+
+
+def test_button_group_single_unselect():
+    """ButtonGroup (single) clears the value only when it matches."""
+
+    def script():
+        import streamlit as st
+
+        st.pills("p", options=["X", "Y", "Z"], key="single")
+
+    at = AppTest.from_function(script).run()
+    at.pills[0].select("Y")
+    # Unselecting the current value clears the selection.
+    at.pills[0].unselect("Y")
+    assert at.pills[0].value is None
+    # Unselecting a non-current value leaves the selection unchanged.
+    at.pills[0].unselect("X")
+    assert at.pills[0].value is None
+
+
+def test_file_uploader_property_accessors_and_clear_via_set_value():
+    """FileUploader exposes accept_directory/allowed_type and clears via set_value."""
+
+    def script():
+        import streamlit as st
+
+        st.file_uploader("upload", type=["txt", "csv"])
+
+    at = AppTest.from_function(script).run()
+    uploader = at.file_uploader[0]
+    assert uploader.accept_directory is False
+    # File types are normalized to include a leading dot.
+    assert uploader.allowed_type == [".txt", ".csv"]
+
+    # set_value(None) clears any pending files.
+    uploader.set_value(("f.txt", b"data", "text/plain"))
+    uploader.set_value(None)
+    at.run()
+    assert at.file_uploader[0].value is None
+
+
+def test_number_input_increment_decrement_noop_when_none():
+    """NumberInput increment/decrement are no-ops when the value is None."""
+
+    def script():
+        import streamlit as st
+
+        st.number_input("n", value=None)
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value is None
+    at.number_input[0].increment().run()
+    assert at.number_input[0].value is None
+    at.number_input[0].decrement().run()
+    assert at.number_input[0].value is None
+
+
+def test_selectbox_select_index_none_clears_pending_value():
+    """Selectbox.select_index(None) sets the pending value to None."""
+
+    def script():
+        import streamlit as st
+
+        st.selectbox("s", options=["a", "b", "c"], index=1)
+
+    at = AppTest.from_function(script).run()
+    assert at.selectbox[0].value == "b"
+    # select_index(None) delegates to set_value(None); the pending value reads
+    # back as None before a rerun commits it.
+    at.selectbox[0].select_index(None)
+    assert at.selectbox[0].value is None
+
+
+def test_time_input_increment_decrement_noop_when_none():
+    """TimeInput increment/decrement are no-ops when the value is None."""
+
+    def script():
+        import streamlit as st
+
+        st.time_input("t", value=None)
+
+    at = AppTest.from_function(script).run()
+    assert at.time_input[0].value is None
+    at.time_input[0].increment().run()
+    assert at.time_input[0].value is None
+    at.time_input[0].decrement().run()
+    assert at.time_input[0].value is None
+
+
+def test_container_block_and_block_helpers():
+    """Block helpers (__len__, key, run) work on the main block of a container app."""
+
+    def script():
+        import streamlit as st
+
+        with st.container():
+            st.text("inside")
+
+    at = AppTest.from_function(script).run()
+    # Block.__len__, Block.key, and Block.run are exercised via the main block.
+    assert len(at.main) >= 1
+    assert at.main.key is None
+    assert at.main.run() is not None
+    assert at.text[0].value == "inside"
+
+
+def test_spinner_transient_delta_is_skipped():
+    """new_transient deltas (e.g. st.spinner) are skipped in the element tree."""
+
+    def script():
+        import streamlit as st
+
+        with st.spinner("loading"):
+            st.text("done")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.text[0].value == "done"

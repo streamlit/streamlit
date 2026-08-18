@@ -73,6 +73,11 @@ if TYPE_CHECKING:
     assert_type(button("Shortcut", shortcut="Ctrl+S"), bool)
     assert_type(button("Shortcut", shortcut=None), bool)
 
+    # Button with wrap parameter
+    assert_type(button("Wrap", wrap=True), bool)
+    assert_type(button("Wrap", wrap=False), bool)
+    assert_type(button("Wrap", wrap=None), bool)
+
     # Button with on_click callback
     def my_callback() -> None:
         pass
@@ -101,6 +106,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Enter",
+            wrap=False,
         ),
         bool,
     )
@@ -164,6 +170,9 @@ if TYPE_CHECKING:
     assert_type(download_button("Download", data="content", key="dl_key"), bool)
     assert_type(download_button("Download", data="content", key=456), bool)
     assert_type(download_button("Download", data="content", shortcut="Ctrl+D"), bool)
+    assert_type(download_button("Download", data="content", wrap=True), bool)
+    assert_type(download_button("Download", data="content", wrap=False), bool)
+    assert_type(download_button("Download", data="content", wrap=None), bool)
 
     # Download button with all parameters combined
     assert_type(
@@ -182,6 +191,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Ctrl+Shift+D",
+            wrap=False,
         ),
         bool,
     )
@@ -251,6 +261,11 @@ if TYPE_CHECKING:
         link_button("Link", "https://example.com", shortcut=None), DeltaGenerator
     )
 
+    # Link button with wrap parameter
+    assert_type(link_button("Link", "https://example.com", wrap=True), DeltaGenerator)
+    assert_type(link_button("Link", "https://example.com", wrap=False), DeltaGenerator)
+    assert_type(link_button("Link", "https://example.com", wrap=None), DeltaGenerator)
+
     # Link button with on_click parameter - supports "rerun", "ignore", or callable
     assert_type(
         link_button("Link", "https://example.com", on_click="ignore"), DeltaGenerator
@@ -291,6 +306,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Ctrl+Shift+S",
+            wrap=False,
         ),
         bool,
     )
@@ -300,14 +316,14 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Basic page link - returns DeltaGenerator
-    # page parameter accepts str, Path, or StreamlitPage
+    # page parameter accepts str, Path, or Page
     assert_type(page_link("pages/page1.py"), DeltaGenerator)
     assert_type(page_link(Path("pages/page1.py")), DeltaGenerator)
     assert_type(page_link("https://example.com", label="External"), DeltaGenerator)
 
-    # Page link with StreamlitPage object
-    streamlit_page = Page("page1.py")
-    assert_type(page_link(streamlit_page), DeltaGenerator)
+    # Page link with Page object
+    page = Page("page1.py")
+    assert_type(page_link(page), DeltaGenerator)
 
     # Page link with label
     assert_type(page_link("pages/page1.py", label="Page 1"), DeltaGenerator)
@@ -395,6 +411,11 @@ if TYPE_CHECKING:
     assert_type(form_submit_button("Submit", shortcut="Ctrl+Enter"), bool)
     assert_type(form_submit_button("Submit", shortcut=None), bool)
 
+    # Form submit button with wrap
+    assert_type(form_submit_button("Submit", wrap=True), bool)
+    assert_type(form_submit_button("Submit", wrap=False), bool)
+    assert_type(form_submit_button("Submit", wrap=None), bool)
+
     # Form submit button with on_click callback
     assert_type(form_submit_button("Submit", on_click=my_callback), bool)
     assert_type(
@@ -422,6 +443,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             shortcut="Ctrl+Enter",
+            wrap=False,
         ),
         bool,
     )

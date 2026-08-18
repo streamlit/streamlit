@@ -28,12 +28,15 @@ from e2e_playwright.shared.app_utils import (
     expect_no_exception,
     expect_prefixed_markdown,
     get_button,
+    get_color_picker,
     get_markdown,
     is_child_bounding_box_inside_parent,
+    select_selectbox_option,
 )
 from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 modal_test_id = "stDialog"
 
@@ -44,6 +47,10 @@ def open_dialog_with_images(app: Page):
 
 def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
+
+
+def open_dialog_with_date_input(app: Page):
+    click_button(app, "Open Dialog with Date Input")
 
 
 def open_dialog_with_icon(app: Page):
@@ -96,6 +103,10 @@ def open_dialog_with_deprecation_warning(app: Page):
 
 def open_dialog_with_chart(app: Page):
     click_button(app, "Open Chart Dialog")
+
+
+def open_dialog_with_layered_chart(app: Page):
+    click_button(app, "Open Layered Chart Dialog")
 
 
 def open_dialog_with_rerun(app: Page):
@@ -198,6 +209,82 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
+    """Test that nested widget overlays render above dialog overlays."""
+    open_dialog_with_date_input(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_test_id("stDateInput").get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    calendar.get_by_label("Tuesday, January 2, 2024").click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Due Date Value: 2024-01-02")
+
+    select_selectbox_option(dialog, "Status", "Paid")
+    expect_markdown(dialog, "Status Value: Paid")
+
+    dialog.get_by_role("combobox", name="Tags").click()
+    app.get_by_role("option", name="Utilities", exact=True).first.click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Tags Value: ['Utilities']")
+
+
+def test_dialog_allows_interacting_with_widget_in_popover(app: Page):
+    """Widgets inside an st.popover opened inside an st.dialog must be
+    interactable — the popover body must not be occluded by the dialog's
+    React Aria overlay (regression coverage for #16005).
+    """
+    click_button(app, "Open Dialog with Popover")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_role("button", name="Open popover").click()
+    popover_body = app.get_by_test_id("stPopoverBody")
+    expect(popover_body).to_be_visible()
+
+    # The popover body must land above the dialog for hit-testing: its parent
+    # container (the FloatingPortal host) must not be `inert`. Without the fix,
+    # the popover body's own DIV is above the dialog visually, but its parent
+    # is marked inert by React Aria's ModalOverlay — so `elementFromPoint` at
+    # the widget's center returns the dialog rather than the widget.
+    select_selectbox_option(popover_body, "Fruit", "Banana")
+    expect_markdown(popover_body, "picked: Banana")
+
+    # The dialog must not be dismissed by the interaction inside the popover.
+    expect(dialog).to_be_visible()
+
+
+def test_dialog_allows_interacting_with_color_picker(app: Page):
+    """A color picker palette opened inside an st.dialog must stay interactive
+    without dismissing the dialog (regression coverage for #16538).
+    """
+    click_button(app, "Open Dialog with Color Picker")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    color_picker = get_color_picker(dialog, "Dialog color picker")
+    color_picker.get_by_test_id("stColorPickerBlock").click()
+
+    popover = app.get_by_test_id("stColorPickerPopover")
+    expect(popover).to_be_visible()
+    popover.locator("input").fill("#1a2b3c")
+
+    # Close the palette with a click that stays inside the dialog, which must
+    # remain open.
+    dialog.get_by_text("Dialog color picker", exact=True).click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Selected color: #1a2b3c")
+    expect(dialog).to_be_visible()
 
 
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
@@ -379,6 +466,32 @@ def test_medium_width_dialog_displays_correctly(
     assert_snapshot(dialog, name="st_dialog-with_medium_width")
 
 
+@pytest.mark.only_browser("chromium")
+def test_medium_width_dialog_keeps_narrow_viewport_gutter(app: Page):
+    """Test that a medium dialog preserves the viewport gutter on narrow screens."""
+    app.set_viewport_size({"width": 600, "height": 600})
+    open_medium_width_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    dialog_box = dialog.bounding_box()
+    assert dialog_box is not None
+    assert dialog_box["x"] == pytest.approx(16, abs=1)
+    assert dialog_box["y"] == pytest.approx(48, abs=1)
+    assert dialog_box["width"] == pytest.approx(568, abs=1)
+
+    # On a viewport narrower than the dialog's minimum width (20rem) plus both
+    # gutters, the panel must shrink to keep the gutter instead of overflowing.
+    app.set_viewport_size({"width": 320, "height": 600})
+    narrow_box = dialog.bounding_box()
+    assert narrow_box is not None
+    assert narrow_box["x"] == pytest.approx(16, abs=1)
+    assert narrow_box["width"] == pytest.approx(288, abs=1)
+    # The right edge must stay within the viewport (left gutter + width + right
+    # gutter should not exceed the viewport width).
+    assert narrow_box["x"] + narrow_box["width"] == pytest.approx(304, abs=1)
+
+
 # its enough to test this on one browser as showing the error inline is more a backend
 # functionality than a frontend one
 @pytest.mark.only_browser("chromium")
@@ -491,9 +604,7 @@ def test_dialog_with_chart(app: Page):
     expect(main_dialog).to_be_visible()
 
     # Check for the chart & tooltip
-    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
-        "[role='graphics-document']"
-    )
+    chart = get_vega_graphics_document(main_dialog.get_by_test_id("stVegaLiteChart"))
     expect(chart).to_be_visible()
     # Wait for the app to fully render (helps webkit where bounding_box can be None initially)
     wait_for_app_run(app)
@@ -501,6 +612,29 @@ def test_dialog_with_chart(app: Page):
     chart_box = chart.bounding_box()
     assert chart_box is not None
     target: Position = {"x": chart_box["width"] * 0.5, "y": chart_box["height"] * 0.5}
+    app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
+    chart.hover(position=target)
+    tooltip = app.locator("#vg-tooltip-element")
+    expect(tooltip).to_be_visible()
+
+
+def test_dialog_with_layered_chart_shows_tooltips(app: Page):
+    """Check that layered Vega-Lite charts positioned in dialogs respond to hover events
+    on the lower layers and show the tooltip.
+    """
+    open_dialog_with_layered_chart(app)
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+    expect(main_dialog).to_be_visible()
+
+    chart = get_vega_graphics_document(main_dialog.get_by_test_id("stVegaLiteChart"))
+    expect(chart).to_be_visible()
+    wait_for_app_run(app)
+    chart.scroll_into_view_if_needed()
+    chart_box = chart.bounding_box()
+    assert chart_box is not None
+    # Hover in the lower-right of the chart where the area polygon is
+    target: Position = {"x": chart_box["width"] * 0.75, "y": chart_box["height"] * 0.75}
     app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
     chart.hover(position=target)
     tooltip = app.locator("#vg-tooltip-element")
@@ -539,6 +673,9 @@ def test_dialog_with_dataframe_shows_column_menu_correctly(app: Page):
     expect(column_menu).to_be_visible()
     expect(column_menu).to_be_in_viewport()
     assert is_child_bounding_box_inside_parent(column_menu, df_element)
+    column_menu.get_by_text("Sort ascending").click()
+    expect(column_menu).not_to_be_visible()
+    expect(dialog).to_be_visible()
 
 
 def test_dialog_with_rerun_closes_even_if_button_is_clicked_multiple_times(app: Page):
@@ -615,7 +752,17 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     """
     open_non_dismissible_dialog(app)
     main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+
+    # Wait for dialog content so the non-dismissible keyboard handler is armed
+    # before we exercise Escape / R (important on WebKit).
+    expect(
+        main_dialog.get_by_text("This dialog cannot be dismissed", exact=False)
+    ).to_be_visible()
+    # Opening the dialog is one script rerun (count 2). Any later R-hotkey
+    # leak would bump this and unmount the dialog — assert it stays put.
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
     # Verify the close button (X) is not present
     expect(app.get_by_label("Close")).not_to_be_attached()
@@ -626,20 +773,24 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     # Dialog should still be visible
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
     # Click on body element outside dialog
     app.locator("body").click(position={"x": 50, "y": 50}, force=True)
 
-    # Dialog should still be visible
+    # Dialog should still be visible, and the outside click must not rerun.
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
-    # Press R hotkey:
+    # Press R hotkey — must not rerun/dismiss a non-dismissible dialog
+    # (even when focus is outside the dialog after the backdrop click above).
     app.keyboard.press("R")
 
-    # Dialog should still be visible
-    expect(main_dialog).to_be_visible()
-    expect(main_dialog).to_have_count(1)
+    # Dialog should still be visible, and R must not have triggered a rerun.
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
+    expect(app.get_by_test_id(modal_test_id)).to_have_count(1)
+    expect(app.get_by_test_id(modal_test_id)).to_be_visible()
 
 
 def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):

@@ -129,7 +129,7 @@ class StTextTextAlignmentTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.text("Test text", text_alignment="middle")
 
-        assert 'Invalid text_alignment value: "middle"' in str(exc.value)
+        assert "Invalid `text_alignment` value" in str(exc.value)
         assert "left" in str(exc.value)
         assert "center" in str(exc.value)
         assert "right" in str(exc.value)

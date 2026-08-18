@@ -66,6 +66,9 @@ class LoggerTest(unittest.TestCase):
         """Test streamlit.logger.setup_log_formatter."""
 
         LOGGER = logger.get_logger("test")
+        # Keep the handler-count assertion isolated from other tests.
+        for handler in list(LOGGER.handlers):
+            LOGGER.removeHandler(handler)
 
         config._set_option("logger.messageFormat", messageFormat, "test")
         config._set_option("logger.level", logging.DEBUG, "test")
