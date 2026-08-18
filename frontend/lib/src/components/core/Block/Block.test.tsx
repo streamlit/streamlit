@@ -561,6 +561,12 @@ describe("BlockNodeRenderer step blocks", () => {
     expect(
       screen.queryByTestId("stExpanderStepConnector")
     ).not.toBeInTheDocument()
+    // An empty step draws no connector of its own, but it must stay marked so
+    // the preceding step can extend its line down to this step's icon.
+    expect(screen.getByTestId("stLayoutWrapper")).toHaveAttribute(
+      STEP_BLOCK_ATTRIBUTE,
+      "true"
+    )
   })
 })
 

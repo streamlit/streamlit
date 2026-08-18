@@ -1592,7 +1592,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
 
         assert len(self.forward_msg_queue._queue) == message_count
 
-    def test_step_type_survives_auto_transition(self):
+    def test_step_type_is_preserved_when_status_auto_completes(self):
         """Test that a step-type status auto-completes on exit and stays a step."""
         with st.status("label", type="step"):
             pass

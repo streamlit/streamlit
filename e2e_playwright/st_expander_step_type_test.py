@@ -39,7 +39,9 @@ def test_basic_steps_render_correctly(
 def test_step_variants_render_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test the remaining step scenarios via screenshots."""
+    """Snapshot the status states, broken chain, empty divider, custom gap,
+    scrollable container, and parameter variants.
+    """
     broken_chain = get_element_by_key(app, "steps_broken_chain")
     expect(broken_chain.get_by_text("First chain content")).to_be_visible()
 

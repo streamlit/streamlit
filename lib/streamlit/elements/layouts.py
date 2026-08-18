@@ -1172,8 +1172,9 @@ class LayoutsMixin:
 
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), no icon is displayed, except with
+            ``type="step"``, which falls back to a faded circle placeholder. If
+            ``icon`` is a string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.

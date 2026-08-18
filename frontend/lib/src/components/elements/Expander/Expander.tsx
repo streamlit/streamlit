@@ -353,12 +353,12 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           isStale={isStale}
           expanded={isOpen}
           expanderType={type}
-          // Only steps get an explicit aria-expanded. It reports the state the
-          // user just asked for, which leads `details.open` by the length of
-          // the collapse animation, and a step is the one style whose open
-          // state has no persistent visual indicator: it shows a status icon
-          // and only swaps in a chevron on hover or focus. The other two styles
-          // keep the native <details> mapping they have always relied on.
+          // Only steps set aria-expanded explicitly: a step shows a status icon
+          // and swaps in a chevron only on hover or focus, so its open state has
+          // no persistent visual indicator. The value also reports the state the
+          // user just asked for, ahead of `details.open`, which lags by the
+          // collapse animation. Default and compact keep the native <details>
+          // mapping.
           aria-expanded={isStep ? isOpen : undefined}
         >
           {summaryHeading}
