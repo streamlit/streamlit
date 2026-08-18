@@ -120,12 +120,14 @@ spec:
   `required=True`).
 - File uploader: lock deleting the last committed file when `required=True`; a new drop
   that replaces still commits. Register a form-submit validator that fails when
-  `WidgetStateManager` is empty and `required=True`.
-- In-progress upload: if form submit runs while `status === "updating"`, the widget
-  may still look empty in widget state. Treat an in-flight upload as empty (fail with
-  `This field is required`) until the upload has been written to `WidgetStateManager`.
-  Do not read FileUploader/CameraInput component-local pending files as the submit-time
-  source of truth.
+  `WidgetStateManager` is empty and `required=True`. Last-file lock also avoids the
+  race where local UI is empty but widget state still holds the previous file.
+- In-progress upload: emptiness is the `WidgetStateManager` value, not
+  `status === "updating"` (a multi-file widget can be updating while already holding
+  committed files). Form submit is already disabled while `formsWithUploads` is set
+  (`FormSubmitButton`); do not add a separate required-error path for in-flight
+  uploads. Do not read FileUploader/CameraInput component-local pending files as the
+  submit-time source of truth.
 
 Show the error on the dropzone / control. Use the visually hidden `role="alert"` pattern
 from `TextInput`. On widgets whose root role ignores `aria-required`, include
@@ -171,8 +173,7 @@ extension of an existing parameter, not a new one.
   `required=False` and is a required error when `required=True`; required error vs
   validate error; form submit runs all validators; `clear_on_submit` not invoked on
   failure; search clear does not commit when required; file/camera/audio clear does
-  not commit empty when required; last file-uploader delete is locked; in-flight
-  upload fails required at submit.
+  not commit empty when required; last file-uploader delete is locked.
 - Python: proto field set; pills multi-select no longer raises; `required` not in
   widget ID.
 - Public typing tests (`lib/tests/streamlit/typing/`) for every affected widget,

@@ -250,10 +250,12 @@ form gate.
   deleting the last file** (hide/disable that delete control), like selection widgets.
   Replacing via a new drop still works. Form submit is gated while the widget is still
   empty (`None` / `[]`).
-- **In-progress upload:** submit-time emptiness is the value in `WidgetStateManager`
-  (uploaded files only). A file that is still uploading has not been written yet and
-  counts as empty, so submit fails with `This field is required` until the upload
-  completes.
+- **In-progress upload:** emptiness is the `WidgetStateManager` value only. Do **not**
+  treat `status === "updating"` as empty — a multi-file uploader can be uploading
+  while prior files are already committed. Form submit is already disabled while
+  `formsWithUploads` is set (`FormSubmitButton`), so an in-flight upload does not
+  produce a `This field is required` click path. After the upload completes, required
+  is evaluated on the committed files.
 
 `required=True` does **not** change defaults. `st.selectbox(options)` still starts on
 the first option; `st.number_input()` still starts at `min`. To get an empty required
