@@ -33,9 +33,9 @@ validator, so an empty required pills widget can still submit a form. Multi-sele
 ### Proto
 
 Add `bool required = N;` to each affected widget message (`TextInput`, `TextArea`,
-`NumberInput`, `DateInput`, `TimeInput`, `Selectbox`, `Radio`, `MultiSelect`,
-`FileUploader`, `CameraInput`, `AudioInput`). `ButtonGroup.required` already exists
-(field 16); update its comment to cover multi-select and form gating.
+`NumberInput`, `DateInput`, `TimeInput`, `DateTimeInput`, `Selectbox`, `Radio`,
+`MultiSelect`, `FileUploader`, `CameraInput`, `AudioInput`). `ButtonGroup.required`
+already exists (field 16); update its comment to cover multi-select and form gating.
 
 Do **not** put `required` in the widget identity / element ID (same as `disabled`).
 Toggling `required` must not reset state.
@@ -45,15 +45,19 @@ pills/segmented exception that raises on `required=True` + `selection_mode="mult
 
 ### Empty check
 
-Shared frontend helper, per widget family:
+Shared frontend helper, per widget family. **Required-empty** and **validate-skip**
+are not the same predicate for text:
 
-| Family | Empty |
-| --- | --- |
-| Text | `value == null \|\| value.trim() === ""` |
-| Number / date / time | `value == null` (range date: missing either bound) |
-| Single select / radio / pills | no selection |
-| Multi select / multi pills | `length === 0` |
-| File / camera / audio | no uploaded/captured value |
+| Family | Required-empty | Validate-skip (today) |
+| --- | --- | --- |
+| Text | `value == null \|\| value.trim() === ""` | `value == null \|\| value === ""` only |
+| Number / date / time / datetime | `value == null` (range date: `()`, missing either bound, or a one-element `tuple[date]`) | n/a |
+| Single select / radio / pills | no selection | n/a |
+| Multi select / multi pills | `length === 0` | n/a |
+| File / camera / audio | no uploaded/captured value in `WidgetStateManager` | n/a |
+
+Do not fold whitespace into the validate-skip path. When `required=False`, `"   "` still
+runs the regex.
 
 Python does not need to re-check on deserialize for MVP (client-side, like `validate`).
 Document the bypass. A later callable-`validate` follow-up can add a server path.
@@ -62,21 +66,26 @@ Document the bypass. A later callable-`validate` follow-up can add a server path
 
 Generalize text-input `validateBeforeCommit` to:
 
-1. If empty and `required`: set required error, return `false`.
-2. If empty and not `required`: clear errors, return `true` (today's `validate` skip).
-3. If non-empty: run `validate` regex when present (today's path).
+1. If required-empty and `required`: set required error, return `false`.
+2. If validate-skip (`""` / `null` only): clear errors, return `true` (today's `validate`
+   skip).
+3. Otherwise run `validate` regex when present (today's path), including whitespace-only
+   when `required=False`.
 
-Outside a form, a `false` result skips `commitWidgetValue` / `setValueWithSource` — no
-rerun. Inside a form, blur/Enter still **stage** the local value (same as `validate`) and
-leave gating to the form-submit validator.
+Outside a form, a `false` result skips `commitWidgetValue` / `setValueWithSource`
+(no rerun). Inside a form, blur/Enter still updates the local field only — the
+same as `validate` — and the form-submit validator is what blocks the backend
+commit.
 
 `type="search"` `handleClear` currently commits `""` immediately because empty bypasses
 `validate`. When `required=True`, clear must only update local UI, set the required
 error, and not commit.
 
 Register a form-submit validator when `required || hasValidationConfig`, not only when
-a regex is set. The validator calls the same `validateBeforeCommit`. Failed submit
-must not clear `dirty` (already the `validate` rule) so `clear_on_submit` cannot run.
+a regex is set. The validator calls the same `validateBeforeCommit`. `submitForm`
+aborts before clearing form state, so `clear_on_submit` cannot run on a failed submit.
+Keep `dirty` set on failure so `useUpdateUiValue` doesn't overwrite the value the user
+is still correcting.
 
 Error copy: `"This field is required"` for the required failure; keep the existing
 `validate` message for content failures. `aria-required` is independent of error
@@ -85,7 +94,8 @@ visibility; `aria-invalid` / `aria-describedby` follow `displayedError`.
 ### Selection widgets
 
 Keep / extend `disallowEmptySelection` (pills) and hide/disable the clear affordance
-(selectbox X, last multiselect chip) once a value exists and `required=True`.
+(selectbox X, multiselect clear-all and last remaining chip) once a value exists and
+`required=True`.
 
 That prevents the empty *interaction*. Still register a form-submit validator for the
 case the widget **starts** empty (`index=None` / `default=None`) and the user hits
@@ -102,9 +112,24 @@ marker + error if submit happens while still empty.
 
 ### File-like widgets
 
-No empty-commit path outside a form. Register a form-submit validator that fails when
-the current widget state is empty and `required=True`. Show the error on the dropzone /
-control. Outside a form, only the label marker and `aria-required` apply.
+Delete file / Clear photo / clear recording **do** commit empty today. Match the product
+spec:
+
+- Camera/audio: Clear updates local UI without committing `None`, sets the required
+  error, then a new capture commits (same pattern as `type="search"` clear when
+  `required=True`).
+- File uploader: lock deleting the last committed file when `required=True`; a new drop
+  that replaces still commits. Register a form-submit validator that fails when
+  `WidgetStateManager` is empty and `required=True`.
+- In-progress upload: if form submit runs while `status === "updating"`, the widget
+  may still look empty in widget state. Treat an in-flight upload as empty (fail with
+  `This field is required`) until the upload has been written to `WidgetStateManager`.
+  Do not read FileUploader/CameraInput component-local pending files as the submit-time
+  source of truth.
+
+Show the error on the dropzone / control. Use the visually hidden `role="alert"` pattern
+from `TextInput`. On widgets whose root role ignores `aria-required`, include
+`(required)` in the accessible name.
 
 ### Label marker
 
@@ -120,33 +145,44 @@ pattern as `validate`.
 
 ### Implementation order
 
-The API is specified for all empty-able input widgets. Land in waves so each wave is
-reviewable, without shipping a `required` that only works on one command long-term:
+The API is specified for all empty-able input widgets. Land the work in reviewable
+waves. The API contract covers every listed widget, so do not leave a permanently
+partial implementation:
 
 1. **`st.text_input`** — extend `validateBeforeCommit`, form-validator registration,
    search-clear, label marker. Proves composition with `validate`.
 2. **`st.text_area`** — same commit path, no `validate` yet.
-3. **`st.number_input` / `st.date_input` / `st.time_input`** — empty/`None` commit
-   already exists for clearable instances; add the required gate next to range errors.
+3. **`st.number_input` / `st.date_input` / `st.time_input` / `st.datetime_input`** —
+   empty/`None` commit already exists for clearable instances; add the required gate
+   next to range errors.
 4. **`st.selectbox` / `st.radio` / `st.multiselect`** — lock last value + form gate.
 5. **`st.pills` / `st.segmented_control`** — form gate, label, error if still empty,
    allow multi-select `required`.
-6. **`st.file_uploader` / `st.camera_input` / `st.audio_input`** — form gate + marker.
+6. **`st.file_uploader` / `st.camera_input` / `st.audio_input`** — form gate, marker,
+   last-file lock, camera/audio Clear that does not commit empty.
 
 Waves 1–2 are the smallest useful slice and unblock #13497. Wave 5 is a behavior
 extension of an existing parameter, not a new one.
 
 ### Tests
 
-- Frontend unit: empty commit blocked / allowed; `validate` still skipped for empty
-  when `required=False`; required error vs validate error; form submit runs all
-  validators; `clear_on_submit` not invoked on failure; search clear does not commit
-  when required.
+- Frontend unit: empty commit blocked / allowed; `validate` still skipped for `""` /
+  `null` when `required=False`; whitespace-only still runs `validate` when
+  `required=False` and is a required error when `required=True`; required error vs
+  validate error; form submit runs all validators; `clear_on_submit` not invoked on
+  failure; search clear does not commit when required; file/camera/audio clear does
+  not commit empty when required; last file-uploader delete is locked; in-flight
+  upload fails required at submit.
 - Python: proto field set; pills multi-select no longer raises; `required` not in
   widget ID.
+- Public typing tests (`lib/tests/streamlit/typing/`) for every affected widget,
+  especially the existing `pills` / `segmented_control` overloads (new keyword-only
+  arg and newly legal multi-select + `required`).
 - E2E: form with two required fields (both errors on submit); outside-form text_input
   does not rerun on empty blur; email `type` + `required` (empty vs invalid vs valid);
-  pills required still cannot deselect; empty required pills blocks form submit.
+  pills required still cannot deselect; empty required pills blocks form submit;
+  range `st.date_input` with `required=True` does not rerun on the first bound;
+  failed form submit exposes the required error via the visually hidden `role="alert"`.
 
 ## Alternatives considered
 

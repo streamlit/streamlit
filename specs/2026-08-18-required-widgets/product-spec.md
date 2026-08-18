@@ -129,14 +129,14 @@ omitted — a no-op `required` is worse than leaving the parameter off.
 
 | Widget | Empty means | `required` already? |
 | --- | --- | --- |
-| `st.text_input`, `st.text_area` | `None` or whitespace-only (`str.strip() == ""`) | No |
-| `st.number_input`, `st.date_input`, `st.time_input` | `None` | No |
+| `st.text_input`, `st.text_area` | `None` or whitespace-only (`str.strip() == ""`) for **required**. `validate` skip remains `""` / `None` only (see [`required` and `validate`](#required-and-validate)). | No |
+| `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input` | `None` | No |
 | `st.selectbox`, `st.radio` | `None` (`index=None`) | No |
 | `st.multiselect` | `[]` | No |
 | `st.pills`, `st.segmented_control` | `None` / `[]` | Yes (single-select only) |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input` | `None` or `[]` | No |
 
-`st.date_input` in range mode is empty until a complete range is selected.
+In range-mode `st.date_input`, `required` treats a complete `(start, end)` as non-empty. `()`, a missing bound, and a one-element `tuple[date]` are empty. When `required=False`, today's partial-range commit is unchanged.
 
 **Not in scope:** `st.checkbox` / `st.toggle` (boolean, not emptiness), sliders and
 `st.color_picker` (always a value), buttons, `st.chat_input` (trigger widget),
@@ -154,7 +154,8 @@ This is **not** "the script waits until the field is filled." Commands stay non-
 | Moment | Empty + `required=True` | Result |
 | --- | --- | --- |
 | Initial render | Yes (default empty) | No error, no blocked script. Return value is the empty default. |
-| User tries to commit empty (blur / Enter / change) | Yes | Error state. **No rerun.** Backend keeps the last committed value. |
+| User tries to commit empty **outside** a form (blur / Enter / change) | Yes | Error state. **No rerun.** Backend keeps the last committed value. |
+| User blurs an empty field **inside** a form | Yes | No error yet — the value stages locally (same as `validate`) and gating happens at submit. |
 | Form submit with any required field empty | Yes | Submit aborted (no rerun, no `clear_on_submit`). Every failing field shows its error. |
 | User commits a non-empty value | No | Normal commit / submit. Then `validate` runs if configured. |
 
@@ -170,10 +171,11 @@ One pipeline, two checks, required first:
 
 | Current value | `required` | `validate` | Commit / form submit |
 | --- | --- | --- | --- |
-| Empty | `False` (default) | any | Allowed; `validate` is skipped (today's behavior) |
-| Empty | `True` | any | **Blocked.** Message: `This field is required`. `validate` does not run |
-| Non-empty, invalid | any | regex / tuple | **Blocked.** `validate` message (today's behavior) |
-| Non-empty, valid | any | regex / tuple / none | Allowed |
+| `""` / `None` | `False` (default) | any | Allowed; `validate` is skipped (today's behavior) |
+| Whitespace-only (`"   "`) | `False` (default) | any | Allowed; `validate` still runs on the raw string (today's behavior) |
+| `""` / `None` / whitespace-only | `True` | any | **Blocked.** Message: `This field is required`. `validate` does not run |
+| Non-empty after strip, invalid | any | regex / tuple | **Blocked.** `validate` message (today's behavior) |
+| Non-empty after strip, valid | any | regex / tuple / none | Allowed |
 
 ```python
 # Optional email: empty is OK, "foo" is not
@@ -193,9 +195,11 @@ st.text_input(
 )
 ```
 
-Whitespace-only strings on `st.text_input` / `st.text_area` count as empty for `required`
-(`"   "` → required error, not a `validate` error). `validate` still sees the raw value
-when the field is non-empty after strip.
+Whitespace-only strings on `st.text_input` / `st.text_area` count as empty **for
+`required`** (`"   "` + `required=True` → required error, not a `validate` error). They
+do **not** count as empty for the `validate` skip: when `required=False`, `"   "` still
+runs the regex (today only `""` / `None` skip). `validate` still sees the raw value when
+the field is non-empty after strip.
 
 Like `validate`, this is **client-side**. It can be bypassed. It is not a security
 boundary; app code that cares must still check the Python value after submit.
@@ -204,24 +208,26 @@ boundary; app code that cares must still check the Python value after submit.
 
 Widgets differ in whether an empty UI is a reasonable in-progress state.
 
-**Typed widgets** (`text_input`, `text_area`, `number_input`, `date_input`, `time_input`):
-the user must be able to clear the field while editing. Empty UI is allowed. Empty
-*commit* is not. Matches `validate`.
+**Typed widgets** (`text_input`, `text_area`, `number_input`, `date_input`, `time_input`,
+`datetime_input`): the user must be able to clear the field while editing. Empty UI is
+allowed. Empty *commit* is not. Matches `validate`.
 
 - Clear / search-X / backspace-to-empty updates the local field only.
-- On blur, Enter, or form submit: if empty, show the error and do not send a value.
+- Outside a form, on blur / Enter / change: if empty, show the error and do not send a
+  value. Inside a form, blur/Enter stages locally; the error is shown at submit.
 - `type="search"` clear must **not** immediately commit `""` when `required=True`
   (today it does, because empty bypasses `validate`).
 
 **Selection widgets** (`selectbox`, `radio`, `multiselect`, `pills`, `segmented_control`):
-empty is not an in-progress edit — it is "no choice." Once a value is selected,
-`required=True` **prevents returning to empty** (hide/disable the clear X; ignore
-click-to-deselect; do not remove the last multiselect/pills chip). If the widget still
-starts empty (`index=None` / `default=None`), form submit is gated until the user picks
-something. Outside a form there is no empty-commit gesture until the user selects and
-then tries to clear — so an empty-start required selectbox is a label plus lock-once-filled
-until it sits in a form (or the user selects a value). Downstream code still uses
-`if country:`.
+empty is "no choice," not an in-progress edit. Once a value is selected,
+`required=True` prevents returning to empty (hide/disable the clear control;
+ignore click-to-deselect; do not remove the last multiselect/pills chip).
+
+If the widget still starts empty (`index=None` / `default=None`):
+- Inside a form, submit is gated until the user picks something.
+- Outside a form there is no empty-commit gesture until the user selects
+  and then tries to clear, so `required` is a label plus "cannot clear
+  after the first choice." Downstream code still uses `if country:`.
 
 This is the shipped pills/segmented single-select behavior (`disallowEmptySelection`),
 extended to:
@@ -232,10 +238,22 @@ extended to:
   ([#14900](https://github.com/streamlit/streamlit/issues/14900)). Drop the current
   `required=True` + `selection_mode="multi"` exception.
 
-**File-like widgets** (`file_uploader`, `camera_input`, `audio_input`): there is no
-"commit empty" gesture outside a form. `required=True` adds the label marker,
-`aria-required`, and form-submit gating. Outside a form the script still sees `None` on
-first run until the user provides a file.
+**File-like widgets** (`file_uploader`, `camera_input`, `audio_input`): these **do**
+commit empty today (file delete, Clear photo, clear recording). `required=True` must
+block a later empty commit, same as typed/selection widgets — not only add a label and
+form gate.
+
+- **Camera / audio:** treat Clear as a typed-widget empty edit. Clear updates local UI,
+  shows the required error, and does **not** commit `None`. A new capture commits.
+  Users must be able to recapture.
+- **File uploader:** once at least one file is committed, `required=True` **locks
+  deleting the last file** (hide/disable that delete control), like selection widgets.
+  Replacing via a new drop still works. Form submit is gated while the widget is still
+  empty (`None` / `[]`).
+- **In-progress upload:** submit-time emptiness is the value in `WidgetStateManager`
+  (uploaded files only). A file that is still uploading has not been written yet and
+  counts as empty, so submit fails with `This field is required` until the upload
+  completes.
 
 `required=True` does **not** change defaults. `st.selectbox(options)` still starts on
 the first option; `st.number_input()` still starts at `min`. To get an empty required
@@ -250,10 +268,11 @@ st.selectbox("Country", countries, index=None, required=True)
 Reuse the validation error treatment already used by `st.text_input` / `st.number_input`
 (red field, error icon, tooltip) — not a new visual language.
 
-**Required marker** — append `(required)` to the visible label in caption-sized, muted
-text (same treatment planned for keyboard shortcuts on buttons). Prefer this over a
-bare `*` (too implicit). Show it whenever `required=True` and the label is visible
-(`label_visibility="visible"`). Hidden/collapsed labels rely on `aria-required` only.
+**Required marker** — append `(required)` to the visible label in caption-sized,
+muted text. Prefer this over a bare `*` (too implicit). Show it whenever
+`required=True` and the label is visible (`label_visibility="visible"`).
+Hidden/collapsed labels rely on `aria-required` (or the accessible-name fallback
+below) only.
 
 ![Required label marker](./required-label.png)
 
@@ -261,7 +280,7 @@ bare `*` (too implicit). Show it whenever `required=True` and the label is visib
 existing invalid-input treatment. Tooltip / `aria-describedby` text:
 `This field is required`.
 
-![Validation error state](./required-error-state.png)
+![Existing invalid-field chrome (red field, error icon, tooltip) — reference, not the final required copy](./required-error-state.png)
 
 Typed widgets already have this chrome. Selection and file-like widgets should get the
 same error icon + tooltip (on the label or control) and a red outline; exact placement
@@ -269,9 +288,15 @@ can be finalized in Figma against the [design-system invalid field](https://www.
 
 **Accessibility**
 
-- `aria-required="true"` whenever `required=True` (already done for pills).
+- `aria-required="true"` whenever `required=True` (already done for pills). On
+  widgets whose root role does not honor `aria-required` (file-uploader dropzone,
+  camera, audio — and pills needed an imperative workaround), also include
+  `(required)` in the accessible name via `aria-label` / `aria-labelledby`.
 - `aria-invalid="true"` and `aria-describedby` pointing at the error text while the
   error is shown (already done for `validate`).
+- Selection and file-like widgets must use the same visually hidden `role="alert"`
+  linked by `aria-describedby` that `st.text_input` already uses. Tooltip-only error
+  text is not announced on a failed form submit (no rerun, no focus change).
 
 ### Pills and segmented_control (existing `required`)
 
@@ -357,9 +382,11 @@ with st.form("upload"):
 ### Edge cases
 
 - **First run / empty default.** No error until the user attempts a commit or form
-  submit. Return type does **not** narrow (`text_input` remains `str | None`) because
-  the first run can still be empty. Existing pills overloads that narrow when
-  `required=True` and `default` is set stay as they are.
+  submit. Return types do **not** narrow (e.g. `st.selectbox(index=None, required=True)`
+  stays `V | None`) because the first run can still be empty. Existing pills overloads
+  that narrow when `required=True` and `default` is set stay as they are. Once
+  `required=True` is legal with `selection_mode="multi"`, the multi overload still
+  returns `list[V]` with no non-empty guarantee.
 - **Pre-filled required field.** `st.text_input("Name", value="Ada", required=True)`
   starts valid. Clearing it and committing is blocked.
 - **`disabled=True`.** A disabled empty required field can trap a form. Do not raise
@@ -381,7 +408,9 @@ with st.form("upload"):
 - **Widget identity.** Changing `required` must not reset the widget (same as
   `disabled`). Do not hash `required` into the element ID.
 - **`st.form(clear_on_submit=True)`.** Clear only runs after a successful submit.
-- **Range `st.date_input`.** Incomplete range is empty for `required`.
+- **Range `st.date_input`.** An incomplete range counts as empty, so with
+  `required=True` the intermediate single-date commit (which reruns the app today)
+  is suppressed until both bounds are selected.
 - **`type="email"` / `"url"` without `required`.** Unchanged: empty still allowed.
 
 ## Out of Scope (Future Work)
@@ -399,6 +428,9 @@ with st.form("upload"):
   submits; `validate` already rejected React Aria/native constraint validation for this
   reason. Use Streamlit's error chrome + `aria-required`.
 - **Auto-selecting a default** when `required=True` and no `default`/`index` is set.
+- **`min_selections` / "at least N"** — `required=True` on multi-select is deliberately
+  the `min_selections=1` special case. A numeric minimum can be added later without
+  conflict (`st.multiselect` already has `max_selections`).
 
 ## Alternatives considered
 
@@ -426,7 +458,7 @@ precedent. Specify the full input-widget API; implementation can still land in w
 | Item                      | ✅ or comment                                                                 |
 | ------------------------- | ----------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc? | ✅ Frontend commit/submit gating; no new backend runtime dependency            |
-| No breaking API changes   | ✅ New optional param (`False`). Pills: allowing `required` in multi-select is additive (today it raises) |
+| No breaking API changes   | ✅ New optional param (`False`). Pills: allowing `required` in multi-select is additive (today it raises). **Intentional behavior fix:** empty shipped `required` pills/segmented widgets will start failing form submit (today those forms still submit). Not a deprecation; changelog should call out closing the 1.56 form-gating gap. |
 | No new dependencies       | ✅ Reuses `validate` error UI and `addFormSubmitValidator`                     |
 | Metrics collected         | ✅ Track `required=True` usage per widget                                      |
 | Any security/legal impact? | Client-side only; document that app code must still check values if it matters |
