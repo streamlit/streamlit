@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { CalendarDateTime } from "@internationalized/date"
 import { describe, expect, it, vi } from "vitest"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
@@ -22,72 +23,186 @@ import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  combineDateAndTime,
-  isSameDay,
-  normalizeDateValue,
-  stringToDate,
+  calendarDateTimeToIso,
+  createDateTimeErrorMessage,
+  dateTimesEqual,
+  formatCalendarDateTime,
+  isoToCalendarDateTime,
+  parsePastedDateTime,
   updateWidgetMgrState,
+  validateDateTime,
 } from "./dateTimeInputUtils"
 
-describe("stringToDate", () => {
-  it("parses valid datetime strings and resets seconds", () => {
-    const result = stringToDate("2024/05/10, 13:47")
-    expect(result).not.toBeNull()
-    expect(result?.getMinutes()).toBe(47)
-    expect(result?.getSeconds()).toBe(0)
+describe("isoToCalendarDateTime", () => {
+  it("parses a valid ISO datetime string", () => {
+    const result = isoToCalendarDateTime("2024-05-10T13:47")
+    expect(result).toMatchObject({
+      year: 2024,
+      month: 5,
+      day: 10,
+      hour: 13,
+      minute: 47,
+    })
   })
 
   it("returns null for invalid or falsy values", () => {
-    expect(stringToDate("invalid")).toBeNull()
-    expect(stringToDate(null)).toBeNull()
-    expect(stringToDate(undefined)).toBeNull()
-    expect(stringToDate("")).toBeNull()
+    expect(isoToCalendarDateTime("invalid")).toBeNull()
+    expect(isoToCalendarDateTime(null)).toBeNull()
+    expect(isoToCalendarDateTime(undefined)).toBeNull()
+    expect(isoToCalendarDateTime("")).toBeNull()
+  })
+
+  it("rejects values with invalid month/day/hour/minute", () => {
+    expect(isoToCalendarDateTime("2024-13-01T00:00")).toBeNull()
+    expect(isoToCalendarDateTime("2024-01-32T00:00")).toBeNull()
+    expect(isoToCalendarDateTime("2024-01-01T24:00")).toBeNull()
+    expect(isoToCalendarDateTime("2024-01-01T00:60")).toBeNull()
+  })
+
+  it("accepts ISO with seconds (discards seconds)", () => {
+    const result = isoToCalendarDateTime("2024-07-04T08:15:30")
+    expect(result).toMatchObject({
+      year: 2024,
+      month: 7,
+      day: 4,
+      hour: 8,
+      minute: 15,
+    })
+  })
+
+  it("rejects out-of-range seconds", () => {
+    expect(isoToCalendarDateTime("2024-07-04T08:15:99")).toBeNull()
+    expect(isoToCalendarDateTime("2024-07-04T08:15:60")).toBeNull()
   })
 })
 
-describe("normalizeDateValue", () => {
-  it("normalizes arrays by picking the first valid date", () => {
-    const first = new Date("2024-01-01T10:15:30Z")
-    const second = new Date("2024-01-02T11:30:00Z")
-    const normalized = normalizeDateValue([null, undefined, first, second])
-    expect(normalized?.getMinutes()).toBe(first.getMinutes())
-    expect(normalized?.getSeconds()).toBe(0)
-  })
-
-  it("returns null when no valid date exists", () => {
-    expect(normalizeDateValue([null, undefined])).toBeNull()
+describe("calendarDateTimeToIso", () => {
+  it("serializes to the expected wire format", () => {
+    const dt = new CalendarDateTime(2024, 1, 5, 9, 3)
+    expect(calendarDateTimeToIso(dt)).toBe("2024-01-05T09:03")
   })
 })
 
-describe("dateHelpers", () => {
-  it("identifies same day values", () => {
-    expect(
-      isSameDay(
-        new Date("2024-06-01T03:00:00Z"),
-        new Date("2024-06-01T20:00:00Z")
-      )
-    ).toBe(true)
-    expect(
-      isSameDay(
-        new Date("2024-06-01T03:00:00Z"),
-        new Date("2024-06-02T03:00:00Z")
-      )
-    ).toBe(false)
+describe("dateTimesEqual", () => {
+  it("returns true for equal values", () => {
+    const a = new CalendarDateTime(2024, 6, 1, 12, 0)
+    const b = new CalendarDateTime(2024, 6, 1, 12, 0)
+    expect(dateTimesEqual(a, b)).toBe(true)
   })
 
-  it("combines date and time portions", () => {
-    const date = new Date("2024-06-01T00:00:00Z")
-    const time = new Date("2024-06-01T13:45:00Z")
-    const combined = combineDateAndTime(date, time)
-    expect(combined.getHours()).toBe(13)
-    expect(combined.getMinutes()).toBe(45)
+  it("returns false for different values", () => {
+    const a = new CalendarDateTime(2024, 6, 1, 12, 0)
+    const b = new CalendarDateTime(2024, 6, 1, 12, 1)
+    expect(dateTimesEqual(a, b)).toBe(false)
+  })
+
+  it("handles null values", () => {
+    expect(dateTimesEqual(null, null)).toBe(true)
+    expect(dateTimesEqual(new CalendarDateTime(2024, 1, 1, 0, 0), null)).toBe(
+      false
+    )
+    expect(dateTimesEqual(null, new CalendarDateTime(2024, 1, 1, 0, 0))).toBe(
+      false
+    )
+  })
+})
+
+describe("validateDateTime", () => {
+  const min = new CalendarDateTime(2024, 1, 1, 0, 0)
+  const max = new CalendarDateTime(2024, 12, 31, 23, 45)
+
+  it("returns null for in-range values", () => {
+    expect(
+      validateDateTime(new CalendarDateTime(2024, 6, 1, 12, 0), min, max)
+    ).toBeNull()
+  })
+
+  it("returns 'beforeMin' for values before min", () => {
+    expect(
+      validateDateTime(new CalendarDateTime(2023, 12, 31, 23, 59), min, max)
+    ).toBe("beforeMin")
+  })
+
+  it("returns 'afterMax' for values after max", () => {
+    expect(
+      validateDateTime(new CalendarDateTime(2025, 1, 1, 0, 0), min, max)
+    ).toBe("afterMax")
+  })
+
+  it("returns null for null value", () => {
+    expect(validateDateTime(null, min, max)).toBeNull()
+  })
+})
+
+describe("formatCalendarDateTime", () => {
+  it("formats with YYYY/MM/DD format", () => {
+    const dt = new CalendarDateTime(2024, 1, 5, 9, 3)
+    expect(formatCalendarDateTime(dt, "YYYY/MM/DD")).toBe("2024/01/05, 09:03")
+  })
+
+  it("formats with DD/MM/YYYY format", () => {
+    const dt = new CalendarDateTime(2024, 1, 5, 14, 30)
+    expect(formatCalendarDateTime(dt, "DD/MM/YYYY")).toBe("05/01/2024, 14:30")
+  })
+})
+
+describe("createDateTimeErrorMessage", () => {
+  it("returns null for null error type", () => {
+    expect(createDateTimeErrorMessage(null, "min", "max")).toBeNull()
+  })
+
+  it("returns afterMax message", () => {
+    const msg = createDateTimeErrorMessage("afterMax", "min", "max")
+    expect(msg).toContain("on or before max")
+  })
+
+  it("returns beforeMin message with no max", () => {
+    const msg = createDateTimeErrorMessage("beforeMin", "min", "")
+    expect(msg).toContain("on or after min")
+  })
+
+  it("returns between message", () => {
+    const msg = createDateTimeErrorMessage("beforeMin", "min", "max")
+    expect(msg).toContain("between min and max")
+  })
+})
+
+describe("parsePastedDateTime", () => {
+  it("parses ISO format", () => {
+    const result = parsePastedDateTime("2024-06-15T14:30", "YYYY/MM/DD")
+    expect(result).toMatchObject({
+      year: 2024,
+      month: 6,
+      day: 15,
+      hour: 14,
+      minute: 30,
+    })
+  })
+
+  it("parses display format with date reordering", () => {
+    const result = parsePastedDateTime("15/06/2024, 14:30", "DD/MM/YYYY")
+    expect(result).toMatchObject({
+      year: 2024,
+      month: 6,
+      day: 15,
+      hour: 14,
+      minute: 30,
+    })
+  })
+
+  it("returns null for invalid paste text", () => {
+    expect(parsePastedDateTime("not a date", "YYYY/MM/DD")).toBeNull()
+  })
+
+  it("rejects invalid dates that would be clamped", () => {
+    expect(parsePastedDateTime("2024-02-30T12:00", "YYYY/MM/DD")).toBeNull()
   })
 })
 
 describe("updateWidgetMgrState", () => {
   const element = {
-    min: "2024/01/01, 00:00",
-    max: "2024/12/31, 23:45",
+    min: "2024-01-01T00:00",
+    max: "2024-12-31T23:45",
   } as unknown as DateTimeInputProto
 
   const makeWidgetMgr = (): WidgetStateManager =>
@@ -98,7 +213,7 @@ describe("updateWidgetMgrState", () => {
   it("commits values within bounds", () => {
     const widgetMgr = makeWidgetMgr()
     const vws: ValueWithSource<string | null> = {
-      value: "2024/06/01, 12:00",
+      value: "2024-06-01T12:00",
       fromUser: true,
     }
 
@@ -106,7 +221,7 @@ describe("updateWidgetMgrState", () => {
 
     expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       element.id,
-      ["2024/06/01, 12:00"],
+      ["2024-06-01T12:00"],
       { formId: element.formId, fragmentId: "fragment", fromUser: true }
     )
   })
@@ -114,7 +229,7 @@ describe("updateWidgetMgrState", () => {
   it("rejects values outside bounds", () => {
     const widgetMgr = makeWidgetMgr()
     const vws: ValueWithSource<string | null> = {
-      value: "2025/01/01, 12:00",
+      value: "2025-01-01T12:00",
       fromUser: true,
     }
 

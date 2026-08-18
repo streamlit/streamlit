@@ -31,10 +31,12 @@ export const StyledCheckbox = styled.div(({ theme }) => ({
 
 interface StyledContentProps {
   visibility?: LabelVisibilityOptions
+  /** When true, the label truncates on one line, so it must be shrinkable. */
+  $truncate?: boolean
 }
 
 export const StyledContent = styled.div<StyledContentProps>(
-  ({ theme, visibility }) => ({
+  ({ theme, visibility, $truncate }) => ({
     display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
     visibility:
       visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
@@ -42,11 +44,38 @@ export const StyledContent = styled.div<StyledContentProps>(
     flexDirection: "row",
     alignItems: "center",
     lineHeight: theme.lineHeights.small,
+    // Allow the label to shrink below its content size so the markdown can
+    // ellipsize. The help icon keeps its intrinsic size and stays visible.
+    ...($truncate && { minWidth: 0 }),
   })
 )
 
+interface StyledLabelTextProps {
+  /** When true, the label truncates on one line, so it must be shrinkable. */
+  $truncate?: boolean
+}
+
+/**
+ * Wraps the label markdown so the native `title` tooltip is scoped to the label
+ * only (not the sibling help icon). When truncating it becomes a shrinkable flex
+ * box so the markdown can ellipsize; otherwise it stays transparent to layout.
+ */
+export const StyledLabelText = styled.div<StyledLabelTextProps>(
+  ({ $truncate }) =>
+    $truncate
+      ? { display: "flex", alignItems: "center", minWidth: 0 }
+      : { display: "contents" }
+)
+
+interface StyledRootProps {
+  /** When true, the control can shrink within its container so the label can ellipsize. */
+  $truncate?: boolean
+}
+
 /** Wrapper around React Aria Checkbox — handles layout and keyboard-focus background. */
-export const StyledCheckboxRoot = styled(RACheckbox)(({ theme }) => ({
+export const StyledCheckboxRoot = styled(RACheckbox, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<StyledRootProps>(({ theme, $truncate }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing.sm,
@@ -54,6 +83,10 @@ export const StyledCheckboxRoot = styled(RACheckbox)(({ theme }) => ({
   marginTop: 0,
   cursor: "pointer",
   position: "relative",
+  // Bound the control to its container (without expanding a short label to full
+  // width) and let it shrink so an overflowing label can ellipsize instead of
+  // widening the control past its container.
+  ...($truncate && { minWidth: 0, maxWidth: "100%" }),
 
   "&[data-disabled]": {
     cursor: "not-allowed",
@@ -125,7 +158,9 @@ export const StyledCheckboxIndicator =
   )
 
 /** Wrapper around React Aria Switch — handles layout for the toggle variant. */
-export const StyledSwitchRoot = styled(RASwitch)(({ theme }) => ({
+export const StyledSwitchRoot = styled(RASwitch, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<StyledRootProps>(({ theme, $truncate }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing.sm,
@@ -133,6 +168,10 @@ export const StyledSwitchRoot = styled(RASwitch)(({ theme }) => ({
   marginTop: 0,
   cursor: "pointer",
   position: "relative",
+  // Bound the control to its container (without expanding a short label to full
+  // width) and let it shrink so an overflowing label can ellipsize instead of
+  // widening the control past its container.
+  ...($truncate && { minWidth: 0, maxWidth: "100%" }),
 
   "&[data-disabled]": {
     cursor: "not-allowed",

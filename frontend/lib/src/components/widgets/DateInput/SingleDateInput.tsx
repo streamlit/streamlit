@@ -56,11 +56,12 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
 import {
   datesEqual,
+  getSafeLocale,
   isValidSegmentValue,
   parsePartialSegmentPaste,
   parsePastedDate,
 } from "./dateInputUtils"
-import { ReorderedDateSegments } from "./ReorderedDateSegments"
+import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -75,7 +76,6 @@ import {
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { getSafeLocale } from "./weekInfo"
 
 interface SingleDateInputProps {
   value: CalendarDate | null
@@ -101,7 +101,7 @@ interface SingleDateInputProps {
   /** Called when close requires parent-level cleanup (segments left in
    * placeholder state after an edit). Parent clears the validation error;
    * the display revert is handled locally. */
-  onClose: (hasPlaceholderSegments: boolean) => void
+  onClose: (shouldClearError: boolean) => void
   /** When inside a form, writes the pending value to WidgetStateManager
    * synchronously on blur so a concurrent form submit reads the correct
    * value. Undefined when not in a form. */
@@ -227,7 +227,7 @@ function SingleDateInput({
           // already be at default (segment edits were buffered), making the
           // parent's revert a no-op.
           setDisplayValue(value)
-          onCloseRef.current(true /* hasPlaceholderSegments */)
+          onCloseRef.current(true /* shouldClearError */)
         } else {
           const pending = allCleared ? null : displayValueRef.current
           if (!datesEqual(pending, value)) {
@@ -570,7 +570,7 @@ function SingleDateInput({
               shouldForceLeadingZeros
               isDisabled={disabled}
             >
-              <ReorderedDateSegments format={format} />
+              <ReorderedSegments format={format} />
             </DateField>
           </StyledDateField>
         </I18nProvider>

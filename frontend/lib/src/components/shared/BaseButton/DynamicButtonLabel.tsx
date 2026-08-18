@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { useEffect, useMemo, useRef } from "react"
+import { useMemo } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
 import type { IconSize } from "~lib/theme/types"
 import { isFromMac } from "~lib/util/utils"
@@ -65,51 +66,13 @@ export const DynamicButtonLabel = ({
 
   const truncate = !wrap
 
-  const labelRef = useRef<HTMLDivElement>(null)
-  // Wraps only the rendered Markdown label so we can read its plain text without
-  // picking up the icon or shortcut. Uses `display: contents`, so it adds no box
-  // and leaves the flex/truncation layout unchanged.
-  const labelTextRef = useRef<HTMLSpanElement>(null)
-
-  // Set the native tooltip to the rendered plain-text label (the accessible
-  // name) rather than the raw Markdown source. This reads from the DOM because
-  // Markdown can only be converted to plain text after it is rendered. Observe
-  // DOM mutations so we re-sync after async Markdown plugins (e.g. emoji)
-  // replace a loading skeleton with the real label. Skip the observer when
-  // no title is needed so most buttons do not subscribe to DOM mutations.
-  useEffect(() => {
-    const node = labelRef.current
-    if (!node) {
-      return
-    }
-
-    if (!addTitleTooltip) {
-      node.removeAttribute("title")
-      return
-    }
-
-    const syncTitle = (): void => {
-      const labelText = labelTextRef.current?.textContent ?? ""
-      if (labelText) {
-        node.title = labelText
-      } else {
-        node.removeAttribute("title")
-      }
-    }
-
-    syncTitle()
-
-    const observer = new MutationObserver(syncTitle)
-    observer.observe(node, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    })
-    return () => observer.disconnect()
-  }, [addTitleTooltip, label])
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(
+    addTitleTooltip,
+    label
+  )
 
   return (
-    <StyledButtonLabel ref={labelRef} $truncate={truncate}>
+    <StyledButtonLabel ref={titleRef} $truncate={truncate}>
       <StyledButtonMainLabel
         data-has-shortcut={Boolean(displayShortcut)}
         $truncate={truncate}
@@ -118,6 +81,9 @@ export const DynamicButtonLabel = ({
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {label && (
+          // Wrap only the rendered Markdown label so we can read its plain text
+          // for the native title without picking up the icon or shortcut.
+          // `display: contents` adds no box and leaves the layout unchanged.
           <span ref={labelTextRef} style={{ display: "contents" }}>
             <StreamlitMarkdown
               source={label}

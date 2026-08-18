@@ -14,94 +14,204 @@
  * limitations under the License.
  */
 
-import moment from "moment"
+import { CalendarDateTime } from "@internationalized/date"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
+import { parseFormatOrder } from "~lib/components/widgets/DateInput/dateInputUtils"
 import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
-import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-// Wire format for protobuf communication (ISO 8601)
-export const DATE_TIME_FORMAT = "YYYY-MM-DDTHH:mm"
+function pad(value: number, length: number): string {
+  return String(Math.abs(value)).padStart(length, "0")
+}
 
-export const getStateFromWidgetMgr = (
+/** Parse an ISO datetime string (`YYYY-MM-DDTHH:mm` or `YYYY-MM-DDTHH:mm:ss`) into a CalendarDateTime. Seconds are accepted but discarded. */
+export function isoToCalendarDateTime(
+  value: string | null | undefined
+): CalendarDateTime | null {
+  if (!value) return null
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::[0-5]\d)?$/.exec(
+    value.trim()
+  )
+  if (!match) return null
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr] = match
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  const day = Number(dayStr)
+  const hour = Number(hourStr)
+  const minute = Number(minuteStr)
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
+  try {
+    const result = new CalendarDateTime(year, month, day, hour, minute)
+    if (result.day !== day) return null
+    return result
+  } catch {
+    return null
+  }
+}
+
+/** Serialize a CalendarDateTime to the wire format (`YYYY-MM-DDTHH:mm`). */
+export function calendarDateTimeToIso(dt: CalendarDateTime): string {
+  return `${pad(dt.year, 4)}-${pad(dt.month, 2)}-${pad(dt.day, 2)}T${pad(dt.hour, 2)}:${pad(dt.minute, 2)}`
+}
+
+/** Value-based equality for CalendarDateTime (avoids object-identity pitfalls). */
+export function dateTimesEqual(
+  a: CalendarDateTime | null,
+  b: CalendarDateTime | null
+): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.compare(b) === 0
+}
+
+export type DateTimeValidationErrorType = "beforeMin" | "afterMax" | null
+
+export function validateDateTime(
+  dt: CalendarDateTime | null,
+  minDateTime: CalendarDateTime | null,
+  maxDateTime: CalendarDateTime | null
+): DateTimeValidationErrorType {
+  if (!dt) return null
+  if (maxDateTime && dt.compare(maxDateTime) > 0) return "afterMax"
+  if (minDateTime && dt.compare(minDateTime) < 0) return "beforeMin"
+  return null
+}
+
+/** Format a CalendarDateTime for error messages using the element's date format + time. */
+export function formatCalendarDateTime(
+  dt: CalendarDateTime,
+  dateFormat: string
+): string {
+  const { order, separator } = parseFormatOrder(dateFormat)
+  const datePart = order
+    .map(token => {
+      if (token === "Y") return pad(dt.year, 4)
+      if (token === "M") return pad(dt.month, 2)
+      return pad(dt.day, 2)
+    })
+    .join(separator)
+  return `${datePart}, ${pad(dt.hour, 2)}:${pad(dt.minute, 2)}`
+}
+
+/** Build the user-facing error message for out-of-range datetimes.
+ * afterMax always shows just the upper bound (mentioning min adds noise).
+ * beforeMin shows the full range when both bounds exist, or just min otherwise. */
+export function createDateTimeErrorMessage(
+  errorType: DateTimeValidationErrorType,
+  minString: string,
+  maxString: string
+): string | null {
+  if (!errorType) return null
+  if (errorType === "afterMax") {
+    return `**Error**: Date and time set outside allowed range. Please select a date and time on or before ${maxString}.`
+  }
+  if (!maxString) {
+    return `**Error**: Date and time set outside allowed range. Please select a date and time on or after ${minString}.`
+  }
+  return `**Error**: Date and time set outside allowed range. Please select a date and time between ${minString} and ${maxString}.`
+}
+
+/**
+ * Parse a pasted datetime string. Supports both the ISO wire format
+ * (`YYYY-MM-DDTHH:mm`) and the display format (`DD/MM/YYYY, HH:mm` etc).
+ */
+export function parsePastedDateTime(
+  text: string,
+  dateFormat: string
+): CalendarDateTime | null {
+  const trimmed = text.trim()
+
+  const isoResult = isoToCalendarDateTime(trimmed)
+  if (isoResult) return isoResult
+
+  const { order, separator } = parseFormatOrder(dateFormat)
+  const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const datePartRe = `(\\d{1,4})${escapedSep}(\\d{1,4})${escapedSep}(\\d{1,4})`
+  const timePartRe = `(\\d{1,2}):(\\d{2})`
+  const re = new RegExp(`^${datePartRe}[,\\s]+${timePartRe}$`)
+  const match = re.exec(trimmed)
+  if (!match) return null
+
+  const parts: Partial<Record<"Y" | "M" | "D", number>> = {}
+  order.forEach((token, i) => {
+    parts[token] = Number(match[i + 1])
+  })
+  const { Y: year, M: month, D: day } = parts
+  const hour = Number(match[4])
+  const minute = Number(match[5])
+  if (year === undefined || month === undefined || day === undefined)
+    return null
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
+
+  try {
+    const result = new CalendarDateTime(year, month, day, hour, minute)
+    if (result.day !== day) return null
+    return result
+  } catch {
+    return null
+  }
+}
+
+// --- Segment state helper ---
+
+export interface SegmentState {
+  totalSegments: number
+  placeholderCount: number
+  isPartiallyTyped: boolean
+  isFullyCleared: boolean
+}
+
+/** Query spinbutton segments in a container to determine their placeholder state. */
+export function getSegmentState(container: HTMLElement): SegmentState {
+  const segments = container.querySelectorAll('[role="spinbutton"]')
+  const placeholders = container.querySelectorAll(
+    '[role="spinbutton"][data-placeholder="true"]'
+  )
+  const totalSegments = segments.length
+  const placeholderCount = placeholders.length
+  return {
+    totalSegments,
+    placeholderCount,
+    isPartiallyTyped: placeholderCount > 0 && placeholderCount < totalSegments,
+    isFullyCleared: totalSegments > 0 && placeholderCount === totalSegments,
+  }
+}
+
+// --- useBasicWidgetState integration ---
+
+export function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: DateTimeInputProto
-): string | null | undefined => {
+): string | null | undefined {
   const values = widgetMgr.getStringArrayValue(element)
-  if (values === undefined) {
-    return undefined
-  }
+  if (values === undefined) return undefined
   return values.length > 0 ? values[0] : null
 }
 
-export const getDefaultStateFromProto = (
+export function getDefaultStateFromProto(
   element: DateTimeInputProto
-): string | null => (element.default?.length ? element.default[0] : null)
+): string | null {
+  return element.default?.length ? element.default[0] : null
+}
 
-export const getCurrStateFromProto = (
+export function getCurrStateFromProto(
   element: DateTimeInputProto
-): string | null => (element.value?.length ? element.value[0] : null)
-
-export const normalizeDateValue = (
-  date: Date | (Date | null | undefined)[] | null | undefined
-): Date | null => {
-  let singleDate: Date | null | undefined
-
-  if (Array.isArray(date)) {
-    singleDate = date.find((d): d is Date => d instanceof Date)
-  } else {
-    singleDate = date
-  }
-
-  if (!singleDate || Number.isNaN(singleDate.getTime())) {
-    return null
-  }
-
-  const normalized = new Date(singleDate.getTime())
-  normalized.setSeconds(0, 0)
-  return normalized
+): string | null {
+  return element.value?.length ? element.value[0] : null
 }
 
-const DATE_TIME_LEGACY_FORMAT = "YYYY/MM/DD, HH:mm"
-const DATE_TIME_PARSE_FORMATS = [DATE_TIME_FORMAT, DATE_TIME_LEGACY_FORMAT]
-
-export const stringToDate = (
-  value: string | null | undefined
-): Date | null => {
-  if (isNullOrUndefined(value) || value === "") {
-    return null
-  }
-  const parsed = moment(value, DATE_TIME_PARSE_FORMATS, true)
-  if (!parsed.isValid()) {
-    return null
-  }
-  return normalizeDateValue(parsed.toDate())
-}
-
-export const isSameDay = (a: Date, b: Date): boolean =>
-  a.getFullYear() === b.getFullYear() &&
-  a.getMonth() === b.getMonth() &&
-  a.getDate() === b.getDate()
-
-export const combineDateAndTime = (
-  dateValue: Date,
-  timeSource: Date
-): Date => {
-  const merged = new Date(dateValue.getTime())
-  merged.setHours(timeSource.getHours(), timeSource.getMinutes(), 0, 0)
-  return merged
-}
-
-export const updateWidgetMgrState = (
+export function updateWidgetMgrState(
   element: DateTimeInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
   fragmentId: string | undefined
-): void => {
-  const minDateTime = stringToDate(element.min)
-  const maxDateTime = stringToDate(element.max)
+): void {
+  const minDateTime = isoToCalendarDateTime(element.min)
+  const maxDateTime = isoToCalendarDateTime(element.max)
 
   const setArrayValue = (val: string | null): void => {
     widgetMgr.setStringArrayValue(element.id, val ? [val] : [], {
@@ -112,12 +222,9 @@ export const updateWidgetMgrState = (
   }
 
   if (vws.value) {
-    const dateValue = stringToDate(vws.value)
-    if (dateValue) {
-      const isOutOfBounds =
-        (minDateTime && dateValue < minDateTime) ||
-        (maxDateTime && dateValue > maxDateTime)
-
+    const dt = isoToCalendarDateTime(vws.value)
+    if (dt) {
+      const isOutOfBounds = !!validateDateTime(dt, minDateTime, maxDateTime)
       if (!isOutOfBounds) {
         setArrayValue(vws.value)
       }

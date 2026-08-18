@@ -14,11 +14,11 @@ on:
         description: "Model to use for QA testing"
         required: false
         type: string
-        default: "cursor-grok-4.5-high"
+        default: "cursor-grok-4.6-xhigh"
 
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'cursor-grok-4.5-high' }}
+  MODEL: ${{ github.event.inputs.model || 'cursor-grok-4.6-xhigh' }}
 
 jobs:
   check-secrets:
