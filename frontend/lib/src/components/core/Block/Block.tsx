@@ -460,7 +460,11 @@ export const BlockNodeRenderer = (
       >
         {child}
         {hasResizeHandle && (
-          <ColumnResizeHandle index={columnIndex} gap={gap} />
+          <ColumnResizeHandle
+            index={columnIndex}
+            gap={gap}
+            showBorder={node.deltaBlock.column.showBorder ?? false}
+          />
         )}
       </StyledColumn>
     )

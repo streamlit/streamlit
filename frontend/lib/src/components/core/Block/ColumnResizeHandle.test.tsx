@@ -46,7 +46,8 @@ const ROW: RowMetrics = {
 }
 
 function renderHandle(
-  overrides: Partial<ResizableColumnsContextValue> = {}
+  overrides: Partial<ResizableColumnsContextValue> = {},
+  showBorder = false
 ): ResizableColumnsContextValue & { unmount: () => void } {
   const contextValue: ResizableColumnsContextValue = {
     columnIndexes: new Map(),
@@ -62,6 +63,7 @@ function renderHandle(
       <ColumnResizeHandle
         index={0}
         gap={{ gapSize: streamlit.GapSize.SMALL }}
+        showBorder={showBorder}
       />
     </ResizableColumnsContext.Provider>
   )
@@ -134,6 +136,21 @@ describe("ColumnResizeHandle", () => {
     expect(handle).toHaveAttribute("aria-valuetext", "75% / 25%")
     expect(handle).toHaveAttribute("tabindex", "0")
   })
+
+  it.each([
+    // Half a gap (0.5rem) plus half the handle's own width (0.25rem).
+    ["without a border", false, "calc((1rem + 0.5rem) / -2 - 0px)"],
+    // A border insets the padding box the handle is positioned against, so the
+    // offset has to grow by the border's width to stay on the boundary.
+    ["with a border", true, "calc((1rem + 0.5rem) / -2 - 1px)"],
+  ])(
+    "centers itself on the column boundary %s",
+    (_name, showBorder, right) => {
+      renderHandle({}, showBorder)
+
+      expect(getHandle()).toHaveStyle(`right: ${right}`)
+    }
+  )
 
   it("resizes by the distance dragged and releases the pointer afterwards", async () => {
     const { resizeColumns } = renderHandle()

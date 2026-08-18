@@ -233,10 +233,12 @@ export const StyledColumn = styled.div<StyledColumnProps>(
 interface StyledColumnResizeHandleProps {
   /** Gap of the column the handle belongs to. */
   gap: streamlit.IGapConfig | undefined
+  /** Whether the column the handle belongs to draws a border. */
+  showBorder: boolean
 }
 
 export const StyledColumnResizeHandle =
-  styled.div<StyledColumnResizeHandleProps>(({ theme, gap }) => {
+  styled.div<StyledColumnResizeHandleProps>(({ theme, gap, showBorder }) => {
     const translatedGapWidth = translateGapWidth(gap, theme)
     // `theme.spacing.none` is a unitless "0", which is not a valid length in
     // calc() and would make the whole declaration invalid.
@@ -245,6 +247,9 @@ export const StyledColumnResizeHandle =
     // Matches the sidebar's resize handle, which is comfortable to grab without
     // covering the neighboring column's content.
     const handleWidth = theme.spacing.sm
+    // Offsets are relative to the column's padding box, which a border insets
+    // from the column's visible edge by its own width.
+    const borderWidth = showBorder ? theme.sizes.borderWidth : "0px"
 
     return {
       position: "absolute",
@@ -253,7 +258,7 @@ export const StyledColumnResizeHandle =
       width: handleWidth,
       // Straddle the boundary between this column and the next one, which sits
       // half a gap past the column's edge.
-      right: `calc((${gapWidth} + ${handleWidth}) / -2)`,
+      right: `calc((${gapWidth} + ${handleWidth}) / -2 - ${borderWidth})`,
       display: "flex",
       justifyContent: "center",
       cursor: "col-resize",

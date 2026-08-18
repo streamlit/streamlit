@@ -45,6 +45,23 @@ def _get_width(locator: Locator) -> float:
     return bounding_box["width"]
 
 
+def _expect_handle_centered_on_boundary(column_group: Locator) -> None:
+    """Assert the first resize handle is centered on the gap it sits in."""
+    handle_box = column_group.get_by_role("separator").first.bounding_box()
+    columns = column_group.get_by_test_id("stColumn")
+    first_column_box = columns.nth(0).bounding_box()
+    second_column_box = columns.nth(1).bounding_box()
+    assert handle_box is not None
+    assert first_column_box is not None
+    assert second_column_box is not None
+
+    handle_center_x = handle_box["x"] + handle_box["width"] / 2
+    boundary_center_x = (
+        first_column_box["x"] + first_column_box["width"] + second_column_box["x"]
+    ) / 2
+    assert abs(handle_center_x - boundary_center_x) < 0.5
+
+
 def _drag_horizontally(app: Page, handle: Locator, delta_x: float) -> None:
     """Press a resize handle and drag it delta_x pixels sideways."""
     handle.scroll_into_view_if_needed()
@@ -419,20 +436,13 @@ def test_resizable_columns_show_a_handle_on_each_boundary(
 
     assert_snapshot(column_group, name="st_columns-resizable_hovered_handle")
 
-    # A gapless row still centers its handle on the boundary: the handle offset
-    # is computed in calc(), which a unitless zero gap would make invalid.
+    # Each handle sits on the boundary rather than beside it. The offset is
+    # computed in calc(), which both a unitless zero gap and an unaccounted-for
+    # column border would throw off, so check a gapped and a gapless row.
+    _expect_handle_centered_on_boundary(column_group)
     no_gap_group = _get_column_group(app, "columns_resizable_no_gap")
-    no_gap_handle = no_gap_group.get_by_role("separator")
-    expect(no_gap_handle).to_have_count(1)
-    handle_box = no_gap_handle.bounding_box()
-    first_column_box = no_gap_group.get_by_test_id("stColumn").first.bounding_box()
-    assert handle_box is not None
-    assert first_column_box is not None
-    handle_center_x = handle_box["x"] + handle_box["width"] / 2
-    boundary_x = first_column_box["x"] + first_column_box["width"]
-    # The column's border shifts the handle by a pixel; an invalid offset would
-    # drop it at the column's left edge instead.
-    assert abs(handle_center_x - boundary_x) <= 1
+    expect(no_gap_group.get_by_role("separator")).to_have_count(1)
+    _expect_handle_centered_on_boundary(no_gap_group)
 
 
 def test_resizable_columns_resize_only_the_adjacent_pair(app: Page):

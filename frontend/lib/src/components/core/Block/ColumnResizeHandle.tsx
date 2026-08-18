@@ -57,6 +57,8 @@ interface ColumnResizeHandleProps {
   index: number
   /** The column's gap, so the handle can be centered on the boundary. */
   gap: streamlit.IGapConfig | undefined
+  /** Whether the column draws a border, which also offsets the boundary. */
+  showBorder: boolean
 }
 
 /**
@@ -72,6 +74,7 @@ interface ColumnResizeHandleProps {
 const ColumnResizeHandle = ({
   index,
   gap,
+  showBorder,
 }: ColumnResizeHandleProps): ReactElement => {
   const { columnFractions, measureRow, resizeColumns, resetColumns } =
     useRequiredContext(ResizableColumnsContext)
@@ -253,6 +256,7 @@ const ColumnResizeHandle = ({
   return (
     <StyledColumnResizeHandle
       gap={gap}
+      showBorder={showBorder}
       role="separator"
       aria-orientation="vertical"
       aria-label={`Resize columns ${index + 1} and ${index + 2}`}
