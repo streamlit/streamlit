@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -23,6 +23,11 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
 import * as Utils from "~lib/theme/utils"
@@ -705,6 +710,44 @@ describe("Multiselect widget", () => {
 
       expect(tagsContainer.scrollTop).toBe(100)
     })
+
+    it("preserves horizontal scroll position when removing an item in single-row mode", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 20 }, (_, i) => `Option ${i + 1}`)
+      const props = getProps({
+        wrap: false,
+        default: options.map((_, i) => i),
+        options,
+      })
+      render(<Multiselect {...props} />)
+
+      const tagsContainer = screen.getByTestId("stMultiSelectTagsContainer")
+      Object.defineProperty(tagsContainer, "scrollWidth", {
+        configurable: true,
+        value: 800,
+      })
+      Object.defineProperty(tagsContainer, "clientWidth", {
+        configurable: true,
+        value: 200,
+      })
+      Object.defineProperty(tagsContainer, "scrollLeft", {
+        writable: true,
+        configurable: true,
+        value: 120,
+      })
+      act(() => {
+        tagsContainer.dispatchEvent(new Event("scroll", { bubbles: true }))
+      })
+
+      const removeButtons = screen.getAllByRole("button", {
+        name: /^Remove /,
+      })
+      await user.click(removeButtons[5])
+
+      await waitFor(() => {
+        expect(tagsContainer.scrollLeft).toBe(120)
+      })
+    })
   })
 
   describe("on mobile", () => {
@@ -1352,5 +1395,187 @@ describe("Multiselect tag accessibility", () => {
 
     await user.keyboard("{Delete}")
     expect(screen.getByRole("combobox")).toHaveFocus()
+  })
+
+  describe("wrap", () => {
+    const horizontalContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    it("keeps chips in a single, horizontally scrollable row when wrap is false", () => {
+      const props = getProps({ wrap: false, rawValues: ["a"], setValue: true })
+      render(<Multiselect {...props} />)
+
+      const tagsContainer = screen.getByTestId("stMultiSelectTagsContainer")
+      expect(tagsContainer).toHaveStyle({
+        flexWrap: "nowrap",
+        overflowX: "auto",
+        overflowY: "hidden",
+        // The native horizontal scrollbar is hidden (like st.tabs) so it can't
+        // consume the pinned one-row height and clip chips; the edge fade is the
+        // scroll affordance instead.
+        scrollbarWidth: "none",
+      })
+    })
+
+    it("wraps chips onto multiple rows when wrap is true", () => {
+      const props = getProps({ wrap: true, rawValues: ["a"], setValue: true })
+      render(<Multiselect {...props} />)
+
+      const tagsContainer = screen.getByTestId("stMultiSelectTagsContainer")
+      expect(tagsContainer).toHaveStyle({
+        flexWrap: "wrap",
+        overflowY: "auto",
+        overflowX: "hidden",
+      })
+      // While wrapping, the vertical scrollbar is the intended overflow
+      // affordance, so it must not be hidden.
+      expect(tagsContainer).not.toHaveStyle({ scrollbarWidth: "none" })
+    })
+
+    it("resolves the auto default to no-wrap inside a horizontal container", () => {
+      const props = getProps({ rawValues: ["a"], setValue: true })
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Multiselect {...props} />
+        </FlexContext.Provider>
+      )
+
+      const tagsContainer = screen.getByTestId("stMultiSelectTagsContainer")
+      expect(tagsContainer).toHaveStyle({ flexWrap: "nowrap" })
+    })
+
+    it("resolves the auto default to wrapping outside a horizontal container", () => {
+      const props = getProps({ rawValues: ["a"], setValue: true })
+      render(<Multiselect {...props} />)
+
+      const tagsContainer = screen.getByTestId("stMultiSelectTagsContainer")
+      expect(tagsContainer).toHaveStyle({ flexWrap: "wrap" })
+    })
+
+    it("keeps the clear and dropdown controls pinned outside the scroll area when wrap is false", () => {
+      const props = getProps({ wrap: false, rawValues: ["a"], setValue: true })
+      render(<Multiselect {...props} />)
+
+      const tagsContainer = screen.getByTestId("stMultiSelectTagsContainer")
+      const clearButton = screen.getByRole("button", { name: "Clear all" })
+      const openButton = screen.getByRole("button", { name: "Open" })
+
+      expect(clearButton).toBeVisible()
+      expect(openButton).toBeVisible()
+      // The pinned controls must not live inside the horizontally scrolling area.
+      expect(tagsContainer).not.toContainElement(clearButton)
+      expect(tagsContainer).not.toContainElement(openButton)
+    })
+  })
+
+  describe("wrap scroll affordance", () => {
+    const mockScrollMetrics = (
+      el: HTMLElement,
+      metrics: { scrollLeft: number; scrollWidth: number; clientWidth: number }
+    ): void => {
+      Object.defineProperty(el, "scrollLeft", {
+        configurable: true,
+        writable: true,
+        value: metrics.scrollLeft,
+      })
+      Object.defineProperty(el, "scrollWidth", {
+        configurable: true,
+        value: metrics.scrollWidth,
+      })
+      Object.defineProperty(el, "clientWidth", {
+        configurable: true,
+        value: metrics.clientWidth,
+      })
+    }
+
+    const renderOverflowing = (
+      elementProps: Partial<MultiSelectProto>,
+      metrics: { scrollLeft: number; scrollWidth: number; clientWidth: number }
+    ): HTMLElement => {
+      render(<Multiselect {...getProps(elementProps)} />)
+      const container = screen.getByTestId("stMultiSelectTagsContainer")
+      mockScrollMetrics(container, metrics)
+      act(() => {
+        container.dispatchEvent(new Event("scroll"))
+      })
+      return container
+    }
+
+    it("fades only the end edge when scrolled to the start", async () => {
+      const container = renderOverflowing(
+        { wrap: false, rawValues: ["a"], setValue: true },
+        { scrollLeft: 0, scrollWidth: 800, clientWidth: 200 }
+      )
+      await waitFor(() => {
+        expect(container).toHaveAttribute("data-can-scroll-end")
+      })
+      expect(container).not.toHaveAttribute("data-can-scroll-start")
+    })
+
+    it("fades both edges when scrolled to the middle", async () => {
+      const container = renderOverflowing(
+        { wrap: false, rawValues: ["a"], setValue: true },
+        { scrollLeft: 300, scrollWidth: 800, clientWidth: 200 }
+      )
+      await waitFor(() => {
+        expect(container).toHaveAttribute("data-can-scroll-start")
+      })
+      expect(container).toHaveAttribute("data-can-scroll-end")
+    })
+
+    it("fades only the start edge when scrolled to the end", async () => {
+      const container = renderOverflowing(
+        { wrap: false, rawValues: ["a"], setValue: true },
+        { scrollLeft: 600, scrollWidth: 800, clientWidth: 200 }
+      )
+      await waitFor(() => {
+        expect(container).toHaveAttribute("data-can-scroll-start")
+      })
+      expect(container).not.toHaveAttribute("data-can-scroll-end")
+    })
+
+    it("never fades while wrapping, even when the content overflows", async () => {
+      const container = renderOverflowing(
+        { wrap: true, rawValues: ["a"], setValue: true },
+        { scrollLeft: 0, scrollWidth: 800, clientWidth: 200 }
+      )
+      // Give the scroll handler a chance to (not) set the attributes.
+      await waitFor(() => {
+        expect(container).toBeVisible()
+      })
+      expect(container).not.toHaveAttribute("data-can-scroll-start")
+      expect(container).not.toHaveAttribute("data-can-scroll-end")
+    })
+
+    it("scrolls the newest chip into view when a selection is added in single-row mode", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        wrap: false,
+        default: [0],
+        options: ["a", "b", "c"],
+      })
+      render(<Multiselect {...props} />)
+
+      const container = screen.getByTestId("stMultiSelectTagsContainer")
+      // Simulate an overflowing single row so scroll-to-end has an effect.
+      mockScrollMetrics(container, {
+        scrollLeft: 0,
+        scrollWidth: 800,
+        clientWidth: 200,
+      })
+
+      const input = screen.getByRole("combobox")
+      await user.type(input, "b")
+      await user.click(screen.getByRole("option"))
+
+      // The container is scrolled to the end so the newest chip + input show.
+      await waitFor(() => {
+        expect(container.scrollLeft).toBe(800)
+      })
+    })
   })
 })

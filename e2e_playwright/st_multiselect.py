@@ -339,3 +339,50 @@ with st.popover("Popover with multiselect"):
         key="multiselect_esc_popover",
     )
     st.text(f"value esc popover: {esc_multi_popover}")
+
+# --- wrap parameter ---
+
+wrap_options = [
+    "Afghanistan",
+    "Albania",
+    "Algeria",
+    "Andorra",
+    "Angola",
+    "Argentina",
+    "Armenia",
+    "Australia",
+    "Austria",
+    "Azerbaijan",
+]
+
+with st.container(key="multiselect_wrap_false"):
+    st.multiselect(
+        "multiselect wrap false",
+        wrap_options,
+        default=wrap_options,
+        wrap=False,
+    )
+
+with st.container(key="multiselect_wrap_true"):
+    st.multiselect(
+        "multiselect wrap true",
+        wrap_options,
+        default=wrap_options,
+        wrap=True,
+    )
+
+# Auto (wrap=None) resolves to no-wrap inside a horizontal container ...
+with st.container(horizontal=True, key="multiselect_wrap_auto_horizontal"):
+    st.multiselect(
+        "multiselect wrap auto horizontal",
+        wrap_options,
+        default=wrap_options,
+    )
+
+# ... and to wrapping in a normal vertical layout.
+with st.container(key="multiselect_wrap_auto_vertical"):
+    st.multiselect(
+        "multiselect wrap auto vertical",
+        wrap_options,
+        default=wrap_options,
+    )
