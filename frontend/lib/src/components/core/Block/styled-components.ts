@@ -155,10 +155,20 @@ interface StyledColumnProps {
    * usable minimum width and scroll horizontally instead.
    */
   $wrap?: boolean
+  /** Whether the column belongs to a row the user can resize by dragging. */
+  isResizable?: boolean
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
+  ({
+    theme,
+    weight,
+    gap,
+    showBorder,
+    verticalAlignment,
+    $wrap = true,
+    isResizable,
+  }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
@@ -172,6 +182,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // e.g. if it overflows to next row.
       width,
       flex: `1 1 ${width}`,
+      ...(isResizable && {
+        // Anchors the absolutely positioned resize handle.
+        position: "relative" as const,
+      }),
       ...($wrap
         ? {
             [`@media (max-width: ${theme.breakpoints.columns})`]: {
@@ -215,6 +229,68 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     }
   }
 )
+
+interface StyledColumnResizeHandleProps {
+  /** Gap of the column the handle belongs to. */
+  gap: streamlit.IGapConfig | undefined
+}
+
+export const StyledColumnResizeHandle =
+  styled.div<StyledColumnResizeHandleProps>(({ theme, gap }) => {
+    const translatedGapWidth = translateGapWidth(gap, theme)
+    // `theme.spacing.none` is a unitless "0", which is not a valid length in
+    // calc() and would make the whole declaration invalid.
+    const gapWidth =
+      translatedGapWidth === theme.spacing.none ? "0px" : translatedGapWidth
+    // Matches the sidebar's resize handle, which is comfortable to grab without
+    // covering the neighboring column's content.
+    const handleWidth = theme.spacing.sm
+
+    return {
+      position: "absolute",
+      top: 0,
+      height: "100%",
+      width: handleWidth,
+      // Straddle the boundary between this column and the next one, which sits
+      // half a gap past the column's edge.
+      right: `calc((${gapWidth} + ${handleWidth}) / -2)`,
+      display: "flex",
+      justifyContent: "center",
+      cursor: "col-resize",
+      // Stop the browser from scrolling the page during a touch drag.
+      touchAction: "none",
+      // Paint above the neighboring column's border, but low enough to stay
+      // below popovers and dialogs.
+      zIndex: theme.zIndices.priority,
+      borderRadius: theme.radii.default,
+      // Only hint at the boundary once the user is about to interact with it.
+      opacity: 0,
+      transition: "opacity 150ms ease",
+      "&:hover, &:focus-visible": {
+        opacity: 1,
+      },
+      // Touch devices never match :hover, so keep the indicator up for the
+      // duration of the gesture instead.
+      "&[data-dragging='true']": {
+        opacity: 1,
+      },
+      "&:focus": {
+        outline: "none",
+      },
+      "&:focus-visible": {
+        boxShadow: theme.shadows.focusRing,
+      },
+      "&::after": {
+        content: '""',
+        width: theme.sizes.borderWidth,
+        height: "100%",
+        backgroundColor: theme.colors.borderColor,
+      },
+      "@media print": {
+        display: "none",
+      },
+    }
+  })
 
 const getAlignItems = (
   align: BlockProto.FlexContainer.Align | undefined | null

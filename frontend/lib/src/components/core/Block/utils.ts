@@ -16,7 +16,10 @@
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
-import { Direction } from "~lib/components/core/Layout/utils"
+import {
+  Direction,
+  getDirectionOfBlock,
+} from "~lib/components/core/Layout/utils"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
@@ -195,6 +198,54 @@ export function getColumnGapConfig(
     return { gapSize: gapConfig.gapSize }
   }
   return { gapSize: streamlit.GapSize.SMALL }
+}
+
+/**
+ * Appends the columns found in `nodes` to `columnNodes`.
+ *
+ * @returns False as soon as a node that is not a column (nor a transparent
+ * wrapper around columns) is found.
+ */
+function collectColumnNodes(
+  nodes: AppNode[],
+  columnNodes: BlockNode[]
+): boolean {
+  for (const node of nodes) {
+    if (!(node instanceof BlockNode)) {
+      return false
+    }
+    if (node.deltaBlock.column) {
+      columnNodes.push(node)
+    } else if (node.deltaBlock.transparent) {
+      // Transparent blocks group children in the backend tree without adding
+      // DOM, so their columns render as direct children of the row.
+      if (!collectColumnNodes(node.children, columnNodes)) {
+        return false
+      }
+    } else {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * Returns the columns of a resizable `st.columns` row, in render order.
+ *
+ * Resizing redistributes width between two adjacent columns, so it is only
+ * offered for a horizontal row that opted in via `resizable` and whose children
+ * are all columns. Any other block yields an empty array.
+ */
+export function getResizableColumnNodes(blockNode: BlockNode): BlockNode[] {
+  if (
+    !blockNode.deltaBlock.flexContainer?.resizable ||
+    getDirectionOfBlock(blockNode.deltaBlock) !== Direction.HORIZONTAL
+  ) {
+    return []
+  }
+
+  const columnNodes: BlockNode[] = []
+  return collectColumnNodes(blockNode.children, columnNodes) ? columnNodes : []
 }
 
 export function checkFlexContainerBackwardsCompatibile(

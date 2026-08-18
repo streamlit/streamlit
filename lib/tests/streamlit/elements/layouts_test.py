@@ -385,6 +385,47 @@ class ColumnsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError):
             st.columns(3, wrap=invalid_wrap)
 
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+        ]
+    )
+    def test_columns_resizable(self, resizable: bool, expected_resizable: bool):
+        """Test that resizable maps onto flex_container.resizable of the row."""
+        st.columns(3, resizable=resizable)
+
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.flex_container.resizable is expected_resizable
+
+    def test_columns_resizable_default_omitted(self):
+        """Omitting resizable keeps the columns non-resizable."""
+        st.columns(3)
+
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.flex_container.resizable is False
+
+    def test_columns_resizable_is_only_set_on_the_row(self):
+        """Resizable is a property of the column group, not of each column."""
+        st.columns(3, resizable=True)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        for column_block in all_deltas[1:4]:
+            assert not column_block.add_block.flex_container.resizable
+
+    @parameterized.expand(
+        [
+            ("no",),
+            (1,),
+            ("true",),
+            (None,),
+        ]
+    )
+    def test_columns_with_invalid_resizable(self, invalid_resizable):
+        """Test that invalid resizable values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.columns(3, resizable=invalid_resizable)
+
 
 class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):

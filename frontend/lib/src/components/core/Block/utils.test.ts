@@ -21,7 +21,7 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { BlockNode, ElementNode } from "~lib/AppNode"
+import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { getDividerColors } from "~lib/theme/getColors"
@@ -34,6 +34,7 @@ import {
   getBorderBackwardsCompatible,
   getColumnGapConfig,
   getKeyFromId,
+  getResizableColumnNodes,
   isElementStale,
   shouldActivateScrollToBottom,
 } from "./utils"
@@ -550,5 +551,81 @@ describe("assignDividerColor", () => {
     expect(elements[0].heading.divider).toBe("#c-blue")
     expect(elements[1].heading.divider).toBe("#c-red")
     expect(elements[2].heading.divider).toBe("#c-green")
+  })
+})
+
+describe("getResizableColumnNodes", () => {
+  const SCRIPT_HASH = "test-script-hash"
+
+  function makeBlock(props: IBlock, children: AppNode[] = []): BlockNode {
+    return new BlockNode(SCRIPT_HASH, children, new BlockProto(props))
+  }
+
+  function makeColumnsRow(
+    children: AppNode[],
+    flexContainer: BlockProto.IFlexContainer = {}
+  ): BlockNode {
+    return makeBlock(
+      {
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+          resizable: true,
+          ...flexContainer,
+        },
+      },
+      children
+    )
+  }
+
+  const firstColumn = makeBlock({ column: { weight: 0.5 } })
+  const secondColumn = makeBlock({ column: { weight: 0.5 } })
+
+  it("returns the row's columns in order", () => {
+    const row = makeColumnsRow([firstColumn, secondColumn])
+
+    expect(getResizableColumnNodes(row)).toEqual([firstColumn, secondColumn])
+  })
+
+  it("looks through transparent wrappers around the columns", () => {
+    // Fragments can wrap a row's columns in a transparent block, which renders
+    // no DOM of its own.
+    const row = makeColumnsRow([
+      makeBlock({ transparent: {} }, [firstColumn]),
+      secondColumn,
+    ])
+
+    expect(getResizableColumnNodes(row)).toEqual([firstColumn, secondColumn])
+  })
+
+  it.each([
+    [
+      "the row did not opt in",
+      makeColumnsRow([firstColumn], { resizable: false }),
+    ],
+    [
+      "the row is vertical",
+      makeColumnsRow([firstColumn], {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      }),
+    ],
+    [
+      "a child is not a column",
+      makeColumnsRow([firstColumn, makeBlock({ flexContainer: {} })]),
+    ],
+    [
+      "a transparent wrapper holds something other than a column",
+      makeColumnsRow([
+        makeBlock({ transparent: {} }, [makeBlock({ flexContainer: {} })]),
+      ]),
+    ],
+    [
+      "a child is an element rather than a block",
+      makeColumnsRow([
+        // @ts-expect-error - the element itself is irrelevant to the check
+        new ElementNode(null, null, "scriptRunId", SCRIPT_HASH),
+      ]),
+    ],
+  ])("returns no columns when %s", (_reason, row) => {
+    expect(getResizableColumnNodes(row)).toEqual([])
   })
 })

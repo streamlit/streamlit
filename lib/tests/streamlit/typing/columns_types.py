@@ -48,6 +48,10 @@ if TYPE_CHECKING:
     assert_type(columns(3, wrap=True), list[DeltaGenerator])
     assert_type(columns(3, wrap=False), list[DeltaGenerator])
 
+    # st.columns accepts resizable for drag-to-resize columns.
+    assert_type(columns(3, resizable=True), list[DeltaGenerator])
+    assert_type(columns(3, resizable=False), list[DeltaGenerator])
+
     # st.container accepts the same range of gap values.
     assert_type(container(gap="small"), DeltaGenerator)
     assert_type(container(gap="medium"), DeltaGenerator)

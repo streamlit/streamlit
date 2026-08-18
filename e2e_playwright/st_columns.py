@@ -185,3 +185,17 @@ with st.container(key="columns_wrap_true"):
     wrap_true_cols = st.columns(3, wrap=True, border=True)
     for i, col in enumerate(wrap_true_cols):
         col.write(f"Wrap true {i + 1}")
+
+with st.container(key="columns_resizable"):
+    resizable_cols = st.columns(3, resizable=True, border=True)
+    for i, col in enumerate(resizable_cols):
+        col.write(f"Resizable {i + 1}")
+
+with st.container(key="columns_resizable_single"):
+    (single_resizable_col,) = st.columns(1, resizable=True, border=True)
+    single_resizable_col.write("Single resizable column")
+
+with st.container(key="columns_resizable_no_wrap"):
+    no_wrap_resizable_cols = st.columns(2, resizable=True, wrap=False, border=True)
+    for i, col in enumerate(no_wrap_resizable_cols):
+        col.write(f"Resizable no-wrap {i + 1}")

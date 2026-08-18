@@ -449,6 +449,7 @@ class LayoutsMixin:
         border: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
+        resizable: bool = False,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -520,6 +521,30 @@ class LayoutsMixin:
             columns stay in a single row. Columns shrink until a usable
             minimum width, then the column group scrolls horizontally instead
             of overflowing the page.
+
+        resizable : bool
+            Whether users can resize the columns by dragging the border
+            between them. If this is ``False`` (default), the column widths
+            are fixed and determined by ``spec``. If this is ``True``, a drag
+            handle appears on hover between each pair of adjacent columns.
+            Dragging a handle grows one column and shrinks its neighbor by the
+            same amount, leaving the other columns untouched. Columns can't be
+            dragged narrower than 64 pixels.
+
+            Drag handles are keyboard accessible. Focus a handle and use the
+            left and right arrow keys to resize in 10-pixel steps. To restore
+            the widths defined by ``spec``, double-click a handle or press
+            Enter while it's focused.
+
+            Resizing happens in the browser and doesn't rerun your app, so the
+            adjusted widths aren't available to your script. Widths reset when
+            your app reruns with a different ``spec`` or number of columns, or
+            when the column group moves to a different position in your app.
+
+            Drag handles are hidden while the columns are stacked vertically,
+            since there is nothing to resize between. If ``wrap`` is ``False``,
+            the columns never stack, but resizing has no effect once they have
+            shrunk to their minimum width and the column group scrolls.
 
         Returns
         -------
@@ -648,6 +673,25 @@ class LayoutsMixin:
             https://doc-columns-wrap-false.streamlit.app/
             height: 250px
 
+        **Example 7: Let users resize the columns**
+
+        Use ``resizable=True`` to let users drag the border between two
+        columns to rebalance them.
+
+        >>> import streamlit as st
+        >>>
+        >>> left, right = st.columns([0.7, 0.3], resizable=True, border=True)
+        >>>
+        >>> left.subheader("Main content")
+        >>> left.markdown("Lorem ipsum " * 20)
+        >>>
+        >>> right.subheader("Details")
+        >>> right.markdown("Lorem ipsum " * 5)
+
+        .. output::
+            https://doc-columns-resizable.streamlit.app/
+            height: 300px
+
         """
         weights = spec
         if isinstance(weights, int):
@@ -661,6 +705,9 @@ class LayoutsMixin:
 
         if not isinstance(wrap, bool):
             raise StreamlitValueError("wrap", ["True", "False"])
+
+        if not isinstance(resizable, bool):
+            raise StreamlitValueError("resizable", ["True", "False"])
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -694,6 +741,7 @@ class LayoutsMixin:
             BlockProto.FlexContainer.Direction.HORIZONTAL
         )
         block_proto.flex_container.wrap = wrap
+        block_proto.flex_container.resizable = resizable
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
         block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH

@@ -32,6 +32,33 @@ def _get_basic_column_container(app: Page, index: int = 0) -> Locator:
     return column_container
 
 
+def _get_column_group(app: Page, key: str) -> Locator:
+    column_group = get_element_by_key(app, key).get_by_test_id("stHorizontalBlock")
+    expect(column_group).to_be_visible()
+    return column_group
+
+
+def _get_width(locator: Locator) -> float:
+    """Return the rendered width of a locator in pixels."""
+    bounding_box = locator.bounding_box()
+    assert bounding_box is not None
+    return bounding_box["width"]
+
+
+def _drag_horizontally(app: Page, handle: Locator, delta_x: float) -> None:
+    """Press a resize handle and drag it delta_x pixels sideways."""
+    handle.scroll_into_view_if_needed()
+    handle_box = handle.bounding_box()
+    assert handle_box is not None
+    start_x = handle_box["x"] + handle_box["width"] / 2
+    center_y = handle_box["y"] + handle_box["height"] / 2
+
+    app.mouse.move(start_x, center_y)
+    app.mouse.down()
+    app.mouse.move(start_x + delta_x, center_y, steps=10)
+    app.mouse.up()
+
+
 def test_show_columns_horizontally_when_viewport_allows(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -362,3 +389,104 @@ def test_columns_wrap_true_still_stacks_at_narrow_viewport(app: Page):
         return second_box["y"] > first_box["y"] + first_box["height"] / 2
 
     wait_until(app, _columns_are_stacked)
+
+
+def test_resizable_columns_show_a_handle_on_each_boundary(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """resizable=True puts a drag handle on every boundary between two columns."""
+    column_group = _get_column_group(app, "columns_resizable")
+    expect(column_group.get_by_test_id("stColumn")).to_have_count(3)
+
+    # Three columns have two boundaries; the last column has nothing to its right.
+    handles = column_group.get_by_role("separator")
+    expect(handles).to_have_count(2)
+
+    # Columns are only resizable when the app opts in...
+    expect(_get_basic_column_container(app).get_by_role("separator")).to_have_count(0)
+    # ...and a lone column has no neighbor to resize against.
+    single_column_group = _get_column_group(app, "columns_resizable_single")
+    expect(single_column_group.get_by_test_id("stColumn")).to_have_count(1)
+    expect(single_column_group.get_by_role("separator")).to_have_count(0)
+
+    # The handle only shows itself once the pointer reaches the boundary.
+    first_handle = handles.first
+    expect(first_handle).to_have_css("opacity", "0")
+    first_handle.scroll_into_view_if_needed()
+    first_handle.hover()
+    expect(first_handle).to_have_css("opacity", "1")
+    expect(first_handle).to_have_css("cursor", "col-resize")
+
+    assert_snapshot(column_group, name="st_columns-resizable_hovered_handle")
+
+
+def test_resizable_columns_resize_only_the_adjacent_pair(app: Page):
+    """Dragging or arrow-keying a handle rebalances just the two columns it joins."""
+    column_group = _get_column_group(app, "columns_resizable")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+
+    first_column = columns.nth(0)
+    second_column = columns.nth(1)
+    third_column = columns.nth(2)
+    initial_first_width = _get_width(first_column)
+    initial_second_width = _get_width(second_column)
+    initial_third_width = _get_width(third_column)
+
+    first_handle = column_group.get_by_role("separator").first
+    _drag_horizontally(app, first_handle, 80)
+    wait_until(app, lambda: _get_width(first_column) > initial_first_width + 40)
+
+    # The pair keeps its combined width, so the rest of the row cannot shift.
+    assert _get_width(second_column) < initial_second_width
+    assert (
+        abs(
+            (_get_width(first_column) + _get_width(second_column))
+            - (initial_first_width + initial_second_width)
+        )
+        < 2
+    )
+    assert abs(_get_width(third_column) - initial_third_width) < 2
+
+    # Dragging past the left edge of the row stops at the minimum column width
+    # instead of collapsing the column or pushing a neighbor onto a second row.
+    _drag_horizontally(app, first_handle, -1000)
+    wait_until(app, lambda: _get_width(first_column) < initial_first_width)
+    assert 40 < _get_width(first_column) < 70
+    first_box = first_column.bounding_box()
+    third_box = third_column.bounding_box()
+    assert first_box is not None
+    assert third_box is not None
+    assert first_box["y"] == third_box["y"]
+
+    # Double-clicking a handle restores the widths defined by `spec`.
+    first_handle.dblclick()
+    wait_until(app, lambda: abs(_get_width(first_column) - initial_first_width) < 2)
+    assert abs(_get_width(second_column) - initial_second_width) < 2
+
+    # Arrow keys move the boundary in 10px steps so the row is keyboard-operable.
+    for _ in range(5):
+        first_handle.press("ArrowRight")
+    wait_until(app, lambda: _get_width(first_column) > initial_first_width + 40)
+    assert abs(_get_width(third_column) - initial_third_width) < 2
+
+    # Enter is the keyboard equivalent of double-clicking to reset.
+    first_handle.press("Enter")
+    wait_until(app, lambda: abs(_get_width(first_column) - initial_first_width) < 2)
+
+
+def test_resizable_columns_hide_handles_while_stacked(app: Page):
+    """Handles disappear while columns are stacked and return once they unstack."""
+    app.set_viewport_size({"width": 640, "height": 800})
+
+    column_group = _get_column_group(app, "columns_resizable")
+    expect(column_group.get_by_test_id("stColumn")).to_have_count(3)
+    # Stacked columns sit above each other, so there is no boundary to drag.
+    expect(column_group.get_by_role("separator")).to_have_count(0)
+
+    # wrap=False columns never stack, so they stay resizable at the same width.
+    no_wrap_group = _get_column_group(app, "columns_resizable_no_wrap")
+    expect(no_wrap_group.get_by_role("separator")).to_have_count(1)
+
+    app.set_viewport_size({"width": 1000, "height": 800})
+    expect(column_group.get_by_role("separator")).to_have_count(2)

@@ -47,7 +47,12 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { notNullOrUndefined } from "~lib/util/utils"
 
+import ColumnResizeHandle from "./ColumnResizeHandle"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
+import {
+  ResizableColumnsContext,
+  ResizableColumnsProvider,
+} from "./ResizableColumnsContext"
 import {
   StyledColumn,
   StyledFlexContainerBlock,
@@ -63,6 +68,7 @@ import {
   getClassnamePrefix,
   getColumnGapConfig,
   getKeyFromId,
+  getResizableColumnNodes,
   isComponentStale,
   shouldActivateScrollToBottom,
   shouldComponentBeEnabled,
@@ -207,6 +213,31 @@ export const FlexBoxContainer = (
     (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
     (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
 
+  // Non-empty only for an `st.columns(resizable=True)` row. Wrapping just those
+  // rows keeps every other container out of the resize machinery.
+  const resizableColumnNodes = useMemo(
+    () => getResizableColumnNodes(props.node),
+    [props.node]
+  )
+
+  const container = (
+    <StyledFlexContainerBlock
+      {...styles}
+      className={classNames(
+        getClassnamePrefix(direction),
+        convertKeyToClassName(userKey)
+      )}
+      data-testid={getClassnamePrefix(direction)}
+      data-test-wrap={String(wrap)}
+      ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
+      data-test-scroll-behavior={
+        activateScrollToBottom ? "scroll-to-bottom" : "normal"
+      }
+    >
+      <ChildRenderer {...props} />
+    </StyledFlexContainerBlock>
+  )
+
   return (
     <FlexContextProvider
       direction={direction}
@@ -216,21 +247,17 @@ export const FlexBoxContainer = (
       hasFixedWidth={hasFixedWidth}
       parentContext={parentContext}
     >
-      <StyledFlexContainerBlock
-        {...styles}
-        className={classNames(
-          getClassnamePrefix(direction),
-          convertKeyToClassName(userKey)
-        )}
-        data-testid={getClassnamePrefix(direction)}
-        data-test-wrap={String(wrap)}
-        ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
-        data-test-scroll-behavior={
-          activateScrollToBottom ? "scroll-to-bottom" : "normal"
-        }
-      >
-        <ChildRenderer {...props} />
-      </StyledFlexContainerBlock>
+      {resizableColumnNodes.length > 0 ? (
+        <ResizableColumnsProvider
+          columnNodes={resizableColumnNodes}
+          wrap={wrap}
+          containerRef={scrollContainerRef}
+        >
+          {container}
+        </ResizableColumnsProvider>
+      ) : (
+        container
+      )}
     </FlexContextProvider>
   )
 }
@@ -249,6 +276,7 @@ export const BlockNodeRenderer = (
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const flexContext = useContext(FlexContext)
+  const resizableColumns = useContext(ResizableColumnsContext)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
@@ -402,20 +430,38 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.column) {
+    const gap = getColumnGapConfig(node.deltaBlock.column)
+    // Columns of a resizable row are looked up by node identity, so a nested
+    // row's columns never match an ancestor row's context.
+    const columnIndex = resizableColumns?.columnIndexes.get(node)
+    const columnFractions = resizableColumns?.columnFractions ?? []
+    // The last column has no boundary on its right, so it gets no handle. This
+    // also means a single column gets none at all.
+    const hasResizeHandle =
+      columnIndex !== undefined && columnIndex < columnFractions.length - 1
+    // A dragged width is just a different fraction of the row, so it replaces
+    // the weight the `spec` produced.
+    const draggedWeight =
+      columnIndex === undefined ? undefined : columnFractions[columnIndex]
+
     return (
       <StyledColumn
-        weight={node.deltaBlock.column.weight ?? 0}
-        gap={getColumnGapConfig(node.deltaBlock.column)}
+        weight={draggedWeight ?? node.deltaBlock.column.weight ?? 0}
+        gap={gap}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
         showBorder={node.deltaBlock.column.showBorder ?? false}
         // Inherit parent row wrap; default true when FlexContext is absent.
         $wrap={flexContext?.wrap ?? true}
+        isResizable={columnIndex !== undefined}
         className="stColumn"
         data-testid="stColumn"
       >
         {child}
+        {hasResizeHandle && (
+          <ColumnResizeHandle index={columnIndex} gap={gap} />
+        )}
       </StyledColumn>
     )
   }
