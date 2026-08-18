@@ -124,6 +124,14 @@ function getInitialState(
     }
   }
 
+  if (element.default) {
+    try {
+      return JSON.parse(element.default) as FilterState
+    } catch {
+      return {}
+    }
+  }
+
   return {}
 }
 

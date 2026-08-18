@@ -23,8 +23,8 @@ Key technical gaps:
 
 - No proto message for filter metadata (column types, option values, min/max bounds)
 - No widget serde pattern for "list of active filters" state
-- No lazy option-loading mechanism for high-cardinality columns without triggering a full
-  script rerun
+- No mechanism for server-side option search on high-cardinality columns without
+  triggering a full script rerun (solved: `BackendOperationRequest` integration)
 - No established pattern for schema-based (rather than data-based) widget identity in
   data-centric widgets
 
@@ -245,11 +245,11 @@ The Arrow schema is the canonical source for type classification.
 #### Option Loading Strategy
 
 V1 computes options eagerly for all eligible columns on each rerun. The implementation
-uses a cardinality threshold (`_TEXT_FILTER_CARDINALITY_THRESHOLD = 100`) to decide
+uses a cardinality threshold (`_TEXT_FILTER_CARDINALITY_THRESHOLD = 50`) to decide
 between multiselect and text filter:
 
-1. **Multiselect** (≤100 unique values): all unique values sent in `FilterColumnMeta.options`
-2. **Text filter** (>100 unique values): no options sent; uses free-text input with operators
+1. **Multiselect** (≤50 unique values): all unique values sent in `FilterColumnMeta.options`
+2. **Text filter** (>50 unique values): no options sent; uses free-text input with operators
 3. **Server search** (>1000 values with multiselect forced via `FilterConfig`):
    `FilterColumnMeta.server_search = true`, first 1000 options sent
 
@@ -261,7 +261,8 @@ impact is acceptable because:
 
 **Future optimization:** If startup latency becomes a problem on very wide DataFrames,
 the architecture supports lazy loading (compute options only when user opens a filter's
-popover) without API changes.
+popover) using the same `BackendOperationRequest` mechanism as server-side search — no API
+changes required.
 
 #### Filter Execution
 
@@ -633,7 +634,7 @@ Each filter popover uses specific ARIA patterns depending on filter type:
 
 #### Multiselect State Format
 
-V1 uses a simple include-only format (sufficient for the 100-value cardinality limit):
+V1 uses a simple include-only format (sufficient for the 50-value cardinality limit):
 
 ```typescript
 // Per-column filter value for multiselect:
@@ -662,16 +663,18 @@ Frontend mirrors this with a `useEffect` that prunes on `validColumnNames` chang
 #### Option Rendering
 
 Multiselect options are rendered as a plain DOM scrollable checkbox list with client-side
-search filtering. The cardinality threshold ensures lists stay under 100 items (above
+search filtering. The cardinality threshold ensures lists stay under 50 items (above
 that, the column uses a text filter instead):
 
 | Cardinality | Filter Type | Rendering |
 |-------------|-------------|-----------|
-| ≤100 unique | Multiselect | All values as checkboxes with client-side search |
-| >100 unique | Text search | Free-text input with operator (contains/equals/starts_with/ends_with) |
+| ≤50 unique | Multiselect | All values as checkboxes with client-side search |
+| >50 unique | Text search | Free-text input with operator (contains/equals/starts_with/ends_with) |
 | Forced multiselect >1000 | Multiselect (server_search) | Top 1000 shipped; further search deferred to V2 |
 
-Virtualization is omitted — modern browsers handle 100 checkbox items without jank.
+Virtualization is omitted — modern browsers handle 50 checkbox items without jank.
+Performance testing confirmed that 100 options causes ~294ms popover latency; at 50
+the popover is responsive.
 
 #### Query Params Binding
 
@@ -816,7 +819,7 @@ by `unique()` calls) takes ~95ms and `_apply_filters()` takes ~70ms — together
 per rerun. Two optimizations ship in V1 to keep this under 200ms:
 
 1. **`nunique()` gate** (Option A): Before calling `unique()` on a string column, call
-   the cheaper `nunique()`. If cardinality > threshold (100), the column becomes a text
+   the cheaper `nunique()`. If cardinality > threshold (50), the column becomes a text
    filter and `unique()` is skipped entirely. This saves ~17ms per high-cardinality
    column at 1M rows.
 
@@ -842,7 +845,7 @@ intermediary during filtering (~2× input size during the operation, released af
 | `React.memo()` on each filter component | Only re-renders when that filter's state changes | N filters don't re-render when 1 changes |
 | `useMemo` for `filteredOptions` | Recomputes only when search query or options change | Avoids O(n) filter on every render |
 | `useMemo` for `selectedSet` | `new Set(values)` recomputed only on value change | Checkbox `checked` lookups are O(1) not O(n) |
-| `Set` for membership in `isSelected` | `selectedSet.has(v)` vs `values.includes(v)` | O(1) vs O(n) per checkbox — critical for 100 options |
+| `Set` for membership in `isSelected` | `selectedSet.has(v)` vs `values.includes(v)` | O(1) vs O(n) per checkbox — critical for 50 options |
 | Stable callback refs via `useCallback` | Prevents child re-renders from ref identity changes | Pills don't re-render when unrelated state changes |
 | 150ms debounce on text/range | Batches keystrokes into single commit | 10 keystrokes = 1 rerun, not 10 |
 
@@ -876,7 +879,7 @@ bounds) and filter state (compact JSON) are exchanged.
 | Row count | 1M+ rows | `_apply_filters` (vectorized, <100ms at 1M) | `@st.fragment` scopes reruns; `@st.cache_data` for input |
 | Column count | 50+ filterable columns | `unique()` per string column on first render | Signature-keyed cache skips on subsequent reruns; `nunique()` gate skips high-cardinality columns |
 | Active filters | 20+ simultaneous | Mask composition O(N) merges (negligible) | No practical limit |
-| Multiselect options | 100 per column (threshold) | DOM rendering (100 checkboxes) | Modern browsers handle without jank; virtualization deferred |
+| Multiselect options | Up to `MAX_SHIPPED_OPTIONS` per column | DOM rendering + wire overhead | Capped at 1,000; server-side search for remainder (see below) |
 | URL binding | ~1,500 char JSON | Browser URL length limits | Falls back to session-only and warns if exceeded |
 | Pill count (UI) | 20+ visible pills | Pill row wrap + roving tabindex | CSS flexbox wrap is performant; no virtualization needed |
 
@@ -885,7 +888,136 @@ columns (forces `infer_dtype()` per column — O(rows) each). Mitigation: users 
 use typed DataFrames (Arrow-backed dtypes, explicit categories). The schema detection
 cost disappears for well-typed data.
 
-### State Flow Diagram
+**Large dataset guidance (validated via profiling):**
+
+| Row count | Filter application (mixed, 5 types) | Recommendation |
+|-----------|--------------------------------------|----------------|
+| 100K | 12ms | No special handling needed |
+| 1M | 84ms | Wrap in `@st.fragment` for best UX |
+| 10M | 787ms | Requires `@st.fragment` + `@st.cache_data`; warn in docs |
+
+The `@st.fragment` pattern is the primary performance story: filter interactions only
+re-execute the fragment function, not the full script. Prototype validation confirmed
+correct isolation (expensive computations above the fragment do not re-execute on filter
+interaction).
+
+#### BackendOperationRequest Integration
+
+`st.filter_bar` leverages the existing `BackendOperationRequest` / `BackendOperationResponse`
+mechanism (the same pattern used by lazy dataframe row-chunk loading and deferred file
+downloads) to avoid full script reruns for two operations:
+
+1. **Server-side search** — filtering options in high-cardinality multiselect columns
+2. **Lazy option loading** — deferring `unique()` computation until the user opens a popover
+
+These are frontend→backend round-trips that bypass the rerun cycle entirely.
+
+##### Server-Side Search for High-Cardinality Multiselect
+
+**Scope: V1.** Required for `FilterConfig(type="multiselect")` to work correctly on
+columns with >1,000 unique values. Without it, either all options are shipped (making the
+popover unusable — 294ms measured at just 100 options) or the user is silently capped at
+1,000 values with no way to access the rest.
+
+**Protocol:**
+
+1. Backend computes all unique values but ships only the first `_SERVER_SEARCH_THRESHOLD`
+   (1,000) in the proto's `options` field. A `server_search: true` flag on
+   `FilterColumnMeta` signals the frontend that more options exist.
+2. Frontend renders the initial 1,000 options with a "Showing 1,000 of N — type to search"
+   indicator. When the user types in the search input, a debounced (150ms) request is sent
+   via `BackendOperationRequest` with a `FilterSearchRequestPayload`.
+3. Backend filters the cached unique-value list server-side (measured: 0.5ms at 10K values,
+   2ms at 100K values) and returns matching options (capped at `_SERVER_SEARCH_THRESHOLD`)
+   in a `BackendOperationResponse` with `FilterSearchResponsePayload`.
+4. Frontend replaces the displayed option list with the search results. No script rerun
+   occurs.
+
+**Proto additions (BackMsg.proto / ForwardMsg.proto):**
+
+```protobuf
+// In BackendOperationRequest.payload oneof:
+FilterSearchRequestPayload filter_search = 7;
+
+message FilterSearchRequestPayload {
+  string widget_id = 1;       // widget element ID
+  string column_name = 2;     // column to search within
+  string query = 3;           // user's search text (case-insensitive contains)
+  uint32 limit = 4;           // max results to return (default: 1000)
+}
+
+// In BackendOperationResponse.payload oneof:
+FilterSearchResponsePayload filter_search = 7;
+
+message FilterSearchResponsePayload {
+  string widget_id = 1;
+  string column_name = 2;
+  repeated string options = 3;   // filtered matches
+  uint32 total_matches = 4;      // total count (for "showing X of Y")
+}
+```
+
+**When it triggers:**
+- Auto-inferred multiselect: never (cardinality threshold ensures ≤50 options)
+- `FilterConfig(type="multiselect")` override on high-cardinality column: yes
+- Future: if the cardinality threshold is raised above 1,000
+
+**Performance validation:** Backend search on pre-computed unique values adds < 2ms even
+at 100K cardinality. The `unique()` computation itself (13ms at 1M rows) is cached by the
+signature-keyed cache and only runs once per schema.
+
+##### Lazy Option Loading
+
+**Scope: V1 (optional optimization).** Instead of computing `unique()` for all multiselect
+columns eagerly on first render, defer the computation to when the user actually opens that
+column's popover. Uses the same `BackendOperationRequest` mechanism.
+
+**Motivation:** For a 15-column DataFrame at 1M rows, eager option loading runs `unique()`
+on every string column with ≤50 values — costing ~195ms on cold cache. With lazy loading,
+first render ships only column names/types (cost: ~0ms), and each `unique()` call happens
+on-demand when the user opens that filter's popover (cost: ~13ms per column).
+
+**Protocol:**
+
+1. Backend ships `FilterColumnMeta` with filter type and operators but **no options** for
+   multiselect columns. A `lazy_options: true` flag signals the frontend to fetch on open.
+2. When user opens a filter popover for a lazy column, frontend sends a
+   `FilterOptionsRequestPayload` via `BackendOperationRequest`.
+3. Backend computes `unique()` for that single column, caches the result, and responds.
+4. Frontend populates the checkbox list. Subsequent opens use the cached options from the
+   first response (frontend-side cache, invalidated on schema change).
+
+**Trade-off:** Adds a brief loading state on first popover open (~13ms — likely
+imperceptible). Eliminates the 195ms+ cold-start penalty for wide DataFrames. Can be
+implemented incrementally — start with eager (current) and migrate to lazy if startup
+latency becomes a user complaint.
+
+**Why not virtualization:** Virtualizing a checkbox list (`react-window`) adds complexity
+for a case that is rare in V1 — the cardinality threshold gates most columns at ≤50
+options. The `_SERVER_SEARCH_THRESHOLD` cap is simpler: it bounds both DOM node count and
+wire payload regardless of source cardinality. If user feedback shows demand for browsing
+(not searching) very long option lists, virtualization can be added as a complementary
+optimization.
+
+#### Known Limitations (V2 Candidates)
+
+These are non-blocking for V1 but worth addressing if user feedback surfaces issues:
+
+| # | Issue | Impact | Mitigation |
+|---|-------|--------|-----------|
+| P1 | No native Polars filtering | Polars inputs are converted to pandas for filtering, creating ~2× memory peak | Could apply filter masks directly in Polars (`.filter()`) to avoid intermediary. Deferred because the conversion path is correct and `@st.cache_data` avoids repeated cost. |
+| P2 | `getPillRef(index)` creates new closure per render | Defeats `React.memo` on `FilterPill` — triggers re-render of all pills on any state change | Impact minimal for typical pill counts (<20). Can switch to a ref Map with stable callbacks. |
+| P3 | Initial `commitState` on mount | First render commits state immediately, potentially triggering an extra script rerun | Could skip if state matches proto `default`. Currently acceptable — the extra rerun is indistinguishable from initial load. |
+| P4 | AND/OR toggle has no debounce | Rapid toggling between AND/OR commits immediately on each click | Acceptable because users rarely toggle rapidly; each toggle is a deliberate action. If needed, could gate with a 100ms debounce. |
+
+None of these affect perceived performance for typical usage (≤20 filters, ≤1,000
+shipped options per multiselect). They become relevant if: (a) users add 50+
+simultaneous filters, (b) apps run on extremely constrained devices, or (c) Polars
+adoption grows and memory overhead becomes a concern.
+
+### State Flow Diagrams
+
+**Filter interaction (triggers rerun):**
 
 ```
 [User adds/edits filter in browser]
@@ -899,6 +1031,18 @@ cost disappears for well-typed data.
   → Build FilterBar proto (all column metadata included)
   → Forward message cache deduplication
   → Frontend: React.memo skips re-render if props unchanged
+```
+
+**Server-side search (no rerun):**
+
+```
+[User types in multiselect search input (server_search=true column)]
+  → debounce 150ms
+  → BackMsg(BackendOperationRequest { FilterSearchRequestPayload { widget_id, column, query } })
+  → Backend: filter cached unique values by query (< 2ms)
+  → ForwardMsg(BackendOperationResponse { FilterSearchResponsePayload { options, total } })
+  → Frontend: replace option list in popover (no rerun, no state change)
+```
   → Return filtered DataFrame to user's script
 ```
 
@@ -916,10 +1060,10 @@ For AND/OR toggle:
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Eager vs lazy metadata | Eager (all columns at once) | Simpler; acceptable perf for multiselect ≤100 threshold |
+| Eager vs lazy metadata | Eager for ≤50 threshold; server-side search for forced high-cardinality multiselect | Eager is simple for normal case; `BackendOperationRequest` handles the forced-multiselect path without rerun |
 | State on schema change | Drop stale filters individually, preserve `_` metadata | Valid filters preserved; only orphaned column filters removed |
 | Widget state wire format | JSON string via `string_value` | Matches `st.data_editor` pattern; flexible during iteration |
-| Multiselect wire format | Simple include-only `values` array | Sufficient for ≤100 cardinality; include/exclude deferred |
+| Multiselect wire format | Simple include-only `values` array | Sufficient for ≤50 cardinality; include/exclude deferred |
 | AND/OR state model | Groups-ready (`_groups: [{logic, columns}]`) | V1 ships flat toggle; extends to multi-group in V2 without migration |
 | Expanded/collapsed state | Frontend-only, not in widget value | UI chrome; doesn't affect filtering logic or trigger `on_change` |
 | Element ID source | Schema signature (names + types) | Data changes don't reset state; only structural changes do |
@@ -985,17 +1129,24 @@ For AND/OR toggle:
 - Why not reuse `Dataframe`: filter_bar never displays data; sending Arrow bytes would be
   wasteful and architecturally misleading
 
-**2. Lazy options vs eager options** ✅ Eager + cached (CHOSEN for V1)
+**2. Eager options + server-side search** ✅ Hybrid (CHOSEN for V1)
 
-- Chosen: All column metadata (including options for multiselect columns) computed
-  eagerly and shipped in the proto, with results cached by schema signature.
-- Rationale: With the 100-unique-value threshold, multiselect option lists are always
-  small. The `nunique()` gate skips `unique()` for high-cardinality columns (>100),
+- Chosen: Column metadata computed eagerly for columns below the cardinality threshold
+  (≤50 unique values), cached by schema signature. High-cardinality columns forced to
+  multiselect via `FilterConfig` use server-side search through `BackendOperationRequest`
+  (ships first 1,000 options, searches on demand without rerun).
+- Rationale: With the 50-value threshold, eagerly-shipped option lists are always small
+  (≤50 items). The `nunique()` gate skips `unique()` for high-cardinality columns (>50),
   and the signature-keyed cache eliminates recomputation on subsequent reruns when the
-  schema hasn't changed. First render at 1M rows: ~50-70ms; subsequent reruns: ~0ms.
+  schema hasn't changed. First render at 1M rows: ~35ms; subsequent reruns: ~0ms.
+  Server-side search is required for `FilterConfig(type="multiselect")` on high-cardinality
+  columns — without it, shipping thousands of options makes the popover unusable.
 - Trade-off: Cache invalidates on any schema change (column add/remove/type change),
   forcing a full recomputation. This is correct behavior — schema changes should
-  re-evaluate filter types. Lazy loading deferred to V2 for the `server_search` path.
+  re-evaluate filter types.
+- Optional enhancement: Lazy option loading (defer `unique()` to popover open) can be
+  added incrementally using the same `BackendOperationRequest` mechanism if wide-DataFrame
+  startup latency becomes a user complaint.
 
 **3. Separate FilterBar.proto vs extending Dataframe.proto** ✅ Separate file (PREFERRED)
 
@@ -1033,19 +1184,3 @@ For AND/OR toggle:
   pattern would be the natural evolution. The switch is easily replaced at that point.
 - Reference: `st.data_editor` uses a `ColumnTypes` registry because it has 15+ column
   types and supports user-defined columns. filter_bar has a smaller, fixed set.
-
-## Known Performance Limitations (V2)
-
-These are non-blocking for V1 (the widget is responsive with typical usage) but worth
-addressing if user feedback surfaces performance issues:
-
-| # | Issue | Impact | Mitigation |
-|---|-------|--------|-----------|
-| P2 | No option list virtualization | All 100 multiselect options render as DOM nodes | Bounded by cardinality threshold; 100 checkboxes render without jank on modern browsers. Add `react-window` if >100 threshold is raised. |
-| P3 | `getPillRef(index)` creates new closure per render | Defeats `React.memo` on `FilterPill` — triggers re-render of all pills on any state change | Impact minimal for typical pill counts (<20). Can switch to a ref Map with stable callbacks for V2. |
-| P4 | Initial `commitState` on mount | First render commits state immediately, potentially triggering an extra script rerun | Could skip if state matches proto `default`. Currently acceptable — the extra rerun is indistinguishable from initial load. |
-
-None of these affect perceived performance for typical usage (≤20 filters, ≤100 options
-per multiselect). They become relevant if: (a) the cardinality threshold is raised
-significantly, (b) users add 50+ simultaneous filters, or (c) apps run on extremely
-constrained devices.

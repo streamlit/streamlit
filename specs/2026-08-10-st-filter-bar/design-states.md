@@ -8,8 +8,8 @@ Complete inventory of every distinct UI state that needs a design spec. Organize
 
 | # | Filter Type | Trigger Condition | Operators |
 |---|-------------|-------------------|-----------|
-| 1 | **Multiselect** | String column, ≤100 unique values | `is`, `is_not`, `is_null`, `is_not_null` |
-| 2 | **Text** | String column, >100 unique values | `contains`, `not_contains`, `equals`, `not_equals`, `starts_with`, `ends_with`, `is_null`, `is_not_null` |
+| 1 | **Multiselect** | String column, ≤50 unique values | `is`, `is_not`, `is_null`, `is_not_null` |
+| 2 | **Text** | String column, >50 unique values | `contains`, `not_contains`, `equals`, `not_equals`, `starts_with`, `ends_with`, `is_null`, `is_not_null` |
 | 3 | **Range** | Numeric column (int/float) | `between`, `not_between`, `equals`, `not_equals`, `greater_than`, `less_than`, `is_null`, `is_not_null` |
 | 4 | **Toggle** | Boolean column | `is_true`, `is_false`, `is_null` |
 | 5 | **Date/Datetime** | Date or datetime column | `between`, `not_between`, `before`, `after`, `equals`, `not_equals`, `is_relative_to_today`, `is_null`, `is_not_null` |
@@ -124,7 +124,7 @@ The menu shown when clicking "+ Add filter":
 
 ## D. Multiselect Filter Popover
 
-Shown for categorical string columns with ≤100 unique values.
+Shown for categorical string columns with ≤50 unique values.
 
 ### Layout
 
@@ -169,7 +169,7 @@ Shown for categorical string columns with ≤100 unique values.
 
 ## E. Text Filter Popover
 
-Shown for high-cardinality string columns (>100 unique values).
+Shown for high-cardinality string columns (>50 unique values).
 
 ### Layout
 

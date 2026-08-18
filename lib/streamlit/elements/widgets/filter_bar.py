@@ -162,7 +162,7 @@ _OPERATORS_BY_FILTER_TYPE: dict[str, list[str]] = {
     ],
 }
 
-_TEXT_FILTER_CARDINALITY_THRESHOLD = 100
+_TEXT_FILTER_CARDINALITY_THRESHOLD = 50
 
 
 class FilterConfig:  # noqa: B903

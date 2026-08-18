@@ -108,7 +108,10 @@ Key decisions that need PM alignment before implementation:
 
 4. **Cardinality threshold for multiselect → text fallback** — A string column with few
    unique values gets a multiselect (checkbox list); above the threshold it falls back to
-   text search. What should the threshold be? Should it be configurable via `FilterConfig`?
+   text search. Prototype testing shows 100 options causes ~294ms popover latency (DOM
+   rendering 100 checkboxes + Floating UI positioning). At 50 options the popover is
+   responsive. **Proposed: 50** as V1 default. Text search at 50+ is fast (~8ms at 100K
+   rows). Should the threshold be configurable via `FilterConfig`?
 
 5. **`placeholder` param semantics** — Currently overrides "Add filter" button text. Other
    widgets use `placeholder` for input field placeholder text (e.g., `st.text_input`). Is
@@ -272,8 +275,8 @@ dtypes using the same `ColumnDataKind` system that powers `st.dataframe`:
 
 | Column Data Kind | Filter Type | UI |
 |---|---|---|
-| `STRING` (low cardinality) | Multiselect | Searchable checklist of values |
-| `STRING` (high cardinality) | Text search | Text input with contains/equals operators |
+| `STRING` (≤50 unique values) | Multiselect | Searchable checklist of values |
+| `STRING` (>50 unique values) | Text search | Text input with contains/equals operators |
 | `BOOLEAN` | Toggle | True / False / All |
 | `INTEGER`, `FLOAT`, `DECIMAL` | Range | Min/max inputs |
 | `DATE` | Date range | Date picker with before/after/between |
@@ -424,10 +427,15 @@ toggle at runtime.
 **Performance:**
 
 - Only filter metadata crosses the wire (not the full DataFrame)
-- Handles 1M+ rows without startup delay
-- Works with `@st.fragment` and `@st.cache_data`
+- Handles 1M+ rows without startup delay (signature-keyed cache eliminates repeated
+  `unique()` calls on subsequent reruns)
+- **Recommended pattern for large datasets:** wrap the filter bar in `@st.fragment` so
+  filter interactions only re-execute the fragment, not the full script. Combine with
+  `@st.cache_data` for expensive data loading above the filter
 - High-cardinality multiselect columns scale gracefully (incremental server-side search
   for very large option sets)
+- At 10M+ rows, filter application itself takes ~800ms — production apps at this scale
+  should use `@st.fragment` to keep interactions responsive
 
 ### Edge Cases
 

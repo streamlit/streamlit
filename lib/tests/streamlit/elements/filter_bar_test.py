@@ -945,25 +945,25 @@ class TestCardinalityAutoSwitch:
     """Tests for automatic STRING → TEXT switch at cardinality threshold."""
 
     def test_low_cardinality_stays_multiselect(self) -> None:
-        """STRING column with <=100 unique values stays multiselect."""
-        values = [f"val_{i}" for i in range(100)]
+        """STRING column with <=50 unique values stays multiselect."""
+        values = [f"val_{i}" for i in range(50)]
         df = pd.DataFrame({"col": values})
         cols = _determine_filter_columns(df, _make_arrow_schema(df))
         assert cols[0].filter_type == FILTER_TYPE_MULTISELECT
-        assert len(cols[0].options) == 100
+        assert len(cols[0].options) == 50
 
     def test_high_cardinality_becomes_text(self) -> None:
-        """STRING column with >100 unique values becomes TEXT."""
-        values = [f"val_{i}" for i in range(101)]
+        """STRING column with >50 unique values becomes TEXT."""
+        values = [f"val_{i}" for i in range(51)]
         df = pd.DataFrame({"col": values})
         cols = _determine_filter_columns(df, _make_arrow_schema(df))
         assert cols[0].filter_type == FILTER_TYPE_TEXT
         assert len(cols[0].options) == 0
 
     def test_threshold_boundary(self) -> None:
-        """Exactly 100 unique values stays multiselect, 101 switches."""
-        at_threshold = pd.DataFrame({"col": [f"v{i}" for i in range(100)]})
-        above_threshold = pd.DataFrame({"col": [f"v{i}" for i in range(101)]})
+        """Exactly 50 unique values stays multiselect, 51 switches."""
+        at_threshold = pd.DataFrame({"col": [f"v{i}" for i in range(50)]})
+        above_threshold = pd.DataFrame({"col": [f"v{i}" for i in range(51)]})
         cols_at = _determine_filter_columns(
             at_threshold, _make_arrow_schema(at_threshold)
         )
