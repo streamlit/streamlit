@@ -20,6 +20,19 @@ target it without index-based locators.
 """
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+ctx = get_script_run_ctx()
+if ctx is None:
+    import sys
+
+    # This script is not compatible with running it in "bare" mode (e.g.
+    # `python script.py`), for the same reason as st_status.py: without the
+    # runtime, st.status does not return a mutable container, so .update() is
+    # unavailable. The keyed step also has no session state to read back.
+    print("This test script does not support bare script execution.")
+    sys.exit(0)
+
 
 with st.container(key="steps_basic"):
     with st.expander("Understanding the question", type="step", expanded=True):
