@@ -31,7 +31,7 @@ class _NonRetryableError(Exception):
     """An exception the retry predicate treats as non-retryable."""
 
 
-def _retry_only_retryable(exc: BaseException) -> bool:
+def _retry_only_retryable(exc: Exception) -> bool:
     """Retry predicate that only retries ``_RetryableError`` instances."""
     return isinstance(exc, _RetryableError)
 

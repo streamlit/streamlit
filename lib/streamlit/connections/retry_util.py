@@ -14,29 +14,9 @@
 
 """A small retry helper for Streamlit's database connections.
 
-This replaces the tiny subset of the ``tenacity`` library that
-``SQLConnection.query`` and ``SnowflakeConnection.query`` relied on, so that
-``tenacity`` is no longer a required runtime dependency.
-
-The single :func:`retry` decorator retries a function a fixed number of times,
-sleeping a fixed number of seconds between attempts, and only retries
-exceptions for which a caller-supplied predicate returns ``True``. This mirrors
-tenacity's behavior for the specific options the connections use (``stop=
-stop_after_attempt``, ``wait=wait_fixed``, ``retry=retry_if_exception[_type]``,
-``after``, and ``reraise=True``):
-
-- On success, the result is returned immediately.
-- After every failed *retryable* attempt, the optional ``after`` callback runs
-  (including the final attempt, right before the exception is re-raised).
-- When all attempts are exhausted, the exception from the final attempt is
-  re-raised unchanged (tenacity's ``reraise=True``).
-- An exception the predicate rejects is re-raised immediately, without any
-  retry, wait, or ``after`` callback.
-
-This is not a fully general tenacity drop-in: only ``Exception`` subclasses are
-considered for retrying, so non-``Exception`` ``BaseException``s (e.g.
-``KeyboardInterrupt``) always propagate immediately. This matches the observable
-behavior at both call sites, whose predicates only ever match ``Exception``s.
+Replaces the tiny subset of ``tenacity`` that ``SQLConnection.query`` and
+``SnowflakeConnection.query`` used, so ``tenacity`` is no longer a required
+runtime dependency.
 """
 
 from __future__ import annotations
@@ -58,11 +38,14 @@ def retry(
     *,
     max_attempts: int,
     wait_seconds: float,
-    retry_on_exception: Callable[[BaseException], bool],
+    retry_on_exception: Callable[[Exception], bool],
     after: Callable[[], None] | None = None,
     sleep: Callable[[float], None] = time.sleep,
 ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """Retry a function on retryable exceptions.
+
+    Only ``Exception`` subclasses are considered; other ``BaseException``s
+    (e.g. ``KeyboardInterrupt``) propagate immediately.
 
     Parameters
     ----------
@@ -105,7 +88,7 @@ def retry(
             while True:
                 try:
                     return func(*args, **kwargs)
-                except Exception as exc:  # noqa: PERF203
+                except Exception as exc:  # noqa: PERF203 — retry loop must catch per-iteration
                     # The predicate rejected this exception: re-raise it
                     # immediately with no wait or `after` callback.
                     if not retry_on_exception(exc):
