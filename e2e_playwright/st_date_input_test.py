@@ -14,7 +14,7 @@
 
 
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from playwright.sync_api import Page, expect
 
@@ -112,20 +112,17 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     )
 
 
-def test_date_input_sidebar_rendering(
+def test_date_input_narrow_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that date inputs render correctly in the narrow sidebar."""
-    sidebar = themed_app.get_by_test_id("stSidebar")
-    sidebar.hover()
-
+    """Test that date inputs render correctly in narrow containers."""
     assert_snapshot(
-        get_element_by_key(themed_app, "sidebar_single"),
-        name="st_date_input-sidebar_single",
+        get_element_by_key(themed_app, "narrow_single"),
+        name="st_date_input-narrow_single",
     )
     assert_snapshot(
-        get_element_by_key(themed_app, "sidebar_range"),
-        name="st_date_input-sidebar_range",
+        get_element_by_key(themed_app, "narrow_range"),
+        name="st_date_input-narrow_range",
     )
 
 
@@ -332,6 +329,20 @@ def test_range_date_calendar_picker_rendering(
         calendar,
         name="st_date_input-range_two_dates_calendar",
     )
+
+
+def test_today_indicator_in_calendar(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that today's date is visually marked in the calendar popover."""
+    # Freeze browser clock so "today" is always March 7, 2026
+    app.clock.set_fixed_time(datetime(2026, 3, 7, 12, 0, 0))
+
+    date_field = get_date_input(app, "Empty value").get_by_test_id("stDateInputField")
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    assert_snapshot(calendar, name="st_date_input-calendar_today_indicator")
 
 
 def test_single_value_reverts_to_committed_if_calendar_closed_empty(app: Page):

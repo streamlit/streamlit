@@ -156,17 +156,18 @@ bound_minmax = st.date_input(
 )
 st.write("Bound minmax:", bound_minmax)
 
-with st.sidebar:
-    st.date_input(
-        "Sidebar single",
-        date(2019, 7, 6),
-        key="sidebar_single",
-    )
-    st.date_input(
-        "Sidebar range",
-        [date(2019, 7, 6), date(2019, 7, 20)],
-        key="sidebar_range",
-    )
+st.date_input(
+    "Narrow single",
+    date(2019, 7, 6),
+    width=85,
+    key="narrow_single",
+)
+st.date_input(
+    "Narrow range",
+    [date(2019, 7, 6), date(2019, 7, 20)],
+    width=150,
+    key="narrow_range",
+)
 
 if st.toggle("Update date input props"):
     dval = st.date_input(

@@ -50,7 +50,7 @@ export const StyledDateFieldContainer = styled.div({
 export const StyledDateField = styled("div", {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
-  flex: $isRange ? "0 0 auto" : 1,
+  flex: $isRange ? "0 0 auto" : "1 0 auto",
   minWidth: 0,
   ...($isRange && {
     "&:first-of-type": {
@@ -101,14 +101,16 @@ export const StyledDateFieldInput = styled(Group, {
 })<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
   display: "flex",
   alignItems: "center",
-  flex: 1,
+  flex: "1 0 auto",
   minWidth: 0,
   paddingTop: theme.spacing.sm,
   paddingBottom: theme.spacing.sm,
   paddingLeft: $isRange
     ? theme.spacing.none
     : `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
-  paddingRight: $isRange ? theme.spacing.none : theme.spacing.sm,
+  paddingRight: $isRange
+    ? theme.spacing.none
+    : `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
   outline: "none",
 }))
 

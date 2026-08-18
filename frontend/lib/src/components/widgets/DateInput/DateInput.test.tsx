@@ -777,45 +777,6 @@ describe("DateInput", () => {
     })
   })
 
-  describe("today indicator", () => {
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    it("marks today's date cell with data-today attribute", async () => {
-      vi.setSystemTime(new Date(2019, 6, 15)) // 2019-07-15
-      const user = userEvent.setup()
-      const props = getProps({ default: ["2019-07-06"] })
-      render(<DateInput {...props} />)
-
-      const region = screen.getByTestId("stDateInput")
-      const { year } = getSingleDateSegments(region)
-      await user.click(year)
-
-      const todayCell = await screen.findByLabelText(/Monday, July 15, 2019/)
-      expect(todayCell).toHaveAttribute("data-today", "true")
-      expect(todayCell).not.toHaveAttribute("data-outside-month")
-    })
-
-    it("marks today as outside-month when viewing a different month", async () => {
-      // July 31 appears as an outside-month cell on the August 2019 grid
-      vi.setSystemTime(new Date(2019, 6, 31)) // 2019-07-31
-      const user = userEvent.setup()
-      const props = getProps({ default: ["2019-08-10"] })
-      render(<DateInput {...props} />)
-
-      const region = screen.getByTestId("stDateInput")
-      const { year } = getSingleDateSegments(region)
-      await user.click(year)
-
-      const todayCell = await screen.findByLabelText(
-        /Wednesday, July 31, 2019/
-      )
-      expect(todayCell).toHaveAttribute("data-today", "true")
-      expect(todayCell).toHaveAttribute("data-outside-month")
-    })
-  })
-
   describe("quick select feature", () => {
     afterEach(() => {
       vi.useRealTimers()
