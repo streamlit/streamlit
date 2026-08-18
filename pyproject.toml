@@ -31,7 +31,7 @@ requires-python = ">=3.10"
 # The published package metadata remains in lib/pyproject.toml. This requirement
 # makes its runtime dependencies part of the development lock graph, while the
 # source mapping below keeps the package editable.
-dependencies = ["streamlit"]
+dependencies = ["streamlit-nightly"]
 
 [tool.uv]
 # The development toolchain is the default local environment.
@@ -52,7 +52,7 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-streamlit = { path = "lib", editable = true }
+streamlit-nightly = { path = "lib", editable = true }
 
 # =============================================================================
 # Dependency Groups (PEP 735)
@@ -139,7 +139,7 @@ test = [
   #   - charts -> matplotlib, graphviz, plotly, orjson
   #   - pdf -> streamlit-pdf
   #   - performance -> orjson, uvloop
-  "streamlit[auth,charts,pdf,performance]",
+  "streamlit-nightly[auth,charts,pdf,performance]",
   # Test-only packages not provided by any extra:
   "seaborn",
   # watchdog is skipped on macOS by the core deps; install it here so CI also
@@ -179,7 +179,7 @@ test = [
 integration = [
   { include-group = "test" },
   # Snowflake dependencies (matches the `snowflake` extra users install):
-  "streamlit[snowflake]",
+  "streamlit-nightly[snowflake]",
   # Additional dataframe formats for testing:
   "polars",
   "xarray",
