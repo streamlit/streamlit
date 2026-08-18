@@ -121,7 +121,11 @@ spec:
   clear when `required=True`). The form-submit validator uses the **local/staged**
   capture, like typed widgets' `validateBeforeCommit` reading `uiValue` — not
   `WidgetStateManager`. After Clear, local is empty so submit fails required and does
-  not send the previous file. Recapture writes the new file and submit succeeds.
+  not send the previous file. After recapture, if local is non-empty the validator
+  must flush that capture into form pending state (`setFileUploaderStateValue`)
+  **before** returning true — the same as `TextInput` writing dirty `uiValue` in its
+  form-submit validator — so `submitForm` serializes the new file, not the previous
+  one. An in-flight recapture already disables submit via `formsWithUploads`.
   (`WidgetStateManager` remains the source of truth for `st.file_uploader`, where
   last-file delete is locked so local UI and widget state cannot diverge to empty.)
 - File uploader: lock deleting the last committed file when `required=True`; a new drop
@@ -181,7 +185,9 @@ extension of an existing parameter, not a new one.
   validate error; form submit runs all validators; `clear_on_submit` not invoked on
   failure; search clear does not commit when required; file/camera/audio clear does
   not commit empty when required; last file-uploader delete is locked; camera/audio
-  in a form: Clear after a capture blocks submit and does not send the previous file.
+  in a form: Clear after a capture blocks submit and does not send the previous file;
+  recapture then submit sends the new file (validator flushes local capture before
+  returning true).
 - Python: proto field set; pills multi-select no longer raises; `required` not in
   widget ID.
 - Public typing tests (`lib/tests/streamlit/typing/`) for every affected widget,

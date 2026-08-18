@@ -249,8 +249,12 @@ form gate.
   **Inside a form:** Clear stages empty locally (same as typing empty in a required
   text input). The form-submit validator must read that local/staged capture — not
   `WidgetStateManager`'s previous file — so submit fails with `This field is required`
-  instead of sending the stale photo or recording. Recapture replaces the staged empty
-  and submit then sends the new capture.
+  instead of sending the stale photo or recording. Recapture replaces the staged empty.
+  On a successful submit, the validator must write that local capture into form widget
+  state **before** returning true (same as typed widgets committing dirty `uiValue` in
+  the form-submit validator), so the form sends the new photo/recording, not the
+  previous one. If the replacement is still uploading, submit stays disabled via
+  `formsWithUploads`.
 - **File uploader:** once at least one file is committed, `required=True` **locks
   deleting the last file** (hide/disable that delete control), like selection widgets.
   Replacing via a new drop still works. Form submit is gated while the widget is still
