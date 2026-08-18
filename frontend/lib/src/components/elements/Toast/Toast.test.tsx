@@ -224,10 +224,7 @@ describe("Toast Component", () => {
   it("throws an error when called via st.sidebar.toast", () => {
     const props = getProps({})
     render(
-      <ThemeProvider
-        theme={{ ...mockTheme.emotion, inSidebar: true }}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={{ ...mockTheme.emotion, inSidebar: true }}>
         {createContainer()}
         <Toast {...props} />
       </ThemeProvider>

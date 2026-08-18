@@ -738,6 +738,8 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     first_segment.click()
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
+    # Wait until keyboard focus has moved into the calendar grid.
+    expect(calendar.locator(":focus")).to_be_visible()
 
     # Tab to the month picker trigger and activate it.
     # Note: prev-month button is disabled (min_value=1970-01-01, showing Jan 1970),
@@ -763,9 +765,14 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     second_segment.click()
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
+    # Wait until keyboard focus has moved into the calendar grid.
+    expect(calendar.locator(":focus")).to_be_visible()
 
-    # Navigate to a different date and select it with Enter
+    # Navigate to a different date and select it with Enter.
+    # Wait until React Aria has moved calendar focus to January 2 before Enter.
+    # Without this, Enter can fire before the internal focus state updates.
     app.keyboard.press("ArrowRight")
+    expect(calendar.locator("td [data-focused]")).to_have_text("2")
     app.keyboard.press("Enter")
 
     expect(calendar).not_to_be_visible()
