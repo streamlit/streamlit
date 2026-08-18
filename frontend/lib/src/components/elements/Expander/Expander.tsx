@@ -338,8 +338,10 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         isStale={isStale}
         hasBorder={hasBorder}
         ref={detailsRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        // A step swaps its icon for the chevron in CSS, so tracking hover in
+        // state would only cost it a render per pointer enter and leave.
+        onMouseEnter={isStep ? undefined : handleMouseEnter}
+        onMouseLeave={isStep ? undefined : handleMouseLeave}
       >
         <StyledSummary
           onClick={handleToggle}

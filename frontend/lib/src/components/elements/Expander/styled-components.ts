@@ -19,7 +19,11 @@ import styled, { CSSObject } from "@emotion/styled"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { STEP_CONNECTOR_BOTTOM_VAR } from "~lib/components/core/Layout/stepConnector"
-import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme/consts"
+import {
+  STALE_STYLES,
+  STALE_TRANSITION_PARAMS,
+  VISUALLY_HIDDEN_STYLES,
+} from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 
 const { Type } = BlockProto.Expandable
@@ -30,20 +34,8 @@ export type ExpanderType = BlockProto.Expandable.Type
 /** Visual emphasis of a step's icon, following the spec's icon precedence. */
 export type StepIconTone = "default" | "muted" | "error"
 
-/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
-/** Visually hidden but accessible to screen readers (standard CSS pattern). */
-export const StyledVisuallyHidden = styled.span({
-  position: "absolute",
-  width: "1px",
-  height: "1px",
-  padding: 0,
-  margin: "-1px",
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-})
-/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+/** Visually hidden but accessible to screen readers. */
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 export const StyledExpandableContainer = styled.div<{
   expanderType: ExpanderType

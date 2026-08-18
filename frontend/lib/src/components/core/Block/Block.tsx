@@ -318,7 +318,10 @@ export const BlockNodeRenderer = (
   let keyClassOnWrapper = false
 
   // Marks the wrapper as a timeline step so the parent flex container can let
-  // the step's connector line bridge the gap to an adjacent step.
+  // the step's connector line bridge the gap to an adjacent step. Empty steps
+  // must be marked too: they draw no connector of their own, but the preceding
+  // step extends its line to whatever step follows it, which is how a trailing
+  // empty step terminates a timeline at its icon.
   const isStepBlock =
     node.deltaBlock.expandable?.type === BlockProto.Expandable.Type.STEP
 

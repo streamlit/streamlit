@@ -1200,7 +1200,9 @@ class LayoutsMixin:
               icon column and a vertical connector line. Consecutive step
               containers form a connected timeline, which is useful for
               chain-of-thought output, multi-stage pipelines, and activity
-              feeds. A step without content ends the timeline.
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
 
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
@@ -1933,7 +1935,9 @@ class LayoutsMixin:
               icon column and a vertical connector line. Consecutive step
               containers form a connected timeline, which is useful for
               chain-of-thought output, multi-stage pipelines, and activity
-              feeds. A step without content ends the timeline.
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
