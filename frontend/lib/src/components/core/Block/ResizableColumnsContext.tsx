@@ -27,15 +27,18 @@ import {
 import { BlockNode } from "~lib/AppNode"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 /**
  * Smallest width a column can be dragged down to, in pixels.
  *
- * This is deliberately not a CSS `min-width`: `StyledColumn` sizes columns as
- * `calc(weight% - gap)`, so those widths only add up to a full row as long as
- * the weights add up to 1. A `min-width` would let a clamped column claim more
- * than its weight, overflow the row's flex line, and wrap the last column onto
- * a second row.
+ * A wrapping row deliberately gives its columns no CSS `min-width`:
+ * `StyledColumn` sizes them as `calc(weight% - gap)`, so those widths only add
+ * up to a full row as long as the weights add up to 1. A `min-width` would let
+ * a clamped column claim more than its weight, overflow the row's flex line,
+ * and wrap the last column onto a second row. A `wrap=false` row scrolls
+ * instead of wrapping and does pin its columns to a `min-width`, so it raises
+ * its drag floor to match — see `ResizableColumnsProvider`.
  */
 export const MIN_COLUMN_WIDTH_PX = 64
 
@@ -62,12 +65,21 @@ function floorFraction(fraction: number): number {
   return Math.floor(fraction * FRACTION_FACTOR) / FRACTION_FACTOR
 }
 
-/** Geometry of a column row, measured when a resize gesture starts. */
+/**
+ * Geometry and width limits of a column row, resolved when a resize gesture
+ * starts.
+ */
 export interface RowMetrics {
   /** Width of the row in pixels, or 0 when it can't be measured. */
   width: number
   /** Gap between two adjacent columns in pixels. */
   gapPx: number
+  /**
+   * Smallest width a column of this row may be dragged to, in pixels. Larger
+   * than `MIN_COLUMN_WIDTH_PX` when the row's columns already carry a wider
+   * CSS `min-width`.
+   */
+  minColumnWidthPx: number
 }
 
 export interface ResizeColumnsParams {
@@ -91,23 +103,25 @@ export interface ResizeColumnsParams {
  * A column of fraction `f` is laid out as `calc(f * 100% - gap)` and then grows
  * by its share of the row's one gap of leftover space, so it ends up
  * `f * width - gap + gap / columnCount` wide. This inverts that to the fraction
- * at which a column renders exactly `MIN_COLUMN_WIDTH_PX` wide, which also
- * keeps the laid-out width non-negative at large gaps.
+ * at which a column renders exactly `minColumnWidthPx` wide, which also keeps
+ * the laid-out width non-negative at large gaps.
  */
 function getMinFraction(
-  { width, gapPx }: RowMetrics,
+  { width, gapPx, minColumnWidthPx }: RowMetrics,
   columnCount: number
 ): number {
   const gapCompensation = (gapPx * (columnCount - 1)) / columnCount
-  return (MIN_COLUMN_WIDTH_PX + gapCompensation) / width
+  return (minColumnWidthPx + gapCompensation) / width
 }
 
 /**
  * Moves the boundary between the columns at `index` and `index + 1` by
  * `deltaPx`, leaving all other columns untouched.
  *
- * Both columns stay at or above `MIN_COLUMN_WIDTH_PX` and the pair keeps its
- * combined fraction, so the row's total width never changes.
+ * Both columns stay at or above the row's minimum column width, and the pair
+ * keeps its combined fraction to within one rounding step: the right-hand
+ * column is floored so the row can never overflow, and `flex-grow` reabsorbs
+ * the sliver that leaves behind.
  *
  * @returns The updated fractions, or `baseFractions` unchanged when the gesture
  * cannot be applied (unmeasurable row, no room for both minimum widths, or a
@@ -214,10 +228,11 @@ export const ResizableColumnsProvider: FC<
   // user dragged, but a different `spec` (or column count) invalidates them.
   // Adjusting state during render avoids the extra committed render an effect
   // would cost. See https://react.dev/reference/react/useState
-  const columnConfig = specFractions.join(",")
-  const [prevColumnConfig, setPrevColumnConfig] = useState(columnConfig)
-  if (prevColumnConfig !== columnConfig) {
-    setPrevColumnConfig(columnConfig)
+  const columnConfigKey = specFractions.join(",")
+  const [prevColumnConfigKey, setPrevColumnConfigKey] =
+    useState(columnConfigKey)
+  if (prevColumnConfigKey !== columnConfigKey) {
+    setPrevColumnConfigKey(columnConfigKey)
     setWidthFractions(null)
   }
 
@@ -226,18 +241,28 @@ export const ResizableColumnsProvider: FC<
     [columnNodes]
   )
 
+  // Columns of a `wrap=false` row are pinned to a CSS `min-width`, so dragging
+  // below it would only shrink the fraction while the rendered width stays put.
+  const minColumnWidthPx = wrap
+    ? MIN_COLUMN_WIDTH_PX
+    : Math.max(MIN_COLUMN_WIDTH_PX, convertRemToPx(theme.spacing.sixXL))
+
   const measureRow = useCallback((): RowMetrics => {
     const row = containerRef.current
     if (!row) {
-      return { width: 0, gapPx: 0 }
+      return { width: 0, gapPx: 0, minColumnWidthPx }
     }
     /* eslint-disable streamlit-custom/no-force-reflow-access -- Measured once per resize gesture to turn the pointer's pixel delta into a width fraction. */
     const width = row.getBoundingClientRect().width
     const { columnGap } = window.getComputedStyle(row)
     /* eslint-enable streamlit-custom/no-force-reflow-access */
     // `column-gap` resolves to "normal" when no gap is set, which is 0 for flex.
-    return { width, gapPx: Number.parseFloat(columnGap) || 0 }
-  }, [containerRef])
+    return {
+      width,
+      gapPx: Number.parseFloat(columnGap) || 0,
+      minColumnWidthPx,
+    }
+  }, [containerRef, minColumnWidthPx])
 
   const resizeColumns = useCallback((params: ResizeColumnsParams) => {
     const nextFractions = resizeColumnFractions(params)
@@ -263,7 +288,15 @@ export const ResizableColumnsProvider: FC<
         ? null
         : {
             columnIndexes,
-            columnFractions: widthFractions ?? specFractions,
+            // A gesture that started before a rerun changed the column count
+            // resolves against the widths it was started with, so it can hand
+            // back a fractions array of the wrong length. Applying it would
+            // leave the weights adding up to more than 1, which wraps the last
+            // column onto a second line for as long as the widths are kept.
+            columnFractions:
+              widthFractions?.length === specFractions.length
+                ? widthFractions
+                : specFractions,
             measureRow,
             resizeColumns,
             resetColumns,

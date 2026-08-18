@@ -419,6 +419,21 @@ def test_resizable_columns_show_a_handle_on_each_boundary(
 
     assert_snapshot(column_group, name="st_columns-resizable_hovered_handle")
 
+    # A gapless row still centers its handle on the boundary: the handle offset
+    # is computed in calc(), which a unitless zero gap would make invalid.
+    no_gap_group = _get_column_group(app, "columns_resizable_no_gap")
+    no_gap_handle = no_gap_group.get_by_role("separator")
+    expect(no_gap_handle).to_have_count(1)
+    handle_box = no_gap_handle.bounding_box()
+    first_column_box = no_gap_group.get_by_test_id("stColumn").first.bounding_box()
+    assert handle_box is not None
+    assert first_column_box is not None
+    handle_center_x = handle_box["x"] + handle_box["width"] / 2
+    boundary_x = first_column_box["x"] + first_column_box["width"]
+    # The column's border shifts the handle by a pixel; an invalid offset would
+    # drop it at the column's left edge instead.
+    assert abs(handle_center_x - boundary_x) <= 1
+
 
 def test_resizable_columns_resize_only_the_adjacent_pair(app: Page):
     """Dragging or arrow-keying a handle rebalances just the two columns it joins."""
@@ -473,6 +488,30 @@ def test_resizable_columns_resize_only_the_adjacent_pair(app: Page):
     # Enter is the keyboard equivalent of double-clicking to reset.
     first_handle.press("Enter")
     wait_until(app, lambda: abs(_get_width(first_column) - initial_first_width) < 2)
+
+
+def test_resizable_columns_keep_dragged_widths_without_rerunning(app: Page):
+    """Resizing is client-side: it never reruns the app, and the widths it
+    produces survive a rerun that keeps the same column spec.
+    """
+    column_group = _get_column_group(app, "columns_resizable")
+    first_column = column_group.get_by_test_id("stColumn").first
+    initial_width = _get_width(first_column)
+    expect_markdown(app, "Resizable runs: 1")
+
+    _drag_horizontally(app, column_group.get_by_role("separator").first, 80)
+    wait_until(app, lambda: _get_width(first_column) > initial_width + 40)
+    dragged_width = _get_width(first_column)
+
+    # Widths are only applied in the browser, so the script must not have run
+    # again while the user was dragging.
+    expect_markdown(app, "Resizable runs: 1")
+
+    click_button(app, "Rerun resizable columns")
+    expect_markdown(app, "Resizable runs: 2")
+
+    # The rerun sends the same spec, so the dragged widths are kept.
+    wait_until(app, lambda: abs(_get_width(first_column) - dragged_width) < 2)
 
 
 def test_resizable_columns_hide_handles_while_stacked(app: Page):

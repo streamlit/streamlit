@@ -220,7 +220,7 @@ export const FlexBoxContainer = (
     [props.node]
   )
 
-  const container = (
+  const flexContainerElement = (
     <StyledFlexContainerBlock
       {...styles}
       className={classNames(
@@ -253,10 +253,10 @@ export const FlexBoxContainer = (
           wrap={wrap}
           containerRef={scrollContainerRef}
         >
-          {container}
+          {flexContainerElement}
         </ResizableColumnsProvider>
       ) : (
-        container
+        flexContainerElement
       )}
     </FlexContextProvider>
   )

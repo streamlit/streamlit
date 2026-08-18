@@ -385,18 +385,13 @@ class ColumnsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError):
             st.columns(3, wrap=invalid_wrap)
 
-    @parameterized.expand(
-        [
-            (True, True),
-            (False, False),
-        ]
-    )
-    def test_columns_resizable(self, resizable: bool, expected_resizable: bool):
+    @parameterized.expand([(True,), (False,)])
+    def test_columns_resizable(self, resizable: bool):
         """Test that resizable maps onto flex_container.resizable of the row."""
         st.columns(3, resizable=resizable)
 
         columns_block = self.get_delta_from_queue(0)
-        assert columns_block.add_block.flex_container.resizable is expected_resizable
+        assert columns_block.add_block.flex_container.resizable is resizable
 
     def test_columns_resizable_default_omitted(self):
         """Omitting resizable keeps the columns non-resizable."""
@@ -411,7 +406,8 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
         for column_block in all_deltas[1:4]:
-            assert not column_block.add_block.flex_container.resizable
+            assert column_block.add_block.HasField("column")
+            assert not column_block.add_block.HasField("flex_container")
 
     @parameterized.expand(
         [

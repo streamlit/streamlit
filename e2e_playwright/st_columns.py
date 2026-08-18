@@ -186,10 +186,20 @@ with st.container(key="columns_wrap_true"):
     for i, col in enumerate(wrap_true_cols):
         col.write(f"Wrap true {i + 1}")
 
+st.session_state.resizable_runs = st.session_state.get("resizable_runs", 0) + 1
+
 with st.container(key="columns_resizable"):
     resizable_cols = st.columns(3, resizable=True, border=True)
     for i, col in enumerate(resizable_cols):
         col.write(f"Resizable {i + 1}")
+    # Lets the tests tell a client-side resize apart from a script rerun.
+    st.write(f"Resizable runs: {st.session_state.resizable_runs}")
+    st.button("Rerun resizable columns")
+
+with st.container(key="columns_resizable_no_gap"):
+    no_gap_resizable_cols = st.columns(2, resizable=True, gap=None, border=True)
+    for i, col in enumerate(no_gap_resizable_cols):
+        col.write(f"Resizable no-gap {i + 1}")
 
 with st.container(key="columns_resizable_single"):
     (single_resizable_col,) = st.columns(1, resizable=True, border=True)

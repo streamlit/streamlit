@@ -593,12 +593,13 @@ describe("resizable columns", () => {
   function renderRow(row: BlockNode): void {
     renderWithContexts(makeVerticalBlockComponent(makeVerticalBlock([row])))
 
-    // jsdom reports a zero-size rect for every element, so the row has to be
+    // jsdom reports a zero-size rect for every element, so every row has to be
     // given a width for a pixel drag to translate into a width fraction.
-    const [rowElement] = screen.getAllByTestId("stHorizontalBlock")
-    vi.spyOn(rowElement, "getBoundingClientRect").mockReturnValue({
-      width: ROW_WIDTH,
-    } as DOMRect)
+    for (const rowElement of screen.getAllByTestId("stHorizontalBlock")) {
+      vi.spyOn(rowElement, "getBoundingClientRect").mockReturnValue({
+        width: ROW_WIDTH,
+      } as DOMRect)
+    }
   }
 
   async function dragBy(handle: HTMLElement, deltaPx: number): Promise<void> {
@@ -626,9 +627,10 @@ describe("resizable columns", () => {
     for (const column of columns) {
       // Anchors the absolutely positioned handle.
       expect(column).toHaveStyle("position: relative")
-      // A min-width would let a clamped column claim more than its weight and
-      // wrap the row onto a second line, so the floor lives in the drag math.
-      expect(column).not.toHaveStyle("min-width: 4rem")
+      // A wrapping column gets no min-width outside the stacking media query:
+      // one would let a clamped column claim more than its weight and wrap the
+      // row onto a second line, so the floor lives in the drag math instead.
+      expect(getComputedStyle(column).minWidth).toBe("")
     }
   })
 
@@ -645,7 +647,6 @@ describe("resizable columns", () => {
     expect(screen.queryByRole("separator")).not.toBeInTheDocument()
     for (const column of screen.getAllByTestId("stColumn")) {
       expect(column).not.toHaveStyle("position: relative")
-      expect(column).not.toHaveStyle("min-width: 4rem")
     }
   })
 
@@ -758,14 +759,19 @@ describe("resizable columns", () => {
     )
     const columns = screen.getAllByTestId("stColumn")
 
-    // The outer row's handle comes first in document order because the nested
-    // row lives in the second outer column.
-    await dragBy(screen.getAllByRole("separator")[0], 80)
+    // One boundary in each row: without its own context, the nested row would
+    // render no handle at all and only the outer one would be found here.
+    const handles = screen.getAllByRole("separator")
+    expect(handles).toHaveLength(2)
 
-    expect(columns[0]).toHaveStyle("width: calc(60% - 1rem)")
-    expect(columns[1]).toHaveStyle("width: calc(40% - 1rem)")
-    // The nested row keeps its own widths.
-    expect(columns[2]).toHaveStyle("width: calc(50% - 1rem)")
-    expect(columns[3]).toHaveStyle("width: calc(50% - 1rem)")
+    // The nested handle comes second in document order, because the nested row
+    // lives in the second outer column.
+    await dragBy(handles[1], 80)
+
+    expect(columns[2]).toHaveStyle("width: calc(60% - 1rem)")
+    expect(columns[3]).toHaveStyle("width: calc(40% - 1rem)")
+    // Resizing a nested pair leaves the row it is nested in untouched.
+    expect(columns[0]).toHaveStyle("width: calc(50% - 1rem)")
+    expect(columns[1]).toHaveStyle("width: calc(50% - 1rem)")
   })
 })

@@ -529,7 +529,8 @@ class LayoutsMixin:
             handle appears on hover between each pair of adjacent columns.
             Dragging a handle grows one column and shrinks its neighbor by the
             same amount, leaving the other columns untouched. Columns can't be
-            dragged narrower than 64 pixels.
+            dragged narrower than 64 pixels, or narrower than 128 pixels if
+            ``wrap`` is ``False``.
 
             Drag handles are keyboard accessible. Focus a handle and use the
             left and right arrow keys to resize in 10-pixel steps. To restore
@@ -542,9 +543,7 @@ class LayoutsMixin:
             when the column group moves to a different position in your app.
 
             Drag handles are hidden while the columns are stacked vertically,
-            since there is nothing to resize between. If ``wrap`` is ``False``,
-            the columns never stack, but resizing has no effect once they have
-            shrunk to their minimum width and the column group scrolls.
+            since there is nothing to resize between.
 
         Returns
         -------

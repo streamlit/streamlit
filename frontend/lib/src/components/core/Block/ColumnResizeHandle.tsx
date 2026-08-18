@@ -51,7 +51,7 @@ interface DragGesture {
 }
 
 interface ColumnResizeHandleProps {
-  /** Index of the column this handle sits on the right edge of. */
+  /** Index of the column on the left of the boundary being moved. */
   index: number
   /** The column's gap, so the handle can be centered on the boundary. */
   gap: streamlit.IGapConfig | undefined
@@ -60,10 +60,12 @@ interface ColumnResizeHandleProps {
 /**
  * A draggable boundary between two adjacent resizable columns.
  *
- * Implements the ARIA window splitter pattern: it is focusable, exposes the left
- * column's share of the pair as `aria-valuenow`, and supports the arrow keys as
- * a keyboard equivalent of dragging (plus `Enter` to reset, mirroring
- * double-click).
+ * Loosely follows the ARIA window splitter pattern: it is focusable, exposes
+ * the left column's share of the pair as `aria-valuenow`, and supports the
+ * arrow keys as a keyboard equivalent of dragging. It deviates in two ways:
+ * there is no `aria-controls`, because the columns it resizes carry no id, and
+ * `Enter` restores the widths from `spec` (mirroring double-click) rather than
+ * collapsing a pane.
  */
 const ColumnResizeHandle = ({
   index,
@@ -95,6 +97,14 @@ const ColumnResizeHandle = ({
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
+      // A right-click would otherwise capture the pointer and paint the resize
+      // cursor for a gesture the user cannot finish, and a second finger
+      // landing on the handle would restart the drag from its own origin,
+      // making the boundary jump.
+      if (!event.isPrimary || event.button !== 0) {
+        return
+      }
+
       // Stop the browser from starting a text selection or a native drag.
       event.preventDefault()
 
@@ -192,6 +202,17 @@ const ColumnResizeHandle = ({
     [columnFractions, index, measureRow, resetColumns, resizeColumns]
   )
 
+  // A handle can be unmounted mid-drag, e.g. when the viewport narrows past the
+  // stacking breakpoint. Drop the queued move so it can't resize a row that is
+  // no longer on screen.
+  useEffect(() => {
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     if (!isDragging) {
       return undefined
@@ -234,6 +255,10 @@ const ColumnResizeHandle = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
       onPointerCancel={handlePointerEnd}
+      // A no-op on the normal path, where the pointer-up handler has already
+      // ended the gesture, but it keeps a browser-level interruption of the
+      // capture from leaving the resize cursor stuck on the page.
+      onLostPointerCapture={handlePointerEnd}
       onDoubleClick={resetColumns}
       onKeyDown={handleKeyDown}
     />

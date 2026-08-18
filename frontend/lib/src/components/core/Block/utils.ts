@@ -201,32 +201,35 @@ export function getColumnGapConfig(
 }
 
 /**
- * Appends the columns found in `nodes` to `columnNodes`.
+ * Returns the columns found in `nodes`, in render order.
  *
- * @returns False as soon as a node that is not a column (nor a transparent
+ * @returns Null as soon as a node that is not a column (nor a transparent
  * wrapper around columns) is found.
  */
-function collectColumnNodes(
-  nodes: AppNode[],
-  columnNodes: BlockNode[]
-): boolean {
+function collectColumnNodes(nodes: AppNode[]): BlockNode[] | null {
+  const columnNodes: BlockNode[] = []
   for (const node of nodes) {
     if (!(node instanceof BlockNode)) {
-      return false
+      return null
     }
     if (node.deltaBlock.column) {
       columnNodes.push(node)
     } else if (node.deltaBlock.transparent) {
       // Transparent blocks group children in the backend tree without adding
-      // DOM, so their columns render as direct children of the row.
-      if (!collectColumnNodes(node.children, columnNodes)) {
-        return false
+      // DOM, so their columns render as direct children of the row. This
+      // branch is defensive: the only producer of transparent blocks wraps the
+      // container a fragment writes into, which is a column rather than the
+      // row, so an `st.columns` row is not expected to have this shape today.
+      const nestedColumnNodes = collectColumnNodes(node.children)
+      if (nestedColumnNodes === null) {
+        return null
       }
+      columnNodes.push(...nestedColumnNodes)
     } else {
-      return false
+      return null
     }
   }
-  return true
+  return columnNodes
 }
 
 /**
@@ -244,8 +247,7 @@ export function getResizableColumnNodes(blockNode: BlockNode): BlockNode[] {
     return []
   }
 
-  const columnNodes: BlockNode[] = []
-  return collectColumnNodes(blockNode.children, columnNodes) ? columnNodes : []
+  return collectColumnNodes(blockNode.children) ?? []
 }
 
 export function checkFlexContainerBackwardsCompatibile(

@@ -29,6 +29,7 @@ import {
   ResizableColumnsContext,
   ResizableColumnsProvider,
   resizeColumnFractions,
+  RowMetrics,
 } from "./ResizableColumnsContext"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
@@ -39,6 +40,16 @@ const ROW_WIDTH = 800
 /** Pixel drag that moves a boundary by exactly 10% of ROW_WIDTH. */
 const DRAG_PX = 80
 
+/** Smallest change a stored fraction can express. */
+const FRACTION_STEP = 0.0001
+
+/** A gapless row of ROW_WIDTH with the default minimum column width. */
+const DEFAULT_ROW: RowMetrics = {
+  width: ROW_WIDTH,
+  gapPx: 0,
+  minColumnWidthPx: MIN_COLUMN_WIDTH_PX,
+}
+
 describe("resizeColumnFractions", () => {
   it("moves the boundary between the two adjacent columns only", () => {
     const baseFractions = [0.25, 0.25, 0.5]
@@ -46,7 +57,7 @@ describe("resizeColumnFractions", () => {
     const result = resizeColumnFractions({
       index: 0,
       deltaPx: DRAG_PX,
-      row: { width: ROW_WIDTH, gapPx: 0 },
+      row: DEFAULT_ROW,
       baseFractions,
     })
 
@@ -62,7 +73,7 @@ describe("resizeColumnFractions", () => {
     const result = resizeColumnFractions({
       index: 1,
       deltaPx: -DRAG_PX,
-      row: { width: ROW_WIDTH, gapPx: 0 },
+      row: DEFAULT_ROW,
       baseFractions,
     })
 
@@ -81,27 +92,43 @@ describe("resizeColumnFractions", () => {
       const result = resizeColumnFractions({
         index: 0,
         deltaPx,
-        row: { width: ROW_WIDTH, gapPx: 0 },
+        row: DEFAULT_ROW,
         baseFractions: [0.5, 0.5],
       })
 
-      // Fractions are stored to 4 decimals, so the clamp lands within a
-      // rounding step of the minimum rather than exactly on it.
+      // The clamped column lands on the minimum, except when it is the
+      // right-hand one: that side is floored, so it can come out a single
+      // rounding step short.
       const minFraction = MIN_COLUMN_WIDTH_PX / ROW_WIDTH
-      expect(Math.min(result[0], result[1])).toBeCloseTo(minFraction, 3)
+      const clampedFraction = Math.min(result[0], result[1])
+      expect(clampedFraction).toBeLessThanOrEqual(minFraction)
+      expect(clampedFraction).toBeGreaterThanOrEqual(
+        minFraction - FRACTION_STEP
+      )
       expect(result[0] + result[1]).toBeLessThanOrEqual(1)
     }
   )
 
+  it("clamps at a minimum column width wider than the default", () => {
+    // A `wrap=false` row pins its columns to 8rem, so shrinking the fraction
+    // past that point would move nothing on screen.
+    const result = resizeColumnFractions({
+      index: 0,
+      deltaPx: -10_000,
+      row: { ...DEFAULT_ROW, minColumnWidthPx: 128 },
+      baseFractions: [0.5, 0.5],
+    })
+
+    expect(result[0]).toBe(0.16)
+    expect(result[1]).toBe(0.84)
+  })
+
   it.each([
     [
       "the row width cannot be measured",
-      { row: { width: 0, gapPx: 0 }, deltaPx: DRAG_PX },
+      { row: { ...DEFAULT_ROW, width: 0 }, deltaPx: DRAG_PX },
     ],
-    [
-      "the drag does not move anything",
-      { row: { width: ROW_WIDTH, gapPx: 0 }, deltaPx: 0 },
-    ],
+    ["the drag does not move anything", { row: DEFAULT_ROW, deltaPx: 0 }],
   ])("returns the base fractions unchanged when %s", (_reason, params) => {
     const baseFractions = [0.5, 0.5]
 
@@ -119,7 +146,7 @@ describe("resizeColumnFractions", () => {
       resizeColumnFractions({
         index: 0,
         deltaPx: DRAG_PX,
-        row: { width: 500, gapPx: 0 },
+        row: { ...DEFAULT_ROW, width: 500 },
         baseFractions,
       })
     ).toBe(baseFractions)
@@ -135,7 +162,7 @@ describe("resizeColumnFractions", () => {
       const result = resizeColumnFractions({
         index: 0,
         deltaPx,
-        row: { width: ROW_WIDTH, gapPx: 0 },
+        row: DEFAULT_ROW,
         baseFractions,
       })
 
@@ -152,7 +179,7 @@ describe("resizeColumnFractions", () => {
     const result = resizeColumnFractions({
       index: 0,
       deltaPx: -10_000,
-      row: { width: ROW_WIDTH, gapPx },
+      row: { ...DEFAULT_ROW, gapPx },
       baseFractions: [1 / 3, 1 / 3, 1 / 3],
     })
 
@@ -170,7 +197,7 @@ describe("resizeColumnFractions", () => {
       resizeColumnFractions({
         index: 1,
         deltaPx: DRAG_PX,
-        row: { width: ROW_WIDTH, gapPx: 0 },
+        row: DEFAULT_ROW,
         baseFractions,
       })
     ).toBe(baseFractions)
@@ -185,8 +212,19 @@ function makeColumn(weight: number): BlockNode {
   )
 }
 
+interface ContextProbeProps {
+  index: number
+  deltaPx: number
+  /** Widths the drag resolves against; defaults to the ones in context. */
+  baseFractions?: number[]
+}
+
 /** Renders the context values so tests can assert on them as text. */
-const ContextProbe = ({ index }: { index: number }): ReactElement => {
+const ContextProbe = ({
+  index,
+  deltaPx,
+  baseFractions,
+}: ContextProbeProps): ReactElement => {
   const value = useContext(ResizableColumnsContext)
 
   if (!value) {
@@ -204,9 +242,9 @@ const ContextProbe = ({ index }: { index: number }): ReactElement => {
         onClick={() =>
           resizeColumns({
             index,
-            deltaPx: DRAG_PX,
+            deltaPx,
             row: measureRow(),
-            baseFractions: columnFractions,
+            baseFractions: baseFractions ?? columnFractions,
           })
         }
       >
@@ -222,12 +260,16 @@ interface HarnessProps {
   weights: number[]
   wrap?: boolean
   index?: number
+  deltaPx?: number
+  baseFractions?: number[]
 }
 
 const Harness = ({
   weights,
   wrap = true,
   index = 0,
+  deltaPx = DRAG_PX,
+  baseFractions,
 }: HarnessProps): ReactElement => {
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -238,7 +280,11 @@ const Harness = ({
         wrap={wrap}
         containerRef={rowRef}
       >
-        <ContextProbe index={index} />
+        <ContextProbe
+          index={index}
+          deltaPx={deltaPx}
+          baseFractions={baseFractions}
+        />
       </ResizableColumnsProvider>
     </div>
   )
@@ -327,6 +373,37 @@ describe("ResizableColumnsProvider", () => {
       expect(screen.getByTestId("columnFractions")).toHaveTextContent(expected)
     }
   )
+
+  it("ignores widths a gesture produced for a different column count", async () => {
+    const user = userEvent.setup()
+    const { rerenderHarness } = renderHarness({ weights: [0.5, 0.5] })
+
+    // A drag freezes the widths it started from, so one still in flight when a
+    // rerun adds a column resolves to two fractions for a three-column row.
+    rerenderHarness({
+      weights: [0.5, 0.25, 0.25],
+      baseFractions: [0.5, 0.5],
+    })
+    await user.click(screen.getByRole("button", { name: "drag" }))
+
+    // Applying "0.6 0.4" here would leave the weights adding up to more than
+    // one and wrap the last column onto a second line.
+    expect(screen.getByTestId("columnFractions")).toHaveTextContent(
+      "0.5 0.25 0.25"
+    )
+  })
+
+  it("raises the drag floor to the CSS minimum width of a nowrap row", async () => {
+    const user = userEvent.setup()
+    renderHarness({ weights: [0.5, 0.5], wrap: false, deltaPx: -10_000 })
+
+    await user.click(screen.getByRole("button", { name: "drag" }))
+
+    // 8rem of an 800px row, rather than the 0.08 the 64px floor would give.
+    expect(screen.getByTestId("columnFractions")).toHaveTextContent(
+      "0.16 0.84"
+    )
+  })
 
   it("stops offering resizing while the columns are stacked", () => {
     setViewportWidth(400)

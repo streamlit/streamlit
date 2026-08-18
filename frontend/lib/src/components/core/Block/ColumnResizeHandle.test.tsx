@@ -23,8 +23,10 @@ import { renderWithContexts } from "~lib/test_util"
 
 import ColumnResizeHandle from "./ColumnResizeHandle"
 import {
+  MIN_COLUMN_WIDTH_PX,
   ResizableColumnsContext,
   ResizableColumnsContextValue,
+  RowMetrics,
 } from "./ResizableColumnsContext"
 
 const ROW_WIDTH = 800
@@ -33,19 +35,25 @@ const DRAG_START_X = 100
 
 const DRAG_END_X = 160
 
+const ROW: RowMetrics = {
+  width: ROW_WIDTH,
+  gapPx: 0,
+  minColumnWidthPx: MIN_COLUMN_WIDTH_PX,
+}
+
 function renderHandle(
   overrides: Partial<ResizableColumnsContextValue> = {}
-): ResizableColumnsContextValue {
+): ResizableColumnsContextValue & { unmount: () => void } {
   const contextValue: ResizableColumnsContextValue = {
     columnIndexes: new Map(),
     columnFractions: [0.5, 0.5],
-    measureRow: () => ({ width: ROW_WIDTH, gapPx: 0 }),
+    measureRow: () => ROW,
     resizeColumns: vi.fn(),
     resetColumns: vi.fn(),
     ...overrides,
   }
 
-  renderWithContexts(
+  const { unmount } = renderWithContexts(
     <ResizableColumnsContext.Provider value={contextValue}>
       <ColumnResizeHandle
         index={0}
@@ -54,7 +62,7 @@ function renderHandle(
     </ResizableColumnsContext.Provider>
   )
 
-  return contextValue
+  return { ...contextValue, unmount }
 }
 
 function getHandle(): HTMLElement {
@@ -119,11 +127,82 @@ describe("ColumnResizeHandle", () => {
     expect(resizeColumns).toHaveBeenCalledWith({
       index: 0,
       deltaPx: DRAG_END_X - DRAG_START_X,
-      row: { width: ROW_WIDTH, gapPx: 0 },
+      row: ROW,
       baseFractions: [0.5, 0.5],
     })
     expect(Element.prototype.setPointerCapture).toHaveBeenCalled()
     expect(Element.prototype.releasePointerCapture).toHaveBeenCalled()
+  })
+
+  it("ignores a drag started with a secondary mouse button", async () => {
+    const user = userEvent.setup()
+    const { resizeColumns } = renderHandle()
+    const handle = getHandle()
+
+    await user.pointer([
+      {
+        keys: "[MouseRight>]",
+        target: handle,
+        coords: { clientX: DRAG_START_X },
+      },
+      { target: handle, coords: { clientX: DRAG_END_X } },
+    ])
+
+    expect(resizeColumns).not.toHaveBeenCalled()
+    // Capturing the pointer would paint the resize cursor over the page for as
+    // long as the context menu is open.
+    expect(handle).not.toHaveAttribute("data-dragging")
+    expect(Element.prototype.setPointerCapture).not.toHaveBeenCalled()
+  })
+
+  it("keeps a drag anchored to the finger that started it", async () => {
+    const user = userEvent.setup()
+    const { resizeColumns } = renderHandle()
+    const handle = getHandle()
+
+    await user.pointer([
+      { keys: "[TouchA>]", target: handle, coords: { clientX: DRAG_START_X } },
+      // A second contact must not restart the gesture from its own position,
+      // which would make the boundary jump.
+      {
+        keys: "[TouchB>]",
+        target: handle,
+        coords: { clientX: DRAG_START_X + 200 },
+      },
+      {
+        pointerName: "TouchA",
+        target: handle,
+        coords: { clientX: DRAG_END_X },
+      },
+      { keys: "[/TouchA]", target: handle, coords: { clientX: DRAG_END_X } },
+    ])
+
+    expect(resizeColumns).toHaveBeenLastCalledWith(
+      expect.objectContaining({ deltaPx: DRAG_END_X - DRAG_START_X })
+    )
+  })
+
+  it("cancels a queued resize when the handle unmounts mid-drag", async () => {
+    const user = userEvent.setup()
+    // Hold the coalesced update back so a move is still queued at unmount.
+    vi.mocked(window.requestAnimationFrame).mockReturnValue(1)
+    const { resizeColumns, unmount } = renderHandle()
+    const handle = getHandle()
+    await user.pointer([
+      {
+        keys: "[MouseLeft>]",
+        target: handle,
+        coords: { clientX: DRAG_START_X },
+      },
+      { target: handle, coords: { clientX: DRAG_END_X } },
+    ])
+
+    unmount()
+
+    // The queued callback would otherwise resize a row that is gone, e.g. once
+    // a narrowing viewport has stacked the columns.
+    expect(window.cancelAnimationFrame).toHaveBeenCalledWith(1)
+    expect(resizeColumns).not.toHaveBeenCalled()
   })
 
   it("applies the last move even when the pointer is released before it paints", async () => {
@@ -208,7 +287,7 @@ describe("ColumnResizeHandle", () => {
     expect(resizeColumns).toHaveBeenCalledWith({
       index: 0,
       deltaPx,
-      row: { width: ROW_WIDTH, gapPx: 0 },
+      row: ROW,
       baseFractions: [0.5, 0.5],
     })
   })
@@ -251,7 +330,7 @@ describe("ColumnResizeHandle", () => {
   it("does not resize when the row width cannot be measured", async () => {
     const user = userEvent.setup()
     const { resizeColumns } = renderHandle({
-      measureRow: () => ({ width: 0, gapPx: 0 }),
+      measureRow: () => ({ ...ROW, width: 0 }),
     })
     const handle = getHandle()
 
