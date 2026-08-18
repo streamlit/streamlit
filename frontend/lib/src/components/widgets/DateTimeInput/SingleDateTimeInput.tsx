@@ -227,15 +227,19 @@ function SingleDateTimeInput({
     return true
   }, [value, clearable, minDateTime, maxDateTime])
 
-  // Reset the commit-dedup guard when the popover opens so a later dismiss
-  // commit isn't treated as a duplicate of a prior interaction's commit.
+  // Reset state when the popover opens: clear the commit-dedup guard and
+  // sync the calendar's focused month to the committed value so a prior
+  // reverted out-of-bounds edit doesn't leave the calendar on a wrong month.
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
     if (!wasOpenRef.current && isOpen) {
       lastCommittedRef.current = undefined
+      if (value) {
+        onFocusChange(new CalendarDate(value.year, value.month, value.day))
+      }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen])
+  }, [isOpen, value, onFocusChange])
 
   // Focus active calendar cell on active mode entry.
   useEffect(() => {
@@ -332,8 +336,9 @@ function SingleDateTimeInput({
     [onFocusChange, onValidate]
   )
 
-  // Calendar date selection: merge with existing time, update display only.
-  // Popover stays open so user can also adjust time before committing.
+  // Calendar date selection: merge with existing time and enter active mode
+  // so Tab cycles within the popover (reaching the TimeField) instead of
+  // dismissing.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
       const currentTime = displayValueRef.current
@@ -346,6 +351,8 @@ function SingleDateTimeInput({
       )
       setDisplayValue(merged)
       onValidate(merged)
+      setIsCalendarActive(true)
+      activeOriginRef.current = null
     },
     [onValidate]
   )
