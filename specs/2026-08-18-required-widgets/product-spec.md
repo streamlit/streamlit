@@ -244,8 +244,13 @@ block a later empty commit, same as typed/selection widgets — not only add a l
 form gate.
 
 - **Camera / audio:** treat Clear as a typed-widget empty edit. Clear updates local UI,
-  shows the required error, and does **not** commit `None`. A new capture commits.
-  Users must be able to recapture.
+  shows the required error, and does **not** commit `None` to the backend. A new
+  capture commits. Users must be able to recapture.
+  **Inside a form:** Clear stages empty locally (same as typing empty in a required
+  text input). The form-submit validator must read that local/staged capture — not
+  `WidgetStateManager`'s previous file — so submit fails with `This field is required`
+  instead of sending the stale photo or recording. Recapture replaces the staged empty
+  and submit then sends the new capture.
 - **File uploader:** once at least one file is committed, `required=True` **locks
   deleting the last file** (hide/disable that delete control), like selection widgets.
   Replacing via a new drop still works. Form submit is gated while the widget is still

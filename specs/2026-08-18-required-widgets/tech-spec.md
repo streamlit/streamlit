@@ -54,7 +54,8 @@ are not the same predicate for text:
 | Number / date / time / datetime | `value == null` (range date: `()`, missing either bound, or a one-element `tuple[date]`) | n/a |
 | Single select / radio / pills | no selection | n/a |
 | Multi select / multi pills | `length === 0` | n/a |
-| File / camera / audio | no uploaded/captured value in `WidgetStateManager` | n/a |
+| File uploader | no uploaded value in `WidgetStateManager` | n/a |
+| Camera / audio | no local/staged capture (Clear is empty even if `WidgetStateManager` still holds the previous file) | n/a |
 
 Do not fold whitespace into the validate-skip path. When `required=False`, `"   "` still
 runs the regex.
@@ -115,19 +116,25 @@ marker + error if submit happens while still empty.
 Delete file / Clear photo / clear recording **do** commit empty today. Match the product
 spec:
 
-- Camera/audio: Clear updates local UI without committing `None`, sets the required
-  error, then a new capture commits (same pattern as `type="search"` clear when
-  `required=True`).
+- Camera/audio: Clear updates local UI without committing `None` to the backend, sets
+  the required error, then a new capture commits (same pattern as `type="search"`
+  clear when `required=True`). The form-submit validator uses the **local/staged**
+  capture, like typed widgets' `validateBeforeCommit` reading `uiValue` — not
+  `WidgetStateManager`. After Clear, local is empty so submit fails required and does
+  not send the previous file. Recapture writes the new file and submit succeeds.
+  (`WidgetStateManager` remains the source of truth for `st.file_uploader`, where
+  last-file delete is locked so local UI and widget state cannot diverge to empty.)
 - File uploader: lock deleting the last committed file when `required=True`; a new drop
   that replaces still commits. Register a form-submit validator that fails when
   `WidgetStateManager` is empty and `required=True`. Last-file lock also avoids the
   race where local UI is empty but widget state still holds the previous file.
-- In-progress upload: emptiness is the `WidgetStateManager` value, not
-  `status === "updating"` (a multi-file widget can be updating while already holding
-  committed files). Form submit is already disabled while `formsWithUploads` is set
-  (`FormSubmitButton`); do not add a separate required-error path for in-flight
-  uploads. Do not read FileUploader/CameraInput component-local pending files as the
-  submit-time source of truth.
+- In-progress upload: for `st.file_uploader`, emptiness is the `WidgetStateManager`
+  value, not `status === "updating"` (a multi-file widget can be updating while
+  already holding committed files). Form submit is already disabled while
+  `formsWithUploads` is set (`FormSubmitButton`); do not add a separate required-error
+  path for in-flight uploads. Do not treat FileUploader component-local pending files
+  as uploaded. Camera/audio Clear is a different local state: that staged empty **is**
+  the submit-time source of truth, as specified above.
 
 Show the error on the dropzone / control. Use the visually hidden `role="alert"` pattern
 from `TextInput`. On widgets whose root role ignores `aria-required`, include
@@ -173,7 +180,8 @@ extension of an existing parameter, not a new one.
   `required=False` and is a required error when `required=True`; required error vs
   validate error; form submit runs all validators; `clear_on_submit` not invoked on
   failure; search clear does not commit when required; file/camera/audio clear does
-  not commit empty when required; last file-uploader delete is locked.
+  not commit empty when required; last file-uploader delete is locked; camera/audio
+  in a form: Clear after a capture blocks submit and does not send the previous file.
 - Python: proto field set; pills multi-select no longer raises; `required` not in
   widget ID.
 - Public typing tests (`lib/tests/streamlit/typing/`) for every affected widget,
