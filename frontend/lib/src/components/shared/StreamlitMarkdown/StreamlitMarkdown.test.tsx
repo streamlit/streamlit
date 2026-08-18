@@ -319,15 +319,42 @@ describe("rewriteMaterialIconPrefix", () => {
       description: "double-backtick code span is left alone",
     },
     {
-      input: "```\n:material/search:\n```",
-      expected: "```\n:material/search:\n```",
-      description: "fenced code block is left alone",
+      input: "```\n:material/a:",
+      expected: "```\n:material_a:",
+      description:
+        "unclosed fence is not treated as code, so later prose still rewrites",
     },
     {
-      input: "```\n:material/a:",
-      expected: "```\n:material/a:",
+      input: "see ``` here :material/search:",
+      expected: "see ``` here :material_search:",
       description:
-        "unterminated fence runs to end of input, as markdown treats it",
+        "a mid-line ``` is prose, not a fence, so the prefix after it still rewrites",
+    },
+    {
+      input: "``:material/a: with ` inside``",
+      expected: "``:material/a: with ` inside``",
+      description:
+        "double-backtick span containing a single backtick is left alone",
+    },
+    {
+      input: "````:material/a:````",
+      expected: "````:material/a:````",
+      description: "four-backtick span is left alone",
+    },
+    {
+      input: "~~~\n:material/a:\n~~~",
+      expected: "~~~\n:material/a:\n~~~",
+      description: "tilde-fenced block is left alone",
+    },
+    {
+      input: "```python\n:material/a:\n```",
+      expected: "```python\n:material/a:\n```",
+      description: "fence with an info string is left alone",
+    },
+    {
+      input: "  ```\n  :material/a:\n  ```",
+      expected: "  ```\n  :material/a:\n  ```",
+      description: "indented fence is left alone",
     },
     {
       input: ":material/one: `:material/two:` :material/three:",

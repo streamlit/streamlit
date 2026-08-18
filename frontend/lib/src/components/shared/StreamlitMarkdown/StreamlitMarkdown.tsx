@@ -116,6 +116,29 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
+ * Matches a fenced code block or an inline code span (so they can be skipped), or
+ * else a bare `:material/` prefix.
+ *
+ * The code alternatives come first so they are consumed whole and returned
+ * unchanged; only the final branch substitutes.
+ *
+ * - Fences must begin a line (up to three spaces of indent, per CommonMark) and be
+ *   closed by a matching run on its own line. Both conditions matter: without the
+ *   line anchor, a mid-line ``` -- which CommonMark leaves as prose -- would open a
+ *   fence, and without requiring the close it would swallow the rest of the input,
+ *   so `:material/` in later prose would never be rewritten and the icon would
+ *   silently stop rendering.
+ * - Inline spans backreference the opening backtick run, so any run length works and
+ *   a shorter run inside a longer one does not terminate the span.
+ *
+ * Not covered: four-space indented code blocks, and fences that are never closed.
+ * Those keep the old behaviour of being rewritten, so they stay mildly wrong rather
+ * than becoming newly broken.
+ */
+const CODE_OR_MATERIAL_PREFIX =
+  /^[ \t]{0,3}(`{3,}|~{3,})[\s\S]*?^[ \t]{0,3}\1[ \t]*$|(`+)[\s\S]*?\2|:material\//gm
+
+/**
  * Rewrites `:material/` to `:material_` outside of code, leaving code untouched.
  *
  * The icon directive plugin matches on `:material_` because a `/` conflicts with
@@ -127,17 +150,13 @@ export function containsEmojiShortcodes(source: string): boolean {
  * See: https://github.com/streamlit/streamlit/issues/10365
  *
  * @param source - The markdown source string to rewrite
- * @returns The source with `:material/` rewritten outside code spans only
+ * @returns The source with `:material/` rewritten outside code only
  */
 export function rewriteMaterialIconPrefix(source: string): string {
-  // The code alternatives come first so they are consumed whole and returned via the
-  // capture group unchanged; only the trailing bare-prefix branch substitutes. They
-  // are ordered longest-delimiter first so a fenced block is not read as two
-  // single-backtick spans, and an unterminated fence still runs to end of input --
-  // which is how markdown itself treats it.
   return source.replace(
-    /(```[\s\S]*?(?:```|$)|``[^`]*``|`[^`]*`)|:material\//g,
-    (_match, code: string | undefined) => code ?? ":material_"
+    CODE_OR_MATERIAL_PREFIX,
+    (match, fence: string | undefined, span: string | undefined) =>
+      fence !== undefined || span !== undefined ? match : ":material_"
   )
 }
 
