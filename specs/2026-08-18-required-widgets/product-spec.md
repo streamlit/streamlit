@@ -253,11 +253,13 @@ form gate.
   On a successful submit, the validator must write that local capture into form widget
   state **before** returning true (same as typed widgets committing dirty `uiValue` in
   the form-submit validator), so the form sends the new photo/recording, not the
-  previous one. A recapture is in-progress from the moment the new capture is shown
-  until that file is in form widget state. Block submit for the whole window (today
-  `formsWithUploads` starts only once `uploadFile` runs, which is after `urltoFile` /
-  `fetchFileURLs`). Do not show `This field is required` while a recapture is visible,
-  and do not send the previous file if submit is clicked in that window.
+  previous one. Recapture **upload** is in-progress from the moment the new capture is
+  shown until that file is locally uploaded (`status` ready). Block submit for that
+  upload window (today `formsWithUploads` starts only once `uploadFile` runs, which is
+  after `urltoFile` / `fetchFileURLs`). Do not show `This field is required` while a
+  recapture is visible. After the upload is ready, submit is enabled; the validator
+  then flushes the new file into form widget state so `submitForm` does not send the
+  previous file.
 - **File uploader:** once at least one file is committed, `required=True` **locks
   deleting the last file** (hide/disable that delete control), like selection widgets.
   Replacing via a new drop still works. Form submit is gated while the widget is still

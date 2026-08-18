@@ -125,12 +125,13 @@ spec:
   must flush that capture into form pending state (`setFileUploaderStateValue`)
   **before** returning true — the same as `TextInput` writing dirty `uiValue` in its
   form-submit validator — so `submitForm` serializes the new file, not the previous
-  one. Recapture is in-progress from first paint of the new capture until that file
-  is flushed to form pending state. Extend the submit disable to that whole window
-  (today `formsWithUploads` starts too late: only once `uploadFile` / `addFile`
-  runs, after `urltoFile` / `fetchFileURLs`). During that window the validator must
-  not pass (would serialize the previous file) and must not treat the widget as
-  required-empty (the new capture is already visible).
+  one. Recapture **upload** is in-progress from first paint of the new capture until
+  the file is locally uploaded (`status === "ready"`), not until the WidgetStateManager
+  flush. Extend the submit disable to that upload window (today `formsWithUploads`
+  starts too late: only once `uploadFile` / `addFile` runs, after `urltoFile` /
+  `fetchFileURLs`). During upload the validator must not pass (would serialize the
+  previous file) and must not treat the widget as required-empty (the new capture is
+  already visible). After upload is ready, submit is enabled and the flush above runs.
   (`WidgetStateManager` remains the source of truth for `st.file_uploader`, where
   last-file delete is locked so local UI and widget state cannot diverge to empty.)
 - File uploader: lock deleting the last committed file when `required=True`; a new drop
@@ -192,7 +193,7 @@ extension of an existing parameter, not a new one.
   not commit empty when required; last file-uploader delete is locked; camera/audio
   in a form: Clear after a capture blocks submit and does not send the previous file;
   recapture then submit sends the new file (validator flushes local capture before
-  returning true); recapture in-progress (including before `uploadFile`) blocks
+  returning true); recapture upload in-progress (including before `uploadFile`) blocks
   submit without a required-empty error.
 - Python: proto field set; pills multi-select no longer raises; `required` not in
   widget ID.
