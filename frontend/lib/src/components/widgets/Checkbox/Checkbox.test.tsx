@@ -484,6 +484,10 @@ describe("Checkbox wrap", () => {
         <Checkbox {...getProps({ type, wrap: false, label: LONG_LABEL })} />
       )
       expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+      expect(screen.getByTestId("stMarkdownContainer")).toHaveStyle({
+        "text-overflow": "ellipsis",
+        "white-space": "nowrap",
+      })
     }
   )
 
@@ -506,6 +510,9 @@ describe("Checkbox wrap", () => {
     (_name, type) => {
       render(<Checkbox {...getProps({ type, label: LONG_LABEL })} />)
       expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+      expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+        "text-overflow": "ellipsis",
+      })
     }
   )
 
@@ -518,6 +525,10 @@ describe("Checkbox wrap", () => {
         </FlexContext.Provider>
       )
       expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+      expect(screen.getByTestId("stMarkdownContainer")).toHaveStyle({
+        "text-overflow": "ellipsis",
+        "white-space": "nowrap",
+      })
     }
   )
 
@@ -530,6 +541,9 @@ describe("Checkbox wrap", () => {
         </FlexContext.Provider>
       )
       expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+      expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+        "text-overflow": "ellipsis",
+      })
     }
   )
 

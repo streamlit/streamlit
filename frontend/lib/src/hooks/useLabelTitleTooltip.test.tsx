@@ -69,16 +69,24 @@ describe("useLabelTitleTooltip", () => {
     expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
   })
 
-  it("removes the title and stops observing when addTitleTooltip flips to false", async () => {
-    const disconnect = vi.fn()
+  it("removes the title and stops observing when addTitleTooltip flips to false", () => {
     const observe = vi.fn()
+    // disconnect() clears the stored callback so a later fire() is a no-op, matching
+    // a real MutationObserver after teardown. If cleanup skipped disconnect, fire()
+    // would still invoke syncTitle and re-attach the title.
+    let mutationCallback: MutationCallback | undefined
+    const disconnect = vi.fn(() => {
+      mutationCallback = undefined
+    })
     const OriginalMutationObserver = globalThis.MutationObserver
 
     class MockMutationObserver {
       public observe = observe
       public disconnect = disconnect
 
-      constructor(_callback: MutationCallback) {}
+      constructor(callback: MutationCallback) {
+        mutationCallback = callback
+      }
     }
 
     globalThis.MutationObserver =
@@ -101,9 +109,8 @@ describe("useLabelTitleTooltip", () => {
 
       // A late DOM mutation must not re-attach a title after the observer is gone.
       screen.getByTestId("label-text").textContent = "Updated label"
-      await waitFor(() => {
-        expect(screen.queryByTitle("Updated label")).not.toBeInTheDocument()
-      })
+      mutationCallback?.([], {} as MutationObserver)
+      expect(screen.queryByTitle("Updated label")).not.toBeInTheDocument()
     } finally {
       globalThis.MutationObserver = OriginalMutationObserver
     }

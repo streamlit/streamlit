@@ -201,8 +201,12 @@ def test_wrap_false_title_and_help_coexist(app: Page):
     """
     container = get_element_by_key(app, "wrap_help_checkbox")
     # The label is still ellipsized and exposes the full label via a native title.
+    # The checkbox indicator and help icon must remain visible (not clipped when
+    # the help icon shares the truncated row).
     expect_label_truncated(container)
     expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(container.get_by_role("checkbox")).to_be_visible()
+    expect(container.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
 
     # Hovering the separate help icon still shows the help tooltip.
     reset_hovering(app)
