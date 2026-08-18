@@ -79,6 +79,7 @@ class MediaMixin:
         end_time: MediaTime | None = None,
         loop: bool = False,
         autoplay: bool = False,
+        alt: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display an audio player.
@@ -143,6 +144,15 @@ class MediaMixin:
             Whether the audio file should start playing automatically. This is
             ``False`` by default. Browsers will not autoplay audio files if the
             user has not interacted with the page by clicking somewhere.
+        alt : str or None
+            A description of the audio for screen readers and other assistive
+            technologies. If this is ``None`` (default), no description is
+            added, and the audio player is announced without any context.
+
+            Describe the content of the audio rather than repeating text that
+            is already visible on the page. Visible text is available to
+            assistive technologies already, so duplicating it in ``alt`` makes
+            the player more verbose without adding information.
         width : "stretch" or int
             The width of the audio player element. This can be one of the
             following:
@@ -220,6 +230,7 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            alt=alt,
             width=width,
         )
         return self.dg._enqueue("audio", audio_proto)
@@ -236,6 +247,7 @@ class MediaMixin:
         loop: bool = False,
         autoplay: bool = False,
         muted: bool = False,
+        alt: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a video player.
@@ -323,6 +335,17 @@ class MediaMixin:
             Whether the video should play with the audio silenced. This is
             ``False`` by default. Use this in conjunction with ``autoplay=True``
             to enable autoplay without user interaction.
+        alt : str or None
+            A description of the video for screen readers and other assistive
+            technologies. If this is ``None`` (default), no description is
+            added, and the video player is announced without any context.
+
+            Describe the content of the video rather than repeating text that
+            is already visible on the page. Visible text is available to
+            assistive technologies already, so duplicating it in ``alt`` makes
+            the player more verbose without adding information. This is not a
+            replacement for ``subtitles``, which serve viewers who can see the
+            video but not hear it.
         width : "stretch" or int
             The width of the video player element. This can be one of the
             following:
@@ -402,6 +425,7 @@ class MediaMixin:
             loop,
             autoplay,
             muted,
+            alt=alt,
             width=width,
         )
         return self.dg._enqueue("video", video_proto)
@@ -513,6 +537,7 @@ def marshall_video(
     loop: bool = False,
     autoplay: bool = False,
     muted: bool = False,
+    alt: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
@@ -557,6 +582,9 @@ def marshall_video(
     muted: bool
         Whether the video should play with the audio silenced. This can be used to
         enable autoplay without user interaction. Defaults to False.
+    alt: str or None
+        A description of the video exposed to assistive technologies as the
+        accessible name. Defaults to None, which leaves the description unset.
     width: int or "stretch"
         The width of the video player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -580,6 +608,9 @@ def marshall_video(
     else:
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
+
+    if alt is not None:
+        proto.alt = alt
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -644,6 +675,9 @@ def marshall_video(
 
     if autoplay:
         proto.autoplay = autoplay
+        # `alt` is intentionally excluded from the element ID: for media, this
+        # id only drives the frontend's "already autoplayed" flag, so refining a
+        # description must not make the same media autoplay again.
         proto.id = compute_and_register_element_id(
             "video",
             # video does not yet allow setting a user-defined key
@@ -779,6 +813,7 @@ def marshall_audio(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    alt: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
@@ -806,6 +841,9 @@ def marshall_audio(
     autoplay : bool
         Whether the audio should start playing automatically.
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
+    alt: str or None
+        A description of the audio exposed to assistive technologies as the
+        accessible name. Defaults to None, which leaves the description unset.
     width: int or "stretch"
         The width of the audio player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -824,6 +862,9 @@ def marshall_audio(
     else:
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
+
+    if alt is not None:
+        proto.alt = alt
 
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
@@ -844,6 +885,9 @@ def marshall_audio(
 
     if autoplay:
         proto.autoplay = autoplay
+        # `alt` is intentionally excluded from the element ID: for media, this
+        # id only drives the frontend's "already autoplayed" flag, so refining a
+        # description must not make the same media autoplay again.
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,

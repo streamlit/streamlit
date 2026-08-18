@@ -89,6 +89,10 @@ if TYPE_CHECKING:
     assert_type(video("video.mp4", muted=True), DeltaGenerator)
     assert_type(video("video.mp4", muted=False), DeltaGenerator)
 
+    # Video with alt parameter
+    assert_type(video("video.mp4", alt="A short animated film"), DeltaGenerator)
+    assert_type(video("video.mp4", alt=None), DeltaGenerator)
+
     # Video with width parameter - "stretch" or int
     assert_type(video("video.mp4", width="stretch"), DeltaGenerator)
     assert_type(video("video.mp4", width=640), DeltaGenerator)
@@ -104,6 +108,7 @@ if TYPE_CHECKING:
             loop=False,
             autoplay=True,
             muted=True,
+            alt="A short animated film",
             width="stretch",
         ),
         DeltaGenerator,
@@ -115,6 +120,9 @@ if TYPE_CHECKING:
 
     # Invalid width value (not "stretch" or int - "content" is not valid for video)
     video("video.mp4", width="content")  # type: ignore[arg-type]
+
+    # Invalid alt value (must be a string or None)
+    video("video.mp4", alt=123)  # type: ignore[arg-type]
 
     # Passing subtitles as positional argument (should be keyword-only)
     video("video.mp4", "video/mp4", 0, "subtitles.vtt")  # type: ignore[call-arg]

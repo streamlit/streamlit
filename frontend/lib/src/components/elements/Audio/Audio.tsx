@@ -40,7 +40,7 @@ function Audio({
 }: Readonly<AudioProps>): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { startTime, endTime, loop, autoplay } = element
+  const { startTime, endTime, loop, autoplay, alt } = element
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -174,6 +174,9 @@ function Audio({
         data-testid="stAudio"
         ref={audioRef}
         controls
+        // Only set an accessible name when the author provided one; an empty
+        // aria-label is worse than none at all.
+        aria-label={alt || undefined}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}

@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-VIDEO_ELEMENTS_COUNT = 12
+VIDEO_ELEMENTS_COUNT = 13
 
 
 def _select_video_to_show(app: Page, label: str) -> Locator:
@@ -226,6 +226,28 @@ def test_video_remount_no_autoplay(app: Page):
 
     expect(video_element).to_have_js_property("autoplay", False)
     expect(video_element).to_have_js_property("paused", True)
+
+
+def test_video_alt_sets_accessible_name(app: Page):
+    """Test that `st.video` exposes `alt` as the player's accessible name.
+
+    Asserts the *computed* accessible name rather than just the attribute, since
+    `<video>` has no mapped ARIA role and the name computation for media
+    elements is less well specified than for role-bearing elements.
+    """
+    video_element = _select_video_to_show(app, "webm video with alt")
+    expect(video_element).to_have_attribute(
+        "aria-label", "A short animated film about a girl and a dragon"
+    )
+    expect(video_element).to_have_accessible_name(
+        "A short animated film about a girl and a dragon"
+    )
+
+    # A video without `alt` must not get an accessible name at all - an empty
+    # aria-label would be worse than none.
+    video_element = _select_video_to_show(app, "webm video with stretch width")
+    expect(video_element).not_to_have_attribute("aria-label", re.compile(r".*"))
+    expect(video_element).to_have_accessible_name("")
 
 
 def test_check_top_level_class(app: Page):

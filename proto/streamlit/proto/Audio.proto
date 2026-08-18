@@ -36,5 +36,9 @@ message Audio {
 
   optional streamlit.WidthConfig width_config = 10;
 
+  // Author-provided description of the audio, exposed to assistive
+  // technologies as the accessible name. Empty if not provided.
+  string alt = 11;
+
   reserved 1, 2, 4;
 }

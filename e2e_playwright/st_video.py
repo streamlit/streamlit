@@ -37,6 +37,7 @@ webm_video_with_autoplay = "webm video with autoplay"
 webm_video_muted = "webm video muted"
 webm_video_width_pixel = "webm video with pixel width"
 webm_video_width_stretch = "webm video with stretch width"
+webm_video_with_alt = "webm video with alt"
 
 video_to_show = st.radio(
     "Choose a video to show",
@@ -53,6 +54,7 @@ video_to_show = st.radio(
         webm_video_muted,
         webm_video_width_pixel,
         webm_video_width_stretch,
+        webm_video_with_alt,
     ],
     index=0,
 )
@@ -144,4 +146,11 @@ if video_to_show == webm_video_width_stretch:
     st.video(
         str(WEBM_VIDEO_PATH),
         width="stretch",
+    )
+
+if video_to_show == webm_video_with_alt:
+    # Test video with an accessible description
+    st.video(
+        str(WEBM_VIDEO_PATH),
+        alt="A short animated film about a girl and a dragon",
     )
