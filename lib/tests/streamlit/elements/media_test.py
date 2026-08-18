@@ -32,7 +32,11 @@ from streamlit.elements.media import (
     _parse_start_time_end_time,
     marshall_video,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -243,6 +247,171 @@ class MediaTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions for video."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.video("foo.mp4", "video/mp4", width=width)
+
+    def test_audio_autoplay_repeated_identical_args_does_not_raise(self):
+        """Multiple st.audio calls with identical args + autoplay=True should not
+        raise StreamlitDuplicateElementId, since each call has a distinct position
+        in the app (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for _ in range(3):
+                st.audio("foo.wav", "audio/wav", autoplay=True)
+
+            ids = [
+                delta.new_element.audio.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
+
+    def test_video_autoplay_repeated_identical_args_does_not_raise(self):
+        """Multiple st.video calls with identical args + autoplay=True should not
+        raise StreamlitDuplicateElementId, since each call has a distinct position
+        in the app (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for _ in range(3):
+                st.video("foo.mp4", "video/mp4", autoplay=True, muted=True)
+
+            ids = [
+                delta.new_element.video.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
+
+    def test_audio_autoplay_id_stable_regardless_of_position(self):
+        """A single (non-duplicated) autoplay audio element's ID must not depend
+        on its position in the app. Otherwise, inserting/removing unrelated
+        elements above it in a later rerun would change its ID and reset
+        playback, even though it's logically the same element.
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+
+            # First "run": the audio element is the first element on the page.
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            first_id = self.get_delta_from_queue().new_element.audio.id
+
+            # Simulate a rerun (fresh script run context) where an unrelated
+            # element now precedes the audio element, shifting its position.
+            self.tearDown()
+            self.setUp()
+            st.write("An unrelated element inserted before the audio player")
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            second_id = self.get_delta_from_queue().new_element.audio.id
+
+            assert first_id == second_id
+
+    def test_audio_autoplay_duplicate_id_stable_regardless_of_position(self):
+        """A repeated (duplicate) autoplay audio element's ID must only depend
+        on the relative order of the *other* duplicate calls, not on unrelated
+        elements elsewhere in the app (see GH issue #11360 discussion).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+
+            # First "run": two identical audio elements, back to back.
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            second_duplicate_id = self.get_delta_from_queue().new_element.audio.id
+
+            # Simulate a rerun where unrelated elements are inserted before and
+            # between the two duplicate audio elements.
+            self.tearDown()
+            self.setUp()
+            st.write("An unrelated element inserted before both audio players")
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            st.write("An unrelated element inserted between the audio players")
+            st.audio("foo.wav", "audio/wav", autoplay=True)
+            second_duplicate_id_after_rerun = (
+                self.get_delta_from_queue().new_element.audio.id
+            )
+
+            assert second_duplicate_id == second_duplicate_id_after_rerun
+
+    def test_audio_autoplay_with_key_avoids_duplicate_index_fallback(self):
+        """Passing distinct ``key`` values for repeated identical autoplay audio
+        calls should disambiguate them directly, without relying on the
+        occurrence-counter fallback (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for i in range(3):
+                st.audio("foo.wav", "audio/wav", autoplay=True, key=f"audio-{i}")
+
+            ids = [
+                delta.new_element.audio.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
+
+    def test_audio_autoplay_duplicate_key_raises(self):
+        """Reusing the same ``key`` for two autoplay audio elements should raise
+        the standard duplicate-key error, not be silently disambiguated.
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.audio("foo.wav", "audio/wav", autoplay=True, key="dup")
+            with pytest.raises(StreamlitDuplicateElementKey):
+                st.audio("bar.wav", "audio/wav", autoplay=True, key="dup")
+
+    def test_video_autoplay_with_key_avoids_duplicate_index_fallback(self):
+        """Passing distinct ``key`` values for repeated identical autoplay video
+        calls should disambiguate them directly, without relying on the
+        occurrence-counter fallback (see GH issue #11360).
+        """
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            for i in range(3):
+                st.video(
+                    "foo.mp4",
+                    "video/mp4",
+                    autoplay=True,
+                    muted=True,
+                    key=f"video-{i}",
+                )
+
+            ids = [
+                delta.new_element.video.id for delta in self.get_all_deltas_from_queue()
+            ]
+            assert len(ids) == 3
+            assert len(set(ids)) == 3
 
 
 class _RawIOReadReturnsNone(io.RawIOBase):

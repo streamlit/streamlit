@@ -75,6 +75,11 @@ if TYPE_CHECKING:
     assert_type(audio("audio.wav", width="stretch"), DeltaGenerator)
     assert_type(audio("audio.wav", width=400), DeltaGenerator)
 
+    # Audio with key parameter - str, int, or None
+    assert_type(audio("audio.wav", key="my-audio"), DeltaGenerator)
+    assert_type(audio("audio.wav", key=1), DeltaGenerator)
+    assert_type(audio("audio.wav", key=None), DeltaGenerator)
+
     # Audio with all parameters combined
     assert_type(
         audio(
@@ -86,6 +91,7 @@ if TYPE_CHECKING:
             loop=True,
             autoplay=False,
             width="stretch",
+            key="my-audio",
         ),
         DeltaGenerator,
     )

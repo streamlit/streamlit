@@ -93,6 +93,11 @@ if TYPE_CHECKING:
     assert_type(video("video.mp4", width="stretch"), DeltaGenerator)
     assert_type(video("video.mp4", width=640), DeltaGenerator)
 
+    # Video with key parameter - str, int, or None
+    assert_type(video("video.mp4", key="my-video"), DeltaGenerator)
+    assert_type(video("video.mp4", key=1), DeltaGenerator)
+    assert_type(video("video.mp4", key=None), DeltaGenerator)
+
     # Video with all parameters combined
     assert_type(
         video(
@@ -105,6 +110,7 @@ if TYPE_CHECKING:
             autoplay=True,
             muted=True,
             width="stretch",
+            key="my-video",
         ),
         DeltaGenerator,
     )

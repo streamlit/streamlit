@@ -19,13 +19,18 @@ import os
 import re
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, TypeAlias, Union, cast
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, Union, cast
 
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
-from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import (
+    SAFE_VALUES,
+    Key,
+    compute_and_register_element_id,
+    to_key,
+)
+from streamlit.errors import StreamlitAPIException, StreamlitDuplicateElementId
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -80,6 +85,7 @@ class MediaMixin:
         loop: bool = False,
         autoplay: bool = False,
         width: WidthWithoutContent = "stretch",
+        key: Key | None = None,
     ) -> DeltaGenerator:
         """Display an audio player.
 
@@ -153,6 +159,18 @@ class MediaMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+        key : str, int, or None
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            This is primarily useful when ``autoplay=True`` and the same
+            audio is displayed multiple times (e.g. in a loop), since
+            Streamlit otherwise can't tell such elements apart and may
+            replay them unexpectedly on a rerun.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         Examples
         --------
@@ -221,6 +239,7 @@ class MediaMixin:
             loop,
             autoplay,
             width=width,
+            key=key,
         )
         return self.dg._enqueue("audio", audio_proto)
 
@@ -237,6 +256,7 @@ class MediaMixin:
         autoplay: bool = False,
         muted: bool = False,
         width: WidthWithoutContent = "stretch",
+        key: Key | None = None,
     ) -> DeltaGenerator:
         """Display a video player.
 
@@ -333,6 +353,18 @@ class MediaMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+        key : str, int, or None
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            This is primarily useful when ``autoplay=True`` and the same
+            video is displayed multiple times (e.g. in a loop), since
+            Streamlit otherwise can't tell such elements apart and may
+            replay them unexpectedly on a rerun.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         Examples
         --------
@@ -403,6 +435,7 @@ class MediaMixin:
             autoplay,
             muted,
             width=width,
+            key=key,
         )
         return self.dg._enqueue("video", video_proto)
 
@@ -501,6 +534,56 @@ def _marshall_av_media(
     proto.url = file_url
 
 
+def _compute_autoplay_element_id(
+    element_type: Literal["audio", "video"],
+    dg: DeltaGenerator,
+    user_key: str | None,
+    **kwargs: SAFE_VALUES,
+) -> str:
+    """Compute the ID for an autoplay audio/video element.
+
+    If the user passed an explicit ``key``, it's used as-is: a genuine
+    duplicate key raises the normal "please use a unique key" error rather
+    than being silently disambiguated.
+
+    Otherwise, the ID is based only on the element's arguments. This keeps a
+    given element's identity (and thus its autoplay/playback state) stable
+    even when unrelated elements are added or removed elsewhere in the app.
+    If multiple elements share identical arguments (e.g. rendered in a
+    loop), they would otherwise all compute the same ID, so each additional
+    duplicate is disambiguated with an occurrence counter, which is only
+    affected by the relative order of the *other* duplicate calls, not by
+    unrelated elements elsewhere in the app. This can't fully replace an
+    explicit key (e.g. it isn't stable across independent fragment reruns),
+    but it avoids an outright crash on repeated calls.
+    """
+    if user_key is not None:
+        return compute_and_register_element_id(
+            element_type,
+            user_key=user_key,
+            key_as_main_identity=False,
+            dg=dg,
+            **kwargs,
+        )
+
+    duplicate_index = 0
+    while True:
+        try:
+            return compute_and_register_element_id(
+                element_type,
+                user_key=None,
+                key_as_main_identity=False,
+                dg=dg,
+                **(
+                    kwargs
+                    if duplicate_index == 0
+                    else {**kwargs, "duplicate_index": duplicate_index}
+                ),
+            )
+        except StreamlitDuplicateElementId:  # noqa: PERF203
+            duplicate_index += 1
+
+
 def marshall_video(
     dg: DeltaGenerator,
     coordinates: str,
@@ -514,6 +597,7 @@ def marshall_video(
     autoplay: bool = False,
     muted: bool = False,
     width: WidthWithoutContent = "stretch",
+    key: Key | None = None,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -562,6 +646,8 @@ def marshall_video(
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
         - "stretch": The default value. The video player stretches to fill
           available space in its container.
+    key: str, int, or None
+        An optional string to use for giving this element a stable identity.
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
@@ -644,12 +730,10 @@ def marshall_video(
 
     if autoplay:
         proto.autoplay = autoplay
-        proto.id = compute_and_register_element_id(
+        proto.id = _compute_autoplay_element_id(
             "video",
-            # video does not yet allow setting a user-defined key
-            user_key=None,
-            key_as_main_identity=False,
-            dg=dg,
+            dg,
+            to_key(key),
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -780,6 +864,7 @@ def marshall_audio(
     loop: bool = False,
     autoplay: bool = False,
     width: WidthWithoutContent = "stretch",
+    key: Key | None = None,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -811,6 +896,8 @@ def marshall_audio(
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
         - "stretch": The default value. The audio player stretches to fill
           available space in its container.
+    key: str, int, or None
+        An optional string to use for giving this element a stable identity.
     """
 
     proto.start_time = start_time
@@ -844,11 +931,10 @@ def marshall_audio(
 
     if autoplay:
         proto.autoplay = autoplay
-        proto.id = compute_and_register_element_id(
+        proto.id = _compute_autoplay_element_id(
             "audio",
-            user_key=None,
-            key_as_main_identity=False,
-            dg=dg,
+            dg,
+            to_key(key),
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
