@@ -57,21 +57,25 @@ interface StepIcon {
 
 interface StepState extends StepIcon {
   /** Progress state as announced to screen readers. */
-  label: string
+  stateLabel: string
 }
 
 /** How a step renders each progress state of an st.status. */
 const STEP_STATES: Partial<Record<BlockProto.Expandable.State, StepState>> = {
-  [State.RUNNING]: { iconValue: "spinner", tone: "muted", label: "running" },
+  [State.RUNNING]: {
+    iconValue: "spinner",
+    tone: "muted",
+    stateLabel: "running",
+  },
   [State.COMPLETE]: {
     iconValue: ":material/check_circle:",
     tone: "muted",
-    label: "complete",
+    stateLabel: "complete",
   },
   [State.ERROR]: {
     iconValue: ":material/error:",
     tone: "error",
-    label: "error",
+    stateLabel: "error",
   },
 }
 
@@ -246,7 +250,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
 
   const stepState = STEP_STATES[state]
   const stepIcon = resolveStepIcon(stepState, icon)
-  const stepStateLabel = isStep ? stepState?.label : undefined
+  const stepStateLabel = isStep ? stepState?.stateLabel : undefined
 
   const summaryHeading = (
     <StyledSummaryHeading expanderType={type}>
@@ -349,6 +353,12 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           isStale={isStale}
           expanded={isOpen}
           expanderType={type}
+          // Only steps get an explicit aria-expanded. It reports the state the
+          // user just asked for, which leads `details.open` by the length of
+          // the collapse animation, and a step is the one style whose open
+          // state has no persistent visual indicator: it shows a status icon
+          // and only swaps in a chevron on hover or focus. The other two styles
+          // keep the native <details> mapping they have always relied on.
           aria-expanded={isStep ? isOpen : undefined}
         >
           {summaryHeading}

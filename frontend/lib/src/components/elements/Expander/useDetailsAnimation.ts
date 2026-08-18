@@ -130,8 +130,8 @@ export function useDetailsAnimation({
   // Track if component has mounted (to skip animation on initial render)
   const hasMountedRef = useRef(false)
 
-  // Mirrored in state so effects that observe the element re-run when a
-  // remount swaps it, which a ref alone would not trigger.
+  // Store the <details> node in state so the ResizeObserver effect re-runs
+  // when a step remounts it. A ref alone would not retrigger that effect.
   const [detailsElement, setDetailsElement] =
     useState<HTMLDetailsElement | null>(null)
 

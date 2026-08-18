@@ -62,7 +62,11 @@ SIZE_TO_REM_MAPPING = {
 }
 
 # Shared by st.expander and st.status, which render through the same proto.
-EXPANDABLE_TYPE_TO_PROTO_MAPPING: Final[dict[str, Block.Expandable.Type.ValueType]] = {
+ExpandableType: TypeAlias = Literal["default", "compact", "step"]
+
+EXPANDABLE_TYPE_TO_PROTO_MAPPING: Final[
+    dict[ExpandableType, Block.Expandable.Type.ValueType]
+] = {
     "default": Block.Expandable.Type.DEFAULT,
     "compact": Block.Expandable.Type.COMPACT,
     "step": Block.Expandable.Type.STEP,

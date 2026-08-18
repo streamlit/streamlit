@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
     EXPANDABLE_TYPE_TO_PROTO_MAPPING,
+    ExpandableType,
     Gap,
     Height,
     HorizontalAlignment,
@@ -1104,7 +1105,7 @@ class LayoutsMixin:
         *,
         key: Key | None = None,
         icon: str | None = None,
-        type: Literal["default", "compact", "step"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1865,7 +1866,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-        type: Literal["default", "compact", "step"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.

@@ -2423,7 +2423,10 @@ class Status(Block):
         # Blocks are classified as a status by the presence of an icon, so an
         # st.expander with a custom icon lands here without a state.
         if self.proto.state == self.proto.State.STATE_UNDEFINED:
-            raise ValueError("Unknown Status state")
+            raise ValueError(
+                "This block has no status state. Only st.status sets a state; "
+                "an st.expander with an icon is also exposed via at.status."
+            )
         return self.proto.State.Name(self.proto.state).lower()
 
 

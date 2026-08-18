@@ -22,6 +22,7 @@ from typing_extensions import Self
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.layout_utils import (
     EXPANDABLE_TYPE_TO_PROTO_MAPPING,
+    ExpandableType,
     WidthWithoutContent,
     get_width_config,
     validate_width,
@@ -46,8 +47,9 @@ _STATE_ICONS: Final[dict[States, str]] = {
     "error": ":material/error:",
 }
 
-# The step style derives its own icon from this semantic state and announces the
-# state to screen readers.
+# Semantic progress state sent with every status container. The step style uses
+# it for the icon and the screen-reader announcement; AppTest reads it instead
+# of inferring the state from the icon.
 _STATE_PROTO_VALUES: Final[dict[States, BlockProto.Expandable.State.ValueType]] = {
     "running": BlockProto.Expandable.State.RUNNING,
     "complete": BlockProto.Expandable.State.COMPLETE,
@@ -62,7 +64,7 @@ class StatusContainer(DeltaGenerator):
         label: str,
         expanded: bool = False,
         state: States = "running",
-        type: Literal["default", "compact", "step"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         if type not in EXPANDABLE_TYPE_TO_PROTO_MAPPING:
