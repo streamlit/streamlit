@@ -592,7 +592,8 @@ describe("BlockNodeRenderer direct column wrapping context", () => {
   it("resolves auto wrap to false for a button directly in a column", async () => {
     await renderColumnChildren([makeButton(label)])
 
-    expect(screen.getByTitle(label)).toBeVisible()
+    // Title is applied in an effect after Markdown renders the label text.
+    expect(await screen.findByTitle(label)).toBeVisible()
   })
 
   it("preserves direct column placement through transparent blocks", async () => {
@@ -603,7 +604,7 @@ describe("BlockNodeRenderer direct column wrapping context", () => {
     )
     await renderColumnChildren([transparentBlock])
 
-    expect(screen.getByTitle(label)).toBeVisible()
+    expect(await screen.findByTitle(label)).toBeVisible()
   })
 
   it("resets direct column placement in a nested layout container", async () => {
