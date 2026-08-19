@@ -67,7 +67,7 @@ TIME_STRING_TO_SECONDS_PARAMS = [
     ]
 )
 def test_adjust_years(input_date: date, years: int, expected_date: date):
-    """Test that `adjust_years` correctly adjusts the year of a date."""
+    """Test that `adjust_years` shifts the year and saturates at `date.min` / `date.max`."""
     assert adjust_years(input_date, years) == expected_date
 
 
