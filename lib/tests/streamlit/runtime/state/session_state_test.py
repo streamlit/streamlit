@@ -589,9 +589,11 @@ def test_callback_rerun_keeps_widget_values() -> None:
 
         st.text_input("touched", key="touched", on_change=callback)
         st.text_input("untouched", key="untouched")
+        st.checkbox("box", key="box")
 
     at = AppTest.from_function(script).run()
     at.text_input(key="untouched").input("keep me").run()
+    at.checkbox(key="box").check().run()
 
     at.text_input(key="touched").input("hello").run()
 
@@ -599,6 +601,10 @@ def test_callback_rerun_keeps_widget_values() -> None:
     assert at.session_state["touched"] == "hello"
     # An unrelated widget's value must survive the rerun too.
     assert at.session_state["untouched"] == "keep me"
+    # A dropped bool reverts to its falsy default instead of raising, which is how
+    # this bug was originally reported.
+    assert at.session_state["box"] is True
+    assert at.checkbox(key="box").value is True
 
 
 def test_callback_rerun_resets_triggers() -> None:
@@ -629,9 +635,56 @@ def test_callback_rerun_resets_triggers() -> None:
     assert at.session_state["clicks"] == 2
 
 
-def test_on_script_finished_can_skip_stale_widget_removal() -> None:
-    """``remove_stale_widgets=False`` resets triggers but keeps unseen widget values."""
+def test_callback_rerun_does_not_abort_the_other_callbacks() -> None:
+    """One callback's st.rerun() must not silently kill the others in the interaction.
 
+    The requests are queued only after the last callback returns. Queued mid-dispatch,
+    the next callback's first ``st.*`` call would pick the pending request up at a yield
+    point and raise — indistinguishable from its own ``st.rerun()``, so it was swallowed
+    just as silently and the callback's ``session_state`` writes were lost.
+
+    Both callbacks rerun, so the test does not depend on which one is dispatched first.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.session_state["body_runs"] = st.session_state.get("body_runs", 0) + 1
+
+        def cb_a():
+            st.empty()  # a yield point: enqueuing an element checks for a pending rerun
+            st.session_state["a_done"] = True
+            st.rerun()
+
+        def cb_b():
+            st.empty()
+            st.session_state["b_done"] = True
+            st.rerun()
+
+        st.text_input("a", key="a", on_change=cb_a)
+        st.text_input("b", key="b", on_change=cb_b)
+
+    at = AppTest.from_function(script).run()
+
+    # Both widgets change in one interaction, so both callbacks are dispatched.
+    at.text_input(key="a").input("x")
+    at.text_input(key="b").input("y")
+    at.run()
+
+    assert at.session_state["a_done"] is True
+    assert at.session_state["b_done"] is True
+    assert len(at.exception) == 0
+    # The two reruns coalesce into one, so the body runs once more than the initial run.
+    assert at.session_state["body_runs"] == 2
+
+
+def _state_with_unregistered_widgets() -> SessionState:
+    """Build state holding one value widget and one fired trigger, neither registered.
+
+    Mimics the end of a run that rendered nothing: the values sit in
+    ``_new_widget_state``, but no widget id was collected, so cleanup sees them
+    all as stale.
+    """
     ss = SessionState()
     for wid, value_type, value in [
         ("w-val", "int_value", 5),
@@ -646,16 +699,42 @@ def test_on_script_finished_can_skip_stale_widget_removal() -> None:
             )
         )
         ss._new_widget_state.set_from_value(wid, value)
+    return ss
+
+
+def test_on_script_finished_can_skip_stale_widget_removal() -> None:
+    """``remove_stale_widgets=False`` resets triggers but keeps unseen widget values."""
+    ss = _state_with_unregistered_widgets()
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MagicMock(fragment_ids_this_run=None),
     ):
-        # No widget registered this run, so every widget looks stale.
         ss.on_script_finished(frozenset(), remove_stale_widgets=False)
 
     assert ss["w-val"] == 5
     assert ss["w-trig"] is False
+
+
+def test_on_script_finished_removes_stale_widgets_by_default() -> None:
+    """A run that rendered still drops widget state that no widget re-registered.
+
+    The counterpart to the skip case above. ``script_started`` picks between the two,
+    so without this test a gate stuck at False would leak stale widget state after
+    every run while the skip test kept passing.
+    """
+    ss = _state_with_unregistered_widgets()
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    ):
+        ss.on_script_finished(frozenset())
+
+    with pytest.raises(KeyError):
+        ss["w-val"]
+    with pytest.raises(KeyError):
+        ss["w-trig"]
 
 
 def test_callback_run_location_resets_after_rerun_exception() -> None:
@@ -839,7 +918,7 @@ def test_fragment_callback_rerun_requeued() -> None:
     assert len(requeue_calls) == 1
 
 
-def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
+def test_callbacks_targeted_and_default_in_main_script_force_full_app_rerun() -> None:
     """A main-script interaction's default is app-wide, so it trumps the targets.
 
     - One callback requests a fragment-scoped rerun; another returns normally.
@@ -975,6 +1054,10 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
         ss._new_widget_state.set_from_value(wid, 1)
 
     mock_ctx = MagicMock()
+    # Pin a main-script interaction, whose default rerun is the full app: the "no
+    # force" result then comes from no callback voting for the default, not from the
+    # fragment gate suppressing it.
+    mock_ctx.fragment_ids_this_run = None
     mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
         d
     )
@@ -989,6 +1072,53 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
     # Only the two targeted re-queues; no forced full-app rerun was added.
     assert len(requeue_calls) == 2
     assert all(d.is_fragment_scoped_rerun for d in requeue_calls)
+
+
+def test_callbacks_queued_target_without_fragment_scope_counts_as_targeted() -> None:
+    """A queued fragment target counts as targeted even without ``scope="fragment"``.
+
+    ``st.rerun(scope="fragment")`` sets both ``fragment_id_queue`` and
+    ``is_fragment_scoped_rerun``, so either field alone would classify today's reruns
+    correctly. This pins the ``fragment_id_queue`` field on its own, which is what a
+    future targeted rerun that names fragments without scoping to them would send.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    def cb_queued_target() -> None:
+        raise RerunException(RerunData(fragment_id_queue=["frag-1"]))
+
+    ss = SessionState()
+    for wid, cb in [("w1", cb_queued_target), ("w2", lambda: None)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Read as targeted, so the normally-returning callback's app-wide default is
+    # forced on top of it.
+    assert len(requeue_calls) == 2
+    assert requeue_calls[0].fragment_id_queue == ["frag-1"]
+    assert requeue_calls[-1].fragment_id_queue == []
 
 
 def test_updates():

@@ -84,12 +84,7 @@ class ScriptRequest:
 
 
 def _is_full_app_rerun(data: RerunData) -> bool:
-    """Whether ``data`` is a full-app rerun (no fragment identity or fragment scope).
-
-    Checks ``fragment_id``, ``fragment_id_queue``, and ``is_fragment_scoped_rerun``
-    so this works for both raw incoming requests and stored ones (where
-    ``fragment_id`` has already been folded into ``fragment_id_queue``).
-    """
+    """Whether ``data`` reruns the whole app rather than specific fragments."""
     return (
         not data.fragment_id
         and not data.fragment_id_queue
@@ -227,9 +222,8 @@ class ScriptRequests:
                     self._rerun_data.widget_states, new_data.widget_states
                 )
 
-                # Normalize new_data the same way the CONTINUE branch does: fold a
-                # bare fragment_id into fragment_id_queue so the rest of the coalescing
-                # logic only has to deal with one field.
+                # Fold a bare fragment_id into fragment_id_queue so the coalescing
+                # below only has to read one field (the CONTINUE branch does the same).
                 if new_data.fragment_id:
                     new_data = replace(
                         new_data,

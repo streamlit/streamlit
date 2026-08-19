@@ -109,10 +109,7 @@ class FragmentThreadState:
 
     @property
     def in_fragment_callback(self) -> bool:
-        """True when this thread is inside a widget callback that belongs to a fragment.
-
-        Equivalent to ``run_location is CALLBACK`` and ``fragment_id is not None``.
-        """
+        """True when this thread is inside a widget callback that belongs to a fragment."""
         return (
             self.run_location is RunLocation.CALLBACK and self.fragment_id is not None
         )
@@ -317,7 +314,7 @@ class ScriptRunContext:
 
     @property
     def script_started(self) -> bool:
-        """Whether this run got as far as executing the script body.
+        """Whether this run reached its script body.
 
         False when a widget callback queued an ``st.rerun()`` that preempted
         the run before its body. Stale-widget cleanup relies on the body having
