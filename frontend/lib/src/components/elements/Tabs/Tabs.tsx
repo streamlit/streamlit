@@ -156,11 +156,11 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   }
 
   const tabListRef = useRef<HTMLDivElement>(null)
-  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow(
-    tabListRef,
-    true,
-    allTabLabels.join("\0")
-  )
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: tabListRef,
+    enabled: true,
+    layoutKey: allTabLabels.join("\0"),
+  })
   const isOverflowing = canScrollLeft || canScrollRight
 
   // Scroll the tabs by a fixed amount

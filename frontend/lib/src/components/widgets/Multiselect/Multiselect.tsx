@@ -311,11 +311,11 @@ const Multiselect: FC<Props> = props => {
   // scrollable row. Absent (auto) resolves to no-wrap inside a horizontal
   // container and wrap otherwise.
   const wrap = useResolvedWrap(element.wrap)
-  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow(
-    tagsContainerRef,
-    !wrap,
-    value
-  )
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: tagsContainerRef,
+    enabled: !wrap,
+    layoutKey: value,
+  })
 
   // Max height. When wrapping, cut through the 5th tag row so the control can
   // grow and scroll vertically. When not wrapping, pin the control to a single

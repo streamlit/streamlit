@@ -69,6 +69,36 @@ function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
 }
 
 /**
+ * Scroll `option` into `group` horizontally without moving ancestor
+ * scrollports (`scrollIntoView` would also pan `stMain`). Honors CSS
+ * `scroll-padding-inline` so the option lands outside the overflow fade.
+ */
+function scrollOptionIntoGroup(group: HTMLElement, option: Element): void {
+  if (!(option instanceof HTMLElement)) return
+
+  /* eslint-disable streamlit-custom/no-force-reflow-access -- Batched reads to align the option inside this group only */
+  const groupRect = group.getBoundingClientRect()
+  const optionRect = option.getBoundingClientRect()
+  const style = getComputedStyle(group)
+  const padStart = Number.parseFloat(style.scrollPaddingInlineStart) || 0
+  const padEnd = Number.parseFloat(style.scrollPaddingInlineEnd) || 0
+  const overflowStart = optionRect.left - (groupRect.left + padStart)
+  const overflowEnd = optionRect.right - (groupRect.right - padEnd)
+  if (overflowStart >= 0 && overflowEnd <= 0) return
+
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches
+  const nextLeft =
+    group.scrollLeft + (overflowStart < 0 ? overflowStart : overflowEnd)
+  /* eslint-enable streamlit-custom/no-force-reflow-access */
+  group.scrollTo({
+    left: nextLeft,
+    behavior: reduceMotion ? "instant" : "smooth",
+  })
+}
+
+/**
  * Find the index of an option by its content string.
  * Returns the last matching index (to match backend "last wins" behavior
  * for duplicate labels), or -1 if not found.
@@ -182,11 +212,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     () => options.map(getOptionBaseContent).join("\0"),
     [options]
   )
-  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow(
-    groupRef,
-    !wrap,
-    overflowLayoutKey
-  )
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: groupRef,
+    enabled: !wrap,
+    layoutKey: overflowLayoutKey,
+  })
   useEffect(() => {
     if (!groupRef.current) return
     if (required) {
@@ -201,9 +231,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   // selected option so multi-select clicks don't jump back to the leftmost
   // selection. If focus is still on an option that was just deselected, skip
   // scrolling so remaining selections don't yank the viewport left.
-  // block/inline "nearest" avoid unnecessary page scroll; honor
-  // prefers-reduced-motion. Depend on selection only — not `options` — so
-  // unrelated script reruns don't reset the user's horizontal scroll.
+  // Scroll the group itself rather than scrollIntoView, which would also
+  // pan ancestor containers like stMain. Honor prefers-reduced-motion.
+  // Depend on selection and the value-stable overflowLayoutKey — not the
+  // `options` array reference — so a reorder still brings the selection
+  // into view, but unrelated script reruns don't reset scroll.
   useEffect(() => {
     if (wrap || !groupRef.current || value.length === 0) return
     const group = groupRef.current
@@ -214,15 +246,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       ? active
       : group.querySelector("[data-selected]")
     if (!selectedOption) return
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches
-    selectedOption.scrollIntoView({
-      behavior: reduceMotion ? "instant" : "smooth",
-      block: "nearest",
-      inline: "nearest",
-    })
-  }, [wrap, value])
+    scrollOptionIntoGroup(group, selectedOption)
+  }, [wrap, value, overflowLayoutKey])
 
   // When options change and the currently stored value no longer matches any
   // option (e.g. because format_func changed dynamically due to a language

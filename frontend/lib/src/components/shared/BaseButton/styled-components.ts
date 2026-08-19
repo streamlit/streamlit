@@ -632,11 +632,20 @@ export const StyledToggleButtonGroup = styled(ToggleButtonGroup, {
   ...(!$wrap && {
     overflowX: "auto" as const,
     overflowY: "hidden" as const,
+    // overflowY:hidden clips the 0.2rem focus ring above/below options.
+    // Vertical padding makes room; negative margin keeps outer layout the same.
+    paddingBlock: theme.sizes.focusRingWidth,
+    marginBlock: `-${theme.sizes.focusRingWidth}`,
     ...getHorizontalOverflowFadeStyles(theme.spacing.lg),
   }),
 }))
 
-/** Option flex sizing: when wrap is false, never shrink below content width. */
+/**
+ * Option flex sizing. When wrap is false, keep each option at its natural
+ * width (`min-width: fit-content` wins over the base `max-width:
+ * contentMaxWidth`) so long labels stay fully readable and the group scrolls
+ * instead of ellipsizing. `flex-shrink: 0` already prevents compression.
+ */
 function getToggleOptionFlex(
   wrap: boolean,
   containerWidth: boolean

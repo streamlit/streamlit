@@ -39,6 +39,9 @@ export function getHorizontalOverflowFadeStyles(fadeSize: string): CSSObject {
   const bothMask = `linear-gradient(to right, ${startFade}, ${endFade})`
   return {
     scrollbarWidth: "none",
+    // Keep programmatic and keyboard-focus scrolling outside the mask so the
+    // :focus-visible ring is not hidden in the fade.
+    scrollPaddingInline: fadeSize,
     "&::-webkit-scrollbar": { display: "none" },
     "&[data-can-scroll-start][data-can-scroll-end]": {
       maskImage: bothMask,

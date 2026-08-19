@@ -761,10 +761,80 @@ describe("ButtonGroup wrap", () => {
   }
 
   const originalScrollIntoView = Element.prototype.scrollIntoView
+  const originalScrollTo = Element.prototype.scrollTo
+  beforeAll(() => {
+    // jsdom does not implement Element.scrollTo.
+    Element.prototype.scrollTo = function (
+      this: Element,
+      options?: ScrollToOptions | number
+    ) {
+      if (typeof options === "object" && options?.left !== undefined) {
+        ;(this as HTMLElement).scrollLeft = options.left
+      }
+    }
+  })
   afterEach(() => {
     vi.restoreAllMocks()
     Element.prototype.scrollIntoView = originalScrollIntoView
   })
+  afterAll(() => {
+    Element.prototype.scrollTo = originalScrollTo
+  })
+
+  function makeRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): DOMRect {
+    return {
+      x,
+      y,
+      width,
+      height,
+      top: y,
+      left: x,
+      right: x + width,
+      bottom: y + height,
+      toJSON() {
+        return this
+      },
+    }
+  }
+
+  /**
+   * Selected options sit past the group's right edge so the scroll effect
+   * actually moves. When focus is inside the group, only the focused option
+   * is treated as overflowing — other selected options stay in view so we
+   * can tell which geometry the effect used.
+   */
+  function mockSelectedOptionOutOfView(): void {
+    vi.spyOn(
+      HTMLElement.prototype,
+      "getBoundingClientRect"
+    ).mockImplementation(function (this: HTMLElement) {
+      const isGroup =
+        this.getAttribute("role") === "radiogroup" ||
+        this.getAttribute("role") === "group"
+      if (isGroup) {
+        return makeRect(0, 0, 200, 32)
+      }
+      const active = document.activeElement
+      const focusIsInGroup =
+        active instanceof HTMLElement &&
+        (active.closest('[role="radiogroup"]') !== null ||
+          active.closest('[role="group"]') !== null)
+      if (this === active && focusIsInGroup) {
+        return makeRect(400, 0, 80, 32)
+      }
+      if (this.hasAttribute("data-selected")) {
+        return focusIsInGroup
+          ? makeRect(0, 0, 80, 32)
+          : makeRect(400, 0, 80, 32)
+      }
+      return makeRect(0, 0, 80, 32)
+    })
+  }
 
   function mockButtonGroupScrollMetrics(
     group: HTMLElement,
@@ -801,6 +871,9 @@ describe("ButtonGroup wrap", () => {
     expect(group).toHaveStyle("flex-wrap: nowrap")
     expect(group).toHaveStyle("overflow-x: auto")
     expect(group).toHaveStyle("scrollbar-width: none")
+    expect(group).toHaveStyle("padding-block: 0.2rem")
+    expect(group).toHaveStyle("margin-block: -0.2rem")
+    expect(group).toHaveStyle("scroll-padding-inline: 1rem")
     // Content-width + wrap=False stays intrinsic (not stretched to 100%).
     expect(group).toHaveStyle("width: auto")
     expect(group).toHaveStyle("max-width: 100%")
@@ -883,14 +956,51 @@ describe("ButtonGroup wrap", () => {
     expect(buttons[0]).not.toHaveAttribute("data-selected")
   })
 
+  it("lets long labels keep their natural width when wrap is false", () => {
+    const longLabel =
+      "A very long option label that would otherwise ellipsize at contentMaxWidth"
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: [ButtonGroupProto.Option.create({ content: longLabel })],
+          default: [],
+        })}
+      />
+    )
+    const button = getButtonGroupButtons()[0]
+    expect(button).toHaveStyle("min-width: fit-content")
+    expect(button).toHaveStyle("flex-shrink: 0")
+  })
+
+  it("keeps a focus ring on a wrap=false option", async () => {
+    const user = userEvent.setup()
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [],
+        })}
+      />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("padding-block: 0.2rem")
+    expect(group).toHaveStyle("margin-block: -0.2rem")
+
+    await user.tab()
+    const focused = group.querySelector("[data-focus-visible]")
+    expect(focused).toBeTruthy()
+  })
+
   it.each([
     { wrap: false, expectedCalls: 1 },
     { wrap: true, expectedCalls: 0 },
   ] as const)(
     "scrolls selected option into view only when wrap is false (wrap=$wrap)",
     ({ wrap, expectedCalls }) => {
-      const scrollIntoView = vi.fn()
-      Element.prototype.scrollIntoView = scrollIntoView
+      mockSelectedOptionOutOfView()
+      const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
 
       render(
         <ButtonGroup
@@ -902,13 +1012,13 @@ describe("ButtonGroup wrap", () => {
         />
       )
 
-      expect(scrollIntoView).toHaveBeenCalledTimes(expectedCalls)
+      expect(scrollTo).toHaveBeenCalledTimes(expectedCalls)
     }
   )
 
   it("does not re-scroll on rerender with a new options array reference", () => {
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
+    mockSelectedOptionOutOfView()
+    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
 
     const props = getProps({
       wrap: false,
@@ -916,7 +1026,7 @@ describe("ButtonGroup wrap", () => {
       default: [2],
     })
     const { rerender } = render(<ButtonGroup {...props} />)
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledTimes(1)
 
     // Proto options are a new array on every ForwardMsg even when unchanged.
     const sameOptionsNewRef = simpleOptions.map(option =>
@@ -931,15 +1041,39 @@ describe("ButtonGroup wrap", () => {
         })}
       />
     )
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+
+  it("scrolls the selected option into view when options are reordered", () => {
+    mockSelectedOptionOutOfView()
+    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
+
+    const props = getProps({
+      wrap: false,
+      options: simpleOptions,
+      default: [2],
+    })
+    const { rerender } = render(<ButtonGroup {...props} />)
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+
+    // Same selection, different order — overflowLayoutKey must retrigger scroll.
+    const reordered = [simpleOptions[2], simpleOptions[0], simpleOptions[1]]
+    rerender(
+      <ButtonGroup
+        {...props}
+        element={ButtonGroupProto.create({
+          ...props.element,
+          options: reordered,
+        })}
+      />
+    )
+    expect(scrollTo).toHaveBeenCalledTimes(2)
   })
 
   it("scrolls the focused selected option in multi-select, not the leftmost", async () => {
     const user = userEvent.setup()
-    const scrolledElements: Element[] = []
-    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
-      scrolledElements.push(this)
-    })
+    mockSelectedOptionOutOfView()
+    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
 
     render(
       <ButtonGroup
@@ -951,21 +1085,19 @@ describe("ButtonGroup wrap", () => {
         })}
       />
     )
-    scrolledElements.length = 0
+    scrollTo.mockClear()
 
     const buttons = getButtonGroupButtons()
     await user.click(buttons[2])
 
-    expect(scrolledElements.length).toBeGreaterThan(0)
-    expect(scrolledElements.at(-1)).toBe(buttons[2])
+    // Leftmost selected stays in view; only the focused option overflows.
+    expect(scrollTo).toHaveBeenCalled()
   })
 
   it("does not scroll when deselecting a non-leftmost selected option", async () => {
     const user = userEvent.setup()
-    const scrolledElements: Element[] = []
-    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
-      scrolledElements.push(this)
-    })
+    mockSelectedOptionOutOfView()
+    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
 
     render(
       <ButtonGroup
@@ -977,14 +1109,45 @@ describe("ButtonGroup wrap", () => {
         })}
       />
     )
-    scrolledElements.length = 0
+    scrollTo.mockClear()
 
     const buttons = getButtonGroupButtons()
     await user.click(buttons[2])
 
     expectHighlightStyle(buttons[2], false)
     expectHighlightStyle(buttons[0])
-    expect(scrolledElements).toHaveLength(0)
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("does not scroll window or ancestor containers when bringing a selection into view", () => {
+    mockSelectedOptionOutOfView()
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    const ancestor = document.createElement("div")
+    ancestor.scrollTop = 80
+    ancestor.scrollLeft = 40
+    document.body.appendChild(ancestor)
+
+    try {
+      render(
+        <ButtonGroup
+          {...getProps({
+            wrap: false,
+            options: simpleOptions,
+            default: [2],
+          })}
+        />,
+        { container: ancestor }
+      )
+
+      expect(scrollIntoView).not.toHaveBeenCalled()
+      expect(ancestor.scrollTop).toBe(80)
+      expect(ancestor.scrollLeft).toBe(40)
+      expect(window.scrollX).toBe(0)
+      expect(window.scrollY).toBe(0)
+    } finally {
+      ancestor.remove()
+    }
   })
 
   it("shows an overflow fade only on sides that can still scroll", () => {

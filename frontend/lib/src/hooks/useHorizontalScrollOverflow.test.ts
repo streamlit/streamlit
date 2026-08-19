@@ -65,7 +65,10 @@ describe("useHorizontalScrollOverflow", () => {
       clientWidth: 200,
     })
     const { result } = renderHook(() =>
-      useHorizontalScrollOverflow(refOf(element), false)
+      useHorizontalScrollOverflow({
+        elementRef: refOf(element),
+        enabled: false,
+      })
     )
 
     act(() => {
@@ -83,7 +86,10 @@ describe("useHorizontalScrollOverflow", () => {
       clientWidth: 200,
     })
     const { result } = renderHook(() =>
-      useHorizontalScrollOverflow(refOf(element), true)
+      useHorizontalScrollOverflow({
+        elementRef: refOf(element),
+        enabled: true,
+      })
     )
 
     act(() => {
@@ -101,7 +107,10 @@ describe("useHorizontalScrollOverflow", () => {
       clientWidth: 200,
     })
     const { result } = renderHook(() =>
-      useHorizontalScrollOverflow(refOf(element), true)
+      useHorizontalScrollOverflow({
+        elementRef: refOf(element),
+        enabled: true,
+      })
     )
 
     act(() => {
@@ -119,7 +128,10 @@ describe("useHorizontalScrollOverflow", () => {
       clientWidth: 200,
     })
     const { result } = renderHook(() =>
-      useHorizontalScrollOverflow(refOf(element), true)
+      useHorizontalScrollOverflow({
+        elementRef: refOf(element),
+        enabled: true,
+      })
     )
 
     act(() => {
@@ -137,7 +149,11 @@ describe("useHorizontalScrollOverflow", () => {
       clientWidth: 200,
     })
     const { result, rerender } = renderHook(
-      ({ enabled }) => useHorizontalScrollOverflow(refOf(element), enabled),
+      ({ enabled }) =>
+        useHorizontalScrollOverflow({
+          elementRef: refOf(element),
+          enabled,
+        }),
       { initialProps: { enabled: true } }
     )
 

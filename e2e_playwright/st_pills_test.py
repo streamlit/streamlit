@@ -21,6 +21,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -728,28 +729,28 @@ def test_pills_wrap_behavior(app: Page, assert_snapshot: ImageCompareFunction):
     selected_group = get_button_group_options(app, "pills_wrap_selected_into_view")
     stretch_group = get_button_group_options(app, "pills_wrap_false_stretch")
 
-    # wrap=False: single row with local horizontal overflow
-    false_box = false_group.bounding_box()
-    true_box = true_group.bounding_box()
-    assert false_box is not None
-    assert true_box is not None
-    assert false_box["height"] < true_box["height"]
+    def _height(group: Locator) -> float:
+        box = group.bounding_box()
+        assert box is not None, "Expected the option group to have a bounding box."
+        return box["height"]
+
+    # wrap=False: single row with local horizontal overflow. Poll heights so
+    # first-paint / scroll-into-view layout does not flake the comparison.
+    wait_until(app, lambda: _height(false_group) < _height(true_group))
 
     expect_button_group_overflows(false_group)
-    # Overflow is local — the page must not gain horizontal scroll
-    assert app.evaluate("() => document.documentElement.scrollWidth") <= app.evaluate(
-        "() => document.documentElement.clientWidth"
+    # Overflow is local — the app scroll container must not gain horizontal scroll
+    main = app.get_by_test_id("stMain")
+    wait_until(
+        app,
+        lambda: main.evaluate("el => el.scrollWidth <= el.clientWidth") is True,
     )
 
     # Default (auto) in vertical layout wraps like wrap=True
-    auto_v_box = auto_v_group.bounding_box()
-    assert auto_v_box is not None
-    assert auto_v_box["height"] > false_box["height"]
+    wait_until(app, lambda: _height(auto_v_group) > _height(false_group))
 
     # Default (auto) inside horizontal container stays one row and scrolls
-    auto_h_box = auto_h_group.bounding_box()
-    assert auto_h_box is not None
-    assert auto_h_box["height"] < true_box["height"]
+    wait_until(app, lambda: _height(auto_h_group) < _height(true_group))
     expect_button_group_overflows(auto_h_group)
 
     expect_selected_option_in_view(selected_group)

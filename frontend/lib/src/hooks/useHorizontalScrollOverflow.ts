@@ -27,6 +27,18 @@ export type HorizontalScrollOverflow = {
   canScrollRight: boolean
 }
 
+export type UseHorizontalScrollOverflowArgs = {
+  /** The scrollport to observe. */
+  elementRef: RefObject<HTMLElement | null>
+  /** When false, both flags are false and no listeners are attached. */
+  enabled: boolean
+  /**
+   * Remeasure when content that affects scrollWidth changes (option labels,
+   * selected chips). Observer setup does not depend on this.
+   */
+  layoutKey?: unknown
+}
+
 /**
  * Track whether a horizontally scrollable element has overflow past either
  * edge. Shared by wrap=False pills, segmented control, and multiselect chips
@@ -35,17 +47,13 @@ export type HorizontalScrollOverflow = {
  * Drive CSS with `data-can-scroll-start` / `data-can-scroll-end` from the
  * returned flags. Listeners are omitted while `enabled` is false.
  *
- * @param elementRef The scrollport to observe.
- * @param enabled When false, both flags are false and no listeners are attached.
- * @param layoutKey Remeasure when content that affects scrollWidth changes
- * (option labels, selected chips). Observer setup does not depend on this.
  * @returns Whether the element can scroll further left and/or right.
  */
-export function useHorizontalScrollOverflow(
-  elementRef: RefObject<HTMLElement | null>,
-  enabled: boolean,
-  layoutKey?: unknown
-): HorizontalScrollOverflow {
+export function useHorizontalScrollOverflow({
+  elementRef,
+  enabled,
+  layoutKey,
+}: UseHorizontalScrollOverflowArgs): HorizontalScrollOverflow {
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const canScrollLeftRef = useRef(false)

@@ -306,6 +306,9 @@ def _build_proto(
         if help is not None:
             proto.help = help
 
+    # wrap is layout-only and intentionally excluded from the element id
+    # (it is not passed to compute_and_register_element_id), so toggling it
+    # never resets the widget's value.
     if wrap is not None:
         proto.wrap = wrap
 
@@ -576,6 +579,9 @@ class ButtonGroupMixin:
               wide for the available space, the option group scrolls
               horizontally. A fade at overflowing edges indicates that more
               options can be scrolled into view.
+
+            Changing ``wrap`` only affects the layout; it does not reset the
+            widget's value.
 
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
@@ -943,6 +949,9 @@ class ButtonGroupMixin:
               wide for the available space, the option group scrolls
               horizontally. A fade at overflowing edges indicates that more
               options can be scrolled into view.
+
+            Changing ``wrap`` only affects the layout; it does not reset the
+            widget's value.
 
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query

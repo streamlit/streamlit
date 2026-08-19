@@ -21,6 +21,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -582,8 +583,11 @@ def test_segmented_control_wrap_behavior(
     selected_group = get_button_group_options(app, "sc_wrap_selected_into_view")
 
     expect_button_group_overflows(false_group)
-    assert app.evaluate("() => document.documentElement.scrollWidth") <= app.evaluate(
-        "() => document.documentElement.clientWidth"
+    # Overflow is local — the app scroll container must not gain horizontal scroll
+    main = app.get_by_test_id("stMain")
+    wait_until(
+        app,
+        lambda: main.evaluate("el => el.scrollWidth <= el.clientWidth") is True,
     )
 
     expect_button_group_overflows(auto_h_group)
