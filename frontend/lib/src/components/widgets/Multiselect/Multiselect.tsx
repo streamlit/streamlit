@@ -58,6 +58,7 @@ import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
 } from "~lib/hooks/useFloatingOverlay"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import {
   CREATABLE_ID,
   type MultiselectOption,
@@ -202,9 +203,6 @@ const preventInputEvent = (e: React.SyntheticEvent): void => {
   e.preventDefault()
 }
 
-/** Pixel tolerance for scroll-edge comparisons to absorb sub-pixel rounding. */
-const SCROLL_TOLERANCE = 1
-
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
@@ -217,15 +215,6 @@ const Multiselect: FC<Props> = props => {
   const scrollLeftRef = useRef(0)
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
-
-  // Whether the single-row chip area has off-screen chips to either side, used
-  // to render a fade mask that signals the row is horizontally scrollable. The
-  // refs mirror the state so scroll/resize handlers only trigger a re-render
-  // when the affordance actually changes.
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-  const canScrollLeftRef = useRef(false)
-  const canScrollRightRef = useRef(false)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -322,6 +311,11 @@ const Multiselect: FC<Props> = props => {
   // scrollable row. Absent (auto) resolves to no-wrap inside a horizontal
   // container and wrap otherwise.
   const wrap = useResolvedWrap(element.wrap)
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: tagsContainerRef,
+    enabled: !wrap,
+    layoutKey: value,
+  })
 
   // Max height. When wrapping, cut through the 5th tag row so the control can
   // grow and scroll vertically. When not wrapping, pin the control to a single
@@ -401,54 +395,6 @@ const Multiselect: FC<Props> = props => {
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access
     scrollLeftRef.current = target.scrollLeft
   }, [])
-
-  // Recompute whether the single-row chip area can scroll left/right so the
-  // fade mask reflects the current overflow. Always false while wrapping.
-  const updateScrollAffordance = useCallback((): void => {
-    const container = tagsContainerRef.current
-    let nextLeft = false
-    let nextRight = false
-    if (container && !wrap) {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-      const { scrollLeft, scrollWidth, clientWidth } = container
-      nextLeft = scrollLeft > SCROLL_TOLERANCE
-      nextRight = scrollLeft + clientWidth < scrollWidth - SCROLL_TOLERANCE
-    }
-    // Only re-render when the affordance actually changes, so scroll/resize
-    // events don't schedule redundant state updates.
-    if (canScrollLeftRef.current !== nextLeft) {
-      canScrollLeftRef.current = nextLeft
-      setCanScrollLeft(nextLeft)
-    }
-    if (canScrollRightRef.current !== nextRight) {
-      canScrollRightRef.current = nextRight
-      setCanScrollRight(nextRight)
-    }
-  }, [wrap])
-
-  // Keep the fade mask in sync with the scroll position and container size.
-  useEffect(() => {
-    const container = tagsContainerRef.current
-    if (!container) return undefined
-    container.addEventListener("scroll", updateScrollAffordance, {
-      passive: true,
-    })
-    const resizeObserver = new ResizeObserver(() => updateScrollAffordance())
-    resizeObserver.observe(container)
-    // Measure after layout settles (chips may mount in a later frame).
-    const rafId = requestAnimationFrame(updateScrollAffordance)
-    return () => {
-      container.removeEventListener("scroll", updateScrollAffordance)
-      resizeObserver.disconnect()
-      cancelAnimationFrame(rafId)
-    }
-  }, [updateScrollAffordance])
-
-  // Re-measure when the selection changes, since adding/removing chips changes
-  // the scrollable width without necessarily resizing the container.
-  useEffect(() => {
-    updateScrollAffordance()
-  }, [updateScrollAffordance, value])
 
   const handleChange = useCallback(
     (keys: Key[]): void => {
