@@ -374,6 +374,17 @@ describe("rewriteMaterialIconPrefix", () => {
       description: "rewrites around a code span without touching it",
     },
     {
+      input: "a ` tick\n\n:material/star:\n\nb ` tick",
+      expected: "a ` tick\n\n:material_star:\n\nb ` tick",
+      description:
+        "unpaired backticks in separate blocks are not a code span, so prose still rewrites",
+    },
+    {
+      input: "`multi\nline :material/a:`",
+      expected: "`multi\nline :material/a:`",
+      description: "a span may cross a line break, just not a blank line",
+    },
+    {
       input: "no icons here",
       expected: "no icons here",
       description: "source without the prefix is unchanged",

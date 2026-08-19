@@ -132,16 +132,20 @@ export function containsEmojiShortcodes(source: string): boolean {
  *   than the opener, which CommonMark permits. One combined branch would need a
  *   single backreference, and that only matches an exactly equal run.
  * - Inline spans backreference the opening backtick run, so any run length works and
- *   a shorter run inside a longer one does not terminate the span.
+ *   a shorter run inside a longer one does not terminate the span. They may span
+ *   lines but not a *blank* line, because CommonMark keeps inline code inside one
+ *   block -- otherwise two unpaired backticks in separate paragraphs would pair up
+ *   and swallow the prose between them.
  *
- * Not covered: four-space indented code blocks, and fences that are never closed.
- * Those keep the old behaviour of being rewritten, so they stay mildly wrong rather
- * than becoming newly broken. Nor is an *unterminated* inline span, which matters
- * only while streaming: `remend` closes it after this runs, so a transient frame can
- * show `:material_x:`. The settled source is correct.
+ * Deliberately not handled:
+ * - Four-space indented code blocks: still rewritten, so #10365 persists there.
+ * - Unterminated fences and inline spans: whether the prefix is rewritten depends on
+ *   where the next delimiter run falls. This mostly matters while streaming, where
+ *   `remend` closes the construct only after this runs, so a transient frame can show
+ *   `:material_x:`. The settled source is correct.
  */
 const CODE_OR_MATERIAL_PREFIX =
-  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(`+)[\s\S]*?\3|:material\//gm
+  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(`+)(?:[^\n]|\n(?![ \t]*\n))*?\3|:material\//gm
 
 /**
  * Rewrites `:material/` to `:material_` outside of code, leaving code untouched.
@@ -158,19 +162,11 @@ const CODE_OR_MATERIAL_PREFIX =
  * @returns The source with `:material/` rewritten outside code only
  */
 export function rewriteMaterialIconPrefix(source: string): string {
-  return source.replace(
-    CODE_OR_MATERIAL_PREFIX,
-    (
-      match,
-      backtickFence: string | undefined,
-      tildeFence: string | undefined,
-      span: string | undefined
-    ) =>
-      backtickFence !== undefined ||
-      tildeFence !== undefined ||
-      span !== undefined
-        ? match
-        : ":material_"
+  // Every code alternative starts with a backtick or tilde, so only the bare-prefix
+  // branch can produce this exact match. Comparing the match rather than inspecting
+  // capture groups keeps this correct if another group is ever added.
+  return source.replace(CODE_OR_MATERIAL_PREFIX, match =>
+    match === ":material/" ? ":material_" : match
   )
 }
 
