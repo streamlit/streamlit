@@ -577,11 +577,7 @@ class ButtonGroupMixin:
               they wrap onto additional rows.
             - ``False``: The options stay on a single row. If they are too
               wide for the available space, the option group scrolls
-              horizontally. A fade at overflowing edges indicates that more
-              options can be scrolled into view.
-
-            Changing ``wrap`` only affects the layout; it does not reset the
-            widget's value.
+              horizontally.
 
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
@@ -947,11 +943,7 @@ class ButtonGroupMixin:
               they wrap onto additional rows.
             - ``False``: The options stay on a single row. If they are too
               wide for the available space, the option group scrolls
-              horizontally. A fade at overflowing edges indicates that more
-              options can be scrolled into view.
-
-            Changing ``wrap`` only affects the layout; it does not reset the
-            widget's value.
+              horizontally.
 
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
