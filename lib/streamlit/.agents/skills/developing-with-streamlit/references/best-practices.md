@@ -296,13 +296,6 @@ tags = st.pills(
     ["New", "Active", "At risk"],
     selection_mode="multi",
 )
-
-# GOOD: Keep many options on one scrollable row
-period = st.segmented_control(
-    "Period",
-    ["1D", "1W", "1M", "3M", "YTD", "1Y", "All"],
-    wrap=False,
-)
 ```
 
 Initialize session state in one clear place and avoid module-level mutable state for per-user data.

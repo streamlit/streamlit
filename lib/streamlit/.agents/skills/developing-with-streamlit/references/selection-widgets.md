@@ -46,35 +46,6 @@ st.pills(
 
 More visual and easier to use than `st.multiselect` for small option sets.
 
-## Keeping pills and segmented controls on one row
-
-Use `wrap` when a compact, fixed-height row matters more than showing every option at once:
-
-```python
-# Stay on one row and scroll horizontally when options overflow
-period = st.segmented_control(
-    "Period",
-    ["1D", "1W", "1M", "3M", "YTD", "1Y", "All"],
-    wrap=False,
-)
-
-# Same pattern for pills
-filters = st.pills(
-    "Filters",
-    ["All", "Active", "Paused", "Archived", "Draft"],
-    selection_mode="multi",
-    wrap=False,
-)
-```
-
-`wrap` behavior:
-
-- `None` (default): Streamlit decides from layout. Inside `st.container(horizontal=True)`, options stay on one row and scroll if needed; elsewhere they wrap onto additional rows.
-- `True`: Options wrap onto additional rows when they don't fit.
-- `False`: Options stay on a single row and scroll horizontally when they overflow.
-
-Inside a horizontal toolbar, you usually do not need an explicit `wrap=False` — the default already keeps the control on one row.
-
 ## Selectbox (many options, single select)
 
 ```python
