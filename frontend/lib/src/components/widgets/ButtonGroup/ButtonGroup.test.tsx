@@ -915,6 +915,33 @@ describe("ButtonGroup wrap", () => {
     expect(scrolledElements.at(-1)).toBe(buttons[2])
   })
 
+  it("does not scroll when deselecting a non-leftmost selected option", async () => {
+    const user = userEvent.setup()
+    const scrolledElements: Element[] = []
+    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
+      scrolledElements.push(this)
+    })
+
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [0, 2],
+          clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+        })}
+      />
+    )
+    scrolledElements.length = 0
+
+    const buttons = getButtonGroupButtons()
+    await user.click(buttons[2])
+
+    expectHighlightStyle(buttons[2], false)
+    expectHighlightStyle(buttons[0])
+    expect(scrolledElements).toHaveLength(0)
+  })
+
   it("still updates selection when wrap is false", async () => {
     const user = userEvent.setup()
     const props = getProps({
