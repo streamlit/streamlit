@@ -761,24 +761,9 @@ describe("ButtonGroup wrap", () => {
   }
 
   const originalScrollIntoView = Element.prototype.scrollIntoView
-  const originalScrollTo = Element.prototype.scrollTo
-  beforeAll(() => {
-    // jsdom does not implement Element.scrollTo.
-    Element.prototype.scrollTo = function (
-      this: Element,
-      options?: ScrollToOptions | number
-    ) {
-      if (typeof options === "object" && options?.left !== undefined) {
-        ;(this as HTMLElement).scrollLeft = options.left
-      }
-    }
-  })
   afterEach(() => {
     vi.restoreAllMocks()
     Element.prototype.scrollIntoView = originalScrollIntoView
-  })
-  afterAll(() => {
-    Element.prototype.scrollTo = originalScrollTo
   })
 
   function makeRect(
@@ -1000,7 +985,11 @@ describe("ButtonGroup wrap", () => {
     "scrolls selected option into view only when wrap is false (wrap=$wrap)",
     ({ wrap, expectedCalls }) => {
       mockSelectedOptionOutOfView()
-      const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
+      const setScrollLeft = vi.spyOn(
+        HTMLElement.prototype,
+        "scrollLeft",
+        "set"
+      )
 
       render(
         <ButtonGroup
@@ -1012,13 +1001,13 @@ describe("ButtonGroup wrap", () => {
         />
       )
 
-      expect(scrollTo).toHaveBeenCalledTimes(expectedCalls)
+      expect(setScrollLeft).toHaveBeenCalledTimes(expectedCalls)
     }
   )
 
   it("does not re-scroll on rerender with a new options array reference", () => {
     mockSelectedOptionOutOfView()
-    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
 
     const props = getProps({
       wrap: false,
@@ -1026,7 +1015,7 @@ describe("ButtonGroup wrap", () => {
       default: [2],
     })
     const { rerender } = render(<ButtonGroup {...props} />)
-    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(setScrollLeft).toHaveBeenCalledTimes(1)
 
     // Proto options are a new array on every ForwardMsg even when unchanged.
     const sameOptionsNewRef = simpleOptions.map(option =>
@@ -1041,12 +1030,12 @@ describe("ButtonGroup wrap", () => {
         })}
       />
     )
-    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(setScrollLeft).toHaveBeenCalledTimes(1)
   })
 
   it("scrolls the selected option into view when options are reordered", () => {
     mockSelectedOptionOutOfView()
-    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
 
     const props = getProps({
       wrap: false,
@@ -1054,7 +1043,7 @@ describe("ButtonGroup wrap", () => {
       default: [2],
     })
     const { rerender } = render(<ButtonGroup {...props} />)
-    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(setScrollLeft).toHaveBeenCalledTimes(1)
 
     // Same selection, different order — overflowLayoutKey must retrigger scroll.
     const reordered = [simpleOptions[2], simpleOptions[0], simpleOptions[1]]
@@ -1067,13 +1056,13 @@ describe("ButtonGroup wrap", () => {
         })}
       />
     )
-    expect(scrollTo).toHaveBeenCalledTimes(2)
+    expect(setScrollLeft).toHaveBeenCalledTimes(2)
   })
 
   it("scrolls the focused selected option in multi-select, not the leftmost", async () => {
     const user = userEvent.setup()
     mockSelectedOptionOutOfView()
-    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
 
     render(
       <ButtonGroup
@@ -1085,19 +1074,19 @@ describe("ButtonGroup wrap", () => {
         })}
       />
     )
-    scrollTo.mockClear()
+    setScrollLeft.mockClear()
 
     const buttons = getButtonGroupButtons()
     await user.click(buttons[2])
 
     // Leftmost selected stays in view; only the focused option overflows.
-    expect(scrollTo).toHaveBeenCalled()
+    expect(setScrollLeft).toHaveBeenCalled()
   })
 
   it("does not scroll when deselecting a non-leftmost selected option", async () => {
     const user = userEvent.setup()
     mockSelectedOptionOutOfView()
-    const scrollTo = vi.spyOn(Element.prototype, "scrollTo")
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
 
     render(
       <ButtonGroup
@@ -1109,14 +1098,14 @@ describe("ButtonGroup wrap", () => {
         })}
       />
     )
-    scrollTo.mockClear()
+    setScrollLeft.mockClear()
 
     const buttons = getButtonGroupButtons()
     await user.click(buttons[2])
 
     expectHighlightStyle(buttons[2], false)
     expectHighlightStyle(buttons[0])
-    expect(scrollTo).not.toHaveBeenCalled()
+    expect(setScrollLeft).not.toHaveBeenCalled()
   })
 
   it("does not scroll window or ancestor containers when bringing a selection into view", () => {

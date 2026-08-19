@@ -86,16 +86,11 @@ function scrollOptionIntoGroup(group: HTMLElement, option: Element): void {
   const overflowEnd = optionRect.right - (groupRect.right - padEnd)
   if (overflowStart >= 0 && overflowEnd <= 0) return
 
-  const reduceMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)"
-  ).matches
-  const nextLeft =
-    group.scrollLeft + (overflowStart < 0 ? overflowStart : overflowEnd)
+  // Assign scrollLeft instead of scrollIntoView/scrollTo: it stays local to
+  // this group (no ancestor pan) and applies synchronously so layout tests
+  // don't wait on smooth-scroll animation.
+  group.scrollLeft += overflowStart < 0 ? overflowStart : overflowEnd
   /* eslint-enable streamlit-custom/no-force-reflow-access */
-  group.scrollTo({
-    left: nextLeft,
-    behavior: reduceMotion ? "instant" : "smooth",
-  })
 }
 
 /**
@@ -232,7 +227,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   // selection. If focus is still on an option that was just deselected, skip
   // scrolling so remaining selections don't yank the viewport left.
   // Scroll the group itself rather than scrollIntoView, which would also
-  // pan ancestor containers like stMain. Honor prefers-reduced-motion.
+  // pan ancestor containers like stMain.
   // Depend on selection and the value-stable overflowLayoutKey — not the
   // `options` array reference — so a reorder still brings the selection
   // into view, but unrelated script reruns don't reset scroll.
