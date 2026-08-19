@@ -935,6 +935,10 @@ class SessionState:
         # mid-dispatch would abort the callbacks after it: their first st.* call picks
         # the pending request up at a yield point and raises, which is indistinguishable
         # from their own st.rerun() and would be swallowed just as silently.
+        #
+        # Deliberately not wrapped in try/finally: if a callback raises, the interaction
+        # errored and nothing should be re-queued. Firing a rerun anyway would clear the
+        # exception element on the next SCRIPT_STARTED, hiding the error.
         if ctx and ctx.script_requests:
             for rerun_data in votes.pending_reruns:
                 ctx.script_requests.request_rerun(rerun_data)
