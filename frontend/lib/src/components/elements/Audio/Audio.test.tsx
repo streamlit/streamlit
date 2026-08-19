@@ -86,23 +86,6 @@ describe("Audio Element", () => {
     mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
   })
 
-  describe("alt (accessible description)", () => {
-    it("sets aria-label when alt is provided", () => {
-      render(<Audio {...getProps({ alt: "A cat purring" })} />)
-      expect(screen.getByTestId("stAudio")).toHaveAttribute(
-        "aria-label",
-        "A cat purring"
-      )
-    })
-
-    it("omits aria-label entirely when alt is not provided", () => {
-      render(<Audio {...getProps()} />)
-      // An empty aria-label is worse than none, so the attribute must be
-      // absent rather than present-but-empty.
-      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
-    })
-  })
-
   it("does not autoplay if preventAutoplay is set", () => {
     mockGetElementState.mockReturnValueOnce(true) // Autoplay should be prevented
     const props = getProps({ autoplay: true, id: "uniqueAudioId" })
@@ -313,6 +296,23 @@ describe("Audio Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("alt (accessible description)", () => {
+    it("sets aria-label when alt is provided", () => {
+      render(<Audio {...getProps({ alt: "A cat purring" })} />)
+      expect(screen.getByTestId("stAudio")).toHaveAttribute(
+        "aria-label",
+        "A cat purring"
+      )
+    })
+
+    it("omits aria-label entirely when alt is not provided", () => {
+      render(<Audio {...getProps()} />)
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty.
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
   })
 
   describe("crossOrigin attribute", () => {
