@@ -116,7 +116,7 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
- * Stands in for the leading `:` of a `:material/` prefix while markdown is parsed.
+ * Inserted after the `:` of a `:material/` prefix while markdown is parsed.
  *
  * `:material/icon:` cannot survive parsing as written: `remark-directive` claims
  * `:material` as a text directive and leaves `/icon:` behind as loose text, so the
@@ -130,21 +130,36 @@ export function containsEmojiShortcodes(source: string): boolean {
  * restored verbatim.
  *
  * U+FFFC (OBJECT REPLACEMENT CHARACTER) is used because:
- * - It replaces the `:`, so the source handed to remark never contains `:material`
- *   and no directive can be claimed at all.
- * - Unicode puts it in category So, which CommonMark treats as punctuation, so it
- *   cannot appear in a directive *name* either. That rules out a neighbouring `:`
- *   pulling it into a directive, which is what disqualifies the invisible
- *   alternatives: private-use and format characters (U+E000, U+2063, U+FFF9) are all
- *   name characters, so `:material/a::material/b:` parses its second prefix as a
- *   directive named "\uFFFCmaterial" and the sentinel is eaten.
+ * - Unicode puts it in category So, which `micromark-util-character` classifies as
+ *   punctuation. A directive name can neither start with nor contain punctuation, so
+ *   sitting immediately after the `:` it stops the directive from being claimed.
+ * - That classification is the whole requirement, and it is what disqualifies the
+ *   invisible alternatives: private-use and format characters (U+E000, U+2063,
+ *   U+FFF9) are all name characters, so `:material/a::material/b:` would parse its
+ *   second prefix as a directive named "\uE000material" and eat the sentinel.
  * - It is effectively never typed by hand, and it means "an object goes here", which
  *   is what it is standing in for.
+ *
+ * It is inserted after the `:` rather than replacing it so that the colon keeps any
+ * syntactic role it already had. Replacing it turns `<foo:material/bar>` from a
+ * custom-scheme autolink into plain text, and leaves the backslash visible in
+ * `\:material/search:`, because CommonMark only escapes ASCII punctuation.
  */
 const MATERIAL_ICON_SENTINEL = "\uFFFC"
 
 /** The parse-time form of a `:material/` prefix. */
-const ENCODED_MATERIAL_PREFIX = `${MATERIAL_ICON_SENTINEL}material/`
+const ENCODED_MATERIAL_PREFIX = `:${MATERIAL_ICON_SENTINEL}material/`
+
+/**
+ * Matches an encoded prefix followed by an icon name.
+ *
+ * Lives next to `ENCODED_MATERIAL_PREFIX` because interpolating that constant into a
+ * pattern only stays correct while the sentinel is not a regex metacharacter.
+ */
+const ENCODED_MATERIAL_ICON_PATTERN = new RegExp(
+  `${ENCODED_MATERIAL_PREFIX}(\\w+):`,
+  "g"
+)
 
 /**
  * Disguises every `:material/` prefix so it survives markdown parsing intact.
@@ -186,8 +201,11 @@ function createRemarkRestoreMaterialIconPrefix() {
       // sentinel left in a URL breaks the link, so sweep every string field rather
       // than enumerating the ones that exist today.
       //
-      // Restoring unconditionally is safe because the sentinel only ever appears
-      // where encoding put it, so turning it back is always what the user wrote.
+      // Restoring unconditionally is safe in practice: a source that already
+      // contains the encoded prefix is vanishingly unlikely, since nobody types
+      // OBJECT REPLACEMENT CHARACTER. Matching the whole prefix rather than a bare
+      // sentinel also means a stray one a user did type is left alone instead of
+      // being turned into a colon.
       const fields = node as unknown as Record<string, unknown>
       for (const key of Object.keys(fields)) {
         const value = fields[key]
@@ -1029,7 +1047,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     // createRemarkRestoreMaterialIconPrefix.
     findAndReplace(tree, [
       [
-        new RegExp(`${ENCODED_MATERIAL_PREFIX}(\\w+):`, "g"),
+        ENCODED_MATERIAL_ICON_PATTERN,
         replace as (fullMatch: string, iconName: string) => Text,
       ],
     ])
@@ -1254,6 +1272,13 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const needsKatex = useMemo(() => containsMathSyntax(source), [source])
   const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
+  // Gating on the raw source is sound because nothing downstream introduces a
+  // prefix: neither the label escaping below nor `remend` can add one, and
+  // `encodeMaterialIconPrefix` only rewrites prefixes already present.
+  const needsMaterialIcon = useMemo(
+    () => source.includes(":material/"),
+    [source]
+  )
 
   // Lazy load plugins only when needed
   const katexPlugin = useLazyPlugin<KatexPlugin>({
@@ -1310,8 +1335,13 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     const plugins: PluggableList = [
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
-      createRemarkMaterialIcons(theme),
     ]
+
+    // Both icon plugins walk the whole tree, and every widget label goes through
+    // here, so skip them entirely when there is no prefix to act on.
+    if (needsMaterialIcon) {
+      plugins.push(createRemarkMaterialIcons(theme))
+    }
 
     if (needsEmoji && wrappedEmojiPlugin) {
       plugins.push(wrappedEmojiPlugin)
@@ -1324,10 +1354,12 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     // Must come after createRemarkMaterialIcons, so it only sees prefixes that did
     // not become icons. It touches node values rather than directives, so its order
     // relative to the cleanup above does not matter.
-    plugins.push(createRemarkRestoreMaterialIconPrefix())
+    if (needsMaterialIcon) {
+      plugins.push(createRemarkRestoreMaterialIconPrefix())
+    }
 
     return plugins
-  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
+  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin, needsMaterialIcon])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []

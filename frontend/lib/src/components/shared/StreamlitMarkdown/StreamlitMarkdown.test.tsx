@@ -1135,8 +1135,8 @@ describe("StreamlitMarkdown", () => {
           allowHTML={false}
         />
       )
-      expect(screen.getByText("star")).toBeInTheDocument()
-      expect(screen.getByText("home")).toBeInTheDocument()
+      expect(screen.getByText("star")).toBeVisible()
+      expect(screen.getByText("home")).toBeVisible()
     })
 
     it("renders adjacent icons with no separator", () => {
@@ -1149,8 +1149,8 @@ describe("StreamlitMarkdown", () => {
           allowHTML={false}
         />
       )
-      expect(screen.getByText("star")).toBeInTheDocument()
-      expect(screen.getByText("home")).toBeInTheDocument()
+      expect(screen.getByText("star")).toBeVisible()
+      expect(screen.getByText("home")).toBeVisible()
     })
 
     it.each([
@@ -1263,7 +1263,7 @@ describe("StreamlitMarkdown", () => {
       render(
         <StreamlitMarkdown source="see :material/ alone" allowHTML={false} />
       )
-      expect(screen.getByText("see :material/ alone")).toBeInTheDocument()
+      expect(screen.getByText("see :material/ alone")).toBeVisible()
     })
 
     it("renders an icon nested in a color directive", async () => {
@@ -1310,6 +1310,45 @@ describe("StreamlitMarkdown", () => {
         "src",
         "https://example.com/:material/search:.png"
       )
+    })
+
+    it("blocks a dangerous URL that the encoded prefix would otherwise hide", () => {
+      // Ordering is load-bearing. Encoding rewrites the `:material/` inside the URL,
+      // so `javascript\uFFFCmaterial/alert(1)` no longer starts with `javascript:`
+      // and would slip past the protocol blocklist if restore ran after sanitizing.
+      // Restore is a remark plugin and `urlTransform` runs after the mdast phase, so
+      // the blocklist sees the restored URL -- assert that, because nothing else
+      // pins the order.
+      render(
+        <StreamlitMarkdown
+          source="[x](javascript:material/alert(1))"
+          allowHTML={false}
+        />
+      )
+      expect(screen.getByText("x")).toHaveAttribute("href", "#")
+    })
+
+    it("keeps a custom-scheme autolink working", () => {
+      // The sentinel goes after the colon precisely so the colon keeps its role as a
+      // scheme separator; replacing it would demote this to plain text.
+      render(
+        <StreamlitMarkdown source="<foo:material/bar>" allowHTML={false} />
+      )
+      expect(screen.getByText("foo:material/bar")).toHaveAttribute(
+        "href",
+        "foo:material/bar"
+      )
+    })
+
+    it("honours a backslash-escaped colon without leaking the escape", () => {
+      // CommonMark only escapes ASCII punctuation, so the colon has to survive
+      // encoding for `\:` to be recognised -- otherwise the backslash renders.
+      // Braces, not a quoted attribute: JSX passes attribute text through verbatim,
+      // so `source="\\:"` would send two backslashes rather than an escape.
+      const { container } = render(
+        <StreamlitMarkdown source={"\\:material/search:"} allowHTML={false} />
+      )
+      expect(container.textContent).not.toContain("\\")
     })
 
     it.each([
