@@ -149,6 +149,8 @@ class MediaMixin:
             technologies. If this is ``None`` (default), no description is
             added, and the audio player is announced without any context.
 
+            An empty string is treated the same as ``None``.
+
             Describe the content of the audio rather than repeating text that
             is already visible on the page. Visible text is available to
             assistive technologies already, so duplicating it in ``alt`` makes
@@ -171,7 +173,12 @@ class MediaMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.audio("cat-purr.mp3", format="audio/mpeg", loop=True)
+        >>> st.audio(
+        ...     "cat-purr.mp3",
+        ...     format="audio/mpeg",
+        ...     loop=True,
+        ...     alt="A cat purring contentedly",
+        ... )
 
         .. output::
            https://doc-audio-purr.streamlit.app/
@@ -340,6 +347,8 @@ class MediaMixin:
             technologies. If this is ``None`` (default), no description is
             added, and the video player is announced without any context.
 
+            An empty string is treated the same as ``None``.
+
             Describe the content of the video rather than repeating text that
             is already visible on the page. Visible text is available to
             assistive technologies already, so duplicating it in ``alt`` makes
@@ -364,7 +373,7 @@ class MediaMixin:
         >>> video_file = open("myvideo.mp4", "rb")
         >>> video_bytes = video_file.read()
         >>>
-        >>> st.video(video_bytes)
+        >>> st.video(video_bytes, alt="A timelapse of a city skyline at sunset")
 
         .. output::
            https://doc-video.streamlit.app/
@@ -675,9 +684,10 @@ def marshall_video(
 
     if autoplay:
         proto.autoplay = autoplay
-        # `alt` is intentionally excluded from the element ID: for media, this
-        # id only drives the frontend's "already autoplayed" flag, so refining a
-        # description must not make the same media autoplay again.
+        # Deliberately exclude `alt` from the element ID: the frontend keys its
+        # "already autoplayed" flag off this ID, so changing `alt` must not make
+        # the same media autoplay again. Trade-off: two autoplaying media
+        # elements that differ only in `alt` still collide as duplicate IDs.
         proto.id = compute_and_register_element_id(
             "video",
             # video does not yet allow setting a user-defined key
@@ -885,9 +895,10 @@ def marshall_audio(
 
     if autoplay:
         proto.autoplay = autoplay
-        # `alt` is intentionally excluded from the element ID: for media, this
-        # id only drives the frontend's "already autoplayed" flag, so refining a
-        # description must not make the same media autoplay again.
+        # Deliberately exclude `alt` from the element ID: the frontend keys its
+        # "already autoplayed" flag off this ID, so changing `alt` must not make
+        # the same media autoplay again. Trade-off: two autoplaying media
+        # elements that differ only in `alt` still collide as duplicate IDs.
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,
