@@ -440,7 +440,8 @@ class MultiSelectMixin:
 
             - ``None`` (default): Streamlit chooses the wrapping behavior based
               on the layout. Inside a horizontal container or when directly
-              placed in a column, the chips stay in a single row and the chip
+              placed in a column (not nested in another container), the chips
+              stay in a single row and the chip
               area scrolls horizontally; in other layouts, the chips wrap onto
               additional rows.
             - ``True``: If the selected chips are too wide for the widget, they

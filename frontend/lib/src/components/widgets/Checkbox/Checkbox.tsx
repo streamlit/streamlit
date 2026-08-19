@@ -89,11 +89,10 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
-  // wrap=None: no-wrap in a horizontal container or as a direct column child,
-  // wrap otherwise.
-  // When truncated, a native title on the label reveals the full label on hover.
-  // Unlike a button (whose help tooltip covers the whole control), help here lives
-  // on a separate icon, so the title and help never compete and both stay enabled.
+  // When wrap resolves to no-wrap, a native title on the label reveals the full
+  // label on hover. Unlike a button (whose help tooltip covers the whole control),
+  // help here lives on a separate icon, so the title and help never compete and
+  // both stay enabled.
   const wrap = useResolvedWrap(element.wrap)
   const truncate = !wrap
   const { titleRef, labelTextRef } = useLabelTitleTooltip(

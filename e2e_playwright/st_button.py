@@ -178,8 +178,9 @@ with st.container(key="wrap_buttons"):
 with st.container(horizontal=True, width=200, key="wrap_auto_horizontal"):
     st.button(_WRAP_LABEL, key="wrap_auto_button")
 
-# Direct column children use the same compact auto default. Real nested layout
-# containers reset that direct placement, while an explicit wrap value wins.
+# Direct column children use the same compact auto default. Nesting the control
+# in another layout container (here a vertical st.container) resets that direct
+# placement, while an explicit wrap value always wins.
 with st.container(key="wrap_column_placements"):
     auto_column, explicit_column, nested_column = st.columns(3)
     auto_column.button(_WRAP_LABEL, width=150, key="wrap_auto_direct_column_button")

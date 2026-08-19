@@ -135,10 +135,11 @@ export const ContainerContentsWrapper = (
     <FlexContextProvider
       direction={Direction.VERTICAL}
       isRoot={props.isRoot}
-      // Derived from this node only — do not inherit from parentContext.
-      // Column nodes keep auto wrap compact for direct children. Nested
-      // layout providers (form, expander, container, tabs, …) also use this
-      // wrapper; because those nodes are not columns, the flag resets to false.
+      // True only when this node is itself an `st.columns` column, so auto wrap
+      // stays compact for the column's direct children. Deliberately not inherited
+      // from parentContext. Nested providers that use this wrapper (form, expander,
+      // tabs, …) are not columns, so the flag resets to false. Nested st.container
+      // resets the same way because FlexBoxContainer omits this prop.
       isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
       parentContext={parentContext}
     >

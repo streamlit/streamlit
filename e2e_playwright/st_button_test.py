@@ -17,7 +17,11 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -35,6 +39,10 @@ from e2e_playwright.shared.app_utils import (
 TOTAL_BUTTONS = 40
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
+
+# Minimum height difference (px) that distinguishes a wrapped two-line control
+# from a single-row one; absorbs sub-pixel rounding.
+WRAPPED_HEIGHT_MARGIN = 4
 
 
 def test_button_widget_rendering(
@@ -325,10 +333,7 @@ def test_wrap_false_keeps_single_row_and_sets_title(app: Page):
     auto_box = wrap_auto_vertical.locator("button").bounding_box()
     assert false_box is not None
     assert auto_box is not None
-    # The 4px margin absorbs sub-pixel rounding so the assertion stays robust:
-    # the wrapped (two-line) button must be clearly taller than the single-row
-    # one, not just larger by a rounding artifact.
-    assert auto_box["height"] > false_box["height"] + 4
+    assert auto_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
 
 
 def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
@@ -368,12 +373,23 @@ def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
         return box["height"]
 
     direct_height = button_height(auto_direct)
-    assert button_height(explicit_true) > direct_height + 4
-    assert button_height(auto_nested) > direct_height + 4
-    assert button_height(form_submit) > direct_height + 4
+    assert button_height(explicit_true) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(auto_nested) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(form_submit) > direct_height + WRAPPED_HEIGHT_MARGIN
 
     app.set_viewport_size({"width": 390, "height": 844})
     auto_direct.scroll_into_view_if_needed()
+
+    def columns_are_stacked() -> bool:
+        auto_box = auto_direct.locator("button").bounding_box()
+        explicit_box = explicit_true.locator("button").bounding_box()
+        return (
+            auto_box is not None
+            and explicit_box is not None
+            and explicit_box["y"] > auto_box["y"]
+        )
+
+    wait_until(app, columns_are_stacked)
     expect_label_truncated(auto_direct)
     expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
