@@ -173,10 +173,11 @@ describe("Video Element", () => {
   describe("alt (accessible description)", () => {
     it("sets aria-label on the native video when alt is provided", async () => {
       render(<Video {...getProps({ alt: "A short animated film" })} />)
-      expect(await screen.findByTestId("stVideo")).toHaveAttribute(
-        "aria-label",
-        "A short animated film"
-      )
+      // Query by accessible name rather than test id: that is the name a
+      // screen reader announces, and AGENTS.md ranks it above getByTestId.
+      expect(
+        await screen.findByLabelText("A short animated film")
+      ).toBeVisible()
     })
 
     it("omits aria-label entirely when alt is not provided", async () => {
@@ -187,6 +188,36 @@ describe("Video Element", () => {
         "aria-label"
       )
     })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", async (_label, alt) => {
+      render(<Video {...getProps({ alt })} />)
+      expect(await screen.findByTestId("stVideo")).not.toHaveAttribute(
+        "aria-label"
+      )
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])(
+      "falls back to the url for the iframe title when alt is %s",
+      async (_label, alt) => {
+        // A blank title would leave the iframe effectively untitled, which is
+        // an outright accessibility failure - the url must win instead.
+        render(
+          <Video
+            {...getProps({ type: VideoProto.Type.YOUTUBE_IFRAME, alt })}
+          />
+        )
+        expect(await screen.findByTestId("stVideo")).toHaveAttribute(
+          "title",
+          "https://www.w3schools.com/html/mov_bbb.mp4"
+        )
+      }
+    )
 
     it("uses alt as the youtube iframe title when provided", async () => {
       render(

@@ -313,6 +313,14 @@ describe("Audio Element", () => {
       // absent rather than present-but-empty.
       expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
     })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", (_label, alt) => {
+      render(<Audio {...getProps({ alt })} />)
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
   })
 
   describe("crossOrigin attribute", () => {

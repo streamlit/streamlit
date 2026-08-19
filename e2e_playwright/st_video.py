@@ -149,7 +149,6 @@ if video_to_show == webm_video_width_stretch:
     )
 
 if video_to_show == webm_video_with_alt:
-    # Test video with an accessible description
     st.video(
         str(WEBM_VIDEO_PATH),
         alt="A short animated film about a girl and a dragon",

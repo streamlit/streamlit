@@ -146,15 +146,15 @@ class MediaMixin:
             user has not interacted with the page by clicking somewhere.
         alt : str or None
             A description of the audio for screen readers and other assistive
-            technologies. If this is ``None`` (default), no description is
-            added, and the audio player is announced without any context.
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the player.
 
-            An empty string is treated the same as ``None``.
+            An empty or blank string is treated the same as ``None``.
 
-            Describe the content of the audio rather than repeating text that
-            is already visible on the page. Visible text is available to
-            assistive technologies already, so duplicating it in ``alt`` makes
-            the player more verbose without adding information.
+            Describe the content of the audio rather than repeating text that is
+            already visible on the page, which assistive technologies can read
+            already. This is a short description, not a substitute for a
+            transcript of the audio.
         width : "stretch" or int
             The width of the audio player element. This can be one of the
             following:
@@ -344,17 +344,16 @@ class MediaMixin:
             to enable autoplay without user interaction.
         alt : str or None
             A description of the video for screen readers and other assistive
-            technologies. If this is ``None`` (default), no description is
-            added, and the video player is announced without any context.
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for a native player. A YouTube iframe
+            continues to use its embed URL as its title.
 
-            An empty string is treated the same as ``None``.
+            An empty or blank string is treated the same as ``None``.
 
-            Describe the content of the video rather than repeating text that
-            is already visible on the page. Visible text is available to
-            assistive technologies already, so duplicating it in ``alt`` makes
-            the player more verbose without adding information. This is not a
-            replacement for ``subtitles``, which serve viewers who can see the
-            video but not hear it.
+            Describe the content of the video rather than repeating text that is
+            already visible on the page, which assistive technologies can read
+            already. This is not a replacement for ``subtitles``, which serve
+            viewers who can see the video but not hear it.
         width : "stretch" or int
             The width of the video player element. This can be one of the
             following:
@@ -593,7 +592,8 @@ def marshall_video(
         enable autoplay without user interaction. Defaults to False.
     alt: str or None
         A description of the video exposed to assistive technologies as the
-        accessible name. Defaults to None, which leaves the description unset.
+        accessible name. Defaults to None. Blank strings are treated as unset by
+        the frontend.
     width: int or "stretch"
         The width of the video player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -853,7 +853,8 @@ def marshall_audio(
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
     alt: str or None
         A description of the audio exposed to assistive technologies as the
-        accessible name. Defaults to None, which leaves the description unset.
+        accessible name. Defaults to None. Blank strings are treated as unset by
+        the frontend.
     width: int or "stretch"
         The width of the audio player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
