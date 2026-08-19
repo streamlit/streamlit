@@ -158,7 +158,7 @@ class VideoTest(DeltaGeneratorTestCase):
         """
         fake_video_data = b"\x11\x22\x33\x44\x55\x66"
 
-        def video_id(**kwargs) -> str:
+        def video_id(**kwargs: object) -> str:
             # Each call registers its ID, so clear the registry to simulate a
             # fresh script run instead of tripping the duplicate-ID guard.
             self.script_run_ctx.shared.widget_ids_this_run.clear()

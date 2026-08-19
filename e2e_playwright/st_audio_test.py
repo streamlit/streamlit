@@ -50,24 +50,19 @@ def check_audio_source_error_count(messages: list[str], expected_count: int):
 
 
 def test_audio_has_correct_properties(app: Page):
-    """Test that `st.audio` renders correct properties."""
+    """Test that `st.audio` renders correct properties, including `alt`."""
     audio_elements = app.get_by_test_id("stAudio")
     expect(audio_elements).to_have_count(10)
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
     expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*mp3"))
 
-
-def test_audio_alt_sets_accessible_name(app: Page):
-    """Test that `st.audio` exposes `alt` as the player's accessible name.
-
-    Asserts the *computed* accessible name rather than just the attribute, since
-    `<audio>` has no mapped ARIA role and the name computation for media
-    elements is less well specified than for role-bearing elements.
-    """
-    audio_element = get_element_by_key(app, "audio_alt").get_by_test_id("stAudio")
-    expect(audio_element).to_have_attribute("aria-label", "A cat purring contentedly")
-    expect(audio_element).to_have_accessible_name("A cat purring contentedly")
+    # `alt` becomes the player's accessible name. Assert the *computed* name and
+    # not just the attribute: `<audio>` has no mapped ARIA role, so the name
+    # computation is less well specified than for role-bearing elements.
+    labeled_audio = get_element_by_key(app, "audio_alt").get_by_test_id("stAudio")
+    expect(labeled_audio).to_have_attribute("aria-label", "A cat purring contentedly")
+    expect(labeled_audio).to_have_accessible_name("A cat purring contentedly")
 
     # Audio without `alt` must not get an accessible name at all - an empty
     # aria-label would be worse than none.
@@ -223,7 +218,7 @@ def test_audio_source_error_with_url(app: Page, app_base_url: str):
     goto_app(app, app_base_url)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
-    # Should be 3 instances of the error, one for each audio element with url
+    # Wait for one error per audio element loaded from an external URL
     wait_until(
         app, lambda: check_audio_source_error_count(messages, AUDIO_ELEMENTS_WITH_URL)
     )
@@ -249,7 +244,7 @@ def test_audio_source_error_with_path(app: Page, app_base_url: str):
     goto_app(app, app_base_url)
 
     # Wait until the expected errors are logged, indicating CLIENT_ERROR was sent
-    # Should be 3 instances of the error, one for each audio element with path
+    # Wait for one error per audio element loaded from a media-endpoint path
     wait_until(
         app, lambda: check_audio_source_error_count(messages, AUDIO_ELEMENTS_WITH_PATH)
     )

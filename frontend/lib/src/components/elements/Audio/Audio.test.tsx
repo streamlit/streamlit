@@ -81,6 +81,11 @@ describe("Audio Element", () => {
     expect(audioElement).toHaveAttribute("src", "https://mock.media.url")
   })
 
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
+  })
+
   describe("alt (accessible description)", () => {
     it("sets aria-label when alt is provided", () => {
       render(<Audio {...getProps({ alt: "A cat purring" })} />)
@@ -96,11 +101,6 @@ describe("Audio Element", () => {
       // absent rather than present-but-empty.
       expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
     })
-  })
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
   })
 
   it("does not autoplay if preventAutoplay is set", () => {
