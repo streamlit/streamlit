@@ -56,6 +56,7 @@ describe("useHorizontalScrollOverflow", () => {
 
   afterEach(() => {
     element.remove()
+    vi.restoreAllMocks()
   })
 
   it("reports no overflow when disabled", () => {
@@ -137,6 +138,42 @@ describe("useHorizontalScrollOverflow", () => {
     act(() => {
       element.dispatchEvent(new Event("scroll"))
     })
+
+    expect(result.current.canScrollLeft).toBe(true)
+    expect(result.current.canScrollRight).toBe(true)
+  })
+
+  it("measures overflow on the initial rAF and when layoutKey changes", () => {
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation(cb => {
+      cb(0)
+      return 1
+    })
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {})
+
+    mockScrollMetrics(element, {
+      scrollLeft: 0,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    const { result, rerender } = renderHook(
+      ({ layoutKey }) =>
+        useHorizontalScrollOverflow({
+          elementRef: refOf(element),
+          enabled: true,
+          layoutKey,
+        }),
+      { initialProps: { layoutKey: "a" } }
+    )
+
+    expect(result.current.canScrollLeft).toBe(false)
+    expect(result.current.canScrollRight).toBe(true)
+
+    mockScrollMetrics(element, {
+      scrollLeft: 50,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    rerender({ layoutKey: "b" })
 
     expect(result.current.canScrollLeft).toBe(true)
     expect(result.current.canScrollRight).toBe(true)

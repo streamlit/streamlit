@@ -39,6 +39,9 @@ export function getHorizontalOverflowFadeStyles(fadeSize: string): CSSObject {
   const bothMask = `linear-gradient(to right, ${startFade}, ${endFade})`
   return {
     scrollbarWidth: "none",
+    // Keep a horizontal swipe at the end of the row from chaining into the
+    // page (or triggering browser back/forward on some trackpads).
+    overscrollBehaviorX: "contain",
     // Keep programmatic and keyboard-focus scrolling outside the mask so the
     // :focus-visible ring is not hidden in the fade.
     scrollPaddingInline: fadeSize,

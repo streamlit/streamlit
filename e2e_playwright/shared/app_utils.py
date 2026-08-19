@@ -1560,7 +1560,16 @@ def get_button_group_options(app: Page, key: str) -> Locator:
 
 
 def expect_button_group_overflows(options: Locator) -> None:
-    """Wait until the option list has local horizontal overflow and an edge fade."""
+    """Wait until the option list has local horizontal overflow and an edge fade.
+
+    The fade attributes (``data-can-scroll-start`` / ``data-can-scroll-end``)
+    prove the group itself is the scrollport, not the page.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
     wait_until(
         options.page,
         lambda: (
@@ -1579,7 +1588,16 @@ def expect_button_group_overflows(options: Locator) -> None:
 
 
 def expect_selected_option_in_view(options: Locator) -> None:
-    """Wait until the selected option is fully visible in the option list."""
+    """Wait until the selected option is fully visible in the option list.
+
+    Honors ``scroll-padding-inline`` so an option sitting in the overflow
+    fade is not treated as in view.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
     expect(options.locator("button[data-selected]").first).to_be_visible()
     wait_until(
         options.page,
@@ -1590,8 +1608,14 @@ def expect_selected_option_in_view(options: Locator) -> None:
               if (!selected) return false;
               const group = el.getBoundingClientRect();
               const sel = selected.getBoundingClientRect();
+              const cs = getComputedStyle(el);
+              const padStart = parseFloat(cs.scrollPaddingInlineStart) || 0;
+              const padEnd = parseFloat(cs.scrollPaddingInlineEnd) || 0;
               // ±1px absorbs sub-pixel rounding across browsers.
-              return sel.left >= group.left - 1 && sel.right <= group.right + 1;
+              return (
+                sel.left >= group.left + padStart - 1 &&
+                sel.right <= group.right - padEnd + 1
+              );
             }"""
             )
             is True

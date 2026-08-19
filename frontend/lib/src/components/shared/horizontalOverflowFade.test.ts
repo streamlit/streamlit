@@ -17,9 +17,33 @@
 import { getHorizontalOverflowFadeStyles } from "./horizontalOverflowFade"
 
 describe("getHorizontalOverflowFadeStyles", () => {
-  it("adds scroll-padding so focus lands outside the fade", () => {
-    expect(getHorizontalOverflowFadeStyles("1rem").scrollPaddingInline).toBe(
-      "1rem"
-    )
+  const styles = getHorizontalOverflowFadeStyles("1rem")
+
+  it("hides the scrollbar, contains overscroll, and pads focus into the fade", () => {
+    expect(styles.scrollbarWidth).toBe("none")
+    expect(styles.overscrollBehaviorX).toBe("contain")
+    expect(styles.scrollPaddingInline).toBe("1rem")
+  })
+
+  it("fades both overflowing edges with a to-right mask", () => {
+    expect(styles["&[data-can-scroll-start][data-can-scroll-end]"]).toEqual({
+      maskImage: expect.stringMatching(/to right.*1rem/),
+      WebkitMaskImage: expect.stringMatching(/to right.*1rem/),
+    })
+  })
+
+  it("fades only the overflowing start or end edge", () => {
+    expect(
+      styles["&[data-can-scroll-start]:not([data-can-scroll-end])"]
+    ).toEqual({
+      maskImage: expect.stringContaining("to right"),
+      WebkitMaskImage: expect.stringContaining("to right"),
+    })
+    expect(
+      styles["&:not([data-can-scroll-start])[data-can-scroll-end]"]
+    ).toEqual({
+      maskImage: expect.stringContaining("to right"),
+      WebkitMaskImage: expect.stringContaining("to right"),
+    })
   })
 })

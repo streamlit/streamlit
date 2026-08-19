@@ -641,10 +641,11 @@ export const StyledToggleButtonGroup = styled(ToggleButtonGroup, {
 }))
 
 /**
- * Option flex sizing. When wrap is false, keep each option at its natural
- * width (`min-width: fit-content` wins over the base `max-width:
- * contentMaxWidth`) so long labels stay fully readable and the group scrolls
- * instead of ellipsizing. `flex-shrink: 0` already prevents compression.
+ * Returns the flex sizing for a single option. While wrapping, stretch-width
+ * options share the row (`1 1 fit-content`). Without wrapping they keep their
+ * natural width (`min-width: fit-content` beats the base `max-width:
+ * contentMaxWidth`, and `flex-shrink: 0` prevents compression) so long labels
+ * stay readable and the group scrolls instead of ellipsizing.
  */
 function getToggleOptionFlex(
   wrap: boolean,

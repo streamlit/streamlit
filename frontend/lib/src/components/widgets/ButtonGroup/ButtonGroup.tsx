@@ -198,9 +198,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const containerWidth = shouldWidthStretch(widthConfig)
   const wrap = useResolvedWrap(element.wrap)
 
-  // React Aria's ToggleButtonGroup does not forward aria-required to the DOM
-  // element. Imperatively set it on the group root so screen readers can
-  // announce that the field is mandatory.
+  /** The option group scrollport: overflow tracking, scroll-into-view, and aria-required. */
   const groupRef = useRef<HTMLDivElement>(null)
 
   const overflowLayoutKey = useMemo(
@@ -212,6 +210,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     enabled: !wrap,
     layoutKey: overflowLayoutKey,
   })
+  // React Aria's ToggleButtonGroup does not forward aria-required to the DOM
+  // element. Imperatively set it on the group root so screen readers can
+  // announce that the field is mandatory.
   useEffect(() => {
     if (!groupRef.current) return
     if (required) {
@@ -221,16 +222,16 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     }
   }, [required])
 
-  // Scroll a selected option into view when wrap is false (defaults aren't
-  // focused, so focus-based scrolling doesn't cover them). Prefer the focused
-  // selected option so multi-select clicks don't jump back to the leftmost
-  // selection. If focus is still on an option that was just deselected, skip
-  // scrolling so remaining selections don't yank the viewport left.
-  // Scroll the group itself rather than scrollIntoView, which would also
-  // pan ancestor containers like stMain.
-  // Depend on selection and the value-stable overflowLayoutKey — not the
-  // `options` array reference — so a reorder still brings the selection
-  // into view, but unrelated script reruns don't reset scroll.
+  // Keep a selected option visible when wrap is false.
+  // Defaults are never focused, so native focus scrolling is not enough.
+  // Assign scrollLeft instead of scrollIntoView so ancestors like stMain do not pan.
+  //
+  // - Prefer the focused selected option so multi-select clicks do not jump
+  //   to the leftmost selection.
+  // - If focus is on a just-deselected option, skip scrolling so remaining
+  //   selections do not yank the viewport.
+  // - Depend on overflowLayoutKey (not the options array reference) so a
+  //   reorder still scrolls, but unrelated reruns do not.
   useEffect(() => {
     if (wrap || !groupRef.current || value.length === 0) return
     const group = groupRef.current
