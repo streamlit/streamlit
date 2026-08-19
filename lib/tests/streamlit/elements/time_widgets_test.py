@@ -85,6 +85,31 @@ def test_date_input_values_rejects_min_after_max() -> None:
         )
 
 
+def test_parse_max_date_clamps_to_date_max() -> None:
+    """Test that _parse_max_date clamps to date.max when value is near the maximum year."""
+    result = _parse_max_date(None, [date(9999, 12, 31)])
+    assert result == date.max
+
+
+def test_parse_min_date_clamps_to_date_min() -> None:
+    """Test that _parse_min_date clamps to date.min when value is near the minimum year."""
+    result = _parse_min_date(None, [date(1, 1, 1)])
+    assert result == date.min
+
+
+def test_parse_max_date_does_not_crash_with_datetime_max() -> None:
+    """Test that using datetime.max as a date_input value does not raise (GH#7427)."""
+    max_as_date = datetime.max.date()
+    result = _parse_max_date(None, [date.today(), max_as_date])
+    assert result == date.max
+
+
+def test_parse_min_date_does_not_crash_with_date_min() -> None:
+    """Test that using date.min as a date_input value does not raise."""
+    result = _parse_min_date(None, [date.min, date.today()])
+    assert result == date.min
+
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [

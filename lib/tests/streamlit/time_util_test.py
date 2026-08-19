@@ -56,10 +56,18 @@ TIME_STRING_TO_SECONDS_PARAMS = [
         (date(1920, 4, 10), 100, date(2020, 4, 10)),
         # End of year date
         (date(2019, 12, 31), 1, date(2020, 12, 31)),
+        # Clamp to date.max when target year exceeds 9999:
+        (date(9999, 12, 31), 10, date.max),
+        (date(9999, 6, 15), 1, date.max),
+        (date(9995, 6, 15), 10, date.max),
+        # Clamp to date.min when target year falls below 1:
+        (date(1, 1, 1), -1, date.min),
+        (date(1, 3, 15), -5, date.min),
+        (date(5, 6, 15), -10, date.min),
     ]
 )
 def test_adjust_years(input_date: date, years: int, expected_date: date):
-    """Test that `adjust_years` correctly` adjusts the year of a date."""
+    """Test that `adjust_years` correctly adjusts the year of a date."""
     assert adjust_years(input_date, years) == expected_date
 
 
