@@ -116,7 +116,7 @@ Ship `st.grid` as a **responsive auto-placement container**.
 st.grid(
     columns: Literal["auto"] | int = "auto",
     *,
-    min_column_width: int = 200,
+    min_column_width: Literal["auto"] | int = "auto",
     wrap: bool = True,
     gap: Gap | None | tuple[Gap | None, Gap | None] = "small",
     vertical_alignment: Literal["top", "center", "bottom"] = "top",
@@ -152,7 +152,7 @@ principle keeps illustrating the abbreviation rather than the command.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `columns` | `"auto"` or `int` | `"auto"` | Maximum number of equal-width columns. `"auto"` creates as many columns as fit the available container width. An integer caps the grid at that many columns and, when `wrap=True`, wraps to fewer columns when cells would become narrower than `min_column_width`. Must be `>= 1`. |
-| `min_column_width` | `int` | `200` | Minimum preferred cell width in pixels. When `wrap=True`, the grid wraps to fewer columns before cells would become narrower than this. When `wrap=False`, cells shrink until this width, then the grid scrolls horizontally instead of wrapping (see [No-wrap behavior](#no-wrap-behavior)). Must be `>= 1`. Note: when `border=True`, cell padding reduces effective content width by ~32px, so prefer 250px+ for bordered cells. |
+| `min_column_width` | `"auto"` or `int` | `"auto"` | Minimum preferred cell width. `"auto"` (the default) is resolved on the frontend in rem and grows when `border=True` so cell padding does not eat the content floor (see [Auto minimum width](#auto-minimum-width)). A positive integer is an explicit outer cell width in pixels and is *not* padded on top of — same as `width=200`. When `wrap=True`, the grid wraps to fewer columns before cells would become narrower than this. When `wrap=False`, cells shrink until this width, then the grid scrolls horizontally (see [No-wrap behavior](#no-wrap-behavior)). |
 | `wrap` | `bool` | `True` | Whether the grid may wrap to fewer columns when the container is too narrow. Same name and layout-container default as [`st.container` / `st.columns`](../2026-07-23-horizontal-wrap-control/product-spec.md): `True` allows wrapping (today's behavior); `False` keeps the declared column count and scrolls locally. Invalid with `columns="auto"`. Not an adaptive `None` default — grid is a layout container, not a control. |
 | `gap` | gap size, `None`, or `(row_gap, column_gap)` | `"small"` | Space between cells. Accepts exactly what `st.columns` / `st.container` accept: the named scale (`"xxsmall"`, `"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, `"xxlarge"`), a non-negative pixel integer such as `gap=20`, or `None` for no gap. A single value sets both row and column gaps; the optional `(row_gap, column_gap)` tuple is an additive grid-specific extension for asymmetric spacing (see note below). |
 | `vertical_alignment` | `"top"`, `"center"`, or `"bottom"` | `"top"` | Vertical alignment of a direct child inside its grid cell when the cell is taller than the child. Uses CSS "safe" alignment so oversized content stays reachable instead of overflowing past the cell's start edge (see [Risks](#risks) for the browser-support fallback). |
@@ -167,7 +167,7 @@ than being silently coerced (Principle 23):
 | Invalid input | Error |
 | --- | --- |
 | `columns` is an integer `< 1` | `StreamlitValueBelowMinError` |
-| `min_column_width` is an integer `< 1` | `StreamlitValueBelowMinError` |
+| `min_column_width` is an integer `< 1`, or a string other than `"auto"` | `StreamlitValueBelowMinError` / `StreamlitValueError` |
 | `columns="auto"` with `wrap=False` | `StreamlitAPIException` explaining that auto mode is defined by wrapping, and suggesting either `wrap=True` or an integer `columns` |
 | `row_height` is an integer `< 1`, or a string other than `"content"` / `"equal"` | `StreamlitValueBelowMinError` / `StreamlitValueError` |
 | `gap` outside the shared scale, or a tuple with the wrong length | The same errors `st.columns` already raises for `gap` |
@@ -228,8 +228,8 @@ The two parameters are not alternatives; they answer different questions:
   exactly the `st.columns` limitation this feature exists to fix.
 
 **Recommendation:** Ship both. `wrap` is the on/off shared with other layout containers;
-`min_column_width` is the grid-specific threshold. `min_column_width=None` is not part of the
-API — a positive pixel width is always required.
+`min_column_width` is the grid-specific threshold. Its default is `"auto"`, not a Python pixel
+literal and not `None` (`None` reads as "no minimum," which is `wrap=False`).
 
 Like `st.container` and `st.columns`, `st.grid` does **not** use the adaptive `wrap: bool | None
 = None` default that the wrap spec gives to controls. A grid is a layout container, so
@@ -238,6 +238,31 @@ row of column tracks is requested only with an explicit `wrap=False`. Nested wid
 grid cell also do not inherit a no-wrap auto default: a grid cell is a vertical region, like a
 column, not a horizontal toolbar. A button or pill inside a cell still wraps unless it is
 placed in `st.container(horizontal=True)` or passed `wrap=False` itself.
+
+#### Auto Minimum Width
+
+A Python default of `200` would be a magic pixel number: it would not scale with the root font
+size, and `border=True` would silently steal ~2rem of content width (the same
+`theme.spacing.lg` padding bordered `st.container` / `st.columns` cells use). Layout sizes
+belong on the frontend in rem.
+
+`"auto"` is preferred over `None`. `None` reads as "no minimum," which is `wrap=False`.
+`"auto"` matches `columns="auto"` and `width="auto"`: Streamlit picks. The two `"auto"` values
+on this command compose rather than collide — `st.grid()` means "as many columns as fit at the
+theme's comfortable cell width."
+
+**Resolution (frontend):**
+
+- Unbordered: a theme token (target ~`12.5rem`, the prototype's 200px at a 16px root).
+- Bordered: that token plus `2 * theme.spacing.lg`, so the *content* floor stays the same
+  after the per-side `calc(spacing.lg - borderWidth)` padding and the border itself. Do not
+  use a hand-tuned "add 50px" fudge in Python.
+- An explicit pixel int is the outer cell/track width, matching `width=200`, and does **not**
+  get extra border padding added on top. Pass an int only to opt out of the theme default
+  (compact chip galleries, extra-wide charts).
+
+Most apps should omit `min_column_width` entirely. `st.grid(4, border=True)` and
+`st.grid(4)` then wrap at equivalent *content* widths.
 
 #### Asymmetric Gaps: Tuple Versus Explicit Parameters
 
@@ -336,22 +361,24 @@ fixes: keep the heading outside the grid, or give it its own full-width cell via
 
 #### Responsive Placement
 
-`st.grid(4, min_column_width=200)` means "use up to four columns, but wrap earlier if four
-columns would make cells narrower than 200px." For example:
+`st.grid(4)` means "use up to four columns, but wrap earlier if four columns would make cells
+narrower than the auto minimum." With an explicit `min_column_width=200` at default font size
+that looks like:
 
 - 1100px available width: 4 columns
 - 700px available width: 3 columns
 - 440px available width: 2 columns
 - 320px available width: 1 column
 
-The exact thresholds account for the configured gap. The calculation happens on the frontend
-from the actual container width, so Python does not need to know the browser size.
+The exact thresholds account for the configured gap and, when `min_column_width="auto"`, for
+root font size and `border`. The calculation happens on the frontend from the actual container
+width, so Python does not need to know the browser size.
 
-`st.grid("auto", min_column_width=200)` creates as many columns as fit, with no explicit max.
-This is useful for galleries. Most dashboard apps should pass an integer max column count.
+`st.grid("auto")` creates as many columns as fit, with no explicit max. This is useful for
+galleries. Most dashboard apps should pass an integer max column count.
 
-When `wrap=True` and the container itself is narrower than `min_column_width` (for example a
-180px sidebar with the default `min_column_width=200`), the grid renders a single column at the
+When `wrap=True` and the container itself is narrower than the resolved minimum (for example a
+180px sidebar against a ~12.5rem auto floor), the grid renders a single column at the
 container's width. The minimum is a wrapping threshold, not a floor that forces horizontal
 overflow.
 
@@ -388,9 +415,9 @@ rendering unreadable ~70px cells or collapsing to one column. `st.grid("auto", w
 raises, because auto mode has no declared column count to keep.
 
 `min_column_width` still applies when `wrap=False`: it is the shrink-then-scroll floor instead
-of a wrap threshold. `st.grid(4, wrap=False)` therefore uses the default 200px floor;
-`st.grid(4, wrap=False, min_column_width=280)` keeps four columns and starts scrolling once
-cells would drop below 280px.
+of a wrap threshold. `st.grid(4, wrap=False)` therefore uses the auto rem floor (plus cell
+padding when bordered); `st.grid(4, wrap=False, min_column_width=280)` keeps four columns and
+starts scrolling once cells would drop below 280px.
 
 #### Height And Alignment
 
@@ -476,7 +503,7 @@ metrics = [
     ("Retention", "96%", "-0.4%", "Monthly"),
 ]
 
-grid = st.grid(4, min_column_width=250, border=True, row_height="equal")
+grid = st.grid(4, border=True, row_height="equal")
 
 for label, value, delta, caption in metrics:
     with grid.container():
@@ -491,7 +518,7 @@ import streamlit as st
 
 items = ["Apple", "Lemon", "Grape", "Kiwi", "Peach", "Cherry", "Coconut", "Pineapple"]
 
-with st.grid("auto", min_column_width=72, gap="xsmall"):
+with st.grid("auto", min_column_width=72, gap="xsmall"):  # compact chips; override auto
     for item in items:
         st.button(item, key=f"item-{item}", width="stretch")
 ```
@@ -501,7 +528,7 @@ with st.grid("auto", min_column_width=72, gap="xsmall"):
 ```python
 import streamlit as st
 
-grid = st.grid(3, min_column_width=320, gap=("medium", "small"), border=True)
+grid = st.grid(3, min_column_width=320, gap=("medium", "small"), border=True)  # charts need room
 
 with grid.container():
     st.subheader("Revenue")
@@ -540,7 +567,7 @@ import streamlit as st
 
 # Three charts stay side by side on every viewport. On a phone the grid
 # scrolls horizontally instead of stacking into unreadably tall single-column charts.
-grid = st.grid(3, wrap=False, min_column_width=280, border=True)
+grid = st.grid(3, wrap=False, border=True)
 
 with grid.container():
     st.subheader("Revenue")
@@ -571,7 +598,7 @@ The options below are grouped by how they relate to the proposed API:
 ### Core Proposed API: Responsive Auto-Placement Container
 
 ```python
-grid = st.grid(4, min_column_width=200, border=True)
+grid = st.grid(4, border=True)
 
 for item in items:
     with grid.container():
@@ -657,7 +684,7 @@ or if consistency with keyed containers becomes important.
 ### Included Grid-Object Helper: Cursor-Based Span Cells
 
 ```python
-grid = st.grid(4, min_column_width=260, border=True)
+grid = st.grid(4, border=True)
 
 with grid.span(columns=2):
     st.line_chart(df)
@@ -902,7 +929,7 @@ grid has shipped and we have usage data.
 ### Alternative API: Separate `st.auto_grid`
 
 ```python
-grid = st.auto_grid(columns=4, min_column_width=250, row_height="equal")
+grid = st.auto_grid(columns=4, row_height="equal")
 
 for product in products:
     with grid.container():
@@ -934,7 +961,7 @@ split, not about naming.
 Ship the core proposed API with spanning support:
 
 ```python
-st.grid(columns="auto", *, min_column_width=200, wrap=True, gap="small",
+st.grid(columns="auto", *, min_column_width="auto", wrap=True, gap="small",
         vertical_alignment="top", border=False, row_height="content",
         width="stretch", dense=True) -> GridContainer
 ```
@@ -949,14 +976,15 @@ by CSS Grid from the start.
 
 **Guidance validated by the prototype:**
 
-- `min_column_width=200` works well for most unbordered content.
-- Bordered cells need roughly 50px more, because cell padding costs ~32px of content width.
-  Prefer 250px+ whenever `border=True`, and document this next to the parameter rather than
-  trying to auto-adjust it.
-- The grid cannot detect that its content is too cramped, so `min_column_width` is the user's
-  only lever for content that needs room (charts with axis labels, metrics with long deltas).
-  `wrap=False` is the lever for content that must keep a column count instead (side-by-side
-  charts that should scroll on a phone rather than stack).
+- Most apps should omit `min_column_width` and use `"auto"`. The frontend default of ~`12.5rem`
+  matches the prototype's 200px at a 16px root, and bordered cells add `2 * theme.spacing.lg`
+  so padding does not shrink the content floor. Do not document a parallel "use 250 when
+  bordered" rule.
+- Pass an explicit pixel int when the content needs a different floor: compact chip galleries
+  (`min_column_width=72`) or charts with axis labels (`min_column_width=320`). Explicit ints
+  are the outer cell width and do not get border padding added on top.
+- `wrap=False` is the lever for content that must keep a column count (side-by-side charts
+  that should scroll on a phone rather than stack).
 
 ## Risks
 
