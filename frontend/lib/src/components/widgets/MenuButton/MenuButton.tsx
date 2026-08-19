@@ -29,6 +29,7 @@ import { type Key } from "react-aria-components"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -198,7 +199,7 @@ function MenuButton(props: Props): ReactElement {
         </BaseButton>
       </BaseButtonTooltip>
       {isOpen && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledMenuPopover
             ref={setFloatingRef}
             data-testid="stMenuButtonBody"

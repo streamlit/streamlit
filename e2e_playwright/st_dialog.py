@@ -393,3 +393,29 @@ def dialog_with_color_picker() -> None:
 
 if st.button("Open Dialog with Color Picker"):
     dialog_with_color_picker()
+
+
+# Regression coverage for inert portal bug: a menu button dropdown opened inside
+# an st.dialog must stay interactive (the portal body must not be marked inert).
+@st.dialog("Dialog with menu button")
+def dialog_with_menu_button() -> None:
+    selected = st.menu_button(
+        "Dialog menu",
+        options=["Alpha", "Beta", "Gamma"],
+    )
+    st.write(f"menu selected: {selected}")
+
+
+if st.button("Open Dialog with Menu Button"):
+    dialog_with_menu_button()
+
+
+# Regression coverage for inert portal bug: a JSON path tooltip opened inside
+# an st.dialog must stay interactive (the portal body must not be marked inert).
+@st.dialog("Dialog with JSON path tooltip")
+def dialog_with_json_path_tooltip() -> None:
+    st.json({"level1": {"level2": "value"}}, expanded=True)
+
+
+if st.button("Open Dialog with JSON Path Tooltip"):
+    dialog_with_json_path_tooltip()
