@@ -1137,6 +1137,25 @@ describe("StreamlitMarkdown", () => {
     expect(container).toHaveStyle("overflow: hidden")
     expect(container).toHaveStyle("white-space: nowrap")
     expect(container).toHaveStyle("text-overflow: ellipsis")
+    expect(container).toHaveStyle("line-height: normal")
+    expect(screen.getByText(source)).toHaveStyle("line-height: normal")
+  })
+
+  it("inherits line height when truncating if requested", () => {
+    const source = "This text should preserve its parent's line height"
+    render(
+      <StreamlitMarkdown
+        source={source}
+        allowHTML={false}
+        truncate
+        inheritLineHeight
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle("line-height: inherit")
+    expect(screen.getByText(source)).toHaveStyle("line-height: inherit")
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveStyle("text-overflow: ellipsis")
   })
 
   it("does not apply truncate styles when truncate is false", () => {

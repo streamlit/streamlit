@@ -38,6 +38,7 @@ interface StyledStreamlitMarkdownProps {
   isLabel?: boolean
   isInHorizontalLayout?: boolean
   inheritFont?: boolean
+  inheritLineHeight?: boolean
   boldLabel?: boolean
   isToast?: boolean
   truncate?: boolean
@@ -201,6 +202,7 @@ export const StyledStreamlitMarkdown =
       isLabel,
       isInHorizontalLayout = false,
       inheritFont,
+      inheritLineHeight,
       boldLabel,
       isToast,
       truncate,
@@ -212,6 +214,7 @@ export const StyledStreamlitMarkdown =
       // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
       // and font-weight inherit from their parent container instead.
       const useSmallerFontSize = isLabel || isToast || isCaption
+      const shouldInheritLineHeight = inheritFont || inheritLineHeight
 
       return {
         fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
@@ -240,14 +243,14 @@ export const StyledStreamlitMarkdown =
 
         // Truncate text with ellipsis when it overflows the container.
         // This is useful for single-line text that should not wrap.
-        // When inheritFont is false, lineHeight: "normal" resets inherited line heights
-        // (e.g., when parent has a large line-height). When inheritFont is true,
-        // we preserve the parent's line height for consistent styling.
+        // By default, lineHeight: "normal" resets inherited line heights (e.g.,
+        // when a parent has a large line-height). Callers can preserve the
+        // parent's line height independently of the other font properties.
         ...(truncate && {
           overflow: "hidden",
           whiteSpace: "nowrap",
           textOverflow: "ellipsis",
-          lineHeight: inheritFont ? "inherit" : "normal",
+          lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
           // Allow the label to shrink below its content size within a flex
           // parent so the ellipsis can appear.
           minWidth: 0,
@@ -256,7 +259,7 @@ export const StyledStreamlitMarkdown =
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
-            lineHeight: inheritFont ? "inherit" : "normal",
+            lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
           },
         }),
 

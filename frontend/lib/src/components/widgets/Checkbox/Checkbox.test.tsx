@@ -478,9 +478,14 @@ describe("Checkbox wrap", () => {
         <Checkbox {...getProps({ type, wrap: false, label: LONG_LABEL })} />
       )
       expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
-      expect(screen.getByTestId("stMarkdownContainer")).toHaveStyle({
+      const container = screen.getByTestId("stMarkdownContainer")
+      expect(container).toHaveStyle({
         "text-overflow": "ellipsis",
         "white-space": "nowrap",
+        "line-height": "inherit",
+      })
+      expect(screen.getByText(LONG_LABEL)).toHaveStyle({
+        "line-height": "inherit",
       })
     }
   )

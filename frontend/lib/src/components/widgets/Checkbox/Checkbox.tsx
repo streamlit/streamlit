@@ -116,6 +116,7 @@ function Checkbox({
             allowHTML={false}
             isLabel
             truncate={truncate}
+            inheritLineHeight
           />
         </span>
       </StyledLabelText>
