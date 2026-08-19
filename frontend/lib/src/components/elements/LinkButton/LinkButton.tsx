@@ -26,6 +26,7 @@ import {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -43,6 +44,12 @@ function LinkButton(props: Readonly<Props>): ReactElement {
   const shortcut = element.shortcut || undefined
   const isLinkBlocked = isDangerousLinkUri(element.url)
   const href = isLinkBlocked ? BLOCKED_LINK_URI : element.url
+
+  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
+  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
+  // skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -71,7 +78,12 @@ function LinkButton(props: Readonly<Props>): ReactElement {
       }
 
       if (!element.ignoreRerun && element.id) {
-        void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+        void widgetMgr.setTriggerValue(element.id, {
+          // Link buttons cannot be placed inside a form.
+          formId: undefined,
+          fragmentId,
+          fromUser: true,
+        })
       }
     },
     [element, fragmentId, isLinkBlocked, widgetMgr]
@@ -108,6 +120,8 @@ function LinkButton(props: Readonly<Props>): ReactElement {
             iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
+            wrap={wrap}
+            addTitleTooltip={addTitleTooltip}
           />
         </BaseLinkButton>
       </BaseButtonTooltip>

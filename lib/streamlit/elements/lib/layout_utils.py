@@ -361,7 +361,9 @@ def validate_text_alignment(text_alignment: TextAlignment) -> None:
     """
     valid_alignments = ["left", "center", "right", "justify"]
     if text_alignment not in valid_alignments:
-        raise StreamlitInvalidTextAlignmentError(text_alignment)
+        raise StreamlitInvalidTextAlignmentError(
+            "text_alignment", ["'left'", "'center'", "'right'", "'justify'"]
+        )
 
 
 map_to_flex_terminology = {

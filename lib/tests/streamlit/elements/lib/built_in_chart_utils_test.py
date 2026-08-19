@@ -29,7 +29,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     StreamlitColumnNotFoundError,
     StreamlitInvalidColorError,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 
 
 @pytest.mark.parametrize(
@@ -38,14 +38,14 @@ from streamlit.errors import StreamlitAPIException
 )
 def test_maybe_raise_stack_warning_accepts_valid(stack: Any) -> None:
     """Supported stack values do not raise."""
-    chart_utils.maybe_raise_stack_warning(stack, "bar_chart", "https://docs")
+    chart_utils.maybe_raise_stack_warning(stack)
 
 
 @pytest.mark.parametrize("stack", ["invalid_value", 1.5])
 def test_maybe_raise_stack_warning_rejects_invalid(stack: Any) -> None:
-    """Unsupported stack values raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="Invalid value for stack"):
-        chart_utils.maybe_raise_stack_warning(stack, "bar_chart", "https://docs")
+    """Unsupported stack values raise StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `stack` value"):
+        chart_utils.maybe_raise_stack_warning(stack)
 
 
 @pytest.mark.parametrize(

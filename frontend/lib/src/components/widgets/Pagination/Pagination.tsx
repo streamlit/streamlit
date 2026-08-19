@@ -228,12 +228,11 @@ function updateWidgetMgrState(
   valueWithSource: ValueWithSource<number>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setIntValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setIntValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 function Pagination(props: Readonly<Props>): ReactElement {
@@ -335,7 +334,7 @@ function Pagination(props: Readonly<Props>): ReactElement {
   const handlePageClick = useCallback(
     (page: number): void => {
       if (page >= 1 && page <= numPages && page !== currentPage) {
-        setValueWithSource({ value: page, fromUi: true })
+        setValueWithSource({ value: page, fromUser: true })
       }
     },
     [currentPage, numPages, setValueWithSource]
@@ -343,13 +342,13 @@ function Pagination(props: Readonly<Props>): ReactElement {
 
   const handlePrevClick = useCallback((): void => {
     if (currentPage > 1) {
-      setValueWithSource({ value: currentPage - 1, fromUi: true })
+      setValueWithSource({ value: currentPage - 1, fromUser: true })
     }
   }, [currentPage, setValueWithSource])
 
   const handleNextClick = useCallback((): void => {
     if (currentPage < numPages) {
-      setValueWithSource({ value: currentPage + 1, fromUi: true })
+      setValueWithSource({ value: currentPage + 1, fromUser: true })
     }
   }, [currentPage, numPages, setValueWithSource])
 

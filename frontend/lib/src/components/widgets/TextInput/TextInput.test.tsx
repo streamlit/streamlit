@@ -126,6 +126,156 @@ describe("TextInput widget", () => {
     expect(showButton).toBeInTheDocument()
   })
 
+  it.each([
+    [TextInputProto.Type.DEFAULT, "text"],
+    [TextInputProto.Type.PASSWORD, "password"],
+    [TextInputProto.Type.EMAIL, "email"],
+    [TextInputProto.Type.URL, "url"],
+    [TextInputProto.Type.PHONE, "tel"],
+    [TextInputProto.Type.SEARCH, "search"],
+  ])(
+    "maps proto type %s to the correct native input type",
+    (protoType, expectedDomType) => {
+      const props = getProps({ type: protoType })
+      render(<TextInput {...props} />)
+      // Password inputs don't have the textbox role, so query by placeholder.
+      const input = screen.getByPlaceholderText("Placeholder")
+      expect(input).toHaveAttribute("type", expectedDomType)
+    }
+  )
+
+  it("sets enterKeyHint='search' only for the search type", () => {
+    const searchProps = getProps({ type: TextInputProto.Type.SEARCH })
+    const { unmount } = render(<TextInput {...searchProps} />)
+    expect(screen.getByRole("searchbox")).toHaveAttribute(
+      "enterkeyhint",
+      "search"
+    )
+    unmount()
+
+    const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
+    render(<TextInput {...defaultProps} />)
+    expect(screen.getByRole("textbox")).not.toHaveAttribute("enterkeyhint")
+  })
+
+  it("does not mark email inputs invalid via native constraint validation", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    render(<TextInput {...props} />)
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "not-an-email")
+    await user.click(document.body)
+
+    // `validationBehavior="aria"` keeps React Aria from reflecting the native
+    // `typeMismatch` into `data-invalid`; the regex `validate` mechanism is the
+    // single source of the invalid state. Without a `validateRegex`, no error
+    // treatment should appear at all.
+    expect(input).not.toHaveAttribute("data-invalid")
+    expect(input).not.toHaveAttribute("aria-invalid")
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+  })
+
+  it("uses Streamlit validate for email type, not native constraint UI", async () => {
+    const user = userEvent.setup()
+    // Product path: EMAIL + the shipped default regex/message.
+    const props = getProps({
+      type: TextInputProto.Type.EMAIL,
+      validateRegex: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+      validateMessage: "Enter a valid email address.",
+    })
+    render(<TextInput {...props} />)
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "not-an-email")
+    await user.click(document.body)
+
+    // Single Streamlit error treatment via the regex `validate` channel.
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getAllByTestId("stTextInputErrorIcon")).toHaveLength(1)
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a valid email address."
+    )
+  })
+
+  describe("search clear button", () => {
+    it("shows the clear button only for search inputs holding a value", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ type: TextInputProto.Type.SEARCH })
+      render(<TextInput {...props} />)
+
+      // Empty search input: no clear button yet.
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+
+      await user.type(screen.getByRole("searchbox"), "laptops")
+      expect(screen.getByTestId("stTextInputClearButton")).toBeVisible()
+    })
+
+    it("does not show the clear button for non-search types", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ type: TextInputProto.Type.DEFAULT })
+      render(<TextInput {...props} />)
+
+      await user.type(screen.getByRole("textbox"), "laptops")
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("clears the value and hides the button when clicked", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ type: TextInputProto.Type.SEARCH })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      // Ignore the mount-time registration call so we can assert clear commits
+      // without a preceding blur of the dirty value.
+      setStringValueSpy.mockClear()
+
+      const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
+      await user.type(searchbox, "laptops")
+
+      // Typing alone must not commit — `preventFocusLoss` on the clear button
+      // exists so mousedown does not blur-commit "laptops" before clear.
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+
+      await user.click(screen.getByTestId("stTextInputClearButton"))
+
+      expect(searchbox.value).toBe("")
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+      // Exactly one commit: the cleared empty value (never the pre-clear text).
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "", {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+    })
+
+    it("does not show the clear button when disabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps(
+        { type: TextInputProto.Type.SEARCH, default: "laptops" },
+        { disabled: true }
+      )
+      render(<TextInput {...props} />)
+
+      // Even with a value present, a disabled search input has no clear button.
+      expect(screen.getByRole<HTMLInputElement>("searchbox").value).toBe(
+        "laptops"
+      )
+      await user.click(document.body)
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("toggles password visibility when show/hide button is clicked", async () => {
     const user = userEvent.setup()
     const props = getProps({ type: TextInputProto.Type.PASSWORD })
@@ -222,10 +372,9 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -235,10 +384,13 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -269,12 +421,9 @@ describe("TextInput widget", () => {
     await user.tab()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "testing",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -285,18 +434,14 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByRole("textbox")
 
-    // userEvent is necessary to simulate the full interaction chain
-    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
+    // Simulate the full interaction chain (focus → keydown → keyup).
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "testing",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -309,18 +454,14 @@ describe("TextInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    // userEvent is necessary to simulate the full interaction chain
-    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
+    // Simulate the full interaction chain (focus → keydown → keyup).
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "testing",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
 
@@ -331,12 +472,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "testingmoreTesting",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(3)
 
@@ -398,14 +536,11 @@ describe("TextInput widget", () => {
       await screen.findByText("Press Enter to submit form")
     ).toBeInTheDocument()
 
-    expect(setStringValueSpy).toHaveBeenCalledWith(
-      props.element,
-      "TEST",
-      {
-        fromUi: true,
-      },
-      undefined
-    )
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "TEST", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
   })
 
   it("does not update widget value on text changes when outside of a form", async () => {
@@ -423,12 +558,9 @@ describe("TextInput widget", () => {
 
     // Check that the last call was in componentDidMount.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: false,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -453,12 +585,9 @@ describe("TextInput widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -673,10 +802,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "abc",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(
       screen.queryByTestId("stTextInputErrorIcon")
@@ -695,10 +823,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(
       screen.queryByTestId("stTextInputErrorIcon")
@@ -805,10 +932,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -823,10 +949,13 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(setStringValueSpy).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "123",
-      { fromUi: true },
-      undefined
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
     )
     expect(
       screen.queryByTestId("stTextInputErrorIcon")
@@ -928,12 +1057,11 @@ describe("TextInput widget", () => {
       widgetMgr.submitForm("form", undefined)
     })
 
-    expect(setStringValueSpy).toHaveBeenCalledWith(
-      props.element,
-      "abcd",
-      { fromUi: true },
-      undefined
-    )
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "abcd", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
     expect(sendRerunBackMsg).toHaveBeenCalledWith(
       {
         widgets: [{ id: props.element.id, stringValue: "abcd" }],

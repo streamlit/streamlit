@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.60.0"
+version = "1.61.1"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -76,17 +76,16 @@ dependencies = [
   "protobuf>=5.26.1,<8",
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=7.0,<25",
+  "pyarrow>=7.0,!=25.0.0,<26",
   "requests>=2.27,<3",
-  "tenacity>=8.1.0,<10",
   # Starting from Python 3.11, Python has built in support for reading TOML files.
   # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
   "toml>=0.10.1,<2",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
-  # ASGI web-framework. 0.46.0 is the first version exposing
-  # `DEFAULT_EXCLUDED_CONTENT_TYPES` from `starlette.middleware.gzip`, which our
-  # gzip middleware imports.
+  # ASGI web-framework. 0.46.0 is the first version whose `GZipMiddleware`
+  # excludes `DEFAULT_EXCLUDED_CONTENT_TYPES` (e.g. `text/event-stream`) from
+  # compression, which our gzip wrapper relies on.
   "starlette>=0.46.0,<2",
   # ASGI server:
   "uvicorn>=0.30.0,<1",

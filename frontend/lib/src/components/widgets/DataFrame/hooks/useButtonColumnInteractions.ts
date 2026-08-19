@@ -139,12 +139,11 @@ function useButtonColumnInteractions({
       if (!widgetId) return
 
       const clickState = JSON.stringify({ row: rowIndex, label })
-      widgetMgr.setStringTriggerValue(
-        { id: widgetId, formId: element.formId },
-        clickState,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setStringTriggerValue(widgetId, clickState, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     },
     [
       clearButtonActionMenu,

@@ -88,3 +88,22 @@ describe("passesTextInputValidation", () => {
     expect(passesTextInputValidation("abc123", regex)).toBe(false)
   })
 })
+
+describe("default email validation pattern", () => {
+  // Shipped `type="email"` default — must run on the JS "us" engine.
+  const emailRegex = compileTextInputValidationRegex(
+    "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+  ) as RegExp
+
+  it.each([
+    ["user@host.tld", true],
+    ["a@b.co", true],
+    ["user.name+tag@example.com", true],
+    // Spec/comments: reject addresses without a dotted domain.
+    ["user@host", false],
+    ["a@b", false],
+    ["not-an-email", false],
+  ])("matches %s → %s", (value, shouldMatch) => {
+    expect(passesTextInputValidation(value, emailRegex)).toBe(shouldMatch)
+  })
+})

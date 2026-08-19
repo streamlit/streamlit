@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
@@ -31,11 +31,34 @@ import { sizes } from "~lib/theme/primitives/sizes"
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
 describe("DataFrame ColumnMenu", () => {
-  // Mock navigator.clipboard
-  Object.assign(navigator, {
-    clipboard: {
-      writeText: vi.fn(),
-    },
+  const mockWriteText = vi.fn()
+
+  // Capture the original clipboard descriptor (if any) so the mock installed
+  // below can be fully restored in afterEach and does not leak across tests.
+  const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  )
+
+  beforeEach(() => {
+    mockWriteText.mockReset()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: mockWriteText },
+    })
+  })
+
+  afterEach(() => {
+    if (originalClipboardDescriptor) {
+      Object.defineProperty(
+        navigator,
+        "clipboard",
+        originalClipboardDescriptor
+      )
+    } else {
+      // jsdom has no native clipboard, so remove the mock we installed.
+      Reflect.deleteProperty(navigator, "clipboard")
+    }
   })
 
   const defaultProps: ColumnMenuProps = {
@@ -195,47 +218,44 @@ describe("DataFrame ColumnMenu", () => {
       expect(screen.queryByText("Format")).not.toBeInTheDocument()
     })
 
-    it("does not close format sub-menu on blur while pointer is down", () => {
+    it("does not close format sub-menu on blur while pointer is down", async () => {
+      const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} />)
 
       const formatMenuItem = screen.getByRole("menuitem", {
         name: /Format/,
       })
 
-      // Focus the Format item to open the sub-menu
-      fireEvent.focus(formatMenuItem)
+      // Click the Format item to open the sub-menu
+      await user.click(formatMenuItem)
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
       // Dispatch pointerdown on document to set the pointerDownRef flag.
-      // We use fireEvent here (not userEvent) because we're testing the
-      // document-level capture listener, not simulating a user click on a UI
-      // element. userEvent.pointer corrupts JSDOM's clipboard mock state.
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.pointerDown(document.body)
+      await user.pointer({ target: document.body, keys: "[MouseLeft>]" })
 
       // Blur the Format item while pointer is still down
-      fireEvent.blur(formatMenuItem)
+      formatMenuItem.blur()
 
       // Sub-menu should remain open because pointer is down
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.pointerUp(document.body)
+      await user.pointer({ keys: "[/MouseLeft]" })
     })
 
-    it("closes format sub-menu on keyboard-driven blur", () => {
+    it("closes format sub-menu on keyboard-driven blur", async () => {
+      const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} />)
 
       const formatMenuItem = screen.getByRole("menuitem", {
         name: /Format/,
       })
 
-      // Focus to open
-      fireEvent.focus(formatMenuItem)
+      // Click to open
+      await user.click(formatMenuItem)
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
       // Blur without pointer down (simulates Tab away)
-      fireEvent.blur(formatMenuItem)
+      await user.tab()
 
       // Sub-menu should close
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "false")
@@ -312,11 +332,8 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("copy column name functionality (isCopied state)", () => {
-    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
-    const mockWriteText = vi.mocked(navigator.clipboard.writeText)
-
     it("shows copy icon initially and switches to check icon after copy", async () => {
-      mockWriteText.mockResolvedValue()
+      mockWriteText.mockResolvedValue(undefined)
 
       render(<ColumnMenu {...defaultProps} />)
 
@@ -414,7 +431,8 @@ describe("DataFrame ColumnMenu", () => {
       expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
     })
 
-    it("opens the statistics sub-menu on focus and closes the format sub-menu", () => {
+    it("opens the statistics sub-menu on click and closes the format sub-menu", async () => {
+      const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
 
       const statsMenuItem = screen.getByRole("menuitem", {
@@ -423,70 +441,81 @@ describe("DataFrame ColumnMenu", () => {
       const formatMenuItem = screen.getByRole("menuitem", { name: /Format/ })
 
       // Open the format sub-menu first...
-      fireEvent.focus(formatMenuItem)
+      await user.click(formatMenuItem)
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
-      // ...then focusing statistics should open it and close the format one.
-      fireEvent.focus(statsMenuItem)
+      // ...then clicking statistics should open it and close the format one.
+      await user.click(statsMenuItem)
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "false")
     })
 
-    it("keeps the statistics sub-menu open on blur while the pointer is down", () => {
+    it("keeps the statistics sub-menu open on blur while the pointer is down", async () => {
+      const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
 
       const statsMenuItem = screen.getByRole("menuitem", {
         name: /Statistics/,
       })
-      fireEvent.focus(statsMenuItem)
+      await user.click(statsMenuItem)
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
 
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.pointerDown(document.body)
-      fireEvent.blur(statsMenuItem)
+      await user.pointer({ target: document.body, keys: "[MouseLeft>]" })
+      statsMenuItem.blur()
 
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
 
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.pointerUp(document.body)
+      await user.pointer({ keys: "[/MouseLeft]" })
     })
 
-    it("keeps the statistics sub-menu open when blur moves focus into the sub-menu", () => {
+    it("keeps the statistics sub-menu open when blur moves focus into the sub-menu", async () => {
+      const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
 
       const statsMenuItem = screen.getByRole("menuitem", {
         name: /Statistics/,
       })
-      fireEvent.focus(statsMenuItem)
+      await user.click(statsMenuItem)
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
       insideSubMenu.setAttribute("data-testid", "stDataFrameStatisticsMenu")
-      fireEvent.blur(statsMenuItem, { relatedTarget: insideSubMenu })
+      insideSubMenu.tabIndex = -1
+      document.body.appendChild(insideSubMenu)
 
-      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+      try {
+        insideSubMenu.focus()
+
+        expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+      } finally {
+        // Always remove the node so a failed assertion can't leak a
+        // testid-bearing element into subsequent tests.
+        insideSubMenu.remove()
+      }
     })
 
-    it("closes the statistics sub-menu on keyboard-driven blur", () => {
+    it("closes the statistics sub-menu on keyboard-driven blur", async () => {
+      const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
 
       const statsMenuItem = screen.getByRole("menuitem", {
         name: /Statistics/,
       })
-      fireEvent.focus(statsMenuItem)
+      await user.click(statsMenuItem)
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
 
-      fireEvent.blur(statsMenuItem)
+      await user.tab()
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "false")
     })
   })
 
   describe("format sub-menu blur into portal", () => {
-    it("keeps the format sub-menu open when blur moves focus into the sub-menu", () => {
+    it("keeps the format sub-menu open when blur moves focus into the sub-menu", async () => {
+      const user = userEvent.setup()
       render(<ColumnMenu {...defaultProps} />)
 
       const formatMenuItem = screen.getByRole("menuitem", { name: /Format/ })
-      fireEvent.focus(formatMenuItem)
+      await user.click(formatMenuItem)
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
@@ -494,9 +523,18 @@ describe("DataFrame ColumnMenu", () => {
         "data-testid",
         "stDataFrameColumnFormattingMenu"
       )
-      fireEvent.blur(formatMenuItem, { relatedTarget: insideSubMenu })
+      insideSubMenu.tabIndex = -1
+      document.body.appendChild(insideSubMenu)
 
-      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+      try {
+        insideSubMenu.focus()
+
+        expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+      } finally {
+        // Always remove the node so a failed assertion can't leak a
+        // testid-bearing element into subsequent tests.
+        insideSubMenu.remove()
+      }
     })
   })
 
@@ -520,7 +558,8 @@ describe("DataFrame ColumnMenu", () => {
   describe("click-outside sub-menu guard", () => {
     it.each(["stDataFrameStatisticsMenu", "stDataFrameColumnFormattingMenu"])(
       "does not close the menu on pointer down inside a %s sub-menu",
-      testId => {
+      async testId => {
+        const user = userEvent.setup()
         render(<ColumnMenu {...defaultProps} />)
 
         const subMenuNode = document.createElement("div")
@@ -528,8 +567,7 @@ describe("DataFrame ColumnMenu", () => {
         document.body.appendChild(subMenuNode)
 
         try {
-          // eslint-disable-next-line testing-library/prefer-user-event
-          fireEvent.pointerDown(subMenuNode)
+          await user.pointer({ target: subMenuNode, keys: "[MouseLeft]" })
 
           expect(defaultProps.onCloseMenu).not.toHaveBeenCalled()
         } finally {

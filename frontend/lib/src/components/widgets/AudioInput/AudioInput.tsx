@@ -322,10 +322,13 @@ const AudioInput: React.FC<Props> = ({
 
       if (updateWidgetManager) {
         widgetMgr.setFileUploaderStateValue(
-          element,
+          element.id,
           {},
-          { fromUi: true },
-          fragmentId
+          {
+            formId: element.formId,
+            fragmentId,
+            fromUser: true,
+          }
         )
       }
 

@@ -22,7 +22,7 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.widgets.pagination import PaginationSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -306,8 +306,8 @@ class TestPaginationBindQueryParams(DeltaGeneratorTestCase):
         assert proto.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.pagination(10, key="my_key", bind="invalid-value")
 
     def test_bind_with_custom_default(self):

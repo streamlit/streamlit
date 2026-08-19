@@ -23,12 +23,12 @@ from typing_extensions import assert_type
 # - Without key: returns ColumnConfig
 # - With key: returns ButtonColumnResult
 if TYPE_CHECKING:
-    from streamlit.elements.lib.column_config_utils import ButtonColumnClickState
     from streamlit.elements.lib.column_types import (
         ButtonColumn,
         ButtonColumnResult,
         ColumnConfig,
     )
+    from streamlit.typing import ButtonColumnClickState
 
     click_state = cast("ButtonColumnClickState", object())
     assert_type(click_state.row, int)

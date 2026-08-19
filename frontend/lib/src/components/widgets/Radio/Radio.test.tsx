@@ -62,10 +62,9 @@ describe("Radio widget", () => {
 
     // Widget uses string values - the default option string at index 0 is "a"
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -75,10 +74,13 @@ describe("Radio widget", () => {
     render(<Radio {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -176,10 +178,9 @@ describe("Radio widget", () => {
 
     // Widget uses string values - selecting index 1 sends option "b"
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(secondOption).toBeChecked()
   })
@@ -201,10 +202,9 @@ describe("Radio widget", () => {
     expect(secondOption).toBeChecked()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -219,12 +219,9 @@ describe("Radio widget", () => {
 
     // Reset sends the default option string "a"
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 })

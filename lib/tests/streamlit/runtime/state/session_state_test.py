@@ -52,7 +52,10 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime import runtime_util
 from streamlit.runtime.runtime_util import WidgetStateSizeError
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import (
@@ -131,6 +134,7 @@ def _create_persist_state_metadata(
 
 class WStateTests(unittest.TestCase):
     def setUp(self):
+        ThreadState.initialize()
         wstates = WStates()
         self.wstates = wstates
 
@@ -554,8 +558,8 @@ def test_callbacks_with_rerun():
 def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     """Ensure fragment callback context flag is cleared on RerunException.
 
-    This guards against leaving `ctx.in_fragment_callback` stuck to True if
-    a callback raises, which could contaminate subsequent runs.
+    This guards against leaving ``ThreadState.get().in_fragment_callback`` stuck
+    to True if a callback raises, which could contaminate subsequent runs.
     """
     from streamlit.runtime.scriptrunner import RerunException
 
@@ -582,7 +586,7 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     mock_ctx = MagicMock()
     # Self-contained: initialize ThreadState so this test doesn't depend on
     # test ordering or another fixture having seeded the ContextVar.
-    ThreadState.initialize(in_fragment_callback=False)
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",

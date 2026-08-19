@@ -27,10 +27,12 @@ from streamlit.proto.ForwardMsg_pb2 import (
     DeferredFileResponsePayload,
 )
 from streamlit.runtime.backend_operation_handler import (
+    _UNEXPECTED_REASON_PREFIX,
     BackendOperationDispatcher,
     DeferredFileHandler,
     DismissSkillsNudgeHandler,
     InstallSkillsHandler,
+    _exception_reason,
     connection_locality,
 )
 from streamlit.web import skills
@@ -138,6 +140,12 @@ def test_dispatch_returns_error_when_handler_fails() -> None:
 
     assert response.request_id == "request-id"
     assert response.error_msg == "Failed to process backend operation"
+    # The dispatcher's catch-all used to return no reason at all, so a handler that
+    # raised past its own try/except produced a bare telemetry label -
+    # indistinguishable from a pre-1.61 client and silent about the operation
+    # possibly never having run. ``dispatch`` is the deepest Streamlit frame here:
+    # the handler that raised lives in this test module, which is correctly skipped.
+    assert response.error_reason == "unhandled_RuntimeError_in_dispatch"
     assert not response.HasField("deferred_file")
 
 
@@ -267,7 +275,9 @@ def test_install_skills_handler_reports_failure() -> None:
         )
 
     assert response.error_msg == "No skills found"
-    assert response.error_reason == "unknown"
+    # A ``ClickException`` that is not an ``InstallError`` carries no vocabulary
+    # reason, so the reason names its class and origin rather than "unknown".
+    assert response.error_reason == "unexpected_ClickException_in_handle"
     assert not response.HasField("install_skills")
 
 
@@ -338,7 +348,7 @@ def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
     exception carrying a free-form str ``.reason`` (``UnicodeDecodeError`` and
     several stdlib errors do) would emit an unbounded telemetry label and break the
     fixed vocabulary. The reason is now trusted ONLY from skills.InstallError; a
-    non-OSError foreign exception is classified ``unknown``.
+    non-OSError foreign exception is named by its class instead.
     """
     foreign = ValueError("boom")
     foreign.reason = "some-unbounded-string"  # type: ignore[attr-defined]
@@ -353,7 +363,119 @@ def test_install_skills_handler_ignores_foreign_reason_attribute() -> None:
             )
         )
 
-    assert response.error_reason == "unknown"
+    assert response.error_reason == "unexpected_ValueError_in_handle"
+    assert "some-unbounded-string" not in response.error_reason
+
+
+def test_install_skills_handler_names_unclassified_exception_class() -> None:
+    """An exception no vocabulary entry covers is reported by class and origin.
+
+    Every such failure used to collapse into one ``unknown`` bucket, which made the
+    largest share of install failures undiagnosable from telemetry - the traceback is
+    logged server-side but never leaves the machine. Class name and raising function
+    are code identifiers, so they split the bucket without carrying a path or any
+    user data.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=RuntimeError("/absolute/server/path exploded"),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unexpected_RuntimeError_in_handle"
+    # The identifiers are safe; the *message* is not, and is never part of the reason.
+    assert "/absolute/server/path" not in response.error_reason
+    assert response.error_msg == "Failed to install skills."
+
+
+def test_install_skills_handler_names_deepest_streamlit_frame() -> None:
+    """The reason names the *deepest* Streamlit frame, not the outermost one.
+
+    Naming ``handle`` for every failure would be barely better than ``unknown`` - the
+    point is to localize the bug. Here the real installer runs and its innermost step
+    raises, so the reason must name ``_install_project_skills`` (the Streamlit function
+    that made the failing call) rather than the handler that started it all.
+    """
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch.object(
+            skills, "_get_source_skills_dir", side_effect=RuntimeError("boom")
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    assert response.error_reason == "unexpected_RuntimeError_in__install_project_skills"
+
+
+def test_exception_reason_falls_back_to_class_without_traceback() -> None:
+    """An exception that was never raised has no traceback, so only the class is named.
+
+    The prefix and class stay in the same position either way, so a
+    ``unexpected_ValueError%`` prefix match works whether or not a frame resolved.
+    """
+    reason = _exception_reason(_UNEXPECTED_REASON_PREFIX, ValueError("never raised"))
+
+    assert reason == "unexpected_ValueError"
+
+
+def test_exception_reason_skips_non_streamlit_frames() -> None:
+    """Only frames inside the ``streamlit`` package may be named.
+
+    This is what keeps a function from the *user's own app* out of the label: their
+    module never sits under ``streamlit``, so a traceback made up entirely of
+    third-party and user frames resolves to no function at all.
+    """
+
+    def _raise_outside_streamlit() -> None:
+        raise ValueError("from a test module, not streamlit")
+
+    try:
+        _raise_outside_streamlit()
+    except ValueError as ex:
+        reason = _exception_reason(_UNEXPECTED_REASON_PREFIX, ex)
+
+    assert reason == "unexpected_ValueError"
+
+
+def test_install_skills_handler_bounds_hostile_exception_class_name() -> None:
+    """The class name is sanitized and length-capped before becoming a label.
+
+    Class names are Python identifiers in practice, but a dynamically built class can
+    carry arbitrary text, and this value ends up as a telemetry label suffix. Anything
+    outside identifier characters is dropped - including the ``:`` that downstream
+    ``split_part(label, ':', 2)`` queries would otherwise truncate on.
+    """
+    hostile = type("Bad: name\nwith 💥 junk" + "X" * 80, (Exception,), {})
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        patch("streamlit.web.skills.install_skills", side_effect=hostile("boom")),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    reason = response.error_reason
+    assert reason == "unexpected_BadnamewithjunkXXXXXXXXXXXXXXXXXXXXXXXXX_in_handle"
+    # The class portion is capped at 40 chars, independent of the frame suffix.
+    assert len(reason.removeprefix("unexpected_").removesuffix("_in_handle")) == 40
+    assert ":" not in reason
+    assert "\n" not in reason
 
 
 def test_install_skills_handler_refuses_without_agent_harness() -> None:

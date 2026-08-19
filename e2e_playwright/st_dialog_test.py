@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     expect_no_exception,
     expect_prefixed_markdown,
     get_button,
+    get_color_picker,
     get_markdown,
     is_child_bounding_box_inside_parent,
     select_selectbox_option,
@@ -216,13 +217,13 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     dialog = app.get_by_role("dialog")
     expect(dialog).to_be_visible()
 
-    dialog.get_by_test_id("stDateInput").locator("input").click()
-    calendar = app.locator('[data-baseweb="calendar"]').first
+    dialog.get_by_test_id("stDateInput").get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
 
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Tuesday, January 2nd 2024."]'
-    ).first.click()
+    calendar.get_by_label("Tuesday, January 2, 2024").click()
     wait_for_app_run(app)
 
     expect_markdown(dialog, "Due Date Value: 2024-01-02")
@@ -259,6 +260,30 @@ def test_dialog_allows_interacting_with_widget_in_popover(app: Page):
     expect_markdown(popover_body, "picked: Banana")
 
     # The dialog must not be dismissed by the interaction inside the popover.
+    expect(dialog).to_be_visible()
+
+
+def test_dialog_allows_interacting_with_color_picker(app: Page):
+    """A color picker palette opened inside an st.dialog must stay interactive
+    without dismissing the dialog (regression coverage for #16538).
+    """
+    click_button(app, "Open Dialog with Color Picker")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    color_picker = get_color_picker(dialog, "Dialog color picker")
+    color_picker.get_by_test_id("stColorPickerBlock").click()
+
+    popover = app.get_by_test_id("stColorPickerPopover")
+    expect(popover).to_be_visible()
+    popover.locator("input").fill("#1a2b3c")
+
+    # Close the palette with a click that stays inside the dialog, which must
+    # remain open.
+    dialog.get_by_text("Dialog color picker", exact=True).click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Selected color: #1a2b3c")
     expect(dialog).to_be_visible()
 
 
@@ -727,7 +752,17 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     """
     open_non_dismissible_dialog(app)
     main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+
+    # Wait for dialog content so the non-dismissible keyboard handler is armed
+    # before we exercise Escape / R (important on WebKit).
+    expect(
+        main_dialog.get_by_text("This dialog cannot be dismissed", exact=False)
+    ).to_be_visible()
+    # Opening the dialog is one script rerun (count 2). Any later R-hotkey
+    # leak would bump this and unmount the dialog — assert it stays put.
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
     # Verify the close button (X) is not present
     expect(app.get_by_label("Close")).not_to_be_attached()
@@ -738,20 +773,24 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     # Dialog should still be visible
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
     # Click on body element outside dialog
     app.locator("body").click(position={"x": 50, "y": 50}, force=True)
 
-    # Dialog should still be visible
+    # Dialog should still be visible, and the outside click must not rerun.
     expect(main_dialog).to_be_visible()
     expect(main_dialog).to_have_count(1)
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
 
-    # Press R hotkey:
+    # Press R hotkey — must not rerun/dismiss a non-dismissible dialog
+    # (even when focus is outside the dialog after the backdrop click above).
     app.keyboard.press("R")
 
-    # Dialog should still be visible
-    expect(main_dialog).to_be_visible()
-    expect(main_dialog).to_have_count(1)
+    # Dialog should still be visible, and R must not have triggered a rerun.
+    expect(app.get_by_text("Rerun count: 2", exact=True)).to_be_visible()
+    expect(app.get_by_test_id(modal_test_id)).to_have_count(1)
+    expect(app.get_by_test_id(modal_test_id)).to_be_visible()
 
 
 def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):

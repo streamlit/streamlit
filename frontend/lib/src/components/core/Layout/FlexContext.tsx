@@ -23,6 +23,11 @@ export interface IFlexContext {
   isInHorizontalLayout: boolean
   isInRoot: boolean
   /**
+   * Whether the nearest flex container allows children to wrap onto additional
+   * rows. Defaults to true when unset for backwards compatibility.
+   */
+  wrap?: boolean
+  /**
    * The width of the parent container in pixels, if the container has a fixed
    * pixel width set via widthConfig.pixelWidth. Undefined otherwise.
    */
@@ -68,6 +73,7 @@ export const FlexContextProvider: FC<
   PropsWithChildren<{
     direction: Direction
     isRoot?: boolean
+    wrap?: boolean
     parentWidth?: number
     hasContentWidth?: boolean
     hasFixedWidth?: boolean
@@ -77,6 +83,7 @@ export const FlexContextProvider: FC<
   children,
   direction,
   isRoot,
+  wrap = true,
   parentWidth,
   hasContentWidth = false,
   hasFixedWidth = false,
@@ -103,12 +110,14 @@ export const FlexContextProvider: FC<
       direction,
       isInHorizontalLayout,
       isInRoot: isRoot ?? false,
+      wrap,
       parentWidth,
       isInContentWidthContainer,
     }
   }, [
     direction,
     isRoot,
+    wrap,
     parentWidth,
     hasContentWidth,
     hasFixedWidth,

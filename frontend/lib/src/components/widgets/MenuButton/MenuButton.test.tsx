@@ -101,10 +101,9 @@ describe("MenuButton widget", () => {
     })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "Option B",
-      { fromUi: true },
-      undefined
+      { formId: undefined, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -127,10 +126,9 @@ describe("MenuButton widget", () => {
     })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "Option A",
-      { fromUi: true },
-      "myFragmentId"
+      { formId: undefined, fragmentId: "myFragmentId", fromUser: true }
     )
   })
 
@@ -274,6 +272,30 @@ describe("MenuButton widget", () => {
 
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("expand_more")
+  })
+
+  describe("wrap=false", () => {
+    it("keeps the chevron visible and sets the full label as a native title", () => {
+      const props = getProps({ label: "A very long menu label", wrap: false })
+      render(<MenuButton {...props} />)
+
+      const button = screen.getByTestId("stMenuButtonButton")
+      expect(button).toHaveTextContent("expand_more")
+      expect(screen.getByTitle("A very long menu label")).toBeVisible()
+    })
+
+    it("does not set a title when help is set (help tooltip takes over)", () => {
+      const props = getProps({
+        label: "A very long menu label",
+        wrap: false,
+        help: "Help wins",
+      })
+      render(<MenuButton {...props} />)
+
+      expect(
+        screen.queryByTitle("A very long menu label")
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("renders no options gracefully", () => {

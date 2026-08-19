@@ -1992,6 +1992,28 @@ class TestConflictError:
         assert "already exist." in message
         assert "Remove them and try again." in message
 
+    def test_path_containing_a_parenthetical_still_collapses(self) -> None:
+        """A directory name containing " (" must not truncate the collapse.
+
+        The reason is appended as the last parenthetical, so the split has to come
+        from the right. Splitting from the left cuts the path at the directory's
+        own " (", leaving too few components for the last-three-parts collapse —
+        which then emits the leading directories verbatim, i.e. the user's home
+        path and username.
+        """
+        err = skills._conflict_error(
+            [
+                (
+                    "/Users/alice/My App (old)/.claude/skills/"
+                    "developing-with-streamlit (existing file or directory)"
+                )
+            ]
+        )
+        message = err.format_message()
+        assert "/Users/alice" not in message
+        assert "alice" not in message
+        assert ".claude/skills/developing-with-streamlit already exists." in message
+
     def test_single_conflict_reads_singular(self) -> None:
         """A lone conflict uses singular phrasing ("exists" / "it")."""
         err = skills._conflict_error(

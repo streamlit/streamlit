@@ -77,10 +77,9 @@ describe("Selectbox widget", () => {
 
     render(<Selectbox {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -100,10 +99,13 @@ describe("Selectbox widget", () => {
 
     render(<Selectbox {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -118,10 +120,9 @@ describe("Selectbox widget", () => {
     await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(screen.getByDisplayValue("b")).toBeVisible()
   })
@@ -139,10 +140,9 @@ describe("Selectbox widget", () => {
     await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -156,12 +156,9 @@ describe("Selectbox widget", () => {
     })
     expect(screen.queryByDisplayValue("b")).not.toBeInTheDocument()
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 

@@ -15,7 +15,7 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, ViewportSize, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -39,7 +40,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(29)
+    expect(popover_elements).to_have_count(30)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -176,6 +177,92 @@ def test_popover_in_sidebar_stays_within_viewport(app: Page):
         "popover body must extend beyond the sidebar (it is portalled to body); "
         f"body={body_box}, sidebar={sidebar_box}"
     )
+
+
+def test_popover_stays_within_narrow_viewport(app: Page):
+    """Popover content must stay fully within a narrow viewport (e.g. an
+    oEmbed host iframe). Regression for
+    https://github.com/streamlit/streamlit/issues/9340.
+
+    Without `size` middleware, the ~704px design max-width (and, under
+    320px, the CSS min-width) overflow a narrow embed: `shift` pins one
+    edge and the host clips the other.
+
+    Three cases in one app load (see e2e_playwright/AGENTS.md):
+
+    - **640px** — between the 576px CSS media-query clamp and the ~704px
+      design max-width, so only JS `size` keeps the popover in bounds.
+      Also checks vertical overflow.
+    - **300px** — narrower than the 320px baseline min-width; exercises the
+      middleware's min-width cap (horizontal only — flip can pick a tight
+      vertical side at this width).
+    - **Stretch at 640px** — `width="stretch"` uses
+      `min-width: max($calculatedWidth, 10rem)`; exercises the
+      stretch-aware min-width path against the applied max-width.
+    """
+    # 1px epsilon guards against subpixel layout differences across browsers.
+    epsilon = 1
+
+    def assert_within_viewport(
+        popover_body: Locator,
+        viewport: ViewportSize,
+        *,
+        check_vertical: bool,
+    ) -> None:
+        body_box = popover_body.bounding_box()
+        assert body_box is not None, "popover body must have a bounding box"
+        assert body_box["x"] >= -epsilon, (
+            f"popover body extends off left edge: {body_box}"
+        )
+        assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
+            f"popover body extends past right edge: {body_box}, viewport={viewport}"
+        )
+        if check_vertical:
+            assert body_box["y"] >= -epsilon, (
+                f"popover body extends off top edge: {body_box}"
+            )
+            assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
+                f"popover body extends past bottom edge: {body_box}, "
+                f"viewport={viewport}"
+            )
+
+    # Case 1: 640px — past the 576px CSS clamp so JS `size` constrains width.
+    # Assert vertical bounds too (800px height catches top/bottom overflow).
+    app.set_viewport_size({"width": 640, "height": 800})
+    popover_body = open_popover(app, "popover 3 (with widgets)")
+    expect_markdown(popover_body, "Hello World 👋")
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=True)
+
+    # Re-open fresh at each viewport rather than relying on Floating UI's
+    # autoUpdate reflow. Dismiss with Escape, not an outside click at a fixed
+    # position: at 300px the layout can put that point on the trigger itself,
+    # which made this step intermittently fail to close the popover.
+    app.keyboard.press("Escape")
+    expect(popover_body).not_to_be_visible()
+
+    # Case 2: 300px — below the 320px CSS min-width; needs the min-width cap.
+    # Horizontal only — flip may pick a tight vertical side.
+    app.set_viewport_size({"width": 300, "height": 800})
+    popover_body = open_popover(app, "popover 3 (with widgets)")
+    expect_markdown(popover_body, "Hello World 👋")
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=False)
+
+    app.keyboard.press("Escape")
+    expect(popover_body).not_to_be_visible()
+
+    # Case 3: stretch popover (`min-width: max($calculatedWidth, 10rem)`).
+    # `expect_markdown` waits until content (and any ResizeObserver-driven
+    # `$calculatedWidth` update) has settled before we measure the box.
+    app.set_viewport_size({"width": 640, "height": 800})
+    popover_body = open_popover(app, "popover 11 (width=stretch)")
+    expect_markdown(popover_body, "Stretch width")
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=False)
 
 
 def test_popover_container_rendering(
@@ -536,12 +623,14 @@ def test_date_input_selection_does_not_dismiss_popover(app: Page):
     expect(date_input).to_be_visible()
 
     # Open the calendar.
-    date_input.locator("input").first.click()
-    calendar = app.locator('[data-baseweb="calendar"]')
+    date_input.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
 
     # Select a different day.
-    calendar.get_by_text("15", exact=True).first.click()
+    calendar.get_by_role("button", name=re.compile(r"15,")).first.click()
     wait_for_app_run(app)
 
     # The popover must still be open after the day selection.
@@ -617,3 +706,17 @@ def test_programmatic_close_does_not_reopen_other_popover(app: Page):
     # Popover A must NOT have reopened (the bug from #14943).
     # If it did, "Close A" would be visible in a second popover body.
     expect(app.get_by_text("Close A")).not_to_be_visible()
+
+
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
+    """
+    container = get_element_by_key(app, "wrap_false_popover")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()
+    expect(container.get_by_test_id("stPopoverButton")).to_contain_text("expand_more")

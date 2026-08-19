@@ -112,6 +112,12 @@ The `st` object users interact with.
 - `LockedCursor`: Fixed position for updating elements
 - Delta path: `[0, 2, 3]` uniquely identifies element position
 
+**Block delta paths**: `_block()` does not always write to the position that the parent cursor points to.
+
+- It can redirect the write into one or more outside-container wrapper blocks, so the new block lands deeper in the tree (see the fragment system section below).
+- Blocks that re-send their own proto later, such as `st.status` and `st.dialog`, must read `DeltaGenerator._block_delta_path` after `_block()` returns. Do not read `delta_path` from the parent cursor.
+- A stored path that points at a wrapper instead of the block makes the update overwrite the wrapper and blank the app.
+
 **Element creation**:
 ```
 st.button("Click")
@@ -232,6 +238,14 @@ sequenceDiagram
 - Elements track both `scriptRunId` and `fragmentId`
 - During fragment reruns, stale cleanup uses `scriptRunId` + `fragmentIdsThisRun` to prune affected subtrees while preserving unrelated nodes
 - Main script elements are preserved during fragment-only reruns
+
+**Outside-container writes**:
+- A fragment can write into a container that the script declares outside the fragment body.
+- The first such write creates a layout-transparent wrapper block inside that container. See `_needs_outside_wrapper()` and `_get_or_create_outside_wrapper()` in `lib/streamlit/delta_generator.py`.
+- The wrapper isolates the writes of one fragment, so repeated fragment reruns overwrite in place instead of appending past the end of the outside container.
+- `FragmentStorage` caches each wrapper as an `OutsideContainerWrapper` (`lib/streamlit/runtime/outside_container_wrapper.py`), keyed by fragment and container.
+- Before a fragment reruns, the runtime evicts the wrappers whose outside containers this fragment rebuilds, then re-emits and resets the wrappers that survive (`_reset_outside_wrappers()` in `lib/streamlit/runtime/fragment.py`). A full script run clears all wrappers.
+- Each wrapper adds a level to the delta path. Code that stores a delta path for a later update must use the path that the write actually reached. See `_block_delta_path` in the `DeltaGenerator` section above.
 
 **Script events for fragments**:
 - `FRAGMENT_STOPPED_WITH_SUCCESS`: Fragment completed successfully

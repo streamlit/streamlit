@@ -24,8 +24,8 @@ import streamlit as st
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
@@ -83,22 +83,252 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     def test_input_types(self):
         # Test valid input types.
-        type_strings = ["default", "password"]
-        type_values = [TextInput.DEFAULT, TextInput.PASSWORD]
-        for type_string, type_value in zip(type_strings, type_values, strict=False):
+        type_strings = ["default", "password", "email", "url", "phone", "search"]
+        type_values = [
+            TextInput.DEFAULT,
+            TextInput.PASSWORD,
+            TextInput.EMAIL,
+            TextInput.URL,
+            TextInput.PHONE,
+            TextInput.SEARCH,
+        ]
+        for type_string, type_value in zip(type_strings, type_values, strict=True):
             st.text_input("label", type=type_string)
 
             c = self.get_delta_from_queue().new_element.text_input
             assert type_value == c.type
 
         # An invalid input type should raise an exception.
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.text_input("label", type="bad_type")
 
         assert (
             str(exc.value)
-            == "'bad_type' is not a valid text_input type. Valid types are 'default' and 'password'."
+            == "Invalid `type` value. Supported values: 'default', 'password', "
+            "'email', 'url', 'phone', 'search'."
         )
+
+    @parameterized.expand(
+        [
+            ("email", ":material/mail:", "you@example.com", "email"),
+            ("url", ":material/link:", "https://example.com", "url"),
+            ("phone", ":material/call:", "+1 234 567 8900", "tel"),
+            ("search", ":material/search:", "Search", "off"),
+        ]
+    )
+    def test_specialized_type_smart_defaults(
+        self,
+        type_string: str,
+        expected_icon: str,
+        expected_placeholder: str,
+        expected_autocomplete: str,
+    ):
+        """Test that specialized types apply their icon/placeholder/autocomplete defaults."""
+        st.text_input("label", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == expected_icon
+        assert c.placeholder == expected_placeholder
+        assert c.autocomplete == expected_autocomplete
+
+    @parameterized.expand(
+        [
+            (
+                "email",
+                r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
+                "Enter a valid email address.",
+            ),
+            (
+                "url",
+                r"^([Hh][Tt][Tt][Pp][Ss]?://)?[^\s/.]+\.[^\s]+$",
+                "Enter a valid URL.",
+            ),
+        ]
+    )
+    def test_specialized_type_default_validation(
+        self, type_string: str, expected_regex: str, expected_message: str
+    ):
+        """Test that email/url types default to Streamlit-maintained validation."""
+        st.text_input("label", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.validate_regex == expected_regex
+        assert c.validate_message == expected_message
+
+    @parameterized.expand(
+        [
+            # Requires a dotted domain: `user@host.tld` passes, `user@host` fails.
+            ("user@host.tld", True),
+            ("a@b.co", True),
+            ("user@host", False),
+            ("a@b", False),
+            ("not-an-email", False),
+        ]
+    )
+    def test_email_type_default_validation_requires_dotted_domain(
+        self, value: str, should_match: bool
+    ):
+        """Test that the default email validation requires a dotted domain."""
+        st.text_input("label", type="email")
+        proto = self.get_delta_from_queue().new_element.text_input
+
+        matched = re.match(proto.validate_regex, value) is not None
+        assert matched is should_match
+
+    @parameterized.expand(
+        [
+            # (value, should_match) — the URL scheme is optional.
+            ("example.com", True),
+            ("www.example.co.uk/path?q=1", True),
+            ("https://example.com", True),
+            ("http://sub.example.com", True),
+            # The scheme is case-insensitive, matching native `type="url"`.
+            ("HTTPS://example.com", True),
+            ("not a url", False),
+            ("localhost", False),
+            # The first host label excludes `/`, so a bare filesystem-like path
+            # and malformed schemes are rejected even though a path after the
+            # host (see `www.example.co.uk/path?q=1` above) is accepted.
+            ("path/to/file.txt", False),
+            ("https://.example.com", False),
+            ("https:/example.com", False),
+        ]
+    )
+    def test_url_type_default_validation_scheme_is_optional(
+        self, value: str, should_match: bool
+    ):
+        """Test that the default URL validation accepts URLs with or without a
+        scheme while still rejecting obvious non-URLs."""
+        st.text_input("label", type="url")
+        proto = self.get_delta_from_queue().new_element.text_input
+
+        matched = re.match(proto.validate_regex, value) is not None
+        assert matched is should_match
+
+    @parameterized.expand([("phone",), ("search",)])
+    def test_specialized_type_without_default_validation(self, type_string: str):
+        """Test that phone/search types don't apply any default validation."""
+        st.text_input("label", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert not c.HasField("validate_regex")
+        assert not c.HasField("validate_message")
+
+    def test_password_type_has_no_smart_defaults(self):
+        """Test that type='password' is unchanged: no icon/placeholder/validation."""
+        st.text_input("label", type="password")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == ""
+        assert c.placeholder == ""
+        assert not c.HasField("validate_regex")
+        assert c.autocomplete == "new-password"
+
+    def test_specialized_type_icon_opt_out(self):
+        """Test that icon='' turns the icon off (and does not raise) for a type default."""
+        st.text_input("label", type="email", icon="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == ""
+
+    def test_specialized_type_placeholder_opt_out(self):
+        """Test that placeholder='' turns the placeholder off for a specialized type."""
+        st.text_input("label", type="email", placeholder="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.placeholder == ""
+
+    def test_specialized_type_validate_opt_out(self):
+        """Test that validate='' turns the default validation off for a specialized type."""
+        st.text_input("label", type="email", validate="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.validate_regex == ""
+        assert not c.HasField("validate_message")
+
+    def test_specialized_type_autocomplete_opt_out(self):
+        """Test that autocomplete='' turns autocomplete off for a specialized type."""
+        st.text_input("label", type="email", autocomplete="")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.autocomplete == ""
+
+    def test_specialized_type_explicit_overrides_win(self):
+        """Test that explicit values override the type-derived defaults."""
+        st.text_input(
+            "label",
+            type="email",
+            icon=":material/work:",
+            placeholder="name@company.com",
+            validate=("^a$", "custom message"),
+            autocomplete="on",
+        )
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.icon == ":material/work:"
+        assert c.placeholder == "name@company.com"
+        assert c.validate_regex == "^a$"
+        assert c.validate_message == "custom message"
+        assert c.autocomplete == "on"
+
+    def test_validate_none_semantics_depends_on_type(self):
+        """Test that validate=None uses the email default but stays off for default."""
+        st.text_input("email", type="email", validate=None)
+        email_proto = self.get_delta_from_queue().new_element.text_input
+        assert email_proto.validate_regex == r"^[^\s@]+@[^\s@]+\.[^\s@]+$"
+
+        st.text_input("default", type="default", validate=None)
+        default_proto = self.get_delta_from_queue().new_element.text_input
+        assert not default_proto.HasField("validate_regex")
+
+    def test_specialized_type_identity_stable_with_defaults(self):
+        """Test that type-derived defaults do not enter the email widget identity.
+
+        The live ID must match an expected ID computed from the raw user kwargs
+        (``None`` enhanced params, no ``validate`` identity kwarg). Folding the
+        email defaults into the hash would change that expected ID. Opting out
+        with ``validate=""`` must stay identity-neutral with the default rule.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("label", key="email_key", type="email")
+            actual_id = self.get_delta_from_queue().new_element.text_input.id
+
+            # Reproduce identity from raw kwargs before type-default resolution.
+            # For a keyed widget, dg-derived keys are dropped, so `dg=None`
+            # yields the same result as passing the real dg.
+            expected_id = compute_and_register_element_id(
+                "text_input",
+                user_key="email_key",
+                key_as_main_identity={"max_chars", "validate"},
+                dg=None,
+                label="label",
+                value="",
+                max_chars=None,
+                type="email",
+                help=None,
+                autocomplete=None,
+                placeholder=str(None),
+                icon=None,
+                width="stretch",
+            )
+            assert actual_id == expected_id
+
+            # Default email validation and an explicit opt-out share an ID —
+            # the type's default rule must stay identity-neutral.
+            st.text_input("label", key="email_key", type="email", validate="")
+            opt_out_id = self.get_delta_from_queue().new_element.text_input.id
+            assert actual_id == opt_out_id
+
+    @parameterized.expand([("email",), ("url",), ("phone",), ("search",)])
+    def test_bind_query_params_allowed_for_specialized_types(self, type_string: str):
+        """Test that bind='query-params' is allowed for non-password specialized types."""
+        st.text_input("label", key="my_text", bind="query-params", type=type_string)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_text"
 
     def test_placeholder(self):
         """Test that it can be called with placeholder"""
@@ -249,11 +479,11 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.text_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_width_config_default(self):
@@ -490,11 +720,11 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self) -> None:
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
             st.text_input("the label", key="my_text", bind="invalid-value")
 
-        assert "invalid-value" in str(exc.value)
+        assert "Invalid `bind` value" in str(exc.value)
         assert "query-params" in str(exc.value)
 
     def test_bind_query_params_with_default_value(self) -> None:

@@ -23,14 +23,11 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
@@ -75,7 +72,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_hash, create_fast_hasher
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash, create_fast_hasher
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -116,64 +113,86 @@ DataTypes: TypeAlias = Union[
 ]
 
 
-class EditingState(TypedDict, total=False):
-    """
-    A dictionary representing the current state of the data editor.
+class DataEditorState(ReadOnlyAttributeDictionary):
+    """The schema for the data editor state.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Top-level assignment and
+    nested dict mutation raise ``TypeError``. List fields (``added_rows``,
+    ``deleted_rows``) are ordinary lists and are not frozen. Data editor
+    states cannot be programmatically changed or set through Session State.
 
     Attributes
     ----------
-    edited_rows : Dict[int, Dict[str, str | int | float | bool | None]]
-        An hierarchical mapping of edited cells based on:
-        row position -> column name -> value.
+    edited_rows : dict[int, dict[str, str | int | float | bool | list[str] | None]]
+        A hierarchical mapping of edited cells based on row position ->
+        column name -> value. Row positions refer to the original source
+        dataframe before pending edits are applied.
 
-    added_rows : List[Dict[str, str | int | float | bool | None]]
+    added_rows : list[dict[str, str | int | float | bool | list[str] | None]]
         A list of added rows, where each row is a mapping from column name to
         the cell value.
 
-    deleted_rows : List[int]
-        A list of deleted rows, where each row is the numerical position of
-        the deleted row.
+    deleted_rows : list[int]
+        A list of deleted rows, where each entry is the numerical position of
+        the deleted row in the original source dataframe.
     """
 
-    edited_rows: Required[dict[int, dict[str, str | int | float | bool | None]]]
-    added_rows: Required[list[dict[str, str | int | float | bool | None]]]
-    deleted_rows: Required[list[int]]
+    edited_rows: dict[int, dict[str, str | int | float | bool | list[str] | None]]
+    added_rows: list[dict[str, str | int | float | bool | list[str] | None]]
+    deleted_rows: list[int]
+
+    @overload
+    def __getitem__(
+        self, key: Literal["edited_rows"]
+    ) -> dict[int, dict[str, str | int | float | bool | list[str] | None]]: ...
+
+    @overload
+    def __getitem__(
+        self, key: Literal["added_rows"]
+    ) -> list[dict[str, str | int | float | bool | list[str] | None]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["deleted_rows"]) -> list[int]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
 @dataclass
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: str | None) -> EditingState:
-        data_editor_state: EditingState = cast(
-            "EditingState",
+    def deserialize(self, ui_value: str | None) -> DataEditorState:
+        # Keep the payload as a plain dict until the end so missing-key and
+        # row-key mutations below can still run before we wrap.
+        data_editor_state: dict[str, Any] = (
             {
                 "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
             if ui_value is None
-            else json.loads(ui_value),
+            else json.loads(ui_value)
         )
 
-        # Make sure that all editing state keys are present:
-        if "edited_rows" not in data_editor_state:
-            data_editor_state["edited_rows"] = {}  # type: ignore[unreachable]
-
-        if "deleted_rows" not in data_editor_state:
-            data_editor_state["deleted_rows"] = []  # type: ignore[unreachable]
-
-        if "added_rows" not in data_editor_state:
-            data_editor_state["added_rows"] = []  # type: ignore[unreachable]
+        data_editor_state.setdefault("edited_rows", {})
+        data_editor_state.setdefault("added_rows", [])
+        data_editor_state.setdefault("deleted_rows", [])
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
             int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
-        return data_editor_state
+        return DataEditorState(data_editor_state)
 
-    def serialize(self, editing_state: EditingState) -> str:
+    def serialize(self, editing_state: DataEditorState) -> str:
         return json.dumps(editing_state, default=str)
 
 
@@ -538,7 +557,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
 
 def _apply_dataframe_edits(
     df: pd.DataFrame,
-    data_editor_state: EditingState,
+    data_editor_state: DataEditorState,
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply edits to the provided dataframe (inplace).
@@ -550,7 +569,7 @@ def _apply_dataframe_edits(
     df : pd.DataFrame
         The dataframe to apply the edits to.
 
-    data_editor_state : EditingState
+    data_editor_state : DataEditorState
         The editing state of the data editor component.
 
     dataframe_schema: DataframeSchema
@@ -939,6 +958,10 @@ class DataEditorMixin:
             ``st.session_state[key]`` (read-only). For more details, see
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            The value in Session State is a ``DataEditorState`` object that
+            describes the pending edits. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.

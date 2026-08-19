@@ -38,7 +38,10 @@ function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   )
 }
 
-function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
+function makeHorizontalBlockWithColumns(
+  numColumns: number,
+  wrap = true
+): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
@@ -51,6 +54,7 @@ function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
           gapSize: streamlit.GapSize.SMALL,
         },
         direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap,
       },
     })
   )
@@ -281,6 +285,115 @@ describe("FlexBoxContainer layout props", () => {
     })
     renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+
+  it("enables horizontal scrolling for a horizontal container with wrap=false", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: nowrap;")
+    expect(horizontalBlock).toHaveAttribute("data-test-wrap", "false")
+  })
+
+  it("adds focus-ring padding compensation for an unbordered horizontal scroll container", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: false,
+        border: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    // An unbordered scroll container gets vertical padding (cancelled by a
+    // negative margin) so child focus rings and shadows are not clipped by the
+    // browser-coerced cross-axis overflow.
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
+    expect(horizontalBlock).toHaveStyle("padding-block: 0.2rem;")
+    expect(horizontalBlock).toHaveStyle("margin-block: -0.2rem;")
+  })
+
+  it("omits focus-ring padding compensation for a bordered horizontal scroll container", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: false,
+        border: true,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    // A bordered container already has enough internal padding, so it must not
+    // add the extra focus-ring compensation margin.
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("overflow-y: visible;")
+    expect(horizontalBlock).not.toHaveStyle("margin-block: -0.2rem;")
+  })
+
+  it("does not enable horizontal scrolling for a horizontal container with wrap=true", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: true,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).not.toHaveStyle("overflow-x: auto;")
+    expect(horizontalBlock).toHaveStyle("flex-wrap: wrap;")
+    expect(horizontalBlock).toHaveAttribute("data-test-wrap", "true")
+  })
+
+  it("does not enable horizontal scrolling for a vertical container with wrap=false", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        wrap: false,
+      },
+    })
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    expect(screen.getByTestId("stVerticalBlock")).not.toHaveStyle(
+      "overflow-x: auto;"
+    )
+  })
+
+  it("should set min-width on columns when wrap is false", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(3, false),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const columns = screen.getAllByTestId("stColumn")
+    expect(columns).toHaveLength(3)
+    for (const column of columns) {
+      expect(column).toHaveStyle("min-width: 8rem;")
+    }
+  })
+
+  it("should not set the nowrap min-width floor when wrap is true", () => {
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(3, true),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block))
+
+    const columns = screen.getAllByTestId("stColumn")
+    expect(columns).toHaveLength(3)
+    for (const column of columns) {
+      expect(column).not.toHaveStyle("min-width: 8rem;")
+    }
   })
 })
 

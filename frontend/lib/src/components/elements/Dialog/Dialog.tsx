@@ -95,17 +95,21 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
 
     // Send widget event if on_dismiss is activated (indicated by presence of id)
     if (id && widgetMgr) {
-      void widgetMgr.setTriggerValue(
-        { id, formId: "" }, // WidgetInfo object - dialogs are not compatible with forms
-        { fromUi: true },
-        fragmentId
-      )
+      // Dialogs are not compatible with forms.
+      void widgetMgr.setTriggerValue(id, {
+        formId: "",
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [id, widgetMgr, fragmentId])
 
-  // Handler to suppress the R key when dialog is open and non-dismissible
-  // Otherwise, R would allow to dismiss the dialog by rerunning the script.
-  const handleKeyDown = useCallback(
+  // Handler to suppress the R key when dialog is open and non-dismissible.
+  // Otherwise, R would dismiss the dialog by rerunning the script.
+  // react-hot-keys binds both keydown and keyup to the same handler, so we
+  // must intercept both — blocking only keydown still lets keyup trigger
+  // App.rerunScript (reproduced on WebKit after backdrop click).
+  const handleRKeySuppress = useCallback(
     (e: KeyboardEvent): void => {
       if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
         const target = e.target as HTMLElement
@@ -122,26 +126,29 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
           return
         }
 
-        // Prevent the R key from bubbling up to the App level
+        // stopImmediatePropagation so other listeners on the same target
+        // (hotkeys-js on document) are skipped too.
         e.preventDefault()
-        e.stopPropagation()
+        e.stopImmediatePropagation()
       }
     },
     [isOpen, element.dismissible]
   )
 
-  // Set up keyboard event listener when dialog is open
+  // Set up keyboard event listeners when dialog is open
   useEffect(() => {
     if (isOpen && !element.dismissible) {
-      // Add event listener with capture=true to intercept before App level
-      document.addEventListener("keydown", handleKeyDown, true)
+      // capture=true to intercept before App-level hotkeys
+      document.addEventListener("keydown", handleRKeySuppress, true)
+      document.addEventListener("keyup", handleRKeySuppress, true)
 
       return () => {
-        document.removeEventListener("keydown", handleKeyDown, true)
+        document.removeEventListener("keydown", handleRKeySuppress, true)
+        document.removeEventListener("keyup", handleRKeySuppress, true)
       }
     }
     return undefined
-  }, [isOpen, element.dismissible, handleKeyDown])
+  }, [isOpen, element.dismissible, handleRKeySuppress])
 
   // don't use the Modal's isOpen prop as it feels laggy when using it
   if (!isOpen) {

@@ -86,7 +86,7 @@ def to_css_color(color: MaybeColor) -> Color:
     raise StreamlitInvalidColorError(color)
 
 
-def is_css_color_like(color: MaybeColor) -> bool:
+def is_css_color_like(color: object) -> bool:
     """Check whether the input looks like something Vega can use.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -98,7 +98,7 @@ def is_css_color_like(color: MaybeColor) -> bool:
     return is_hex_color_like(color) or _is_cssrgb_color_like(color)
 
 
-def is_hex_color_like(color: MaybeColor) -> bool:
+def is_hex_color_like(color: object) -> bool:
     """Check whether the input looks like a hex color.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -112,7 +112,7 @@ def is_hex_color_like(color: MaybeColor) -> bool:
     )
 
 
-def _is_cssrgb_color_like(color: MaybeColor) -> bool:
+def _is_cssrgb_color_like(color: object) -> bool:
     """Check whether the input looks like a CSS rgb() or rgba() color string.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -124,7 +124,7 @@ def _is_cssrgb_color_like(color: MaybeColor) -> bool:
     return isinstance(color, str) and color.startswith(("rgb(", "rgba("))
 
 
-def is_color_tuple_like(color: MaybeColor) -> bool:
+def is_color_tuple_like(color: object) -> bool:
     """Check whether the input looks like a tuple color.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -137,7 +137,7 @@ def is_color_tuple_like(color: MaybeColor) -> bool:
     )
 
 
-def is_builtin_color_name(color: MaybeColor) -> bool:
+def is_builtin_color_name(color: object) -> bool:
     """Check whether the input is a built-in Streamlit color name.
 
     Built-in color names (red, orange, yellow, green, blue, violet, gray/grey, primary)
@@ -146,7 +146,7 @@ def is_builtin_color_name(color: MaybeColor) -> bool:
     return isinstance(color, str) and color.lower() in BUILTIN_COLOR_NAMES
 
 
-def is_color_like(color: MaybeColor) -> bool:
+def is_color_like(color: object) -> bool:
     """A fairly lightweight check of whether the input is a color.
 
     This isn't meant to be a definitive answer. The definitive solution is to

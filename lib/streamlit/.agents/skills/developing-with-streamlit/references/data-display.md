@@ -160,6 +160,7 @@ st.dataframe(
 **Key points:**
 
 - **`key` is required** to enable clicks/callbacks. Click info lives in `st.session_state[key]` as a dict-like object with `row` and `label` attributes (also supports key access) — only during the click rerun, then resets to `None`.
+- Import `ButtonColumnClickState` from `streamlit.typing` when annotating this click value.
 - Use `on_click` (with optional `args`/`kwargs`) for the action; read the clicked row/label inside the callback.
 - Always **read-only** — even in `st.data_editor`, the cell values can't be edited, but clicks still fire.
 - Style with `type="primary" | "secondary" | "tertiary"` and `alignment`.
@@ -218,6 +219,8 @@ edited_df = st.data_editor(
 
 Access edit details via `st.session_state["my_editor"]["edited_rows"]`.
 
+Import `DataEditorState` from `streamlit.typing` when annotating the pending edit state stored at this Session State key.
+
 **Preserving edits on data refresh** — With a `key` and `num_rows="fixed"`, edits are kept when the data's *values* change and only reset when its structure changes (columns, dtypes, row count, or index labels). An edit is dropped once its value matches the new data. Edits are matched by row position, so use a meaningful index if edits should follow specific rows when the data is reordered. Omit `key` to reset edits on every data change.
 
 **Double-input anti-pattern** — assigning the result back to the same session state used as input causes every other edit to disappear:
@@ -244,6 +247,8 @@ selected_data = df.iloc[selected_indices]
 ```
 
 Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-column"`, `"single-cell"`, `"multi-cell"`.
+
+Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, and `PydeckState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, and `st.pydeck_chart`, respectively. Do not import these types from Streamlit's internal modules.
 
 ## Empty DataFrames
 

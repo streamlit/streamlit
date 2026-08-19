@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -884,7 +884,7 @@ describe("AppView element", () => {
       const logoElement = screen.getByTestId("stHeaderLogo")
       expect(logoElement).toBeInTheDocument()
 
-      fireEvent.error(logoElement)
+      logoElement.dispatchEvent(new Event("error"))
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(
         "Header Logo",
