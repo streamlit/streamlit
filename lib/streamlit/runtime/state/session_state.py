@@ -601,8 +601,9 @@ class _CallbackRerunVotes:
     - ``requested_targeted`` — a callback asked to rerun specific fragments rather
       than the full app: ``scope="fragment"`` today, and any non-empty
       ``fragment_id_queue`` so future keyed targets classify the same way.
-    - ``wants_interaction_default`` — a callback returned normally or called plain
-      ``st.rerun()``, i.e. did not ask for a targeted fragment rerun.
+    - ``wants_interaction_default`` — something in this interaction still expects the
+      default rerun: a callback returned normally or called plain ``st.rerun()``, or a
+      widget changed without firing any callback (every field of a form, for instance).
     - ``pending_reruns`` — the requests raised by ``st.rerun()``, in call order, held
       until every callback has run (see ``SessionState._run_widget_callback``).
 
@@ -895,15 +896,21 @@ class SessionState:
         # suppressed.
 
         # Path 1: single callback.
-        changed_widget_ids_for_single_callback = [
-            wid
-            for wid in self._new_widget_state
-            if self._widget_changed(wid)
-            and (metadata := self._new_widget_state.widget_metadata.get(wid))
-            is not None
-            and metadata.callback is not None
-            and not metadata.disabled
-        ]
+        changed_widget_ids_for_single_callback: list[str] = []
+        # Changed widgets with no callback machinery at all. Nothing dispatches for them, so
+        # they never reach _run_widget_callback to cast a vote of their own.
+        changed_widget_ids_without_callback: list[str] = []
+
+        for wid in self._new_widget_state:
+            if not self._widget_changed(wid):
+                continue
+            metadata = self._new_widget_state.widget_metadata.get(wid)
+            if metadata is None or metadata.disabled:
+                continue
+            if metadata.callback is not None:
+                changed_widget_ids_for_single_callback.append(wid)
+            elif metadata.callbacks is None:
+                changed_widget_ids_without_callback.append(wid)
 
         for wid in changed_widget_ids_for_single_callback:
             self._run_widget_callback(
@@ -928,6 +935,14 @@ class SessionState:
             # 2) JSON value change dispatch
             if metadata.value_type == "json_value":
                 self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
+
+        if changed_widget_ids_without_callback:
+            # A widget that changed without firing a callback still expects its new value to
+            # reach the body, so it votes for the interaction's default rerun. Inside a form
+            # that is the only possibility, since `check_callback_rules` forbids `on_change`
+            # on form fields: without this vote, a targeted rerun from the submit button
+            # would preempt the body and the submitted values would never be rendered.
+            votes.wants_interaction_default = True
 
         ctx = get_script_run_ctx()
 

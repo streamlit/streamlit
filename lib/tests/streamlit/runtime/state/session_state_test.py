@@ -21,7 +21,7 @@ import unittest
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -78,6 +78,9 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRe
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def identity(x):
@@ -963,6 +966,103 @@ def test_callback_navigation_survives_the_deferred_queueing() -> None:
 
     assert len(requeue_calls) == 1
     assert requeue_calls[0].page_script_hash == target_page
+
+
+def _state_with_changed_widgets(
+    widgets: list[tuple[str, Callable[[], None] | None]], *, disabled: bool = False
+) -> SessionState:
+    """Build a SessionState where every listed widget changed, with the given callbacks."""
+    ss = SessionState()
+    for wid, cb in widgets:
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=cb,
+                disabled=disabled and cb is None,
+            )
+        )
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+    return ss
+
+
+def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
+    """Run ss._call_callbacks() as a main-script interaction, returning queued requests."""
+    requeue_calls: list[RerunData] = []
+
+    mock_ctx = MagicMock()
+    # No fragment is running, so the interaction's default rerun is the full app.
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    return requeue_calls
+
+
+def _keyed_target() -> None:
+    """Stand in for PR-3's st.rerun(scope="<key>"): a target naming another fragment."""
+    raise RerunException(
+        RerunData(fragment_id_queue=["other-frag"], is_fragment_scoped_rerun=True)
+    )
+
+
+def test_callback_less_change_votes_for_the_interaction_default() -> None:
+    """A widget that changed without a callback still wants the default rerun.
+
+    This is the form shape: `check_callback_rules` forbids `on_change` on form fields, so a
+    field can only ever be callback-less and the submit button holds the only callback. If
+    the field cast no vote, a targeted rerun from that callback would preempt the body and
+    the submitted values would never be rendered.
+    """
+
+    ss = _state_with_changed_widgets([("field", None), ("submit", _keyed_target)])
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    # The targeted re-queue plus the forced app-wide default, which supersedes it.
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert not forced.fragment_id_queue
+    assert not forced.is_fragment_scoped_rerun
+
+
+def test_callback_less_change_alone_queues_nothing() -> None:
+    """The vote only breaks a tie; on its own it must not add a rerun.
+
+    The interaction's own run is already underway, so a changed callback-less widget with
+    nothing competing against it needs no extra request.
+    """
+
+    ss = _state_with_changed_widgets([("field", None), ("other_field", None)])
+
+    assert _call_callbacks_in_main_script(ss) == []
+
+
+def test_disabled_callback_less_change_does_not_vote() -> None:
+    """A disabled widget's reported change is forged or stale, so it gets no vote.
+
+    Without the disabled check it would force an app-wide rerun and override the target.
+    """
+
+    ss = _state_with_changed_widgets(
+        [("field", None), ("submit", _keyed_target)], disabled=True
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    assert len(requeue_calls) == 1
+    assert requeue_calls[0].fragment_id_queue == ["other-frag"]
 
 
 def test_callbacks_targeted_and_default_in_main_script_force_full_app_rerun() -> None:
