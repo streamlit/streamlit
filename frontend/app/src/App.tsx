@@ -25,6 +25,18 @@ import Hotkeys from "react-hot-keys"
 import AppView from "@streamlit/app/src/components/AppView/AppView"
 import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
 import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
+import {
+  isSkillsNudgeDismissed,
+  isSkillsNudgeDroppedConnection,
+  isSkillsNudgeSnoozed,
+  setSkillsNudgeDismissed,
+  setSkillsNudgeSnoozed,
+  SKILLS_NUDGE_DROPPED_MESSAGE,
+  skillsNudgeInstallFailureLabel,
+  skillsNudgeInstallSuccessLabel,
+  skillsNudgeSuppressedLabel,
+} from "@streamlit/app/src/components/SkillsNudgeToast/skillsNudge"
+import SkillsNudgeToast from "@streamlit/app/src/components/SkillsNudgeToast/SkillsNudgeToast"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
 import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
@@ -60,6 +72,7 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
+  BackendOperationClient,
   CircularBuffer,
   ComponentRegistry,
   createAutoTheme,
@@ -90,6 +103,7 @@ import {
   hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
+  INITIAL_SCRIPT_RUN_ID,
   isEmbed,
   isInChildFrame,
   isKeyboardEventFromEditableTarget,
@@ -114,10 +128,10 @@ import {
 import {
   AuthRedirect,
   AutoRerun,
+  BackendOperationResponse,
   BackMsg,
   Config,
   CustomThemeConfig,
-  DeferredFileResponse,
   Delta,
   FileURLsResponse,
   ForwardMsg,
@@ -137,18 +151,20 @@ import {
   ParentMessage,
   SessionEvent,
   SessionStatus,
+  StopAutoRerun,
   WidgetStates,
 } from "@streamlit/protobuf"
 import {
   isLocalhost,
   isNullOrUndefined,
+  localStorageAvailable,
   notNullOrUndefined,
   StreamlitConfig,
 } from "@streamlit/utils"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
-// Used to import fonts + responsive reboot items
-import "@streamlit/app/src/assets/css/theme.scss"
+// Import @font-face rules for app and icon fonts
+import "@streamlit/app/src/assets/css/fonts.css"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 import {
   includeIfDefined,
@@ -187,6 +203,7 @@ interface State {
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
+  disableDataExport: boolean
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
@@ -206,6 +223,12 @@ interface State {
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
+  // Monotonic counter bumped on every scriptFinished message; lets widgets
+  // detect that a run completed. Consumed by ChatInput.
+  scriptRunFinishedSequence: number
+  // Fragments that ran in the run that just finished; empty for full-script
+  // runs, and may contain more than one. Consumed by ChatInput.
+  scriptRunFinishedFragmentIds: Array<string>
   // host communication info
   isOwner: boolean
   hostMenuItems: IMenuItem[]
@@ -217,12 +240,37 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
-}
+  // Whether the framework "install skills" nudge is currently shown. Set once
+  // per page load in handleInitialization when the server recommends it (and
+  // the localhost / dismissal / snooze gates pass), and cleared when the
+  // developer installs, snoozes (✕), or picks "Don't show again".
+  showSkillsNudge: boolean
 
-const INITIAL_SCRIPT_RUN_ID = "<null>"
+  /**
+   * Whether the server recommended installing the bundled agent skills this
+   * session (agent present, skills not installed, not headless, no permanent
+   * dismissal marker). Drives the in-error "install skills" callout, which
+   * gates on it every render — independent of the one-shot toast logic above.
+   */
+  recommendSkillsInstall: boolean
+
+  /**
+   * Set once skills are installed this session (from any surface). The server
+   * only re-detects an install on a new session, so this hides the in-error
+   * callout (and any further nudge) for the rest of the current session.
+   */
+  skillsInstalledThisSession: boolean
+
+  /**
+   * Set once an install has genuinely failed this session (not merely dropped
+   * its connection). The cause is environmental — a blocked target, a read-only
+   * directory — so it will fail again, and without this every later error would
+   * offer the same doomed install.
+   */
+  skillsInstallFailedThisSession: boolean
+}
 
 export const LOG = getLogger("App")
 
@@ -276,11 +324,8 @@ export class App extends PureComponent<Props, State> {
    */
   private readonly appRootRef = createRef<HTMLDivElement>()
 
-  // Listener registry for deferred file responses: fileId -> set of listeners
-  private readonly deferredFileListeners = new Map<
-    string,
-    Set<(response: DeferredFileResponse) => void>
-  >()
+  /** Client for backend operation requests (lazy loading, validation, etc.) */
+  private readonly backendOperationClient: BackendOperationClient
 
   private readonly appNavigation: AppNavigation
 
@@ -291,6 +336,62 @@ export class App extends PureComponent<Props, State> {
   // we have received a NewSession message after the latest rerun request.
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
+
+  // Active `run_every` auto-rerun timers, keyed by fragment id. These are
+  // imperative resources (setInterval handles), so they live outside of React
+  // state. Keying by fragment id lets us keep a single timer per fragment: we
+  // reuse the running timer when a fragment re-registers with the same interval
+  // (so frequent ancestor reruns don't reset its countdown), and only restart
+  // it when the interval changes. The stored `interval` (in seconds) is what we
+  // compare against on re-registration.
+  private readonly autoRerunIntervals: Map<
+    string,
+    { timer: ReturnType<typeof setInterval>; interval: number }
+  > = new Map()
+
+  // Whether the skills-install nudge has been shown this page load.
+  // `handleInitialization` re-runs on websocket reconnect, so this guards
+  // against enqueuing a duplicate nudge and against logging multiple
+  // `skillsNudgeShown` events (which would inflate the adoption funnel). Reset
+  // only by a full page reload (a new App instance).
+  private skillsNudgeShown: boolean = false
+
+  // Whether a suppression reason has been reported this page load. Tracked
+  // separately from `skillsNudgeShown` so recording a suppression does NOT
+  // prevent the nudge from appearing later in the same page load: eligibility is
+  // recomputed on every rerun, and `check_failed` in particular is transient (a
+  // thrown eligibility check), so a single bad rerun must not withhold the nudge
+  // until the user reloads. Deduping the two events independently still keeps a
+  // reconnect from inflating either count.
+  private skillsNudgeSuppressionReported: boolean = false
+
+  // Same once-per-page-load guard for the in-error callout's impression: the
+  // callout remounts whenever its error box remounts (across reruns), but the
+  // adoption funnel should count one "shown" per session per surface — matching
+  // the toast above — so a recurring error can't inflate the errorCallout count.
+  private errorCalloutShown: boolean = false
+
+  // Session-constant part of the in-error callout's gate. `isLocalhost()`,
+  // `isEmbed()`, and `localStorageAvailable()` don't change within a session,
+  // and `localStorageAvailable()` does a synchronous write probe — so compute
+  // them once (lazily) instead of on every render. The callout gate reaches
+  // this only after `recommendSkillsInstall` short-circuits, so apps without
+  // the agent recommendation never pay for it. (The dismissal check stays
+  // per-render, since a "don't show again" can flip it mid-session.)
+  private cachedSkillsCalloutEnvEligible?: boolean
+
+  // The install currently in flight, if any, so both surfaces share one
+  // operation instead of racing two against the same target tree. Cleared when
+  // it settles. See handleSkillsNudgeInstall.
+  private inFlightSkillsInstall: Promise<string | undefined> | null = null
+
+  private get skillsCalloutEnvEligible(): boolean {
+    if (this.cachedSkillsCalloutEnvEligible === undefined) {
+      this.cachedSkillsCalloutEnvEligible =
+        isLocalhost() && !isEmbed() && localStorageAvailable()
+    }
+    return this.cachedSkillsCalloutEnvEligible
+  }
 
   public constructor(props: Props) {
     super(props)
@@ -322,6 +423,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
       showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+      disableDataExport: false,
       // Initialize themeHash to empty string to ensure the first processThemeInput
       // call always processes the theme (whether null or custom theme from server).
       // This prevents the bug where a cached custom theme isn't cleared when the
@@ -345,6 +447,8 @@ export class App extends PureComponent<Props, State> {
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
+      scriptRunFinishedSequence: 0,
+      scriptRunFinishedFragmentIds: [],
       // Information sent from the host
       isOwner: false,
       hostMenuItems: [],
@@ -358,10 +462,13 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
-      autoReruns: [],
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
+      showSkillsNudge: false,
+      recommendSkillsInstall: false,
+      skillsInstalledThisSession: false,
+      skillsInstallFailedThisSession: false,
     }
 
     this.connectionManager = null
@@ -428,6 +535,7 @@ export class App extends PureComponent<Props, State> {
         this.connectionManager?.disconnect()
         this.connectionManager = null
       },
+      printApp: this.printCallback,
     })
 
     this.endpoints = new DefaultStreamlitEndpoints({
@@ -471,6 +579,21 @@ export class App extends PureComponent<Props, State> {
       this.onPageNotFound,
       this.onPageIconChanged
     )
+
+    this.backendOperationClient = new BackendOperationClient({
+      sendRequest: request => {
+        // Check connection before sending to fail fast instead of timing out
+        if (!this.isServerConnected() || !this.sessionInfo.isSet) {
+          throw new Error(
+            "Cannot send backend operation request: not connected to server"
+          )
+        }
+        const backMsg = new BackMsg({ backendOperationRequest: request })
+        backMsg.type = "backendOperationRequest"
+        this.sendBackMsg(backMsg)
+      },
+      getSessionId: () => this.sessionInfo.current.sessionId,
+    })
 
     window.streamlitDebug = {
       clearForwardMsgCache: this.debugClearForwardMsgCache,
@@ -878,7 +1001,7 @@ export class App extends PureComponent<Props, State> {
         // Script is using fragments (fragments in last run or
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
-        this.state.autoReruns.length > 0
+        this.autoRerunIntervals.size > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -905,6 +1028,9 @@ export class App extends PureComponent<Props, State> {
       if (this.sessionInfo.isSet) {
         this.sessionInfo.disconnect()
       }
+
+      // Clean up pending backend operation requests on disconnect
+      this.backendOperationClient.cleanup()
     }
 
     if (this.isInitializingConnectionManager) {
@@ -913,7 +1039,7 @@ export class App extends PureComponent<Props, State> {
       // The setState will be applied in the expected render cycle in this case.
       this.setState({ connectionState: newState })
     } else {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * We are using `flushSync` here because there is code that expects every
        * state to be observed. With React batched updates, it is possible that
        * multiple `connectionState` changes are applied in 1 render cycle, leading
@@ -979,7 +1105,8 @@ export class App extends PureComponent<Props, State> {
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
-            msgProto.metadata as ForwardMsgMetadata
+            msgProto.metadata as ForwardMsgMetadata,
+            msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
@@ -994,10 +1121,10 @@ export class App extends PureComponent<Props, State> {
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
+        stopAutoRerun: (stopAutoRerun: StopAutoRerun) =>
+          this.handleStopAutoRerun(stopAutoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
-        deferredFileResponse: (deferredFileResponse: DeferredFileResponse) =>
-          this.handleDeferredFileResponse(deferredFileResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -1015,6 +1142,8 @@ export class App extends PureComponent<Props, State> {
           }
         },
         heartbeatAck: () => this.handleHeartbeatAck(),
+        backendOperationResponse: (response: BackendOperationResponse) =>
+          this.backendOperationClient.onResponse(response),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1183,14 +1312,47 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
-    const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
-    }, autoRerun.interval * 1000)
+    const { fragmentId } = autoRerun
 
-    this.setState((prevState: State) => {
-      return {
-        autoReruns: [...prevState.autoReruns, intervalId],
-      }
+    // Auto-reruns are always scoped to a fragment, so we expect a non-empty
+    // fragment id. Guard against an empty id (which protobuf produces when the
+    // field is unset): using it as a map key would collide, so a second empty-id
+    // registration would silently cancel the first. Skip it instead.
+    if (!fragmentId) {
+      LOG.warn("Ignoring auto-rerun message without a fragment id.")
+      return
+    }
+
+    const { interval } = autoRerun
+
+    // A `run_every` fragment re-registers its auto-rerun every time an ancestor
+    // re-renders it (a fragment-only rerun doesn't reset timers). If a timer for
+    // this fragment is already running with the same interval, leave it alone:
+    // restarting it would reset the countdown, so ancestor reruns firing more
+    // often than `run_every` could delay or starve the fragment's auto-rerun.
+    // We only (re)start the timer when there isn't one yet or the interval
+    // changed, which also avoids stacking duplicate intervals.
+    if (this.autoRerunIntervals.get(fragmentId)?.interval === interval) {
+      return
+    }
+
+    this.clearAutoRerunInterval(fragmentId)
+
+    const timer = setInterval(() => {
+      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
+    }, interval * 1000)
+
+    this.autoRerunIntervals.set(fragmentId, { timer, interval })
+  }
+
+  /**
+   * Handler for ForwardMsg.stopAutoRerun messages. The server sends this when
+   * it evicts fragments (e.g. a nested ``run_every`` fragment whose ancestor
+   * stopped rendering it), so we cancel their pending auto-rerun timers.
+   */
+  handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
+    stopAutoRerun.fragmentIds.forEach(fragmentId => {
+      this.clearAutoRerunInterval(fragmentId)
     })
   }
 
@@ -1372,6 +1534,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         showErrorLinks: config.showErrorLinks,
+        disableDataExport: config.disableDataExport,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -1444,6 +1607,228 @@ export class App extends PureComponent<Props, State> {
     // Protobuf typing cannot handle complex types, so we need to cast to what
     // we know it should be
     this.handleSessionStatusChanged(initialize.sessionStatus as SessionStatus)
+
+    // Show the framework "install skills" nudge when the server recommends it
+    // (agent present, skills not installed, not headless, no server-side marker)
+    // and we're on localhost, not embedded, not permanently dismissed, and not
+    // snoozed. Require localStorage: it's where a snooze / "don't show again" is
+    // remembered browser-side, so if it's unavailable we fail closed and skip
+    // the nudge rather than show one the user can't make stick. Skip embedded
+    // (?embed=true) apps: they're meant to be chromeless, so a CTA card pinned
+    // over the host page's content is inappropriate (and the developer can't
+    // act on it inside someone else's page anyway).
+    // Store the server's recommendation so the in-error "install skills"
+    // callout (a separate, non-dismissable surface) can gate on it every
+    // render, independent of the one-shot toast-impression logic below.
+    this.setState({
+      recommendSkillsInstall: Boolean(initialize.recommendSkillsInstall),
+    })
+
+    if (
+      initialize.recommendSkillsInstall &&
+      isLocalhost() &&
+      !isEmbed() &&
+      localStorageAvailable() &&
+      !isSkillsNudgeDismissed() &&
+      !isSkillsNudgeSnoozed() &&
+      // Don't re-raise the toast for an install this session already settled.
+      // `skillsNudgeShown` below only stops a SECOND showing — a toast skipped
+      // on first connect (snoozed) leaves it false, so a reconnect once the
+      // snooze lapses would raise the toast even though the callout has since
+      // installed, or tried and failed. Failure matters most: the errored
+      // callout is exempt from the eligibility hide (an error report isn't a
+      // transaction that finishes), so without this the toast would appear
+      // beside it — offering the install that just failed, and breaking the
+      // mutual exclusion the two surfaces otherwise keep.
+      !this.state.skillsInstalledThisSession &&
+      !this.state.skillsInstallFailedThisSession &&
+      // `handleInitialization` re-runs on reconnect; show + log the impression
+      // only once per page load so a reconnect can't enqueue a duplicate nudge
+      // or inflate the funnel's numerator.
+      !this.skillsNudgeShown
+    ) {
+      this.skillsNudgeShown = true
+      this.setState({ showSkillsNudge: true })
+      this.trackSkillsNudge("skillsNudgeShown", "toast")
+    } else if (
+      initialize.skillsNudgeSuppressedReason &&
+      !this.skillsNudgeSuppressionReported &&
+      !this.skillsNudgeShown
+    ) {
+      // The nudge was eligible server-side but the server withheld it — because
+      // the browser isn't on a direct-loopback connection (Docker/VM/tunnel),
+      // because a one-click install would only conflict, or because the
+      // eligibility check itself failed. Record the reason once per page load so
+      // suppression is measurable instead of silent, and so a reconnect can't
+      // double-count it. Also skipped once the nudge HAS been shown, since the
+      // funnel treats shown and suppressed as mutually exclusive per session.
+      this.skillsNudgeSuppressionReported = true
+      this.trackSkillsNudge(
+        skillsNudgeSuppressedLabel(initialize.skillsNudgeSuppressedReason),
+        "toast"
+      )
+    }
+  }
+
+  /**
+   * Record a skills-nudge interaction for telemetry. Routed through the
+   * existing ``menuClick`` event (like the deploy button), so it is only sent
+   * when usage stats are enabled. ``surface`` attributes the event to the UI
+   * that emitted it (the nudge ``toast`` vs the in-error ``errorCallout``) so
+   * the shown → installed funnel can be sliced per surface.
+   */
+  private readonly trackSkillsNudge = (
+    label: string,
+    surface: "toast" | "errorCallout"
+  ): void => {
+    this.metricsMgr.enqueue("menuClick", { label, surface })
+  }
+
+  /** Install the bundled skills via a backend operation (no script rerun). */
+  private readonly handleSkillsNudgeInstall = (
+    surface: "toast" | "errorCallout"
+  ): Promise<string | undefined> => {
+    // Both surfaces can be on screen at once (the sticky callout slot lets them
+    // transiently coexist), and each owns its own button. Hand a second clicker
+    // the install already in flight rather than starting another: two concurrent
+    // installs race on the same target tree, and the loser doesn't fail
+    // cleanly — on the symlink path it falls back to a GLOBAL install into the
+    // user's home dir that nobody asked for, and on the copy path it reports
+    // "could not write" for skills that are in fact installed. No second
+    // `skillsNudgeInstall` event either: it's one install, not two attempts.
+    //
+    // This covers one browser client. Two tabs still race, because the guard
+    // that would have to stop that lives in the server's InstallSkillsHandler.
+    //
+    // `surface` is whoever STARTED the install, not whoever joined it, so a
+    // joiner's click lands on the initiator's telemetry and confirmation. In the
+    // one case that reaches this — callout starts, user then clicks the toast —
+    // the toast is dismissed by the success below and the confirmation appears on
+    // the callout. A slightly odd frame in an already-rare race; not worth
+    // threading a second surface through for.
+    if (this.inFlightSkillsInstall) {
+      return this.inFlightSkillsInstall
+    }
+    this.trackSkillsNudge("skillsNudgeInstall", surface)
+    const install = this.backendOperationClient
+      .requestInstallSkills()
+      .then(result => {
+        // The server has re-detected the now-installed skills (it clears its
+        // detection cache), so a later session won't recommend the nudge again
+        // — no need to also write the permanent "don't show again" flag here,
+        // which would conflate "installed" with a permanent opt-out. The card
+        // shows its own success confirmation and auto-dismisses.
+        this.trackSkillsNudge(
+          skillsNudgeInstallSuccessLabel(result.fallbackReason),
+          surface
+        )
+        // Within this session the server won't re-run detection, so suppress
+        // any further install offer (notably the in-error callout, which can
+        // recur on every error) now that skills are installed.
+        this.setState(prevState => ({
+          skillsInstalledThisSession: true,
+          // An install from the in-error callout also clears the proactive
+          // toast if it happens to be up — the two can transiently coexist via
+          // the sticky callout slot — so it can't keep advertising an install
+          // that just completed. A toast-surface install leaves showSkillsNudge
+          // alone so the toast shows its own success confirmation before
+          // self-dismissing via onClose.
+          showSkillsNudge:
+            surface === "errorCallout" ? false : prevState.showSkillsNudge,
+        }))
+        return result.detail ?? undefined
+      })
+      .catch((error: unknown) => {
+        // A dropped or timed-out connection during a long install rejects the
+        // request even though the server install may have completed. Count it
+        // separately — not as a failure, which would over-count the funnel —
+        // and surface a reassuring, retry-friendly message; re-install is
+        // idempotent.
+        if (isSkillsNudgeDroppedConnection(error)) {
+          this.trackSkillsNudge("skillsNudgeInstallDropped", surface)
+          throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
+        }
+        // Append the server's machine-readable reason as a label suffix, and
+        // count a safety-gate refusal under its own event rather than as a
+        // failure. See skillsNudgeInstallFailureLabel.
+        this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error), surface)
+        // Stop offering the install on NEW callouts for the rest of the session.
+        // A failure here is a property of the machine (a blocked target, a
+        // read-only dir), not of this error, so every later error would offer the
+        // same doomed install — a fresh red box each time, none of them
+        // dismissable. The callout already showing keeps its Retry, since a
+        // non-idle callout ignores this gate. Deliberately NOT set for a dropped
+        // connection above: that one really is worth retrying.
+        this.setState({ skillsInstallFailedThisSession: true })
+        // Re-throw so the card / callout renders its error state.
+        throw error
+      })
+      // Clear the slot whatever the outcome, so a later Retry (or a genuinely
+      // new install after a dropped connection) isn't handed a settled promise.
+      .finally(() => {
+        this.inFlightSkillsInstall = null
+      })
+    this.inFlightSkillsInstall = install
+    return install
+  }
+
+  /** Toast's Install button — installs and tags telemetry with the toast surface. */
+  private readonly handleToastInstall = (): Promise<string | undefined> => {
+    return this.handleSkillsNudgeInstall("toast")
+  }
+
+  /**
+   * In-error callout's Install button — installs and tags telemetry with the
+   * errorCallout surface. Stable reference so the SkillsInstallContext value
+   * doesn't change every render.
+   */
+  private readonly handleErrorCalloutInstall = (): Promise<
+    string | undefined
+  > => {
+    return this.handleSkillsNudgeInstall("errorCallout")
+  }
+
+  /** Record the in-error callout's impression (tagged with the errorCallout surface). */
+  private readonly handleErrorCalloutShown = (): void => {
+    // Once per page load (see `errorCalloutShown`) so reruns that remount the
+    // error box don't re-log the impression.
+    if (this.errorCalloutShown) {
+      return
+    }
+    this.errorCalloutShown = true
+    this.trackSkillsNudge("skillsNudgeShown", "errorCallout")
+  }
+
+  /** Close (✕): snooze the nudge for ~24h. The card removes itself via onClose. */
+  private readonly handleSkillsNudgeSnooze = (): void => {
+    setSkillsNudgeSnoozed()
+    this.trackSkillsNudge("skillsNudgeSnoozed", "toast")
+  }
+
+  /**
+   * "Don't show again": dismiss permanently by writing both the browser
+   * localStorage flag and the server-side marker, so it won't show again from
+   * either signal. The card removes itself via onClose.
+   */
+  private readonly handleSkillsNudgeDontShowAgain = (): void => {
+    setSkillsNudgeDismissed()
+    // Best-effort durable suppression: the localStorage flag already suppresses
+    // the nudge in this browser, so a failed marker write only means a fresh
+    // browser could see it again — log it rather than failing the dismissal.
+    this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
+      LOG.warn("Failed to persist skills nudge dismissal", error)
+    })
+    this.trackSkillsNudge("skillsNudgeDontShowAgain", "toast")
+  }
+
+  /**
+   * Remove the nudge from view. Called by the nudge card after a snooze /
+   * "Don't show again" and by its post-install auto-dismiss. Only toggles
+   * visibility; the persistence (localStorage / server marker) is handled by
+   * the snooze / don't-show-again / install handlers.
+   */
+  private readonly handleSkillsNudgeClose = (): void => {
+    this.setState({ showSkillsNudge: false })
   }
 
   /**
@@ -1573,6 +1958,17 @@ export class App extends PureComponent<Props, State> {
    * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+    // Bump a monotonic counter and snapshot the fragment IDs of the run that
+    // just finished, so widgets (e.g. ChatInput) can react to the completion of
+    // the specific full-script or fragment run they triggered. This runs before
+    // the status-conditional handling below on purpose: the counter must bump
+    // for every finish status (including FINISHED_WITH_COMPILE_ERROR) so widgets
+    // re-enable even when a run ends with a compilation error.
+    this.setState(prevState => ({
+      scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
+      scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
+    }))
+
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN ||
@@ -1738,14 +2134,16 @@ export class App extends PureComponent<Props, State> {
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: ForwardMsgMetadata
+    metadataMsg: ForwardMsgMetadata,
+    elementHash?: string
   ): void => {
     // Use functional state update to ensure we have latest elements
     this.setState(prevState => ({
       elements: prevState.elements.applyDelta(
         prevState.scriptRunId,
         deltaMsg,
-        metadataMsg
+        metadataMsg,
+        elementHash
       ),
     }))
   }
@@ -1793,10 +2191,21 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
-      clearInterval(value)
+    this.autoRerunIntervals.forEach(({ timer }) => {
+      clearInterval(timer)
     })
-    this.setState({ autoReruns: [] })
+    this.autoRerunIntervals.clear()
+  }
+
+  /**
+   * Clear the auto-rerun interval for a single fragment, if one exists.
+   */
+  private clearAutoRerunInterval(fragmentId: string): void {
+    const existing = this.autoRerunIntervals.get(fragmentId)
+    if (existing !== undefined) {
+      clearInterval(existing.timer)
+      this.autoRerunIntervals.delete(fragmentId)
+    }
   }
 
   /**
@@ -2044,7 +2453,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Asks the server to clear the st_cache and st_cache_data and st_cache_resource
+   * Asks the server to clear st.cache_data and st.cache_resource caches.
    */
   clearCache = (): void => {
     this.closeDialog()
@@ -2092,8 +2501,9 @@ export class App extends PureComponent<Props, State> {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      LOG.error(`Not connected. Cannot send back message: ${msg}`)
+      LOG.error(
+        `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
+      )
     }
   }
 
@@ -2277,57 +2687,6 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  requestDeferredFile = (fileId: string): Promise<DeferredFileResponse> => {
-    const isConnected = this.isServerConnected()
-    const isSessionInfoSet = this.sessionInfo.isSet
-
-    if (!isConnected || !isSessionInfoSet) {
-      return Promise.reject(
-        new Error("Not connected to server or session not initialized")
-      )
-    }
-
-    const resolver = Promise.withResolvers<DeferredFileResponse>()
-
-    // Register a one-time listener for this fileId
-    const listeners =
-      this.deferredFileListeners.get(fileId) ??
-      new Set<(response: DeferredFileResponse) => void>()
-    const once = (response: DeferredFileResponse): void => {
-      listeners.delete(once)
-      resolver.resolve(response)
-    }
-    listeners.add(once)
-    this.deferredFileListeners.set(fileId, listeners)
-
-    const backMsg = new BackMsg({
-      deferredFileRequest: {
-        fileId,
-        sessionId: this.sessionInfo.current.sessionId,
-      },
-    })
-
-    backMsg.type = "deferredFileRequest"
-    this.sendBackMsg(backMsg)
-
-    return resolver.promise
-  }
-
-  handleDeferredFileResponse = (response: DeferredFileResponse): void => {
-    const listeners = this.deferredFileListeners.get(response.fileId)
-    if (!listeners || listeners.size === 0) return
-
-    // Notify and clear all listeners for this fileId
-    for (const listener of Array.from(listeners)) {
-      try {
-        listener(response)
-      } catch {
-        // Swallow listener errors to avoid breaking notification fanout
-      }
-    }
-    this.deferredFileListeners.delete(response.fileId)
-  }
-
   handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
     // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
     // We never fire global single-letter shortcuts while the user is typing.
@@ -2485,16 +2844,43 @@ export class App extends PureComponent<Props, State> {
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
         fragmentIdsThisRun={this.state.fragmentIdsThisRun}
+        scriptRunFinishedSequence={this.state.scriptRunFinishedSequence}
+        scriptRunFinishedFragmentIds={this.state.scriptRunFinishedFragmentIds}
         locale={window.navigator.language}
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
+        stopScript={this.stopScript}
         // LibConfig properties
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
         showErrorLinks={this.state.showErrorLinks}
-        requestDeferredFile={this.requestDeferredFile}
+        disableDataExport={this.state.disableDataExport}
+        backendOperationClient={this.backendOperationClient}
+        // In-error "install skills" callout. Gated on the server's
+        // recommendation plus localhost/embed (consistent with the exception
+        // box's own AI-links gate), not-yet-installed-this-session, and not
+        // permanently dismissed. `localStorageAvailable()` matches the toast's
+        // fail-closed behavior: without storage we can't remember a dismissal,
+        // so don't offer something the user can't make stick.
+        //
+        // Mutually exclusive with the proactive nudge toast (`!showSkillsNudge`):
+        // the two never show at once. The 24h snooze is intentionally NOT checked
+        // here — once the toast is snoozed/closed (`showSkillsNudge` flips false),
+        // an error is a higher-intent moment than a snoozed proactive nudge, so
+        // the callout may then appear. A permanent "don't show again" (or an
+        // install) from either surface suppresses both.
+        skillsInstallEnabled={
+          this.state.recommendSkillsInstall &&
+          this.skillsCalloutEnvEligible &&
+          !this.state.skillsInstalledThisSession &&
+          !this.state.skillsInstallFailedThisSession &&
+          !isSkillsNudgeDismissed() &&
+          !this.state.showSkillsNudge
+        }
+        onInstallSkills={this.handleErrorCalloutInstall}
+        onSkillsCalloutShown={this.handleErrorCalloutShown}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2529,6 +2915,16 @@ export class App extends PureComponent<Props, State> {
               showToolbar={showToolbar}
               disableFullscreenMode={libConfig.disableFullscreenMode}
               componentRegistry={this.componentRegistry}
+              skillsNudge={
+                this.state.showSkillsNudge ? (
+                  <SkillsNudgeToast
+                    onInstall={this.handleToastInstall}
+                    onSnooze={this.handleSkillsNudgeSnooze}
+                    onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
+                    onClose={this.handleSkillsNudgeClose}
+                  />
+                ) : undefined
+              }
               topRightContent={
                 <>
                   {!hideTopBar && (

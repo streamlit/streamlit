@@ -66,9 +66,7 @@ function CheckboxColumn(
       ),
     },
     getCell(data?: unknown): GridCell {
-      let cellData = null
-
-      cellData = toSafeBoolean(data)
+      const cellData = toSafeBoolean(data)
       if (cellData === undefined) {
         return getErrorCell(
           toSafeString(data),

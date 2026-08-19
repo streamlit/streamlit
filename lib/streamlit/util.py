@@ -25,6 +25,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from hashlib import _Hash
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -65,16 +66,32 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-def calc_md5(s: bytes | str) -> str:
-    """Return the md5 hash of the given string.
+def create_fast_hasher() -> _Hash:
+    """Create a fast hasher for incremental hashing.
 
-    This should not be used for security-related purposes.
+    Prefers BLAKE2b with a 16-byte digest. If the platform BLAKE2b provider
+    rejects a custom ``digest_size`` (common on FIPS/OpenSSL builds), falls
+    back to MD5. Both produce 32-character hex digests (16 bytes).
     """
-    # Due to security issue in md5 and sha1, usedforsecurity
-    h = hashlib.new("md5", usedforsecurity=False)
+    try:
+        return hashlib.blake2b(  # type: ignore[return-value]  # ty: ignore[invalid-return-type]  # noqa: TID251
+            digest_size=16, usedforsecurity=False
+        )
+    except (TypeError, ValueError):
+        # Some FIPS-enabled Python builds replace the standard BLAKE2b
+        # implementation with an OpenSSL wrapper that rejects a custom digest
+        # size, raising TypeError or ValueError depending on the provider.
+        return hashlib.new("md5", usedforsecurity=False)  # noqa: TID251
 
+
+def calc_hash(s: bytes | str) -> str:
+    """Return a fast hash of the given string.
+
+    Uses BLAKE2b (~2.4x faster than MD5) where supported, with an MD5 fallback
+    for limited FIPS providers. This should not be used for security purposes.
+    """
     b = s.encode("utf-8") if isinstance(s, str) else s
-
+    h = create_fast_hasher()
     h.update(b)
     return h.hexdigest()
 
@@ -104,12 +121,11 @@ class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
 
 
 _READ_ONLY_ERROR_MSG = (
-    "Widget state is read-only. To programmatically update widget state, "
-    "assign a new dictionary to the session state key instead of modifying "
-    "nested values. For example, use:\n"
-    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}\n"
-    "Instead of:\n"
-    "    st.session_state.my_key.selection = {'rows': [0]}"
+    "Widget state is read-only because modifying nested values has no effect "
+    "on the app. For widget states that support programmatic updates "
+    "(e.g. st.dataframe selections), assign a new dictionary to the Session "
+    "State key instead, for example:\n"
+    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}"
 )
 
 
@@ -120,8 +136,10 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
     Used for widget state return values (e.g., dataframe selections) to prevent
     users from modifying values in ways that don't trigger proper state updates.
 
-    Modifications should be done by assigning a new dictionary to the session
-    state key, e.g., ``st.session_state['key'] = {'selection': {'rows': [0]}}``.
+    For widget states that support programmatic updates (e.g. dataframe
+    selections), assign a new dictionary to the Session State key, e.g.
+    ``st.session_state['key'] = {'selection': {'rows': [0]}}``. Other widget
+    states (e.g. chart selections) cannot be updated programmatically.
     """
 
     def __getitem__(self, key: Any) -> Any:
@@ -166,12 +184,15 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
         raise TypeError(_READ_ONLY_ERROR_MSG)
 
     def __copy__(self) -> ReadOnlyAttributeDictionary:
-        return ReadOnlyAttributeDictionary(dict.copy(self))
+        # Reconstruct via the concrete subclass (e.g. DataframeState) so copies
+        # preserve their type. Hardcoding the base class would collapse typed
+        # widget states to a plain ReadOnlyAttributeDictionary.
+        return type(self)(dict.copy(self))
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> ReadOnlyAttributeDictionary:
         import copy
 
-        return ReadOnlyAttributeDictionary(
+        return type(self)(
             {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
         )
 

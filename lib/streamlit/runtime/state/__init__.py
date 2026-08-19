@@ -15,6 +15,7 @@
 from streamlit.runtime.state.common import (
     BindOption,
     OnChangeMode,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -37,6 +38,7 @@ __all__ = [
     "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
     "BindOption",
     "OnChangeMode",
+    "PersistStateOption",
     "QueryParamsProxy",
     "SafeSessionState",
     "SessionState",

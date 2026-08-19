@@ -61,6 +61,7 @@ _os.environ["MPLBACKEND"] = "Agg"
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
+from typing import cast as _cast
 
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
@@ -86,6 +87,9 @@ from streamlit.elements.lib.mutable_tab_container import TabContainer as _TabCon
 from streamlit.elements.lib.mutable_popover_container import (
     PopoverContainer as _PopoverContainer,
 )
+from streamlit.elements.lib.skeleton_placeholder import (
+    SkeletonPlaceholder as _SkeletonPlaceholder,
+)
 
 # instantiate the DeltaGeneratorSingleton
 _dg_singleton = _DeltaGeneratorSingleton(
@@ -95,18 +99,34 @@ _dg_singleton = _DeltaGeneratorSingleton(
     expander_container_cls=_ExpanderContainer,
     tab_container_cls=_TabContainer,
     popover_container_cls=_PopoverContainer,
+    skeleton_placeholder_cls=_SkeletonPlaceholder,
 )
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
 _event: _DeltaGenerator = _dg_singleton._event_dg
-_bottom: _DeltaGenerator = _dg_singleton._bottom_dg
+
+from streamlit.elements.bottom import BottomContainerProxy as _BottomContainerProxy
+
+# The internal _bottom_dg is used by both the public `bottom` and the deprecated `_bottom`
+_bottom_dg_internal: _DeltaGenerator = _dg_singleton._bottom_dg
+# Use cast to DeltaGenerator for static analysis so type checkers see all DeltaGenerator methods.
+# At runtime, bottom is a BottomContainerProxy that validates the execution context.
+bottom: _DeltaGenerator = _cast(
+    "_DeltaGenerator", _BottomContainerProxy(_bottom_dg_internal)
+)
+
+# Deprecated: use `st.bottom` instead
+from streamlit.deprecation_util import deprecate_obj_name as _deprecate_obj_name
+
+_bottom: _DeltaGenerator = _deprecate_obj_name(
+    _bottom_dg_internal, "_bottom", "bottom", "2026-07-01"
+)
 
 
 from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
-    cache as _cache,
 )
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
@@ -126,6 +146,7 @@ from streamlit.user_info import (
 )
 
 import streamlit.column_config as _column_config
+import streamlit.typing as _typing
 
 # Modules that the user should have access to. These are imported with the "as" syntax
 # and the same name; note that renaming the import with "as" does not make it an
@@ -169,7 +190,6 @@ badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
 _bidi_component = _main._bidi_component
-bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
 camera_input = _main.camera_input
@@ -209,10 +229,12 @@ link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown
 menu_button = _main.menu_button
+mermaid_chart = _main.mermaid_chart
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
+pagination = _main.pagination
 pdf = _main.pdf
 pills = _main.pills
 plotly_chart = _main.plotly_chart
@@ -224,6 +246,7 @@ scatter_chart = _main.scatter_chart
 selectbox = _main.selectbox
 select_slider = _main.select_slider
 segmented_control = _main.segmented_control
+skeleton = _main.skeleton
 slider = _main.slider
 snow = _main.snow
 space = _main.space
@@ -265,11 +288,10 @@ context = _ContextProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
-# `st.cache` is deprecated and should be removed soon
-cache = _cache
 
 # Namespaces
 column_config = _column_config
+typing = _typing
 
 # Connection
 connection = _connection
@@ -292,5 +314,8 @@ from streamlit.starlette import App as App
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
+# Explicitly re-export the namespace because type checkers don't infer it from
+# the submodule import side effects below.
+from streamlit import components as components
 import streamlit.components.v1  # noqa: F401
 import streamlit.components.v2  # noqa: F401

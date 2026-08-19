@@ -84,7 +84,7 @@ const loadAndRunModule = async <T extends FrontendState>({
     name: string,
     value: T[keyof T]
   ): void => {
-    let newValue: T = {} as T
+    let newValue: T
 
     try {
       const existingValue = getWidgetValue()
@@ -95,12 +95,11 @@ const loadAndRunModule = async <T extends FrontendState>({
       newValue = { [name]: value } as T
     }
 
-    void widgetMgr.setJsonValue(
-      { id: componentIdForWidgetMgr, formId },
-      newValue,
-      { fromUi: true },
-      fragmentId
-    )
+    void widgetMgr.setJsonValue(componentIdForWidgetMgr, newValue, {
+      formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 
   const setTriggerValue = <T extends FrontendState>(
@@ -121,9 +120,8 @@ const loadAndRunModule = async <T extends FrontendState>({
     }
     const triggerId = makeTriggerAggregatorId(componentIdForWidgetMgr)
     void widgetMgr.setTriggerValue(
-      { id: triggerId, formId },
-      { fromUi: true },
-      fragmentId,
+      triggerId,
+      { formId, fragmentId, fromUser: true },
       { event: name, value }
     )
   }

@@ -17,15 +17,17 @@ from __future__ import annotations
 import contextlib
 import inspect
 import os
+import re
 import sys
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sized
-from functools import wraps
+from collections.abc import Callable, Sequence, Sized
+from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
+from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -35,9 +37,9 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 _LOGGER: Final = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
-_MAX_TRACKED_COMMANDS: Final = 200
+_MAX_TRACKED_COMMANDS: Final = 400
 # Only track a maximum of 25 uses per unique command since some apps use
-# commands excessively (e.g. calling add_rows thousands of times in one rerun)
+# commands excessively (e.g. calling write thousands of times in one rerun)
 # making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
 
@@ -53,10 +55,8 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.Index": "PandasIndex",
     "pandas.Series": "PandasSeries",
     "plotly.graph_objs._figure.Figure": "PlotlyFigure",
-    "bokeh.plotting.figure.Figure": "BokehFigure",
     "matplotlib.figure.Figure": "MatplotlibFigure",
     "pandas.io.formats.style.Styler": "PandasStyler",
-    "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
     "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
 
@@ -207,7 +207,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "snowflake",
     "pydantic",
     "fastapi",
-    "starlette",
     "playwright",
     "folium",
     "geopandas",
@@ -243,6 +242,11 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
+
+# Matches CPython's ``got an unexpected keyword argument 'name'`` TypeError.
+_UNEXPECTED_KWARG_RE: Final = re.compile(
+    r"got an unexpected keyword argument '([^']+)'"
+)
 
 
 def _get_machine_id_v3() -> str:
@@ -370,6 +374,29 @@ def _get_arg_metadata(arg: object) -> str | None:
     return None
 
 
+@lru_cache(maxsize=256)
+def _get_arg_keywords_cached(func: Callable[..., Any]) -> tuple[str, ...]:
+    """Return POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameter names as an immutable tuple.
+
+    Results are cached by function identity. Callers must pass ``func.__func__``
+    for bound methods — this function operates on unbound callables only.
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names (not
+    annotations), we use ``annotation_format=Format.STRING`` to avoid evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    params = type_util.get_func_parameters(func)
+    return tuple(
+        p.name
+        for p in params
+        if p.kind
+        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+    )
+
+
 def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
     """Return argument names from a function's signature.
 
@@ -377,32 +404,27 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
     - Both POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameters (not keyword-only)
     - Includes 'self' for bound methods
 
-    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
-    accessed. This can fail with NameError when annotations reference types
-    imported under TYPE_CHECKING. Since we only need parameter names (not
-    annotations), we use ``annotation_format=Format.STRING`` to avoid
-    evaluation.
+    Uses caching to avoid repeated expensive inspect.signature() calls.
 
-    See: https://github.com/streamlit/streamlit/issues/14324
+    Note: The underlying LRU cache holds strong references to function objects.
+    This is fine for typical Streamlit usage with module-level functions, but
+    dynamically created callables (e.g., closures, partials) may be retained
+    until evicted from the cache.
     """
-
-    params = type_util.get_func_parameters(func)
-    # Filter to POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD to match getfullargspec().args
-    names = [
-        p.name
-        for p in params
-        if p.kind
-        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
-    ]
-    # For bound methods, prepend 'self' since signature() removes it but
-    # getfullargspec() includes it
+    # For bound methods, use __func__ as cache key: this ensures cache hits
+    # across different bound instances of the same method, and
+    # get_func_parameters(__func__) already includes 'self'.
     if inspect.ismethod(func):
-        names.insert(0, "self")
-    return names
+        return list(_get_arg_keywords_cached(func.__func__))
+    return list(_get_arg_keywords_cached(func))
 
 
 def _get_command_telemetry(
-    _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
+    _command_func: Callable[..., Any],
+    _command_name: str,
+    *args: Any,
+    _positional_arg_offset: int = 0,
+    **kwargs: Any,
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
     arg_keywords = _get_arg_keywords(_command_func)
@@ -412,7 +434,10 @@ def _get_command_telemetry(
     name = _command_name
 
     for i, arg in enumerate(args):
-        pos = i
+        # Offset the recorded position so a decorated method's first real
+        # argument lands at position 0, matching a plain-function command that
+        # has no leading ``self`` argument (see ``_positional_arg_offset``).
+        pos = i - _positional_arg_offset
         if is_method:
             # If func is a method, ignore the first argument (self)
             i += 1  # noqa: PLW2901
@@ -463,6 +488,31 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+def format_uncaught_exception(exc: BaseException) -> str:
+    """Return a page-profile label for an uncaught exception.
+
+    Uses the exception type name, appending ``:<param>`` when the failing
+    parameter is known:
+
+    - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
+    - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+
+    Enrichment failures are swallowed so telemetry cannot interrupt script
+    execution or drop the page-profile payload.
+    """
+    name = type(exc).__name__
+    with contextlib.suppress(Exception):
+        if isinstance(exc, TypeError):
+            match = _UNEXPECTED_KWARG_RE.search(str(exc))
+            if match:
+                return f"{name}:{match.group(1)}"
+        elif isinstance(exc, StreamlitValueError):
+            parameter = exc.exec_kwargs.get("parameter")
+            if isinstance(parameter, str) and parameter:
+                return f"{name}:{parameter}"
+    return name
+
+
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -470,6 +520,8 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(
     name: str,
     func: F,
+    *,
+    _positional_arg_offset: int = 0,
 ) -> F: ...
 
 
@@ -477,10 +529,17 @@ def gather_metrics(
 def gather_metrics(
     name: str,
     func: None = None,
+    *,
+    _positional_arg_offset: int = 0,
 ) -> Callable[[F], F]: ...
 
 
-def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
+def gather_metrics(
+    name: str,
+    func: F | None = None,
+    *,
+    _positional_arg_offset: int = 0,
+) -> Callable[[F], F] | F:
     """Function decorator to add telemetry tracking to commands.
 
     Parameters
@@ -490,6 +549,13 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
     func : callable or None
         The function to track for telemetry. If ``None`` (default), returns a
         decorator that can be applied to a function.
+    _positional_arg_offset : int
+        How many leading positional arguments to skip when assigning recorded
+        position indexes. The arguments are still tracked; only their stored
+        position (``p``) is shifted. Set this to ``1`` when decorating a method
+        (such as a class ``__init__``) so that its first real argument is
+        recorded at position ``0``, matching an equivalent plain-function
+        command.
 
     Examples
     --------
@@ -508,6 +574,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             return gather_metrics(
                 name=name,
                 func=f,
+                _positional_arg_offset=_positional_arg_offset,
             )
 
         return wrapper
@@ -525,7 +592,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             ctx is not None
             and ctx.gather_usage_stats
             and not ctx.command_tracking_deactivated
-            and len(ctx.tracked_commands)
+            and ctx.shared.tracked_commands_count
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
@@ -539,16 +606,14 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         if ctx and tracking_activated:
             try:
                 command_telemetry = _get_command_telemetry(
-                    non_optional_func, name, *args, **kwargs
+                    non_optional_func,
+                    name,
+                    *args,
+                    _positional_arg_offset=_positional_arg_offset,
+                    **kwargs,
                 )
 
-                if (
-                    command_telemetry.name not in ctx.tracked_commands_counter
-                    or ctx.tracked_commands_counter[command_telemetry.name]
-                    < _MAX_TRACKED_PER_COMMAND
-                ):
-                    ctx.tracked_commands.append(command_telemetry)
-                ctx.tracked_commands_counter.update([command_telemetry.name])
+                ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
                 # The ctx.command_tracking_deactivated flag was set to True,
@@ -591,7 +656,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
 
 def create_page_profile_message(
-    commands: list[Command],
+    commands: Sequence[Command],
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,
@@ -639,7 +704,18 @@ def create_page_profile_message(
     if uncaught_exception:
         page_profile.uncaught_exception = uncaught_exception
 
+    app_dir: str | None = None
     if ctx := get_script_run_ctx():
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
+        if ctx.main_script_path:
+            app_dir = os.path.dirname(ctx.main_script_path)
+
+    # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
+    # the installer it must stay aligned with); imported lazily to avoid a
+    # module-load dependency from runtime onto web.
+    from streamlit.web import skills
+
+    page_profile.installed_skills.extend(skills.detect_installed_skills(app_dir))
+    page_profile.installed_agents.extend(skills.detect_installed_agents())
 
     return msg

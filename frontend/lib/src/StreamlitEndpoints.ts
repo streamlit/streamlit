@@ -18,7 +18,7 @@ import type { AxiosProgressEvent } from "axios"
 
 import { IAppPage } from "@streamlit/protobuf"
 
-export type FileUploadClientConfig = {
+type FileUploadClientConfig = {
   prefix: string
   headers: Record<string, string>
 }

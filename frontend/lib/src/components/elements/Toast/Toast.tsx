@@ -14,189 +14,80 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
-
-import { toaster, type ToastOverrides } from "baseui/toast"
+import { memo, ReactElement, useEffect } from "react"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
-import type { EmotionTheme } from "~lib/theme/types"
 
-import {
-  StyledMessageWrapper,
-  StyledToastWrapper,
-  StyledViewButton,
-} from "./styled-components"
+import { toastQueue } from "./toastQueue"
 
 export interface ToastProps {
   element: ToastProto
+  /**
+   * Stable identity of this toast (its delta path). Toasts at the same position
+   * across reruns share a `toastId`; distinct `st.toast()` calls do not.
+   */
+  toastId: string
 }
 
-function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
-  const lightBackground = hasLightBackgroundColor(theme)
-  return {
-    Body: {
-      props: {
-        "data-testid": "stToast",
-        className: "stToast",
-      },
-      style: {
-        display: "flex",
-        flexDirection: "row",
-        gap: theme.spacing.md,
-        width: theme.sizes.toastWidth,
-        marginTop: theme.spacing.sm,
-        // Warnings logged if you use shorthand property here:
-        borderTopLeftRadius: theme.radii.default,
-        borderTopRightRadius: theme.radii.default,
-        borderBottomLeftRadius: theme.radii.default,
-        borderBottomRightRadius: theme.radii.default,
-        paddingTop: theme.spacing.lg,
-        paddingBottom: theme.spacing.lg,
-        paddingLeft: theme.spacing.twoXL,
-        paddingRight: theme.spacing.twoXL,
-        backgroundColor: theme.colors.bgColor,
-        filter: lightBackground ? "brightness(0.98)" : "brightness(1.2)",
-        color: theme.colors.bodyText,
-        // Take standard BaseWeb shadow and adjust for dark backgrounds
-        boxShadow: theme.shadows.popover,
-      },
-    },
-    CloseIcon: {
-      style: {
-        color: theme.colors.fadedText40,
-        width: theme.fontSizes.lg,
-        height: theme.fontSizes.lg,
-        marginRight: `calc(-1 * ${theme.spacing.lg} / 2)`,
-        ":hover": {
-          color: theme.colors.bodyText,
-        },
-      },
-    },
-  }
-}
-
-// Function used to truncate toast messages that are longer than three lines.
-export function shortenMessage(fullMessage: string): string {
-  const characterLimit = 104
-
-  if (fullMessage.length > characterLimit) {
-    let message = fullMessage.replace(/^(.{104}[^\s]*).*/, "$1")
-
-    if (message.length > characterLimit) {
-      message = message
-        .substring(0, characterLimit)
-        .split(" ")
-        .slice(0, -1)
-        .join(" ")
-    }
-
-    return message.trim()
-  }
-
-  return fullMessage
-}
-
-function Toast({ element }: Readonly<ToastProps>): ReactElement {
+function Toast({ element, toastId }: Readonly<ToastProps>): ReactElement {
   const { body, icon, duration } = element
   const theme = useEmotionTheme()
-  const displayMessage = shortenMessage(body)
-  const shortened = body !== displayMessage
-
-  const [expanded, setExpanded] = useState(!shortened)
-  const [toastKey, setToastKey] = useState<React.Key>(0)
-
-  const handleClick = useCallback((): void => {
-    setExpanded(!expanded)
-  }, [expanded])
-
-  const styleOverrides = useMemo(() => generateToastOverrides(theme), [theme])
-
-  const toastContent = useMemo(
-    () => (
-      <StyledToastWrapper expanded={expanded}>
-        {icon && (
-          <DynamicIcon
-            iconValue={icon}
-            size="xl"
-            testid="stToastDynamicIcon"
-          />
-        )}
-        <StyledMessageWrapper>
-          <StreamlitMarkdown
-            source={expanded ? body : displayMessage}
-            allowHTML={false}
-            isToast
-          />
-          {shortened && (
-            <StyledViewButton
-              data-testid="stToastViewButton"
-              onClick={handleClick}
-            >
-              {expanded ? "view less" : "view more"}
-            </StyledViewButton>
-          )}
-        </StyledMessageWrapper>
-      </StyledToastWrapper>
-    ),
-    [shortened, expanded, body, icon, displayMessage, handleClick]
-  )
 
   useEffect(() => {
-    // Handles the error case where st.sidebar.toast is called since
-    // baseweb would throw error anyway (no toast container in sidebar)
     if (theme.inSidebar) {
       return
     }
 
-    // Uses toaster utility to create toast on mount and generate unique key
-    // to reference that toast for update/removal
-    const autoHideDurationMs = notNullOrUndefined(duration)
-      ? duration === 0
-        ? 0 // Explicitly disable auto-hide when duration is 0
-        : duration * 1000
-      : 4000 // Use default duration of 4 seconds
-
-    const newKey = toaster.info(toastContent, {
-      overrides: { ...styleOverrides },
-      autoHideDuration: autoHideDurationMs,
-    })
-    setToastKey(newKey)
-
-    return () => {
-      // Disable transition so toast doesn't flicker on removal
-      toaster.update(newKey, {
-        overrides: { Body: { style: { display: "none" } } },
-      })
-      // Remove toast on unmount
-      toaster.clear(newKey)
+    // De-dupe by position: if a toast for this delta path is already visible,
+    // this is a remount caused by a rerun re-emitting the same toast (the
+    // component is keyed by scriptRunId), so we keep the existing one instead of
+    // stacking a duplicate. Distinct st.toast() calls live at distinct delta
+    // paths, so this never suppresses legitimately separate toasts.
+    //
+    // Caveat: toastId is the delta path, which is a *position* in the shared
+    // EVENT container (toasts and dialogs are interleaved there by call order).
+    // If another EVENT element (e.g. a conditionally-shown st.dialog declared
+    // before a toast) changes this toast's index across reruns while the toast
+    // is still visible, it looks like a new position and can briefly show a
+    // duplicate. This is a rare, self-healing edge case (toasts auto-expire);
+    // switching de-dupe to the toast parameters would avoid it but would also
+    // collapse intentionally-identical toasts (e.g. the "Three cheers" example).
+    //
+    // For the same reason, if the same position re-emits *different* content
+    // while the earlier toast is still visible (e.g. st.toast("Loading…") then
+    // a quick rerun emits st.toast("Done!")), the first toast is kept and the
+    // new content is suppressed until it auto-expires. This is intentional: it
+    // is the flip side of the position-based identity that keeps identical
+    // toasts stacking, and is likewise self-healing.
+    if (
+      toastQueue.visibleToasts.some(toast => toast.content.toastId === toastId)
+    ) {
+      return
     }
 
-    // Array must be empty to run as mount/cleanup
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [])
+    // duration=null/undefined → 4s default; duration=0 → undefined (persistent); duration>0 → ms
+    const timeout = notNullOrUndefined(duration)
+      ? duration === 0
+        ? undefined
+        : duration * 1_000
+      : 4_000
 
-  useEffect(() => {
-    // Handles expand/collapse button behavior for long toast messages
-    toaster.update(toastKey, {
-      children: toastContent,
-      overrides: { ...styleOverrides },
-    })
-  }, [toastKey, toastContent, styleOverrides])
+    // Intentionally no unmount cleanup: a toast's lifetime is governed by its
+    // react-aria timeout (or manual dismissal), not the React component
+    // lifecycle. This lets a toast survive the stale-node unmount that happens
+    // when st.toast() is immediately followed by st.rerun() (issue #7740).
+    toastQueue.add({ body, icon: icon || undefined, toastId }, { timeout })
+
+    // Mount only — Streamlit creates a new Toast element (keyed by scriptRunId)
+    // per st.toast() call; the component never receives updated props for the
+    // same toast instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const sidebarErrorMessage = (
     <AlertElement
@@ -205,10 +96,8 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
         See our `st.toast` API [docs](https://docs.streamlit.io/develop/api-reference/status/st.toast) for more information."
     />
   )
-  return (
-    // Shows error if toast is called on st.sidebar
-    <>{theme.inSidebar && sidebarErrorMessage}</>
-  )
+
+  return <>{theme.inSidebar && sidebarErrorMessage}</>
 }
 
 export default memo(Toast)

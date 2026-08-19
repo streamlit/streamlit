@@ -108,6 +108,21 @@ bound_step_time = st.time_input(
 )
 st.write("Bound step time:", bound_step_time)
 
+# --- Form context ---
+with st.form("time_form"):
+    form_time = st.time_input("Form time input", time(9, 0))
+    submitted = st.form_submit_button("Submit")
+if submitted:
+    st.write("Form time:", form_time)
+
+# --- Form context: enter_to_submit ---
+# Set enter_to_submit=True explicitly so the E2E suite can verify the hint
+# text and Enter-key submission path.
+with st.form("time_form_enter", enter_to_submit=True):
+    form_enter_time = st.time_input("Form time input (enter to submit)", time(9, 0))
+    st.form_submit_button("Submit enter form")
+st.write("Form enter time:", form_enter_time)
+
 if st.toggle("Update time input props"):
     tval = st.time_input(
         "Updated dynamic time input",
@@ -139,3 +154,22 @@ else:
         step=60,
     )
     st.write("Initial time input value:", tval)
+
+v_seconds = st.time_input(
+    "Time input (step=30, seconds)", time(8, 45, 30), step=30, key="time_input_seconds"
+)
+st.write("Value seconds:", v_seconds)
+
+v_12h = st.time_input(
+    "Time input (12-hour)", time(8, 45), format="12h", key="time_input_12h"
+)
+st.write("Value 12h:", v_12h)
+
+v_12h_seconds = st.time_input(
+    "Time input (12h + seconds)",
+    time(14, 30, 15),
+    format="12h",
+    step=30,
+    key="time_input_12h_seconds",
+)
+st.write("Value 12h+sec:", v_12h_seconds)

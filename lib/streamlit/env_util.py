@@ -25,6 +25,30 @@ IS_DARWIN = SYSTEM == "darwin"
 IS_LINUX_OR_BSD = (SYSTEM == "linux") or ("bsd" in SYSTEM)
 
 
+def _is_wsl() -> bool:
+    """Return whether Streamlit is running inside Windows Subsystem for Linux."""
+    if not IS_LINUX_OR_BSD:
+        return False
+
+    if "WSL_DISTRO_NAME" in os.environ or "WSL_INTEROP" in os.environ:
+        return True
+
+    try:
+        with open("/proc/version", encoding="utf-8") as proc_version:
+            version_info = proc_version.read().lower()
+    except OSError:
+        return False
+
+    # "microsoft" matches the official WSL1 and WSL2 kernel strings, while
+    # "wsl2" additionally covers custom WSL2 kernels. We avoid a bare "wsl"
+    # substring check to prevent false positives from unrelated kernel build
+    # strings (e.g. a build host that happens to contain "wsl").
+    return "microsoft" in version_info or "wsl2" in version_info
+
+
+IS_WSL = _is_wsl()
+
+
 def is_pex() -> bool:
     """Return if streamlit running in pex.
 

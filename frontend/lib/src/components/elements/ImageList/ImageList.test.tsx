@@ -14,13 +14,9 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 
-import {
-  type IImage,
-  ImageList as ImageListProto,
-  streamlit,
-} from "@streamlit/protobuf"
+import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
@@ -139,6 +135,24 @@ describe("ImageList Element", () => {
       const caption = screen.getByTestId("stImageCaption")
       expect(caption).toHaveTextContent("Test caption")
     })
+
+    it.each([
+      "javascript:alert(1)",
+      "JAVASCRIPT:alert(1)",
+      "java\nscript:alert(1)",
+      "vbscript:msgbox(1)",
+    ])("blocks dangerous link URLs: %s", linkUrl => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: linkUrl,
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("href", "#")
+      expect(link).toHaveAttribute("target", "_self")
+      expect(link).toHaveAttribute("rel", "noreferrer")
+    })
   })
 
   describe("New width configuration system", () => {
@@ -242,8 +256,7 @@ describe("ImageList Element", () => {
     const images = screen.getAllByRole("img")
     expect(images).toHaveLength(2)
 
-    // Trigger the error event on the first image using fireEvent
-    fireEvent.error(images[0])
+    images[0].dispatchEvent(new Event("error"))
 
     // Verify the error was sent with correct parameters
     expect(sendClientErrorToHost).toHaveBeenCalledWith(
@@ -339,7 +352,7 @@ describe("ImageList Element", () => {
       ])(
         "sets crossOrigin to $expected when $scenario",
         ({ expected, resourceCrossOriginMode, imgs }) => {
-          const props = getProps({ imgs: imgs as IImage[] })
+          const props = getProps({ imgs: imgs })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,
@@ -421,7 +434,7 @@ describe("ImageList Element", () => {
       ])(
         "does not set crossOrigin when $scenario",
         ({ resourceCrossOriginMode, imgs }) => {
-          const props = getProps({ imgs: imgs as IImage[] })
+          const props = getProps({ imgs: imgs })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,

@@ -114,7 +114,7 @@ describe("parseBidiComponentData", () => {
     const result = parseBidiComponentData(
       createArgs({
         data: "mixed",
-        arrowBlobs: { table: { data: new Uint8Array([1]) } } as never,
+        arrowBlobs: { table: { data: new Uint8Array([1]) } },
       })
     )
 

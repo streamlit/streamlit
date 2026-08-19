@@ -15,7 +15,7 @@
  */
 
 import { zip } from "lodash-es"
-import { ErrorCode as FileErrorCode, FileRejection } from "react-dropzone"
+import { ErrorCode as FileErrorCode } from "react-dropzone"
 
 import {
   ChatInput as ChatInputProto,
@@ -25,7 +25,7 @@ import {
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { getRejectedFileInfo } from "~lib/util/FileHelper"
+import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { validateFileType } from "./fileUploadUtils"
 
@@ -135,6 +135,26 @@ export const createDropHandler =
         acceptedFiles.push(rejectedFiles[firstFileIndex].file)
         rejectedFiles.splice(firstFileIndex, 1)
       }
+    }
+
+    // When uploads bypass react-dropzone (e.g. pasting multiple files), more
+    // than one valid file can reach here even in single-file mode. Keep the
+    // first file and reject the rest, mirroring the drag-and-drop behavior.
+    if (!acceptMultipleFiles && acceptedFiles.length > 1) {
+      const [firstFile, ...extraFiles] = acceptedFiles
+      acceptedFiles = [firstFile]
+      rejectedFiles = [
+        ...rejectedFiles,
+        ...extraFiles.map(file => ({
+          file,
+          errors: [
+            {
+              code: FileErrorCode.TooManyFiles,
+              message: "Only one file is allowed.",
+            },
+          ],
+        })),
+      ]
     }
 
     if (!acceptMultipleFiles && acceptedFiles.length > 0) {

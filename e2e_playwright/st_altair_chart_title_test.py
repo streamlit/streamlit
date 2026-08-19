@@ -15,16 +15,15 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 
 def test_altair_chart_title_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    expect(
-        app.get_by_test_id("stVegaLiteChart").locator("[role='graphics-document']")
-    ).to_have_count(2)
     charts = app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(2)
+    expect(get_vega_graphics_document(charts)).to_have_count(2)
     snapshot_names = [
         "st_altair_chart_title-long_title_rendering_use_container_width_true",
         "st_altair_chart_title-long_title_rendering_use_container_width_false",

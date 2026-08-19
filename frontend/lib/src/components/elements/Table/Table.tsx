@@ -46,7 +46,7 @@ import {
 
 export interface TableProps {
   element: TableProto
-  data: Quiver
+  elementHash?: string
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
 }
@@ -54,8 +54,10 @@ export interface TableProps {
 // Fallback offset value (in rem) used for sticky positioning when multiple header rows
 // exist. This approximates typical row height to ensure sticky headers don't overlap.
 // The actual size may vary based on content, but this default works reasonably well.
-// Header row: fontSize (1rem) * lineHeight (1.5) + vertical padding (0.5rem) = 2rem
-const FALLBACK_HEADER_ROW_OFFSET_REM = "2rem"
+// Header row height ≈ fontSize.sm (0.875rem) × lineHeights.small (1.5)
+// + vertical padding (twoXS top and bottom = 0.5rem) → 1.8125rem
+// Table.test.tsx pins the derivation against theme tokens to catch drift.
+export const FALLBACK_HEADER_ROW_OFFSET_REM = "1.8125rem"
 
 function getStickyOffset(index: number, stepPx: number): number {
   return index * stepPx
@@ -78,7 +80,20 @@ function getStickyType(stickyTop: boolean, stickyLeft: boolean): StickyType {
 }
 
 export function Table(props: Readonly<TableProps>): ReactElement {
-  const table = props.data
+  const { element, elementHash } = props
+
+  // Construct Quiver from the proto's arrowData. The elementHash serves as the
+  // primary memoization key to avoid unnecessary re-parsing when the payload
+  // hasn't changed.
+  const table = useMemo(() => {
+    if (!element.arrowData) {
+      throw new Error("Table element is missing arrowData")
+    }
+    return new Quiver(element.arrowData)
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementHash, element.arrowData])
+
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns, numIndexColumns } =
     table.dimensions
@@ -268,6 +283,7 @@ function generateTableHeader(
                 <StreamlitMarkdown
                   source={header.name || "\u00A0"}
                   allowHTML={false}
+                  inheritFont
                 />
               </StyledTableCellHeader>
             )
@@ -374,6 +390,7 @@ function generateTableCell(
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
+            inheritFont
           />
         </StyledTableCellHeader>
       )
@@ -392,6 +409,7 @@ function generateTableCell(
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
+            inheritFont
           />
         </StyledTableCell>
       )

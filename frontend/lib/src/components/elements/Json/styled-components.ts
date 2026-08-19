@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+
 export const StyledJsonWrapper = styled.div(({ theme }) => ({
   overflowY: "auto",
   position: "relative",
@@ -66,19 +68,16 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   },
 }))
 
-interface StyledTooltipTargetProps {
-  top: number
-  left: number
-}
-
 /**
- * Invisible anchor element for positioning the tooltip.
- * BaseWeb's Popover requires a target element for positioning.
+ * Floating overlay container for the JSON path tooltip.
+ * Positioned by floating-ui via inline `style` (floatingStyles).
  */
-export const StyledTooltipTarget = styled.div<StyledTooltipTargetProps>(
-  ({ top, left }) => ({
-    position: "fixed",
-    top,
-    left,
-  })
-)
+export const StyledJsonPathTooltipBody = styled.div(({ theme }) => ({
+  backgroundColor: hasLightBackgroundColor(theme)
+    ? theme.colors.bgColor
+    : theme.colors.secondaryBg,
+  borderRadius: theme.radii.default,
+  boxShadow: theme.shadows.tooltip,
+  overflow: "hidden",
+  zIndex: theme.zIndices.popup,
+}))

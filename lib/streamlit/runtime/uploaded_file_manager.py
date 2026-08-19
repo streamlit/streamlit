@@ -61,6 +61,8 @@ class DeletedFile(NamedTuple):
 class UploadedFile(io.BytesIO):
     """A mutable uploaded file.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     This class extends BytesIO, which has copy-on-write semantics when
     initialized with `bytes`.
     """
@@ -123,12 +125,12 @@ class UploadedFileManager(StatsProvider, Protocol):
             A list of URL UploadedFileRec instances, each instance contains information
             about uploaded file.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def remove_session_files(self, session_id: str) -> None:
         """Remove all files associated with a given session."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
@@ -149,4 +151,4 @@ class UploadedFileManager(StatsProvider, Protocol):
             A list of UploadFileUrlInfo instances, each instance contains information
             about uploaded file URLs.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - optional default

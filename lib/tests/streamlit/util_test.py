@@ -15,14 +15,20 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import random
 import unittest
+from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 
 from streamlit import util
 from streamlit.util import AttributeDictionary, ReadOnlyAttributeDictionary
+
+if TYPE_CHECKING:
+    from hashlib import _Hash
 
 
 class UtilTest(unittest.TestCase):
@@ -49,8 +55,76 @@ class UtilTest(unittest.TestCase):
 
         assert hasattr(f, "__wrapped__")
 
-    def test_calc_md5_can_handle_bytes_and_strings(self):
-        assert util.calc_md5("eventually bytes") == util.calc_md5(b"eventually bytes")
+    def test_calc_hash_can_handle_bytes_and_strings(self):
+        assert util.calc_hash("eventually bytes") == util.calc_hash(b"eventually bytes")
+
+    def test_calc_hash_returns_consistent_hex_string(self):
+        """Test that calc_hash returns a consistent hexadecimal string."""
+        result = util.calc_hash("test input")
+        assert isinstance(result, str)
+        assert all(c in "0123456789abcdef" for c in result)
+        assert util.calc_hash("test input") == result
+
+    def test_create_fast_hasher_returns_hasher_protocol(self):
+        """Test that create_fast_hasher returns an object matching Hasher protocol."""
+        hasher = util.create_fast_hasher()
+        assert hasattr(hasher, "update")
+        assert hasattr(hasher, "hexdigest")
+        assert hasattr(hasher, "digest")
+
+    def test_create_fast_hasher_falls_back_for_fixed_size_blake2b(self) -> None:
+        """Test fallback for FIPS builds whose BLAKE2b has a fixed digest size."""
+        original_blake2b = hashlib.blake2b
+
+        def openssl_blake2b(
+            data: bytes = b"", *, usedforsecurity: bool = True
+        ) -> _Hash:
+            return original_blake2b(data, usedforsecurity=usedforsecurity)
+
+        data = b"test data"
+        with patch.object(hashlib, "blake2b", openssl_blake2b):
+            hasher = util.create_fast_hasher()
+            hasher.update(data)
+
+        expected = hashlib.new("md5", data, usedforsecurity=False).hexdigest()
+        assert hasher.hexdigest() == expected
+
+    def test_create_fast_hasher_falls_back_when_blake2b_raises_value_error(
+        self,
+    ) -> None:
+        """Test MD5 fallback when blake2b rejects digest_size with ValueError."""
+
+        def openssl_blake2b_rejecting_digest_size(
+            *args: object, **kwargs: object
+        ) -> _Hash:
+            raise ValueError("digest_size is invalid for openssl_blake2b()")
+
+        data = b"test data"
+        with patch.object(hashlib, "blake2b", openssl_blake2b_rejecting_digest_size):
+            hasher = util.create_fast_hasher()
+            hasher.update(data)
+
+        expected = hashlib.new("md5", data, usedforsecurity=False).hexdigest()
+        assert hasher.hexdigest() == expected
+
+    def test_create_fast_hasher_produces_consistent_results(self):
+        """Test that create_fast_hasher produces consistent hash results."""
+        h1 = util.create_fast_hasher()
+        h1.update(b"test data")
+        result1 = h1.hexdigest()
+
+        h2 = util.create_fast_hasher()
+        h2.update(b"test data")
+        result2 = h2.hexdigest()
+
+        assert result1 == result2
+
+    def test_create_fast_hasher_matches_calc_hash(self):
+        """Test that create_fast_hasher produces same result as calc_hash."""
+        data = b"test data"
+        h = util.create_fast_hasher()
+        h.update(data)
+        assert h.hexdigest() == util.calc_hash(data)
 
 
 # Pytest-style tests for ReadOnlyAttributeDictionary
@@ -152,6 +226,27 @@ class TestReadOnlyAttributeDictionary:
         # Shallow copy shares nested mutable objects
         assert copied["b"] is original["b"]
 
+    def test_copy_preserves_subclass(self) -> None:
+        """Copies of a subclass keep the subclass, not the base class.
+
+        Typed widget states (e.g. DataframeState) subclass
+        ReadOnlyAttributeDictionary. Session State deep-copies widget values, so
+        collapsing to the base class here would strip their type and break
+        ``isinstance`` checks on ``st.session_state[key]``.
+        """
+
+        class _TypedState(ReadOnlyAttributeDictionary):
+            pass
+
+        original = _TypedState({"a": 1, "b": {"c": [1, 2, 3]}})
+
+        assert isinstance(copy.copy(original), _TypedState)
+
+        deep_copied = copy.deepcopy(original)
+        assert isinstance(deep_copied, _TypedState)
+        assert deep_copied == original
+        assert deep_copied["b"] is not original["b"]
+
     def test_json_serialization(self) -> None:
         """Test that JSON serialization works correctly."""
 
@@ -161,3 +256,40 @@ class TestReadOnlyAttributeDictionary:
         serialized = json.dumps(d)
         deserialized = json.loads(serialized)
         assert deserialized == {"selection": {"rows": [1, 2], "columns": ["a"]}}
+
+    def test_attribute_access_raises_attribute_error_for_missing_key(self) -> None:
+        """Attribute-style access to a missing key raises a helpful AttributeError."""
+        d = ReadOnlyAttributeDictionary({"a": 1})
+        with pytest.raises(
+            AttributeError,
+            match=r"'ReadOnlyAttributeDictionary' object has no attribute 'missing'",
+        ):
+            _ = d.missing
+
+
+class TestAttributeDictionary:
+    """Test AttributeDictionary class."""
+
+    def test_setattr_updates_dict_value(self) -> None:
+        """Assigning a new attribute mutates the underlying dict storage."""
+        d = AttributeDictionary({"a": 1})
+        d.b = 2
+
+        assert d["b"] == 2
+        assert d.b == 2
+
+    def test_setattr_overwrites_existing_value(self) -> None:
+        """Setting an existing attribute updates the value rather than shadowing it."""
+        d = AttributeDictionary({"a": 1})
+        d.a = 99
+
+        assert d["a"] == 99
+
+    def test_attribute_access_raises_attribute_error_for_missing_key(self) -> None:
+        """Accessing a missing attribute raises AttributeError instead of KeyError."""
+        d = AttributeDictionary({"a": 1})
+        with pytest.raises(
+            AttributeError,
+            match=r"'AttributeDictionary' object has no attribute 'missing'",
+        ):
+            _ = d.missing

@@ -16,7 +16,13 @@
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
-import { Field, Float64, Int64, Uint64 } from "apache-arrow"
+import {
+  DurationNanosecond,
+  Field,
+  Float64,
+  Int64,
+  Uint64,
+} from "apache-arrow"
 
 import {
   ArrowType,
@@ -59,6 +65,18 @@ const MOCK_UINT_ARROW_TYPE: ArrowType = {
     name: "uint_column",
     pandas_type: "uint64",
     numpy_type: "uint64",
+    metadata: null,
+  },
+}
+
+const MOCK_DURATION_ARROW_TYPE: ArrowType = {
+  type: DataFrameCellType.DATA,
+  arrowField: new Field("duration_column", new DurationNanosecond(), true),
+  pandasType: {
+    field_name: "duration_column",
+    name: "duration_column",
+    pandas_type: "object",
+    numpy_type: "timedelta64[ns]",
     metadata: null,
   },
 }
@@ -463,5 +481,87 @@ describe("NumberColumn", () => {
 
     const cell2 = mockColumn.getCell(0.5)
     expect((cell2 as NumberCell).displayData).toEqual("0.5")
+  })
+
+  describe("validateInput with required cells", () => {
+    it("rejects empty values when the column is required", () => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, undefined, {
+        isRequired: true,
+      })
+      expect(mockColumn.validateInput!(null)).toBe(false)
+      expect(mockColumn.validateInput!(undefined)).toBe(false)
+      expect(mockColumn.validateInput!("")).toBe(false)
+    })
+
+    it("accepts empty values when the column is not required", () => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, undefined, {
+        isRequired: false,
+      })
+      expect(mockColumn.validateInput!(null)).toBe(true)
+      expect(mockColumn.validateInput!(undefined)).toBe(true)
+      expect(mockColumn.validateInput!("")).toBe(true)
+    })
+
+    it("rejects non-numeric values that parse to NaN", () => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+      expect(mockColumn.validateInput!("not-a-number")).toBe(false)
+    })
+  })
+
+  describe("getCell with input validation", () => {
+    it("returns an error cell when validation fails for invalid input", () => {
+      const mockColumn = getNumberColumn(MOCK_UINT_ARROW_TYPE)
+      const errorCell = mockColumn.getCell(-5, true)
+      expect(isErrorCell(errorCell)).toBe(true)
+      expect((errorCell as ErrorCell).errorDetails).toEqual("Invalid input.")
+    })
+
+    it("returns an error cell when value falls below min_value during validation", () => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+        min_value: 10,
+      })
+      const errorCell = mockColumn.getCell(5, true)
+      expect(isErrorCell(errorCell)).toBe(true)
+      expect((errorCell as ErrorCell).errorDetails).toEqual("Invalid input.")
+    })
+
+    it("auto-corrects values that exceed max_value when validating", () => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+        max_value: 10,
+      })
+      const cell = mockColumn.getCell(100, true)
+      expect(isErrorCell(cell)).toBe(false)
+      // The corrected value (10) is what ends up in the cell.
+      expect((cell as NumberCell).data).toEqual(10)
+    })
+
+    it("does not validate when validate flag is false", () => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+        max_value: 10,
+      })
+      const cell = mockColumn.getCell(100, false)
+      // Without validation, the original value passes through unchanged.
+      expect((cell as NumberCell).data).toEqual(100)
+    })
+  })
+
+  it("uses arrow formatting for duration types", () => {
+    // Without a custom format, duration types render with arrow's humanized
+    // formatting (left-aligned) instead of plain number formatting.
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    const cell = mockColumn.getCell(60_000_000_000)
+    expect(cell.contentAlign).toEqual("left")
+    // Use regex to avoid coupling to moment.js's exact humanize output.
+    expect((cell as NumberCell).displayData).toMatch(/minute/i)
+  })
+
+  it("uses configured number format instead of arrow formatting when format is set", () => {
+    // With a custom format, the right-aligned numeric formatting takes over.
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "%.0f ns",
+    })
+    const cell = mockColumn.getCell(60_000_000_000)
+    expect(cell.contentAlign).toEqual("right")
+    expect((cell as NumberCell).displayData).toEqual("60000000000 ns")
   })
 })

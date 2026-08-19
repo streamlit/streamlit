@@ -1,37 +1,70 @@
+# Contributing to Streamlit
+
 Thanks for your interest in helping improve Streamlit! 🎉
 
 **If you are looking for Streamlit's documentation, go here instead: <https://docs.streamlit.io>**
 
-This wiki is for people who want to contribute code to Streamlit. There are also other ways to contribute, such as [reporting bugs](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml), creating [feature requests](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml), helping other users [in our forums](https://discuss.streamlit.io), Stack Overflow, etc., or just being an awesome member of the community!
+> [!IMPORTANT]
+> We have paused accepting pull requests from outside the Streamlit maintainer team.
+> AI coding tools have increased PR volume beyond what we can review sustainably, while detailed
+> issues give maintainers a more effective starting point for improving Streamlit.
 
-## Before contributing
+There are still many valuable ways to contribute to Streamlit and help shape what we build next.
 
-**If your contribution is more than a few lines of code, then prior to starting to code on it please post in the issue saying you want to volunteer, and then wait for a positive response.** And if there is no issue for it yet, create it first.
+## Ways to contribute
 
-This helps make sure:
+### Report a bug
 
-1. Two people aren't working on the same thing
-2. This is something Streamlit's maintainers believe should be implemented/fixed
-3. Any API, UI, or deeper architectural changes that need to be implemented have been fully thought through by Streamlit's maintainers
-4. Your time is well spent!
+[Search existing issues](https://github.com/streamlit/streamlit/issues) first. If the bug has not
+already been reported, [open a bug report](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml)
+that includes:
 
-> [!TIP]
-> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
+1. A clear, descriptive title.
+2. What you expected to happen and what happened instead.
+3. Numbered, specific steps that reproduce the problem.
+4. The smallest self-contained Streamlit app that demonstrates the problem, when possible.
+5. Your Streamlit and Python versions, operating system, and browser for frontend issues.
+6. Relevant tracebacks, logs, screenshots, or screen recordings.
 
-## Pull request expectations
+Minimal, reproducible examples help maintainers investigate bugs much more quickly.
+For security vulnerabilities, follow our [security policy](./SECURITY.md) instead of opening a
+public issue.
 
-These expectations apply to all contributors and all pull requests.
+### Request a feature
 
-### Expectations for all contributions
+[Search existing feature requests](https://github.com/streamlit/streamlit/issues?q=is%3Aissue+label%3Atype%3Aenhancement)
+first. If your idea has not already been suggested,
+[open a feature request](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml)
+that includes:
 
-- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
-- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
-- Address prior review feedback before requesting another review cycle.
-- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
-- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
-- Repeated non-response may result in newer PRs being deprioritized or closed.
+1. The problem or use case you want to solve.
+2. The outcome you would like, including an example API or mockup when useful.
+3. Alternatives and workarounds you have tried.
+4. Any examples, references, or other context that clarify the request.
 
-### Issue and pull request discussion expectations
+Detailed feature requests help us understand community needs and prioritize our roadmap.
+
+### Help improve existing issues and specs
+
+- Add relevant details to [existing issues](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20sort%3Areactions-%2B1-desc),
+  such as a new reproduction, environment information, use case, or workaround.
+- Answer open questions from maintainers when you have firsthand knowledge that can help.
+- React with a 👍 to the initial post of bugs and feature requests that matter to you. Please use
+  reactions instead of adding "+1" or "same" comments.
+- Review [open specs](https://github.com/streamlit/streamlit/issues?q=state%3Aopen%20label%3Achange%3Aspec)
+  and comment with concrete feedback about the use case, proposed API, design, or tradeoffs.
+
+### Extend the Streamlit ecosystem
+
+- Build a [custom Streamlit Component](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
+  and [publish it to PyPI](https://docs.streamlit.io/develop/concepts/custom-components/components-v2/package-based#publishing-your-package)
+  so the community can use it.
+- Contribute reusable utilities to the community-maintained
+  [streamlit-extras project](https://github.com/arnaudmiribel/streamlit-extras).
+- Help other users in the [Streamlit community forum](https://discuss.streamlit.io) or on
+  [Stack Overflow](https://stackoverflow.com/questions/tagged/streamlit).
+
+## Community discussion expectations
 
 Help us keep GitHub issues and PR threads readable and actionable.
 
@@ -41,6 +74,20 @@ Help us keep GitHub issues and PR threads readable and actionable.
 - Avoid duplicate comments that only restate existing points (including copy/paste or light paraphrasing). If you have nothing new to add, consider using a reaction instead of commenting.
 
 Maintainers may hide, edit, or delete comments that don’t contribute to the discussion, lock threads, limit interactions, and take other moderation actions when needed. Repeated or severe abuse may result in restrictions or bans. See our [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+## Development guide for maintainers
+
+The rest of this guide covers local development, testing, and pull requests for the Streamlit
+maintainer team.
+
+### Pull request expectations
+
+- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
+- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
+- Address prior review feedback before requesting another review cycle.
+- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
+- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
+- Repeated non-response may result in newer PRs being deprioritized or closed.
 
 ### Expectations for AI-assisted contributions
 
@@ -75,6 +122,8 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `generating-changelog` | When preparing release notes between two git tags |
 | `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases |
 | `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
+| `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |
+| `reviewing-pr-description` | When reviewing a PR's title and description for clarity and conciseness |
 
 ### Subagents
 
@@ -82,13 +131,14 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 
 | Subagent | When to use |
 |----------|-------------|
-| `reviewing-local-changes` | When you want a code review of the current branch's changes |
+| `reviewing-local-changes` | When you want a code review of the current branch's changes for quality, security, best practices, and product/API alignment |
 | `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
 | `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
+| `qa-testing-feature` | After implementing a feature to perform comprehensive QA testing before finalizing a PR |
 
 ## Style Guide
 
-Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://github.com/nicolo-ribaudo/oxfmt), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
+Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://oxc.rs/docs/guide/usage/formatter), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
 
 ## How to build Streamlit
 
@@ -154,6 +204,31 @@ $ curl -LsSf https://astral.sh/uv/install.sh | sh
 $ sudo apt-get install -y ripgrep
 ```
 
+#### Rocky Linux / RHEL / Fedora
+
+```bash
+# Install some essentials
+$ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
+
+# Set frontend dependencies:
+$ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+$ source ~/.bashrc
+$ nvm install node
+$ corepack enable
+
+# Install uv for Python
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+# See https://cli.github.com/ for installation instructions
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ sudo dnf install -y ripgrep
+```
+
+> [!NOTE]
+> If you're not on Debian, Ubuntu, or macOS, `make python-init` skips `playwright install --with-deps`. That command only officially supports those platforms. Browser binaries still download fine. If e2e tests later complain about missing system libraries, grab them through your package manager. See Playwright's [system requirements](https://playwright.dev/python/docs/intro#system-requirements) for the list. To force or skip the deps step, set `INSTALL_PLAYWRIGHT_DEPS=true` or `false`.
+
 #### Windows
 
 Streamlit's development setup is pretty Mac- and Linux-centric. If you're doing Streamlit development on Windows, we suggest using our [devcontainer](./.devcontainer) via Github Codespaces or locally via VS Code. Alternatively, you can also spin up a Linux VM (e.g. via [VirtualBox](https://www.virtualbox.org/), which is free); or your own Linux Docker image; or using Microsoft's WSL ("Windows Subsystem for Linux").
@@ -174,13 +249,26 @@ git checkout -b ${BRANCH_NAME}
 
 ### 3. Create a new Python environment
 
-We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. If you don't have uv installed, you can install it with:
+We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. Use a version allowed by `[tool.uv].required-version` in `pyproject.toml`. If you don't have uv installed, you can install it with:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+The committed `uv.lock` is the source of truth for development and normal CI environments. It does not lock dependencies for users installing the published Streamlit wheel; those remain governed by the ranges in `lib/pyproject.toml`.
+
 The virtual environment and dependencies will be automatically created and managed when you run `make all-dev` in the next step. uv creates a `.venv` directory in the repository root.
+
+You can also install one explicit final environment:
+
+| Environment | Command |
+|---|---|
+| Runtime only | `PYTHON_DEPENDENCY_GROUP=runtime make python-init` |
+| Unit/E2E tests | `PYTHON_DEPENDENCY_GROUP=test make python-init` |
+| Development (tests plus lint, types, and release tools) | `make python-init` |
+| Integration tests | `PYTHON_DEPENDENCY_GROUP=integration make python-init` |
+
+These commands exact-sync the same `.venv`, so switching selections mutates it. Set a distinct `UV_PROJECT_ENVIRONMENT` path for each selection if you need simultaneous environments.
 
 ## How to develop Streamlit
 
@@ -248,6 +336,8 @@ make init
 > [!IMPORTANT]
 > If your change updates `frontend/yarn.lock` (for example, after adding or upgrading dependencies), run `cd frontend && yarn dedupe` before committing. Our `scripts/check_yarn_dedupe.sh` hook enforces this locally (via pre-commit) and in CI, so handling it upfront keeps your PR green.
 
+For Python dependencies, edit the relevant `pyproject.toml`, run `uv lock`, review the generated lock diff, and commit both files. Use `uv lock --upgrade-package <package>` for a targeted upgrade, `uv lock --upgrade` for a full compatible upgrade, and `uv lock --check` to verify manifest consistency. Do not hand-edit `uv.lock`.
+
 ### 6. Running tests
 
 You should always write unit tests and end-to-end tests! This is true for new features, but also for bugs; this way when you fix a bug you can be sure it will not show up again. So bug-fixing is actually a great way to increase our test coverage where it actually matters.
@@ -305,7 +395,7 @@ We've set up various formatting, linting, and type-checking rules that our Conti
 
 ### Python
 
-For Python, we use [ruff](https://github.com/astral-sh/ruff) for formatting & linting and [mypy](https://github.com/python/mypy) for type-checking.
+For Python, we use [ruff](https://github.com/astral-sh/ruff) for formatting & linting and [mypy](https://github.com/python/mypy) plus [ty](https://github.com/astral-sh/ty) for type-checking.
 
 #### Formatting
 
@@ -410,49 +500,30 @@ def test_streamlit_version(self):
       ?      ^
 ```
 
-To fix this make sure your Python environment is set up correctly. Try running `uv sync --group dev` to reinstall dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
+To fix this make sure your Python environment is set up correctly. Try running `make python-init` to reinstall locked development dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
-#### `protoc` command fails because of version mismatch
+#### `protoc` command fails because the compiler is too old
 
-If the `protoc` command fails and there is a version mismatch reported, try to install the correct version.
+If `make protobuf` reports that the installed compiler is too old, install protoc 3.20 or
+newer using the [official installation instructions](https://protobuf.dev/installation/).
+The compiler does not need to exactly match the Python protobuf runtime version.
 
-- Go to [Protobuf releases](https://github.com/protocolbuffers/protobuf/releases)
-- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `uv run pip show protobuf` or equivalent to find this out.
-- Download zip containing protoc for your system, example: [protoc-3.20.0-osx-x86_64.zip](https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip)
-
-<details>
-<summary>Example for macOS</summary>
-
-```bash
-curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip
-sudo unzip -o protoc-3.20.0-osx-x86_64.zip -d /usr/local bin/protoc
-sudo unzip -o protoc-3.20.0-osx-x86_64.zip -d /usr/local 'include/*'
-# Print out your System's Protoc version
-protoc --version
-```
-
-</details>
-
-<details>
-<summary>Example for Linux (ARM)</summary>
-
-```bash
-curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-linux-aarch_64.zip
-sudo unzip -o protoc-3.20.0-linux-aarch_64.zip -d /usr/local bin/protoc
-sudo unzip -o protoc-3.20.0-linux-aarch_64.zip -d /usr/local 'include/*'
-
-# (optional) remove old version
-rm /usr/bin/protoc
-ln -s /usr/local/bin/protoc /usr/bin/protoc
-
-# Print out your System's Protoc version
-protoc --version
-```
-
-</details>
+To reproduce CI or release-generated output, use the compiler version configured in
+[`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
 
 ## Introducing dependencies
 
 We aim to only introduce dependencies in this project that have reasonable restrictions and comply with various laws.
+
+Normal validation uses `uv.lock` for deterministic dependencies. CI separately tests the published minimum runtime versions without project synchronization, and the weekly `update-python-lock.yml` workflow upgrades the complete compatible graph and opens a PR when it changes. This preserves explicit minimum- and newest-compatible coverage without making unrelated PRs depend on upstream release timing.
+
+If `uv.lock` conflicts during a merge, regenerate it instead of hand-merging:
+
+```bash
+git checkout origin/develop -- uv.lock
+uv lock
+```
+
+Package name or version changes in `lib/pyproject.toml` also require `uv lock`, because the editable package identity is recorded in the lock.
 
 ![Views](https://api.views-badge.org/badge/st-wiki-contributing)

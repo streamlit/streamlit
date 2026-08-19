@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    rerun_app,
     wait_for_app_loaded,
     wait_for_app_run,
 )
@@ -33,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-NUM_RADIO_ELEMENTS = 21
+NUM_RADIO_ELEMENTS = 22
 
 
 def test_radio_widget_rendering(
@@ -129,6 +130,21 @@ def test_radio_has_correct_default_values(app: Page):
     expect_markdown(app, "value 12: male")
     expect_markdown(app, "radio changed: False")
     expect_markdown(app, "value 13: None")
+    expect_markdown(app, "value 15: 1")
+
+
+def test_radio_custom_class_format_func_persists_after_rerun(app: Page):
+    """Regression #14814: non-default radio with format_func must survive rerun."""
+    select_radio_option(
+        app,
+        option="Option B",
+        label="radio 15 (custom class format_func, gh-14814)",
+    )
+    wait_for_app_run(app)
+    expect_markdown(app, "value 15: 2")
+
+    rerun_app(app)
+    expect_markdown(app, "value 15: 2")
 
 
 def test_set_value_correctly_when_click(app: Page):
@@ -193,6 +209,7 @@ def test_set_value_correctly_when_click(app: Page):
     expect_markdown(app, "value 12: male")
     expect_markdown(app, "radio changed: False")
     expect_markdown(app, "value 13: male")
+    expect_markdown(app, "value 15: 1")
 
 
 def test_calls_callback_on_change(app: Page):
@@ -209,6 +226,7 @@ def test_calls_callback_on_change(app: Page):
     expect_markdown(app, "value 1: male")
     expect_markdown(app, "value 12: female")
     expect_markdown(app, "radio changed: False")
+    expect_markdown(app, "value 15: 1")
 
 
 def test_check_top_level_class(app: Page):

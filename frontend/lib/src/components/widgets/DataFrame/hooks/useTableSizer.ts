@@ -263,7 +263,7 @@ function useTableSizer(
   }, [initialWidth])
 
   // Reset the height if the element height parameter was changed or
-  // if the number of rows changes (e.g. via add_rows):
+  // if the number of rows changes:
   useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,

@@ -25,7 +25,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -151,7 +151,7 @@ class VideoTest(DeltaGeneratorTestCase):
         expected_subtitle_url = _calculate_file_id(
             fake_subtitle_data,
             "text/vtt",
-            filename=f"{calc_md5(b'default')}.vtt",
+            filename=f"{calc_hash(b'default')}.vtt",
         )
         assert expected_subtitle_url in el.video.subtitles[0].url
 
@@ -174,12 +174,12 @@ class VideoTest(DeltaGeneratorTestCase):
         expected_empty_subtitle_url = _calculate_file_id(
             b"",
             "text/vtt",
-            filename=f"{calc_md5(b'')}.vtt",
+            filename=f"{calc_hash(b'')}.vtt",
         )
         expected_english_subtitle_url = _calculate_file_id(
             fake_subtitle_data,
             "text/vtt",
-            filename=f"{calc_md5(b'English')}.vtt",
+            filename=f"{calc_hash(b'English')}.vtt",
         )
         assert expected_empty_subtitle_url in el.video.subtitles[0].url
         assert expected_english_subtitle_url in el.video.subtitles[1].url
@@ -198,7 +198,7 @@ class VideoTest(DeltaGeneratorTestCase):
         expected_english_subtitle_url = _calculate_file_id(
             fake_sub_content,
             "text/vtt",
-            filename=f"{calc_md5(b'default')}.vtt",
+            filename=f"{calc_hash(b'default')}.vtt",
         )
 
         el = self.get_delta_from_queue().new_element

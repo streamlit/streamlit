@@ -838,10 +838,9 @@ describe("BidiComponent", () => {
       // Verify setStateValue was called
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "test-js-component", formId: undefined },
+          "test-js-component",
           { testKey: "testValue" },
-          { fromUi: true },
-          mockFragmentId
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -879,10 +878,9 @@ describe("BidiComponent", () => {
       // Verify setJsonValue was called with merged state
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "test-state-component", formId: "test-form" },
+          "test-state-component",
           { existing: "value", counter: 42 },
-          { fromUi: true },
-          mockFragmentId
+          { formId: "test-form", fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -920,10 +918,9 @@ describe("BidiComponent", () => {
       // This demonstrates that the error was caught and the fallback path was taken
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "error-component", formId: undefined },
+          "error-component",
           { newKey: "newValue" },
-          { fromUi: true },
-          mockFragmentId
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -957,12 +954,8 @@ describe("BidiComponent", () => {
       // Format: $$STREAMLIT_INTERNAL_KEY_<base>__events
       await waitFor(() => {
         expect(mockWidgetMgr.setTriggerValue).toHaveBeenCalledWith(
-          {
-            id: "$$STREAMLIT_INTERNAL_KEY_trigger-component__events",
-            formId: undefined,
-          },
-          { fromUi: true },
-          mockFragmentId,
+          "$$STREAMLIT_INTERNAL_KEY_trigger-component__events",
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true },
           { event: "onClick", value: { buttonId: "btn1" } }
         )
       })

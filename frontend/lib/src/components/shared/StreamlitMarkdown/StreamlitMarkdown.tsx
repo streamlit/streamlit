@@ -27,7 +27,9 @@ import {
   useCallback,
   useContext,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -50,13 +52,11 @@ import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
@@ -67,6 +67,7 @@ import {
 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import {
   StyledHeadingActionElements,
@@ -93,6 +94,12 @@ import {
 
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
+
+const MermaidChart = lazy(() =>
+  import("./MermaidChart").then(module => ({
+    default: module.MermaidChart,
+  }))
 )
 
 /**
@@ -154,11 +161,6 @@ export interface Props {
   boldLabel?: boolean
 
   /**
-   * Checkbox labels have larger font sizing
-   */
-  largerLabel?: boolean
-
-  /**
    * Does not allow links
    */
   disableLinks?: boolean
@@ -189,6 +191,12 @@ export interface Props {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * When true, headers (h1-h6) keep their `id` for deep linking but the
+   * visible anchor link icon is not rendered.
+   */
+  hideAnchors?: boolean
 }
 
 /**
@@ -260,11 +268,20 @@ export function createAnchorFromText(text: string | null): string {
   return xxhash.h32(text, 0xabcd).toString(16)
 }
 
-// Note: React markdown limits hrefs to specific protocols ('http', 'https',
-// 'mailto', 'tel') We are essentially allowing any URL (a data URL). It can
-// be considered a security flaw, but developers can choose to expose it.
+/**
+ * Transforms link URIs for markdown rendering.
+ *
+ * Uses a blocklist approach instead of React Markdown's default allowlist
+ * (defaultUrlTransform) to preserve compatibility with data: URLs and other
+ * custom schemes that Streamlit users rely on (e.g., inline images, PDFs).
+ * Only explicitly dangerous schemes (javascript:, vbscript:) are blocked.
+ *
+ * Blocked URLs return "#" (BLOCKED_LINK_URI) instead of "" to prevent
+ * navigation. An empty href combined with target="_blank" would open the
+ * current page in a new tab.
+ */
 function transformLinkUri(href: string): string {
-  return href
+  return isDangerousLinkUri(href) ? BLOCKED_LINK_URI : href
 }
 
 // wrapping in `once` ensures we only scroll once
@@ -325,13 +342,16 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   const [elementId, setElementId] = useState(propsAnchor)
+  const nodeRef = useRef<HTMLElement | null>(null)
 
-  const ref = useCallback(
-    (node: HTMLElement | null) => {
-      if (node === null) {
-        return
-      }
-
+  /**
+   * Set the heading id from `propsAnchor` or the node's textContent, then scroll
+   * the node into view if that id matches the current URL hash. Shared by the
+   * mount-time ref callback and the rerun effect below so the two paths cannot
+   * drift apart.
+   */
+  const applyAnchor = useCallback(
+    (node: HTMLElement): void => {
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
@@ -341,6 +361,33 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     },
     [propsAnchor]
   )
+
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      nodeRef.current = node
+      if (node === null) {
+        return
+      }
+      applyAnchor(node)
+    },
+    [applyAnchor]
+  )
+
+  // Re-derive the anchor when heading text changes across reruns. The ref
+  // callback only fires on mount or when propsAnchor changes; when only the text
+  // content changes, React reuses the DOM node and the callback never re-fires.
+  // Skipped when propsAnchor is set, since an explicit anchor never depends on
+  // the text.
+  //
+  // useLayoutEffect (not useEffect) so the re-derived id is committed before
+  // paint; otherwise a frame can render with the previous hash link.
+  useLayoutEffect(() => {
+    const node = nodeRef.current
+    if (!node || propsAnchor) {
+      return
+    }
+    applyAnchor(node)
+  }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
   const actionElements = (
@@ -410,12 +457,30 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
     node: Element
   }
 
+/**
+ * Context to indicate if markdown is being streamed (unterminatedParsing mode).
+ * When true, mermaid code blocks render as syntax-highlighted code instead of diagrams.
+ * This prevents flickering and error states from partial/incomplete diagram source.
+ */
+const StreamingContext = createContext<boolean>(false)
+StreamingContext.displayName = "StreamingContext"
+
+/**
+ * Context that controls whether anchor link icons render next to markdown
+ * headings. Heading `id` attributes are still set when this is true, so URL
+ * fragment deep links keep working.
+ */
+const HideAnchorsContext = createContext<boolean>(false)
+HideAnchorsContext.displayName = "HideAnchorsContext"
+
 const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
+  const hideAnchor = useContext(HideAnchorsContext)
   return (
     <HeadingWithActionElements
       tag={node.tagName}
       anchor={anchor}
+      hideAnchor={hideAnchor}
       tagProps={rest}
     >
       {children}
@@ -456,6 +521,12 @@ interface RenderedMarkdownProps {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * When true, headers (h1-h6) keep their `id` for deep linking but the
+   * visible anchor link icon is not rendered.
+   */
+  hideAnchors?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -463,6 +534,7 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 
 /**
  * Renders code tag with highlighting based on requested language.
+ * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   inline,
@@ -471,21 +543,35 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   ...props
 }) => {
   const match = /language-(\w+)/.exec(className || "")
+  const isStreaming = useContext(StreamingContext)
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
     .replace(/\n$/, "")
 
   const language = match?.[1] || ""
+
+  // Handle mermaid code blocks: render as a diagram unless streaming
+  // (see StreamingContext for rationale).
+  if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
+    return (
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+          }
+        >
+          <MermaidChart source={codeText} />
+        </Suspense>
+      </ErrorBoundary>
+    )
+  }
+
   return !inline ? (
     <ErrorBoundary>
       <Suspense
         fallback={
-          <Skeleton
-            element={SkeletonProto.create({
-              style: SkeletonProto.SkeletonStyle.ELEMENT,
-            })}
-          />
+          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
         }
       >
         <StreamlitSyntaxHighlighter
@@ -1071,6 +1157,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks,
   helpText,
   unterminatedParsing,
+  hideAnchors,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1220,31 +1307,31 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
-        <Skeleton
-          element={SkeletonProto.create({
-            style: SkeletonProto.SkeletonStyle.ELEMENT,
-          })}
-        />
+        <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
       </ErrorBoundary>
     )
   }
 
   return (
-    <HelpTextContext.Provider value={helpText}>
-      <ErrorBoundary>
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins}
-          rehypePlugins={rehypePlugins}
-          components={renderers}
-          urlTransform={transformLinkUri}
-          disallowedElements={disallowed}
-          // unwrap and render children from invalid markdown
-          unwrapDisallowed={true}
-        >
-          {processedSource}
-        </ReactMarkdown>
-      </ErrorBoundary>
-    </HelpTextContext.Provider>
+    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+      <HelpTextContext.Provider value={helpText}>
+        <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
+          <ErrorBoundary>
+            <ReactMarkdown
+              remarkPlugins={remarkPlugins}
+              rehypePlugins={rehypePlugins}
+              components={renderers}
+              urlTransform={transformLinkUri}
+              disallowedElements={disallowed}
+              // unwrap and render children from invalid markdown
+              unwrapDisallowed={true}
+            >
+              {processedSource}
+            </ReactMarkdown>
+          </ErrorBoundary>
+        </HideAnchorsContext.Provider>
+      </HelpTextContext.Provider>
+    </StreamingContext.Provider>
   )
 })
 
@@ -1259,13 +1346,13 @@ const StreamlitMarkdown: FC<Props> = ({
   isCaption,
   isLabel,
   boldLabel,
-  largerLabel,
   disableLinks,
   isToast,
   inheritFont,
   helpText,
   truncate,
   unterminatedParsing,
+  hideAnchors,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1276,7 +1363,6 @@ const StreamlitMarkdown: FC<Props> = ({
       isLabel={isLabel}
       inheritFont={inheritFont}
       boldLabel={boldLabel}
-      largerLabel={largerLabel}
       isToast={isToast}
       truncate={truncate}
       style={style}
@@ -1289,6 +1375,7 @@ const StreamlitMarkdown: FC<Props> = ({
         disableLinks={disableLinks}
         helpText={helpText}
         unterminatedParsing={unterminatedParsing}
+        hideAnchors={hideAnchors}
       />
     </StyledStreamlitMarkdown>
   )

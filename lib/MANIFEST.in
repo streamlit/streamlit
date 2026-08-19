@@ -1,3 +1,7 @@
 include streamlit/py.typed
+# Intentionally broad — package-data globs in pyproject.toml restrict which
+# file types end up in the wheel. This wildcard ensures sdist includes everything
+# needed for the bundled skills without duplicating the extension list here.
+recursive-include streamlit/.agents *
 recursive-include streamlit/hello *
 recursive-include streamlit/static *

@@ -16,15 +16,14 @@
 
 /** A mock theme definition for use in unit tests. */
 
-import { lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
 
-import { createBaseUiTheme } from "~lib/theme/createBaseUiTheme"
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
 import { breakpoints } from "~lib/theme/primitives/breakpoints"
 import { colors } from "~lib/theme/primitives/colors"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
+import { opacities } from "~lib/theme/primitives/opacities"
 import { radii } from "~lib/theme/primitives/radii"
 import { sizes } from "~lib/theme/primitives/sizes"
 import { spacing } from "~lib/theme/primitives/spacing"
@@ -102,6 +101,7 @@ const emotionMockTheme = {
   genericFonts,
   iconSizes,
   lineHeights,
+  opacities,
   radii,
   shadows,
   sizes,
@@ -109,14 +109,7 @@ const emotionMockTheme = {
   zIndices,
 }
 
-const baseuiMockTheme = createBaseUiTheme(
-  emotionMockTheme,
-  lightThemePrimitives
-)
-
 export const mockTheme: ThemeConfig = {
   name: "MockTheme",
   emotion: emotionMockTheme,
-  basewebTheme: baseuiMockTheme,
-  primitives: lightThemePrimitives,
 }

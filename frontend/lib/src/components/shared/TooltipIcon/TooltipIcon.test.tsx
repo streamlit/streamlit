@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor } from "@testing-library/react"
+import { act, renderHook, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useFocusVisible } from "react-aria"
 import { vi } from "vitest"
 
 import ThemeProvider from "~lib/components/core/ThemeProvider"
@@ -28,12 +29,15 @@ import TooltipIcon, {
 } from "./TooltipIcon"
 
 describe("TooltipIcon element", () => {
+  // Register React Aria's global pointer/keyboard modality listeners so that
+  // hover-triggered tooltip tests can work.  See Tooltip.test.tsx for a full
+  // explanation of this setup.
+  beforeAll(() => {
+    renderHook(() => useFocusVisible())
+  })
   it("renders a TooltipIcon", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="" ariaLabel="Help" />
       </ThemeProvider>
     )
@@ -43,10 +47,7 @@ describe("TooltipIcon element", () => {
 
   it("InlineTooltipIcon uses a default 'Help' aria-label", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <InlineTooltipIcon content="Help text" />
       </ThemeProvider>
     )
@@ -56,10 +57,7 @@ describe("TooltipIcon element", () => {
 
   it("InlineTooltipIcon ariaLabel can be overridden", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <InlineTooltipIcon content="Help text" ariaLabel="More information" />
       </ThemeProvider>
     )
@@ -72,20 +70,21 @@ describe("TooltipIcon element", () => {
   describe("InlineTooltipIcon prop forwarding", () => {
     beforeEach(() => {
       vi.useFakeTimers()
+      // Prime interaction modality to 'pointer' for hover tests.
+      // See Tooltip.test.tsx for full explanation.
+      document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }))
     })
 
     afterEach(() => {
       vi.useRealTimers()
+      vi.restoreAllMocks()
     })
 
     it("forwards containerWidth and onMouseEnterDelay to TooltipIcon", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
       render(
-        <ThemeProvider
-          theme={mockTheme.emotion}
-          baseuiTheme={mockTheme.basewebTheme}
-        >
+        <ThemeProvider theme={mockTheme.emotion}>
           <InlineTooltipIcon
             content="Help text"
             containerWidth
@@ -115,10 +114,7 @@ describe("TooltipIcon element", () => {
   it("falls back to a default aria-label when ariaLabel is an empty string", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         {/* Passing an empty string to validate runtime safety for ariaLabel fallback. */}
         <TooltipIcon content="Help text" ariaLabel="" />
       </ThemeProvider>
@@ -131,10 +127,7 @@ describe("TooltipIcon element", () => {
   it("renders a focusable trigger button by default", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="Help text" ariaLabel="Help for widget" />
       </ThemeProvider>
     )
@@ -148,10 +141,7 @@ describe("TooltipIcon element", () => {
   it("shows tooltip content on keyboard focus and closes on blur", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="Help text" ariaLabel="Help for widget" />
         <button type="button">After</button>
       </ThemeProvider>
@@ -177,10 +167,7 @@ describe("TooltipIcon element", () => {
   it("closes the tooltip on Escape", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="Help text" ariaLabel="Help for widget" />
       </ThemeProvider>
     )

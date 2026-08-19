@@ -3,6 +3,15 @@
 Tips and guidelines specific to the development of the Streamlit Python library,
 not applicable to scripts and e2e tests.
 
+## FIPS Compatibility
+
+- Production code must remain compatible with Python/OpenSSL environments running in FIPS mode.
+- For non-security hashing, use `streamlit.util.create_fast_hasher` (incremental hashing) or `calc_hash` (one-shot string/bytes hashing) instead of calling `hashlib` directly.
+  - Direct use of `hashlib.md5`, `sha1`, `blake2b`, `blake2s`, and `hashlib.new` is banned by lint (ruff `TID251`).
+  - The shared `streamlit.util` helpers are the only sanctioned direct callers, guarded with `# noqa: TID251`.
+- FIPS-approved constructors (e.g. `hashlib.sha256`) remain allowed for genuine security needs.
+- Update `lib/tests/streamlit/fips_test.py` when changing hashing behavior.
+
 ## Logging
 
 If something needs to be logged, please use our logger - that returns a default
@@ -38,6 +47,14 @@ typing errors in parameters or return types by using mypy and `assert_type`.
 - Always include `from __future__ import annotations` at the top.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
   (e.g. `radio_types.py`, `button_types.py`).
+- For dict-like return values backed by `AttributeDictionary` /
+  `ReadOnlyAttributeDictionary` subclasses (e.g. dataframe/chart selection
+  state, `ButtonColumn` click state, `st.data_editor` edit state), assert both
+  attribute and bracket access (e.g. `state.selection.rows` and
+  `state["selection"]["rows"]`, or `edit_state.edited_rows` and
+  `edit_state["edited_rows"]`). Use a separate `TypedDict` (`*Input`) for
+  values users assign (e.g. `selection_default`), not the returned
+  attribute-dictionary class.
 
 ## Docstrings for Public API
 
@@ -64,7 +81,9 @@ reStructuredText directives. Follow these guidelines:
   (see existing docstrings for the pattern).
 - **Examples**: Use `.. code-block:: python` for examples. Where possible, make the examples fully
   executable (beginning with import statements), label the filename, and end with `.. output::` directive
-  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
+  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`). The output
+  directive should include a height of at least 200px. Adjust the height to avoid scrolling where reasonable.
+  Try to keep examples shorter than 600px. Always include a full empty line after an RST directive.
 
   ```
   .. code-block:: python
@@ -72,6 +91,41 @@ reStructuredText directives. Follow these guidelines:
 
      import streamlit as st
   ```
+
+  ```
+  .. output::
+     https://doc-example.streamlit.app
+     height: 200px
+
+  ```
+
+## Exception handling
+
+User-facing API errors raised from `st.*` commands belong in
+`streamlit.errors`. Prefer existing reusable exception types over raising a
+generic `StreamlitAPIException` with a one-off message.
+
+- `StreamlitAPIException`: base for malformed user interaction with the Streamlit
+  API. Prefer a more specific subclass when one fits.
+- `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
+  an invalid value from a known finite set (Literal / enum-like options). Example:
+  `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
+- Prefer other shared validators/errors when they already exist for the
+  parameter, including:
+  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
+    `StreamlitInvalidSizeError` (layout sizing helpers)
+  - `StreamlitInvalidColorError`
+  - `StreamlitInvalidVerticalAlignmentError` /
+    `StreamlitInvalidHorizontalAlignmentError` /
+    `StreamlitInvalidColumnGapError` (layout alignment/gap; these keep
+    element-type context in the message)
+  - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
+    date/time bounds)
+  - `StreamlitInvalidFormCallbackError` (form callback policy)
+
+Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
+type (missing required args, incompatible option combinations, nesting rules,
+serialization failures, and similar).
 
 ## Theming and Layout
 

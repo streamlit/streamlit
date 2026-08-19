@@ -14,9 +14,12 @@
 
 """slider unit test."""
 
+from __future__ import annotations
+
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
@@ -24,14 +27,21 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.widgets.slider import (
+    _MAX_SAFE_DAY,
+    _MIN_SAFE_DAY,
+    SliderSerde,
+)
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -242,6 +252,182 @@ class SliderTest(DeltaGeneratorTestCase):
             st.slider("Label", value=0.5, min_value=min_value)
         assert f"`min_value` ({min_value}) must be >= -1.797e+308" == str(exc.value)
 
+    @parameterized.expand(
+        [
+            ("historical", date(1600, 1, 1), date(1700, 1, 1)),
+            ("far_future", date(2300, 1, 1), date(2400, 1, 1)),
+            ("date_min", date(1, 1, 1), date(2, 1, 1)),
+            ("date_max", date(9998, 1, 1), date(9999, 12, 31)),
+            (
+                "datetime_far_future",
+                datetime(2300, 1, 1),
+                datetime(2400, 1, 1),
+            ),
+        ]
+    )
+    def test_timelike_value_out_of_js_bounds(self, _name, min_value, max_value):
+        """Timelike bounds beyond JS safe-integer microseconds are rejected.
+
+        Dates are serialized as microseconds since the epoch, which the frontend holds
+        in a JavaScript number. Past MAX_SAFE_INTEGER the value cannot round-trip, so
+        it has to fail rather than silently shift to a different instant.
+        """
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider(
+                "Label", min_value=min_value, max_value=max_value, value=min_value
+            )
+        assert "too far from 1970" in str(exc.value)
+        # The message has to name a usable range, not just reject the input.
+        assert f"{_MIN_SAFE_DAY:%Y-%m-%d}" in str(exc.value)
+        assert f"{_MAX_SAFE_DAY:%Y-%m-%d}" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("as_date", lambda d: d),
+            ("as_datetime_midnight", lambda d: datetime.combine(d, time())),
+            ("as_datetime_end_of_day", lambda d: datetime.combine(d, time(23, 59))),
+        ]
+    )
+    def test_advertised_range_is_actually_accepted(self, _name, to_value):
+        """The bounds named in the error message must themselves be accepted.
+
+        The representable limit lands mid-day, so naming the limit's calendar days
+        would recommend values that are then rejected -- following the error message
+        would produce another error. Both ends are checked at the end of the day too,
+        since a datetime may carry any time.
+        """
+        min_value = to_value(_MIN_SAFE_DAY)
+        max_value = to_value(_MAX_SAFE_DAY)
+
+        st.slider("Label", min_value=min_value, max_value=max_value, value=min_value)
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    @parameterized.expand(
+        [
+            ("min_as_date", lambda: _MIN_SAFE_DAY),
+            ("max_as_date", lambda: _MAX_SAFE_DAY),
+            ("min_as_datetime", lambda: datetime.combine(_MIN_SAFE_DAY, time(12))),
+            ("max_as_datetime", lambda: datetime.combine(_MAX_SAFE_DAY, time(12))),
+        ]
+    )
+    def test_advertised_bound_works_without_explicit_bounds(self, _name, make_value):
+        """A bare ``value=`` at either advertised bound is accepted.
+
+        ``min_value``/``max_value`` default to ``value`` +/- 14 days, which at the edge
+        of the representable range lands outside it. Without clamping, following the
+        error message's own advice raised a second error naming a bound the caller
+        never passed.
+        """
+        st.slider("Label", value=make_value())
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    @parameterized.expand([("lower", _MIN_SAFE_DAY), ("upper", _MAX_SAFE_DAY)])
+    def test_advertised_bound_works_for_aware_datetimes(self, _name, day):
+        """The clamped default window keeps the ``tzinfo`` of an aware ``value``.
+
+        ``_window_around`` rebuilds the limits it clamps to, so an aware ``anchor``
+        would raise on the comparison if they came back naive.
+        """
+        value = datetime.combine(day, time(12), tzinfo=self.PST)
+
+        st.slider("Label", value=value)
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    @parameterized.expand(
+        [
+            # A zone whose offset varies by date, and the two extreme fixed offsets.
+            ("dst_zone", ZoneInfo("America/Los_Angeles")),
+            ("plus_14", ZoneInfo("Pacific/Kiritimati")),
+            ("minus_12", ZoneInfo("Etc/GMT+12")),
+        ]
+    )
+    def test_advertised_bounds_survive_offset_extremes(self, _name, tz):
+        """Zone offset never pushes an advertised bound out of range.
+
+        The clamp compares wall-clock datetimes while ``_datetime_to_micros`` reads
+        wall-clock fields as UTC, so for a zone whose offset varies by date the two can
+        disagree -- by at most that offset. The whole-day slack in ``_MIN_SAFE_DAY`` /
+        ``_MAX_SAFE_DAY`` has to be wider than any real offset for that to stay safe.
+        """
+        for day in (_MIN_SAFE_DAY, _MAX_SAFE_DAY):
+            for tod in (time.min, time(23, 59)):
+                st.slider("Label", value=datetime.combine(day, tod, tzinfo=tz))
+
+                proto = self.get_delta_from_queue().new_element.slider
+                assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+                assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    def test_advertised_range_is_the_widest_whole_day_span(self):
+        """One day beyond either advertised bound is rejected by the range check.
+
+        Guards the advertised range from drifting inward and needlessly narrowing what
+        callers are told they can use.
+
+        Each end needs the opposite time of day: the limit falls at 00:12 on the first
+        day and 23:47 on the last, so it is midnight that overflows below and
+        end-of-day that overflows above. The pairing bound stays in range so the
+        earlier ``min_value < max_value`` check cannot mask the result, and the message
+        is asserted so a rejection for some other reason does not count.
+        """
+        just_below = datetime.combine(_MIN_SAFE_DAY - timedelta(days=1), time())
+        just_above = datetime.combine(_MAX_SAFE_DAY + timedelta(days=1), time(23, 59))
+        in_range = datetime.combine(_MIN_SAFE_DAY, time(12))
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", min_value=just_below, max_value=in_range, value=in_range)
+        assert "`min_value` is too far from 1970" in str(exc.value)
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", min_value=in_range, max_value=just_above, value=in_range)
+        assert "`max_value` is too far from 1970" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("epoch_adjacent", date(1970, 1, 1), date(1971, 1, 1)),
+            ("historical_but_safe", date(1700, 1, 1), date(1800, 1, 1)),
+            ("just_inside_lower", date(1685, 1, 1), date(1686, 1, 1)),
+            ("just_inside_upper", date(2254, 1, 1), date(2255, 1, 1)),
+        ]
+    )
+    def test_timelike_value_within_js_bounds_is_accepted(
+        self, _name, min_value, max_value
+    ):
+        """Dates inside the representable range are unaffected by the bounds check."""
+        st.slider("Label", min_value=min_value, max_value=max_value, value=min_value)
+
+        proto = self.get_delta_from_queue().new_element.slider
+        assert abs(proto.min) <= JSNumber.MAX_SAFE_INTEGER
+        assert abs(proto.max) <= JSNumber.MAX_SAFE_INTEGER
+
+    @parameterized.expand(
+        [
+            ("date_min", date(1, 1, 1)),
+            ("date_max", date(9999, 12, 31)),
+            ("datetime_min", datetime(1, 1, 1)),
+            ("datetime_max", datetime(9999, 12, 31, 23, 59)),
+        ]
+    )
+    def test_timelike_value_near_type_limits_reports_the_range(self, _name, value):
+        """A bare ``value`` near ``date``/``datetime``'s limits reports the range.
+
+        The default ``min_value``/``max_value`` are ``value`` +/- 14 days, and next to
+        the type's own limits that arithmetic overflowed before validation could run,
+        surfacing as a bare ``OverflowError``. It should report the representable range
+        instead.
+        """
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", value=value)
+        assert "too far from 1970" in str(exc.value)
+
     def test_step_zero(self):
         with pytest.raises(StreamlitAPIException) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)
@@ -299,11 +485,11 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.slider("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_format_none(self):
@@ -584,9 +770,25 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.slider("the label", key="my_key", bind="invalid-value")
+
+    def test_persist_state_passed_to_metadata(self) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.slider("the label", key="my_key", persist_state="session")
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    def test_persist_state_without_key_raises(self) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.slider("the label", persist_state="session")
 
     def test_bind_with_int_slider(self):
         """Test that bind works with integer slider."""
@@ -671,3 +873,146 @@ class SliderOnChangeModeTest(DeltaGeneratorTestCase):
             st.slider("the label", on_change=[])  # type: ignore[arg-type]
 
         assert "on_change" in str(exc_info.value)
+
+
+def _make_int_serde(
+    value: list[float],
+    *,
+    single_value: bool = True,
+    min_value: float = 0,
+    max_value: float = 100,
+) -> SliderSerde:
+    """Construct a ``SliderSerde`` for INT data with the provided defaults."""
+    return SliderSerde(
+        value=value,
+        data_type=SliderProto.INT,
+        single_value=single_value,
+        orig_tz=None,
+        min_value=min_value,
+        max_value=max_value,
+    )
+
+
+def _make_float_serde(
+    value: list[float],
+    *,
+    single_value: bool = True,
+    min_value: float = 0.0,
+    max_value: float = 1.0,
+) -> SliderSerde:
+    """Construct a ``SliderSerde`` for FLOAT data with the provided defaults."""
+    return SliderSerde(
+        value=value,
+        data_type=SliderProto.FLOAT,
+        single_value=single_value,
+        orig_tz=None,
+        min_value=min_value,
+        max_value=max_value,
+    )
+
+
+def test_slider_serde_deserialize_returns_default_when_ui_value_none() -> None:
+    """A None ui_value falls back to the default."""
+    assert _make_int_serde(value=[42]).deserialize(None) == 42
+
+
+@pytest.mark.parametrize(
+    ("default", "single_value", "ui_value", "expected"),
+    [
+        ([7], True, [1, 2], 7),
+        ([3, 8], False, [5], (3, 8)),
+    ],
+    ids=["single_value_too_many", "range_too_few"],
+)
+def test_slider_serde_deserialize_falls_back_on_wrong_length(
+    default: list[float],
+    single_value: bool,
+    ui_value: list[float],
+    expected: int | tuple[int, int],
+) -> None:
+    """ui_value lists with the wrong length revert to the default."""
+    serde = _make_int_serde(value=default, single_value=single_value)
+    assert serde.deserialize(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [[5], [200]],
+    ids=["below_min", "above_max"],
+)
+def test_slider_serde_deserialize_resets_out_of_range(
+    ui_value: list[float],
+) -> None:
+    """Out-of-range ui_values revert to the default."""
+    serde = _make_int_serde(value=[20], min_value=10, max_value=100)
+    assert serde.deserialize(ui_value) == 20
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [[float("nan")], [float("inf")], [-float("inf")]],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_slider_serde_deserialize_resets_non_finite_value(
+    ui_value: list[float],
+) -> None:
+    """Non-finite float ui_values revert to the default."""
+    serde = _make_float_serde(value=[0.5])
+    assert serde.deserialize(ui_value) == 0.5
+
+
+@pytest.mark.parametrize(
+    "ui_value",
+    [[float("nan"), 0.8], [0.2, float("inf")], [-float("inf"), float("nan")]],
+    ids=["nan_first", "inf_second", "both_non_finite"],
+)
+def test_slider_serde_deserialize_resets_non_finite_value_range(
+    ui_value: list[float],
+) -> None:
+    """Non-finite float values in a range slider revert to the default."""
+    serde = _make_float_serde(value=[0.2, 0.8], single_value=False)
+    assert serde.deserialize(ui_value) == (0.2, 0.8)
+
+
+def test_slider_serde_deserialize_passes_through_in_range_value() -> None:
+    """In-range ui_values are returned and converted to the slider's data type."""
+    serde = _make_int_serde(value=[20])
+    assert serde.deserialize([42.0]) == 42
+
+
+class SliderEdgeCasesTest(DeltaGeneratorTestCase):
+    """Tests for slider parameter validation edge cases."""
+
+    def test_mixed_types_in_value_raises(self):
+        """A list with mixed numeric types raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="must be of the same type"):
+            st.slider("the label", value=[1, 2.5])
+
+    def test_mismatched_arg_types_raises(self):
+        """Mismatched min/max/step types raise StreamlitAPIException."""
+        with pytest.raises(
+            StreamlitAPIException, match="arguments must be of matching types"
+        ):
+            # min/max are float but step is int, so the args-type-mismatch error fires.
+            st.slider("label", min_value=0.0, max_value=10.0, value=5.0, step=1)
+
+    def test_value_type_mismatch_with_args(self):
+        """Value type that doesn't match arg types raises StreamlitAPIException."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match="value and arguments must be of the same type",
+        ):
+            # min/max/step are float but value is int, so data_type is INT and
+            # the value-vs-args matching-type check fails.
+            st.slider("label", min_value=0.0, max_value=10.0, value=5, step=0.5)
+
+    def test_reversed_range_swaps_start_end(self):
+        """A reversed range (start > end) gets swapped automatically."""
+        assert st.slider("label", value=(80, 20), min_value=0, max_value=100) == (
+            20,
+            80,
+        )
+
+    def test_empty_value_list_uses_outer_bounds(self):
+        """An empty value list uses min_value and max_value as bounds."""
+        assert st.slider("label", value=[], min_value=0, max_value=100) == (0, 100)

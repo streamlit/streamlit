@@ -37,6 +37,18 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
 
+/** Test component that wires useDeckGl to the ElementFullscreenContext expand button. */
+const DeckGlFullscreenTestComponent: FC<UseDeckGlProps> = props => {
+  useDeckGl(props)
+  const { expand } = useRequiredContext(ElementFullscreenContext)
+
+  return (
+    <button type="button" onClick={expand}>
+      Expand
+    </button>
+  )
+}
+
 const mockInitialViewState = {
   bearing: -27.36,
   latitude: 52.2323,
@@ -185,6 +197,83 @@ describe("useDeckGl", () => {
         expect(result.html).toBe(expected)
       }
     )
+
+    it.each([
+      {
+        description: "direct object properties",
+        object: {
+          siteName: "A & B",
+          notes: `<img src=x onerror="alert('xss')">`,
+        },
+        expected:
+          "<b>A &amp; B</b><br/>&lt;img src=x onerror=&quot;alert(&#x27;xss&#x27;)&quot;&gt;",
+      },
+      {
+        description: "nested properties field",
+        object: {
+          properties: {
+            siteName: "A & B",
+            notes: "<svg onload=alert(1)>",
+          },
+        },
+        expected: "<b>A &amp; B</b><br/>&lt;svg onload=alert(1)&gt;",
+      },
+      {
+        // Guards against `$` sequences (e.g. `` $` ``) in interpolated values
+        // being treated as `String.prototype.replace` patterns.
+        description: "values containing `$` replacement patterns",
+        object: {
+          siteName: "x",
+          notes: "a$`b",
+        },
+        expected: "<b>x</b><br/>a$`b",
+      },
+    ])(
+      "should escape interpolated html tooltip values from $description",
+      ({ object, expected }) => {
+        const {
+          result: { current },
+        } = renderHook(hookProps => useDeckGl(hookProps), {
+          initialProps: getUseDeckGlProps({
+            tooltip: JSON.stringify({
+              html: "<b>{siteName}</b><br/>{notes}",
+            }),
+          }),
+        })
+
+        const result = current.createTooltip({ object } as PickingInfo)
+
+        if (result === null || typeof result !== "object") {
+          throw new Error("Expected result to be an object")
+        }
+
+        expect(result.html).toBe(expected)
+      }
+    )
+
+    it("should preserve unescaped values in text tooltips", () => {
+      const {
+        result: { current },
+      } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: getUseDeckGlProps({
+          tooltip: JSON.stringify({
+            text: "{notes}",
+          }),
+        }),
+      })
+
+      const result = current.createTooltip({
+        object: {
+          notes: "<b>plain text</b>",
+        },
+      } as PickingInfo)
+
+      if (result === null || typeof result !== "object") {
+        throw new Error("Expected result to be an object")
+      }
+
+      expect(result.text).toBe("<b>plain text</b>")
+    })
   })
 
   describe("deck memo behavior", () => {
@@ -229,18 +318,8 @@ describe("useDeckGl", () => {
 
     it("should call JSON5.parse when isFullScreen changes", async () => {
       const user = userEvent.setup()
-      const MyComponent: FC<UseDeckGlProps> = props => {
-        useDeckGl(props)
-        const { expand } = useRequiredContext(ElementFullscreenContext)
 
-        return (
-          <button type="button" onClick={expand}>
-            Expand
-          </button>
-        )
-      }
-
-      render(<MyComponent {...getUseDeckGlProps()} />)
+      render(<DeckGlFullscreenTestComponent {...getUseDeckGlProps()} />)
 
       expect(JSON5.parse).toHaveBeenCalledTimes(1)
 
@@ -326,7 +405,7 @@ describe("useDeckGl", () => {
 
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [0] },
@@ -421,7 +500,7 @@ describe("useDeckGl", () => {
       // Set a selection on the layer
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "layer-to-remove": [0, 1] },
@@ -468,7 +547,7 @@ describe("useDeckGl", () => {
       // Select items at indices 2 and 4
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "shrinking-layer": [2, 4] },
@@ -512,7 +591,7 @@ describe("useDeckGl", () => {
       const unknownLayerId = "auto-layer-id"
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { [unknownLayerId]: [0] },
@@ -607,7 +686,7 @@ describe("useDeckGl", () => {
       // Set selections on layer "A" and a non-existent "old-layer"
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: {
@@ -670,7 +749,7 @@ describe("useDeckGl", () => {
       const layerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { [layerId]: [5, 10, 15] },
@@ -703,7 +782,7 @@ describe("useDeckGl", () => {
       // Select item at index 0
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "emptying-layer": [0] },
@@ -741,7 +820,7 @@ describe("useDeckGl", () => {
 
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "object-layer": [1] },

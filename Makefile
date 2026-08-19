@@ -16,15 +16,21 @@
 # /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
 SHELL=/bin/bash
 
-INSTALL_DEV_REQS ?= true
-INSTALL_TEST_REQS ?= true
+PYTHON_DEPENDENCY_GROUP ?= dev
+PYTHON_SYNC_LOCK_FLAG ?= --locked
 INSTALL_PLAYWRIGHT ?= true
+INSTALL_PLAYWRIGHT_DEPS ?= auto
 # Flags:
-#  - INSTALL_DEV_REQS: install dev requirements (default: true)
-#  - INSTALL_TEST_REQS: install test requirements (default: true)
+#  - PYTHON_DEPENDENCY_GROUP: final Python environment to install. Supported
+#    values are runtime, test, dev, and integration (default: dev).
+#  - PYTHON_SYNC_LOCK_FLAG: lock enforcement passed to uv sync (default: --locked).
+#    Automation that repairs the lock may explicitly set this to an empty value.
 #  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
 #    CI uses a dedicated action to install browsers and typically sets this to false.
 #    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
+#  - INSTALL_PLAYWRIGHT_DEPS: install Playwright OS-level system deps (default: auto)
+#    `auto` runs --with-deps on Debian, Ubuntu, and macOS only. Use `true` to force
+#    it everywhere, or `false` to skip it (browsers still install in either case).
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
@@ -121,6 +127,10 @@ protobuf:
 		proto/streamlit/proto/*.proto
 
 	@# JS/TS protobuf generation
+	@if [ ! -d "frontend/node_modules" ]; then \
+		echo "frontend/node_modules not found. Running 'make frontend-init' first..."; \
+		$(MAKE) frontend-init; \
+	fi
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
 .PHONY: protobuf-lint
@@ -137,28 +147,37 @@ protobuf-format:
 .PHONY: python-init
 # Install Python dependencies and Streamlit in editable mode.
 python-init:
+	@case "${PYTHON_DEPENDENCY_GROUP}" in \
+		runtime|test|dev|integration) ;; \
+		*) \
+			echo "Unsupported PYTHON_DEPENDENCY_GROUP='${PYTHON_DEPENDENCY_GROUP}'. Expected one of: runtime, test, dev, integration."; \
+			exit 1; \
+		;; \
+	esac
 	@# Check if uv is installed
 	@if ! command -v uv > /dev/null 2>&1; then \
 		echo "Installing uv..."; \
 		pip install uv; \
 	fi
-	@# Determine which dependency group to sync
-	@if [ "${INSTALL_DEV_REQS}" = "true" ] && [ "${INSTALL_TEST_REQS}" = "true" ]; then \
-		echo "Installing dev dependencies (includes test)..."; \
-		uv sync --group dev; \
-	elif [ "${INSTALL_DEV_REQS}" = "true" ]; then \
-		echo "Installing dev dependencies..."; \
-		uv sync --group dev; \
-	elif [ "${INSTALL_TEST_REQS}" = "true" ]; then \
-		echo "Installing test dependencies..."; \
-		uv sync --group test; \
+	@# Sync exactly one final dependency selection. uv otherwise includes dev by default.
+	@if [ "${PYTHON_DEPENDENCY_GROUP}" = "runtime" ]; then \
+		echo "Installing runtime dependencies..."; \
+		uv sync ${PYTHON_SYNC_LOCK_FLAG} --no-default-groups; \
 	else \
-		echo "Installing base dependencies..."; \
-		uv sync; \
+		echo "Installing ${PYTHON_DEPENDENCY_GROUP} dependencies..."; \
+		uv sync ${PYTHON_SYNC_LOCK_FLAG} --no-default-groups --group "${PYTHON_DEPENDENCY_GROUP}"; \
 	fi
 	@# Install playwright if requested
-	@if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
-		uv run python -m playwright install --with-deps; \
+	@if [ "${PYTHON_DEPENDENCY_GROUP}" != "runtime" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
+		if [ "${INSTALL_PLAYWRIGHT_DEPS}" = "false" ]; then \
+			uv run --no-sync python -m playwright install; \
+		elif [ "${INSTALL_PLAYWRIGHT_DEPS}" = "true" ] || [ -f /etc/debian_version ] || [ "$$(uname)" = "Darwin" ]; then \
+			uv run --no-sync python -m playwright install --with-deps; \
+		else \
+			echo "Skipping 'playwright install --with-deps': not officially supported on this OS."; \
+			echo "Browsers will be downloaded. Install browser system libraries through your distro's package manager (see CONTRIBUTING.md)."; \
+			uv run --no-sync python -m playwright install; \
+		fi; \
 	fi
 
 .PHONY: python-lint
@@ -180,23 +199,27 @@ python-format:
 .PHONY: python-tests
 # Run Python unit tests.
 python-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		-m "not performance" \
 		lib/tests/
 
 .PHONY: python-performance-tests
 # Run Python performance tests.
 python-performance-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		-m "performance" \
 		--benchmark-autosave \
 		--benchmark-storage file://.benchmarks/pytest \
 		lib/tests/
 
 .PHONY: python-integration-tests
-# Run Python integration tests. Requires `uv sync --group integration` to be run first.
+# Run Python integration tests. Requires `PYTHON_DEPENDENCY_GROUP=integration make python-init` first.
 python-integration-tests:
-	uv run pytest -c lib/pyproject.toml -v -l \
+	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
+	@# --no-sync keeps the integration group installed by `PYTHON_DEPENDENCY_GROUP=integration make python-init`; a bare `uv run` re-syncs to the default `dev` group and drops integration-only deps.
+	MPLBACKEND=Agg uv run --no-sync pytest -c lib/pyproject.toml -v -l \
 		--require-integration \
 		lib/tests/
 
@@ -207,6 +230,15 @@ python-types:
 	uv run ty check
 	# Run mypy type checker (reads config from pyproject.toml):
 	uv run mypy
+	# Template apps under lib/streamlit/.agents/ are skipped by the bare mypy
+	# run above (no __init__.py chain + dot-prefix directory). Run mypy per-
+	# template with MYPYPATH=lib so each file is checked against the real
+	# streamlit package. Per-file (not batched) because templates share the
+	# module name `streamlit_app`.
+	@for tpl in lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/*/streamlit_app.py; do \
+		echo "# mypy: $$tpl" && \
+		MYPYPATH=lib uv run mypy "$$tpl" || exit 1; \
+	done
 
 .PHONY: frontend-init
 # Install all frontend dependencies.
@@ -262,6 +294,10 @@ frontend-fast:
 frontend-dev:
 	cd frontend/ ; yarn start
 
+# The backend startup loop detects the last numeric port from either the INFO
+# "server started on" or DEBUG "Starting uvicorn runner on" log line,
+# keeping the last match because dev mode may retry ports.
+# Keep comments outside the backslash-continued recipe so Bash parses one command.
 .PHONY: debug
 # Start Streamlit and Vite dev server for debugging. Use via `make debug my-script.py`.
 debug:
@@ -354,8 +390,9 @@ debug:
 			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
 			exit 1; \
 		fi; \
-		if [[ -z "$$BACKEND_PORT" ]]; then \
-			BACKEND_PORT=$$(awk '/[Ss]erver started on/ { n=split($$NF, a, ":"); print a[n]; exit }' "$$DEBUG_DIR/backend.log"); \
+		DETECTED_BACKEND_PORT=$$(awk '/[Ss]erver started on|Starting uvicorn runner on/ { n=split($$NF, a, ":"); port=a[n] } END { if (port ~ /^[0-9]+$$/) print port }' "$$DEBUG_DIR/backend.log"); \
+		if [[ -n "$$DETECTED_BACKEND_PORT" ]]; then \
+			BACKEND_PORT=$$DETECTED_BACKEND_PORT; \
 		fi; \
 		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
@@ -496,6 +533,8 @@ update-emojis:
 update-notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
+	# Normalize line endings to LF (yarn output may contain CRLF from some packages)
+	perl -i -pe 's/\r$$//' NOTICES
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE
@@ -515,10 +554,8 @@ update-headers:
 .PHONY: update-min-deps
 # Update minimum dependency constraints file.
 update-min-deps:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
-	# Install streamlit in editable mode (needed by get_min_versions.py)
-	uv pip install --editable ./lib --no-deps
-	uv run python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
+	INSTALL_PLAYWRIGHT=false PYTHON_DEPENDENCY_GROUP=dev $(MAKE) python-init >/dev/null
+	uv run --no-sync python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
 .PHONY: debug-e2e-test
 # Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
@@ -603,6 +640,13 @@ bare-execution-tests:
 cli-smoke-tests:
 	uv run python scripts/cli_smoke_tests.py
 
+# Template apps under lib/streamlit/.agents/ need per-template mypy invocation:
+# (a) they all use the module name `streamlit_app`, so batching triggers a
+#     "duplicate module" error;
+# (b) they live under a dot-prefixed directory (`.agents/`), which confuses
+#     mypy's package-root resolution and prevents `import streamlit` from
+#     resolving — `MYPYPATH=lib` points at the real streamlit package.
+# `make python-types` applies the same per-template treatment to the full set.
 .PHONY: check
 # Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
@@ -684,8 +728,19 @@ check:
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \
-			uv run mypy $$PY_FILES && \
-			echo "" || PY_EXIT=1; \
+			PY_MYPY_NON_TEMPLATE=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep -v '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			PY_MYPY_TEMPLATES=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			if [ -n "$$(echo "$$PY_MYPY_NON_TEMPLATE" | tr -d ' ')" ]; then \
+				uv run mypy $$PY_MYPY_NON_TEMPLATE && \
+				echo "" || PY_EXIT=1; \
+			fi; \
+			if [ $$PY_EXIT -eq 0 ] && [ -n "$$(echo "$$PY_MYPY_TEMPLATES" | tr -d ' ')" ]; then \
+				echo "# Per-template mypy with MYPYPATH=lib (see 'make check' docstring for why)" && \
+				for tpl in $$PY_MYPY_TEMPLATES; do \
+					MYPYPATH=lib uv run mypy "$$tpl" || PY_EXIT=1; \
+				done; \
+				echo ""; \
+			fi; \
 		fi; \
 	else \
 		echo "No Python files changed."; \
@@ -714,7 +769,7 @@ check:
 	if [ -n "$$PY_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
 		echo "=== Python: tests (pytest) ===" && \
 		echo "Running: $$PY_TESTS" && \
-		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
+		MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \

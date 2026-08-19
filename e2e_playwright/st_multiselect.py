@@ -155,12 +155,22 @@ many_options = (
     "twenty-eight",
     "twenty-nine",
     "thirty",
+    "thirty-one",
+    "thirty-two",
+    "thirty-three",
+    "thirty-four",
+    "thirty-five",
+    "thirty-six",
+    "thirty-seven",
+    "thirty-eight",
+    "thirty-nine",
+    "forty",
 )
 
 st.multiselect(
     "multiselect 17 - show maxHeight",
     options=many_options,
-    default=many_options[0:28],
+    default=many_options,
 )
 
 st.multiselect(
@@ -316,3 +326,63 @@ bound_multi_new = st.multiselect(
     bind="query-params",
 )
 st.text(f"bound_multi_new: {bound_multi_new}")
+
+# --- ESC key handling (issue #15637) ---
+
+esc_colors = ["Green", "Yellow", "Red", "Blue"]
+
+with st.popover("Popover with multiselect"):
+    esc_multi_popover = st.multiselect(
+        "multiselect esc popover",
+        esc_colors,
+        default=esc_colors,
+        key="multiselect_esc_popover",
+    )
+    st.text(f"value esc popover: {esc_multi_popover}")
+
+# --- wrap parameter ---
+
+wrap_options = [
+    "Afghanistan",
+    "Albania",
+    "Algeria",
+    "Andorra",
+    "Angola",
+    "Argentina",
+    "Armenia",
+    "Australia",
+    "Austria",
+    "Azerbaijan",
+]
+
+with st.container(key="multiselect_wrap_false"):
+    st.multiselect(
+        "multiselect wrap false",
+        wrap_options,
+        default=wrap_options,
+        wrap=False,
+    )
+
+with st.container(key="multiselect_wrap_true"):
+    st.multiselect(
+        "multiselect wrap true",
+        wrap_options,
+        default=wrap_options,
+        wrap=True,
+    )
+
+# Auto (wrap=None) resolves to no-wrap inside a horizontal container ...
+with st.container(horizontal=True, key="multiselect_wrap_auto_horizontal"):
+    st.multiselect(
+        "multiselect wrap auto horizontal",
+        wrap_options,
+        default=wrap_options,
+    )
+
+# ... and to wrapping in a normal vertical layout.
+with st.container(key="multiselect_wrap_auto_vertical"):
+    st.multiselect(
+        "multiselect wrap auto vertical",
+        wrap_options,
+        default=wrap_options,
+    )

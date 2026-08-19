@@ -246,7 +246,7 @@ describe("ProgressColumn", () => {
             metadata: null,
           },
         },
-      } as BaseColumnProps,
+      },
       mockTheme.emotion
     )
     const mockCell = mockColumn.getCell(52)

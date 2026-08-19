@@ -30,10 +30,10 @@ const getProps = (
 })
 
 describe("AlertContainer element", () => {
-  it("renders a Notification", () => {
+  it("renders the alert container", () => {
     render(<AlertContainer {...getProps()} />)
     const alertContainer = screen.getByTestId("stAlertContainer")
-    expect(alertContainer).toBeInTheDocument()
+    expect(alertContainer).toBeVisible()
     expect(alertContainer).toHaveClass("stAlertContainer")
   })
 
@@ -44,6 +44,19 @@ describe("AlertContainer element", () => {
       </AlertContainer>
     )
 
-    expect(screen.getByTestId("foo")).toBeInTheDocument()
+    expect(screen.getByTestId("foo")).toBeVisible()
   })
+
+  it.each([
+    [Kind.ERROR, "alert"],
+    [Kind.INFO, "status"],
+    [Kind.SUCCESS, "status"],
+    [Kind.WARNING, "alert"],
+  ] as const)(
+    "for kind=%s, renders role=%s",
+    (kind: Kind, expectedRole: string) => {
+      render(<AlertContainer {...getProps({ kind })} />)
+      expect(screen.getByRole(expectedRole)).toBeVisible()
+    }
+  )
 })

@@ -36,6 +36,20 @@ describe("shouldCollapse", () => {
     ).toBeFalsy()
   })
 
+  it("should not collapse given state is locked and viewport is desktop-width", () => {
+    // Wider than breakpoint — sidebar is pinned open
+    expect(
+      shouldCollapse(PageConfig.SidebarState.LOCKED, 500, 1200)
+    ).toBeFalsy()
+  })
+
+  it("should collapse given state is locked and viewport is mobile-width", () => {
+    // Narrower than breakpoint — lock degrades so the overlay sidebar doesn't trap users
+    expect(
+      shouldCollapse(PageConfig.SidebarState.LOCKED, 500, 400)
+    ).toBeTruthy()
+  })
+
   it("should collapse given state is auto and width is less than breakpoint", () => {
     const windowInnerWidth = 40
     expect(

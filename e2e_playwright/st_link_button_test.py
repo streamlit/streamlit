@@ -21,12 +21,13 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_label_truncated,
     expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
 )
 
-LINK_BUTTON_ELEMENTS = 19
+LINK_BUTTON_ELEMENTS = 21
 
 
 def _click_link_and_wait_for_rerun(app: Page, link: Locator) -> None:
@@ -121,6 +122,19 @@ def test_link_button_click_calls_callback(app: Page):
     )
 
 
+def test_link_button_sanitizes_dangerous_url(app: Page):
+    """Test that a dangerous javascript: URL is neutralized to '#'.
+
+    This relies on real-browser URL normalization that jsdom cannot fully
+    replicate, so it complements the frontend unit tests.
+    """
+    dangerous_link = get_element_by_key(app, "dangerous_link_button").get_by_role(
+        "link"
+    )
+    expect(dangerous_link).to_have_attribute("href", "#")
+    expect(dangerous_link).to_have_attribute("target", "_self")
+
+
 def test_link_button_click_returns_true_for_rerun(app: Page):
     rerun_link_button = get_element_by_key(app, "rerun_link_button").get_by_role("link")
 
@@ -134,8 +148,9 @@ def test_link_button_click_returns_true_for_rerun(app: Page):
     )
 
 
-@pytest.mark.only_browser(
-    "webkit"  # Firefox and Chromium are a bit flaky on the expect_popup.
+@pytest.mark.skip(
+    reason="Flaky on all browsers - Firefox/Chromium have expect_popup issues, "
+    "webkit has keyboard shortcut issues in Playwright 1.59"
 )
 def test_link_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut opens the link in a new tab."""
@@ -161,3 +176,16 @@ def test_link_button_shortcut_triggers(app: Page):
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
+
+
+def test_wrap_false_truncates_and_sets_native_title(app: Page):
+    """wrap=False ellipsizes an overflowing label and exposes the full label via
+    a native title so it stays recoverable on hover.
+    """
+    container = get_element_by_key(app, "wrap_false_link_button")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

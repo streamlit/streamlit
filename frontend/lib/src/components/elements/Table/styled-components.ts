@@ -22,7 +22,8 @@ import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdow
 import type { EmotionTheme } from "~lib/theme/types"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.md,
+  // Match st.dataframe / widgets (fontSizes.sm = 14px at default root).
+  fontSize: theme.fontSizes.sm,
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.small,
   captionSide: "bottom",
@@ -72,6 +73,8 @@ export const StyledTableBorder = styled.div<{
   position: "relative",
   // Use block display with hidden vertical overflow to eliminate inline-table baseline gap
   display: "block",
+  // This prevents accidental overscrolling that triggers the browser's Back button.
+  overscrollBehaviorX: "contain",
 }))
 
 export const StyledTable = styled.table<{
@@ -137,6 +140,15 @@ const styleCellFunction = (
     paddingLeft: border === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
+  // Always inherit the table font size for cell markdown. StreamlitMarkdown
+  // defaults to body size (md), and the global `p, ol, ul, dl { font-size: 1rem }`
+  // rule (theme/globalStyles.ts) would otherwise keep these text containers at
+  // 16px even when the container uses sm. Defined outside the truncate/
+  // non-truncate branches so both modes inherit it.
+  [`${StyledStreamlitMarkdown}, ${StyledStreamlitMarkdown} :is(p, ol, ul, dl)`]:
+    {
+      fontSize: "inherit",
+    },
   ...(truncateContent
     ? {
         // Apply truncation only for fixed-width tables to avoid clipping
@@ -154,7 +166,8 @@ const styleCellFunction = (
 
         // StreamlitMarkdown defaults to width: 100% and aggressive word
         // breaking. Override this in table cells so columns size by content,
-        // and wrapping only happens at the max column width.
+        // and wrapping only happens at the max column width. Font size is
+        // handled by the compound selector above (which this does not redefine).
         [`${StyledStreamlitMarkdown}`]: {
           display: "inline-block",
           width: "fit-content",
@@ -275,6 +288,6 @@ export const StyledEmptyTableCell = styled(StyledTableCell)<{
 }>(({ theme }) => ({
   color: theme.colors.gray70,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.md,
+  fontSize: theme.fontSizes.sm,
   textAlign: "center",
 }))

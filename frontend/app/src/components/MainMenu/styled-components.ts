@@ -18,7 +18,12 @@ import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import {
+  EmotionTheme,
+  getOverlayZIndex,
+  getPopoverContainerStyle,
+  hasLightBackgroundColor,
+} from "@streamlit/lib"
 
 const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`
 0% {
@@ -154,7 +159,7 @@ export const StyledMenuItemShortcut = styled.kbd(({ theme }) => ({
   justifyContent: "center",
   whiteSpace: "nowrap",
   fontSize: theme.fontSizes.sm,
-  opacity: 0.6,
+  opacity: theme.opacities.secondary,
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",
@@ -321,8 +326,8 @@ export const StyledToggleKnob = styled.div<StyledToggleProps>(
  * Footer container for the version string.
  * Lives outside the role="menu" container (as a sibling within the
  * popover) so the CopyButton is not an invalid child of role="menu".
- * Keyboard users reach the CopyButton via Tab; focus-lock keeps
- * focus within the popover.
+ * Keyboard users reach the CopyButton via Tab; explicit handlers in
+ * MenuContent keep focus cycling within the popover.
  */
 export const StyledMenuVersionFooter = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.sm,
@@ -352,10 +357,22 @@ export const StyledMenuVersionRow = styled.div(({ theme }) => ({
     },
 }))
 
+/**
+ * Portal container for the floating main menu popover body.
+ * Receives `position: fixed` placement from Floating UI via the `style` prop.
+ */
+export const StyledMainMenuPopoverBody = styled.div(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  backgroundColor: theme.colors.bgColor,
+  zIndex: getOverlayZIndex(theme),
+  maxHeight: "70vh",
+  overflow: "auto",
+}))
+
 export const StyledMenuVersionText = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
-  opacity: 0.6,
+  opacity: theme.opacities.secondary,
   fontSize: theme.fontSizes.twoSm,
   lineHeight: theme.lineHeights.menuItem,
   color: theme.colors.bodyText,

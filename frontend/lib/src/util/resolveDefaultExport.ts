@@ -35,7 +35,7 @@ export function resolveDefaultExport(
       break
     }
 
-    resolvedValue = (resolvedValue as { default: unknown }).default
+    resolvedValue = resolvedValue.default
   }
 
   return resolvedValue

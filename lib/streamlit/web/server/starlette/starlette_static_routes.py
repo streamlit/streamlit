@@ -63,7 +63,10 @@ def create_streamlit_static_handler(
 
     class _StreamlitStaticFiles(StaticFiles):
         def __init__(self, directory: str, base_url: str | None) -> None:
-            super().__init__(directory=directory, html=True)
+            # follow_symlink=True restores Tornado parity for Bazel/Nix-style deployments
+            # where the static directory may contain or be a symlink. The static dir is
+            # read-only package content, not user-controlled, so this is safe.
+            super().__init__(directory=directory, html=True, follow_symlink=True)
             self._base_url = (base_url or "").strip("/")
             self._index_path = os.path.join(directory, "index.html")
 

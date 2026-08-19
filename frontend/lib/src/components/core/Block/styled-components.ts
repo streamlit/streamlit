@@ -26,10 +26,13 @@ import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
-  gap: streamlit.GapSize | undefined,
+  gap: streamlit.IGapConfig | undefined,
   theme: EmotionTheme
 ): string {
-  switch (gap) {
+  if (typeof gap?.pixelGap === "number") {
+    return `${gap.pixelGap}px`
+  }
+  switch (gap?.gapSize) {
     case streamlit.GapSize.XXSMALL:
       return theme.spacing.twoXS
     case streamlit.GapSize.XSMALL:
@@ -143,13 +146,19 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: streamlit.GapSize | undefined
+  gap: streamlit.IGapConfig | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
+  /**
+   * Whether the parent row allows wrapping/stacking. When true (default),
+   * columns stack below the columns breakpoint. When false, columns keep a
+   * usable minimum width and scroll horizontally instead.
+   */
+  $wrap?: boolean
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment }) => {
+  ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
@@ -163,24 +172,36 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // e.g. if it overflows to next row.
       width,
       flex: `1 1 ${width}`,
-
-      [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        minWidth: `calc(100% - ${theme.spacing.twoXL})`,
-      },
+      ...($wrap
+        ? {
+            [`@media (max-width: ${theme.breakpoints.columns})`]: {
+              minWidth: `calc(100% - ${theme.spacing.twoXL})`,
+            },
+          }
+        : {
+            // Usable floor so nowrap columns scroll instead of shrinking to zero.
+            minWidth: theme.spacing.sixXL,
+          }),
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
         marginTop: "auto",
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]: {
-          marginBottom: theme.spacing.sm,
-        },
+        // Align the last direct-child checkbox/toggle with other input widgets.
+        // Scoped to the column's own stVerticalBlock so nested containers
+        // (e.g. horizontal containers of checkboxes) do not also get matched
+        // (issue #13162).
+        [`& > .stVerticalBlock > ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]:
+          {
+            marginBottom: theme.spacing.sm,
+          },
       }),
       ...(verticalAlignment === VerticalAlignment.TOP && {
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]: {
-          marginTop: theme.spacing.sm,
-        },
+        // Align the first direct-child checkbox/toggle with other input
+        // widgets. Scoped to the column's own stVerticalBlock so nested
+        // containers (e.g. horizontal containers of checkboxes) do not also
+        // get matched (issue #13162).
+        [`& > .stVerticalBlock > ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]:
+          {
+            marginTop: theme.spacing.sm,
+          },
       }),
       ...(verticalAlignment === VerticalAlignment.CENTER && {
         marginTop: "auto",
@@ -239,7 +260,7 @@ const getJustifyContent = (
 
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
-  gap?: streamlit.GapSize | undefined
+  gap?: streamlit.IGapConfig | undefined
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute
@@ -250,6 +271,13 @@ export interface StyledFlexContainerBlockProps {
   align?: BlockProto.FlexContainer.Align | null
   justify?: BlockProto.FlexContainer.Justify | null
   overflow?: React.CSSProperties["overflow"]
+  /**
+   * Horizontal overflow behavior. Set to "auto" for a horizontal container
+   * with `wrap=false` so its elements stay in a single, horizontally
+   * scrollable row. When set, applied as `overflowX` alongside `overflowY`
+   * (from `overflow`) instead of the `overflow` shorthand.
+   */
+  overflowX?: React.CSSProperties["overflowX"]
 }
 
 export const StyledFlexContainerBlock =
@@ -265,6 +293,7 @@ export const StyledFlexContainerBlock =
       align,
       justify,
       overflow,
+      overflowX,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -288,7 +317,23 @@ export const StyledFlexContainerBlock =
           borderRadius: theme.radii.default,
           padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
         }),
-        overflow,
+        ...(overflowX !== undefined
+          ? {
+              overflowX,
+              // `overflow` is a single-keyword value from layout styles
+              // (`visible`/`auto`/`hidden`), which is valid as overflow-y.
+              overflowY: overflow as React.CSSProperties["overflowY"],
+              // The browser coerces the cross-axis overflow to "auto" when one
+              // axis scrolls, which would clip child focus rings and shadows.
+              // A bordered container already has enough internal padding; an
+              // unbordered one gets vertical breathing room (cancelled by a
+              // negative margin so the outer layout is unchanged).
+              ...(!border && {
+                paddingBlock: theme.sizes.focusRingWidth,
+                marginBlock: `-${theme.sizes.focusRingWidth}`,
+              }),
+            }
+          : { overflow }),
       }
     }
   )

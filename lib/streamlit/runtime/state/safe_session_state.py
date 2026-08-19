@@ -67,7 +67,7 @@ class SafeSessionState:
             #  to a Lock.)
             self._state.on_script_will_rerun(latest_widget_states)
 
-    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
+    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
         with self._lock:
             self._state.on_script_finished(widget_ids_this_run)
 

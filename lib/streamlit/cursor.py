@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from streamlit import util
 from streamlit.proto.Element_pb2 import Element
@@ -109,8 +109,8 @@ class SparseList(Generic[T]):
 class Cursor:
     """A pointer to a delta location in the app.
 
-    When adding an element to the app, you should always call
-    get_locked_cursor() on that element's respective Cursor.
+    Subclasses provide `lock_element()` and `open_block()` to reserve
+    positions in the element tree.
 
     Parameters
     ----------
@@ -167,7 +167,10 @@ class Cursor:
     def transient_index(self) -> int:
         return 0 if self._transient_index is None else self._transient_index
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+    def lock_element(self) -> LockedCursor:
+        raise NotImplementedError()
+
+    def open_block(self) -> RunningCursor:
         raise NotImplementedError()
 
     def get_transient_cursor(self) -> Cursor:
@@ -177,15 +180,6 @@ class Cursor:
             self._transient_index += 1
 
         return self
-
-    @property
-    def props(self) -> Any:
-        """Other data in this cursor. This is a temporary measure that will go
-        away when we implement improved return values for elements.
-
-        This is only implemented in LockedCursor.
-        """
-        raise NotImplementedError()
 
 
 class RunningCursor(Cursor):
@@ -199,7 +193,7 @@ class RunningCursor(Cursor):
         """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
-        call get_locked_cursor() on them.
+        call lock_element() or open_block() on them.
 
         Parameters
         ----------
@@ -219,6 +213,12 @@ class RunningCursor(Cursor):
         self._parent_path = parent_path
         self._index = 0
 
+    def reset(self) -> None:
+        """Reset this cursor to its initial position (index 0, no transients)."""
+        self._index = 0
+        self._transient_index = None
+        self._transient_elements = SparseList[Element]()
+
     @property
     def root_container(self) -> int:
         return self._root_container
@@ -235,19 +235,30 @@ class RunningCursor(Cursor):
     def is_locked(self) -> bool:
         return False
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
-        locked_cursor = LockedCursor(
-            root_container=self._root_container,
-            parent_path=self._parent_path,
-            index=self._index,
-            **props,
-        )
-
+    def _advance(self) -> None:
+        """Increment index and reset transient state."""
         self._index += 1
         self._transient_index = None
         self._transient_elements = SparseList[Element]()
 
-        return locked_cursor
+    def lock_element(self) -> LockedCursor:
+        """Reserve the current position for an element and advance."""
+        locked = LockedCursor(
+            root_container=self._root_container,
+            parent_path=self._parent_path,
+            index=self._index,
+        )
+        self._advance()
+        return locked
+
+    def open_block(self) -> RunningCursor:
+        """Create a child cursor for a new block and advance."""
+        child = RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
+        )
+        self._advance()
+        return child
 
 
 class LockedCursor(Cursor):
@@ -258,12 +269,11 @@ class LockedCursor(Cursor):
         index: int = 0,
         transient_index: int | None = None,
         transient_elements: SparseList[Element] | None = None,
-        **props: Any,
     ) -> None:
         """A locked pointer to a location in the app.
 
         LockedCursors always point to the same location, even when you call
-        get_locked_cursor() on them.
+        lock_element() on them.
 
         Parameters
         ----------
@@ -277,17 +287,12 @@ class LockedCursor(Cursor):
           The running index of the transient elements.
         transient_elements: SparseList[Element]
           The list of active transient elements.
-        **props: any
-          Anything else you want to store in this cursor. This is a temporary
-          measure that will go away when we implement improved return values
-          for elements.
 
         """
         super().__init__(transient_index, transient_elements)
         self._root_container = root_container
         self._index = index
         self._parent_path = parent_path
-        self._props = props
 
     @property
     def root_container(self) -> int:
@@ -305,10 +310,16 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
-    @property
-    def props(self) -> Any:
-        return self._props
-
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
-        self._props = props
+    def lock_element(self) -> LockedCursor:
         return self
+
+    def open_block(self) -> RunningCursor:
+        """Create a child RunningCursor from this locked position.
+
+        Used when _block() is called on a DeltaGenerator that has a
+        LockedCursor (e.g., a DG returned from _enqueue as output_dg).
+        """
+        return RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
+        )

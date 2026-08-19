@@ -36,50 +36,14 @@ export interface HelpProps {
   element: HelpProto
 }
 
-/**
- * Functional element representing formatted text.
- */
-function Help({ element }: HelpProps): ReactElement {
-  const { name, type, value, docString, members } = element
-
-  // Put it all together into a nice little html view.
-  return (
-    <StyledDocContainer className="stHelp" data-testid="stHelp">
-      <StyledDocHeader>
-        <StyledDocSummary>
-          {name ? (
-            <StyledDocName data-testid="stHelpName">{name}</StyledDocName>
-          ) : null}
-          {type ? (
-            <StyledDocType data-testid="stHelpType">{type}</StyledDocType>
-          ) : null}
-          {value ? (
-            <StyledDocValue data-testid="stHelpValue">{value}</StyledDocValue>
-          ) : null}
-        </StyledDocSummary>
-      </StyledDocHeader>
-      <StyledDocString data-testid="stHelpDoc">
-        {docString || "No docs available"}
-      </StyledDocString>
-      {members.length > 0 ? (
-        <StyledMembersTable data-testid="stHelpMembersTable">
-          <tbody>
-            {members.map(member => (
-              <Member member={member} key={member.name} />
-            ))}
-          </tbody>
-        </StyledMembersTable>
-      ) : null}
-    </StyledDocContainer>
-  )
-}
-
 interface MemberProps {
   member: IMember
 }
 
-// Exported for tests.
-export function Member({ member }: MemberProps): ReactElement {
+/** Renders a single member row in the members table. */
+export const Member = memo(function Member({
+  member,
+}: MemberProps): ReactElement {
   const { name, type, value, docString } = member
 
   return (
@@ -109,6 +73,41 @@ export function Member({ member }: MemberProps): ReactElement {
         )}
       </StyledMembersDetailsCell>
     </StyledMembersRow>
+  )
+})
+
+/** Functional element representing formatted text. */
+function Help({ element }: HelpProps): ReactElement {
+  const { name, type, value, docString, members } = element
+
+  return (
+    <StyledDocContainer className="stHelp" data-testid="stHelp">
+      <StyledDocHeader>
+        <StyledDocSummary>
+          {name ? (
+            <StyledDocName data-testid="stHelpName">{name}</StyledDocName>
+          ) : null}
+          {type ? (
+            <StyledDocType data-testid="stHelpType">{type}</StyledDocType>
+          ) : null}
+          {value ? (
+            <StyledDocValue data-testid="stHelpValue">{value}</StyledDocValue>
+          ) : null}
+        </StyledDocSummary>
+      </StyledDocHeader>
+      <StyledDocString data-testid="stHelpDoc">
+        {docString || "No docs available"}
+      </StyledDocString>
+      {members.length > 0 ? (
+        <StyledMembersTable data-testid="stHelpMembersTable">
+          <tbody>
+            {members.map(member => (
+              <Member member={member} key={member.name} />
+            ))}
+          </tbody>
+        </StyledMembersTable>
+      ) : null}
+    </StyledDocContainer>
   )
 }
 

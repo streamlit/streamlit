@@ -31,6 +31,7 @@ from streamlit import config, config_util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidThemeError,
     StreamlitInvalidThemeOptionError,
     StreamlitInvalidThemeSectionError,
 )
@@ -699,10 +700,15 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight",
             "fontFaces",
             "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
         }
         assert main_only_options.isdisjoint(section_options)
+
+        # Chart colors are allowed in all theme sections, including sidebar
+        assert {
+            "chartCategoricalColors",
+            "chartSequentialColors",
+            "chartDivergingColors",
+        }.issubset(section_options)
 
         # Test that we get the expected number of theme.sidebar options
         expected_count = self._get_expected_theme_options_count(section="theme.sidebar")
@@ -907,8 +913,6 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight": "bold",
             "fontFaces": "Arial, sans-serif",
             "showSidebarBorder": True,
-            "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
-            "chartSequentialColors": ["#ff0000", "#00ff00", "#0000ff"],
         }
 
         for main_only_option, option_value in main_only_options.items():
@@ -941,6 +945,34 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             assert main_only_option not in filtered_theme["theme"]["sidebar"]
             # Verify valid main option was preserved
             assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
+
+    def test_validate_theme_file_content_allows_chart_colors_in_sidebar(self):
+        """Chart color options are valid in theme.sidebar sections."""
+        theme_content = {
+            "theme": {
+                "primaryColor": "#ff0000",
+                "sidebar": {
+                    "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
+                    "chartSequentialColors": [f"#{i:02x}0000" for i in range(10)],
+                    "chartDivergingColors": [f"#00{i:02x}00" for i in range(10)],
+                },
+            }
+        }
+
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            filtered_theme = config_util._validate_theme_file_content(
+                theme_content, "test_theme.toml", self.config_template
+            )
+            mock_logger.warning.assert_not_called()
+
+        assert filtered_theme["theme"]["sidebar"]["chartCategoricalColors"] == [
+            "#ff0000",
+            "#00ff00",
+            "#0000ff",
+        ]
+        assert len(filtered_theme["theme"]["sidebar"]["chartSequentialColors"]) == 10
+        assert len(filtered_theme["theme"]["sidebar"]["chartDivergingColors"]) == 10
 
     def test_load_theme_file_missing_toml(self):
         """Test _load_theme_file when toml module is missing."""
@@ -1478,3 +1510,53 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             )
 
         assert "cannot reference another theme file" in str(cm.value)
+
+    def test_process_theme_inheritance_none_options_short_circuits(self) -> None:
+        """``None`` config options short-circuits so early bootstrap does not crash."""
+        set_option_mock = MagicMock()
+
+        config_util.process_theme_inheritance(
+            None, self.config_template, set_option_mock
+        )
+
+        set_option_mock.assert_not_called()
+
+    @patch("streamlit.config_util._load_theme_file")
+    def test_process_theme_inheritance_wraps_unexpected_errors(
+        self, mock_load_theme: MagicMock
+    ) -> None:
+        """Unexpected exceptions during processing are wrapped in
+        ``StreamlitInvalidThemeError`` so users see a clear, actionable error."""
+        base_option = ConfigOption("theme.base", description="", default_val=None)
+        base_option.set_value("custom_theme.toml", "test")
+        mock_load_theme.side_effect = RuntimeError("disk on fire")
+
+        with pytest.raises(StreamlitInvalidThemeError, match="disk on fire"):
+            config_util.process_theme_inheritance(
+                {"theme.base": base_option}, self.config_template, MagicMock()
+            )
+
+
+@patch("click.secho")
+def test_show_config_includes_deprecation_block(patched_echo: MagicMock) -> None:
+    """``show_config`` renders the deprecation banner, message, and expiration date."""
+    config_options = {
+        "server.legacyOption": ConfigOption(
+            key="server.legacyOption",
+            description="A legacy option used in unit tests.",
+            default_val="legacy",
+            type_=str,
+            deprecated=True,
+            deprecation_text="Use server.newOption instead.",
+            expiration_date="2030-01-01",
+        )
+    }
+
+    config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+    output = "\n".join(
+        re.sub(r"\x1b[^m]*m", "", c.args[0]) for c in patched_echo.call_args_list
+    )
+    assert "THIS IS DEPRECATED." in output
+    assert "Use server.newOption instead." in output
+    assert "This option will be removed on or after 2030-01-01" in output

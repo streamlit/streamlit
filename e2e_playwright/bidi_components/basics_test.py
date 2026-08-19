@@ -117,7 +117,9 @@ def test_trigger_interactions(app: Page) -> None:
     expect(trigger.get_by_text("Session state: {'foo': True}"))
 
     trigger.get_by_text("Trigger both").click()
-    expect(trigger.get_by_text("Foo count: 3")).to_be_visible()
+    # "Trigger both" fires two setTriggerValue calls from the iframe; on WebKit
+    # the round-trip can be slower, so allow extra time for the rerun to complete.
+    expect(trigger.get_by_text("Foo count: 3")).to_be_visible(timeout=10000)
     expect(trigger.get_by_text("Bar count: 2")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': True, 'bar': True}")).to_be_visible()
     expect(trigger.get_by_text("Session state: {'foo': True, 'bar': True}"))

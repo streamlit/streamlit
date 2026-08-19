@@ -136,6 +136,13 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "always_apply": False,
     },
     {
+        "cursor_mdc": ".cursor/rules/agents.mdc",
+        "github_copilot": ".github/instructions/agents.instructions.md",
+        "agents_md": ".claude/agents/AGENTS.md",
+        "globs": ".claude/agents/**/*",
+        "always_apply": False,
+    },
+    {
         "cursor_mdc": ".cursor/rules/workflows.mdc",
         "github_copilot": ".github/instructions/workflows.instructions.md",
         "agents_md": ".github/workflows/AGENTS.md",

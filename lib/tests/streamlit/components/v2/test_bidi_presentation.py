@@ -23,6 +23,7 @@ import pytest
 
 from streamlit.components.v2.presentation import make_bidi_component_presenter
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state import SessionState
 
 
@@ -114,8 +115,8 @@ def test_setitem_disallows_setting_created_widget():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = {"test_component_id"}
-    mock_ctx.form_ids_this_run = set()
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.shared.widget_ids_this_run.check_and_add("test_component_id")
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",
@@ -146,8 +147,8 @@ def test_delitem_disallows_deleting_from_created_widget():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = {"test_component_id"}
-    mock_ctx.form_ids_this_run = set()
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.shared.widget_ids_this_run.check_and_add("test_component_id")
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",
@@ -178,8 +179,8 @@ def test_setitem_disallows_setting_widget_in_form():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = set()
-    mock_ctx.form_ids_this_run = {"test_key"}
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.shared.form_ids_this_run.check_and_add("test_key")
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",
@@ -210,8 +211,7 @@ def test_setitem_allows_setting_before_widget_creation():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = set()
-    mock_ctx.form_ids_this_run = set()
+    mock_ctx.shared = SharedRunState()
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",
@@ -256,8 +256,7 @@ def test_deepcopy_returns_self():
 def _script_run_ctx_mock() -> MagicMock:
     """Return a minimal script-run context mock for persist paths."""
     ctx = MagicMock()
-    ctx.widget_ids_this_run = set()
-    ctx.form_ids_this_run = set()
+    ctx.shared = SharedRunState()
     return ctx
 
 

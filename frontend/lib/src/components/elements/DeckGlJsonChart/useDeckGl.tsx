@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   type DeckProps,
@@ -77,6 +77,30 @@ type UseDeckGlShape = {
   width: number | string
 }
 
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#x27;",
+}
+
+/**
+ * Escapes HTML-significant characters in a value so it can be safely embedded
+ * as text content or a quoted attribute value in an HTML tooltip template.
+ *
+ * This prevents XSS from untrusted data values interpolated into `tooltip.html`.
+ * It is only safe for element content and quoted attribute contexts. Values must
+ * not be placed by the template into unquoted attributes, URL attributes such as
+ * `href`/`src` (where a `javascript:` scheme would survive escaping), or inside
+ * `<script>`/`<style>` blocks.
+ *
+ * @param {unknown} value - The value to coerce to a string and escape.
+ * @returns {string} - The HTML-escaped string.
+ */
+const escapeHtml = (value: unknown): string =>
+  String(value).replace(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
+
 export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
   theme: EmotionTheme
@@ -99,22 +123,37 @@ export const EMPTY_STATE: DeckGlElementState = {
  *
  * @param {PickingInfo} info - The object containing the data to interpolate into the string.
  * @param {string} body - The string containing placeholders in the format `{variable}`.
+ * @param {boolean} shouldEscapeHtml - Whether interpolated values should be HTML-escaped.
+ *   Enable this when `body` is rendered as HTML (see {@link escapeHtml} for the
+ *   contexts in which escaping is safe).
  * @returns {string} - The interpolated string with placeholders replaced by actual values.
  */
-const interpolate = (info: PickingInfo, body: string): string => {
+const interpolate = (
+  info: PickingInfo,
+  body: string,
+  shouldEscapeHtml = false
+): string => {
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
     matchedVariables.forEach((match: string) => {
       const variable = match.substring(1, match.length - 1)
 
+      let rawValue: unknown
       if (Object.hasOwn(info.object, variable)) {
-        body = body.replace(match, info.object[variable])
+        rawValue = info.object[variable]
       } else if (
         Object.hasOwn(info.object, "properties") &&
         Object.hasOwn(info.object.properties, variable)
       ) {
-        body = body.replace(match, info.object.properties[variable])
+        rawValue = info.object.properties[variable]
+      } else {
+        return
       }
+
+      const value = shouldEscapeHtml ? escapeHtml(rawValue) : String(rawValue)
+      // Use a replacer function so `$` sequences in the value are inserted
+      // literally rather than treated as replacement patterns.
+      body = body.replace(match, () => value)
     })
   }
   return body
@@ -162,12 +201,11 @@ function updateWidgetMgrState(
     return
   }
 
-  widgetMgr.setStringValue(
-    element,
-    JSON.stringify(vws.value),
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, JSON.stringify(vws.value), {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 type LayerDataInfo = {
@@ -342,10 +380,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         ?.height || theme.sizes.defaultMapHeight,
   })
 
-  const [initialViewState, setInitialViewState] = useState<Record<
-    string,
-    unknown
-  > | null>(null)
+  const initialViewStateRef = useRef<DeckObject["initialViewState"] | null>(
+    null
+  )
 
   /**
    * Our proto for selectionMode is an array in order to support future-looking
@@ -380,7 +417,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     if (sanitized.changed) {
       setSelection({
-        fromUi: false,
+        fromUser: false,
         value: {
           selection: {
             indices: sanitized.indices,
@@ -533,7 +570,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     delete jsonCopy?.views // We are not using views. This avoids a console warning.
 
-    return jsonConverter.convert(jsonCopy)
+    return jsonConverter.convert(jsonCopy) as DeckObject
   }, [
     data.selection.indices,
     isLightTheme,
@@ -545,26 +582,26 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   useEffect(() => {
     // If the ViewState on the server has changed, apply the diff to the current state
-    if (!isEqual(deck.initialViewState, initialViewState)) {
+    if (!isEqual(deck.initialViewState, initialViewStateRef.current)) {
       const diff = Object.keys(deck.initialViewState).reduce<
         Record<string, unknown>
       >((diffArg, key): Record<string, unknown> => {
-        // @ts-expect-error
-        if (deck.initialViewState[key] === initialViewState?.[key]) {
+        if (
+          deck.initialViewState[key] === initialViewStateRef.current?.[key]
+        ) {
           return diffArg
         }
 
         return {
           ...diffArg,
-          // @ts-expect-error
           [key]: deck.initialViewState[key],
         }
       }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
-      setInitialViewState(deck.initialViewState)
+      initialViewStateRef.current = deck.initialViewState
     }
-  }, [deck.initialViewState, initialViewState, viewState])
+  }, [deck.initialViewState])
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {
@@ -575,7 +612,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       const parsedTooltip = JSON5.parse(tooltip)
 
       if (parsedTooltip.html) {
-        parsedTooltip.html = interpolate(info, parsedTooltip.html)
+        parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
       } else {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
       }

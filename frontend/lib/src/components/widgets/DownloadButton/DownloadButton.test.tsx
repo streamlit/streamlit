@@ -18,11 +18,9 @@ import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
-import {
-  DeferredFileResponse,
-  DownloadButton as DownloadButtonProto,
-} from "@streamlit/protobuf"
+import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
+import { BackendOperationClient } from "~lib/BackendOperationClient"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
@@ -137,9 +135,8 @@ describe("DownloadButton widget", () => {
       await user.click(downloadButton)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        undefined
+        props.element.id,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       expect(props.endpoints.buildDownloadUrl).toHaveBeenCalledWith(
@@ -173,9 +170,12 @@ describe("DownloadButton widget", () => {
       await user.click(downloadButton)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        "myFragmentId"
+        props.element.id,
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
 
@@ -197,9 +197,8 @@ describe("DownloadButton widget", () => {
       onActivate()
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        undefined
+        props.element.id,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -229,12 +228,11 @@ describe("DownloadButton widget", () => {
 
     it("checks URL once deferred download URL resolves", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
-        DeferredFileResponse.create({
+      const mockBackendOperationClient = {
+        requestDeferredFile: vi.fn().mockResolvedValue({
           url: "/media/generated_file",
-          errorMsg: "",
-        })
-      ) as (fileId: string) => Promise<DeferredFileResponse>
+        }),
+      } as unknown as BackendOperationClient
 
       const props = getProps({
         deferredFileId: "test_file_id",
@@ -243,7 +241,9 @@ describe("DownloadButton widget", () => {
       props.endpoints.buildDownloadUrl = vi.fn(url => `resolved${url}`)
 
       renderWithContexts(<DownloadButton {...props} />, {
-        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+        backendOperationContext: {
+          backendOperationClient: mockBackendOperationClient,
+        },
       })
 
       // Should not check before the download starts.
@@ -253,7 +253,9 @@ describe("DownloadButton widget", () => {
       await user.click(downloadButton)
 
       // Should request deferred file
-      expect(mockRequestDeferredFile).toHaveBeenCalledWith("test_file_id")
+      expect(
+        mockBackendOperationClient.requestDeferredFile
+      ).toHaveBeenCalledWith("test_file_id")
 
       await vi.waitFor(() => {
         expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledWith(
@@ -265,26 +267,29 @@ describe("DownloadButton widget", () => {
 
     it("handles successful deferred download", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
-        DeferredFileResponse.create({
+      const mockBackendOperationClient = {
+        requestDeferredFile: vi.fn().mockResolvedValue({
           url: "/media/generated_file",
-          errorMsg: "",
-        })
-      ) as (fileId: string) => Promise<DeferredFileResponse>
+        }),
+      } as unknown as BackendOperationClient
 
       const props = getProps({
         deferredFileId: "test_file_id",
         url: "",
       })
       renderWithContexts(<DownloadButton {...props} />, {
-        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+        backendOperationContext: {
+          backendOperationClient: mockBackendOperationClient,
+        },
       })
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)
 
       // Should request deferred file
-      expect(mockRequestDeferredFile).toHaveBeenCalledWith("test_file_id")
+      expect(
+        mockBackendOperationClient.requestDeferredFile
+      ).toHaveBeenCalledWith("test_file_id")
 
       // Should build download URL with returned URL
       await vi.waitFor(() => {
@@ -296,21 +301,19 @@ describe("DownloadButton widget", () => {
 
     it("shows loading state during deferred download", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi.fn().mockImplementation(
-        () =>
-          new Promise(resolve =>
-            setTimeout(
-              () =>
-                resolve(
-                  DeferredFileResponse.create({
-                    url: "/media/generated_file",
-                    errorMsg: "",
-                  })
-                ),
-              100
-            )
-          )
-      ) as (fileId: string) => Promise<DeferredFileResponse>
+      const mockBackendOperationClient = {
+        requestDeferredFile: vi
+          .fn()
+          .mockImplementation(
+            () =>
+              new Promise(resolve =>
+                setTimeout(
+                  () => resolve({ url: "/media/generated_file" }),
+                  100
+                )
+              )
+          ),
+      } as unknown as BackendOperationClient
 
       const props = getProps({
         deferredFileId: "test_file_id",
@@ -318,7 +321,9 @@ describe("DownloadButton widget", () => {
         label: "Download File",
       })
       renderWithContexts(<DownloadButton {...props} />, {
-        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+        backendOperationContext: {
+          backendOperationClient: mockBackendOperationClient,
+        },
       })
 
       const downloadButton = screen.getByRole("button")
@@ -333,25 +338,30 @@ describe("DownloadButton widget", () => {
 
       // Wait for completion
       await vi.waitFor(() => {
-        expect(mockRequestDeferredFile).toHaveBeenCalled()
+        expect(
+          mockBackendOperationClient.requestDeferredFile
+        ).toHaveBeenCalled()
       })
     })
 
     it("displays error message when deferred download fails", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
-        DeferredFileResponse.create({
-          url: "",
-          errorMsg: "Callable execution failed: Test error",
-        })
-      ) as (fileId: string) => Promise<DeferredFileResponse>
+      const mockBackendOperationClient = {
+        requestDeferredFile: vi
+          .fn()
+          .mockRejectedValue(
+            new Error("Callable execution failed: Test error")
+          ),
+      } as unknown as BackendOperationClient
 
       const props = getProps({
         deferredFileId: "test_file_id",
         url: "",
       })
       renderWithContexts(<DownloadButton {...props} />, {
-        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+        backendOperationContext: {
+          backendOperationClient: mockBackendOperationClient,
+        },
       })
 
       const downloadButton = screen.getByRole("button")
@@ -368,18 +378,20 @@ describe("DownloadButton widget", () => {
 
     it("displays error when request promise rejects", async () => {
       const user = userEvent.setup()
-      const mockRequestDeferredFile = vi
-        .fn()
-        .mockRejectedValue(new Error("Network error")) as (
-        fileId: string
-      ) => Promise<DeferredFileResponse>
+      const mockBackendOperationClient = {
+        requestDeferredFile: vi
+          .fn()
+          .mockRejectedValue(new Error("Network error")),
+      } as unknown as BackendOperationClient
 
       const props = getProps({
         deferredFileId: "test_file_id",
         url: "",
       })
       renderWithContexts(<DownloadButton {...props} />, {
-        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+        backendOperationContext: {
+          backendOperationClient: mockBackendOperationClient,
+        },
       })
 
       const downloadButton = screen.getByRole("button")
@@ -395,12 +407,11 @@ describe("DownloadButton widget", () => {
     it("clears error after 5 seconds", async () => {
       vi.useFakeTimers()
       const user = userEvent.setup({ delay: null })
-      const mockRequestDeferredFile = vi.fn().mockResolvedValue(
-        DeferredFileResponse.create({
-          url: "",
-          errorMsg: "Test error",
-        })
-      ) as (fileId: string) => Promise<DeferredFileResponse>
+      const mockBackendOperationClient = {
+        requestDeferredFile: vi
+          .fn()
+          .mockRejectedValue(new Error("Test error")),
+      } as unknown as BackendOperationClient
 
       const props = getProps({
         deferredFileId: "test_file_id",
@@ -408,7 +419,9 @@ describe("DownloadButton widget", () => {
         label: "Download File",
       })
       renderWithContexts(<DownloadButton {...props} />, {
-        downloadContext: { requestDeferredFile: mockRequestDeferredFile },
+        backendOperationContext: {
+          backendOperationClient: mockBackendOperationClient,
+        },
       })
 
       const downloadButton = screen.getByRole("button")
@@ -434,15 +447,15 @@ describe("DownloadButton widget", () => {
       vi.useRealTimers()
     })
 
-    it("shows error when requestDeferredFile is not provided", async () => {
+    it("shows error when backendOperationClient is not provided", async () => {
       const user = userEvent.setup()
       const props = getProps({
         deferredFileId: "test_file_id",
         url: "",
       })
-      // Don't provide requestDeferredFile - use renderWithContexts with undefined
+      // Don't provide backendOperationClient - use renderWithContexts with undefined
       renderWithContexts(<DownloadButton {...props} />, {
-        downloadContext: { requestDeferredFile: undefined },
+        backendOperationContext: { backendOperationClient: undefined },
       })
 
       const downloadButton = screen.getByRole("button")

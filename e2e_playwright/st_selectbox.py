@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from dataclasses import dataclass
+
 import pandas as pd
 
 import streamlit as st
@@ -229,6 +232,51 @@ v23 = st.selectbox(
 )
 st.write("value 23:", v23)
 
+
+# Regression test for https://github.com/streamlit/streamlit/issues/15618:
+# custom-class options with a format_func that depends on object identity
+# (here a dict lookup) must not revert the selection on rerun.
+@dataclass(frozen=True)
+class _Choice:
+    id: int
+    name: str
+
+
+_choice_a = _Choice(1, "one")
+_choice_b = _Choice(2, "two")
+_choice_labels = {_choice_a: "I", _choice_b: "II"}
+
+v24 = st.selectbox(
+    "selectbox 24 (custom objects with identity-dependent format_func)",
+    [_choice_a, _choice_b],
+    format_func=lambda choice: f"{_choice_labels[choice]} ({choice.name})",
+    key="selectbox_24",
+)
+st.write("value 24:", v24.name)
+
+# Large option list to exercise the dropdown's virtualization: only a small
+# window of the options should be rendered in the DOM at any time.
+v25 = st.selectbox(
+    "selectbox 25 (large virtualized list)",
+    [f"Option {i}" for i in range(1000)],
+    index=None,
+    key="selectbox_25",
+)
+st.write("value 25:", v25)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/16003:
+# fuzzy (default) filter mode must keep non-contiguous matches. The react-aria
+# ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+# result, dropping matches whose query is not a contiguous substring (e.g. "ape"
+# fuzzy-matches "Apple", and "aple" is not a contiguous substring of any option).
+v26 = st.selectbox(
+    "selectbox 26 (fuzzy filter mode)",
+    ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+    index=None,
+    key="selectbox_26",
+)
+st.write("value 26:", v26)
+
 # --- Bound widgets (query-params) ---
 
 v_bound = st.selectbox(
@@ -247,3 +295,18 @@ v_bound_clear = st.selectbox(
     bind="query-params",
 )
 st.write("bound select clear value:", v_bound_clear)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/16181:
+# a selectbox near the bottom of the sidebar must flip its dropdown up and stay
+# within the viewport instead of opening downward and overflowing. The
+# fixed-height spacer pushes the trigger toward the bottom so there is
+# insufficient room below for the dropdown.
+with st.sidebar:
+    st.container(height=500, border=False)
+    v_sidebar_bottom = st.selectbox(
+        "sidebar selectbox (bottom)",
+        [f"Option {i}" for i in range(1, 8)],
+        index=None,
+        key="sidebar_bottom_select",
+    )
+    st.write("sidebar bottom value:", v_sidebar_bottom)

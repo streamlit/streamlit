@@ -45,6 +45,7 @@ export const StyledAlertIcon = styled.div(({ theme }) => ({
 }))
 
 export const StyledAlertTitle = styled.strong(({ theme }) => ({
+  fontSize: theme.fontSizes.md,
   "& p": {
     fontWeight: theme.fontWeights.bold,
   },

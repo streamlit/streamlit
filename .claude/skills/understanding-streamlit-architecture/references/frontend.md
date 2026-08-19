@@ -86,9 +86,8 @@ Immutable root with 4 top-level containers:
 
 **ElementNode** (`ElementNode.ts`):
 - Leaf node for UI elements
-- Contains `Element` protobuf message
-- Lazy-loads processed data (Quiver for dataframes)
-- Handles `arrowAddRows` for incremental updates
+- Contains `Element` protobuf message and metadata (elementHash)
+- Data model derivation (e.g., Quiver for dataframes) is handled at the component level
 
 **TransientNode** (`TransientNode.ts`):
 - Holds transient elements (currently used for spinners) at a delta path position
@@ -183,7 +182,7 @@ Any state -> DISCONNECTED_FOREVER (on fatal error)
 - `ViewStateContext`: Fullscreen state
 - `ScriptRunContext`: Script run state/ID, fragment IDs (critical for staleness)
 - `FormsContext`: Forms data (pending changes, uploads)
-- `DownloadContext`: Deferred file request handler
+- `BackendOperationContext`: Backend operation client for server-side operations without script rerun (deferred downloads, lazy dataframe loading, validation)
 
 ## Key patterns
 

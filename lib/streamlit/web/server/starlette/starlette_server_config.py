@@ -18,10 +18,20 @@ from __future__ import annotations
 
 from typing import Final
 
+# IMPORTANT: Define every server cookie name here as a `*_COOKIE_NAME` constant,
+# and when adding or renaming one, ensure it is not filtered out by the Streamlit
+# Community Cloud proxy, which only forwards an allowlist of known cookies to the
+# app. A new cookie that is filtered will work locally but silently break on
+# Community Cloud (e.g. st.login via `_streamlit_session`). The guard test in
+# `starlette_server_config_test.py` discovers these constants and will fail as a
+# reminder when they change.
+
 # Cookie name for storing signed user identity information.
 USER_COOKIE_NAME: Final = "_streamlit_user"
 # Cookie name for storing signed OAuth tokens (access_token, id_token).
 TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
+# Lifetime of the persistent auth cookies set by st.login(), 30 days.
+AUTH_COOKIE_MAX_AGE_SECONDS: Final = 30 * 24 * 60 * 60
 # Cookie name for Cross-Site Request Forgery (XSRF) token validation.
 XSRF_COOKIE_NAME: Final = "_streamlit_xsrf"
 # Cookie name for server-side session management.

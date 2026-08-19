@@ -292,10 +292,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"rows":[0]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -339,10 +338,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"columns":["col2"]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -390,10 +388,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[[2,"col2"]]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -437,10 +434,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -482,10 +478,68 @@ describe("useWidgetState hook", () => {
 
       // Should use the mapped index (5) instead of visual index (0)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.anything(),
+        "test-id",
         expect.stringContaining('"rows":[5]'),
-        expect.anything(),
-        expect.anything()
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
+      )
+    })
+
+    it("serializes row selection in stable ascending order regardless of display order", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      // Simulate a sorted grid where the display order is not the original
+      // order: display 0 -> original 5, display 1 -> original 2.
+      const originalByDisplay = [5, 2]
+      const getOriginalIndex = (displayIdx: number): number =>
+        originalByDisplay[displayIdx] ?? displayIdx
+      const syncSelectionState = result.current.createSyncSelectionState(
+        columns,
+        getOriginalIndex
+      )
+
+      // Display rows 0 and 1 are selected (CompactSelection stores them in
+      // ascending display order), which map to original indices [5, 2].
+      const selection = {
+        rows: CompactSelection.empty().add(0).add(1),
+        columns: CompactSelection.empty(),
+        current: undefined,
+      }
+
+      act(() => {
+        syncSelectionState(selection, false)
+      })
+
+      // The serialized rows must be in stable ascending order ([2, 5]) rather
+      // than display order ([5, 2]), so the value is independent of the sort
+      // order and does not trigger a spurious rerun when only the display order
+      // changes.
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        "test-id",
+        expect.stringContaining('"rows":[2,5]'),
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
       )
     })
   })
@@ -656,10 +710,12 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.columns.length).toBe(0)
       expect(initialSelection?.current).toBeUndefined()
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionDefault,
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -790,7 +846,7 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.current).toBeUndefined()
       // Verify the selection was synced to the widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         JSON.stringify({
           selection: {
             rows: [0],
@@ -798,8 +854,10 @@ describe("useWidgetState hook", () => {
             cells: [],
           },
         }),
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -1008,6 +1066,9 @@ describe("useWidgetState hook", () => {
 
       // Should have loaded the added row from widget state
       expect(result.current.numRows).toBe(6)
+      // Hydration counter is bumped so edit reconciliation can run against
+      // the restored edits.
+      expect(result.current.editStateHydrationCount).toBe(1)
     })
 
     it("does not load editing state for read-only mode", () => {
@@ -1040,6 +1101,8 @@ describe("useWidgetState hook", () => {
 
       // Should not have loaded the added row
       expect(result.current.numRows).toBe(5)
+      // No hydration happened for read-only mode, so the counter stays at 0.
+      expect(result.current.editStateHydrationCount).toBe(0)
     })
   })
 
@@ -1121,10 +1184,12 @@ describe("useWidgetState hook", () => {
 
       // Should have synced to widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionStateStr,
-        expect.objectContaining({ fromUi: false }),
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 

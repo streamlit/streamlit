@@ -139,6 +139,11 @@ class ForwardMsgQueue:
                     "parent_message",
                     "page_info_changed",
                 }
+                # Toasts are one-shot notifications that must survive the queue
+                # clear happening when a run is interrupted (e.g. st.toast()
+                # immediately followed by st.rerun()); otherwise the toast delta
+                # is dropped before it reaches the browser (issue #7740).
+                or _is_toast_delta(msg)
                 or (
                     # preserve all messages if this is a fragment rerun and...
                     fragment_ids_this_run is not None
@@ -173,6 +178,20 @@ class ForwardMsgQueue:
         return len(self._queue)
 
 
+def _is_toast_delta(msg: ForwardMsg) -> bool:
+    """True if the ForwardMsg is a toast element delta.
+
+    Lifecycle-retaining clears keep unflushed toast deltas so that an
+    ``st.toast()`` issued right before ``st.rerun()`` still reaches the browser
+    (issue #7740); see ``ForwardMsgQueue.clear`` for the rationale.
+    """
+    return (
+        msg.HasField("delta")
+        and msg.delta.WhichOneof("type") == "new_element"
+        and msg.delta.new_element.WhichOneof("type") == "toast"
+    )
+
+
 def _is_composable_message(msg: ForwardMsg) -> bool:
     """True if the ForwardMsg is potentially composable with other ForwardMsgs."""
     if msg.HasField("ref_hash"):
@@ -184,11 +203,12 @@ def _is_composable_message(msg: ForwardMsg) -> bool:
         # Non-delta messages are never composable.
         return False
 
-    # We never compose add_rows messages in Python, because the add_rows
-    # operation can raise errors, and we don't have a good way of handling
-    # those errors in the message queue.
+    # new_transient is the only delta type that must NOT be coalesced, even when
+    # its delta_path matches an existing entry. This is because transient elements
+    # (e.g. spinners) represent temporary UI state that needs to be processed
+    # individually rather than merged with prior deltas at the same path.
     delta_type = msg.delta.WhichOneof("type")
-    return delta_type not in {"add_rows", "arrow_add_rows", "new_transient"}
+    return delta_type != "new_transient"
 
 
 def _maybe_compose_delta_msgs(

@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
+
+// SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
+// async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
+// Mocking it here prevents the animation machinery from running in unit tests.
+vi.mock("react-aria-components", async importOriginal => {
+  const actual = await importOriginal<typeof import("react-aria-components")>()
+  return { ...actual, SelectionIndicator: () => null }
+})
 
 import { BlockNode } from "~lib/AppNode"
 import { render } from "~lib/test_util"
@@ -154,12 +156,27 @@ describe("st.tabs", () => {
     render(<Tabs {...getProps({ widgetsDisabled: true })} />)
     const tabs = screen.getAllByRole("tab")
 
-    tabs.forEach((_, index) => {
-      // the selected tab does not have the disabled prop as true in baseweb
-      if (index === 0) {
-        return
-      }
-      expect(tabs[index]).not.toBeDisabled()
+    tabs.forEach(tab => {
+      expect(tab).not.toBeDisabled()
+    })
+  })
+
+  it("renders all tab panels in the DOM but only shows the active one", () => {
+    render(<Tabs {...getProps()} />)
+
+    // The active tab panel is accessible and interactive (not inert).
+    const activePanel = screen.getByRole("tabpanel")
+    expect(activePanel).not.toHaveAttribute("inert")
+
+    // All panels stay mounted, but visibility is driven by our own active-tab
+    // state (display:none on inactive panels) rather than RAC's `inert`, which
+    // is unreliable across reruns (#15892, #15893).
+    const panels = screen.getAllByTestId("stTabPanel")
+    expect(panels).toHaveLength(5)
+    expect(panels[0]).toBeVisible()
+
+    panels.slice(1).forEach(panel => {
+      expect(panel).not.toBeVisible()
     })
   })
 
@@ -170,6 +187,30 @@ describe("st.tabs", () => {
     // (JSDOM doesn't implement actual scrolling, so overflow won't be detected)
     expect(screen.queryByTestId("stTabsScrollLeft")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
+  })
+
+  describe("height configuration", () => {
+    it("applies a pixel height when a number is passed", () => {
+      render(<Tabs {...getProps({ height: "300px" })} />)
+
+      const container = screen.getByTestId("stTabs")
+      expect(container).toHaveStyle({ height: "300px" })
+    })
+
+    it("applies a stretch height when '100%' is passed", () => {
+      render(<Tabs {...getProps({ height: "100%" })} />)
+
+      const container = screen.getByTestId("stTabs")
+      expect(container).toHaveStyle({ height: "100%" })
+    })
+
+    it("does not apply a height when height is omitted", () => {
+      render(<Tabs {...getProps()} />)
+
+      const container = screen.getByTestId("stTabs")
+      // No inline height should be set when height is not configured.
+      expect(container.style.height).toBe("")
+    })
   })
 
   describe("CSS key class", () => {
@@ -316,10 +357,9 @@ describe("st.tabs", () => {
       await user.click(tabs[2])
 
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        { id: widgetId, formId: "" },
+        widgetId,
         "Tab 2",
-        { fromUi: true },
-        undefined
+        { formId: "", fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -360,11 +400,27 @@ describe("st.tabs", () => {
         id: widgetId,
       }
 
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
       rerender(<Tabs {...getProps({ node: updatedNode, widgetMgr })} />)
 
       tabs = screen.getAllByRole("tab")
       expect(tabs[2]).toHaveAttribute("aria-selected", "true")
       expect(tabs[0]).toHaveAttribute("aria-selected", "false")
+
+      // The widget manager must be updated with the new tab label and fromUser:false
+      // so subsequent reruns don't send a stale value and break tab.open (gh issue #15458).
+      expect(setStringValueSpy).toHaveBeenCalledWith(widgetId, "Tab 2", {
+        formId: "",
+        fragmentId: undefined,
+        fromUser: false,
+      })
+      // Must NOT use fromUser:true — that would schedule a spurious rerun
+      expect(setStringValueSpy).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({ fromUser: true })
+      )
     })
   })
 
@@ -383,7 +439,9 @@ describe("st.tabs", () => {
         scrollWidth: 800,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollRight")).toBeVisible()
@@ -399,7 +457,9 @@ describe("st.tabs", () => {
         scrollWidth: 700,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()
@@ -417,7 +477,9 @@ describe("st.tabs", () => {
         scrollWidth: 900,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()
@@ -454,7 +516,7 @@ describe("st.tabs", () => {
         observe = vi.fn()
         disconnect = vi.fn()
         unobserve = vi.fn()
-      } as unknown as typeof ResizeObserver
+      }
 
       render(<Tabs {...getProps()} />)
       const tablist = screen.getByRole("tablist")

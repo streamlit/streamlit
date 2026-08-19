@@ -17,9 +17,10 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
+import pytest
 from parameterized import parameterized
 
-from streamlit.elements.lib.dicttools import remove_none_values
+from streamlit.elements.lib.dicttools import remove_none_values, unflatten
 
 
 class DictToolsTest(unittest.TestCase):
@@ -39,3 +40,65 @@ class DictToolsTest(unittest.TestCase):
         assert remove_none_values(input) == expected, (
             f"Expected {input} to be transformed into {expected}."
         )
+
+
+@pytest.mark.parametrize(
+    ("flat_dict", "expected"),
+    [
+        ({}, {}),
+        ({"foo": 1}, {"foo": 1}),
+        ({"foo_bar": 1}, {"foo": {"bar": 1}}),
+        (
+            {"foo_bar_baz": 123, "foo_bar_biz": 456, "x_bonks": "hi"},
+            {"foo": {"bar": {"baz": 123, "biz": 456}}, "x": {"bonks": "hi"}},
+        ),
+        # Iterables of dicts are recursed into; iterables of non-dicts are passed through.
+        (
+            {"items": [{"a_b": 1}, {"a_c": 2}]},
+            {"items": [{"a": {"b": 1}}, {"a": {"c": 2}}]},
+        ),
+        ({"values": [1, 2, 3]}, {"values": [1, 2, 3]}),
+    ],
+    ids=["empty", "flat", "single_split", "nested", "list_of_dicts", "list_of_scalars"],
+)
+def test_unflatten_without_encodings(
+    flat_dict: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    """Unflatten produces a nested tree from underscore-separated keys."""
+    assert unflatten(flat_dict) == expected
+
+
+@pytest.mark.parametrize(
+    ("flat_dict", "encodings", "expected"),
+    [
+        (
+            {"foo_bar_baz": 123, "x_bonks": "hi"},
+            {"x"},
+            {
+                "foo": {"bar": {"baz": 123}},
+                "encoding": {"x": {"bonks": "hi"}},
+            },
+        ),
+        (
+            {"x_value": 1, "y_value": 2, "other_value": 3},
+            {"x", "y"},
+            {
+                "encoding": {"x": {"value": 1}, "y": {"value": 2}},
+                "other": {"value": 3},
+            },
+        ),
+    ],
+    ids=["single_encoding", "multiple_encodings_share_key"],
+)
+def test_unflatten_moves_keys_into_encoding(
+    flat_dict: dict[str, Any],
+    encodings: set[str],
+    expected: dict[str, Any],
+) -> None:
+    """Keys listed in ``encodings`` are grouped under an auto-created ``encoding`` key."""
+    assert unflatten(flat_dict, encodings=encodings) == expected
+
+
+def test_unflatten_default_encodings_does_not_create_encoding_key() -> None:
+    """Without an ``encodings`` argument, no ``encoding`` key is added."""
+    assert "encoding" not in unflatten({"foo_bar": 1})

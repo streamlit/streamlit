@@ -22,6 +22,11 @@ import {
   LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -61,10 +66,9 @@ describe("Checkbox widget", () => {
     render(<Checkbox {...props} />)
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -114,6 +118,41 @@ describe("Checkbox widget", () => {
     expect(screen.getByRole("checkbox")).not.toBeChecked()
   })
 
+  it("is checked when default is true", () => {
+    const props = getProps({ default: true })
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("checkbox")).toBeChecked()
+  })
+
+  it("has an accessible name matching the label", () => {
+    const props = getProps()
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("checkbox", { name: props.element.label })
+    ).toBeVisible()
+  })
+
+  it("toggles via keyboard Space key", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+    render(<Checkbox {...props} />)
+
+    act(() => {
+      screen.getByRole("checkbox").focus()
+    })
+    await user.keyboard(" ")
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element.id,
+      true,
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+    )
+    expect(screen.getByRole("checkbox")).toBeChecked()
+  })
+
   it("is not disabled by default", () => {
     const props = getProps()
     render(<Checkbox {...props} />)
@@ -131,10 +170,9 @@ describe("Checkbox widget", () => {
     await user.click(screen.getByRole("checkbox"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(screen.getByRole("checkbox")).toBeChecked()
   })
@@ -149,10 +187,13 @@ describe("Checkbox widget", () => {
     await user.click(screen.getByRole("checkbox"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: true,
+      }
     )
   })
 
@@ -171,10 +212,9 @@ describe("Checkbox widget", () => {
 
     expect(screen.getByRole("checkbox")).toBeChecked()
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       true,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -185,13 +225,164 @@ describe("Checkbox widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByRole("checkbox")).not.toBeChecked()
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
+  })
+})
+
+describe("Checkbox TOGGLE type", () => {
+  const getToggleProps = (
+    elementProps: Partial<CheckboxProto> = {},
+    widgetProps: Partial<Props> = {}
+  ): Props =>
+    getProps(
+      { type: CheckboxProto.StyleType.TOGGLE, ...elementProps },
+      widgetProps
+    )
+
+  it("renders with ARIA role switch", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).toBeVisible()
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+  })
+
+  it("is off by default", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).not.toBeChecked()
+  })
+
+  it("is on when default is true", () => {
+    const props = getToggleProps({ default: true })
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).toBeChecked()
+  })
+
+  it("has an accessible name matching the label", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("switch", { name: props.element.label })
+    ).toBeVisible()
+  })
+
+  it("toggles via keyboard Space key", async () => {
+    const user = userEvent.setup()
+    const props = getToggleProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+    render(<Checkbox {...props} />)
+
+    act(() => {
+      screen.getByRole("switch").focus()
+    })
+    await user.keyboard(" ")
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element.id,
+      true,
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+    )
+    expect(screen.getByRole("switch")).toBeChecked()
+  })
+
+  it("sets widget value on mount", () => {
+    const props = getToggleProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element.id,
+      props.element.default,
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
+    )
+  })
+
+  it("is not disabled by default", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).not.toBeDisabled()
+  })
+
+  it("is disabled when disabled prop is true", () => {
+    const props = getToggleProps({}, { disabled: true })
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByRole("switch")).toBeDisabled()
+  })
+
+  it("handles toggling on", async () => {
+    const user = userEvent.setup()
+    const props = getToggleProps()
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+
+    await user.click(screen.getByRole("switch"))
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element.id,
+      true,
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+    )
+    expect(screen.getByRole("switch")).toBeChecked()
+  })
+
+  it("does not toggle when disabled", async () => {
+    const user = userEvent.setup()
+    const props = getToggleProps({}, { disabled: true })
+    vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+
+    // Clear initial mount call
+    vi.mocked(props.widgetMgr.setBoolValue).mockClear()
+
+    await user.click(screen.getByRole("switch"))
+
+    expect(props.widgetMgr.setBoolValue).not.toHaveBeenCalled()
+    expect(screen.getByRole("switch")).not.toBeChecked()
+  })
+
+  it("renders a label", () => {
+    const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByText(props.element.label)).toBeInTheDocument()
+  })
+
+  it("applies hidden label visibility to stWidgetLabel", () => {
+    const props = getToggleProps({
+      labelVisibility: {
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
+    )
+  })
+
+  it("applies collapsed label visibility to stWidgetLabel", () => {
+    const props = getToggleProps({
+      labelVisibility: {
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 })
 
@@ -259,4 +450,135 @@ describe("Checkbox query param binding", () => {
       undefined
     )
   })
+})
+
+describe("Checkbox wrap", () => {
+  const LONG_LABEL = "A very long checkbox label that should ellipsize"
+
+  // Both checkbox and toggle share the same truncation/title wiring, so the
+  // wrap behavior is exercised over both style types to catch a regression in
+  // either root (StyledCheckboxRoot / StyledSwitchRoot).
+  const STYLE_TYPES = [
+    ["checkbox", CheckboxProto.StyleType.DEFAULT],
+    ["toggle", CheckboxProto.StyleType.TOGGLE],
+  ] as const
+
+  const horizontalContext: IFlexContext = {
+    direction: Direction.HORIZONTAL,
+    isInHorizontalLayout: true,
+    isInRoot: false,
+    isInContentWidthContainer: false,
+  }
+
+  it.each(STYLE_TYPES)(
+    "sets a native title with the full label when %s wrap is false",
+    (_name, type) => {
+      render(
+        <Checkbox {...getProps({ type, wrap: false, label: LONG_LABEL })} />
+      )
+      expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+      expect(screen.getByTestId("stMarkdownContainer")).toHaveStyle({
+        "text-overflow": "ellipsis",
+        "white-space": "nowrap",
+      })
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "uses the plain text of a Markdown %s label for the title",
+    (_name, type) => {
+      render(
+        <Checkbox
+          {...getProps({ type, wrap: false, label: "**Bold** report" })}
+        />
+      )
+      // The title is the rendered plain text, not the raw Markdown source.
+      expect(screen.getByTitle("Bold report")).toBeVisible()
+      expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "does not set a title by default outside a horizontal layout (%s)",
+    (_name, type) => {
+      render(<Checkbox {...getProps({ type, label: LONG_LABEL })} />)
+      expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+      expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+        "text-overflow": "ellipsis",
+      })
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "auto default sets a title inside a horizontal layout (%s)",
+    (_name, type) => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Checkbox {...getProps({ type, label: LONG_LABEL })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+      expect(screen.getByTestId("stMarkdownContainer")).toHaveStyle({
+        "text-overflow": "ellipsis",
+        "white-space": "nowrap",
+      })
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "explicit wrap=true keeps wrapping inside a horizontal layout (%s)",
+    (_name, type) => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Checkbox {...getProps({ type, wrap: true, label: LONG_LABEL })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.queryByTitle(LONG_LABEL)).not.toBeInTheDocument()
+      expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+        "text-overflow": "ellipsis",
+      })
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "still sets a %s title when help is set (help lives on a separate icon)",
+    (_name, type) => {
+      render(
+        <Checkbox
+          {...getProps({
+            type,
+            wrap: false,
+            label: LONG_LABEL,
+            help: "Extra context",
+          })}
+        />
+      )
+      // Unlike a button, the help tooltip is triggered by the separate help icon,
+      // so the label's native title stays enabled and both coexist.
+      expect(screen.getByTitle(LONG_LABEL)).toBeVisible()
+      expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+    }
+  )
+
+  it.each(STYLE_TYPES)(
+    "scopes the %s title to the label, not the help icon",
+    (_name, type) => {
+      render(
+        <Checkbox
+          {...getProps({
+            type,
+            wrap: false,
+            label: LONG_LABEL,
+            help: "Extra context",
+          })}
+        />
+      )
+      // The title is on the label element, so the help icon is not a descendant
+      // of the titled element and won't surface the full-label tooltip on hover.
+      const titledElement = screen.getByTitle(LONG_LABEL)
+      expect(
+        titledElement.querySelector('[data-testid="stTooltipHoverTarget"]')
+      ).toBeNull()
+    }
+  )
 })

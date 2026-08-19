@@ -48,6 +48,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -156,6 +157,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> None: ...
 
     @overload
@@ -177,6 +179,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @overload
@@ -198,6 +201,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -219,6 +223,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -349,6 +354,21 @@ class RadioMixin:
             from the URL. If ``index`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         any
@@ -412,6 +432,7 @@ class RadioMixin:
             captions=captions,
             label_visibility=label_visibility,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
             width=width,
         )
@@ -433,6 +454,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> T | None:
@@ -532,7 +554,9 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Clearable when index=None: the widget can be in an empty state,
             # so ?key= (empty URL param) should clear the widget to None.
             clearable=(index is None),
@@ -549,7 +573,7 @@ class RadioMixin:
         # Cast to T | None since radio doesn't support accept_new_options,
         # so string values that aren't in options will be reset to default.
         current_value, value_needs_reset = validate_and_sync_value_with_options(
-            cast("T | None", widget_state.value), opt, index, key
+            cast("T | None", widget_state.value), opt, index, key, format_func
         )
 
         if value_needs_reset or widget_state.value_changed:
@@ -560,10 +584,15 @@ class RadioMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
-        self.dg._enqueue("radio", radio_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "radio",
+            radio_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
         return current_value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

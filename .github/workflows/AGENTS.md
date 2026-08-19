@@ -13,7 +13,7 @@ This folder contains all GitHub Actions workflows for the Streamlit repository. 
 1. **Use existing approved actions**: `actions/*`, `github/*`, `pypa/*`, `astral-sh/setup-uv`, `snowflakedb/reusable-workflows`
 2. **Use `actions/github-script`** for GitHub API interactions instead of third-party actions
 3. **Use bash/shell scripts** for general automation tasks
-4. **Pin action versions** using SHA hashes for security-critical actions (e.g., `pypa/gh-action-pypi-publish@ed0c53...`)
+4. **Pin every external action and reusable workflow** to a full-length commit SHA, followed by a version comment (e.g., `actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0`)
 
 Avoid adding new external actions unless absolutely necessary. This reduces supply chain risk and makes workflows easier to audit.
 
@@ -54,7 +54,8 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 | Action | Description |
 |--------|-------------|
 | `build_info` | Sets Python version env vars (`PYTHON_MIN_VERSION`, `PYTHON_MAX_VERSION`, `PYTHON_VERSIONS`). Call early in workflows. |
-| `make_init` | Full dev environment setup: uv, Python, Node/Yarn, protoc, virtualenv, protobufs. Does NOT install Playwright. |
+| `make_init` | Locked dev environment setup: latest compatible uv, Python, Node/Yarn, protoc, lock-keyed virtualenv, protobufs. Does NOT install Playwright. Lock enforcement defaults on; only lock-repair workflows may disable it. |
+| `setup_automation` | Locked Python 3.12 environment containing only the dependencies used by lightweight CI and release utility scripts. |
 | `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
@@ -63,13 +64,19 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v6
+  - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
   - uses: ./.github/actions/build_info        # Get Python versions
   - uses: ./.github/actions/make_init         # Setup dev environment
     with:
       python_version: ${{ env.PYTHON_MAX_VERSION }}
   - uses: ./.github/actions/playwright_install  # Only for E2E tests
 ```
+
+For jobs that only run Python utility scripts, use `setup_automation` instead of
+`make_init`, then invoke scripts with `uv run --no-sync python`. The action exact-syncs
+the small, locked `automation` dependency group, and `--no-sync` prevents later branch or
+tag checkouts from changing that environment. Do not install these dependencies into the
+runner's system Python.
 
 ## Workflow Reference
 
@@ -86,7 +93,6 @@ steps:
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |
 | `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
 | `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
-| `component-template-e2e-tests.yml` | Push/PR to `develop` | Tests for the streamlit/component-template repo |
 | `python-bare-executions.yml` | Push/PR to `develop` | Bare Python execution tests |
 | `flaky-test-verification.yml` | `flaky-verify` label | Runs E2E tests multiple times to verify flakiness fixes |
 | `flaky-js-test-verification.yml` | `flaky-verify-js` label | Runs JS unit tests multiple times to verify flakiness fixes |
@@ -112,7 +118,7 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `nightly.yml` | Daily schedule (6:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
+| `nightly.yml` | Daily schedule (4:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
 | `release.yml` | Manual (on tag) | Builds and publishes official releases to PyPI and GitHub |
 | `release-branch-creation.yml` | Manual | Creates release branch from a nightly tag |
 | `release-tag-and-pr-creation.yml` | Manual | Creates release tag and PR to merge back to develop |
@@ -125,7 +131,7 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, creates preview deployment |
+| `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, and comments the download links on the PR |
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
@@ -135,7 +141,8 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `ai-pr-review.yml` | `ai-review` label or manual | AI-powered code review using Cursor CLI |
+| `ai-pr-review.yml` | `ai-review`/`ai-final-review` label or manual | AI-powered code and product-alignment review using Cursor CLI |
+| `ai-qa-testing.yml` | `ai-qa-test` label or manual | AI-powered QA testing on PR branches |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
@@ -146,6 +153,7 @@ steps:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `update-browserslist-db.yml` | Weekly (Tuesdays) | Updates browserslist database, creates PR if changed |
+| `update-python-lock.yml` | Weekly (Mondays), manual dry run | Upgrades the complete compatible Python lock with the latest compatible uv and creates a PR if changed |
 | `update-emojis-material-icons.yml` | Weekly (Tuesdays) | Updates emoji and Material icons assets |
 | `community-voting.yml` | Issue labeled | Adds voting comment and reaction to bug/enhancement issues |
 

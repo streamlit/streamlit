@@ -162,7 +162,7 @@ points = base.mark_circle().encode(
 )
 
 top_hist = (
-    base.mark_bar(**bar_args)
+    base.mark_bar(**bar_args)  # type: ignore[arg-type]
     .encode(
         alt.X(
             "sepalLength:Q",
@@ -177,7 +177,7 @@ top_hist = (
 )
 
 right_hist = (
-    base.mark_bar(**bar_args)
+    base.mark_bar(**bar_args)  # type: ignore[arg-type]
     .encode(
         alt.Y(
             "sepalWidth:Q",

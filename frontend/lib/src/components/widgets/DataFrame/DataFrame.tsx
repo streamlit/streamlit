@@ -49,8 +49,10 @@ import { createPortal } from "react-dom"
 
 import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
+import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -65,7 +67,14 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
+import {
+  BaseColumn,
+  getTextCell,
+  ImageCellEditor,
+  toGlideColumn,
+} from "./columns"
+import { isServerSortableColumn } from "./hooks/sortUtils"
+import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
 import useColumnPinning from "./hooks/useColumnPinning"
@@ -78,12 +87,16 @@ import useCustomRenderer from "./hooks/useCustomRenderer"
 import useCustomTheme from "./hooks/useCustomTheme"
 import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
+import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
+import useEditReconciliation from "./hooks/useEditReconciliation"
+import useLazyDataLoader from "./hooks/useLazyDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
 import useTooltips from "./hooks/useTooltips"
 import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
+import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -92,9 +105,6 @@ import Tooltip from "./Tooltip"
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
-// Number of rows that triggers some optimization features
-// for large tables.
-const LARGE_TABLE_ROWS_THRESHOLD = 150000
 // Fallback size for the scrollbar gutter size in rem.
 // If the scrollbar gutter size is 0, it means that we the system is using
 // overlay scrollbars that don't take any space. In this case, we assume
@@ -104,7 +114,13 @@ const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 export interface DataFrameProps {
   element: DataframeProto
-  data: Quiver
+  elementHash?: string
+  /**
+   * Optional pre-constructed Quiver data. If provided, this is used directly
+   * instead of constructing from element.arrowData. This is primarily used by
+   * ReadOnlyGrid which already has a Quiver instance.
+   */
+  data?: Quiver
   disabled: boolean
   widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
@@ -119,13 +135,14 @@ export interface DataFrameProps {
  * The main component used by dataframe & data_editor to render an editable table.
  *
  * @param element - The element's proto message
- * @param data - The Arrow data to render (extracted from the proto message)
+ * @param data - Optional pre-constructed Quiver data (for ReadOnlyGrid use case)
  * @param disabled - Whether the widget is disabled
  * @param widgetMgr - The widget manager
  */
 function DataFrame({
   element,
-  data,
+  elementHash,
+  data: dataProp,
   disabled,
   widgetMgr,
   disableFullscreenMode,
@@ -134,6 +151,37 @@ function DataFrame({
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
+  // Lazy mode metadata. When present, rows are loaded on demand in chunks from
+  // the backend instead of being delivered eagerly in `arrowData`.
+  const lazyData = element.lazyData ?? null
+  const isLazy = lazyData !== null
+  const hasButtonColumnInteractions =
+    Object.keys(element.buttonClickWidgets).length > 0
+
+  const { backendOperationClient } = useContext(BackendOperationContext)
+
+  // Use provided Quiver data, the lazy initial chunk, or the eager arrowData.
+  // For lazy dataframes the initial chunk carries the schema plus the first
+  // visible rows. The elementHash serves as the primary memoization key to
+  // avoid unnecessary re-parsing when the payload hasn't changed.
+  const data = useMemo(() => {
+    if (dataProp !== undefined) {
+      return dataProp
+    }
+    if (lazyData !== null) {
+      if (!lazyData.initialChunk) {
+        throw new Error("Lazy dataframe is missing its initial chunk")
+      }
+      return new Quiver(lazyData.initialChunk)
+    }
+    if (!element.arrowData) {
+      throw new Error("DataFrame element is missing arrowData")
+    }
+    return new Quiver(element.arrowData)
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataProp, elementHash, element.arrowData, lazyData?.initialChunk])
+
   const {
     expanded: isFullScreen,
     expand,
@@ -147,7 +195,8 @@ function DataFrame({
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
   // Stores original data row indices that need remapping after a sort operation.
-  // Used to preserve row selection in single-row-required mode when columns are sorted.
+  // Used to preserve row selections (single-row, multi-row, and
+  // single-row-required modes) when columns are sorted on the frontend.
   const pendingRowSelectionRemapRef = useRef<{
     originalRowIndices: number[]
     columns: CompactSelection
@@ -166,7 +215,8 @@ function DataFrame({
     useRowHover(gridTheme)
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { enforceDownloadInNewTab = false, disableDataExport = false } =
+    useContext(LibConfigContext)
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -192,59 +242,52 @@ function DataFrame({
     []
   )
 
-  // Determine if the device is primary using touch as input:
-  const isTouchDevice = useMemo<boolean>(
-    () => window.matchMedia?.("(pointer: coarse)").matches ?? false,
-    []
-  )
-
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
   // would still work. Those messages don't have the
   // editingMode field defined.
-  if (isNullOrUndefined(element.editingMode)) {
-    element.editingMode = DataframeProto.EditingMode.READ_ONLY
-  }
+  const editingMode =
+    element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
+  const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
+  const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
-  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
-    DataframeProto.EditingMode
-
-  // Number of rows of the table minus 1 for the header row:
+  // Number of rows of the table minus 1 for the header row. For lazy
+  // dataframes the total row count comes from the lazy metadata, not from the
+  // (partial) initial chunk.
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(0, dataDimensions.numDataRows)
+  const lazyRowCount =
+    typeof lazyData?.rowCount === "number"
+      ? lazyData.rowCount
+      : (lazyData?.rowCount?.toNumber() ?? 0)
+  const originalNumRows = isLazy
+    ? Math.max(0, lazyRowCount)
+    : Math.max(0, dataDimensions.numDataRows)
 
-  // For empty tables, we show an extra row that
-  // contains "empty" as a way to indicate that the table is empty.
-  const isEmptyTable =
-    originalNumRows === 0 &&
-    // We don't show empty state for modes that allow adding rows
-    // with a table that has data columns defined.
-    !(
-      (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
-      dataDimensions.numDataColumns > 0
-    )
-
-  // For large tables, we apply some optimizations to handle large data
-  const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
-  // Sorting is disabled for modes that allow adding rows (DYNAMIC, ADD_ONLY)
-  // because sorting and row addition can conflict
-  const isSortingEnabled =
-    !isLargeTable &&
-    !isEmptyTable &&
-    element.editingMode !== DYNAMIC &&
-    element.editingMode !== ADD_ONLY
-
-  // Check if the editing mode allows adding rows (DYNAMIC or ADD_ONLY)
-  const canAddRows =
-    !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
-    !disabled
-
-  // Check if the editing mode allows deleting rows (DYNAMIC or DELETE_ONLY)
-  const canDeleteRows =
-    !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === DELETE_ONLY) &&
-    !disabled
+  // Centralized capability layer that determines which features are enabled
+  const {
+    canSort,
+    canSearch,
+    canExportCsv,
+    canShowColumnStatistics,
+    canEdit,
+    canAddRows,
+    canDeleteRows,
+    isEmptyTable,
+    isLargeTable,
+    isTouchDevice,
+    canResizeColumns,
+    supportsFillHandle,
+    supportsRectangleSelection,
+  } = useDataFrameCapabilities({
+    editingMode,
+    disabled,
+    numDataRows: originalNumRows,
+    numDataColumns: dataDimensions.numDataColumns,
+    isLazy,
+    lazySortable: lazyData?.sortable ?? false,
+    hasButtonColumnInteractions,
+    disableDataExport,
+  })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
 
@@ -266,8 +309,10 @@ function DataFrame({
   const {
     editingState,
     numRows,
+    editStateHydrationCount,
     updateNumRows,
     syncEditState,
+    flushEditState,
     createSyncSelectionState,
     onFormCleared: handleFormCleared,
     loadInitialSelectionState,
@@ -280,6 +325,47 @@ function DataFrame({
     originalColumns,
   })
 
+  const flushEditStateOnFinishedEditingRef = useRef(false)
+  const handleOutsideClick = useCallback(
+    (event: MouseEvent | TouchEvent): boolean => {
+      const target = event.target
+      flushEditStateOnFinishedEditingRef.current =
+        target instanceof Node &&
+        resizableContainerRef.current !== null &&
+        !resizableContainerRef.current.contains(target)
+
+      // Glide calls onFinishedEditing synchronously for an outside click. Clear
+      // the flag after the current event so other ways of closing the editor
+      // keep the normal debounce behavior.
+      queueMicrotask(() => {
+        flushEditStateOnFinishedEditingRef.current = false
+      })
+      // Always return true to keep glide's default containment check. This
+      // callback is used only for its side effect of arming the flush flag, not
+      // to change whether the click is treated as outside the editor.
+      return true
+    },
+    [resizableContainerRef]
+  )
+
+  const handleFinishedEditing = useCallback(
+    (_newValue: GridCell | undefined, [moveX, moveY]: Item): void => {
+      // Keyboard completions (Enter/Tab) report non-zero movement and do not
+      // arm the flag. This guard ensures we flush only for the outside-click
+      // path.
+      const shouldFlush =
+        flushEditStateOnFinishedEditingRef.current &&
+        moveX === 0 &&
+        moveY === 0
+      flushEditStateOnFinishedEditingRef.current = false
+
+      if (shouldFlush) {
+        flushEditState()
+      }
+    },
+    [flushEditState]
+  )
+
   const { getCellContent: getOriginalCellContent } = useDataLoader(
     data,
     originalColumns,
@@ -287,12 +373,72 @@ function DataFrame({
     editingState
   )
 
-  const { columns, sortColumn, getOriginalIndex, getCellContent } =
-    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+  // A single sort hook handles both modes: client-side (eager) sorting and
+  // server-side (lazy) sort state. In server mode it never runs Glide's
+  // client-side sorter over the lazy rows and exposes `serverSortState` for the
+  // lazy loader.
+  const {
+    columns,
+    sortColumn,
+    getOriginalIndex,
+    serverSortState,
+    getCellContent: eagerGetCellContent,
+  } = useColumnSort({
+    mode: isLazy ? "server" : "client",
+    numRows: originalNumRows,
+    columns: originalColumns,
+    getCellContent: getOriginalCellContent,
+  })
+
+  const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
+    useLazyDataLoader({
+      initialChunk: data,
+      columns: originalColumns,
+      numRows: originalNumRows,
+      sourceId: lazyData?.sourceId ?? "",
+      pageSize: lazyData?.pageSize ?? 1,
+      sortState: serverSortState,
+      backendOperationClient,
+    })
+
+  // In lazy mode, cells come from the chunked loader; otherwise from the
+  // client-sorted eager getter.
+  const getCellContent = isLazy ? getLazyCellContent : eagerGetCellContent
+
+  // Whether a specific column can be sorted in the current mode. Eager sorting
+  // is client-side and works for any column (incl. the index). Lazy sorting is
+  // server-side and keys on the backend Arrow field name, so columns without
+  // one (e.g. the index column) or with an unorderable nested type (list/struct)
+  // cannot be sorted — we hide the sort affordance for them instead of issuing a
+  // chunk request the backend would fail.
+  const isColumnSortable = (column: BaseColumn | undefined): boolean =>
+    canSort &&
+    column !== undefined &&
+    (!isLazy || isServerSortableColumn(column))
+
+  const {
+    buttonActionMenu,
+    clearButtonActionMenu,
+    handleMenuSelectAction,
+    onCellClicked,
+  } = useButtonColumnInteractions({
+    element,
+    widgetMgr,
+    fragmentId,
+    columns,
+    getCellContent,
+    getOriginalIndex,
+    theme: gridTheme.glideTheme,
+    disabled,
+  })
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
+
+  // Ref to track the last processed selectionState to avoid proto mutation.
+  // Used to detect when a new programmatic selection arrives from the backend.
+  const processedSelectionStateRef = useRef<string | null>(null)
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
   // This is done here because it needs the output from useColumnSort.
@@ -302,10 +448,10 @@ function DataFrame({
   )
 
   // Use a debounce to prevent rapid updates to the widget state.
-  const { debouncedCallback: syncSelectionState } = useDebouncedCallback(
-    innerSyncSelectionState,
-    DEBOUNCE_TIME_MS
-  )
+  const {
+    debouncedCallback: syncSelectionState,
+    cancel: cancelSelectionSync,
+  } = useDebouncedCallback(innerSyncSelectionState, DEBOUNCE_TIME_MS)
 
   const {
     gridSelection,
@@ -386,7 +532,8 @@ function DataFrame({
   )
 
   /**
-   * Remap row selection after sort in single-row-required mode.
+   * Remap row selections after sort so that they keep pointing at the same
+   * underlying data rows (single-row, multi-row, and single-row-required modes).
    * Scheduled via useTimeout to run after React applies the sort state.
    */
   const performRowSelectionRemap = useCallback(() => {
@@ -400,24 +547,42 @@ function DataFrame({
 
     const currentGetOriginalIndex = getOriginalIndexRef.current
 
-    // Find the new display indices for the original data rows
-    const newDisplayIndices: number[] = []
-    for (const origIdx of originalRowIndices) {
-      for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
-        if (currentGetOriginalIndex(displayIdx) === origIdx) {
-          newDisplayIndices.push(displayIdx)
+    // Build a Set for O(1) lookup instead of O(n²) nested loops
+    const targetOriginalIndices = new Set(originalRowIndices)
+    let newRows = CompactSelection.empty()
+    // Track matches with a local counter to avoid repeatedly walking
+    // CompactSelection's internal ranges via `.length` on every match.
+    let foundCount = 0
+
+    for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
+      const origIdx = currentGetOriginalIndex(displayIdx)
+      if (targetOriginalIndices.has(origIdx)) {
+        newRows = newRows.add(displayIdx)
+        foundCount += 1
+        // Early exit when all targets found
+        if (foundCount === targetOriginalIndices.size) {
           break
         }
       }
     }
 
-    if (newDisplayIndices.length > 0) {
+    if (foundCount > 0) {
       const newSelection: GridSelection = {
         columns,
-        rows: CompactSelection.fromSingleSelection(newDisplayIndices[0]),
+        rows: newRows,
         current,
       }
-      processSelectionChange(newSelection)
+      // Re-sync the preserved selection so the backend keeps the correct
+      // original row indices. We force the sync (`forceSync: true`) because the
+      // sort handler cancels any pending debounced sync: if the initial
+      // selection hadn't been synced yet and the preserved row keeps the same
+      // display index after sorting, the default change-detection would skip the
+      // sync and the backend would never receive the selection. Because reported
+      // rows use a stable ascending order (see createSyncSelectionState), the
+      // serialized value is unchanged when the underlying selection is
+      // unchanged, so the forced sync is still deduplicated at the widget-state
+      // level and triggers no extra rerun / on_select callback.
+      processSelectionChange(newSelection, { forceSync: true })
     }
   }, [originalNumRows, processSelectionChange])
 
@@ -432,17 +597,85 @@ function DataFrame({
   )
 
   /**
+   * Handle a column sort while preserving the current row selection.
+   *
+   * Sorting is a frontend-only operation, so selected rows should keep pointing
+   * at the same underlying data rows even as their display positions change.
+   * The selected original row indices are captured before sorting and remapped
+   * to their new display positions afterwards (single-row, multi-row, and
+   * single-row-required modes). Cell selections are cleared because their
+   * display coordinates become stale after sorting.
+   *
+   * @param performSort - Callback that applies the actual column sort.
+   */
+  const handleSortWithSelectionPreservation = useCallback(
+    (performSort: () => void) => {
+      const shouldPreserveRowSelection =
+        isRowSelectionActivated && isRowSelected
+      if (shouldPreserveRowSelection) {
+        // Capture the selected original row indices before sorting so they can
+        // be remapped to their new display positions afterwards. If a remap
+        // from a previous sort is still pending (e.g. back-to-back sorts before
+        // the deferred remap runs), its captured indices are authoritative:
+        // gridSelection still holds the stale pre-remap display rows, which
+        // would map to the wrong original rows under the new sort order.
+        const originalRowIndices =
+          pendingRowSelectionRemapRef.current?.originalRowIndices ??
+          gridSelection.rows.toArray().map(getOriginalIndex)
+        pendingRowSelectionRemapRef.current = {
+          originalRowIndices,
+          columns: gridSelection.columns,
+          // Cell selections use display coordinates that become stale after
+          // sorting, so we don't preserve them.
+          current: undefined,
+        }
+        // Cancel any pending debounced selection sync queued by the initial row
+        // selection. Otherwise it could fire after the sort and serialize the
+        // pre-sort display rows through the post-sort index mapping, sending
+        // wrong row ids to the backend. The scheduled remap re-syncs the
+        // correct value.
+        cancelSelectionSync()
+      }
+      // Clear cell selections but keep row and column selections. Row selections
+      // are remapped to the same data rows after sorting.
+      clearSelection(true, true)
+
+      performSort()
+
+      // Schedule remap after sorting (ref was just set above).
+      if (shouldPreserveRowSelection) {
+        scheduleRowSelectionRemap()
+      }
+    },
+    [
+      isRowSelectionActivated,
+      isRowSelected,
+      gridSelection,
+      getOriginalIndex,
+      cancelSelectionSync,
+      clearSelection,
+      scheduleRowSelectionRemap,
+    ]
+  )
+
+  /**
    * Apply programmatic selection changes set via st.session_state.
    * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed); we clear it after consuming.
+   * the rerun where the value changed). We track processed values via ref
+   * to avoid mutating the proto object.
    */
   useEffect(() => {
-    if (!element.selectionState) {
+    // Skip if no selectionState or we've already processed this exact value
+    if (
+      !element.selectionState ||
+      element.selectionState === processedSelectionStateRef.current
+    ) {
       return
     }
 
     const selectionState = element.selectionState
-    element.selectionState = null
+    // Mark as processed (using ref instead of proto mutation)
+    processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
       selectionState,
@@ -457,9 +690,6 @@ function DataFrame({
     if (programmaticSelection) {
       processSelectionChange(programmaticSelection, { shouldSync: false })
     }
-    // We depend on `element.selectionState` instead of `element` for stability;
-    // `element` is only referenced to clear the one-shot signal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.selectionState,
     columns,
@@ -479,6 +709,15 @@ function DataFrame({
     enforceDownloadInNewTab
   )
 
+  const { getSourceCellValue } = useEditReconciliation({
+    data,
+    allColumns,
+    editingState,
+    isEditingEnabled: canEdit,
+    editStateHydrationCount,
+    syncEditState,
+  })
+
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor({
       columns,
@@ -487,6 +726,7 @@ function DataFrame({
       canDeleteRows,
       editingState,
       getCellContent,
+      getSourceCellValue,
       getOriginalIndex,
       refreshCells,
       updateNumRows,
@@ -576,7 +816,7 @@ function DataFrame({
           textDark: gridTheme.glideTheme.textLight,
         },
         span: [0, Math.max(columns.length - 1, 0)],
-      } as GridCell
+      }
     },
     [columns, gridTheme.glideTheme.textLight]
   )
@@ -692,6 +932,13 @@ function DataFrame({
       ? true
       : false
 
+  // The search overlay may only be open while search is actually enabled.
+  // Deriving it from `canSearch` ensures the overlay is hidden (instead of
+  // getting stuck open) if the table becomes empty while search is active,
+  // since both the toolbar search button and the Ctrl/Cmd+F shortcut are
+  // disabled in that case.
+  const isSearchOpen = canSearch && showSearch
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -740,9 +987,7 @@ function DataFrame({
         if (
           !isFocused &&
           !isTouchDevice &&
-          !event.currentTarget.contains(
-            event.relatedTarget as HTMLElement | null
-          ) &&
+          !event.currentTarget.contains(event.relatedTarget) &&
           !isCellSelectionActivated
         ) {
           // Clear cell selections, but keep row & column selections.
@@ -829,14 +1074,14 @@ function DataFrame({
             />
           </ColumnVisibilityMenu>
         )}
-        {!isLargeTable && !isEmptyTable && (
+        {canExportCsv && (
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
           />
         )}
-        {!isEmptyTable && (
+        {canSearch && (
           <ToolbarAction
             label="Search"
             icon={Search}
@@ -910,7 +1155,8 @@ function DataFrame({
           rowHeight={rowHeight}
           headerHeight={gridTheme.defaultHeaderHeight}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
-          onColumnResize={isTouchDevice ? undefined : onColumnResize}
+          onCellClicked={isEmptyTable ? undefined : onCellClicked}
+          onColumnResize={canResizeColumns ? onColumnResize : undefined}
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
           // Freeze all index columns:
@@ -924,7 +1170,7 @@ function DataFrame({
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={isTouchDevice ? "cell" : "rect"}
+          rangeSelect={supportsRectangleSelection ? "rect" : "cell"}
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable interactive column reordering:
@@ -940,34 +1186,49 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
-            ...(isCellSelectionActivated || isLargeTable
+            copy: !isClipboardCopyDisabled,
+            ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {
                   // Deactivate select all to prevent potential performance issues
-                  // with too many selected cells being processed for cell selection:
+                  // with too many selected cells being processed for cell selection.
+                  // For lazy dataframes this also prevents triggering load
+                  // requests for the entire dataset.
                   selectAll: false,
                 }
               : {}),
           }}
+          // Request chunks for the visible range (plus a small buffer) when the
+          // user scrolls a lazy dataframe.
+          onVisibleRegionChanged={isLazy ? onVisibleRegionChanged : undefined}
           // Search needs to be activated manually, to support search
-          // via the toolbar:
+          // via the toolbar. Disabled for lazy dataframes since search would
+          // only operate on loaded chunks.
           onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+            if (
+              canSearch &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key === "f"
+            ) {
               setShowSearch(cv => !cv)
               event.stopPropagation()
               event.preventDefault()
             }
           }}
-          showSearch={showSearch}
-          searchResults={!showSearch ? [] : undefined}
+          showSearch={isSearchOpen}
+          searchResults={!isSearchOpen ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
           }}
           // Header click is used for column sorting:
           onHeaderClicked={(columnIdx: number, _event) => {
-            if (!isSortingEnabled || isColumnSelectionActivated) {
-              // Deactivate sorting for empty state, for large dataframes, or
-              // when column selection is activated.
+            if (
+              !isColumnSortable(columns[columnIdx]) ||
+              isColumnSelectionActivated
+            ) {
+              // Deactivate sorting for empty state, large dataframes, columns
+              // that aren't sortable in the current mode (e.g. the index column
+              // in lazy mode), or when column selection is activated.
               return
             }
 
@@ -976,37 +1237,9 @@ function DataFrame({
               setShowSearch(false)
             }
 
-            if (isRequiredRowSelectionActivated && isRowSelected) {
-              // In single-row-required mode, preserve the row selection by remapping
-              // it to the same data row after sort. Capture the original data indices
-              // and current column selection before sorting.
-              const originalRowIndices = gridSelection.rows
-                .toArray()
-                .map(getOriginalIndex)
-              pendingRowSelectionRemapRef.current = {
-                originalRowIndices,
-                columns: gridSelection.columns,
-                // Don't capture current cell selection - it uses display coordinates
-                // that become stale after sorting
-                current: undefined,
-              }
-              // Clear cell selections but keep row and column selections
-              clearSelection(true, true)
-            } else if (isRowSelectionActivated && isRowSelected) {
-              // For other row selection modes, clear the selection before sorting.
-              // Keeping row selections when sorting columns is not supported at the moment.
-              clearSelection()
-            } else {
-              // Cell selections are kept on the old position,
-              // which can be confusing. So we clear all cell selections before sorting.
-              clearSelection(true, true)
-            }
-
-            sortColumn(columnIdx, "auto")
-            // Schedule remap after sorting (ref was just set above)
-            if (isRequiredRowSelectionActivated && isRowSelected) {
-              scheduleRowSelectionRemap()
-            }
+            handleSortWithSelectionPreservation(() =>
+              sortColumn(columnIdx, "auto")
+            )
           }}
           gridSelection={gridSelection}
           // We don't have to react to "onSelectionCleared" since
@@ -1028,6 +1261,7 @@ function DataFrame({
               // Close menus:
               setShowMenu(undefined)
               setShowColumnVisibilityMenu(false)
+              clearButtonActionMenu()
             }
           }}
           theme={gridTheme.glideTheme}
@@ -1127,18 +1361,19 @@ function DataFrame({
             rangeSelectionBlending: "additive",
           })}
           // If element is editable, enable editing features:
-          {...(!isEmptyTable &&
-            element.editingMode !== READ_ONLY &&
-            !disabled && {
-              // Support fill handle for bulk editing:
-              fillHandle: !isTouchDevice,
-              // Support editing:
-              onCellEdited,
-              // Support pasting data for bulk editing:
-              onPaste,
-              // Support deleting cells & rows:
-              onDelete,
-            })}
+          {...(canEdit && {
+            // Support fill handle for bulk editing:
+            fillHandle: supportsFillHandle,
+            // Support editing:
+            onCellEdited,
+            // Flush edits before an outside click can trigger a rerun.
+            isOutsideClick: handleOutsideClick,
+            onFinishedEditing: handleFinishedEditing,
+            // Support pasting data for bulk editing:
+            onPaste,
+            // Support deleting cells & rows:
+            onDelete,
+          })}
           // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row
           // and deactivate sorting:
           {...(canAddRows && {
@@ -1181,48 +1416,20 @@ function DataFrame({
             top={showMenu.headerBounds.y + showMenu.headerBounds.height}
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
             column={originalColumns[showMenu.columnIdx]}
+            data={data}
+            canShowColumnStatistics={canShowColumnStatistics}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
-              isSortingEnabled
+              isColumnSortable(originalColumns[showMenu.columnIdx])
                 ? (direction: "asc" | "desc" | undefined) => {
                     // Hide search before sorting to clear search results
                     if (showSearch) {
                       setShowSearch(false)
                     }
 
-                    if (isRequiredRowSelectionActivated && isRowSelected) {
-                      // In single-row-required mode, preserve the row selection by remapping
-                      // it to the same data row after sort. Capture the original data indices
-                      // and current column selection before sorting.
-                      const originalRowIndices = gridSelection.rows
-                        .toArray()
-                        .map(getOriginalIndex)
-                      pendingRowSelectionRemapRef.current = {
-                        originalRowIndices,
-                        columns: gridSelection.columns,
-                        // Don't capture current cell selection - it uses display coordinates
-                        // that become stale after sorting
-                        current: undefined,
-                      }
-                      // Clear cell selections but keep row and column selections
-                      clearSelection(true, true)
-                    } else if (isRowSelectionActivated && isRowSelected) {
-                      // For other row selection modes, clear the selection before sorting.
-                      // Keeping row selections when sorting columns is not supported at the moment.
-                      // So we need to clear the selected rows before we do the sorting (Issue #11345).
-                      // Maintain column selections as these are not impacted.
-                      clearSelection(false, true)
-                    } else {
-                      // Cell selection are kept on the old position,
-                      // which can be confusing. So we clear all cell selections before sorting.
-                      clearSelection(true, true)
-                    }
-
-                    sortColumn(showMenu.columnIdx, direction, true)
-                    // Schedule remap after sorting (ref was just set above)
-                    if (isRequiredRowSelectionActivated && isRowSelected) {
-                      scheduleRowSelectionRemap()
-                    }
+                    handleSortWithSelectionPreservation(() =>
+                      sortColumn(showMenu.columnIdx, direction, true)
+                    )
                   }
                 : undefined
             }
@@ -1261,7 +1468,21 @@ function DataFrame({
           // or anything else that apply a transform (position fixed is influenced
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
-          document.querySelector("#portal") as HTMLElement
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
+        )}
+      {buttonActionMenu &&
+        createPortal(
+          // A dropdown menu for multi-action button cells.
+          <ButtonActionMenu
+            top={buttonActionMenu.screenTop}
+            left={buttonActionMenu.screenLeft}
+            actions={buttonActionMenu.actions}
+            onSelectAction={handleMenuSelectAction}
+            onCloseMenu={clearButtonActionMenu}
+          />,
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
+          document.querySelector(`#${DATAFRAME_PORTAL_ID}`) as HTMLElement
         )}
     </StyledResizableContainer>
   )

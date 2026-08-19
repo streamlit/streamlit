@@ -286,6 +286,42 @@ describe("formatNumber", () => {
   )
 })
 
+describe("formatNumber Intl.NumberFormat RangeError fallback", () => {
+  const realNumberFormat = Intl.NumberFormat
+
+  afterEach(() => {
+    Intl.NumberFormat = realNumberFormat
+  })
+
+  it("falls back to default locale when an unsupported locale throws a RangeError", () => {
+    let attempt = 0
+    Intl.NumberFormat = function (
+      this: unknown,
+      _locales?: unknown,
+      options?: Intl.NumberFormatOptions
+    ) {
+      attempt += 1
+      if (attempt === 1) {
+        throw new RangeError("Incorrect locale information provided")
+      }
+      return new realNumberFormat(undefined, options)
+    } as unknown as typeof Intl.NumberFormat
+
+    const result = formatNumber(1234.5, "localized", 2)
+    expect(typeof result).toBe("string")
+    expect(result.length).toBeGreaterThan(0)
+    expect(attempt).toBe(2)
+  })
+
+  it("re-throws non-RangeError errors from Intl.NumberFormat", () => {
+    Intl.NumberFormat = function () {
+      throw new TypeError("not a range error")
+    } as unknown as typeof Intl.NumberFormat
+
+    expect(() => formatNumber(1234.5, "localized")).toThrow(TypeError)
+  })
+})
+
 describe("isNumericString", () => {
   it("returns true for valid numeric strings", () => {
     expect(isNumericString("123")).toBe(true)

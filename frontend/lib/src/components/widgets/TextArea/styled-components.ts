@@ -21,3 +21,44 @@ export const StyledTextAreaContainer = styled.div({
   display: "flex",
   flexDirection: "column",
 })
+
+export const StyledTextAreaRoot = styled.div(({ theme }) => ({
+  border: `${theme.sizes.borderWidth} solid`,
+  borderColor: theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
+  borderRadius: theme.radii.default,
+  backgroundColor: theme.colors.secondaryBg,
+  flexGrow: 1,
+  "&:focus-within": {
+    borderColor: theme.colors.primary,
+  },
+}))
+
+export const StyledTextAreaInput = styled.textarea<{
+  $height: string
+  $maxHeight: string
+  $resize: "vertical" | "none"
+}>(({ theme, $height, $maxHeight, $resize }) => ({
+  width: "100%",
+  height: $height,
+  maxHeight: $maxHeight,
+  minHeight: theme.sizes.largestElementHeight,
+  resize: $resize,
+  fontWeight: theme.fontWeights.normal,
+  lineHeight: theme.lineHeights.inputWidget,
+  fontFamily: "inherit",
+  fontSize: theme.fontSizes.sm,
+  color: "inherit",
+  backgroundColor: "transparent",
+  border: "none",
+  outline: "none",
+  boxSizing: "border-box",
+  display: "block",
+  overflowY: "auto",
+  padding: theme.spacing.md,
+  "&::placeholder": { color: theme.colors.fadedText60 },
+  "&:disabled": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+    WebkitTextFillColor: theme.colors.fadedText40,
+  },
+}))

@@ -28,7 +28,7 @@ export interface UploadedStatus {
   fileUrls: IFileURLs
 }
 
-export interface ErrorStatus {
+interface ErrorStatus {
   type: "error"
   errorMessage: string
 }

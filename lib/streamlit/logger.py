@@ -89,13 +89,20 @@ def update_formatter() -> None:
 
 
 def init_uvicorn_logs() -> None:
-    """Set Uvicorn log levels.
+    """Set Uvicorn and related server log levels.
 
-    This function sets up loggers for Uvicorn, Starlette, and related components.
-    It does not import any Uvicorn code, so it's safe to call even when the server
+    This function sets up loggers for Uvicorn, websockets, and related components
+    so they respect Streamlit's logger.level config option.
+    It does not import any server code, so it's safe to call even when the server
     is not running.
     """
-    for log in ("uvicorn", "uvicorn.access", "uvicorn.error"):
+    for log in (
+        "uvicorn",
+        "uvicorn.access",
+        "uvicorn.asgi",
+        "uvicorn.error",
+        "websockets",
+    ):
         # get_logger will set the log level for the logger with the given name.
         get_logger(log)
 

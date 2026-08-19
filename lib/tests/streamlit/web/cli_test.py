@@ -491,10 +491,110 @@ class CliTest(unittest.TestCase):
             assert args[1] == "--version"
 
     def test_docs_command(self):
-        """Tests the docs command opens the browser"""
+        """Tests the docs command without an argument opens the browser"""
         with patch("streamlit.cli_util.open_browser") as mock_open_browser:
             self.runner.invoke(cli, ["docs"])
             mock_open_browser.assert_called_once_with("https://docs.streamlit.io")
+
+    @parameterized.expand(
+        [
+            ("st.number_input",),
+            ("number_input",),
+            ("streamlit.number_input",),
+        ]
+    )
+    def test_docs_command_lookup_notations(self, command: str):
+        """Tests the docs command looks up a command across all notations."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            result = self.runner.invoke(cli, ["docs", command])
+
+        assert result.exit_code == 0
+        # The signature header is normalized to the ``st.`` prefix.
+        assert "st.number_input(" in result.output
+        # The docstring is included.
+        assert "Display a numeric input widget." in result.output
+        # Looking up a command should never open the browser.
+        mock_open_browser.assert_not_called()
+
+    def test_docs_command_namespace_member(self):
+        """Tests the docs command resolves nested namespace members."""
+        result = self.runner.invoke(cli, ["docs", "st.column_config.NumberColumn"])
+
+        assert result.exit_code == 0
+        assert "st.column_config.NumberColumn(" in result.output
+        assert "Configure a number column" in result.output
+
+    def test_docs_command_dynamic_container_member(self):
+        """Tests the docs command resolves public members exposed dynamically."""
+        result = self.runner.invoke(cli, ["docs", "st.bottom.button"])
+
+        assert result.exit_code == 0
+        assert "st.bottom.button(" in result.output
+        assert "Display a button widget." in result.output
+
+    def test_docs_command_property_member_does_not_evaluate_property(self):
+        """Tests the docs command resolves property docs without calling the property."""
+        with patch("streamlit.runtime.context.get_script_run_ctx") as mock_get_ctx:
+            result = self.runner.invoke(cli, ["docs", "st.context.headers"])
+
+        assert result.exit_code == 0
+        assert result.output.startswith("st.context.headers")
+        assert "A read-only, dict-like object containing headers" in result.output
+        assert "A Mapping is a generic container" not in result.output
+        mock_get_ctx.assert_not_called()
+
+    def test_docs_command_namespace(self):
+        """Tests the docs command returns the docstring of a namespace."""
+        result = self.runner.invoke(cli, ["docs", "st.column_config"])
+
+        assert result.exit_code == 0
+        assert result.output.startswith("st.column_config")
+        assert "Column types that can be configured" in result.output
+
+    def test_docs_command_unknown_command(self):
+        """Tests the docs command errors out for unknown commands."""
+        result = self.runner.invoke(cli, ["docs", "not_a_real_command"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
+    @parameterized.expand([("",), ("   ",), ("st.",)])
+    def test_docs_command_empty_argument(self, command: str):
+        """Tests the docs command errors out for empty/prefix-only arguments."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            result = self.runner.invoke(cli, ["docs", command])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+        mock_open_browser.assert_not_called()
+
+    def test_docs_command_nested_lookup_does_not_crash(self):
+        """Tests that traversing into objects with custom __getattr__ fails gracefully."""
+        # st.secrets.<key> raises a non-AttributeError; it should yield the
+        # friendly error instead of an uncaught traceback.
+        result = self.runner.invoke(cli, ["docs", "st.secrets.does_not_exist"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
+    def test_docs_command_rejects_private_attribute(self):
+        """Tests the docs command does not expose private attributes."""
+        result = self.runner.invoke(cli, ["docs", "st._main"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
+    def test_docs_command_rejects_synthesized_placeholder(self):
+        """Tests that unknown members on DeltaGenerator do not resolve falsely.
+
+        ``DeltaGenerator.__getattr__`` synthesizes a placeholder callable for
+        unknown names, so ``st.sidebar.not_a_real_command`` must error instead
+        of printing a generic ``(*args, **kwargs)`` signature.
+        """
+        result = self.runner.invoke(cli, ["docs", "st.sidebar.not_a_real_command"])
+
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
 
     def test_hello_command(self):
         """Tests the hello command runs the hello script in streamlit"""
@@ -690,6 +790,93 @@ class CliTest(unittest.TestCase):
         mock_run.assert_called_once()
         mock_run_asgi.assert_not_called()
         assert result.exit_code == 0
+
+
+def test_run_no_extension_raises_helpful_message() -> None:
+    """``streamlit run`` errors when the file argument has no extension at all."""
+    result = CliRunner().invoke(cli.main, ["run", "no_extension"])
+
+    assert result.exit_code != 0
+    assert "no extension" in result.output
+
+
+def test_convert_deprecated_config_option_with_no_description() -> None:
+    """A deprecated config option without a description starts from an empty string."""
+    config_option = ConfigOption(
+        "deprecated.noDescriptionKey",
+        description=None,
+        deprecated=True,
+        deprecation_text="Foo",
+        expiration_date="Bar",
+        type_=int,
+    )
+
+    result = _convert_config_option_to_click_option(config_option)
+
+    assert result["description"] == "\n Foo - Bar"
+
+
+def test_get_command_line_raises_for_streamlit_cli_invocation() -> None:
+    """Calling Streamlit via ``python -m streamlit.cli`` is unsupported and raises."""
+    mock_context = MagicMock()
+    mock_context.parent.command_path = "python -m streamlit.cli run"
+    with (
+        patch("click.get_current_context", return_value=mock_context),
+        pytest.raises(RuntimeError, match=r"streamlit\.cli"),
+    ):
+        cli._get_command_line_as_string()
+
+
+def test_main_run_handles_none_flag_options() -> None:
+    """``_main_run`` accepts ``flag_options=None`` and forwards empty ``args``/``flag_options`` to ``bootstrap.run``."""
+    from streamlit.web.server.app_discovery import AppDiscoveryResult
+
+    discovery = AppDiscoveryResult(is_asgi_app=False, app_name=None, import_string=None)
+
+    with (
+        patch("streamlit.web.bootstrap.load_config_options"),
+        patch("streamlit.web.cli.check_credentials"),
+        patch(
+            "streamlit.web.server.app_discovery.discover_asgi_app",
+            return_value=discovery,
+        ),
+        patch("streamlit.web.bootstrap.run") as mock_run,
+        patch("streamlit.web.cli._get_command_line_as_string", return_value=None),
+    ):
+        cli._main_run("script.py", args=None, flag_options=None)
+
+    # bootstrap.run is called as run(main_script_path, is_hello, args, flag_options).
+    mock_run.assert_called_once()
+    _, _, args_, flag_opts = mock_run.call_args.args
+    assert args_ == []
+    assert flag_opts == {}
+
+
+def test_init_command_runs_app_when_user_confirms() -> None:
+    """``streamlit init`` invokes ``_main_run`` when the user confirms 'Run the app now?'."""
+    runner = CliRunner()
+    with (
+        runner.isolated_filesystem(),
+        patch("streamlit.web.cli._main_run") as mock_main_run,
+    ):
+        result = runner.invoke(cli.main, ["init"], input="y\n")
+
+    assert result.exit_code == 0
+    mock_main_run.assert_called_once()
+    assert "streamlit_app.py" in mock_main_run.call_args.args[0]
+
+
+def test_init_command_raises_click_exception_on_oserror() -> None:
+    """``streamlit init <dir>`` surfaces ``OSError`` as a Click exception."""
+    runner = CliRunner()
+    with (
+        runner.isolated_filesystem(),
+        patch("pathlib.Path.mkdir", side_effect=OSError("disk full")),
+    ):
+        result = runner.invoke(cli.main, ["init", "some-dir"])
+
+    assert result.exit_code != 0
+    assert "Failed to create directory" in result.output
 
 
 class HTTPServerIntegrationTest(unittest.TestCase):

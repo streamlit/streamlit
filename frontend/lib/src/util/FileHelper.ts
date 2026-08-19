@@ -14,10 +14,26 @@
  * limitations under the License.
  */
 
-import { type FileRejection } from "react-dropzone"
+import { type FileRejection as DropzoneFileRejection } from "react-dropzone"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { isFromWindows } from "~lib/util/utils"
+
+/**
+ * A rejected file paired with its validation errors.
+ *
+ * Mirrors react-dropzone's `FileRejection`, but types `file` as a plain `File`
+ * instead of `FileWithPath`. Streamlit builds rejections itself for files that
+ * bypass react-dropzone's validation (directory uploads, pasted files, and
+ * retries); those are plain `File` objects that lack the `path`/`relativePath`
+ * fields that file-selector v4's `FileWithPath` now requires. Because
+ * `FileWithPath` extends `File`, react-dropzone's own rejections stay
+ * assignable to this type.
+ */
+export interface FileRejection {
+  file: File
+  errors: DropzoneFileRejection["errors"]
+}
 
 export enum FileSize {
   Gigabyte = "gb",

@@ -36,6 +36,7 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     expect_prefixed_markdown,
     get_element_by_key,
+    reset_hovering,
 )
 
 NUM_AUDIO_INPUTS = 13
@@ -240,7 +241,8 @@ def test_help_tooltip(app: Page):
     # Help icon should be visible
     expect(help_button).to_be_visible()
 
-    # Hover over help icon
+    # Prime the interaction modality to 'pointer' before hovering.
+    reset_hovering(app)
     help_button.hover()
 
     # Tooltip should appear with the help text

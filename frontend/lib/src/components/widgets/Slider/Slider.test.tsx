@@ -114,10 +114,9 @@ describe("Slider widget", () => {
     render(<Slider {...props} />)
 
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [5],
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -128,10 +127,13 @@ describe("Slider widget", () => {
     render(<Slider {...props} />)
 
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [5],
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -159,11 +161,12 @@ describe("Slider widget", () => {
       const slider = screen.getByRole("slider")
       expect(slider).toHaveAttribute(
         "aria-valuetext",
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-        `${props.element.default}`
+        String(props.element.default)
       )
-      expect(slider).toHaveAttribute("aria-valuemin", `${props.element.min}`)
-      expect(slider).toHaveAttribute("aria-valuemax", `${props.element.max}`)
+      // React Aria uses native HTML attributes on <input type="range"> instead of
+      // explicit aria-valuemin/max attributes.
+      expect(slider).toHaveAttribute("min", `${props.element.min}`)
+      expect(slider).toHaveAttribute("max", `${props.element.max}`)
     })
 
     it("handles value changes", async () => {
@@ -177,13 +180,12 @@ describe("Slider widget", () => {
       await triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [6],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
-      expect(slider).toHaveAttribute("aria-valuenow", "6")
+      expect(slider).toHaveAttribute("value", "6")
     })
 
     it("resets its value when form is cleared", async () => {
@@ -200,13 +202,12 @@ describe("Slider widget", () => {
       await triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         [6],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
-      expect(slider).toHaveAttribute("aria-valuenow", "6")
+      expect(slider).toHaveAttribute("value", "6")
 
       act(() => {
         // "Submit" the form
@@ -215,15 +216,12 @@ describe("Slider widget", () => {
 
       // Our widget should be reset, and the widgetMgr should be updated
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
-      expect(slider).toHaveAttribute("aria-valuenow", "5")
+      expect(slider).toHaveAttribute("value", "5")
     })
   })
 
@@ -247,28 +245,25 @@ describe("Slider widget", () => {
       )
     })
 
-    it("becomes visible while dragging via keyboard and hides after release", async () => {
+    it("sets data-focus-visible on thumb when focused via keyboard", async () => {
       const props = getProps()
       render(<Slider {...props} />)
 
-      const tickBar = screen.getByTestId("stSliderTickBar")
-      const slider = screen.getByRole("slider")
-
-      expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
-
+      // Tab-navigate to focus the slider thumb via keyboard.
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      act(() => {
-        slider.focus()
-      })
-      await user.keyboard("{ArrowRight>}")
-      // Use waitFor since the tickbar has an animation:
-      await waitFor(() => expect(tickBar).toBeVisible())
+      await user.tab()
 
-      await user.keyboard("{/ArrowRight}")
-      await waitFor(() =>
-        expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
-      )
+      // React Aria sets [data-focus-visible] when focus arrives via keyboard.
+      // This attribute activates the --slider-focused CSS variable on StyledSlider
+      // (via :focus-within:has(:focus-visible)), which transitions the tick bar
+      // from opacity:0 to opacity:1. The full visual transition is verified by E2E.
+      const focusedElement = document.querySelector("[data-focus-visible]")
+      expect(focusedElement).toBeInTheDocument()
     })
+
+    // Note: the "becomes visible while dragging via keyboard" test is not applicable
+    // with React Aria because RA fires onChange and onChangeEnd synchronously in the
+    // same keydown handler, so isDragging is true→false in the same React batch.
   })
 
   describe("Range value", () => {
@@ -287,38 +282,42 @@ describe("Slider widget", () => {
       expect(screen.getAllByTestId("stSliderThumbValue")).toHaveLength(2)
     })
 
+    it("gives each thumb a differentiated aria-label", () => {
+      const props = getProps({ default: [1, 9] })
+      render(<Slider {...props} />)
+
+      const sliders = screen.getAllByRole("slider")
+      expect(sliders[0]).toHaveAttribute(
+        "aria-label",
+        `${props.element.label} — start`
+      )
+      expect(sliders[1]).toHaveAttribute(
+        "aria-label",
+        `${props.element.label} — end`
+      )
+    })
+
     it("has the correct value", () => {
       const props = getProps({ default: [1, 9] })
       render(<Slider {...props} />)
 
       const sliders = screen.getAllByRole("slider")
-      // First slider - max is the current value of second slider
+      // React Aria uses native HTML attributes on <input type="range">.
+      // First slider - max is constrained to the current value of second slider
       expect(sliders[0]).toHaveAttribute(
         "aria-valuetext",
         `${props.element.default[0]}`
       )
-      expect(sliders[0]).toHaveAttribute(
-        "aria-valuemin",
-        `${props.element.min}`
-      )
-      expect(sliders[0]).toHaveAttribute(
-        "aria-valuemax",
-        `${props.element.default[1]}`
-      )
+      expect(sliders[0]).toHaveAttribute("min", `${props.element.min}`)
+      expect(sliders[0]).toHaveAttribute("max", `${props.element.default[1]}`)
 
-      // Second slider - min is the current value of first slider
+      // Second slider - min is constrained to the current value of first slider
       expect(sliders[1]).toHaveAttribute(
         "aria-valuetext",
         `${props.element.default[1]}`
       )
-      expect(sliders[1]).toHaveAttribute(
-        "aria-valuemin",
-        `${props.element.default[0]}`
-      )
-      expect(sliders[1]).toHaveAttribute(
-        "aria-valuemax",
-        `${props.element.max}`
-      )
+      expect(sliders[1]).toHaveAttribute("min", `${props.element.default[0]}`)
+      expect(sliders[1]).toHaveAttribute("max", `${props.element.max}`)
     })
 
     describe("value should be within bounds", () => {
@@ -329,10 +328,7 @@ describe("Slider widget", () => {
         const firstSlider = screen.getAllByRole("slider")[0]
         await triggerChangeEvent(firstSlider, "ArrowRight")
 
-        expect(screen.getAllByRole("slider")[0]).toHaveAttribute(
-          "aria-valuenow",
-          "5"
-        )
+        expect(screen.getAllByRole("slider")[0]).toHaveAttribute("value", "5")
       })
 
       it("start < min", async () => {
@@ -342,7 +338,7 @@ describe("Slider widget", () => {
         const firstSlider = screen.getAllByRole("slider")[0]
         await triggerChangeEvent(firstSlider, "ArrowLeft")
 
-        expect(firstSlider).toHaveAttribute("aria-valuenow", "0")
+        expect(firstSlider).toHaveAttribute("value", "0")
       })
 
       it("start > max", async () => {
@@ -352,7 +348,7 @@ describe("Slider widget", () => {
         const slider = screen.getByRole("slider")
         await triggerChangeEvent(slider, "ArrowRight")
 
-        expect(slider).toHaveAttribute("aria-valuenow", "10")
+        expect(slider).toHaveAttribute("value", "10")
       })
 
       it("end < min", async () => {
@@ -362,7 +358,7 @@ describe("Slider widget", () => {
         const slider = screen.getByRole("slider")
         await triggerChangeEvent(slider, "ArrowLeft")
 
-        expect(slider).toHaveAttribute("aria-valuenow", "0")
+        expect(slider).toHaveAttribute("value", "0")
       })
 
       it("end > max", async () => {
@@ -372,7 +368,7 @@ describe("Slider widget", () => {
         const secondSlider = screen.getAllByRole("slider")[1]
         await triggerChangeEvent(secondSlider, "ArrowRight")
 
-        expect(secondSlider).toHaveAttribute("aria-valuenow", "10")
+        expect(secondSlider).toHaveAttribute("value", "10")
       })
     })
 
@@ -387,15 +383,12 @@ describe("Slider widget", () => {
       await triggerChangeEvent(sliders[1], "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [1, 10],
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
-      expect(sliders[0]).toHaveAttribute("aria-valuenow", "1")
-      expect(sliders[1]).toHaveAttribute("aria-valuenow", "10")
+      expect(sliders[0]).toHaveAttribute("value", "1")
+      expect(sliders[1]).toHaveAttribute("value", "10")
     })
   })
 
@@ -537,10 +530,13 @@ describe("Slider widget", () => {
       render(<Slider {...props} />)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["orange"],
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
       // Negative assertion: setDoubleArrayValue should NOT be called for select_slider
       expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
@@ -571,10 +567,9 @@ describe("Slider widget", () => {
       await triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["yellow"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -603,10 +598,9 @@ describe("Slider widget", () => {
       await triggerChangeEvent(sliders[1], "ArrowRight")
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["orange", "indigo"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -633,10 +627,11 @@ describe("Slider widget", () => {
       render(<Slider {...props} />)
       const slider = screen.getByRole("slider")
       // rawValue is "yellow" which is at index 2
-      expect(slider).toHaveAttribute("aria-valuenow", "2")
+      // React Aria uses native HTML `value` attribute on <input type="range">
+      expect(slider).toHaveAttribute("value", "2")
       expect(slider).toHaveAttribute("aria-valuetext", "yellow")
       // Negative assertion: should NOT use the default index (0)
-      expect(slider).not.toHaveAttribute("aria-valuenow", "0")
+      expect(slider).not.toHaveAttribute("value", "0")
       expect(slider).not.toHaveAttribute("aria-valuetext", "red")
     })
   })
@@ -735,30 +730,48 @@ describe("Slider query param binding", () => {
 })
 
 describe("on_change='ignore' mode", () => {
-  it.each([
-    [true, false], // ignoreRerun=true -> fromUi=false (prevents rerun)
-    [false, true], // ignoreRerun=false -> fromUi=true (normal behavior)
-  ])(
-    "sets fromUi based on ignoreRerun=%s (outside form)",
-    async (ignoreRerun, expectedFromUi) => {
-      const props = getProps({ ignoreRerun })
-      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const props = getProps({ ignoreRerun: true })
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
-      render(<Slider {...props} />)
+    render(<Slider {...props} />)
 
-      const slider = screen.getByRole("slider")
-      await triggerChangeEvent(slider, "ArrowRight")
+    const slider = screen.getByRole("slider")
+    await triggerChangeEvent(slider, "ArrowRight")
 
-      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element,
-        [6],
-        { fromUi: expectedFromUi },
-        undefined
-      )
-    }
-  )
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [6],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+  })
 
-  it("keeps fromUi true when ignoreRerun is true but widget is in a form", async () => {
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const props = getProps({ ignoreRerun: false })
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+    render(<Slider {...props} />)
+
+    const slider = screen.getByRole("slider")
+    await triggerChangeEvent(slider, "ArrowRight")
+
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [6],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+  })
+
+  it("still passes triggerRerun: false inside a form (manager ignores it)", async () => {
     const props = getProps({
       ignoreRerun: true,
       formId: "testForm",
@@ -770,12 +783,17 @@ describe("on_change='ignore' mode", () => {
     const slider = screen.getByRole("slider")
     await triggerChangeEvent(slider, "ArrowRight")
 
-    // In a form, ignoreRerun has no effect - forms already batch changes
+    // WidgetStateManager ignores triggerRerun inside forms because the form
+    // owns commit timing. The slider still reports fromUser: true.
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [6],
-      { fromUi: true },
-      undefined
+      {
+        formId: "testForm",
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
     )
   })
 })

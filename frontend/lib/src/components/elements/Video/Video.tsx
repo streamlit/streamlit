@@ -24,7 +24,7 @@ import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
-import { StyledVideoIframe } from "./styled-components"
+import { StyledVideo, StyledVideoIframe } from "./styled-components"
 
 const LOG = getLogger("Video")
 export interface VideoProps {
@@ -32,8 +32,6 @@ export interface VideoProps {
   element: VideoProto
   elementMgr: ElementStateManager
 }
-
-const VIDEO_STYLE = { width: "100%" }
 
 function Video({
   element,
@@ -247,8 +245,7 @@ function Video({
   }
 
   return (
-    // eslint-disable-next-line jsx-a11y/media-has-caption
-    <video
+    <StyledVideo
       className="stVideo"
       data-testid="stVideo"
       ref={videoRef}
@@ -256,7 +253,6 @@ function Video({
       muted={muted}
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
-      style={VIDEO_STYLE}
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
@@ -272,7 +268,7 @@ function Video({
           data-testid="stVideoSubtitle"
         />
       ))}
-    </video>
+    </StyledVideo>
   )
 }
 

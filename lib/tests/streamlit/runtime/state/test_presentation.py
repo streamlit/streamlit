@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
 from streamlit.components.v2.presentation import make_bidi_component_presenter
@@ -78,6 +78,29 @@ def test_apply_presenter_swallows_presenter_errors() -> None:
     ss._new_widget_state.widget_metadata["wid"] = SimpleNamespace(presenter=_boom)
     base = "hello"
     out = apply_presenter(ss, "wid", base)
+    assert out is base
+
+
+def test_apply_presenter_non_callable_presenter() -> None:
+    """Return base value unchanged when presenter is not callable."""
+    ss = _FakeSession()
+    ss._new_widget_state.widget_metadata["wid"] = SimpleNamespace(
+        presenter="not-callable"
+    )
+    base = {"value": 42}
+    out = apply_presenter(ss, "wid", base)
+    assert out is base
+
+
+def test_apply_presenter_swallows_metadata_lookup_errors() -> None:
+    """Return base value unchanged when resolving widget metadata raises."""
+
+    class _RaisingSession:
+        def _get_widget_metadata(self, widget_id: str) -> Any:
+            raise RuntimeError("metadata boom")
+
+    base = {"value": 7}
+    out = apply_presenter(cast("SessionState", _RaisingSession()), "wid", base)
     assert out is base
 
 

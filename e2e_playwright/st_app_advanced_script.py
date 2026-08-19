@@ -15,9 +15,38 @@
 """Streamlit script for st_app_advanced E2E test.
 
 This script is loaded by the st.App in st_app_advanced.py.
+It tests custom routes, middleware, lifespan hooks, and programmatic secrets.
 """
 
+from __future__ import annotations
+
+import os
+from typing import cast
+
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
+
+
+def _get_secret(key: str, default: str = "NOT SET") -> str:
+    """Helper to safely get a secret, handling missing secrets file in bare mode."""
+    try:
+        return cast("str", st.secrets.get(key, default))
+    except StreamlitSecretNotFoundError:
+        return default
+
+
+def _get_nested_secret(
+    section: str, key: str, default: str = "NOT SET"
+) -> str | int | float:
+    """Helper to safely get a nested secret."""
+    try:
+        section_data = st.secrets.get(section, {})
+        if isinstance(section_data, dict):
+            return cast("str | int | float", section_data.get(key, default))
+        return cast("str | int | float", getattr(section_data, key, default))
+    except StreamlitSecretNotFoundError:
+        return default
+
 
 st.title("Advanced st.App Test")
 
@@ -48,3 +77,42 @@ GET /api/lifespan - Returns lifespan events
 """,
     language="text",
 )
+
+st.divider()
+
+# === Programmatic Secrets Section ===
+st.subheader("Programmatic Secrets")
+st.write(f"API Key: {_get_secret('api_key')}")
+st.write(f"Database Host: {_get_nested_secret('database', 'host')}")
+st.write(f"Database Port: {_get_nested_secret('database', 'port')}")
+
+st.subheader("Environment Variables")
+st.write(f"API Key from environ: {os.environ.get('api_key', 'NOT SET')}")  # noqa: SIM112
+
+st.subheader("Nested Secrets")
+try:
+    st.write(f"Auth Client ID: {st.secrets.auth.client_id}")
+except (AttributeError, StreamlitSecretNotFoundError):
+    st.write("Auth Client ID: NOT SET")
+
+st.divider()
+
+# === Script Error Handler Section ===
+st.subheader("Script Error Handler Test")
+suppress = st.checkbox("Suppress error display", key="suppress_error_display")
+st.write(f"Suppress display: {suppress}")
+
+if st.button("Raise exception", key="raise_error"):
+    raise ValueError("Test error from user script")
+
+if st.button("Raise RuntimeError", key="raise_runtime"):
+    raise RuntimeError("Runtime error from user script")
+
+
+# === Widget Callback Error Test ===
+def _on_click_error() -> None:
+    """Callback that raises an exception to test on_script_error with widget callbacks."""
+    raise ValueError("Error from on_click callback")
+
+
+st.button("Raise in callback", key="raise_in_callback", on_click=_on_click_error)

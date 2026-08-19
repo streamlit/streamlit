@@ -14,31 +14,142 @@
  * limitations under the License.
  */
 
-import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
-import { StyledDropdownListItem } from "baseui/select"
+import { getLuminance } from "color2k"
+import { DateInput, DateSegment, TimeField } from "react-aria-components"
 
-export const StyledClearIconContainer = styled.div({
-  position: "absolute",
-  top: "50%",
-  right: "2.05em",
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+
+/** Outermost wrapper for layout. */
+export const StyledTimeFieldContainer = styled.div({
+  width: "100%",
 })
 
-export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
-  shouldForwardProp: isPropValid,
-})(({ theme }) => {
+/** TimeField fills the flex row so error/clear icons stay at the trailing edge. */
+export const StyledTimeField = styled(TimeField)({
+  flex: 1,
+})
+
+/**
+ * Visual container for the time input (border, background).
+ *
+ * Padding lives on StyledTimeFieldInput (DateInput) so React Aria's built-in
+ * click-to-nearest-segment behaviour covers the full clickable area.
+ */
+export const StyledTimeInputWrapper = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  height: theme.sizes.minElementHeight,
+  borderRadius: theme.radii.default,
+  borderWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: getBorderColor(theme.colors, false),
+  backgroundColor: theme.colors.secondaryBg,
+  cursor: "text",
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.inputWidget,
+  "&:focus-within": {
+    borderColor: getBorderColor(theme.colors, true),
+    outline: "none",
+  },
+  "&[data-has-error]": {
+    borderColor: theme.colors.redTextColor,
+    backgroundColor: theme.colors.redBackgroundColor,
+  },
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
+}))
+
+/** DateInput that fills the wrapper, with padding so clicks anywhere focus the nearest segment. */
+export const StyledTimeFieldInput = styled(DateInput)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  paddingTop: theme.spacing.sm,
+  paddingBottom: theme.spacing.sm,
+  paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+  paddingRight: theme.spacing.sm,
+  outline: "none",
+}))
+
+/** Individual hour, minute, or literal separator segment. */
+export const StyledTimeSegment = styled(DateSegment)(({ theme }) => {
+  const isLightPrimary = getLuminance(theme.colors.primary) > 0.5
+
   return {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    padding: theme.spacing.none,
-    margin: theme.spacing.none,
-    height: theme.sizes.dropdownItemHeight,
-    // Inset from edges (xs - borderWidth to account for popover border)
-    marginLeft: theme.sizes.tagMarginInsideBorder,
-    // Right padding also accounts for scrollbar gutter when present
-    marginRight: `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`,
-    background: "transparent",
+    paddingLeft: theme.spacing.threeXS,
+    paddingRight: theme.spacing.threeXS,
+    borderRadius: theme.radii.sm,
+    color: theme.colors.bodyText,
+    caretColor: "transparent",
+    outline: "none",
     fontWeight: theme.fontWeights.normal,
+    "&[data-type=literal]": {
+      color: theme.colors.fadedText60,
+      padding: 0,
+    },
+    "&[data-placeholder]": {
+      color: theme.colors.fadedText60,
+    },
+    // focused must come after placeholder so contrast text always wins on the
+    // primary-colored focused highlight, even when the segment is still a placeholder.
+    "&[data-focused]": {
+      backgroundColor: theme.colors.primary,
+      color: isLightPrimary ? theme.colors.black : theme.colors.white,
+    },
+    // When disabled, inherit the fadedText40 color set on StyledTimeInputWrapper.
+    // Without this, the explicit color: bodyText above blocks CSS inheritance.
+    "&[data-disabled]": {
+      color: "inherit",
+    },
   }
 })
+
+/** Error icon, flex item to the right of the time segments. */
+export const StyledErrorIconContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  color: theme.colors.redTextColor,
+  paddingLeft: theme.spacing.twoXS,
+  paddingRight: theme.spacing.sm,
+  flexShrink: 0,
+}))
+
+/** Clear button, flex item to the right of the time segments (or error icon). */
+export const StyledClearButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: `0 ${theme.spacing.twoXS}`,
+  marginRight: theme.spacing.sm,
+  color: theme.colors.grayTextColor,
+  flexShrink: 0,
+  "&:hover": {
+    color: theme.colors.bodyText,
+  },
+  "&:focus-visible": {
+    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+    borderRadius: theme.radii.sm,
+  },
+}))
+
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+/** Visually hidden but accessible to screen readers. */
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */

@@ -48,7 +48,12 @@ const wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => (
 )
 
 describe("useViewportSize", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -93,6 +98,8 @@ describe("useViewportSize", () => {
     act(() => {
       innerWidthSpy.mockReturnValue(700)
       window.dispatchEvent(new Event("resize"))
+      // Advance timer to flush throttle (100ms)
+      vi.advanceTimersByTime(100)
     })
 
     expect(result.current.isMobile).toBe(true)
@@ -101,6 +108,8 @@ describe("useViewportSize", () => {
     act(() => {
       innerWidthSpy.mockReturnValue(1024)
       window.dispatchEvent(new Event("resize"))
+      // Advance timer to flush throttle (100ms)
+      vi.advanceTimersByTime(100)
     })
 
     expect(result.current.isMobile).toBe(false)

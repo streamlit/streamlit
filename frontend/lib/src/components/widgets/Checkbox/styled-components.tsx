@@ -15,7 +15,12 @@
  */
 
 import styled from "@emotion/styled"
+import {
+  Checkbox as RACheckbox,
+  Switch as RASwitch,
+} from "react-aria-components"
 
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export const StyledCheckbox = styled.div(({ theme }) => ({
@@ -26,15 +31,220 @@ export const StyledCheckbox = styled.div(({ theme }) => ({
 
 interface StyledContentProps {
   visibility?: LabelVisibilityOptions
+  /** When true, the label truncates on one line, so it must be shrinkable. */
+  $truncate?: boolean
 }
 
 export const StyledContent = styled.div<StyledContentProps>(
-  ({ visibility }) => ({
+  ({ theme, visibility, $truncate }) => ({
     display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
     visibility:
       visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
     verticalAlign: "middle",
     flexDirection: "row",
     alignItems: "center",
+    lineHeight: theme.lineHeights.small,
+    // Allow the label to shrink below its content size so the markdown can
+    // ellipsize. The help icon keeps its intrinsic size and stays visible.
+    ...($truncate && { minWidth: 0 }),
   })
+)
+
+interface StyledLabelTextProps {
+  /** When true, the label truncates on one line, so it must be shrinkable. */
+  $truncate?: boolean
+}
+
+/**
+ * Wraps the label markdown so the native `title` tooltip is scoped to the label
+ * only (not the sibling help icon). When truncating it becomes a shrinkable flex
+ * box so the markdown can ellipsize; otherwise it stays transparent to layout.
+ */
+export const StyledLabelText = styled.div<StyledLabelTextProps>(
+  ({ $truncate }) =>
+    $truncate
+      ? { display: "flex", alignItems: "center", minWidth: 0 }
+      : { display: "contents" }
+)
+
+interface StyledRootProps {
+  /** When true, the control can shrink within its container so the label can ellipsize. */
+  $truncate?: boolean
+}
+
+/** Wrapper around React Aria Checkbox — handles layout and keyboard-focus background. */
+export const StyledCheckboxRoot = styled(RACheckbox, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<StyledRootProps>(({ theme, $truncate }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing.sm,
+  marginBottom: 0,
+  marginTop: 0,
+  cursor: "pointer",
+  position: "relative",
+  // Bound the control to its container (without expanding a short label to full
+  // width) and let it shrink so an overflowing label can ellipsize instead of
+  // widening the control past its container.
+  ...($truncate && { minWidth: 0, maxWidth: "100%" }),
+
+  "&[data-disabled]": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+  },
+
+  "&[data-focus-visible]": {
+    backgroundColor: theme.colors.darkenedBgMix25,
+  },
+}))
+
+interface StyledCheckboxIndicatorProps {
+  $isSelected: boolean
+  $isFocusVisible: boolean
+  $isDisabled: boolean
+}
+
+export const StyledCheckboxIndicator =
+  styled.div<StyledCheckboxIndicatorProps>(
+    ({ theme, $isSelected, $isFocusVisible, $isDisabled }) => {
+      let borderColor: string
+      let backgroundColor: string
+
+      if ($isDisabled) {
+        borderColor = theme.colors.borderColor
+        backgroundColor = $isSelected
+          ? theme.colors.fadedText40
+          : theme.colors.lightenedBg05
+      } else if ($isSelected) {
+        borderColor = theme.colors.primary
+        backgroundColor = theme.colors.primary
+      } else {
+        borderColor = theme.colors.borderColor
+        backgroundColor = theme.colors.lightenedBg05
+      }
+
+      return {
+        flexShrink: 0,
+        width: theme.sizes.checkbox,
+        height: theme.sizes.checkbox,
+        // Vertically center the indicator with the first text line.
+        // = (lineHeight × fontSize − indicatorSize) / 2 = (1.5 × 0.875rem − 1rem) / 2 = 2.5px
+        marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
+        borderRadius: theme.radii.sm,
+        border: `${theme.sizes.borderWidth} solid ${borderColor}`,
+        backgroundColor,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow:
+          $isFocusVisible && $isSelected ? theme.shadows.focusRing : "none",
+        transition: "background-color 100ms ease, border-color 100ms ease",
+
+        "& svg": {
+          width: "65%",
+          height: "65%",
+          fill: "none",
+          stroke: $isDisabled
+            ? hasLightBackgroundColor(theme)
+              ? theme.colors.bgColor
+              : theme.colors.bodyText
+            : theme.colors.white,
+          strokeWidth: "2.5px",
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+        },
+      }
+    }
+  )
+
+/** Wrapper around React Aria Switch — handles layout for the toggle variant. */
+export const StyledSwitchRoot = styled(RASwitch, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<StyledRootProps>(({ theme, $truncate }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing.sm,
+  marginBottom: 0,
+  marginTop: 0,
+  cursor: "pointer",
+  position: "relative",
+  // Bound the control to its container (without expanding a short label to full
+  // width) and let it shrink so an overflowing label can ellipsize instead of
+  // widening the control past its container.
+  ...($truncate && { minWidth: 0, maxWidth: "100%" }),
+
+  "&[data-disabled]": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+  },
+
+  "&[data-focus-visible]": {
+    backgroundColor: theme.colors.darkenedBgMix25,
+  },
+}))
+
+interface StyledToggleTrackProps {
+  $isSelected: boolean
+  $isHovered: boolean
+  $isDisabled: boolean
+}
+
+export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
+  ({ theme, $isSelected, $isHovered, $isDisabled }) => {
+    let backgroundColor: string
+
+    if ($isSelected && !$isDisabled) {
+      backgroundColor = theme.colors.primary
+    } else if ($isHovered && !$isDisabled) {
+      backgroundColor = theme.colors.darkenedBgMix15
+    } else {
+      backgroundColor = theme.colors.borderColor
+    }
+
+    return {
+      flexShrink: 0,
+      // Vertically center the track with the first text line — mirrors the
+      // checkbox indicator formula: (lineHeight × fontSize − trackHeight) / 2
+      marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
+      width: `calc(2 * ${theme.sizes.checkbox})`,
+      height: theme.sizes.checkbox,
+      paddingLeft: theme.spacing.threeXS,
+      paddingRight: theme.spacing.threeXS,
+      borderRadius: theme.radii.full,
+      backgroundColor,
+      display: "flex",
+      alignItems: "center",
+      transition: "background-color 150ms ease",
+    }
+  }
+)
+
+interface StyledToggleThumbProps {
+  $isSelected: boolean
+  $isDisabled: boolean
+}
+
+export const StyledToggleThumb = styled.div<StyledToggleThumbProps>(
+  ({ theme, $isSelected, $isDisabled }) => {
+    const isLightTheme = hasLightBackgroundColor(theme)
+    const backgroundColor = $isDisabled
+      ? isLightTheme
+        ? theme.colors.gray70
+        : theme.colors.gray90
+      : isLightTheme
+        ? theme.colors.bgColor
+        : theme.colors.bodyText
+
+    return {
+      flexShrink: 0,
+      width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+      height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+      borderRadius: theme.radii.full,
+      backgroundColor,
+      transform: $isSelected
+        ? `translateX(${theme.sizes.checkbox})`
+        : "translateX(0)",
+      transition: "transform 150ms ease",
+    }
+  }
 )

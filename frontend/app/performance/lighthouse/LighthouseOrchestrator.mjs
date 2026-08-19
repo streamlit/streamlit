@@ -17,11 +17,11 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 // @ts-check
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import lighthouse from "lighthouse"
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import * as chromeLauncher from "chrome-launcher"
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { default as treeKill } from "tree-kill"
 
 import fs from "fs"

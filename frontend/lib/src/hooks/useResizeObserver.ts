@@ -22,6 +22,8 @@ import {
   useState,
 } from "react"
 
+import { useThrottledCallback } from "./useThrottledCallback"
+
 export type DOMRectKeys =
   | "bottom"
   | "height"
@@ -39,6 +41,10 @@ export type DOMRectKeys =
  * @param {DOMRectKeys[]} properties - The list of DOMRect properties to observe.
  * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
  * that will cause the observer to be re-evaluated.
+ * @param {number} [throttleMs=0] - Optional throttle delay in milliseconds.
+ * When > 0, dimension updates are throttled to reduce the frequency of
+ * state updates during rapid resize operations while still providing
+ * visual feedback (updates at most once per throttleMs).
  * @returns {{
  *   values: number[],
  *   elementRef: MutableRefObject<T | null>,
@@ -46,13 +52,15 @@ export type DOMRectKeys =
  */
 export const useResizeObserver = <T extends HTMLDivElement>(
   properties: DOMRectKeys[],
-  dependencies: React.DependencyList = []
+  dependencies: React.DependencyList = [],
+  throttleMs = 0
 ): {
   values: number[]
   elementRef: MutableRefObject<T | null>
 } => {
   const elementRef = useRef<T | null>(null)
   const [values, setValues] = useState<number[]>([])
+
   /**
    * Gets the current values of the specified DOMRect properties.
    *
@@ -71,6 +79,14 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     })
   }, [properties])
 
+  const updateValues = useCallback(() => {
+    setValues(getValues())
+  }, [getValues])
+
+  // Hook must be called unconditionally; throttled path only used when throttleMs > 0
+  const { throttledCallback: throttledUpdateValues, cancel: cancelThrottle } =
+    useThrottledCallback(updateValues, Math.max(throttleMs, 1))
+
   useEffect(() => {
     if (!elementRef.current) {
       return
@@ -79,9 +95,18 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     setValues(getValues())
 
     let frameId: number
+
     const observer = new ResizeObserver(() => {
+      // Cancel any pending animation frame to avoid redundant updates
+      if (frameId) {
+        cancelAnimationFrame(frameId)
+      }
       frameId = window.requestAnimationFrame(() => {
-        setValues(getValues())
+        if (throttleMs > 0) {
+          throttledUpdateValues()
+        } else {
+          setValues(getValues())
+        }
       })
     })
 
@@ -92,9 +117,18 @@ export const useResizeObserver = <T extends HTMLDivElement>(
       if (frameId) {
         cancelAnimationFrame(frameId)
       }
+      cancelThrottle()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [properties, getValues, ...dependencies])
+    /* eslint-disable react-hooks/exhaustive-deps -- dependencies spread is intentional */
+  }, [
+    properties,
+    getValues,
+    throttleMs,
+    throttledUpdateValues,
+    cancelThrottle,
+    ...dependencies,
+  ])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return { values, elementRef }
 }

@@ -33,6 +33,45 @@ type SubElement = {
   widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
+/**
+ * Extract layout-related sub-element properties from an Element or BlockProto.
+ * Some element/block types store width/height config in nested fields.
+ */
+export const extractLayoutSubElement = (
+  element: Element | BlockProto
+): UseLayoutStylesArgs["subElement"] => {
+  const typeKey = element.type as keyof typeof element | undefined
+  const raw = typeKey
+    ? (element as unknown as Record<string, unknown>)[typeKey]
+    : undefined
+  if (!raw || typeof raw !== "object") return undefined
+
+  const candidate = raw as Record<string, unknown>
+  const subElement = {
+    useContainerWidth: candidate.useContainerWidth as
+      | boolean
+      | null
+      | undefined,
+    height: candidate.height as number | undefined,
+    width: candidate.width as number | undefined,
+    widthConfig: candidate.widthConfig as
+      | streamlit.IWidthConfig
+      | null
+      | undefined,
+  }
+
+  if (
+    subElement.useContainerWidth === undefined &&
+    subElement.height === undefined &&
+    subElement.width === undefined &&
+    subElement.widthConfig === undefined
+  ) {
+    return undefined
+  }
+
+  return subElement
+}
+
 type StyleOverrides = Partial<
   Pick<
     UseLayoutStylesShape,

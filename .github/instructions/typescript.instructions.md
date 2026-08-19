@@ -6,9 +6,9 @@ applyTo: "**/*.ts, **/*.tsx"
 
 # TypeScript Development Guide
 
-- TypeScript: v6
-- Linters: oxlint v1 + eslint v9
-- Formatter: oxfmt v0.43
+- TypeScript: v7 for type-checking (native `tsc`, run via the `typescript-v7` alias); v6 stays for `.d.ts` emit (vite-plugin-dts) and typed linting (typescript-eslint), which need the v6 compiler API
+- Linters: oxlint v1 + eslint v10
+- Formatter: oxfmt v0.x
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v8
@@ -48,7 +48,6 @@ applyTo: "**/*.ts, **/*.tsx"
 - All styled components begin with the word `Styled` to indicate it's a styled component.
 - Utilize props in styled components to display elements that may have some interactivity.
 - Avoid the need to target other components.
-- When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
 

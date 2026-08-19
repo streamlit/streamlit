@@ -50,6 +50,7 @@ IGNORE_PATTERN = re.compile(
     r"|\.(json|nvmrc|mdc|md)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
+    r"|^uv\.lock$"
     # Exclude pytest config files, because they don't have any degree of creativity.
     r"|pytest\.ini$"
     r"|\.coveragerc$"
@@ -71,8 +72,9 @@ IGNORE_PATTERN = re.compile(
     r"|\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|test_data|data|test)/"
-    # Exclude vendored files.
+    # Exclude vendored files and bundled skill assets.
     r"|/vendor/|^vendor/|^frontend/component-lib/declarations/apache-arrow"
+    r"|^lib/streamlit/\.agents/"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
     # Exclude patch files.
     r"|\.patch$",

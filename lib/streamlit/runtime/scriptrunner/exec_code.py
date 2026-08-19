@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -22,7 +23,7 @@ from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_default_dg_stack_value,
 )
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
@@ -40,20 +41,26 @@ if TYPE_CHECKING:
 class modified_sys_path:  # noqa: N801
     """A context for prepending a directory to sys.path for a second.
 
+    If initialized with a file path, its parent directory is prepended instead.
+
     Code inspired by IPython:
     Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
     """
 
     def __init__(self, main_script_path: str) -> None:
-        self._main_script_path = main_script_path
+        self._main_script_dir = os.path.abspath(main_script_path)
+
+        if os.path.isfile(self._main_script_dir):
+            self._main_script_dir = os.path.dirname(self._main_script_dir)
+
         self._added_path = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def __enter__(self) -> None:
-        if self._main_script_path not in sys.path:
-            sys.path.insert(0, self._main_script_path)
+        if self._main_script_dir not in sys.path:
+            sys.path.insert(0, self._main_script_dir)
             self._added_path = True
 
     def __exit__(
@@ -64,7 +71,7 @@ class modified_sys_path:  # noqa: N801
     ) -> Literal[False]:
         if self._added_path:
             try:
-                sys.path.remove(self._main_script_path)
+                sys.path.remove(self._main_script_dir)
             except ValueError:
                 # It's already removed.
                 pass
@@ -155,8 +162,8 @@ def exec_func_with_error_handling(
     except Exception as ex:
         run_without_errors = False
         premature_stop = True
-        handle_uncaught_app_exception(ex)
         uncaught_exception = ex
+        handle_user_script_exception(ex, ctx.on_script_error)
 
     return (
         result,

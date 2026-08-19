@@ -51,7 +51,7 @@ export interface DeckGLProps {
 }
 
 export interface DeckObject {
-  initialViewState: {
+  initialViewState: Record<string, unknown> & {
     height: number
     width: number
   }

@@ -22,14 +22,23 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
 
 import streamlit as st
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitValueError,
+)
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page, _validate_registered_page
+from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
     get_script_run_ctx,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
 )
 
 if TYPE_CHECKING:
@@ -95,7 +104,9 @@ def _new_fragment_id_queue(
             "functions during fragment reruns."
         )
 
-    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
+    new_queue = list(
+        dropwhile(lambda x: x != ThreadState.get().fragment_id, curr_queue)
+    )
     if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
@@ -159,9 +170,7 @@ def rerun(  # type: ignore[misc]
     """
 
     if scope not in {"app", "fragment"}:
-        raise StreamlitAPIException(
-            f"'{scope}'is not a valid rerun scope. Valid scopes are 'app' and 'fragment'."
-        )
+        raise StreamlitValueError("scope", ["'app'", "'fragment'"])
 
     ctx = get_script_run_ctx()
 
@@ -186,7 +195,7 @@ def rerun(  # type: ignore[misc]
 
 @gather_metrics("switch_page")
 def switch_page(  # type: ignore[misc]
-    page: str | Path | StreamlitPage,
+    page: str | Path | Page,
     *,
     query_params: QueryParamsInput | None = None,
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
@@ -200,7 +209,7 @@ def switch_page(  # type: ignore[misc]
 
     Parameters
     ----------
-    page : str, Path, or StreamlitPage
+    page : str, Path, or Page
         The page to switch to. This can be one of the following values:
 
         - Path to a Python file: The path can be a string or ``pathlib.Path``
@@ -211,13 +220,13 @@ def switch_page(  # type: ignore[misc]
           ``st.navigation``, the Python file must be your entrypoint file or
           a file in the ``pages/`` directory.
 
-        - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+        - ``Page``: The source of the ``Page`` and its
           ``url_path`` must match a page defined in ``st.navigation``. The
-          ``StreamlitPage`` must be internal and can't be defined by a URL.
-          Use ``st.Page`` to create a ``StreamlitPage`` object.
+          ``Page`` must be internal and can't be defined by a URL.
+          Use ``st.Page`` to create a ``Page`` object.
 
         To switch to a page defined by a ``callable``, you must use a
-        ``StreamlitPage`` object.
+        ``Page`` object.
 
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.
@@ -280,6 +289,7 @@ def switch_page(  # type: ignore[misc]
         height: 350px
 
     """
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 
@@ -288,12 +298,13 @@ def switch_page(  # type: ignore[misc]
         raise NoSessionContext()
 
     page_script_hash = ""
-    if isinstance(page, StreamlitPage):
+    if isinstance(page, Page):
         if page.is_external:
             raise StreamlitAPIException(
                 "Cannot use st.switch_page with external URL pages. "
                 "Use st.page_link instead to create a link to external pages."
             )
+        _validate_registered_page(page)
         page_script_hash = page._script_hash
     else:
         # Convert Path to string if necessary
@@ -320,11 +331,12 @@ def switch_page(  # type: ignore[misc]
     # Reset query params (with exception of embed) and optionally apply overrides.
     with ctx.session_state.query_params() as qp:
         _set_query_params_for_switch(qp, query_params)
-        # Additional safeguard to ensure the query params
-        #  are sent out to the frontend before the new rerun might clear
-        # outstanding messages. This uses the same time that is used as waiting
-        # in our event loop.
-        time.sleep(0.01)
+
+    # Safeguard: sleep longer than the flush interval to ensure at least one
+    # complete flush cycle delivers the query params before the rerun clears
+    # outstanding messages. Sleep is placed after the with block to release
+    # the session state lock first.
+    time.sleep(2 * MESSAGE_FLUSH_INTERVAL_SECS)
 
     ctx.script_requests.request_rerun(
         RerunData(

@@ -424,6 +424,69 @@ describe("linkReference", () => {
   })
 })
 
+describe("link URL scheme security", () => {
+  it.each([
+    "javascript:alert(document.domain)",
+    "JavaScript:alert(1)", // case-insensitive
+    "  javascript:alert(1)", // leading whitespace
+    "javascript:alert(1)  ", // trailing whitespace
+    "vbscript:msgbox(1)",
+    "VBScript:execute()", // case-insensitive
+  ])("blocks dangerous URL: %s", url => {
+    render(
+      <StreamlitMarkdown source={`[Click me](${url})`} allowHTML={false} />
+    )
+    // Returns "#" to prevent navigation (empty href with target="_blank"
+    // would open current page in new tab)
+    const link = screen.getByText("Click me")
+    expect(link).toHaveAttribute("href", "#")
+    // Verify blocked links don't open in new tab (LinkWithTargetBlank returns
+    // target="_self" for URLs starting with "#")
+    expect(link).not.toHaveAttribute("target", "_blank")
+  })
+
+  // Raw HTML links go through rehype-raw and reach transformLinkUri.
+  // Test C0 control characters and internal whitespace bypasses in this context.
+  // The markdown parser already sanitizes these for standard [text](url) links,
+  // but raw HTML needs explicit protection.
+  // Note: Some C0 control characters (like SOH \x01) are converted to Unicode
+  // replacement characters by rehype-raw before reaching transformLinkUri.
+  // This is safe because browsers don't strip replacement characters from URLs.
+  it.each([
+    '<a href="javascript:alert(1)">link</a>',
+    '<a href="vbscript:alert(1)">link</a>',
+    '<a href="JAVASCRIPT:alert(1)">link</a>', // case-insensitive
+    '<a href="  javascript:alert(1)">link</a>', // leading whitespace
+    // HTML entity-encoded bypass attempts (internal tabs/newlines)
+    // These become actual C0 control characters when parsed by the browser
+    '<a href="java&#9;script:alert(1)">link</a>', // tab via HTML entity
+    '<a href="java&#10;script:alert(1)">link</a>', // newline via HTML entity
+    '<a href="java&#13;script:alert(1)">link</a>', // CR via HTML entity
+  ])("blocks dangerous raw HTML URLs: %s", async source => {
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const link = await screen.findByText("link")
+    expect(link).toHaveAttribute("href", "#")
+    // Verify blocked links don't open in new tab
+    expect(link).not.toHaveAttribute("target", "_blank")
+  })
+
+  it.each([
+    "https://example.com",
+    "http://example.com",
+    "mailto:test@example.com",
+    "tel:+1234567890",
+    "data:image/png;base64,abc123",
+    "data:text/plain,hello",
+    "/relative/path",
+    "#anchor",
+  ])("allows safe URL: %s", url => {
+    render(
+      <StreamlitMarkdown source={`[Click me](${url})`} allowHTML={false} />
+    )
+    expect(screen.getByText("Click me")).toHaveAttribute("href", url)
+  })
+})
+
 describe("StreamlitMarkdown", () => {
   let bgColors: ReturnType<typeof getThemeBackgroundColors>
   let backgroundColorMapping: Map<string, string>
@@ -555,6 +618,72 @@ describe("StreamlitMarkdown", () => {
     const heading = screen.getByRole("heading", { name: "Hello" })
     expect(heading).toHaveAttribute("id", "my-anchor")
     expect(heading).not.toHaveAttribute("aria-labelledby")
+  })
+
+  it("updates heading anchor when text changes across reruns (no explicit anchor)", () => {
+    const { rerender } = render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2">
+            First Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading")
+    expect(heading).toHaveAttribute("id", "first-heading")
+
+    rerender(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2">
+            Second Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    // useLayoutEffect commits the re-derived id before paint, so the assertion
+    // can be direct -- no waitFor needed.
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "second-heading")
+    // #8793 was reported through the anchor link, so assert its href too.
+    expect(
+      screen.getByRole("link", { name: "Link to heading" })
+    ).toHaveAttribute("href", "#second-heading")
+    // The stale anchor must be gone, not merely joined by the new one.
+    expect(screen.getByRole("heading")).not.toHaveAttribute(
+      "id",
+      "first-heading"
+    )
+  })
+
+  it("keeps an explicit anchor when heading text changes across reruns", () => {
+    const { rerender } = render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            First Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "my-anchor")
+
+    rerender(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            Second Heading
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    // A developer-supplied anchor is never re-derived from the text.
+    expect(screen.getByRole("heading")).toHaveTextContent("Second Heading")
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "my-anchor")
   })
 
   it("propagates header attributes to custom header", async () => {
@@ -833,6 +962,18 @@ describe("StreamlitMarkdown", () => {
     cleanup()
   })
 
+  it("renders smaller text sizing when isLabel is true", () => {
+    const source = "Here is some label text"
+    render(<StreamlitMarkdown source={source} allowHTML={false} isLabel />)
+
+    const textTag = screen.getByText("Here is some label text")
+    expect(textTag).toBeInTheDocument()
+
+    // All widget labels use the smaller font size for the markdown container
+    const markdownContainer = screen.getByTestId("stMarkdownContainer")
+    expect(markdownContainer).toHaveStyle("font-size: 0.875rem")
+  })
+
   it("renders smaller text sizing when isToast is true", () => {
     const source = "Here is some toast text"
     render(<StreamlitMarkdown source={source} allowHTML={false} isToast />)
@@ -845,31 +986,10 @@ describe("StreamlitMarkdown", () => {
     expect(markdownContainer).toHaveStyle("font-size: 0.875rem")
   })
 
-  it("renders regular text sizing when largerLabel is true", () => {
-    const source = "Here is some checkbox label text"
-    render(
-      <StreamlitMarkdown
-        source={source}
-        allowHTML={false}
-        isLabel
-        largerLabel
-      />
-    )
-
-    const textTag = screen.getByText("Here is some checkbox label text")
-    expect(textTag).toHaveStyle("font-size: inherit")
-  })
-
   it("renders bold label text when boldLabel is true", () => {
     const source = "Here is some checkbox label text"
     render(
-      <StreamlitMarkdown
-        source={source}
-        allowHTML={false}
-        isLabel
-        boldLabel
-        largerLabel
-      />
+      <StreamlitMarkdown source={source} allowHTML={false} isLabel boldLabel />
     )
 
     const textTag = screen.getByText("Here is some checkbox label text")
@@ -1132,12 +1252,16 @@ st.write("Hello")
 })
 
 describe("CustomCodeTag Element", () => {
+  beforeAll(async () => {
+    await import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+  }, 30_000)
+
   it("should render without crashing", async () => {
     const props = getCustomCodeTagProps()
     render(<CustomCodeTag {...props} />)
 
     const stCode = await screen.findByTestId("stCode")
-    expect(stCode).toBeInTheDocument()
+    expect(stCode).toBeVisible()
   })
 
   it("should render as plaintext", async () => {
@@ -1204,6 +1328,34 @@ describe("CustomCodeTag Element", () => {
     const props = getCustomCodeTagProps({ children })
     render(<CustomCodeTag {...props} />)
     expect(screen.getByTestId("stCode")).toHaveTextContent(expected)
+  })
+})
+
+describe("mermaid code blocks", () => {
+  const mermaidSource = "```mermaid\ngraph TD\n  A-->B\n```"
+
+  it("renders a mermaid code block as a diagram when not streaming", async () => {
+    render(<StreamlitMarkdown source={mermaidSource} allowHTML={false} />)
+
+    // The lazy-loaded MermaidChart renders with the stMermaidChart test id.
+    expect(await screen.findByTestId("stMermaidChart")).toBeVisible()
+    // It must not fall back to a syntax-highlighted code block.
+    expect(screen.queryByTestId("stCode")).not.toBeInTheDocument()
+  })
+
+  it("renders a mermaid code block as syntax-highlighted code while streaming", async () => {
+    render(
+      <StreamlitMarkdown
+        source={mermaidSource}
+        allowHTML={false}
+        unterminatedParsing={true}
+      />
+    )
+
+    // While streaming, the (possibly partial) mermaid block is shown as code
+    // to avoid flickering and error states from incomplete diagram source.
+    expect(await screen.findByTestId("stCode")).toBeVisible()
+    expect(screen.queryByTestId("stMermaidChart")).not.toBeInTheDocument()
   })
 })
 

@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+import threading
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
-from streamlit import config, file_util
+from streamlit import config, env_util, file_util
 from streamlit.logger import get_logger
+from streamlit.watcher import util
 from streamlit.watcher.folder_black_list import FolderBlackList
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
@@ -72,6 +74,8 @@ class LocalSourcesWatcher:
 
         self._watched_modules: dict[str, WatchedModule] = {}
         self._watched_pages: set[str] = set()
+        self._pending_evictions: set[str] = set()
+        self._pending_evictions_lock = threading.Lock()
 
         self.update_watched_pages()
 
@@ -124,13 +128,22 @@ class LocalSourcesWatcher:
         _LOGGER.debug("Path changed: %s", filepath)
 
         norm_filepath = os.path.realpath(filepath)
-        if norm_filepath not in self._watched_modules:
+        # On Windows the same path can be reported with an extended-length
+        # prefix (``\\?\``), so fall back to a normalized comparison there. On
+        # other platforms the plain membership check already covers every
+        # equivalent spelling.
+        is_watched_file = norm_filepath in self._watched_modules or (
+            env_util.IS_WINDOWS
+            and any(
+                util.paths_are_same(watched_path, norm_filepath)
+                for watched_path in self._watched_modules
+            )
+        )
+        if not is_watched_file:
             # Check if this is a file in a watched directory
             for watched_path in self._watched_modules:
-                if (
-                    os.path.isdir(watched_path)
-                    and os.path.commonpath([watched_path, norm_filepath])
-                    == watched_path
+                if os.path.isdir(watched_path) and util.path_is_in_directory(
+                    norm_filepath, watched_path
                 ):
                     _LOGGER.debug("File changed in watched directory: %s", filepath)
                     for cb in self._on_path_changed:
@@ -162,24 +175,51 @@ class LocalSourcesWatcher:
             if wm.module_name is not None and wm.module_name in sys.modules
         }
         if modules_to_evict:
-            prefixes = tuple(f"{name}." for name in modules_to_evict)
-            all_to_evict = modules_to_evict.copy()
-            for key in list(sys.modules.keys()):
-                if key.startswith(prefixes):
-                    all_to_evict.add(key)
-
-            for name in all_to_evict:
-                if name in sys.modules:
-                    del sys.modules[name]
+            with self._pending_evictions_lock:
+                self._pending_evictions.update(modules_to_evict)
 
         for cb in self._on_path_changed:
             cb(filepath)
+
+    def on_script_run(self) -> None:
+        """Hook called by ``ScriptRunner`` at the start of each script run.
+
+        Runs on the script thread before any user code executes.  Currently
+        flushes deferred ``sys.modules`` evictions so that the watcher thread
+        never mutates ``sys.modules`` while user code is running.
+        """
+        self.flush_pending_evictions()
+
+    def flush_pending_evictions(self) -> None:
+        """Remove pending watched modules from ``sys.modules``.
+
+        Called at the start of each script run on the script thread so that
+        ``sys.modules`` is not mutated from the file watcher thread while user
+        code (or cache serialization) is executing.
+        """
+        with self._pending_evictions_lock:
+            pending = self._pending_evictions
+            self._pending_evictions = set()
+
+        if not pending:
+            return
+
+        prefixes = tuple(f"{name}." for name in pending)
+        all_to_evict = set(pending)
+        for key in list(sys.modules.keys()):
+            if key.startswith(prefixes):
+                all_to_evict.add(key)
+
+        for name in all_to_evict:
+            sys.modules.pop(name, None)
 
     def close(self) -> None:
         for wm in self._watched_modules.values():
             wm.watcher.close()
         self._watched_modules = {}
         self._watched_pages = set()
+        with self._pending_evictions_lock:
+            self._pending_evictions.clear()
         self._is_closed = True
 
     def _register_watcher(
@@ -209,7 +249,7 @@ class LocalSourcesWatcher:
         except Exception as ex:
             # If we don't have permission to read this file, or if the file
             # doesn't exist, don't even add it to watchers.
-            _LOGGER.warning("Failed to watch file %s: %s", filepath, exc_info=ex)
+            _LOGGER.warning("Failed to watch file %s", filepath, exc_info=ex)
             return
 
     def _deregister_watcher(self, filepath: str) -> None:
@@ -261,7 +301,9 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # __file__ is the pathname of the file from which the module was loaded
         # if it was loaded from a file.
         # The __file__ attribute may be missing for certain types of modules
-        lambda m: [m.__file__] if hasattr(m, "__file__") else [],
+        lambda m: (
+            [m.__file__] if hasattr(m, "__file__") else cast("list[str | None]", [])
+        ),
         # https://docs.python.org/3/reference/import.html#__spec__
         # The __spec__ attribute is set to the module spec that was used
         # when importing the module. one exception is __main__,
@@ -274,20 +316,20 @@ def get_module_paths(module: ModuleType) -> set[str]:
         lambda m: (
             [m.__spec__.origin]
             if hasattr(m, "__spec__") and m.__spec__ is not None
-            else []
+            else cast("list[str | None]", [])
         ),
         # https://www.python.org/dev/peps/pep-0420/
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
         lambda m: (
-            list(m.__path__._path)
+            cast("list[str | None]", list(m.__path__._path))  # ty: ignore[invalid-argument-type]
             if hasattr(m, "__path__")
             # This check prevents issues with torch classes:
             # https://github.com/streamlit/streamlit/issues/10992
             and type(m.__path__).__name__ == "_NamespacePath"
             and hasattr(m.__path__, "_path")
-            else []
+            else cast("list[str | None]", [])
         ),
     ]
 

@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
 
-import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
+import { FloatingPortal } from "@floating-ui/react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 
 import {
   StyledCopyButton,
+  StyledJsonPathTooltipBody,
   StyledPathTooltip,
-  StyledTooltipTarget,
 } from "./styled-components"
+
+/**
+ * Minimum milliseconds between tooltip open and a dismissal click.
+ * Mirrors the guard in Popover.tsx and must stay in sync with the test mock.
+ */
+export const OPEN_GUARD_MS = 50
 
 export interface JsonPathTooltipProps {
   top: number
@@ -39,9 +44,10 @@ export interface JsonPathTooltipProps {
 /**
  * A tooltip that displays a JSON path and allows copying it to clipboard.
  *
- * Uses BaseWeb's Popover for consistent positioning and behavior.
- * Since Popover doesn't support positioning to a virtual position,
- * we use an invisible div as the anchor element.
+ * Uses floating-ui for virtual-element positioning (no DOM anchor required).
+ * The parent (`Json.tsx`) controls mount/unmount — this component is always
+ * "open" while mounted, and calls `clearTooltip` to signal the parent to
+ * unmount it.
  */
 function JsonPathTooltip({
   top,
@@ -49,24 +55,103 @@ function JsonPathTooltip({
   path,
   clearTooltip,
 }: JsonPathTooltipProps): ReactElement {
-  const [isOpen, setIsOpen] = useState(true)
-  const theme = useEmotionTheme()
-  const { colors, radii } = theme
-
   const { isCopied, copyToClipboard, label } = useCopyToClipboard()
 
-  const closeTooltip = useCallback((): void => {
-    setIsOpen(false)
-    clearTooltip()
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: true,
+    placement: "top",
+    offsetPx: 15,
+  })
+
+  // Track when the component mounted so the click-outside handler can ignore
+  // the same click that caused the tooltip to appear (timestamp guard mirrors
+  // the pattern in Popover.tsx). Set once on mount only — intentionally
+  // separate from the virtual-element effect so coordinate updates (top/left)
+  // do not incorrectly reset the guard window.
+  const openedAtRef = useRef(0)
+  useEffect(() => {
+    openedAtRef.current = Date.now()
+  }, [])
+
+  // Stable ref for clearTooltip so the dismissal effect does not need to
+  // re-register document listeners when the parent re-renders and passes a new
+  // function reference.
+  const clearTooltipRef = useRef(clearTooltip)
+  useEffect(() => {
+    clearTooltipRef.current = clearTooltip
   }, [clearTooltip])
+
+  // Ref for the floating body element — needed for click-outside detection.
+  const tooltipBodyRef = useRef<HTMLDivElement | null>(null)
+
+  // Set a floating-ui virtual element from the (top, left) click coordinates.
+  // A virtual element satisfies the ReferenceElement interface via
+  // getBoundingClientRect, so no invisible DOM anchor div is needed.
+  useEffect(() => {
+    refs.setReference({
+      getBoundingClientRect: () => ({
+        x: left,
+        y: top,
+        top,
+        left,
+        bottom: top,
+        right: left,
+        width: 0,
+        height: 0,
+      }),
+    })
+  }, [refs, top, left])
+
+  // Merge the floating ref with our local tooltipBodyRef for dismissal logic.
+  const setFloatingRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      refs.setFloating(node)
+      tooltipBodyRef.current = node
+    },
+    [refs]
+  )
+
+  // Document-level click-outside and Escape dismissal.
+  // Deps are empty — listeners are registered once on mount and read stable
+  // refs (openedAtRef, tooltipBodyRef, clearTooltipRef) rather than capturing
+  // props or state directly.
+  useEffect(() => {
+    const handleClick = (e: MouseEvent): void => {
+      // Guard against the click that opened the tooltip closing it immediately.
+      if (Date.now() - openedAtRef.current < OPEN_GUARD_MS) return
+      if (!tooltipBodyRef.current?.contains(e.target as Node)) {
+        clearTooltipRef.current()
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        clearTooltipRef.current()
+      }
+    }
+
+    document.addEventListener("click", handleClick)
+    document.addEventListener("keydown", handleKeyDown, true)
+    return () => {
+      document.removeEventListener("click", handleClick)
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
+  }, [])
 
   const handleCopyPath = useCallback((): void => {
     copyToClipboard(path)
   }, [copyToClipboard, path])
 
   return (
-    <Popover
-      content={
+    <FloatingPortal>
+      <StyledJsonPathTooltipBody
+        ref={setFloatingRef}
+        data-testid="stJsonPathTooltipBody"
+        style={floatingStyles}
+        role="dialog"
+        aria-label="JSON path"
+      >
         <StyledPathTooltip data-testid="stJsonPathTooltip">
           <code>{path}</code>
           <StyledCopyButton
@@ -83,52 +168,8 @@ function JsonPathTooltip({
             />
           </StyledCopyButton>
         </StyledPathTooltip>
-      }
-      placement={PLACEMENT.top}
-      accessibilityType={ACCESSIBILITY_TYPE.tooltip}
-      showArrow={false}
-      popoverMargin={15}
-      onClickOutside={closeTooltip}
-      onEsc={closeTooltip}
-      overrides={{
-        Body: {
-          style: {
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-            backgroundColor: "transparent",
-          },
-        },
-        Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
-            color: colors.bodyText,
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-          },
-        },
-      }}
-      isOpen={isOpen}
-    >
-      <StyledTooltipTarget
-        data-testid="stJsonPathTooltipTarget"
-        top={top}
-        left={left}
-      />
-    </Popover>
+      </StyledJsonPathTooltipBody>
+    </FloatingPortal>
   )
 }
 

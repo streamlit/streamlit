@@ -262,22 +262,21 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   const curViewRef = useRef<ReactNode>()
   // nodeRef is passed to CSSTransition to avoid deprecated findDOMNode usage
   const nodeRef = useRef<HTMLDivElement>(null)
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   const prevView = curViewRef.current
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   curViewRef.current = renderWidget()
 
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (isNullOrUndefined(curViewRef.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   if (notNullOrUndefined(curViewRef.current)) {
     animateIn = true
-    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
     renderView = curViewRef.current
   } else {
     animateIn = false

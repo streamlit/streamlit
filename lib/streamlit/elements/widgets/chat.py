@@ -23,6 +23,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    TypeAlias,
     cast,
     overload,
 )
@@ -52,7 +53,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
@@ -89,10 +90,14 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
     }
 )
 
+_ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
+
 
 @dataclass
-class ChatInputValue(MutableMapping[str, Any]):
+class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
 
     This dataclass contains the user's input text, any files uploaded, and optionally
     an audio recording. It provides a dict-like interface for accessing and modifying
@@ -146,7 +151,19 @@ class ChatInputValue(MutableMapping[str, Any]):
             return False
         return key in self._get_included_keys()
 
-    def __getitem__(self, item: str) -> str | list[UploadedFile] | UploadedFile | None:
+    @overload
+    def __getitem__(self, item: Literal["text"]) -> str: ...
+
+    @overload
+    def __getitem__(self, item: Literal["files"]) -> list[UploadedFile]: ...
+
+    @overload
+    def __getitem__(self, item: Literal["audio"]) -> UploadedFile | None: ...
+
+    @overload
+    def __getitem__(self, item: str) -> _ChatInputValueItem: ...
+
+    def __getitem__(self, item: str) -> _ChatInputValueItem:
         if item not in self._get_included_keys():
             raise KeyError(f"Invalid key: {item}")
         try:
@@ -181,10 +198,8 @@ class ChatInputValue(MutableMapping[str, Any]):
         except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {key}") from None
 
-    def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
-        result: dict[str, str | list[UploadedFile] | UploadedFile | None] = {
-            "text": self.text
-        }
+    def to_dict(self) -> dict[str, _ChatInputValueItem]:
+        result: dict[str, _ChatInputValueItem] = {"text": self.text}
         if self._include_files:
             result["files"] = self.files
         if self._include_audio:
@@ -393,8 +408,8 @@ class ChatInputSerde:
             _include_audio=self.accept_audio,
         )
 
-    def serialize(self, v: str | None) -> ChatInputValueProto:
-        return ChatInputValueProto(data=v)
+    def serialize(self, v: str | ChatInputValue | None) -> ChatInputValueProto:
+        return ChatInputValueProto(data=v.text if isinstance(v, ChatInputValue) else v)
 
 
 class ChatMixin:
@@ -556,6 +571,7 @@ class ChatMixin:
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -576,6 +592,7 @@ class ChatMixin:
         accept_audio: Literal[True],
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -596,6 +613,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -616,6 +634,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -732,6 +751,22 @@ class ChatMixin:
             Whether the chat input should be disabled. This defaults to
             ``False``.
 
+        submit_mode : "submit", "disable", or "stop"
+            Controls widget behavior after the user submits a message while
+            the script is running. This can be one of the following values:
+
+            - ``"submit"`` (default): The widget remains fully enabled after
+              submission. Users can submit new messages while the script
+              is running.
+            - ``"disable"``: The widget is automatically disabled after
+              the user submits a message and re-enables when the script
+              run completes. This prevents users from interrupting ongoing
+              operations like LLM streaming.
+            - ``"stop"``: The submit button transforms into a stop button
+              after submission. Clicking it stops the script execution,
+              similar to clicking "Stop" in the app's status widget. The
+              text area is disabled while the script runs.
+
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
 
@@ -768,7 +803,7 @@ class ChatMixin:
 
         Returns
         -------
-        None, str, or dict-like
+        None, str, or ChatInputValue
             The user's submission. This is one of the following types:
 
             - ``None``: If the user didn't submit a message, file, or audio
@@ -776,12 +811,17 @@ class ChatMixin:
             - A string: When the widget isn't configured to accept files or
               audio recordings, and the user submitted a message in the last
               rerun, the widget returns the user's message as a string.
-            - A dict-like object: When the widget is configured to accept files
-              or audio recordings, and the user submitted any content in the
-              last rerun, the widget returns a dict-like object.
+            - A ``ChatInputValue`` object: When the widget is configured to
+              accept files or audio recordings, and the user submitted any
+              content in the last rerun, the widget returns a ``ChatInputValue``
+              object. This object is dictionary-like and supports both key and
+              attribute notation.
               The object always includes the ``text`` attribute, and
               optionally includes ``files`` and/or ``audio`` attributes depending
               on the ``accept_file`` and ``accept_audio`` parameters.
+
+            To use ``ChatInputValue`` or ``UploadedFile`` in an annotation,
+            import them from ``streamlit.typing``.
 
             When the widget is configured to accept files or audio recordings,
             and the user submitted content in the last rerun, you can access
@@ -918,8 +958,13 @@ class ChatMixin:
         )
 
         if accept_file not in {True, False, "multiple", "directory"}:
-            raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            raise StreamlitValueError(
+                "accept_file", ["True", "False", "'multiple'", "'directory'"]
+            )
+
+        if submit_mode not in {"submit", "disable", "stop"}:
+            raise StreamlitValueError(
+                "submit_mode", ["'submit'", "'disable'", "'stop'"]
             )
 
         if max_upload_size is not None and (
@@ -957,6 +1002,7 @@ class ChatMixin:
             file_type=file_type,
             accept_audio=accept_audio,
             audio_sample_rate=audio_sample_rate,
+            submit_mode=submit_mode,
             width=width,
             height=height,
         )
@@ -969,9 +1015,9 @@ class ChatMixin:
             audio_sample_rate is not None
             and audio_sample_rate not in ALLOWED_SAMPLE_RATES
         ):
-            raise StreamlitAPIException(
-                f"Invalid audio_sample_rate: {audio_sample_rate}. "
-                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            raise StreamlitValueError(
+                "audio_sample_rate",
+                [str(rate) for rate in sorted(ALLOWED_SAMPLE_RATES)] + ["None"],
             )
 
         # It doesn't make sense to create a chat input inside a form.
@@ -1027,7 +1073,7 @@ class ChatMixin:
             accept_audio=accept_audio,
             allowed_types=file_type,
         )
-        widget_state = register_widget(  # type: ignore[misc]
+        widget_state = register_widget(
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
@@ -1036,6 +1082,7 @@ class ChatMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="chat_input_value",
+            disabled=disabled,
         )
 
         layout_config = create_layout_config(
@@ -1043,7 +1090,17 @@ class ChatMixin:
         )
 
         chat_input_proto.disabled = disabled
-        if widget_state.value_changed and widget_state.value is not None:
+
+        if submit_mode == "stop":
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_STOP
+        elif submit_mode == "disable":
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLE
+        else:
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
+
+        # Only plain str values are pushed to the frontend. ChatInputValue is the
+        # deserialized submit/return form and is not a valid programmatic set_value.
+        if widget_state.value_changed and isinstance(widget_state.value, str):
             # Support for programmatically setting the text in the chat input
             # via session state. Since chat input has a trigger state,
             # it works a bit differently to other widgets. We are not changing
@@ -1061,20 +1118,30 @@ class ChatMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
+        # Match the set_value guard so one-shot only fires when a str was pushed.
+        has_one_shot = widget_state.value_changed and isinstance(
+            widget_state.value, str
+        )
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input", chat_input_proto, layout_config=layout_config
+                "chat_input",
+                chat_input_proto,
+                layout_config=layout_config,
+                has_one_shot_effect=has_one_shot,
             )
         else:
             self.dg._enqueue(
-                "chat_input", chat_input_proto, layout_config=layout_config
+                "chat_input",
+                chat_input_proto,
+                layout_config=layout_config,
+                has_one_shot_effect=has_one_shot,
             )
 
         return widget_state.value if not widget_state.value_changed else None
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

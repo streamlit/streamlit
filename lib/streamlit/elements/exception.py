@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Final, TypeVar, cast
 from streamlit import config
 from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.errors import (
+    Error,
     MarkdownFormattedException,
     StreamlitAPIWarning,
 )
@@ -88,7 +89,7 @@ class ExceptionMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
@@ -98,10 +99,15 @@ def _exception(
     dg: DeltaGenerator,
     exception: BaseException,
     width: WidthWithoutContent = "stretch",
-    is_uncaught_app_exception: bool = False,
+    apply_show_error_details: bool = False,
 ) -> DeltaGenerator:
     exception_proto = ExceptionProto()
-    marshall(exception_proto, exception, width, is_uncaught_app_exception)
+    marshall(
+        exception_proto,
+        exception,
+        width,
+        apply_show_error_details=apply_show_error_details,
+    )
     return dg._enqueue("exception", exception_proto)
 
 
@@ -109,7 +115,7 @@ def marshall(
     exception_proto: ExceptionProto,
     exception: BaseException,
     width: WidthWithoutContent = "stretch",
-    is_uncaught_app_exception: bool = False,
+    apply_show_error_details: bool = False,
 ) -> None:
     """Marshalls an Exception.proto message.
 
@@ -125,8 +131,11 @@ def marshall(
         The width of the exception display. Can be either an integer (pixels) or "stretch".
         Defaults to "stretch".
 
-    is_uncaught_app_exception: bool
-        The exception originates from an uncaught error during script execution.
+    apply_show_error_details: bool
+        Redact the message, type, and stack trace of the exception as the
+        `client.showErrorDetails` config option requires. Set this for any
+        exception that Streamlit itself sends to the browser, because the
+        traceback can expose internal file paths.
     """
     validate_width(width)
 
@@ -143,6 +152,12 @@ def marshall(
 
     exception_proto.stack_trace.extend(stack_trace)
     exception_proto.is_warning = isinstance(exception, Warning)
+
+    # Flag exceptions Streamlit itself raised (subclasses of streamlit.errors.Error)
+    # so the frontend can scope the in-error "Install skills" callout to Streamlit
+    # API misuse — the class of mistake the agent skills can actually fix — rather
+    # than arbitrary user/runtime errors like ZeroDivisionError.
+    exception_proto.is_streamlit_exception = isinstance(exception, Error)
 
     width_config = WidthConfig()
 
@@ -189,7 +204,7 @@ Traceback:
             "\n".join(_get_stack_trace_str_list(str_exception)),
         )
 
-    if is_uncaught_app_exception:
+    if apply_show_error_details:
         show_error_details = config.get_option("client.showErrorDetails")
 
         show_message = (
@@ -216,6 +231,11 @@ Traceback:
             exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         if not show_type:
             exception_proto.ClearField("type")
+            # Provenance is only meaningful beside a visible type. With the type,
+            # message and trace all withheld, the frontend has nothing to offer
+            # help *about* — so don't let the in-error "install skills" callout
+            # claim it can fix an error the box just refused to describe.
+            exception_proto.ClearField("is_streamlit_exception")
         else:
             type_str = str(type(exception))
             exception_proto.type = type_str.replace("<class '", "").replace("'>", "")

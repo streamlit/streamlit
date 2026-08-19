@@ -32,6 +32,8 @@ import {
   Utf8,
   vectorFromArray,
 } from "apache-arrow"
+import { getLogger } from "loglevel"
+import { vi } from "vitest"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
@@ -462,6 +464,59 @@ describe("format", () => {
     }
     expect(format(Number.NaN, floatType)).toEqual("NaN")
     expect(format(Number.POSITIVE_INFINITY, floatType)).toEqual("Infinity")
+  })
+
+  it("returns String(x) when an unsupported type is encountered", () => {
+    // A boolean type does not match any explicit branch in format(), so the
+    // function should return String(x) at the end (post-try block).
+    expect(
+      format(false, {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("test", new Bool(), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "bool",
+          numpy_type: "bool",
+          metadata: null,
+        },
+      })
+    ).toEqual("false")
+  })
+
+  it("falls back to string coercion when interval metadata fails to parse", () => {
+    // Provide a pandas.interval extension marker but invalid JSON metadata,
+    // which causes JSON.parse to throw inside formatInterval and triggers the
+    // top-level catch in format().
+    const LOG = getLogger("arrowFormatUtils")
+    const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "pandas.interval"],
+      ["ARROW:extension:metadata", "{not-valid-json"],
+    ])
+    const intervalStruct = new Struct([
+      new Field("left", new Float64(), true),
+      new Field("right", new Float64(), true),
+    ])
+    const row = vectorFromArray([{ left: 0, right: 1 }], intervalStruct).get(0)
+    const result = format(row, {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("iv", intervalStruct, true, meta),
+      pandasType: {
+        field_name: "iv",
+        name: "iv",
+        pandas_type: "object",
+        numpy_type: "interval[float64, float64]",
+        metadata: null,
+      },
+    })
+    expect(result).toBe(String(row))
+    // Verify the top-level catch handler ran by checking LOG.warn was called.
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Unexpected error")
+    )
+    warnSpy.mockRestore()
   })
 })
 

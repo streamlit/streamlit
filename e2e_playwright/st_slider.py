@@ -370,9 +370,24 @@ bound_ss = st.slider(
 )
 st.write("Bound ss value:", bound_ss)
 
-# --- on_change="ignore" slider ---
+# --- setValue one-shot test (element hash memo regression) ---
+if "slider_setvalue_counter" not in st.session_state:
+    st.session_state.slider_setvalue_counter = 0
 
-# Slider 37 - on_change="ignore" suppresses rerun
+st.session_state.slider_setvalue_counter += 1
+
+st.slider(
+    "Programmatic slider",
+    min_value=0,
+    max_value=100,
+    value=50,
+    key="setvalue_test_slider",
+)
+st.write(f"Slider counter: {st.session_state.slider_setvalue_counter}")
+
+st.button("Trigger slider rerun")
+
+# --- on_change="ignore" slider ---
 ignore_slider = st.slider(
     "Ignore change slider",
     min_value=0,

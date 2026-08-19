@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -60,7 +59,7 @@ from streamlit.errors import (
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import BindOption, register_widget
+from streamlit.runtime.state import BindOption, PersistStateOption, register_widget
 from streamlit.type_util import (
     is_iterable,
 )
@@ -68,7 +67,6 @@ from streamlit.type_util import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetArgs,
@@ -212,7 +210,9 @@ class MultiSelectMixin:
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T]: ...
 
     @overload
@@ -235,7 +235,9 @@ class MultiSelectMixin:
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T | str]: ...
 
     @overload
@@ -258,7 +260,9 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -281,7 +285,9 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -428,6 +434,23 @@ class MultiSelectMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the selected-value chips can wrap onto multiple rows. This
+            can be one of the following:
+
+            - ``None`` (default): Streamlit chooses the wrapping behavior based
+              on the layout. Inside a horizontal container, the chips stay in a
+              single row and the chip area scrolls horizontally; in other
+              layouts, the chips wrap onto additional rows.
+            - ``True``: If the selected chips are too wide for the widget, they
+              wrap onto additional rows and the widget grows taller.
+            - ``False``: The selected chips stay in a single row at a fixed
+              height. If they don't fit, the chip area scrolls horizontally
+              while the clear and dropdown controls stay pinned.
+
+            Changing ``wrap`` only affects the layout; it does not reset the
+            widget's value.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -450,6 +473,21 @@ class MultiSelectMixin:
             deduplicated. If ``max_selections`` is set, excess values
             are truncated. When ``accept_new_options`` is ``True``, any
             value is accepted.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -527,7 +565,9 @@ class MultiSelectMixin:
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
             width=width,
+            wrap=wrap,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -550,7 +590,9 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -630,6 +672,11 @@ class MultiSelectMixin:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
         proto.filter_mode = proto_filter_mode
+        # wrap is layout-only and intentionally excluded from the element id
+        # (see compute_and_register_element_id above), so toggling it never
+        # resets the widget's value.
+        if wrap is not None:
+            proto.wrap = wrap
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
@@ -652,7 +699,9 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Multiselect is always clearable: users can always remove all
             # selections, so ?key= (empty URL param) should clear to [].
             clearable=True,
@@ -695,11 +744,16 @@ class MultiSelectMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
+        self.dg._enqueue(
+            widget_name,
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
 
         return current_values
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

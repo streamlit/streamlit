@@ -18,20 +18,32 @@ import { screen } from "@testing-library/react"
 
 import { Table as TableProto } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { MULTI } from "~lib/mocks/arrow/multi"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
+import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
-import { Table, TableProps } from "./Table"
+import { FALLBACK_HEADER_ROW_OFFSET_REM, Table, TableProps } from "./Table"
 
 const getProps = (data: Uint8Array): TableProps => ({
-  element: TableProto.create({ borderMode: TableProto.BorderMode.ALL }),
-  data: new Quiver({ data }),
+  element: TableProto.create({
+    borderMode: TableProto.BorderMode.ALL,
+    arrowData: { data },
+  }),
+  elementHash: "test-hash",
 })
 
 describe("st.table", () => {
+  it("keeps FALLBACK_HEADER_ROW_OFFSET_REM aligned with theme tokens", () => {
+    const { fontSizes, lineHeights, spacing } = mockTheme.emotion
+    const fontSizeRem = Number.parseFloat(fontSizes.sm)
+    const verticalPaddingRem = Number.parseFloat(spacing.twoXS) * 2
+    const expectedRem = fontSizeRem * lineHeights.small + verticalPaddingRem
+
+    expect(FALLBACK_HEADER_ROW_OFFSET_REM).toBe(`${expectedRem}rem`)
+  })
+
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
     render(<Table {...props} />)
@@ -58,8 +70,11 @@ describe("st.table", () => {
 
   it("renders with all borders when border=true", () => {
     const modifiedProps: TableProps = {
-      element: TableProto.create({ borderMode: TableProto.BorderMode.ALL }),
-      data: new Quiver({ data: UNICODE }),
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        arrowData: { data: UNICODE },
+      }),
+      elementHash: "test-hash",
     }
 
     const { container } = render(<Table {...modifiedProps} />)
@@ -74,10 +89,12 @@ describe("st.table", () => {
   })
 
   it("renders without borders when border=false", () => {
-    // Create a Quiver with border=false
     const modifiedProps: TableProps = {
-      element: TableProto.create({ borderMode: TableProto.BorderMode.NONE }),
-      data: new Quiver({ data: UNICODE }),
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.NONE,
+        arrowData: { data: UNICODE },
+      }),
+      elementHash: "test-hash",
     }
 
     const { container } = render(<Table {...modifiedProps} />)
@@ -97,8 +114,9 @@ describe("st.table", () => {
     const modifiedProps: TableProps = {
       element: TableProto.create({
         borderMode: TableProto.BorderMode.HORIZONTAL,
+        arrowData: { data: UNICODE },
       }),
-      data: new Quiver({ data: UNICODE }),
+      elementHash: "test-hash",
     }
 
     const { container } = render(<Table {...modifiedProps} />)
@@ -187,9 +205,7 @@ describe("st.table", () => {
     )
     expect(firstRowIndexCells.length).toBeGreaterThan(1)
 
-    const firstIndexLeft = getComputedStyle(
-      firstRowIndexCells[0] as HTMLElement
-    ).left
+    const firstIndexLeft = getComputedStyle(firstRowIndexCells[0]).left
     // Empty string means no sticky left positioning was applied
     expect(firstIndexLeft).toBe("")
   })
@@ -233,8 +249,9 @@ describe("st.table", () => {
       element: TableProto.create({
         borderMode: TableProto.BorderMode.ALL,
         hideIndex: true,
+        arrowData: { data: UNICODE },
       }),
-      data: new Quiver({ data: UNICODE }),
+      elementHash: "test-hash",
     }
 
     const { container } = render(<Table {...props} />)
@@ -253,8 +270,9 @@ describe("st.table", () => {
       element: TableProto.create({
         borderMode: TableProto.BorderMode.ALL,
         hideIndex: false,
+        arrowData: { data: UNICODE },
       }),
-      data: new Quiver({ data: UNICODE }),
+      elementHash: "test-hash",
     }
 
     const { container } = render(<Table {...props} />)
@@ -269,8 +287,9 @@ describe("st.table", () => {
       element: TableProto.create({
         borderMode: TableProto.BorderMode.ALL,
         hideHeader: true,
+        arrowData: { data: UNICODE },
       }),
-      data: new Quiver({ data: UNICODE }),
+      elementHash: "test-hash",
     }
 
     const { container } = render(<Table {...props} />)
@@ -291,8 +310,9 @@ describe("st.table", () => {
       element: TableProto.create({
         borderMode: TableProto.BorderMode.ALL,
         hideHeader: false,
+        arrowData: { data: UNICODE },
       }),
-      data: new Quiver({ data: UNICODE }),
+      elementHash: "test-hash",
     }
 
     const { container } = render(<Table {...props} />)

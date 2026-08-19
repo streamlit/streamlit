@@ -105,7 +105,8 @@ async function resampleAndConvertToMono(
     throw new Error(
       `Failed to resample audio from ${sampleRate}Hz to ${targetSampleRate}Hz: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     )
   }
 }

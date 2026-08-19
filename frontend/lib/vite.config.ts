@@ -18,13 +18,15 @@
 import react from "@vitejs/plugin-react-swc"
 import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
-import viteTsconfigPaths from "vite-tsconfig-paths"
 
 import path from "path"
 
 // We do not explicitly set the DEV_BUILD in any of our processes
 // This is a convenience for developers for debugging purposes
 const DEV_BUILD = Boolean(process.env.DEV_BUILD)
+// DEV_WATCH is used to simplify development of the library
+// to speed up rebuilds for development of Streamlit
+const DEV_WATCH = Boolean(process.env.DEV_WATCH)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -34,24 +36,32 @@ export default defineConfig({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],
     }),
-    viteTsconfigPaths(),
-    dts({
-      insertTypesEntry: true,
-      // Keep declaration emit on a separate tsconfig so normal typechecking can
-      // still resolve sibling workspace source without pulling those files into
-      // the build root under TypeScript 6.
-      tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
-    }),
+    // Skip DTS generation in dev mode - types resolve from source via tsconfig paths
+    ...(!DEV_WATCH
+      ? [
+          dts({
+            insertTypesEntry: true,
+            // Keep declaration emit on a separate tsconfig so normal typechecking can
+            // still resolve sibling workspace source without pulling those files into
+            // the build root under TypeScript 6.
+            tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
+          }),
+        ]
+      : []),
   ],
   build: {
     outDir: "dist",
-    sourcemap: DEV_BUILD,
+    sourcemap: DEV_BUILD || DEV_WATCH,
+    reportCompressedSize: false,
     lib: {
       // Specify the entry point of your library
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "@streamlit/lib", // Replace with your library's name
       fileName: format => `streamlit-lib.${format}.js`,
-      formats: ["es", "umd", "cjs"], // Output formats
+      // For development, only build es format since that is what Streamlit uses.
+      // DEV_WATCH is intentionally workspace-only: consumers in the monorepo
+      // use the ESM entry (import/module), so missing CJS/UMD outputs are fine.
+      formats: DEV_WATCH ? ["es"] : ["es", "umd", "cjs"],
     },
     rolldownOptions: {
       input: "src/index.ts",
@@ -66,6 +76,7 @@ export default defineConfig({
     },
   },
   resolve: {
+    tsconfigPaths: true,
     alias: {
       "~lib": path.resolve(__dirname, "../lib/src"),
     },

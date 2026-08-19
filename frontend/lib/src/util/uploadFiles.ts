@@ -54,7 +54,7 @@ export const uploadFiles = async ({
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
 }> => {
-  let fileUrls: IFileURLs[] = []
+  let fileUrls: IFileURLs[]
 
   try {
     fileUrls = await uploadClient.fetchFileURLs(files)
@@ -97,7 +97,7 @@ export const uploadFiles = async ({
   )
 
   widgetMgr.setFileUploaderStateValue(
-    widgetInfo,
+    widgetInfo.id,
     new FileUploaderStateProto({
       uploadedFileInfo: successfulUploads.map(
         ({ file, fileUrl }) =>
@@ -110,9 +110,10 @@ export const uploadFiles = async ({
       ),
     }),
     {
-      fromUi: true,
-    },
-    fragmentId
+      formId: widgetInfo.formId,
+      fragmentId,
+      fromUser: true,
+    }
   )
 
   return { successfulUploads, failedUploads }

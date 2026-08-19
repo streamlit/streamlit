@@ -37,7 +37,3 @@ export const StyledForm = styled.div<StyledFormProps>(
     overflow: overflow,
   })
 )
-
-export const StyledErrorContainer = styled.div(({ theme }) => ({
-  marginTop: theme.spacing.lg,
-}))

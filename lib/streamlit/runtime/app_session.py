@@ -39,12 +39,20 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.runtime import caching
+from streamlit.runtime.backend_operation_handler import (
+    BackendOperationDispatcher,
+    DeferredFileHandler,
+    DismissSkillsNudgeHandler,
+    InstallSkillsHandler,
+)
+from streamlit.runtime.dataframe_chunk_handler import DataframeChunkHandler
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.state.query_params import sanitize_query_string
 from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
@@ -55,15 +63,28 @@ if TYPE_CHECKING:
 
     from google.protobuf.internal.containers import RepeatedScalarFieldContainer
 
-    from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
+    from streamlit.proto.BackMsg_pb2 import (
+        BackendOperationRequest,
+        BackMsg,
+    )
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.state import SessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
     from streamlit.source_util import PageHash, PageInfo
 
 _LOGGER: Final = get_logger(__name__)
+
+# Skills-nudge suppression reasons worth reporting to telemetry: the ones that
+# tell us something actionable about adoption. The rest are deliberately dropped
+# to ``""`` — ``headless`` alone fires for every deployed app and would swamp the
+# metric, and "no agent harness" / "already installed" / "user dismissed" are
+# either already measurable from the page profile or simply not interesting.
+_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_failed"})
 
 
 class AppSessionState(Enum):
@@ -97,6 +118,7 @@ class AppSession:
         message_enqueued_callback: Callable[[], None] | None,
         user_info: UserInfoType,
         session_id_override: str | None = None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         """Initialize the AppSession.
 
@@ -131,6 +153,11 @@ class AppSession:
             The ID to assign to this session. Setting this can be useful when the
             service that a Streamlit Runtime is running in wants to tie the lifecycle of
             a Streamlit session to some other session-like object that it manages.
+
+        on_script_error
+            Callback to invoke when an uncaught exception occurs in user script code.
+            Returns True to suppress the default exception display, or False/None
+            to show the exception normally.
         """
 
         # Each AppSession has a unique string ID.
@@ -140,6 +167,7 @@ class AppSession:
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
+        self._on_script_error = on_script_error
         self._pages_manager = PagesManager(
             script_data.main_script_path, self._script_cache
         )
@@ -177,11 +205,46 @@ class AppSession:
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
+        self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
+
+        # Store references to background tasks to prevent garbage collection.
+        # Tasks are removed via add_done_callback when they complete.
+        self._background_tasks: set[asyncio.Task[None]] = set()
+
         _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def __del__(self) -> None:
         """Ensure that we call shutdown() when an AppSession is garbage collected."""
         self.shutdown()
+
+    def _create_backend_operation_dispatcher(self) -> BackendOperationDispatcher:
+        """Create and configure the backend operation dispatcher.
+
+        Registers handlers for all supported backend operation request types.
+        """
+        dispatcher = BackendOperationDispatcher()
+
+        dispatcher.register(
+            "deferred_file",
+            DeferredFileHandler(lambda: runtime.get_instance().media_file_mgr),
+        )
+
+        dispatcher.register(
+            "dataframe_chunk",
+            DataframeChunkHandler(lambda: runtime.get_instance().dataframe_source_mgr),
+        )
+
+        # Bind the app dir via the ScriptData (not ``self``) so the handler's
+        # closure does not capture the AppSession, which would create a
+        # reference cycle the disconnect ref-leak test guards against.
+        script_data = self._script_data
+        dispatcher.register(
+            "install_skills",
+            InstallSkillsHandler(lambda: os.path.dirname(script_data.main_script_path)),
+        )
+        dispatcher.register("dismiss_skills_nudge", DismissSkillsNudgeHandler())
+
+        return dispatcher
 
     def register_file_watchers(self) -> None:
         """Register handlers to be called when various files are changed.
@@ -263,6 +326,7 @@ class AppSession:
                 rt = runtime.get_instance()
                 rt.media_file_mgr.clear_session_refs(self.id)
                 rt.media_file_mgr.remove_orphaned_files()
+                rt.dataframe_source_mgr.clear_all_for_session(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -319,15 +383,17 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
-            elif msg_type == "deferred_file_request":
-                # Execute deferred callable in a separate thread to avoid blocking
-                # the main event loop. Use create_task to run the async handler.
-                # Store task reference to prevent garbage collection.
+            elif msg_type == "backend_operation_request":
                 task = asyncio.create_task(
-                    self._handle_deferred_file_request(msg.deferred_file_request)
+                    self._handle_backend_operation_request(
+                        msg.backend_operation_request
+                    )
                 )
-                # Add task name for better debugging
-                task.set_name(f"deferred_file_{msg.deferred_file_request.file_id}")
+                task.set_name(f"backend_op_{msg.backend_operation_request.request_id}")
+                # Store task reference to prevent garbage collection.
+                # Remove from set when done via callback.
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -411,14 +477,15 @@ class AppSession:
             if client_state.HasField("context_info"):
                 self._client_state.context_info.CopyFrom(client_state.context_info)
 
+            query_string = sanitize_query_string(client_state.query_string)
             rerun_data = RerunData(
-                query_string=client_state.query_string,
+                query_string=query_string,
                 widget_states=client_state.widget_states,
                 page_script_hash=client_state.page_script_hash,
                 page_name=client_state.page_name,
                 fragment_id=fragment_id or None,
                 is_auto_rerun=client_state.is_auto_rerun,
-                cached_message_hashes=set(client_state.cached_message_hashes),
+                cached_message_hashes=frozenset(client_state.cached_message_hashes),
                 context_info=client_state.context_info,
             )
         else:
@@ -460,6 +527,19 @@ class AppSession:
         """Clear the user info for this session."""
         self._user_info.clear()
 
+    def matches_user_info(self, user_info: UserInfoType) -> bool:
+        """Return whether ``user_info`` matches this session's owner identity.
+
+        Used to bind a session to the identity of the connection that created
+        it. A reconnect (via ``existing_session_id``) may only reuse this
+        session when the reconnecting connection presents the same
+        ``user_info``; otherwise a different user could take over the session
+        merely by presenting its id. The comparison is intentionally strict
+        (full equality) so any identity difference fails closed to a fresh
+        session rather than allowing a takeover.
+        """
+        return self._user_info == user_info
+
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
         self._scriptrunner = ScriptRunner(
@@ -472,6 +552,8 @@ class AppSession:
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
+            on_script_error=self._on_script_error,
+            local_sources_watcher=self._local_sources_watcher,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -706,6 +788,9 @@ class AppSession:
                 # Only clear media files and session caches if the script is done
                 # running AND the session is actually shutting down.
                 runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+                runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
+                    self.id
+                )
                 self.clear_session_caches()
 
             self._client_state = client_state
@@ -814,7 +899,69 @@ class AppSession:
         imsg.is_hello = self._script_data.is_hello
         imsg.session_id = self.id
 
+        # Recommend installing the bundled agent skills when running locally
+        # with an AI agent present, no skills installed yet, and the browser on a
+        # direct-loopback connection, so the frontend can surface a one-click
+        # "install skills" nudge. ``suppressed_reason`` records (for telemetry)
+        # why an otherwise-eligible nudge was withheld.
+        recommend, suppressed_reason = self._compute_skills_nudge_state()
+        imsg.recommend_skills_install = recommend
+        imsg.skills_nudge_suppressed_reason = suppressed_reason
+
         return msg
+
+    def _compute_skills_nudge_state(self) -> tuple[bool, str]:
+        """Compute the in-app skills-nudge state for the NewSession message.
+
+        Returns ``(recommend, suppressed_reason)``:
+
+        - ``recommend`` is ``True`` only when the nudge is eligible
+          (``skills.nudge_suppression_reason`` returns ``""``) AND the browser is
+          connected directly over loopback. The loopback requirement is an
+          intentionally conservative eligibility rule: Docker/VM/reverse-proxy/SSH-tunnel
+          setups are legitimate local dev but also where the app may be
+          shared/deployed, so we don't surface an in-app CTA there.
+        - ``suppressed_reason`` is why an otherwise-eligible nudge was withheld,
+          else ``""`` — recorded purely so adoption telemetry can measure
+          suppression instead of it being silent. Only the informative reasons are
+          reported (see ``_REPORTED_NUDGE_SUPPRESSION_REASONS``); the high-volume
+          uninteresting ones, above all ``headless`` (every deployed app), would
+          swamp the metric.
+
+        Recomputed on each NewSession rather than memoized: the heavy filesystem
+        detection is cached in ``skills`` (and invalidated when skills are
+        installed in-app), so a stale per-session value would otherwise keep
+        recommending the nudge after a successful install. Guarded so this
+        non-essential nudge can never break session creation.
+        """
+        try:
+            # Never nudge in the bundled ``streamlit hello`` demo: its script
+            # lives inside the Streamlit package, so a one-click install would
+            # write skills into the install tree (e.g. site-packages), and a
+            # call-to-action card is inappropriate on the demo app anyway.
+            if self._script_data.is_hello:
+                return False, ""
+
+            from streamlit.runtime.backend_operation_handler import (
+                connection_locality,
+            )
+            from streamlit.web import skills
+
+            app_dir = os.path.dirname(self._script_data.main_script_path)
+            reason = skills.nudge_suppression_reason(app_dir)
+            if reason:
+                return False, (
+                    reason if reason in _REPORTED_NUDGE_SUPPRESSION_REASONS else ""
+                )
+            locality = connection_locality(self.id)
+            if locality == "loopback":
+                return True, ""
+            # Eligible, but the browser is not on a direct-loopback connection:
+            # withhold the nudge and record the topology for adoption telemetry.
+            return False, f"non_loopback_{locality}"
+        except Exception as ex:  # pragma: no cover - defensive
+            _LOGGER.debug("Failed to compute skills nudge state", exc_info=ex)
+            return False, ""
 
     def _create_script_finished_message(
         self, status: ForwardMsg.ScriptFinishedStatus.ValueType
@@ -827,7 +974,12 @@ class AppSession:
     def _create_exception_message(self, e: BaseException) -> ForwardMsg:
         """Create and return an Exception ForwardMsg."""
         msg = ForwardMsg()
-        exception_utils.marshall(msg.delta.new_element.exception, e)
+        # The apply_show_error_details flag applies the client.showErrorDetails
+        # redaction. Without this flag, the session sends the internal message,
+        # type, and stack trace of the error to the browser.
+        exception_utils.marshall(
+            msg.delta.new_element.exception, e, apply_show_error_details=True
+        )
         return msg
 
     def _handle_git_information_request(self) -> None:
@@ -947,33 +1099,34 @@ class AppSession:
 
         self._enqueue_forward_msg(msg)
 
-    async def _handle_deferred_file_request(self, request: DeferredFileRequest) -> None:
-        """Handle a deferred_file_request BackMsg sent by the client.
+    async def _handle_backend_operation_request(
+        self, request: BackendOperationRequest
+    ) -> None:
+        """Handle a backend_operation_request BackMsg sent by the client.
 
-        Execute the deferred callable in a separate thread and send the URL back
-        to the frontend. This prevents blocking the main event loop if the callable
-        is slow.
+        Dispatches the request to the appropriate handler and sends the
+        response back to the frontend.
         """
-        response = ForwardMsg()
-        response.deferred_file_response.file_id = request.file_id
-
-        try:
-            # Execute the deferred callable in a separate thread to avoid blocking
-            # the main event loop. This is critical for shared apps where a slow
-            # callable could freeze all sessions.
-            url = await asyncio.to_thread(
-                runtime.get_instance().media_file_mgr.execute_deferred,
-                request.file_id,
+        if request.session_id != self.id:
+            _LOGGER.warning(
+                "Rejecting backend operation request %s: session ID mismatch "
+                "(request=%s, expected=%s)",
+                request.request_id,
+                request.session_id[:8] if request.session_id else "<none>",
+                self.id[:8] if self.id else "<none>",
             )
-            response.deferred_file_response.url = url
-        except Exception as e:
-            # Send error response if callable execution fails
-            _LOGGER.exception(
-                "Error executing deferred callable for file_id %s", request.file_id
+            msg = ForwardMsg()
+            msg.backend_operation_response.request_id = request.request_id
+            msg.backend_operation_response.error_msg = (
+                "Invalid session ID for backend operation request"
             )
-            response.deferred_file_response.error_msg = str(e)
+            self._enqueue_forward_msg(msg)
+            return
 
-        self._enqueue_forward_msg(response)
+        response = await self._backend_operation_dispatcher.dispatch(request, self.id)
+        msg = ForwardMsg()
+        msg.backend_operation_response.CopyFrom(response)
+        self._enqueue_forward_msg(msg)
 
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]
@@ -1043,6 +1196,7 @@ def _populate_config_msg(msg: Config) -> None:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
     msg.show_error_links = _get_show_error_links()
+    msg.disable_data_export = config.get_option("client.disableDataExport")
 
 
 def _parse_and_populate_chart_colors(
