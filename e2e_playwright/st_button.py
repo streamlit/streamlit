@@ -177,3 +177,26 @@ with st.container(key="wrap_buttons"):
 # width narrower than the label forces the overflow.
 with st.container(horizontal=True, width=200, key="wrap_auto_horizontal"):
     st.button(_WRAP_LABEL, key="wrap_auto_button")
+
+# Direct column children use the same compact auto default. Real nested layout
+# containers reset that direct placement, while an explicit wrap value wins.
+with st.container(key="wrap_column_placements"):
+    auto_column, explicit_column, nested_column = st.columns(3)
+    auto_column.button(_WRAP_LABEL, width=150, key="wrap_auto_direct_column_button")
+    explicit_column.button(
+        _WRAP_LABEL,
+        width=150,
+        wrap=True,
+        key="wrap_true_direct_column_button",
+    )
+    with nested_column.container():
+        st.button(_WRAP_LABEL, width=150, key="wrap_auto_nested_column_button")
+
+# A form is a layout boundary: placing the form in a column does not make
+# the submit button a direct column child, so auto wrap still wraps.
+with st.container(key="wrap_form_in_column"):
+    form_col, _ = st.columns(2)
+    with form_col.form("wrap_column_form"):
+        st.form_submit_button(
+            _WRAP_LABEL, width=150, key="wrap_auto_form_submit_in_column"
+        )

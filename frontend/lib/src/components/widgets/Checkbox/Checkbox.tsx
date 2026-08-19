@@ -89,7 +89,8 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
-  // wrap=None resolves from layout: no-wrap in horizontal containers, wrap otherwise.
+  // wrap=None: no-wrap in a horizontal container or as a direct column child,
+  // wrap otherwise.
   // When truncated, a native title on the label reveals the full label on hover.
   // Unlike a button (whose help tooltip covers the whole control), help here lives
   // on a separate icon, so the title and help never compete and both stay enabled.

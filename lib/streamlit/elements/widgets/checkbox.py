@@ -171,10 +171,10 @@ class CheckboxMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the checkbox keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column, the checkbox keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the checkbox, it wraps onto
               additional lines and the widget grows taller.
             - ``False``: The checkbox keeps its standard, single-row height. A
@@ -361,10 +361,10 @@ class CheckboxMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the toggle keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column, the toggle keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the toggle, it wraps onto
               additional lines and the widget grows taller.
             - ``False``: The toggle keeps its standard, single-row height. A

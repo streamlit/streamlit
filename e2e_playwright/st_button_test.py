@@ -15,7 +15,7 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 37
+TOTAL_BUTTONS = 40
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
 
@@ -344,6 +344,38 @@ def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
     # Same default (auto) in a vertical container wraps and gets no title.
     auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
     expect(auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+
+def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
+    """Direct column children keep auto no-wrap, including after columns stack.
+
+    Nested containers and a form placed in a column wrap; wrap=True still wraps.
+    """
+    auto_direct = get_element_by_key(app, "wrap_auto_direct_column_button")
+    explicit_true = get_element_by_key(app, "wrap_true_direct_column_button")
+    auto_nested = get_element_by_key(app, "wrap_auto_nested_column_button")
+    form_submit = get_element_by_key(app, "wrap_auto_form_submit_in_column")
+
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(explicit_true.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(auto_nested.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(form_submit.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    def button_height(element: Locator) -> float:
+        box = element.locator("button").bounding_box()
+        assert box is not None
+        return box["height"]
+
+    direct_height = button_height(auto_direct)
+    assert button_height(explicit_true) > direct_height + 4
+    assert button_height(auto_nested) > direct_height + 4
+    assert button_height(form_submit) > direct_height + 4
+
+    app.set_viewport_size({"width": 390, "height": 844})
+    auto_direct.scroll_into_view_if_needed()
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
 
 def test_wrap_false_help_takes_precedence_over_title(app: Page):
