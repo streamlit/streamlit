@@ -29,8 +29,6 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-VIDEO_ELEMENTS_COUNT = 13
-
 
 def _select_video_to_show(app: Page, label: str) -> Locator:
     select_radio_option(app, re.compile(f"^{label}$"))
