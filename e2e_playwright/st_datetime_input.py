@@ -141,6 +141,12 @@ bound_minmax_dt = st.datetime_input(
 )
 st.write("Bound minmax datetime:", bound_minmax_dt)
 
+st.datetime_input(
+    "Datetime input narrow",
+    BASE_DATETIME,
+    width=110,
+    key="narrow_datetime",
+)
 st.markdown("Dynamic datetime input:")
 
 if st.toggle("Update datetime input props"):

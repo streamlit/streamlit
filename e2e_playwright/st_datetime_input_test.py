@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 18
+NUM_DATETIME_INPUTS = 19
 
 
 def test_datetime_input_widget_rendering(
@@ -110,6 +110,16 @@ def test_datetime_input_dropdown(app: Page, assert_snapshot: ImageCompareFunctio
     expect(calendar).to_be_visible()
 
     assert_snapshot(calendar, name="st_datetime_input-dropdown")
+
+
+def test_datetime_input_narrow_rendering(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that datetime input renders correctly in a narrow container."""
+    assert_snapshot(
+        get_element_by_key(app, "narrow_datetime"),
+        name="st_datetime_input-narrow",
+    )
 
 
 def test_help_tooltip(app: Page):

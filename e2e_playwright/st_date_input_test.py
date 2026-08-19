@@ -14,7 +14,7 @@
 
 
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from playwright.sync_api import Page, expect
 
@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 22
+NUM_DATE_INPUTS = 24
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -110,6 +110,25 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
         get_date_input(themed_app, "Date input 17 (width='stretch')"),
         name="st_date_input-width_stretch",
     )
+
+
+def test_date_input_narrow_rendering(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that date inputs render correctly in narrow containers."""
+    narrow_single = get_element_by_key(app, "narrow_single")
+    assert_snapshot(narrow_single, name="st_date_input-narrow_single")
+
+    narrow_range = get_element_by_key(app, "narrow_range")
+    assert_snapshot(narrow_range, name="st_date_input-narrow_range")
+
+    # Field must not overflow its container border
+    for key in ("narrow_single", "narrow_range"):
+        container = get_element_by_key(app, key).get_by_test_id("stDateInput")
+        field = container.get_by_test_id("stDateInputField")
+        container_box = container.bounding_box()
+        field_box = field.bounding_box()
+        assert container_box is not None
+        assert field_box is not None
+        assert field_box["width"] <= container_box["width"]
 
 
 def test_help_tooltip_works(app: Page):
@@ -315,6 +334,21 @@ def test_range_date_calendar_picker_rendering(
         calendar,
         name="st_date_input-range_two_dates_calendar",
     )
+
+
+def test_today_indicator_in_calendar(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that today's date is visually marked in the calendar popover."""
+    app.clock.set_fixed_time(datetime(2026, 3, 7, 12, 0, 0))
+    app.reload()
+    wait_for_app_loaded(app)
+
+    date_field = get_date_input(app, "Empty value").get_by_test_id("stDateInputField")
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    assert_snapshot(calendar, name="st_date_input-calendar_today_indicator")
 
 
 def test_single_value_reverts_to_committed_if_calendar_closed_empty(app: Page):
