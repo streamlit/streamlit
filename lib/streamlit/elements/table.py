@@ -165,10 +165,10 @@ class TableMixin:
 
         While ``st.dataframe`` is geared towards larger datasets and interactive
         data exploration, ``st.table`` is useful for small, static, styled
-        tables that don't need interactive exploration. For example, ``st.table``
-        is a great fit for description lists and other key-value data, confusion
-        matrices, and leaderboards. Additionally, ``st.table`` supports Markdown
-        and offers more extensive Pandas Styler support than ``st.dataframe``.
+        tables. For example, ``st.table`` is a great fit for description lists
+        and other key-value data, confusion matrices, and leaderboards.
+        Additionally, ``st.table`` supports Markdown and offers more extensive
+        Pandas Styler support than ``st.dataframe``.
 
         Parameters
         ----------

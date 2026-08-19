@@ -171,15 +171,15 @@ st.dataframe(
 | ---------------- | ----------------------------------------------------------------------------- |
 | `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
 | `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
-| `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler  |
+| `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler support |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
 
 ## Description and key-value lists
 
-`st.table` is a great fit for description lists and compact key-value summaries. Pass a mapping of keys to **scalar** values: keys become the row labels, and Streamlit auto-hides the generated column header. A dict of lists is treated as a columnar table instead (headers shown).
+`st.table` is a great fit for description lists and compact key-value summaries. Pass a mapping of keys to **scalar** values: keys become the row index (shown by default), and Streamlit auto-hides the generated `value` header. A dict of lists is treated as a columnar table instead (headers shown).
 
-Use `border="horizontal"` and `width="content"` for a compact list. Keys are shown as the row index; the generated `value` header is hidden. Pass `hide_index` or `hide_header` only to override those defaults.
+Use `border="horizontal"` and `width="content"` for a compact list. Pass `hide_index` or `hide_header` only to override those defaults.
 
 ```python
 st.table(
@@ -200,11 +200,11 @@ For `st.dataframe` and `st.data_editor`, use `column_config` for **all value for
 `st.table` does not have a `column_config` parameter. For small, static tables, pass a Pandas Styler to `st.table` for more extensive formatting and styling.
 
 ```python
-# BAD: Styler for formatting — AI tends to overuse this
+# BAD: Styler for formatting with st.dataframe — AI tends to overuse this
 styled = df.style.format({"revenue": "${:.2f}", "growth": "{:.1%}"})
 st.dataframe(styled)
 
-# GOOD: column_config for formatting
+# GOOD: column_config for formatting with st.dataframe
 st.dataframe(
     df,
     column_config={
