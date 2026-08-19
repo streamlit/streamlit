@@ -187,7 +187,7 @@ st.button("1\\. Not a list")
 
 ## Markdown in st.table
 
-`st.table()` renders Markdown in cells and headers. A mapping of keys to scalar values is treated as a key-value list (generated header hidden).
+`st.table()` renders Markdown in cells, index labels, and headers. A mapping of keys to scalar values is treated as a key-value list, so the keys render as index labels and the generated header is hidden.
 
 ```python
 st.table(

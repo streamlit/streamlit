@@ -711,11 +711,10 @@ class ArrowMixin:
             values, colors, and font weights. It does not support some of the
             more exotic styling options, like bar charts, hovering, and
             captions. For small, static tables that need more extensive Pandas
-            Styler support, use ``st.table``. For ``st.dataframe``, use column
-            configuration as an alternative where the needed formatting or
-            display option is available. Text and number formatting from
-            ``column_config`` always takes precedence over text and number
-            formatting from ``pandas.Styler``.
+            Styler support, use ``st.table``. Prefer column configuration when
+            it covers the formatting or display option you need. Text and
+            number formatting from ``column_config`` always takes precedence
+            over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.

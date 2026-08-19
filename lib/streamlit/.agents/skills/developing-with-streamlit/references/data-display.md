@@ -179,7 +179,7 @@ Use `st.dataframe` with `on_select` for row selection — do **not** use `st.dat
 
 `st.table` is a great fit for description lists and compact key-value summaries. Pass a mapping of keys to **scalar** values: keys become the row labels, and Streamlit auto-hides the generated column header. A dict of lists is treated as a columnar table instead (headers shown).
 
-Use `border="horizontal"` and `width="content"` for a compact list. Override with `hide_index` / `hide_header` when the auto-hide defaults are not what you want.
+Use `border="horizontal"` and `width="content"` for a compact list. Keys are shown as the row index; the generated `value` header is hidden. Pass `hide_index` or `hide_header` only to override those defaults.
 
 ```python
 st.table(
