@@ -836,6 +836,156 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
 
     @parameterized.expand(
+        [
+            (st.pills, ["a"], [True, False, False]),
+            (st.pills, ["b"], [False, True, False]),
+            (st.pills, ["a", "c"], [True, False, True]),
+            (st.segmented_control, ["a"], [True, False, False]),
+        ]
+    )
+    def test_disabled_with_values(
+        self,
+        command: Callable,
+        disabled_values: list[str],
+        expected_disabled_status: list[bool],
+    ):
+        """Test that disabled can be passed as a list of values."""
+        command("label", ["a", "b", "c"], disabled=disabled_values)
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == expected_disabled_status
+
+    @parameterized.expand(
+        [
+            (st.pills, [True, False, True], [True, False, True]),
+            (st.pills, [False, False, False], [False, False, False]),
+            (st.segmented_control, [False, True, False], [False, True, False]),
+        ]
+    )
+    def test_disabled_with_bool_sequence(
+        self,
+        command: Callable,
+        disabled_mask: list[bool],
+        expected_disabled_status: list[bool],
+    ):
+        """Test that disabled can be passed as a list of booleans."""
+        command("label", ["a", "b", "c"], disabled=disabled_mask)
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == expected_disabled_status
+
+    def test_disabled_bool_mask_length_mismatch(self):
+        """Test that a length mismatch raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.pills("label", ["a", "b", "c"], disabled=[True, False])
+
+    def test_disabled_all_options_sets_widget_disabled(self):
+        """Test that disabling all options sets the widget-level disabled flag."""
+        st.pills("label", ["a", "b", "c"], disabled=[True, True, True])
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is True
+        assert [option.disabled for option in delta.options] == [True, True, True]
+
+    def test_disabled_boolean_option_values(self):
+        """Test that boolean option values are treated as values, not masks."""
+        st.pills("label1", [True, False], disabled=[True])
+        delta1 = self.get_delta_from_queue().new_element.button_group
+        assert delta1.disabled is False
+        assert [option.disabled for option in delta1.options] == [True, False]
+
+        # Equal-length all-bool disabled lists are value lists when options
+        # themselves are booleans (not positional masks).
+        st.pills("label2", [False, True], disabled=[False, True])
+        delta2 = self.get_delta_from_queue().new_element.button_group
+        assert delta2.disabled is True
+        assert [option.disabled for option in delta2.options] == [True, True]
+
+    def test_disabled_bool_mask_on_numeric_options(self):
+        """Equal-length bool lists are positional masks for non-bool options.
+
+        Python's False==0 / True==1 must not reclassify a mask as a value list.
+        Disable numeric options by value with disabled=[0]/disabled=[1] instead.
+        """
+        st.pills("label_mask", [0, 1], disabled=[False, True])
+        delta_mask = self.get_delta_from_queue().new_element.button_group
+        assert delta_mask.disabled is False
+        assert [option.disabled for option in delta_mask.options] == [False, True]
+
+        # Same mask pattern for three numeric options (common rating-style UI).
+        st.pills("label_mask3", [0, 1, 2], disabled=[True, False, True])
+        delta_mask3 = self.get_delta_from_queue().new_element.button_group
+        assert delta_mask3.disabled is False
+        assert [option.disabled for option in delta_mask3.options] == [
+            True,
+            False,
+            True,
+        ]
+
+        # Value-list form still works when callers pass the actual option values.
+        st.pills("label_vals", [0, 1], disabled=[0, 1])
+        delta_vals = self.get_delta_from_queue().new_element.button_group
+        assert delta_vals.disabled is True
+        assert [option.disabled for option in delta_vals.options] == [True, True]
+
+        st.pills("label_one", [0, 1], disabled=[0])
+        delta_one = self.get_delta_from_queue().new_element.button_group
+        assert delta_one.disabled is False
+        assert [option.disabled for option in delta_one.options] == [True, False]
+
+    def test_per_option_disabled_registers_widget_as_enabled(self):
+        """Test that per-option disabled does not mark the entire widget as disabled in session state."""
+        res = st.pills("label", ["a", "b"], disabled=["a"])
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == [True, False]
+
+    def test_disabled_value_disables_all_duplicate_options(self):
+        """Value-based disabled marks every matching option, not only the first."""
+        st.pills("label", ["a", "b", "a"], disabled=["a"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == [True, False, True]
+
+    def test_disabled_mask_partial_duplicates_keeps_enabled_selection(self):
+        """Positional mask that disables only some duplicates must not clear
+        a still-enabled selection of that same value."""
+        st.session_state["pills"] = "a"
+        # First "a" disabled, second "a" still enabled.
+        result = st.pills(
+            "label",
+            ["a", "b", "a"],
+            key="pills",
+            disabled=[True, False, False],
+        )
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert [option.disabled for option in delta.options] == [True, False, False]
+        # Selection of "a" remains valid because an enabled "a" exists.
+        assert result == "a"
+        assert st.session_state["pills"] == "a"
+
+    def test_default_skips_disabled_options(self):
+        """Default values that point at disabled options are dropped from the proto."""
+        st.pills("label", ["a", "b", "c"], default="a", disabled=["a"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert list(delta.default) == []
+        assert [option.disabled for option in delta.options] == [True, False, False]
+
+        st.pills(
+            "label2",
+            ["a", "b", "c"],
+            default=["a", "b"],
+            disabled=["a"],
+            selection_mode="multi",
+        )
+        delta2 = self.get_delta_from_queue().new_element.button_group
+        assert list(delta2.default) == [1]
+        assert [option.disabled for option in delta2.options] == [True, False, False]
+
+    @parameterized.expand(
         get_command_matrix([(None, []), ([], []), (["Tea"], [1]), ("Coffee", [0])])
     )
     def test_default_for_singleselect(
