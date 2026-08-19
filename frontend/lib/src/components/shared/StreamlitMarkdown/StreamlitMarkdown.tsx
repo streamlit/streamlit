@@ -192,30 +192,48 @@ export function encodeMaterialIconPrefix(source: string): string {
  * Restoring the whole prefix rather than a bare sentinel keeps a sentinel a user
  * typed themselves untouched, so it can never be turned into a stray `:`.
  */
-function createRemarkRestoreMaterialIconPrefix() {
+function createRemarkRestoreMaterialIconPrefix(): () => (
+  tree: MdastRoot
+) => MdastRoot {
+  /**
+   * Restores every encoded prefix reachable from `holder` without descending into
+   * child nodes.
+   *
+   * `children` is skipped because `visit` reaches those separately, and `position`
+   * because it holds only numbers. Everything else is walked, which is what picks up
+   * a directive's `attributes` -- a plain string map filled straight from the source,
+   * so `:color[x]{foreground=":material/red"}` hides a prefix one level down.
+   */
+  const restoreStrings = (holder: Record<string, unknown>): void => {
+    for (const key of Object.keys(holder)) {
+      if (key === "children" || key === "position") {
+        continue
+      }
+      const value = holder[key]
+      if (typeof value === "string") {
+        if (value.includes(MATERIAL_ICON_SENTINEL)) {
+          holder[key] = value.replaceAll(ENCODED_MATERIAL_PREFIX, ":material/")
+        }
+      } else if (value !== null && typeof value === "object") {
+        restoreStrings(value as Record<string, unknown>)
+      }
+    }
+  }
+
   return () => (tree: MdastRoot) => {
     visit(tree, node => {
       // Any string field can hold an encoded prefix, not just `value`: a link's
-      // `url` and `title`, an image's `alt`, a fence's `lang` and `meta`, and a
-      // footnote's `identifier` and `label` all come straight from the source. A
-      // sentinel left in a URL breaks the link, so sweep every string field rather
-      // than enumerating the ones that exist today.
+      // `url` and `title`, an image's `alt`, a fence's `lang` and `meta`, a
+      // footnote's `identifier` and `label`, and a directive's `attributes` all come
+      // straight from the source. A sentinel left in a URL breaks the link, so sweep
+      // every string field rather than enumerating the ones that exist today.
       //
       // Restoring unconditionally is safe in practice: a source that already
       // contains the encoded prefix is vanishingly unlikely, since nobody types
       // OBJECT REPLACEMENT CHARACTER. Matching the whole prefix rather than a bare
       // sentinel also means a stray one a user did type is left alone instead of
       // being turned into a colon.
-      const fields = node as unknown as Record<string, unknown>
-      for (const key of Object.keys(fields)) {
-        const value = fields[key]
-        if (
-          typeof value === "string" &&
-          value.includes(MATERIAL_ICON_SENTINEL)
-        ) {
-          fields[key] = value.replaceAll(ENCODED_MATERIAL_PREFIX, ":material/")
-        }
-      }
+      restoreStrings(node as unknown as Record<string, unknown>)
     })
     return tree
   }
@@ -1042,9 +1060,16 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     }
     // The prefix reaches this point in its encoded form -- see
     // MATERIAL_ICON_SENTINEL for why it cannot be matched as `:material/`.
-    // `findAndReplace` visits `text` nodes only, so code and raw HTML are never
-    // offered here; whatever it leaves behind is restored by
-    // createRemarkRestoreMaterialIconPrefix.
+    // `findAndReplace` visits `text` nodes only, so markdown code -- spans, fences
+    // and indented blocks -- is never offered here; whatever it leaves behind is
+    // restored by createRemarkRestoreMaterialIconPrefix.
+    //
+    // Raw HTML is only partly excluded. A block like `<div>...</div>` is one `html`
+    // node and is skipped, but phrasing HTML is tokenized as `html` + `text` + `html`,
+    // so `<code>:material/x:</code>` under `allowHTML` still yields an icon inside
+    // the code element. That asymmetry with markdown code predates this change --
+    // the previous `:material_` rewrite produced an icon there too -- and matching
+    // markdown would mean tracking the raw-HTML tag stack, so it is left alone.
     findAndReplace(tree, [
       [
         ENCODED_MATERIAL_ICON_PATTERN,

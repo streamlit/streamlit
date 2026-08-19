@@ -1312,13 +1312,12 @@ describe("StreamlitMarkdown", () => {
       )
     })
 
-    it("blocks a dangerous URL that the encoded prefix would otherwise hide", () => {
-      // Ordering is load-bearing. Encoding rewrites the `:material/` inside the URL,
-      // so `javascript\uFFFCmaterial/alert(1)` no longer starts with `javascript:`
-      // and would slip past the protocol blocklist if restore ran after sanitizing.
-      // Restore is a remark plugin and `urlTransform` runs after the mdast phase, so
-      // the blocklist sees the restored URL -- assert that, because nothing else
-      // pins the order.
+    it("blocks a dangerous URL containing the prefix", () => {
+      // Keeping the colon means the encoded URL still begins `javascript:`, so the
+      // protocol blocklist matches it whether or not restore has run yet. Asserted
+      // anyway as defense in depth: restore runs first (it is a remark plugin, and
+      // `urlTransform` runs after the mdast phase), and nothing else pins that, so an
+      // encoding that did hide the scheme would still be caught here.
       render(
         <StreamlitMarkdown
           source="[x](javascript:material/alert(1))"
@@ -1326,6 +1325,41 @@ describe("StreamlitMarkdown", () => {
         />
       )
       expect(screen.getByText("x")).toHaveAttribute("href", "#")
+    })
+
+    describe("with allowHTML", () => {
+      // `rehype-raw` re-parses raw HTML after the mdast phase, so these pin that
+      // restore has already run by then -- the markdown-only cases above cannot.
+      it("restores the prefix inside raw HTML", async () => {
+        const { container } = render(
+          <StreamlitMarkdown
+            source="<div>`:material/search:`</div>"
+            allowHTML={true}
+          />
+        )
+        await waitFor(() => expect(container.textContent).toContain(PREFIX))
+        expect(container.innerHTML).not.toContain("\uFFFC")
+      })
+
+      it("still blocks a dangerous URL", () => {
+        render(
+          <StreamlitMarkdown
+            source="[x](javascript:material/alert(1))"
+            allowHTML={true}
+          />
+        )
+        expect(screen.getByText("x")).toHaveAttribute("href", "#")
+      })
+
+      it("leaves no sentinel when the prefix is an icon", async () => {
+        const { container } = render(
+          <StreamlitMarkdown source=":material/search: hi" allowHTML={true} />
+        )
+        await waitFor(() =>
+          expect(container.querySelector(ICON)).toHaveTextContent("search")
+        )
+        expect(container.innerHTML).not.toContain("\uFFFC")
+      })
     })
 
     it("keeps a custom-scheme autolink working", () => {
