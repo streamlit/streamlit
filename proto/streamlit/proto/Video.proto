@@ -57,7 +57,8 @@ message Video {
   optional streamlit.WidthConfig width_config = 13;
 
   // Author-provided description of the video, exposed to assistive
-  // technologies as the accessible name. Empty if not provided.
+  // technologies as the accessible name. Empty when omitted or supplied as an
+  // empty string; the frontend also treats blank strings as unset.
   string alt = 14;
 
   reserved 1, 2, 4;

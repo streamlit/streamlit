@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
 )
 
 AUDIO_ELEMENTS_WITH_PATH = 5
-AUDIO_ELEMENTS_WITH_URL = 3
+AUDIO_ELEMENTS_WITH_URL = 5
 
 
 def check_audio_source_error_count(messages: list[str], expected_count: int):

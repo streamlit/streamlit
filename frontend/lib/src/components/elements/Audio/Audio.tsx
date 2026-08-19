@@ -174,9 +174,10 @@ function Audio({
         data-testid="stAudio"
         ref={audioRef}
         controls
-        // Only set an accessible name when the author provided one; an empty
-        // aria-label is worse than none at all.
-        aria-label={alt || undefined}
+        // Only set an accessible name when the author provided one. Blank input
+        // is treated as absent: aria-label=" " computes to an empty accessible
+        // name, which is worse than having no aria-label at all.
+        aria-label={alt?.trim() || undefined}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}
