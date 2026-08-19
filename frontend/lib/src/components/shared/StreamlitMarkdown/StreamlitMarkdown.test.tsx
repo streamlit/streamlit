@@ -1263,6 +1263,72 @@ describe("StreamlitMarkdown", () => {
       expect(container.querySelector(ICON)).toHaveTextContent("search")
       expect(container.textContent).not.toContain(":material/")
     })
+
+    it("keeps a link's URL intact when it contains the prefix", async () => {
+      // The prefix is encoded everywhere, including inside a URL, where a leaked
+      // sentinel would silently break the link.
+      const container = await renderSettled(
+        "[text](https://example.com/:material/search:)"
+      )
+      expect(container.querySelector("a")).toHaveAttribute(
+        "href",
+        "https://example.com/:material/search:"
+      )
+    })
+
+    it("keeps an image's alt text and URL intact", async () => {
+      const container = await renderSettled(
+        "![alt :material/search:](https://example.com/:material/search:.png)"
+      )
+      const img = container.querySelector("img")
+      expect(img).toHaveAttribute("alt", "alt :material/search:")
+      expect(img).toHaveAttribute(
+        "src",
+        "https://example.com/:material/search:.png"
+      )
+    })
+
+    it.each([
+      { description: "prose", source: ":material/search: hi" },
+      { description: "code span", source: "`:material/search:`" },
+      { description: "fenced block", source: "```\n:material/search:\n```" },
+      {
+        description: "a link URL",
+        source: "[t](https://example.com/:material/search:)",
+      },
+      {
+        description: "a link title",
+        source: '[t](https://example.com "ti :material/search:")',
+      },
+      {
+        description: "an image alt and URL",
+        source: "![a :material/search:](https://e.com/:material/search:.png)",
+      },
+      {
+        description: "a fence info string",
+        source: "```:material/search:\ncode\n```",
+      },
+      {
+        description: "a fence info string with meta",
+        source: "```python :material/search:\ncode\n```",
+      },
+      { description: "an autolink", source: "<https://e.com/:material/x:>" },
+      { description: "a heading", source: "# :material/search: T" },
+      {
+        description: "a table cell",
+        source: "| `:material/search:` |\n|---|",
+      },
+    ])(
+      "leaves no sentinel in the output for $description",
+      async ({ source }) => {
+        // Encoding is unconditional, so every string field the parser fills from the
+        // source can carry a sentinel. This is the catch-all: whatever the field, it
+        // must never reach the DOM. U+FFFC is spelled out rather than imported so the
+        // assertion does not depend on the constant it is checking.
+        const container = await renderSettled(source)
+        expect(container.innerHTML).not.toContain("\uFFFC")
+      }
+    )
   })
 
   it("does not remove unknown directive", () => {

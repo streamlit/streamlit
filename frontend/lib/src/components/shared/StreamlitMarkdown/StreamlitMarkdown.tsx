@@ -180,16 +180,23 @@ export function encodeMaterialIconPrefix(source: string): string {
 function createRemarkRestoreMaterialIconPrefix() {
   return () => (tree: MdastRoot) => {
     visit(tree, node => {
-      // Icon nodes keep the encoded prefix in `value`, but render from `data`, so
-      // skipping them avoids pointless work rather than changing any output.
-      if ("data" in node && node.data && "hName" in node.data) {
-        return
-      }
-      if ("value" in node && typeof node.value === "string") {
-        node.value = node.value.replaceAll(
-          ENCODED_MATERIAL_PREFIX,
-          ":material/"
-        )
+      // Any string field can hold an encoded prefix, not just `value`: a link's
+      // `url` and `title`, an image's `alt`, a fence's `lang` and `meta`, and a
+      // footnote's `identifier` and `label` all come straight from the source. A
+      // sentinel left in a URL breaks the link, so sweep every string field rather
+      // than enumerating the ones that exist today.
+      //
+      // Restoring unconditionally is safe because the sentinel only ever appears
+      // where encoding put it, so turning it back is always what the user wrote.
+      const fields = node as unknown as Record<string, unknown>
+      for (const key of Object.keys(fields)) {
+        const value = fields[key]
+        if (
+          typeof value === "string" &&
+          value.includes(MATERIAL_ICON_SENTINEL)
+        ) {
+          fields[key] = value.replaceAll(ENCODED_MATERIAL_PREFIX, ":material/")
+        }
       }
     })
     return tree
@@ -986,7 +993,10 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     ): MdastTextWithHastData {
       return {
         type: "text",
-        value: fullMatch,
+        // Rendering comes from `data` below, so this is only a fallback -- but it
+        // holds the encoded prefix, so decode it to keep the sentinel out of any
+        // path that might read it.
+        value: fullMatch.replace(ENCODED_MATERIAL_PREFIX, ":material/"),
         data: {
           hName: "span",
           hProperties: {
