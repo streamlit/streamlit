@@ -88,3 +88,12 @@ if TYPE_CHECKING:
     # StreamlitAPIException at runtime. This combination cannot be caught at
     # type-check time because the overload fallback accepts it. The validation
     # is enforced in _internal_button_group() at runtime.
+
+    # Check wrap parameter
+    assert_type(segmented_control("foo", options, wrap=True), int | None)
+    assert_type(segmented_control("foo", options, wrap=False), int | None)
+    assert_type(segmented_control("foo", options, wrap=None), int | None)
+    assert_type(
+        segmented_control("foo", options, selection_mode="multi", wrap=False),
+        list[int],
+    )

@@ -448,9 +448,6 @@ class MultiSelectMixin:
               height. If they don't fit, the chip area scrolls horizontally
               while the clear and dropdown controls stay pinned.
 
-            Changing ``wrap`` only affects the layout; it does not reset the
-            widget's value.
-
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
