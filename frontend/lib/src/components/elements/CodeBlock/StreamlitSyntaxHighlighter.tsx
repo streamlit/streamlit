@@ -49,10 +49,15 @@ type RendererProps = Parameters<
  * arguments the engine rejects the call, so the whole code block fails to render.
  * See https://github.com/streamlit/streamlit/issues/11996.
  *
- * Line count is the axis because it *is* the argument count; byte size is not. The
+ * Line count is the threshold because it is the argument count; byte size is not. The
  * cap applies on both wrap paths: only the unwrapped path can throw, but highlighting
- * this many lines pins the main thread either way. 50k sits well below the
- * engine-specific ~110k-120k boundary.
+ * this many lines pins the main thread either way.
+ *
+ * The safe ceiling is engine-specific, so this cites the tightest known limit rather
+ * than the one measured here: JavaScriptCore hard-caps `apply` at 65,536 arguments,
+ * where V8 tolerates roughly 110k-120k (the boundary observed in jsdom). 50k
+ * therefore clears Safari with only ~1.3x of headroom -- do not raise it toward the
+ * V8 number without re-checking JavaScriptCore, or the crash comes back there.
  */
 export const MAX_HIGHLIGHTED_LINES = 50000
 
@@ -63,7 +68,7 @@ export const MAX_HIGHLIGHTED_LINES = 50000
  * than a small one, and does not allocate an array of lines the way
  * `split("\n").length` would.
  */
-function exceedsLineLimit(text: string, limit: number): boolean {
+export function exceedsLineLimit(text: string, limit: number): boolean {
   let lines = 1
   let index = text.indexOf("\n")
 

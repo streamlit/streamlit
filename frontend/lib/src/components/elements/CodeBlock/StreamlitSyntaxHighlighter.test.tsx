@@ -19,6 +19,7 @@ import { screen, within } from "@testing-library/react"
 import { render } from "~lib/test_util"
 
 import StreamlitSyntaxHighlighter, {
+  exceedsLineLimit,
   MAX_HIGHLIGHTED_LINES,
   StreamlitSyntaxHighlighterProps,
 } from "./StreamlitSyntaxHighlighter"
@@ -146,9 +147,23 @@ describe("CustomCodeTag Element", () => {
   describe("very long input", () => {
     const line = "lorem ipsum dolor sit amet\n"
 
-    it("highlights normally at the line limit", () => {
+    // The boundary is pinned on the pure helper rather than through renders, which
+    // keeps it exact and cheap: highlighting ~50k lines was the most expensive thing
+    // in this file and had to fit vitest's per-test budget on the slowest runner.
+    // Note a trailing newline still counts as a line, matching the highlighter's own
+    // row count.
+    it.each([
+      ["a\nb", 2, false],
+      ["a\nb\n", 2, true],
+      ["", 1, false],
+      ["a", 1, false],
+    ])("exceedsLineLimit(%j, %i) === %s", (text, limit, expected) => {
+      expect(exceedsLineLimit(text, limit)).toBe(expected)
+    })
+
+    it("highlights ordinary input", () => {
       const props = getStreamlitSyntaxHighlighterProps({
-        children: line.repeat(MAX_HIGHLIGHTED_LINES - 1),
+        children: line.repeat(10),
         language: "python",
       })
       const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
@@ -223,9 +238,16 @@ describe("CustomCodeTag Element", () => {
         language: "python",
         wrapLines: true,
       })
-      render(<StreamlitSyntaxHighlighter {...props} />)
+      const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
 
-      expect(screen.getByTestId("stCodeUnhighlighted")).toBeVisible()
+      const fallback = screen.getByTestId("stCodeUnhighlighted")
+      expect(fallback).toBeVisible()
+      // The fallback is a StyledCode carrying wrapLines, so wrapping still works
+      // when highlighting is skipped.
+      expect(fallback).toHaveStyle({ whiteSpace: "pre-wrap" })
+      expect(
+        baseElement.querySelector("pre code.language-python")
+      ).not.toBeInTheDocument()
     })
 
     it("keeps the copy button available in the fallback", () => {
