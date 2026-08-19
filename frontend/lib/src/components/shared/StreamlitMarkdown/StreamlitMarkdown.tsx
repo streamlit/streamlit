@@ -137,7 +137,9 @@ export function containsEmojiShortcodes(source: string): boolean {
  *   because CommonMark closes a run of N only with a run of exactly N. Without that,
  *   a longer trailing run would be read as an equal-length closer, the enclosed
  *   prefix would be left unrewritten, and since markdown does not see a code span
- *   there either, the icon would render as literal text.
+ *   there either, the icon would render as literal text. The opener is captured
+ *   inside a lookahead so its `+` cannot backtrack to a shorter run and pair with a
+ *   shorter closer, which is the same failure from the other direction.
  * - Spans may cross a line break but not a *blank* line, because CommonMark keeps
  *   inline code inside one block -- otherwise two unpaired backticks in separate
  *   paragraphs would pair up and swallow the prose between them.
@@ -150,7 +152,7 @@ export function containsEmojiShortcodes(source: string): boolean {
  *   `:material_x:`. The settled source is correct.
  */
 const CODE_OR_MATERIAL_PREFIX =
-  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(?<!`)(`+)(?:[^\n]|\n(?![ \t]*\n))*?(?<!`)\3(?!`)|:material\//gm
+  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(?<!`)(?=(`+))\3(?:[^\n]|\n(?![ \t]*\n))*?(?<!`)\3(?!`)|:material\//gm
 
 /**
  * Rewrites `:material/` to `:material_` outside of code, leaving code untouched.

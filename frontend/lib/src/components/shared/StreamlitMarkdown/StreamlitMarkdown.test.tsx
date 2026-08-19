@@ -402,6 +402,12 @@ describe("rewriteMaterialIconPrefix", () => {
       description: "a three-backtick inline span on one line is left alone",
     },
     {
+      input: "```:material/star:`",
+      expected: "```:material_star:`",
+      description:
+        "a longer opener does not pair with a shorter closer, so it is not a span",
+    },
+    {
       input: "no icons here",
       expected: "no icons here",
       description: "source without the prefix is unchanged",
