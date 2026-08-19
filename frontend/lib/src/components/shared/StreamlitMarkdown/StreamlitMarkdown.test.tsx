@@ -385,6 +385,23 @@ describe("rewriteMaterialIconPrefix", () => {
       description: "a span may cross a line break, just not a blank line",
     },
     {
+      input: "`:material/star:``",
+      expected: "`:material_star:``",
+      description:
+        "a longer trailing run does not close a shorter opener, so it is not a span",
+    },
+    {
+      input: "``:material/star:```",
+      expected: "``:material_star:```",
+      description:
+        "a longer trailing run does not close a two-backtick opener either",
+    },
+    {
+      input: "```:material/a:```",
+      expected: "```:material/a:```",
+      description: "a three-backtick inline span on one line is left alone",
+    },
+    {
       input: "no icons here",
       expected: "no icons here",
       description: "source without the prefix is unchanged",

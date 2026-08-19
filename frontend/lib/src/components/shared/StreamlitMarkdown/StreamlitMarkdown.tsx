@@ -132,10 +132,15 @@ export function containsEmojiShortcodes(source: string): boolean {
  *   than the opener, which CommonMark permits. One combined branch would need a
  *   single backreference, and that only matches an exactly equal run.
  * - Inline spans backreference the opening backtick run, so any run length works and
- *   a shorter run inside a longer one does not terminate the span. They may span
- *   lines but not a *blank* line, because CommonMark keeps inline code inside one
- *   block -- otherwise two unpaired backticks in separate paragraphs would pair up
- *   and swallow the prose between them.
+ *   a shorter run inside a longer one does not terminate the span. Both delimiters
+ *   are required to be *maximal* runs -- neither adjoined by another backtick --
+ *   because CommonMark closes a run of N only with a run of exactly N. Without that,
+ *   a longer trailing run would be read as an equal-length closer, the enclosed
+ *   prefix would be left unrewritten, and since markdown does not see a code span
+ *   there either, the icon would render as literal text.
+ * - Spans may cross a line break but not a *blank* line, because CommonMark keeps
+ *   inline code inside one block -- otherwise two unpaired backticks in separate
+ *   paragraphs would pair up and swallow the prose between them.
  *
  * Deliberately not handled:
  * - Four-space indented code blocks: still rewritten, so #10365 persists there.
@@ -145,7 +150,7 @@ export function containsEmojiShortcodes(source: string): boolean {
  *   `:material_x:`. The settled source is correct.
  */
 const CODE_OR_MATERIAL_PREFIX =
-  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(`+)(?:[^\n]|\n(?![ \t]*\n))*?\3|:material\//gm
+  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(?<!`)(`+)(?:[^\n]|\n(?![ \t]*\n))*?(?<!`)\3(?!`)|:material\//gm
 
 /**
  * Rewrites `:material/` to `:material_` outside of code, leaving code untouched.
