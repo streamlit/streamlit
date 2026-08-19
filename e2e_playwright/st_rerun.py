@@ -90,9 +90,11 @@ if "callback_count" not in st.session_state:
 def rerun_from_callback():
     st.session_state.callback_count += 1
     st.rerun()
-    # Unreachable: st.rerun() interrupts the callback instead of warning and
-    # returning, which is what it did before callback reruns were supported.
-    st.session_state.resumed_after_rerun = True
+    # Dead code on purpose, and the test asserts it stays dead: st.rerun()
+    # interrupts the callback rather than warning and returning, which is what it
+    # did before callback reruns were supported. st.rerun() is typed NoReturn, so
+    # mypy needs telling that the unreachable line belongs here.
+    st.session_state.resumed_after_rerun = True  # type: ignore[unreachable]
 
 
 callback_text = st.text_input(
