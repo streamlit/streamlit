@@ -20,6 +20,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
+import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
@@ -612,7 +613,9 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
 // State is driven by React Aria data attributes ([data-selected], [data-hovered],
 // [data-focus-visible], [data-disabled]) rather than swapping BaseButtonKind variants.
 
-export const StyledToggleButtonGroup = styled(ToggleButtonGroup)<{
+export const StyledToggleButtonGroup = styled(ToggleButtonGroup, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{
   $isPills: boolean
   $containerWidth: boolean
   $wrap: boolean
@@ -629,6 +632,7 @@ export const StyledToggleButtonGroup = styled(ToggleButtonGroup)<{
   ...(!$wrap && {
     overflowX: "auto" as const,
     overflowY: "hidden" as const,
+    ...getHorizontalOverflowFadeStyles(theme.spacing.lg),
   }),
 }))
 

@@ -47,6 +47,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -176,6 +177,16 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   // element. Imperatively set it on the group root so screen readers can
   // announce that the field is mandatory.
   const groupRef = useRef<HTMLDivElement>(null)
+
+  const overflowLayoutKey = useMemo(
+    () => options.map(getOptionBaseContent).join("\0"),
+    [options]
+  )
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow(
+    groupRef,
+    !wrap,
+    overflowLayoutKey
+  )
   useEffect(() => {
     if (!groupRef.current) return
     if (required) {
@@ -341,6 +352,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         $isPills={isPills}
         $containerWidth={containerWidth}
         $wrap={wrap}
+        data-can-scroll-start={canScrollLeft ? "" : undefined}
+        data-can-scroll-end={canScrollRight ? "" : undefined}
       >
         {optionElements}
       </StyledToggleButtonGroup>

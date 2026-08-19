@@ -446,7 +446,9 @@ class MultiSelectMixin:
               wrap onto additional rows and the widget grows taller.
             - ``False``: The selected chips stay in a single row at a fixed
               height. If they don't fit, the chip area scrolls horizontally
-              while the clear and dropdown controls stay pinned.
+              while the clear and dropdown controls stay pinned. A fade at
+              overflowing edges indicates that more chips can be scrolled into
+              view.
 
             Changing ``wrap`` only affects the layout; it does not reset the
             widget's value.

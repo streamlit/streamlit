@@ -1560,10 +1560,21 @@ def get_button_group_options(app: Page, key: str) -> Locator:
 
 
 def expect_button_group_overflows(options: Locator) -> None:
-    """Wait until the option list has local horizontal overflow."""
+    """Wait until the option list has local horizontal overflow and an edge fade."""
     wait_until(
         options.page,
-        lambda: options.evaluate("el => el.scrollWidth > el.clientWidth") is True,
+        lambda: (
+            options.evaluate(
+                """el => {
+              if (el.scrollWidth <= el.clientWidth) return false
+              return (
+                el.hasAttribute("data-can-scroll-start")
+                || el.hasAttribute("data-can-scroll-end")
+              )
+            }"""
+            )
+            is True
+        ),
     )
 
 

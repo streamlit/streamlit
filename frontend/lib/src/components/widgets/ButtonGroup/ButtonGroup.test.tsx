@@ -766,6 +766,33 @@ describe("ButtonGroup wrap", () => {
     Element.prototype.scrollIntoView = originalScrollIntoView
   })
 
+  function mockButtonGroupScrollMetrics(
+    group: HTMLElement,
+    metrics: {
+      scrollLeft?: number
+      scrollWidth?: number
+      clientWidth?: number
+    }
+  ): void {
+    const scrollLeft = metrics.scrollLeft ?? 0
+    const scrollWidth = metrics.scrollWidth ?? 1000
+    const clientWidth = metrics.clientWidth ?? 200
+    Object.defineProperties(group, {
+      scrollLeft: {
+        configurable: true,
+        get: () => scrollLeft,
+      },
+      scrollWidth: {
+        configurable: true,
+        get: () => scrollWidth,
+      },
+      clientWidth: {
+        configurable: true,
+        get: () => clientWidth,
+      },
+    })
+  }
+
   it("uses nowrap and overflow-x when wrap is false", () => {
     render(
       <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
@@ -773,6 +800,7 @@ describe("ButtonGroup wrap", () => {
     const group = screen.getByRole("radiogroup")
     expect(group).toHaveStyle("flex-wrap: nowrap")
     expect(group).toHaveStyle("overflow-x: auto")
+    expect(group).toHaveStyle("scrollbar-width: none")
     // Content-width + wrap=False stays intrinsic (not stretched to 100%).
     expect(group).toHaveStyle("width: auto")
     expect(group).toHaveStyle("max-width: 100%")
@@ -957,5 +985,63 @@ describe("ButtonGroup wrap", () => {
     expectHighlightStyle(buttons[2], false)
     expectHighlightStyle(buttons[0])
     expect(scrolledElements).toHaveLength(0)
+  })
+
+  it("shows an overflow fade only on sides that can still scroll", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 0,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).toHaveAttribute("data-can-scroll-end")
+    expect(group).not.toHaveAttribute("data-can-scroll-start")
+
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 50,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).toHaveAttribute("data-can-scroll-start")
+    expect(group).toHaveAttribute("data-can-scroll-end")
+
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 600,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).toHaveAttribute("data-can-scroll-start")
+    expect(group).not.toHaveAttribute("data-can-scroll-end")
+  })
+
+  it("does not show an overflow fade when wrapping", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: true, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 0,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).not.toHaveAttribute("data-can-scroll-start")
+    expect(group).not.toHaveAttribute("data-can-scroll-end")
+    expect(group).not.toHaveStyle("overflow-x: auto")
   })
 })

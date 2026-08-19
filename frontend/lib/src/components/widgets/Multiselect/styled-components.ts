@@ -29,6 +29,7 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
 import type { EmotionTheme } from "~lib/theme/types"
 
 /** Right padding that shrinks when a scrollbar appears, keeping content aligned. */
@@ -75,54 +76,28 @@ export const StyledTrigger = styled(Group, {
  * chips (both edges when scrolled to the middle), driven by the
  * `data-can-scroll-start`/`data-can-scroll-end` attributes, to signal that the
  * row is horizontally scrollable. The native horizontal scrollbar is hidden
- * (like `st.tabs`) so it doesn't consume the pinned one-row height and clip the
- * chips; the fade is the sole scroll affordance while native scrolling via
- * trackpad/shift-wheel/keyboard still works. The mask direction assumes an LTR
- * layout (physical scrollLeft + `to right` gradient); RTL is out of scope for
- * now.
+ * so it doesn't consume the pinned one-row height and clip the chips; the fade
+ * is the sole scroll affordance while native scrolling via
+ * trackpad/shift-wheel/keyboard still works.
  */
 export const StyledTagsContainer = styled.div<{ $wrap: boolean }>(
-  ({ theme, $wrap }) => {
-    const fade = theme.spacing.lg
-    const startFade = `transparent 0, black ${fade}`
-    const endFade = `black calc(100% - ${fade}), transparent 100%`
-    const startMask = `linear-gradient(to right, ${startFade}, black 100%)`
-    const endMask = `linear-gradient(to right, black 0, ${endFade})`
-    const bothMask = `linear-gradient(to right, ${startFade}, ${endFade})`
-    return {
-      display: "flex",
-      flexWrap: $wrap ? ("wrap" as const) : ("nowrap" as const),
-      alignItems: "center",
-      flexGrow: 1,
-      overflowY: $wrap ? ("auto" as const) : ("hidden" as const),
-      overflowX: $wrap ? ("hidden" as const) : ("auto" as const),
-      paddingLeft: theme.sizes.tagMarginInsideBorder,
-      paddingTop: theme.sizes.tagMarginInsideBorder,
-      paddingBottom: theme.spacing.none,
-      paddingRight: theme.spacing.none,
-      cursor: "text",
-      // Hide the horizontal scrollbar in single-row mode so it can't reduce the
-      // fixed one-row height and clip chips/controls (the edge fade signals
-      // scrollability instead). Kept visible while wrapping, where the vertical
-      // scrollbar is the intended overflow affordance.
-      ...(!$wrap && {
-        scrollbarWidth: "none" as const,
-        "&::-webkit-scrollbar": { display: "none" as const },
-      }),
-      "&[data-can-scroll-start][data-can-scroll-end]": {
-        maskImage: bothMask,
-        WebkitMaskImage: bothMask,
-      },
-      "&[data-can-scroll-start]:not([data-can-scroll-end])": {
-        maskImage: startMask,
-        WebkitMaskImage: startMask,
-      },
-      "&:not([data-can-scroll-start])[data-can-scroll-end]": {
-        maskImage: endMask,
-        WebkitMaskImage: endMask,
-      },
-    }
-  }
+  ({ theme, $wrap }) => ({
+    display: "flex",
+    flexWrap: $wrap ? ("wrap" as const) : ("nowrap" as const),
+    alignItems: "center",
+    flexGrow: 1,
+    overflowY: $wrap ? ("auto" as const) : ("hidden" as const),
+    overflowX: $wrap ? ("hidden" as const) : ("auto" as const),
+    paddingLeft: theme.sizes.tagMarginInsideBorder,
+    paddingTop: theme.sizes.tagMarginInsideBorder,
+    paddingBottom: theme.spacing.none,
+    paddingRight: theme.spacing.none,
+    cursor: "text",
+    // Hide the horizontal scrollbar in single-row mode so it can't reduce the
+    // fixed one-row height and clip chips/controls. Kept visible while wrapping,
+    // where the vertical scrollbar is the intended overflow affordance.
+    ...(!$wrap && getHorizontalOverflowFadeStyles(theme.spacing.lg)),
+  })
 )
 
 /** Wrapper for the tag group that participates in flex layout without adding a box. */
