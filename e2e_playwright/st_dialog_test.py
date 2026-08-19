@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     expect_no_exception,
     expect_prefixed_markdown,
     get_button,
+    get_color_picker,
     get_markdown,
     is_child_bounding_box_inside_parent,
     select_selectbox_option,
@@ -216,13 +217,13 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     dialog = app.get_by_role("dialog")
     expect(dialog).to_be_visible()
 
-    dialog.get_by_test_id("stDateInput").locator("input").click()
-    calendar = app.locator('[data-baseweb="calendar"]').first
+    dialog.get_by_test_id("stDateInput").get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
 
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Tuesday, January 2nd 2024."]'
-    ).first.click()
+    calendar.get_by_label("Tuesday, January 2, 2024").click()
     wait_for_app_run(app)
 
     expect_markdown(dialog, "Due Date Value: 2024-01-02")
@@ -259,6 +260,30 @@ def test_dialog_allows_interacting_with_widget_in_popover(app: Page):
     expect_markdown(popover_body, "picked: Banana")
 
     # The dialog must not be dismissed by the interaction inside the popover.
+    expect(dialog).to_be_visible()
+
+
+def test_dialog_allows_interacting_with_color_picker(app: Page):
+    """A color picker palette opened inside an st.dialog must stay interactive
+    without dismissing the dialog (regression coverage for #16538).
+    """
+    click_button(app, "Open Dialog with Color Picker")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    color_picker = get_color_picker(dialog, "Dialog color picker")
+    color_picker.get_by_test_id("stColorPickerBlock").click()
+
+    popover = app.get_by_test_id("stColorPickerPopover")
+    expect(popover).to_be_visible()
+    popover.locator("input").fill("#1a2b3c")
+
+    # Close the palette with a click that stays inside the dialog, which must
+    # remain open.
+    dialog.get_by_text("Dialog color picker", exact=True).click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "Selected color: #1a2b3c")
     expect(dialog).to_be_visible()
 
 

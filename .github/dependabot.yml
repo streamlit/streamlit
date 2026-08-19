@@ -22,10 +22,6 @@ updates:
       - "never-stale"
 
     ignore:
-      - dependency-name: "baseui"
-        # 12->13: Needs to restyle date picker
-        # 13->14: Requires rewrites of lots of overrides
-        versions: [">=12.3.0"]
       - dependency-name: "iframe-resizer"
         # The license was changed to GPL-3 with the 4.4.0 update.
         # We pin the version to the last version under MIT licenses.
@@ -48,9 +44,6 @@ updates:
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
-      - dependency-name: "react-window"
-        # This requires us to update baseui, since that has a dependency on react-window v1.
-        versions: [">=2.0.0"]
       - dependency-name: "@types/node"
         # Our types should match the version of node we're using as defined in `.nvmrc`
         versions: [">=25.0.0"]

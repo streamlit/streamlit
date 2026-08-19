@@ -100,9 +100,8 @@ describe("Button widget", () => {
       await user.click(buttonWidget)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        undefined
+        props.element.id,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -117,9 +116,12 @@ describe("Button widget", () => {
       await user.click(buttonWidget)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        "myFragmentId"
+        props.element.id,
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
 
@@ -170,9 +172,8 @@ describe("Button widget", () => {
     onActivate()
 
     expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-      props.element,
-      { fromUi: true },
-      undefined
+      props.element.id,
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 

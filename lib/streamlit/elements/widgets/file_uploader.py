@@ -420,7 +420,8 @@ class FileUploaderMixin:
 
             The ``UploadedFile`` class is a subclass of ``BytesIO``, and
             therefore is "file-like". This means you can pass an instance of it
-            anywhere a file is expected.
+            anywhere a file is expected. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
         Examples
         --------

@@ -210,6 +210,7 @@ class MultiSelectMixin:
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T]: ...
@@ -234,6 +235,7 @@ class MultiSelectMixin:
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T | str]: ...
@@ -258,6 +260,7 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -282,6 +285,7 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]:
@@ -430,6 +434,23 @@ class MultiSelectMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the selected-value chips can wrap onto multiple rows. This
+            can be one of the following:
+
+            - ``None`` (default): Streamlit chooses the wrapping behavior based
+              on the layout. Inside a horizontal container, the chips stay in a
+              single row and the chip area scrolls horizontally; in other
+              layouts, the chips wrap onto additional rows.
+            - ``True``: If the selected chips are too wide for the widget, they
+              wrap onto additional rows and the widget grows taller.
+            - ``False``: The selected chips stay in a single row at a fixed
+              height. If they don't fit, the chip area scrolls horizontally
+              while the clear and dropdown controls stay pinned.
+
+            Changing ``wrap`` only affects the layout; it does not reset the
+            widget's value.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -544,6 +565,7 @@ class MultiSelectMixin:
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
             width=width,
+            wrap=wrap,
             bind=bind,
             persist_state=persist_state,
             ctx=ctx,
@@ -568,6 +590,7 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
@@ -649,6 +672,11 @@ class MultiSelectMixin:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
         proto.filter_mode = proto_filter_mode
+        # wrap is layout-only and intentionally excluded from the element id
+        # (see compute_and_register_element_id above), so toggling it never
+        # resets the widget's value.
+        if wrap is not None:
+            proto.wrap = wrap
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

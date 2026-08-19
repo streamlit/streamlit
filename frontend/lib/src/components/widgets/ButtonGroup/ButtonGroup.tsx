@@ -133,12 +133,11 @@ function syncWithWidgetManager(
   valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
@@ -238,7 +237,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         backendValue.length > 0
           ? backendValue
           : getDefaultStateFromProto(element),
-      fromUi: false,
+      fromUser: false,
     })
   }, [options, value, setValueWithSource, element])
 
@@ -279,7 +278,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       ) {
         return
       }
-      setValueWithSource({ value: newSelection, fromUi: true })
+      setValueWithSource({ value: newSelection, fromUser: true })
     },
     [options, value, setValueWithSource, element.id]
   )

@@ -139,7 +139,11 @@ function DownloadButton(props: Props): ReactElement {
 
     if (!ignoreRerun) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+      widgetMgr.setTriggerValue(element.id, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     }
 
     const isDeferred = Boolean(deferredFileId?.length)

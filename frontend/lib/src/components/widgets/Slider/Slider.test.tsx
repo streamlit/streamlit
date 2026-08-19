@@ -114,10 +114,9 @@ describe("Slider widget", () => {
     render(<Slider {...props} />)
 
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [5],
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -128,10 +127,13 @@ describe("Slider widget", () => {
     render(<Slider {...props} />)
 
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [5],
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -178,10 +180,9 @@ describe("Slider widget", () => {
       await triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [6],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       expect(slider).toHaveAttribute("value", "6")
@@ -201,10 +202,9 @@ describe("Slider widget", () => {
       await triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         [6],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       expect(slider).toHaveAttribute("value", "6")
@@ -216,12 +216,9 @@ describe("Slider widget", () => {
 
       // Our widget should be reset, and the widgetMgr should be updated
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       expect(slider).toHaveAttribute("value", "5")
@@ -386,12 +383,9 @@ describe("Slider widget", () => {
       await triggerChangeEvent(sliders[1], "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [1, 10],
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(sliders[0]).toHaveAttribute("value", "1")
       expect(sliders[1]).toHaveAttribute("value", "10")
@@ -536,10 +530,13 @@ describe("Slider widget", () => {
       render(<Slider {...props} />)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["orange"],
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
       // Negative assertion: setDoubleArrayValue should NOT be called for select_slider
       expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
@@ -570,10 +567,9 @@ describe("Slider widget", () => {
       await triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["yellow"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -602,10 +598,9 @@ describe("Slider widget", () => {
       await triggerChangeEvent(sliders[1], "ArrowRight")
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["orange", "indigo"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 

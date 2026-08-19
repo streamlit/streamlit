@@ -168,12 +168,9 @@ describe("ButtonGroup widget", () => {
     render(<ButtonGroup {...props} />)
     // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-      {
-        fromUi: false,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -199,40 +196,40 @@ describe("ButtonGroup widget", () => {
       expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
       // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
 
       // click element at index 1 to select it
       await user.click(buttons[1])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[1]}:`],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(2)
 
       // click element at index 0 to select it
       await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[0]}:`],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(3)
 
       // click on same button does deselect it
       await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(4)
     })
@@ -248,46 +245,45 @@ describe("ButtonGroup widget", () => {
       const buttons = getButtonGroupButtons()
       // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       await user.click(buttons[1])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
-        // the defaultSelectedIndex is default value, index 1 is newly clicked
+        props.element.id,
         [
           `:material/${materialIconNames[defaultSelectedIndex]}:`,
           `:material/${materialIconNames[1]}:`,
         ],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [
           `:material/${materialIconNames[defaultSelectedIndex]}:`,
           `:material/${materialIconNames[1]}:`,
           `:material/${materialIconNames[0]}:`,
         ],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       // unselect the second button
       await user.click(getButtonGroupButtons()[1])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [
           `:material/${materialIconNames[defaultSelectedIndex]}:`,
           `:material/${materialIconNames[0]}:`,
         ],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -303,19 +299,25 @@ describe("ButtonGroup widget", () => {
       render(<ButtonGroup {...props} />)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-        { fromUi: false },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        }
       )
 
       const button = getButtonGroupButtons()[0]
       await user.click(button)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[0]}:`],
-        { fromUi: true },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
 
@@ -344,12 +346,13 @@ describe("ButtonGroup widget", () => {
       expectHighlightStyle(buttons[defaultSelectedIndex], false)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[3]}:`],
         {
-          fromUi: false,
-        },
-        undefined
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -491,10 +494,9 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[1], false)
     expectHighlightStyle(buttons[2])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -526,12 +528,11 @@ describe("ButtonGroup widget", () => {
 
     // Pre-populate widgetMgr with the EN-formatted selection so the component
     // starts with a stale value when it next renders with ES options.
-    widgetMgr.setStringArrayValue(
-      enElement,
-      ["apple"],
-      { fromUi: false },
-      undefined
-    )
+    widgetMgr.setStringArrayValue(enElement.id, ["apple"], {
+      formId: enElement.formId,
+      fragmentId: undefined,
+      fromUser: false,
+    })
 
     const baseProps: Props = {
       element: enElement,
@@ -555,10 +556,9 @@ describe("ButtonGroup widget", () => {
     // The stale-value effect should have fired and reset widgetMgr to the
     // ES default (index 0 = "manzana") so the widget is visually consistent.
     expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      esElement,
+      esElement.id,
       ["manzana"],
-      { fromUi: false },
-      undefined
+      { formId: esElement.formId, fragmentId: undefined, fromUser: false }
     )
   })
 })
@@ -670,10 +670,9 @@ describe("ButtonGroup required parameter", () => {
 
     // Should have been called with empty array (deselected)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       [],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -692,10 +691,9 @@ describe("ButtonGroup required parameter", () => {
     // Initial mount call
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       ["apple"],
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
 
     const buttons = getButtonGroupButtons()
@@ -726,10 +724,9 @@ describe("ButtonGroup required parameter", () => {
 
     // Should have changed to "banana"
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       ["banana"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 

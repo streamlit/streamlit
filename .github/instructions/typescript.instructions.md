@@ -48,7 +48,6 @@ applyTo: "**/*.ts, **/*.tsx"
 - All styled components begin with the word `Styled` to indicate it's a styled component.
 - Utilize props in styled components to display elements that may have some interactivity.
 - Avoid the need to target other components.
-- When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
 

@@ -269,7 +269,9 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     """
     import pyarrow as pa
 
-    return is_version_less_than(pa.__version__, v)
+    # ty infers pyarrow's ``__version__`` as possibly ``None``, but it is always
+    # a version string at runtime, so it is safe to pass through as-is.
+    return is_version_less_than(pa.__version__, v)  # ty: ignore[invalid-argument-type]
 
 
 # Minimum PyArrow version that supports consuming PyCapsule Interface via from_stream.
