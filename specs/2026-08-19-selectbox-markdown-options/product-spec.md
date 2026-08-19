@@ -7,10 +7,16 @@ created: 2026-08-19
 
 ## Summary
 
-Render option labels in `st.selectbox` and `st.multiselect` with the same inline
-markdown subset already used for widget labels, `st.radio` options, and
-`st.menu_button` options (bold, italics, icons, colors, badges, and similar).
-No new parameters. Filtering matches the visible text, not the markdown source.
+Render option labels in `st.selectbox` and `st.multiselect` with the **button /
+menu-item** markdown subset (`isLabel` + `disableLinks` + `truncate`: bold,
+italics, icons, colors, badges, and similar). No new parameters. Filtering
+matches visible text, not markdown source.
+
+`st.radio`, `st.menu_button`, and `st.select_slider` already render option
+markdown. Selectbox/multiselect follow **menu items**, not radio: links (and
+`:help[]`) are unwrapped to text because a nested control inside a selectable
+row fights click-to-select. Radio still renders clickable links; aligning that
+later is out of scope.
 
 ## Problem
 
@@ -59,13 +65,15 @@ and are out of scope (see below).
 
 No new parameters. Option strings — including the output of `format_func` — are
 interpreted as **label markdown**, the same subset documented on the `label`
-parameter today.
+parameter today, with two extra restrictions that match `st.menu_button` (not
+`st.radio`): links and `:help[]` unwrap to inner text.
 
-Docstring addition on `options` (match `st.radio` / `st.menu_button`):
+Docstring addition on `options` (cite menu-button behavior for the nested-
+control sentence):
 
-> Labels can include markdown as described in the `label` parameter. Links are
-> unwrapped to their link text (options are selectable, so they must not
-> contain nested interactive elements).
+> Labels can include markdown as described in the `label` parameter. Links and
+> help icons are unwrapped to their text (options are selectable, so they must
+> not contain nested interactive elements).
 
 Return values, widget state, `format_func`, `key`, and identity are unchanged.
 The user still gets the original option object, not the formatted markdown
@@ -83,8 +91,9 @@ the button / menu-item subset, not full `st.markdown`.
 | `:red[text]`, `:blue-background[text]`, `:green-badge[text]`, custom `:color[]` | Yes |
 | `:small[]`, `:shimmer[]` | Yes (allowed because labels allow them) |
 | Inline images | Yes, as icons (`max-height: 1em`) |
-| Inline `$LaTeX$` | Yes, same as labels (see tech spec for risk) |
+| Inline `$LaTeX$` | Yes, same as labels (see tech spec for plugin-load risk) |
 | Links | Text only — unwrap `[Docs](url)` to `Docs` |
+| `:help[]` | Text only — unwrap to inner text, no tooltip button |
 | HTML | No (`allowHTML=false`) |
 | Headings, lists, blockquotes, tables, hr, fenced code, `$$LaTeX$$` | No — escaped or unwrapped; display as literal / inner text |
 
@@ -101,11 +110,11 @@ to `inherit`).
 
 | Surface | Behavior |
 | ------- | -------- |
-| Dropdown rows (both widgets) | Rendered markdown, truncated with ellipsis |
-| Multiselect chips | Rendered markdown inside the chip |
-| Selectbox, idle (value committed) | Rendered markdown overlay on the closed control |
+| Dropdown rows (both widgets) | Rendered markdown, truncated with ellipsis. Color/badge directives keep their colors. |
+| Multiselect chips | Rendered markdown, truncated. Chip chrome stays primary/white; colored spans and badge/background fills **inherit the chip foreground** so they stay readable. Full color remains in the dropdown. |
+| Selectbox, idle (value committed, including Tab-focus with no typing) | Rendered markdown overlay on the closed control |
 | Selectbox, while typing | Native input shows the **filter query as plain text** |
-| Screen readers / `title` tooltips | Visible plaintext, not raw `**` / `:material/…:` |
+| Screen readers / `title` / `textValue` | Visible plaintext only (`Email`), not icon identifiers and not raw `**` / `:material/…:`. Icon-only options (`:material/error:`) use the icon name so the accessible name is not empty. |
 
 The overlay is required: React Aria ComboBox uses a native `<input>` for both
 the committed value and the filter query, and an input cannot render markdown.
@@ -115,22 +124,42 @@ dropdown is closed.
 ### Filtering
 
 Users type what they see. Existing `filter_mode` values (`"fuzzy"`,
-`"contains"`, `"prefix"`, `None`) are unchanged, but they match **visible
-plaintext**, not markdown source.
+`"contains"`, `"prefix"`, `None`) are unchanged. They match a **search
+string**, not markdown source.
+
+The search string is visible plaintext with material icon names **appended**
+(`:material/mail: Email` → search `Email mail`). Prefix therefore matches the
+words the user sees (`Email`), not the icon identifier. Icon names still match
+under `"contains"` and `"fuzzy"`. Color token names are not indexed.
+
+Plaintext is produced with the same remark/mdast parser family used to render
+labels (not a regex stripper). Emphasis and links unwrap; color/badge
+directives contribute **inner text only**.
 
 | Option source | User types | Match |
 | ------------- | ---------- | ----- |
-| `**Apple** pie` | `Apple pie` or `App` | Yes |
-| `:material/mail: Email` | `Email` or `mail` | Yes (`mail` is the icon name) |
+| `**Apple** pie` | `Apple pie` or `App` | Yes (all modes) |
+| `:material/mail: Email` | `Email` or `Em` | Yes (all modes) — visible text is `Email` |
+| `:material/mail: Email` | `mail` | Yes for `"fuzzy"` / `"contains"`; **no for `"prefix"`** |
+| `:material/error:` (icon-only) | `error` | Yes (all modes) — icon name is the label when there is no other text |
 | `:red[Error]` | `Error` | Yes |
 | `:red[Error]` | `red` | No — color is visual-only |
 | `**Bold** text` | `**` | No — punctuation is not indexed |
 
 If an app wants color (or other directives) to be searchable, put that word in
-the visible label (`:red[red: Error]`).
+the visible label (`:red[red: Error]`). To make an icon-prefixed option
+prefix-match the icon name, put the name in the visible text.
 
 `filter_mode=None` is unchanged: typing is blocked, markdown still renders in
 the list and on the closed control.
+
+**Large lists:** stripping runs once when the option list changes, not on
+every keystroke. Strings with no markdown syntax skip the parser (the common
+case for DB-backed lists). Rendering markdown is still only for the
+virtualized window of visible rows. Apps that already put thousands of options
+in a selectbox keep the same filter cost they have today (scan every option
+per keystroke); the extra work is a one-time parse of the rows that actually
+contain markdown. See the tech spec for the budget and mitigations.
 
 ### `accept_new_options`
 
@@ -214,6 +243,63 @@ labels = st.multiselect(
 )
 ```
 
+### Interaction with `bind="query-params"`
+
+Markdown rendering does **not** change what goes in the URL. Selectbox and
+multiselect already serialize the **formatted option string** (what
+`format_func` returns, which is also what the frontend stores). `st.radio`
+already combines markdown options with bind this way.
+
+```python
+st.selectbox(
+    "Contact",
+    [":material/mail: Email", ":material/call: Phone"],
+    key="contact",
+    bind="query-params",
+)
+# URL: ?contact=:material/mail:+Email  (percent-encoded as needed)
+```
+
+With `format_func`, the Python return value stays the raw option (`"email"`),
+but the URL still contains the **formatted** string — that is existing bind
+behavior, not something markdown introduces:
+
+```python
+st.selectbox(
+    "Contact",
+    ["email", "phone"],
+    format_func=lambda x: f":material/{x}: {x.title()}",
+    key="contact",
+    bind="query-params",
+)
+# st.write(...) -> "email"
+# URL            -> ?contact=:material/email:+Email
+```
+
+**Round-trip:** `_seed_widget_from_url` accepts a URL value only if it exactly
+matches a formatted option. Visible plaintext (`Email`) does **not** seed the
+widget. Changing `format_func` (for example adding an icon) invalidates old
+URLs — already true today.
+
+**Encoding:** `:` `/` `[` `]` `*` `&` `#` are handled by the existing
+query-string encoder (`%20` is rewritten to `+`, matching the backend). No
+bind-path changes are required. Ugly, long URLs are the real cost of putting
+markdown in the bound string.
+
+**`persist_state`:** unaffected. It stores the deserialized Python value, not
+the display string.
+
+**Guidance:**
+
+- Prefer short, stable option values when the widget is bound (`"email"`,
+  `"p0"`). Use `format_func` for markdown in the UI. Accept that the URL will
+  still show the formatted label unless we later change bind to serialize raw
+  options (out of scope).
+- Do not put markdown in option strings *and* bind if you care about readable
+  shareable URLs.
+- Default values are omitted from the URL as today, so a markdown default does
+  not pollute the empty-state URL.
+
 ## Alternatives considered
 
 ### Opt-in parameter (`markdown=True` / `unsafe_allow_markdown`)
@@ -230,10 +316,11 @@ such flag; fights principle 24 (markdown everywhere).
 This is what #7466 asked for.
 
 **Cons:** Breaks the fixed-height virtualizer; HTML is an XSS surface; links
-inside a selectable row fight click-to-select; radio/buttons already reject
-this subset.
+inside a selectable row fight click-to-select. Menu items already unwrap
+links; radio still allows them.
 
-**Decision:** Label subset only.
+**Decision:** Button / menu-item subset (`isLabel` + `disableLinks` +
+`truncate`), not radio's clickable links.
 
 ### Markdown in the dropdown only (plain source in the closed selectbox)
 
@@ -245,16 +332,29 @@ the dropdown is closed.
 **Decision:** Overlay for idle selectbox. Multiselect chips already can render
 markdown without an overlay.
 
+### Prepend icon names in the search string (`mail Email`)
+
+Makes `"prefix"` match the icon identifier first. The flagship example is
+typing `Email`, which would then fail prefix match.
+
+**Decision:** Append icon names (`Email mail`). Prefix follows visible text.
+Icon-only options use the icon name as the whole label.
+
 ## Out of scope (future work)
 
 - HTML, multiline option cards, variable-height rows
-- Clickable links inside options
+- Clickable links inside options (and aligning `st.radio` to unwrap them)
+- Colored markdown inside multiselect chips (chips inherit chip foreground;
+  revisit if we restyle chip chrome)
 - DataFrame `SelectboxColumn` / `MultiselectColumn`
 - Opt-in / opt-out flag for markdown in options
 - Highlighting the matched query inside markdown
 - Server-side or callable filters
-- Special-casing `:shimmer[]` / `:help[]` in options (allowed because labels
-  allow them; revisit if they are noisy in a list)
+- Special-casing `:shimmer[]` in options (allowed because labels allow it;
+  revisit if it is noisy in a list)
+- Changing `bind="query-params"` to serialize raw option values instead of
+  formatted labels (would make `format_func` + bind URLs stable; independent
+  of markdown rendering)
 
 ## Checklist
 
@@ -262,7 +362,7 @@ markdown without an overlay.
 | ---- | ------------- |
 | Works on SiS, Cloud, etc? | ✅ frontend-only rendering and filtering |
 | No breaking API changes | ✅ no new params; mild visual change for option strings that already contain markdown |
-| No new dependencies | ✅ existing `StreamlitMarkdown` + `filterSelectOptions` |
+| No new dependencies | ✅ reuse existing remark/unified stack; promote already-transitive `mdast-util-to-string` / `remark-parse` to direct deps. No new markdown library (`strip-markdown`, etc.) |
 | Metrics collected | N/A — no new parameter |
-| Any security/legal impact? | Same as widget labels: `allowHTML=false`, links disabled |
+| Any security/legal impact? | Same as widget labels: `allowHTML=false`; links and `:help[]` unwrapped (no nested interactive controls) |
 | Any docs changes needed? | ✅ document markdown on `options` for both widgets |
