@@ -918,6 +918,53 @@ def test_fragment_callback_rerun_requeued() -> None:
     assert len(requeue_calls) == 1
 
 
+def test_callback_navigation_survives_the_deferred_queueing() -> None:
+    """st.switch_page() in a callback keeps its target page.
+
+    switch_page queues a full-app RerunData carrying the *target* page_script_hash and then
+    forces a yield point, so the callback sees a RerunException holding that data. Since
+    callback requests are queued only once every callback has run, that deferred queueing is
+    what carries the navigation through: losing page_script_hash there would silently leave
+    the user on the current page.
+    """
+
+    requeue_calls: list[RerunData] = []
+    target_page = "target-page-hash"
+
+    def cb_navigate() -> None:
+        # What switch_page's forced yield point raises inside a callback.
+        raise RerunException(RerunData(page_script_hash=target_page))
+
+    ss = SessionState()
+    wid = "w-nav"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callback=cb_navigate,
+    )
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 0
+    ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    assert len(requeue_calls) == 1
+    assert requeue_calls[0].page_script_hash == target_page
+
+
 def test_callbacks_targeted_and_default_in_main_script_force_full_app_rerun() -> None:
     """A main-script interaction's default is app-wide, so it trumps the targets.
 
