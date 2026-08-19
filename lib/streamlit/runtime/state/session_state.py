@@ -47,6 +47,7 @@ from streamlit.runtime.runtime_util import (
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
+    ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
 )
@@ -585,6 +586,14 @@ class PersistedWidgetTracker:
         self._pending_resets.discard(widget_id)
 
 
+def _interaction_default_is_app_wide(ctx: ScriptRunContext | None) -> bool:
+    """Whether the interaction's default rerun covers the whole app, not one fragment.
+
+    A widget inside a fragment defaults to rerunning just that fragment.
+    """
+    return not (ctx and ctx.fragment_ids_this_run)
+
+
 @dataclass(slots=True)
 class _CallbackRerunVotes:
     """Records whether callbacks in one interaction asked for a targeted or default rerun.
@@ -930,15 +939,16 @@ class SessionState:
             for rerun_data in votes.pending_reruns:
                 ctx.script_requests.request_rerun(rerun_data)
 
-        if votes.requested_targeted and votes.wants_interaction_default:
-            interaction_default_is_app_wide = not (ctx and ctx.fragment_ids_this_run)
-            if interaction_default_is_app_wide:
-                # An app-wide default trumps the targeted requests, so queue it
-                # explicitly: this run's body is about to be preempted, and nothing
-                # else represents a callback that returned normally. A fragment
-                # interaction's default covers only its own fragment, so the targeted
-                # reruns replace it instead of losing to it.
-                self._request_full_app_rerun()
+        if (
+            votes.requested_targeted
+            and votes.wants_interaction_default
+            and _interaction_default_is_app_wide(ctx)
+        ):
+            # An app-wide default trumps the targeted requests, so queue it explicitly:
+            # this run's body is about to be preempted, and nothing else represents a
+            # callback that returned normally. A fragment interaction's default covers
+            # only its own fragment, so the targeted reruns replace it instead.
+            self._request_full_app_rerun()
 
     def _execute_widget_callback(
         self,
