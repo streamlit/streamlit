@@ -44,23 +44,15 @@ type RendererProps = Parameters<
 /**
  * Line count above which syntax highlighting is skipped.
  *
- * `react-syntax-highlighter`'s `processLines` ends with
- * `wrapLines ? newTree : [].concat.apply([], newTree)` (`highlight.js`). On the
- * unwrapped path that spreads one array element per line into an argument list, and
- * past roughly 120k arguments the engine rejects the call with `RangeError: Maximum
- * call stack size exceeded` -- so the whole code block fails to render rather than
- * merely rendering slowly. See https://github.com/streamlit/streamlit/issues/11996.
+ * `react-syntax-highlighter`'s `processLines` flattens unwrapped rows with
+ * `[].concat.apply([], newTree)`, spreading one argument per line. Past roughly 120k
+ * arguments the engine rejects the call, so the whole code block fails to render.
+ * See https://github.com/streamlit/streamlit/issues/11996.
  *
- * That mechanism is why line count is the thing to cap and byte size is not: the
- * argument count tracks lines. Measured here, 20MB over 20k lines renders fine while
- * 3.2MB over 120k lines throws, with the boundary between 110k and 120k lines.
- *
- * The cap applies on both paths even though only the unwrapped one can throw
- * (`wrapLines: true` returns `newTree` directly -- verified at 200k lines): above
- * this many lines, highlighting pins the main thread long enough to be worth
- * skipping regardless. The limit sits well below the observed boundary because the
- * argument limit is engine-specific, and still leaves an order of magnitude of
- * headroom over any realistic source file.
+ * Line count is the axis because it *is* the argument count; byte size is not. The
+ * cap applies on both wrap paths: only the unwrapped path can throw, but highlighting
+ * this many lines pins the main thread either way. 50k sits well below the
+ * engine-specific ~110k-120k boundary.
  */
 export const MAX_HIGHLIGHTED_LINES = 50000
 

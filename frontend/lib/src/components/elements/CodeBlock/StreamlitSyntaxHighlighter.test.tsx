@@ -151,8 +151,16 @@ describe("CustomCodeTag Element", () => {
         children: line.repeat(MAX_HIGHLIGHTED_LINES - 1),
         language: "python",
       })
-      render(<StreamlitSyntaxHighlighter {...props} />)
+      const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
 
+      // Assert highlighting actually ran, not just that the fallback is absent --
+      // otherwise this would still pass if the highlighted branch were replaced by
+      // plain markup. The highlighter sets `language-<lang>` on the code element
+      // regardless of whether the content produces any tokens, which this prose
+      // fixture does not.
+      expect(
+        baseElement.querySelector("pre code.language-python")
+      ).toBeVisible()
       expect(
         screen.queryByTestId("stCodeUnhighlighted")
       ).not.toBeInTheDocument()
@@ -190,15 +198,17 @@ describe("CustomCodeTag Element", () => {
     })
 
     it("still highlights a large byte count spread over few lines", () => {
-      // Byte size is not what overflows the stack -- line count is. 5MB across 5k
-      // lines is well over any plausible byte threshold while staying far below the
-      // line cap, and is a quarter of the tokenizing cost of a 20MB fixture.
+      // Line count, not byte size, is what overflows the stack: 5MB over 5k lines
+      // stays far below the line cap and must still be highlighted.
       const props = getStreamlitSyntaxHighlighterProps({
         children: ("x".repeat(999) + "\n").repeat(5000),
         language: "python",
       })
-      render(<StreamlitSyntaxHighlighter {...props} />)
+      const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
 
+      expect(
+        baseElement.querySelector("pre code.language-python")
+      ).toBeVisible()
       expect(
         screen.queryByTestId("stCodeUnhighlighted")
       ).not.toBeInTheDocument()
