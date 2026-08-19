@@ -1590,8 +1590,10 @@ def expect_button_group_overflows(options: Locator) -> None:
 def expect_selected_option_in_view(options: Locator) -> None:
     """Wait until the selected option is fully visible in the option list.
 
-    Honors ``scroll-padding-inline`` so an option sitting in the overflow
-    fade is not treated as in view.
+    When an edge is fading (``data-can-scroll-start`` / ``end``), honors
+    ``scroll-padding-inline`` so an option sitting in that fade is not
+    treated as in view. First/last options can sit flush with a non-fading
+    edge because max scroll cannot inset them.
 
     Parameters
     ----------
@@ -1609,8 +1611,12 @@ def expect_selected_option_in_view(options: Locator) -> None:
               const group = el.getBoundingClientRect();
               const sel = selected.getBoundingClientRect();
               const cs = getComputedStyle(el);
-              const padStart = parseFloat(cs.scrollPaddingInlineStart) || 0;
-              const padEnd = parseFloat(cs.scrollPaddingInlineEnd) || 0;
+              const padStart = el.hasAttribute('data-can-scroll-start')
+                ? parseFloat(cs.scrollPaddingInlineStart) || 0
+                : 0;
+              const padEnd = el.hasAttribute('data-can-scroll-end')
+                ? parseFloat(cs.scrollPaddingInlineEnd) || 0
+                : 0;
               // ±1px absorbs sub-pixel rounding across browsers.
               return (
                 sel.left >= group.left + padStart - 1 &&
