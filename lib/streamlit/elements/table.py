@@ -163,11 +163,12 @@ class TableMixin:
     ) -> DeltaGenerator:
         """Display a static table.
 
-        While ``st.dataframe`` is geared towards large datasets and interactive
-        data exploration, ``st.table`` is useful for displaying small, styled
-        tables without sorting or scrolling. For example, ``st.table`` may be
-        the preferred way to display a confusion matrix or leaderboard.
-        Additionally, ``st.table`` supports Markdown.
+        While ``st.dataframe`` is geared towards larger datasets and interactive
+        data exploration, ``st.table`` is useful for small, static, styled
+        displays when interactive sorting isn't needed. For example, ``st.table``
+        is a great fit for description lists and other key-value data, confusion
+        matrices, and leaderboards. Additionally, ``st.table`` supports Markdown
+        and offers more extensive Pandas Styler support.
 
         Parameters
         ----------

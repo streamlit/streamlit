@@ -171,13 +171,33 @@ st.dataframe(
 | ---------------- | ----------------------------------------------------------------------------- |
 | `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
 | `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
-| `st.table`       | Small static datasets, Markdown-formatting and extended Pandas Styler support |
+| `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler  |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
 
+## Description and key-value lists
+
+`st.table` is a great fit for description lists and compact key-value summaries. Pass a mapping of keys to **scalar** values: keys become the row labels, and Streamlit auto-hides the generated column header. A dict of lists is treated as a columnar table instead (headers shown).
+
+Use `border="horizontal"` and `width="content"` for a compact list. Override with `hide_index` / `hide_header` when the auto-hide defaults are not what you want.
+
+```python
+st.table(
+    {
+        ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+        ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+        ":material/license: License": ":green-badge[Apache 2.0]",
+    },
+    border="horizontal",
+    width="content",
+)
+```
+
 ## Pandas Styler: formatting vs coloring
 
-Use `column_config` for **all value formatting** (numbers, dates, percentages). Only use Pandas Styler for **coloring** (background gradients, highlights).
+For `st.dataframe` and `st.data_editor`, use `column_config` for **all value formatting** (numbers, dates, percentages). With these commands, only use Pandas Styler for **coloring** (background gradients, highlights).
+
+`st.table` does not have a `column_config` parameter. For small, static tables, pass a Pandas Styler to `st.table` for more extensive formatting and styling.
 
 ```python
 # BAD: Styler for formatting — AI tends to overuse this
@@ -303,6 +323,7 @@ See `dashboards.md` for composing metrics into dashboard layouts.
 ## References
 
 - [st.dataframe](https://docs.streamlit.io/develop/api-reference/data/st.dataframe)
+- [st.table](https://docs.streamlit.io/develop/api-reference/data/st.table)
 - [st.column_config](https://docs.streamlit.io/develop/api-reference/data/st.column_config)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.line_chart](https://docs.streamlit.io/develop/api-reference/charts/st.line_chart)
