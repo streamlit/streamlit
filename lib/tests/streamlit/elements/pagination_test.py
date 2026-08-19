@@ -209,6 +209,17 @@ class TestPaginationSessionState(DeltaGeneratorTestCase):
         assert metadata is not None
         assert metadata.callback is not None
 
+    def test_invalid_deserialized_page_falls_back_to_default(self) -> None:
+        """The post-register guard resets a deserialized page of 0 back to ``default``."""
+        with patch(
+            "streamlit.elements.widgets.pagination.PaginationSerde.deserialize",
+            return_value=0,
+        ):
+            value = st.pagination(10, default=3, key="bad_page")
+
+        assert value == 3
+        assert st.session_state.bad_page == 3
+
 
 class TestPaginationFormIntegration(DeltaGeneratorTestCase):
     """Tests for st.pagination form integration."""

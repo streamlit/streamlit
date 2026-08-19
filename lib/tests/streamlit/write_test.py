@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import sys
 import time
+import types
 import unittest
 from collections import namedtuple
 from io import StringIO
@@ -904,6 +906,37 @@ def test_write_graphviz_chart_routes_to_graphviz_chart() -> None:
         with patch("streamlit.delta_generator.DeltaGenerator.graphviz_chart") as p:
             st.write(object())
             p.assert_called_once()
+
+
+def test_write_sympy_expression_routes_to_latex() -> None:
+    """Route SymPy-shaped objects to ``DeltaGenerator.latex`` without importing sympy."""
+    with (
+        patch("streamlit.type_util.is_sympy_expression", return_value=True),
+        patch("streamlit.delta_generator.DeltaGenerator.latex") as p,
+    ):
+        st.write(object())
+        p.assert_called_once()
+
+
+def test_write_keras_model_routes_to_graphviz_chart() -> None:
+    """Route Keras models to ``graphviz_chart`` via ``vis_utils.model_to_dot``."""
+    vis_utils = MagicMock()
+    vis_utils.model_to_dot.return_value.to_string.return_value = "digraph G {}"
+    utils_mod = types.ModuleType("tensorflow.python.keras.utils")
+    utils_mod.vis_utils = vis_utils
+    modules = {
+        "tensorflow": types.ModuleType("tensorflow"),
+        "tensorflow.python": types.ModuleType("tensorflow.python"),
+        "tensorflow.python.keras": types.ModuleType("tensorflow.python.keras"),
+        "tensorflow.python.keras.utils": utils_mod,
+    }
+    with (
+        patch("streamlit.type_util.is_keras_model", return_value=True),
+        patch.dict(sys.modules, modules),
+        patch("streamlit.delta_generator.DeltaGenerator.graphviz_chart") as mock_chart,
+    ):
+        st.write(object())
+        mock_chart.assert_called_once_with("digraph G {}")
 
 
 def test_write_mixin_dg_property_returns_self() -> None:

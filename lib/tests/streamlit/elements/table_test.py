@@ -14,6 +14,8 @@
 
 """Arrow marshalling unit tests."""
 
+from __future__ import annotations
+
 from unittest.mock import patch
 
 import numpy as np
@@ -27,11 +29,14 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.elements.table import marshall_table
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
+from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 from streamlit.proto.Table_pb2 import Table as TableProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import (
@@ -386,3 +391,30 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.table
         assert proto.hide_index is True
         assert proto.hide_header is True
+
+    def test_unevaluated_data_auto_hides_index(self) -> None:
+        """Unevaluated inputs are collected with a small row cap and hide the index."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        with (
+            patch(
+                "streamlit.elements.table.dataframe_util.is_unevaluated_data_object",
+                return_value=True,
+            ),
+            patch(
+                "streamlit.elements.table.dataframe_util.convert_anything_to_pandas_df",
+                return_value=df,
+            ) as convert_df,
+        ):
+            st.table(object())
+
+        # st.table converts once for the unevaluated cap, then again while marshalling Arrow.
+        assert convert_df.call_args_list[0].kwargs["max_unevaluated_rows"] == 100
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is True
+
+
+def test_marshall_table_requires_string_uuid_for_styler() -> None:
+    """Styler marshalling rejects a missing default UUID."""
+    styler = pd.DataFrame({"a": [1]}).style
+    with pytest.raises(StreamlitAPIException, match="Default UUID must be a string"):
+        marshall_table(ArrowDataProto(), styler, default_uuid=None)

@@ -35,6 +35,7 @@ from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import (
+    DataCache,
     _data_caches,
     get_data_cache_stats_provider,
 )
@@ -50,6 +51,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageError,
     InvalidCacheStorageContextError,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -87,6 +89,30 @@ def as_replay_test_data() -> CachedResult:
         [ElementMsgData("text", TextProto(body="1"), st._main._id, "")],
         st._main._id,
         st.sidebar._id,
+    )
+
+
+def _seeded_background_cache(key: str) -> DataCache:
+    """Return a background-mode cache that already stores ``vk -> 1``."""
+    cache = _data_caches.get_cache(
+        key=key,
+        persist=None,
+        max_entries=None,
+        ttl=100,
+        display_name=key,
+        refresh_mode="background",
+    )
+    cache.write_result("vk", 1, [])
+    return cache
+
+
+def _write_background_refresh(cache: DataCache, value: object) -> None:
+    """Write ``value`` back as a background refresh of the seeded ``vk`` entry."""
+    cache.write_background_refresh_result(
+        "vk",
+        value,
+        expected_generation=cache.generation,
+        expected_key_generation=cache.key_generation("vk"),
     )
 
 
@@ -1023,3 +1049,44 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert cache_bg is not cache_fg
         # The replaced cache is detached so an in-flight refresh would be discarded.
         assert cache_fg.is_active is False
+
+
+def test_data_cache_get_stats_empty_when_storage_is_not_stats_provider() -> None:
+    """Storages that are not stats providers contribute no cache stats."""
+    cache = DataCache(
+        key="k",
+        storage=DummyCacheStorage(),
+        persist=None,
+        max_entries=None,
+        ttl_seconds=None,
+        display_name="d",
+    )
+    assert cache.get_stats() == {}
+
+
+def test_background_writeback_raises_when_value_cannot_be_pickled() -> None:
+    """Unpickleable background-refresh values raise CacheError before writing."""
+    cache = _seeded_background_cache("bg_pickle")
+    with pytest.raises(CacheError, match="Failed to pickle"):
+        _write_background_refresh(cache, lambda: None)
+
+
+def test_background_writeback_discards_when_presence_check_fails() -> None:
+    """A storage error during the presence check discards the write-back."""
+    cache = _seeded_background_cache("bg_has_error")
+    with patch.object(cache.storage, "has", side_effect=CacheStorageError("boom")):
+        _write_background_refresh(cache, 2)
+    assert cache.read_result("vk").value == 1
+
+
+def test_background_writeback_discards_when_orphaned_under_lock() -> None:
+    """A refresh that becomes orphaned after pickling does not overwrite the entry."""
+    cache = _seeded_background_cache("bg_orphan_lock")
+    orphan_calls = iter([False, True])
+    with patch.object(
+        cache,
+        "_refresh_is_orphaned",
+        side_effect=lambda *_args, **_kwargs: next(orphan_calls),
+    ):
+        _write_background_refresh(cache, 2)
+    assert cache.read_result("vk").value == 1

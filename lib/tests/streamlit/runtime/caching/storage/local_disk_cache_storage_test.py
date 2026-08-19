@@ -236,6 +236,31 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("new-key")
 
+    def test_ttl_and_max_entries_none_are_infinite(self) -> None:
+        """Unset TTL and max-entries are treated as unbounded."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist="disk",
+            ttl_seconds=None,
+            max_entries=None,
+        )
+        storage = LocalDiskCacheStorage(context)
+        assert storage.ttl_seconds == math.inf
+        assert storage.max_entries == math.inf
+
+    def test_storage_delete_logs_unexpected_os_error(self) -> None:
+        """Unexpected delete errors are logged and swallowed."""
+        self.storage.set("new-key", b"new-value")
+        with (
+            patch("os.remove", side_effect=PermissionError("denied")),
+            patch(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage._LOGGER"
+            ) as mock_logger,
+        ):
+            self.storage.delete("new-key")
+        mock_logger.exception.assert_called_once()
+
     def test_storage_clear(self):
         """Test that storage.clear() removes all storage files from disk."""
         self.storage.set("some-key", b"some-value")

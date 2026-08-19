@@ -19,7 +19,8 @@ import time
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.spinner import SpinnerMixin
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -128,3 +129,18 @@ class SpinnerTest(DeltaGeneratorTestCase):
                 == WidthConfigFields.USE_CONTENT.value
             )
             assert el.width_config.use_content is True
+
+
+def test_spinner_without_session_context_is_a_noop() -> None:
+    """A spinner outside a script run yields without enqueueing UI."""
+
+    class _OnlySpinner(SpinnerMixin):
+        def _transient(
+            self, *_args: object, **_kwargs: object
+        ) -> tuple[object, object]:
+            raise NoSessionContext("no session")
+
+    entered = False
+    with _OnlySpinner().spinner("loading"):
+        entered = True
+    assert entered is True

@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from unittest.mock import MagicMock, patch
 
 import plotly.express as px
@@ -755,3 +756,44 @@ def test_plotly_state_is_read_only() -> None:
     copied = copy.deepcopy(result)
     assert isinstance(copied, PlotlyState)
     assert isinstance(copied.selection, PlotlySelectionState)
+
+
+def test_plotly_serde_deserializes_selection_payload() -> None:
+    """A frontend selection payload is wrapped into typed Plotly state classes."""
+    payload = json.dumps(
+        {
+            "selection": {
+                "points": [{"x": 1}],
+                "point_indices": [0],
+                "box": [],
+                "lasso": [],
+            }
+        }
+    )
+    result = PlotlyChartSelectionSerde().deserialize(payload)
+
+    assert isinstance(result, PlotlyState)
+    assert isinstance(result.selection, PlotlySelectionState)
+    assert result.selection.points == [{"x": 1}]
+    assert result["selection"]["point_indices"] == [0]
+
+
+def test_plotly_state_wraps_raw_selection_dict() -> None:
+    """Bracket access wraps a raw selection mapping and caches the instance."""
+    state = PlotlyState(
+        {
+            "selection": {
+                "points": [],
+                "point_indices": [3],
+                "box": [],
+                "lasso": [],
+            },
+            "meta": 9,
+        }
+    )
+
+    first = state["selection"]
+    assert isinstance(first, PlotlySelectionState)
+    assert first.point_indices == [3]
+    assert state["selection"] is first
+    assert state["meta"] == 9

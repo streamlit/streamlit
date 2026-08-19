@@ -40,6 +40,13 @@ def test_align_to_schema_reorders_columns() -> None:
     assert aligned.column("a").to_pylist() == [3, 4]
 
 
+def test_align_to_schema_returns_original_when_already_matching() -> None:
+    """Tables that already match the canonical schema are returned unchanged."""
+    schema = pa.schema([("a", pa.int64()), ("b", pa.int64())])
+    table = pa.table({"a": [1, 2], "b": [3, 4]}, schema=schema)
+    assert _align_to_schema(table, schema) is table
+
+
 def test_align_to_schema_returns_as_is_on_mismatch() -> None:
     """Incompatible columns are returned as-is rather than raising."""
     schema = pa.schema([("a", pa.int64()), ("missing", pa.int64())])

@@ -72,6 +72,14 @@ class _UnknownRowCountSource:
         return pa.table({"a": []}, schema=self.schema)
 
 
+class _RaisingRowCountSource(_UnknownRowCountSource):
+    """Native-like source whose ``row_count`` lookup fails."""
+
+    @property
+    def row_count(self) -> int | None:
+        raise RuntimeError("count failed")
+
+
 def test_in_memory_source_exposes_metadata() -> None:
     """The in-memory source reports row count, schema, and capability flags."""
     source = InMemoryDataframeSource(_make_table(10))
@@ -436,3 +444,86 @@ def test_default_page_size() -> None:
     """The default page size balances initial payload size and scrolling runway."""
     assert dataframe_source.DEFAULT_PAGE_SIZE == 1_000
     assert dataframe_source.MAX_CHUNK_ROWS >= dataframe_source.DEFAULT_PAGE_SIZE
+
+
+def test_pyarrow_range_index_renames_when_physical_name_collides() -> None:
+    """Materializing a RangeIndex picks a unique name if the default already exists."""
+    df = pd.DataFrame(
+        {
+            "a": np.arange(FORCED_LAZY_MIN_ROWS + 1),
+            "__streamlit_lazy_index__": np.arange(FORCED_LAZY_MIN_ROWS + 1),
+        }
+    )
+    table = pa.Table.from_pandas(df)
+    source = resolve_lazy_source(table, True, is_selection_activated=False)
+    assert isinstance(source, InMemoryDataframeSource)
+
+    chunk = source.load_rows(0, 3)
+    assert "__streamlit_lazy_index__" in chunk.column_names
+    assert "___streamlit_lazy_index__" in chunk.column_names
+
+
+def test_should_lazy_load_in_memory_false_is_always_eager() -> None:
+    """``lazy=False`` never switches an in-memory source to lazy delivery."""
+    assert (
+        dataframe_source._should_lazy_load_in_memory(False, AUTO_LAZY_ROW_THRESHOLD + 1)
+        is False
+    )
+
+
+def test_resolve_auto_lazy_native_source_row_count_error_falls_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=None`` falls back when a native source cannot report its size."""
+    monkeypatch.setattr(
+        dataframe_source,
+        "_try_create_native_source",
+        lambda _data: _RaisingRowCountSource(),
+    )
+
+    assert resolve_lazy_source(object(), None, is_selection_activated=False) is None
+
+
+def test_resolve_forced_lazy_native_source_row_count_error_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=True`` raises when a native source cannot report its size."""
+    monkeypatch.setattr(
+        dataframe_source,
+        "_try_create_native_source",
+        lambda _data: _RaisingRowCountSource(),
+    )
+
+    with pytest.raises(
+        StreamlitAPIException, match="could not determine its row count"
+    ):
+        resolve_lazy_source(object(), True, is_selection_activated=False)
+
+
+def test_resolve_forced_lazy_native_source_large_uses_native(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=True`` keeps a native source above the small-data threshold."""
+    native_source = InMemoryDataframeSource(_make_table(FORCED_LAZY_MIN_ROWS + 1))
+    monkeypatch.setattr(
+        dataframe_source, "_try_create_native_source", lambda _data: native_source
+    )
+
+    assert (
+        resolve_lazy_source(object(), True, is_selection_activated=False)
+        is native_source
+    )
+
+
+def test_resolve_forced_lazy_unevaluated_without_adapter_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``lazy=True`` rejects unevaluated objects that have no native adapter."""
+    monkeypatch.setattr(
+        dataframe_source.dataframe_util,
+        "is_unevaluated_data_object",
+        lambda _data: True,
+    )
+
+    with pytest.raises(StreamlitAPIException, match="no lazy adapter"):
+        resolve_lazy_source(object(), True, is_selection_activated=False)

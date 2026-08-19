@@ -34,6 +34,7 @@ from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
 from streamlit.errors import (
     BidiComponentInvalidCallbackNameError,
+    BidiComponentUnserializableDataError,
     StreamlitAPIException,
 )
 from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
@@ -483,6 +484,64 @@ class BidiComponentTest(DeltaGeneratorTestCase):
             ValueError, match="Component 'nonexistent_component' is not registered"
         ):
             st._bidi_component("nonexistent_component")
+
+    def test_component_without_script_run_ctx_returns_empty_result(self) -> None:
+        """Without a script-run context the component returns empty state."""
+        with patch(
+            "streamlit.components.v2.bidi_component.main.get_script_run_ctx",
+            return_value=None,
+        ):
+            result = st._bidi_component("anything")
+        assert isinstance(result, ComponentResult)
+        assert dict(result) == {}
+
+    def test_component_ignores_non_event_kwargs(self) -> None:
+        """Non-event kwargs do not raise; only ``on_<event>_change`` callables are registered."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="ignore_kwargs",
+                js="console.log('hello world');",
+            )
+        )
+        on_click = MagicMock(name="on_click")
+        helper = MagicMock(name="helper")
+        st._bidi_component(
+            "ignore_kwargs",
+            extra="not callable",
+            helper=helper,
+            on_click_change=on_click,
+        )
+        proto = self.get_delta_from_queue().new_element.bidi_component
+        assert proto.component_name == "ignore_kwargs"
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        metadata = ctx.session_state._state._new_widget_state.widget_metadata[proto.id]
+        assert metadata.callbacks == {"click": on_click}
+
+    def test_component_integer_data_uses_unknown_json_fallback(self) -> None:
+        """Scalar integers are JSON-encoded via the UNKNOWN-format fallback."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="int_data",
+                js="console.log('hello world');",
+            )
+        )
+        st._bidi_component("int_data", data=42)
+        proto = self.get_delta_from_queue().new_element.bidi_component
+        assert proto.WhichOneof("data") == "json"
+        assert proto.json == "42"
+
+    def test_component_unserializable_data_raises(self) -> None:
+        """Data that cannot be Arrow- or JSON-serialized raises a dedicated error."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="bad_data",
+                js="console.log('hello world');",
+            )
+        )
+        with pytest.raises(BidiComponentUnserializableDataError):
+            st._bidi_component("bad_data", data=object())
 
     def test_component_with_key(self):
         """Test component with a user-specified key."""

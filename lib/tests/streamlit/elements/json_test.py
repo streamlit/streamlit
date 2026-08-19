@@ -197,3 +197,23 @@ class StJsonAPITest(DeltaGeneratorTestCase):
             assert body["email"] == "test@example.com"
             assert body["name"] == "Test User"
             assert "tokens" not in body
+
+    def test_st_json_pydantic_sequence_falls_back_when_dump_fails(self) -> None:
+        """Fall back to ``list(body)`` when Pydantic serialization raises AttributeError."""
+        payload = [{"value": 1}, {"value": 2}]
+        with (
+            patch(
+                "streamlit.elements.json.is_sequence_of_pydantic_models",
+                return_value=True,
+            ),
+            patch(
+                "streamlit.elements.json.dump_pydantic_sequence",
+                side_effect=AttributeError,
+            ) as dump,
+        ):
+            st.json(payload)
+
+        dump.assert_called_once()
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == payload

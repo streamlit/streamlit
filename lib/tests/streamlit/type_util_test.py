@@ -270,6 +270,22 @@ def test_dump_pydantic_sequence_model_dump_v2() -> None:
     ]
 
 
+def test_dump_pydantic_sequence_uses_model_dump_without_pydantic() -> None:
+    """Serialize duck-typed Pydantic v2 models without importing pydantic."""
+
+    class _V2Model:
+        def __init__(self, x: int) -> None:
+            self.x = x
+
+        def model_dump(self, mode: str = "python") -> dict[str, object]:
+            return {"x": self.x, "mode": mode}
+
+    assert type_util.dump_pydantic_sequence([_V2Model(1), _V2Model(2)]) == [
+        {"x": 1, "mode": "json"},
+        {"x": 2, "mode": "json"},
+    ]
+
+
 @pytest.mark.parametrize(
     ("obj", "expected"),
     [

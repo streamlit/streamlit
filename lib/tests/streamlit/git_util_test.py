@@ -236,6 +236,33 @@ def test_public_git_queries_contain_unexpected_failures() -> None:
             assert repo.get_repo_info() is None
 
 
+def test_ahead_commits_returns_empty_list_when_rev_list_raises() -> None:
+    """A rev-list failure after a resolved upstream is reported as no ahead commits."""
+    with _mock_git_repo() as repo:
+        with (
+            patch.object(
+                repo, "get_tracking_branch_remote", return_value=("origin", "main")
+            ),
+            patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")),
+        ):
+            assert repo.ahead_commits == []
+
+
+def test_tracking_branch_remote_returns_none_when_is_valid_raises() -> None:
+    """``get_tracking_branch_remote`` returns None if ``is_valid`` raises."""
+    with _mock_git_repo() as repo:
+        with patch.object(repo, "is_valid", side_effect=RuntimeError("boom")):
+            assert repo.get_tracking_branch_remote() is None
+            assert repo.get_repo_info() is None
+
+
+def test_get_remote_urls_returns_empty_list_when_git_raises() -> None:
+    """``_get_remote_urls`` returns an empty list if Git raises."""
+    with _mock_git_repo() as repo:
+        with patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")):
+            assert repo._get_remote_urls("origin") == []
+
+
 def test_get_repo_info_uses_first_github_remote_url() -> None:
     """Use the first GitHub URL when a remote has multiple URLs."""
     with _mock_git_repo(

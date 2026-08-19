@@ -468,6 +468,19 @@ def test_get_stack_trace_no_traceback() -> None:
     assert result == []
 
 
+def test_get_stack_trace_uses_fallback_when_warning_has_no_stack() -> None:
+    """StreamlitAPIWarning without a tacked-on stack uses the catch-block fallback."""
+    warning = errors.StreamlitAPIWarning("missing stack")
+    warning.tacked_on_stack = None
+    result = _get_stack_trace_str_list(warning)
+    assert result == [
+        (
+            "Cannot extract the stack trace for this exception. "
+            "Try calling exception() within the `catch` block."
+        )
+    ]
+
+
 @patch("streamlit.elements.exception.get_script_run_ctx")
 def test_split_internal_frames_no_ctx(mock_ctx: MagicMock) -> None:
     """Test _split_internal_streamlit_frames returns all frames when no ctx."""

@@ -37,7 +37,10 @@ from streamlit.components.v1.component_registry import (
     ComponentRegistry,
     _get_module_name,
 )
-from streamlit.components.v1.custom_component import CustomComponent
+from streamlit.components.v1.custom_component import (
+    CustomComponent,
+    MarshallComponentException,
+)
 from streamlit.dataframe_util import (
     is_pandas_version_less_than,
     is_pyarrow_version_less_than,
@@ -634,6 +637,37 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitAPIException):
             self.test_component(tab_index=True, key="invalid_tab_index_3")
+
+    def test_positional_args_require_a_label(self) -> None:
+        """Positional component arguments must be passed as labeled kwargs."""
+        with pytest.raises(MarshallComponentException, match="needs a label"):
+            self.test_component("positional")
+
+    def test_unserializable_json_args_raise(self) -> None:
+        """Non-JSON component kwargs raise MarshallComponentException."""
+        with pytest.raises(
+            MarshallComponentException, match="Could not convert component args to JSON"
+        ):
+            self.test_component(bad=object())
+
+    def test_arrow_table_widget_value_is_converted_to_dataframe(self) -> None:
+        """Frontend ArrowTable values are converted back to a pandas DataFrame."""
+        widget_state = MagicMock()
+        widget_state.value = ArrowTableProto()
+        converted = pd.DataFrame({"a": [1]})
+        with (
+            patch(
+                "streamlit.components.v1.custom_component.register_widget",
+                return_value=widget_state,
+            ),
+            patch(
+                "streamlit.components.v1.component_arrow.arrow_proto_to_dataframe",
+                return_value=converted,
+            ) as convert_arrow,
+        ):
+            result = self.test_component()
+        convert_arrow.assert_called_once_with(widget_state.value)
+        pd.testing.assert_frame_equal(result, converted)
 
 
 class IFrameTest(DeltaGeneratorTestCase):

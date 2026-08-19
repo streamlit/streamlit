@@ -92,6 +92,33 @@ def test_vega_lite_state_is_read_only() -> None:
     assert isinstance(copy.deepcopy(result), VegaLiteState)
 
 
+def test_vega_lite_serde_deserializes_selection_payload() -> None:
+    """A frontend selection payload is wrapped into a typed Vega-Lite state."""
+    payload = json.dumps({"selection": {"brush": {"x": [1, 2]}}})
+    result = VegaLiteStateSerde(["brush"]).deserialize(payload)
+
+    assert isinstance(result, VegaLiteState)
+    assert result.selection.brush == {"x": [1, 2]}
+    assert result["selection"]["brush"] == {"x": [1, 2]}
+
+
+def test_vega_lite_serde_returns_empty_state_when_selection_missing() -> None:
+    """JSON without a selection key falls back to the empty selection state."""
+    result = VegaLiteStateSerde(["brush"]).deserialize(json.dumps({"other": 1}))
+
+    assert result.selection.brush == {}
+
+
+def test_vega_lite_state_wraps_raw_selection_dict() -> None:
+    """Bracket access wraps a raw selection mapping and caches the instance."""
+    state = VegaLiteState({"selection": {"brush": {"x": 1}}, "meta": 7})
+
+    first = state["selection"]
+    assert first.brush == {"x": 1}
+    assert state["selection"] is first
+    assert state["meta"] == 7
+
+
 def merge_dicts(x, y):
     z = x.copy()
     z.update(y)
@@ -3631,8 +3658,6 @@ class VegaUtilitiesTest(unittest.TestCase):
             }
         )
         assert result == {"valid_param", "another_valid"}
-        # Negative assertion: invalid entries should not appear in the result
-        assert "string_entry" not in result
 
         # Malformed composition: layer contains non-dict entries
         result = _extract_selection_parameters(

@@ -1034,6 +1034,54 @@ def test_pydantic_model_unhashable_when_model_dump_json_fails() -> None:
     assert "unhashable members" in str(exc_info.value).lower()
 
 
+class _FakePydanticBaseModel:
+    """Stand-in whose MRO FQN matches ``pydantic.main.BaseModel``."""
+
+
+_FakePydanticBaseModel.__module__ = "pydantic.main"
+_FakePydanticBaseModel.__qualname__ = "BaseModel"
+
+
+def test_pydantic_v2_style_model_hashes_from_model_dump_json() -> None:
+    """Pydantic v2 models are hashed from ``model_dump_json`` without importing pydantic."""
+
+    class _V2Model(_FakePydanticBaseModel):
+        def __init__(self, payload: str) -> None:
+            self._payload = payload
+
+        def model_dump_json(self) -> str:
+            return self._payload
+
+    assert get_hash(_V2Model('{"x": 1}')) == get_hash(_V2Model('{"x": 1}'))
+    assert get_hash(_V2Model('{"x": 1}')) != get_hash(_V2Model('{"x": 2}'))
+
+
+def test_pydantic_v1_style_model_hashes_from_json_method() -> None:
+    """Pydantic v1 models fall back to ``json()`` when ``model_dump_json`` is absent."""
+
+    class _V1Model(_FakePydanticBaseModel):
+        def __init__(self, payload: str) -> None:
+            self._payload = payload
+
+        def json(self) -> str:
+            return self._payload
+
+    assert get_hash(_V1Model('{"x": 1}')) == get_hash(_V1Model('{"x": 1}'))
+    assert get_hash(_V1Model('{"x": 1}')) != get_hash(_V1Model('{"x": 2}'))
+
+
+def test_pydantic_model_unhashable_when_dump_raises_without_pydantic() -> None:
+    """Serialization failures on a Pydantic-shaped object raise ``UnhashableTypeError``."""
+
+    class _BrokenModel(_FakePydanticBaseModel):
+        def model_dump_json(self) -> str:
+            raise TypeError("cannot serialize")
+
+    with pytest.raises(UnhashableTypeError) as exc_info:
+        get_hash(_BrokenModel())
+    assert "unhashable members" in str(exc_info.value).lower()
+
+
 def test_PIL_pmode_palette_collision_prevention() -> None:
     """P-mode PIL images with different palettes produce different hashes.
 

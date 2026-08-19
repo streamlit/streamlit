@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import unittest
 
 from parameterized import parameterized
@@ -430,3 +431,35 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(TEXT_DELTA_MSG2)
 
         assert count == 0
+
+    def test_get_debug_serializes_queued_messages(self) -> None:
+        """get_debug exposes JSON-serializable queue contents and delta paths."""
+        fmq = ForwardMsgQueue()
+        msg = ForwardMsg()
+        msg.delta.new_element.text.body = "debug"
+        msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+        fmq.enqueue(msg)
+
+        debug = fmq.get_debug()
+        assert debug["ids"] == [tuple(msg.metadata.delta_path)]
+        assert debug["queue"][0]["delta"]["newElement"]["text"]["body"] == "debug"
+        # MessageToDict output must be JSON-serializable (no protobuf objects).
+        assert json.dumps(debug)
+
+    def test_compose_replaces_delta_with_ref_hash_message(self) -> None:
+        """A ref_hash message at the same delta path replaces the queued delta."""
+        fmq = ForwardMsgQueue()
+        delta_path = make_delta_path(RootContainer.MAIN, (), 0)
+
+        old_msg = ForwardMsg()
+        old_msg.delta.new_element.text.body = "old"
+        old_msg.metadata.delta_path[:] = delta_path
+        fmq.enqueue(old_msg)
+
+        ref_msg = ForwardMsg()
+        ref_msg.ref_hash = "abc123"
+        ref_msg.metadata.delta_path[:] = delta_path
+        fmq.enqueue(ref_msg)
+
+        assert len(fmq._queue) == 1
+        assert fmq._queue[0].ref_hash == "abc123"

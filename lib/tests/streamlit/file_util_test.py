@@ -322,3 +322,20 @@ class FileInPythonPathTest(unittest.TestCase):
         assert (
             file_util.normalize_path_join("some", "random", "path", "../..") == "some"
         )
+
+
+def test_get_static_dir_points_at_package_static_folder() -> None:
+    """The packaged static directory lives next to ``file_util`` in the Streamlit package."""
+    expected = os.path.normpath(
+        os.path.join(os.path.dirname(file_util.__file__), "static")
+    )
+    assert file_util.get_static_dir() == expected
+
+
+def test_get_streamlit_file_path_requires_home_directory() -> None:
+    """A missing home directory is a hard error, not a silent fallback."""
+    with (
+        patch("streamlit.file_util.Path.home", return_value=None),
+        pytest.raises(RuntimeError, match="No home directory"),
+    ):
+        file_util.get_streamlit_file_path("config.toml")

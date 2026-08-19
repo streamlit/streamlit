@@ -85,6 +85,23 @@ def test_submit_degrades_when_threads_unavailable() -> None:
         manager.shutdown()
 
 
+def test_submit_releases_slot_on_unexpected_schedule_error() -> None:
+    """Non-RuntimeError scheduling failures release the slot without latching degradation."""
+    manager = _BackgroundRefreshManager(max_workers=2)
+    try:
+        failing_executor = Mock()
+        failing_executor.submit.side_effect = ValueError("pool exploded")
+        manager._executor = failing_executor
+
+        ran = Mock()
+        assert manager.submit(ran) is False
+        assert manager.threads_unavailable is False
+        ran.assert_not_called()
+        assert manager._slots._value == 2
+    finally:
+        manager.shutdown()
+
+
 def test_slot_released_on_task_failure() -> None:
     """A task that raises still releases its semaphore slot."""
     manager = _BackgroundRefreshManager(max_workers=1)

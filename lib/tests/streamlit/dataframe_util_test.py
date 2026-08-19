@@ -22,7 +22,7 @@ from collections.abc import Iterator, Mapping
 from datetime import date
 from decimal import Decimal
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -1630,3 +1630,14 @@ def test_unify_missing_values_replaces_nan_with_none() -> None:
     df = pd.DataFrame({"a": ["x", np.nan, "y"]})
     result = dataframe_util._unify_missing_values(df)
     assert result["a"].tolist() == ["x", None, "y"]
+
+
+def test_show_data_information_uses_main_caption() -> None:
+    """Truncation notices are shown via the main DeltaGenerator caption."""
+    mock_dg = MagicMock()
+    with patch(
+        "streamlit.delta_generator_singletons.get_dg_singleton_instance"
+    ) as get_instance:
+        get_instance.return_value.main_dg = mock_dg
+        dataframe_util._show_data_information("truncated")
+    mock_dg.caption.assert_called_once_with("truncated")
