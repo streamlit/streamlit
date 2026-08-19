@@ -699,24 +699,27 @@ class SliderMixin:
 
         on_change : callable, "rerun", "ignore", or None
             How the slider should respond to value changes. This controls
-            whether or not the slider triggers a rerun and if a callback
-            function is called. This can be one of the following values:
+            whether or not Streamlit reruns the app when the user interacts
+            with the slider. ``on_change`` can be one of the following:
 
-            - ``"rerun"`` (default): The slider value changes and the app
-              reruns. No callback function is called.
-            - ``"ignore"``: The slider's UI updates and the app doesn't
-              rerun. No callback function is called. The command's return
-              value and ``st.session_state`` stay at the previous value
-              until another interaction reruns the app. Ignored changes are
-              held in the browser and are lost if the page is refreshed
-              before that rerun. Combined with ``bind="query-params"``,
-              ignored changes also do not update the URL; the query
-              parameter stays at the last value synced from a
-              rerun-triggering interaction, including after a later rerun
-              that delivers the buffered value to Python.
-            - A ``callable``: The slider value changes and the app reruns.
-              The callable is called before the rest of the app.
-            - ``None``: This is same as ``on_change="rerun"``. This value
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user changes the slider value.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              changes the slider value. The slider still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              changes are held in the browser and are lost if the page is
+              refreshed before that rerun. Combined with
+              ``bind="query-params"``, ignored changes also do not update
+              the URL; the query parameter stays at the last value synced
+              from a rerun-triggering interaction, including after a later
+              rerun that delivers the buffered value to Python.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
               exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
