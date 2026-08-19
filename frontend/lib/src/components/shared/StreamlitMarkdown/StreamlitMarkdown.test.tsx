@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { cleanup, screen, within } from "@testing-library/react"
+import { cleanup, screen, waitFor, within } from "@testing-library/react"
 import { transparentize } from "color2k"
 import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
@@ -36,10 +36,10 @@ import StreamlitMarkdown, {
   CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
+  encodeMaterialIconPrefix,
   HeadingWithActionElements,
   isValidCssColor,
   LinkWithTargetBlank,
-  rewriteMaterialIconPrefix,
 } from "./StreamlitMarkdown"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
@@ -296,124 +296,33 @@ describe("containsEmojiShortcodes", () => {
   )
 })
 
-describe("rewriteMaterialIconPrefix", () => {
-  it.each([
-    {
-      input: ":material/search: hello",
-      expected: ":material_search: hello",
-      description: "bare prefix in prose",
-    },
-    {
-      input: "a :material/one: b :material/two:",
-      expected: "a :material_one: b :material_two:",
-      description: "every occurrence in prose",
-    },
-    {
-      input: "`:material/search:`",
-      expected: "`:material/search:`",
-      description: "single-backtick code span is left alone",
-    },
-    {
-      input: "``:material/search:``",
-      expected: "``:material/search:``",
-      description: "double-backtick code span is left alone",
-    },
-    {
-      input: "```\n:material/a:",
-      expected: "```\n:material_a:",
-      description:
-        "unclosed fence is not treated as code, so later prose still rewrites",
-    },
-    {
-      input: "see ``` here :material/search:",
-      expected: "see ``` here :material_search:",
-      description:
-        "a mid-line ``` is prose, not a fence, so the prefix after it still rewrites",
-    },
-    {
-      input: "``:material/a: with ` inside``",
-      expected: "``:material/a: with ` inside``",
-      description:
-        "double-backtick span containing a single backtick is left alone",
-    },
-    {
-      input: "````:material/a:````",
-      expected: "````:material/a:````",
-      description: "four-backtick span is left alone",
-    },
-    {
-      input: "~~~\n:material/a:\n~~~",
-      expected: "~~~\n:material/a:\n~~~",
-      description: "tilde-fenced block is left alone",
-    },
-    {
-      input: "```python\n:material/a:\n```",
-      expected: "```python\n:material/a:\n```",
-      description: "fence with an info string is left alone",
-    },
-    {
-      input: "```\n:material/a:\n`````",
-      expected: "```\n:material/a:\n`````",
-      description:
-        "backtick fence closed by a longer run is left alone, as CommonMark allows",
-    },
-    {
-      input: "~~~\n:material/a:\n~~~~",
-      expected: "~~~\n:material/a:\n~~~~",
-      description:
-        "tilde fence closed by a longer run is left alone, as CommonMark allows",
-    },
-    {
-      input: "  ```\n  :material/a:\n  ```",
-      expected: "  ```\n  :material/a:\n  ```",
-      description: "indented fence is left alone",
-    },
-    {
-      input: ":material/one: `:material/two:` :material/three:",
-      expected: ":material_one: `:material/two:` :material_three:",
-      description: "rewrites around a code span without touching it",
-    },
-    {
-      input: "a ` tick\n\n:material/star:\n\nb ` tick",
-      expected: "a ` tick\n\n:material_star:\n\nb ` tick",
-      description:
-        "unpaired backticks in separate blocks are not a code span, so prose still rewrites",
-    },
-    {
-      input: "`multi\nline :material/a:`",
-      expected: "`multi\nline :material/a:`",
-      description: "a span may cross a line break, just not a blank line",
-    },
-    {
-      input: "`:material/star:``",
-      expected: "`:material_star:``",
-      description:
-        "a longer trailing run does not close a shorter opener, so it is not a span",
-    },
-    {
-      input: "``:material/star:```",
-      expected: "``:material_star:```",
-      description:
-        "a longer trailing run does not close a two-backtick opener either",
-    },
-    {
-      input: "```:material/a:```",
-      expected: "```:material/a:```",
-      description: "a three-backtick inline span on one line is left alone",
-    },
-    {
-      input: "```:material/star:`",
-      expected: "```:material_star:`",
-      description:
-        "a longer opener does not pair with a shorter closer, so it is not a span",
-    },
-    {
-      input: "no icons here",
-      expected: "no icons here",
-      description: "source without the prefix is unchanged",
-    },
-  ])("$description", ({ input, expected }) => {
-    expect(rewriteMaterialIconPrefix(input)).toBe(expected)
+describe("encodeMaterialIconPrefix", () => {
+  // The sentinel is deliberately not exported: tests assert the round trip through
+  // rendering (see "material icon prefix" below) rather than the wire format, so the
+  // encoding stays free to change. These cases only pin the properties the rest of
+  // the pipeline relies on.
+  it("encodes every occurrence, and nothing else", () => {
+    const encoded = encodeMaterialIconPrefix(
+      "a :material/one: b `:material/two:` c"
+    )
+    // The prefix is gone in its literal form...
+    expect(encoded).not.toContain(":material/")
+    // ...for both occurrences, code included -- this pass does not inspect syntax.
+    expect(encoded.match(/material\//g)).toHaveLength(2)
+    // Surrounding text is untouched.
+    expect(encoded).toContain("a ")
+    expect(encoded).toContain(" b `")
+    expect(encoded).toContain("` c")
+  })
+
+  it("leaves source without the prefix unchanged", () => {
+    const source = "no icons here, just :emoji: and :red[color]"
+    expect(encodeMaterialIconPrefix(source)).toBe(source)
+  })
+
+  it("does not encode a bare :material without a slash", () => {
+    const source = "the :material directive"
+    expect(encodeMaterialIconPrefix(source)).toBe(source)
   })
 })
 
@@ -1159,25 +1068,201 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveAttribute("translate", "no")
   })
 
-  it("preserves a material icon name inside inline code", () => {
-    // The icon plugin only visits text nodes, so a code span can never become an
-    // icon -- it must render the literal text the user typed, slash included.
+  describe("material icon prefix", () => {
+    // Whether a `:material/` prefix is an icon or literal text is the markdown
+    // parser's decision, so these assert the rendered result rather than any
+    // intermediate form. An icon renders as a <span> holding just the name; literal
+    // text must keep the slash the user typed.
     // See: https://github.com/streamlit/streamlit/issues/10365
-    const source = "`:material/search:`"
-    render(<StreamlitMarkdown source={source} allowHTML={false} />)
-    const code = screen.getByText(":material/search:")
-    expect(code.nodeName.toLowerCase()).toBe("code")
-  })
 
-  it("renders an icon outside code while preserving one inside code", () => {
-    const source = ":material/search: and `:material/search:`"
-    render(<StreamlitMarkdown source={source} allowHTML={false} />)
-    // The prose occurrence became an icon span holding just the name...
-    expect(screen.getByText("search").nodeName.toLowerCase()).toBe("span")
-    // ...while the code occurrence kept its literal text.
-    expect(screen.getByText(":material/search:").nodeName.toLowerCase()).toBe(
-      "code"
+    const PREFIX = ":material/search:"
+
+    /** An icon renders as this element -- see createRemarkMaterialIcons. */
+    const ICON = 'span[role="img"]'
+
+    /**
+     * Renders `source` and resolves once any lazily loaded content has arrived.
+     *
+     * Code blocks sit behind Suspense, so they render a skeleton first and their
+     * text only appears on a later tick.
+     */
+    const renderSettled = async (source: string): Promise<HTMLElement> => {
+      const { container } = render(
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      )
+      await waitFor(() =>
+        expect(
+          container.querySelector('[data-testid="stSkeleton"]')
+        ).not.toBeInTheDocument()
+      )
+      return container
+    }
+
+    it("renders an icon in prose", async () => {
+      const container = await renderSettled(":material/search: hello")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders every icon in prose", () => {
+      render(
+        <StreamlitMarkdown
+          source="a :material/star: b :material/home:"
+          allowHTML={false}
+        />
+      )
+      expect(screen.getByText("star")).toBeInTheDocument()
+      expect(screen.getByText("home")).toBeInTheDocument()
+    })
+
+    it("renders adjacent icons with no separator", () => {
+      // The encoded prefix has to survive sitting immediately after the previous
+      // icon's closing colon -- a sentinel that can appear in a directive name gets
+      // swallowed here, dropping the second icon.
+      render(
+        <StreamlitMarkdown
+          source=":material/star::material/home:"
+          allowHTML={false}
+        />
+      )
+      expect(screen.getByText("star")).toBeInTheDocument()
+      expect(screen.getByText("home")).toBeInTheDocument()
+    })
+
+    it.each([
+      {
+        description: "single-backtick code span",
+        source: "`:material/search:`",
+      },
+      {
+        description: "double-backtick code span",
+        source: "``:material/search:``",
+      },
+      {
+        description: "code span containing a backtick",
+        source: "``:material/search: with ` inside``",
+      },
+      {
+        description: "code span crossing a line break",
+        source: "`multi\nline :material/search:`",
+      },
+      { description: "fenced block", source: "```\n:material/search:\n```" },
+      {
+        description: "fenced block with an info string",
+        source: "```python\n:material/search:\n```",
+      },
+      {
+        description: "fence closed by a longer run, which CommonMark allows",
+        source: "```\n:material/search:\n`````",
+      },
+      {
+        description: "tilde-fenced block",
+        source: "~~~\n:material/search:\n~~~",
+      },
+      {
+        description: "tilde fence closed by a longer run",
+        source: "~~~\n:material/search:\n~~~~",
+      },
+      { description: "indented fence", source: "  ```\n  :material/search:" },
+      {
+        description: "four-space indented code block",
+        source: "    :material/search:",
+      },
+      {
+        description: "unterminated fence",
+        source: "```\n:material/search:",
+      },
+      {
+        description: "code span in a table cell",
+        source: "| a |\n|---|\n| `:material/search:` |",
+      },
+      {
+        description: "code span in a blockquote",
+        source: "> `:material/search:`",
+      },
+    ])(
+      "keeps the literal prefix inside a $description",
+      async ({ source }) => {
+        // Four-space indented blocks are included: the previous regex-based
+        // approach could not see them, so #10365 persisted there.
+        const container = await renderSettled(source)
+        // Reads textContent because syntax highlighting splits a code block
+        // across many elements.
+        expect(container.textContent).toContain(PREFIX)
+        expect(container.querySelector(ICON)).not.toBeInTheDocument()
+      }
     )
+
+    it("renders an icon outside code while preserving one inside code", () => {
+      render(
+        <StreamlitMarkdown
+          source=":material/search: and `:material/search:`"
+          allowHTML={false}
+        />
+      )
+      // The prose occurrence became an icon span holding just the name...
+      expect(screen.getByText("search").nodeName.toLowerCase()).toBe("span")
+      // ...while the code occurrence kept its literal text.
+      expect(
+        screen.getByText(":material/search:").nodeName.toLowerCase()
+      ).toBe("code")
+    })
+
+    it("renders an icon when a backtick in the info string disqualifies the fence", async () => {
+      // CommonMark forbids backticks in a backtick fence's info string, so this is
+      // prose and the icon must render. Deciding that needs block-vs-inline
+      // precedence, which is why preprocessing cannot judge code by itself.
+      const container = await renderSettled("```a`b\n:material/search:\n```")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon after a mid-line run of backticks", async () => {
+      // A run of backticks that does not start a line cannot open a fence.
+      const container = await renderSettled("see ``` here :material/search:")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon between unpaired backticks in separate blocks", async () => {
+      // Inline code cannot span a blank line, so neither backtick opens a span.
+      const container = await renderSettled(
+        "a ` tick\n\n:material/search:\n\nb ` tick"
+      )
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("keeps a bare prefix with no icon name as literal text", () => {
+      // `:material` on its own is a directive remark would otherwise claim, taking
+      // the slash with it.
+      render(
+        <StreamlitMarkdown source="see :material/ alone" allowHTML={false} />
+      )
+      expect(screen.getByText("see :material/ alone")).toBeInTheDocument()
+    })
+
+    it("renders an icon nested in a color directive", async () => {
+      const container = await renderSettled(":red[:material/search:]")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon in a heading", async () => {
+      const container = await renderSettled("# :material/search: Title")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon in a link's text", async () => {
+      // `findAndReplace` visits text nodes inside links too, so this is an icon --
+      // matching the behaviour before this change.
+      const container = await renderSettled(
+        "[:material/search:](https://example.com)"
+      )
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
   })
 
   it("does not remove unknown directive", () => {

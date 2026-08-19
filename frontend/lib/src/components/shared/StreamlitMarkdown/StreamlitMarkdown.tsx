@@ -116,65 +116,84 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
- * Matches a fenced code block or an inline code span (so they can be skipped), or
- * else a bare `:material/` prefix.
+ * Stands in for the leading `:` of a `:material/` prefix while markdown is parsed.
  *
- * The code alternatives come first so they are consumed whole and returned
- * unchanged; only the final branch substitutes.
+ * `:material/icon:` cannot survive parsing as written: `remark-directive` claims
+ * `:material` as a text directive and leaves `/icon:` behind as loose text, so the
+ * prefix has to be disguised before parsing and the icon plugin has to match the
+ * disguised form.
  *
- * - Fences must begin a line (up to three spaces of indent, per CommonMark) and be
- *   closed on a line of their own. Both conditions matter: without the line anchor,
- *   a mid-line ``` -- which CommonMark leaves as prose -- would open a fence, and
- *   without requiring the close it would swallow the rest of the input, so
- *   `:material/` in later prose would never be rewritten and the icon would silently
- *   stop rendering.
- * - Backtick and tilde fences get separate branches so the closing run can be longer
- *   than the opener, which CommonMark permits. One combined branch would need a
- *   single backreference, and that only matches an exactly equal run.
- * - Inline spans backreference the opening backtick run, so any run length works and
- *   a shorter run inside a longer one does not terminate the span. Both delimiters
- *   are required to be *maximal* runs -- neither adjoined by another backtick --
- *   because CommonMark closes a run of N only with a run of exactly N. Without that,
- *   a longer trailing run would be read as an equal-length closer, the enclosed
- *   prefix would be left unrewritten, and since markdown does not see a code span
- *   there either, the icon would render as literal text. The opener is captured
- *   inside a lookahead so its `+` cannot backtrack to a shorter run and pair with a
- *   shorter closer, which is the same failure from the other direction.
- * - Spans may cross a line break but not a *blank* line, because CommonMark keeps
- *   inline code inside one block -- otherwise two unpaired backticks in separate
- *   paragraphs would pair up and swallow the prose between them.
+ * The disguise has to be reversible, because whether a given occurrence is an icon
+ * or literal text is not knowable from the source alone -- it depends on where the
+ * markdown parser decides code begins and ends (see #10365). So every occurrence is
+ * encoded blindly, and whatever the parser did *not* hand to the icon plugin is
+ * restored verbatim.
  *
- * Deliberately not handled:
- * - Four-space indented code blocks: still rewritten, so #10365 persists there.
- * - Unterminated fences and inline spans: whether the prefix is rewritten depends on
- *   where the next delimiter run falls. This mostly matters while streaming, where
- *   `remend` closes the construct only after this runs, so a transient frame can show
- *   `:material_x:`. The settled source is correct.
+ * U+FFFC (OBJECT REPLACEMENT CHARACTER) is used because:
+ * - It replaces the `:`, so the source handed to remark never contains `:material`
+ *   and no directive can be claimed at all.
+ * - Unicode puts it in category So, which CommonMark treats as punctuation, so it
+ *   cannot appear in a directive *name* either. That rules out a neighbouring `:`
+ *   pulling it into a directive, which is what disqualifies the invisible
+ *   alternatives: private-use and format characters (U+E000, U+2063, U+FFF9) are all
+ *   name characters, so `:material/a::material/b:` parses its second prefix as a
+ *   directive named "\uFFFCmaterial" and the sentinel is eaten.
+ * - It is effectively never typed by hand, and it means "an object goes here", which
+ *   is what it is standing in for.
  */
-const CODE_OR_MATERIAL_PREFIX =
-  /^[ \t]{0,3}(`{3,})[\s\S]*?^[ \t]{0,3}\1`*[ \t]*$|^[ \t]{0,3}(~{3,})[\s\S]*?^[ \t]{0,3}\2~*[ \t]*$|(?<!`)(?=(`+))\3(?:[^\n]|\n(?![ \t]*\n))*?(?<!`)\3(?!`)|:material\//gm
+const MATERIAL_ICON_SENTINEL = "\uFFFC"
+
+/** The parse-time form of a `:material/` prefix. */
+const ENCODED_MATERIAL_PREFIX = `${MATERIAL_ICON_SENTINEL}material/`
 
 /**
- * Rewrites `:material/` to `:material_` outside of code, leaving code untouched.
+ * Disguises every `:material/` prefix so it survives markdown parsing intact.
  *
- * The icon directive plugin matches on `:material_` because a `/` conflicts with
- * directive syntax, so the prefix has to be rewritten before parsing. Code is a
- * special case: the plugin walks mdast `text` nodes, so it never reaches
- * `inlineCode` or `code` nodes to begin with. Rewriting inside them therefore buys
- * nothing and corrupts the literal text the user asked to display.
+ * Unconditional by design. Deciding here which occurrences are code -- and so should
+ * be left alone -- means reimplementing CommonMark's block and inline precedence in a
+ * regex, which does not work: a fence's info string may not contain a backtick, and a
+ * line-leading run of three or more backticks is claimed by block parsing before
+ * inline parsing runs. Both are decisions only the parser can make. Instead the
+ * parser makes them, and `createRemarkRestoreMaterialIconPrefix` undoes the disguise
+ * everywhere an icon was not produced.
  *
  * See: https://github.com/streamlit/streamlit/issues/10365
  *
- * @param source - The markdown source string to rewrite
- * @returns The source with `:material/` rewritten outside code only
+ * @param source - The markdown source string to encode
+ * @returns The source with every `:material/` prefix replaced by its encoded form
  */
-export function rewriteMaterialIconPrefix(source: string): string {
-  // Every code alternative starts with a backtick or tilde, so only the bare-prefix
-  // branch can produce this exact match. Comparing the match rather than inspecting
-  // capture groups keeps this correct if another group is ever added.
-  return source.replace(CODE_OR_MATERIAL_PREFIX, match =>
-    match === ":material/" ? ":material_" : match
-  )
+export function encodeMaterialIconPrefix(source: string): string {
+  return source.replaceAll(":material/", ENCODED_MATERIAL_PREFIX)
+}
+
+/**
+ * Factory function to create the plugin that undoes `encodeMaterialIconPrefix`.
+ *
+ * Must run after `createRemarkMaterialIcons`, which consumes the encoded prefixes
+ * that really are icons. Everything still encoded by this point is literal text the
+ * user asked to display -- inside a code span, a fenced or indented code block, raw
+ * HTML, or simply not a well-formed icon name -- and is restored verbatim.
+ *
+ * Restoring the whole prefix rather than a bare sentinel keeps a sentinel a user
+ * typed themselves untouched, so it can never be turned into a stray `:`.
+ */
+function createRemarkRestoreMaterialIconPrefix() {
+  return () => (tree: MdastRoot) => {
+    visit(tree, node => {
+      // Icon nodes keep the encoded prefix in `value`, but render from `data`, so
+      // skipping them avoids pointless work rather than changing any output.
+      if ("data" in node && node.data && "hName" in node.data) {
+        return
+      }
+      if ("value" in node && typeof node.value === "string") {
+        node.value = node.value.replaceAll(
+          ENCODED_MATERIAL_PREFIX,
+          ":material/"
+        )
+      }
+    })
+    return tree
+  }
 }
 
 /**
@@ -993,14 +1012,14 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
         },
       }
     }
-    // We replace all `:material/` occurrences with `:material_` to avoid
-    // conflicts with the directive plugin.
-    // Since all `:material/` already got replaced with `:material_`
-    // within the markdown text (see below), we need to use `:material_`
-    // within the regex.
+    // The prefix reaches this point in its encoded form -- see
+    // MATERIAL_ICON_SENTINEL for why it cannot be matched as `:material/`.
+    // `findAndReplace` visits `text` nodes only, so code and raw HTML are never
+    // offered here; whatever it leaves behind is restored by
+    // createRemarkRestoreMaterialIconPrefix.
     findAndReplace(tree, [
       [
-        /:material_(\w+):/g,
+        new RegExp(`${ENCODED_MATERIAL_PREFIX}(\\w+):`, "g"),
         replace as (fullMatch: string, iconName: string) => Text,
       ],
     ])
@@ -1288,8 +1307,14 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       plugins.push(wrappedEmojiPlugin)
     }
 
-    // This plugin must run last to clean up any unsupported directives
+    // This plugin must run after any plugin that handles a directive, so it only
+    // sees the ones nothing claimed.
     plugins.push(createRemarkUnsupportedDirectivesCleanup())
+
+    // Must come after createRemarkMaterialIcons, so it only sees prefixes that did
+    // not become icons. It touches node values rather than directives, so its order
+    // relative to the cleanup above does not matter.
+    plugins.push(createRemarkRestoreMaterialIconPrefix())
 
     return plugins
   }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
@@ -1323,8 +1348,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const processedSource = useMemo(() => {
-    // Rewrite :material/ to :material_ outside code so the directive plugin can match it.
-    let processed = rewriteMaterialIconPrefix(source)
+    // Disguise :material/ so it survives parsing; restored afterwards by
+    // createRemarkRestoreMaterialIconPrefix wherever it was not an icon.
+    let processed = encodeMaterialIconPrefix(source)
 
     if (isLabel) {
       // Escape markdown syntax that would be stripped in labels, leaving empty content.
