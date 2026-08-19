@@ -289,7 +289,7 @@ def test_dialog_allows_interacting_with_color_picker(app: Page):
 
 def test_dialog_allows_interacting_with_menu_button(app: Page):
     """A menu button dropdown opened inside an st.dialog must stay interactive
-    without dismissing the dialog (regression coverage for inert portal bug).
+    without dismissing the dialog.
     """
     click_button(app, "Open Dialog with Menu Button")
     dialog = app.get_by_test_id(modal_test_id)
@@ -310,7 +310,7 @@ def test_dialog_allows_interacting_with_menu_button(app: Page):
 
 def test_dialog_allows_interacting_with_json_path_tooltip(app: Page):
     """A JSON path tooltip opened inside an st.dialog must stay interactive
-    without dismissing the dialog (regression coverage for inert portal bug).
+    without dismissing the dialog.
     """
     click_button(app, "Open Dialog with JSON Path Tooltip")
     dialog = app.get_by_test_id(modal_test_id)
