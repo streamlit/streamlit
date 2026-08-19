@@ -141,7 +141,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.4",
     "@types/d3": "^7.4.3",
-    "@types/d3-graphviz": "^2.6.10",
+    "@types/d3-graphviz": "^3.1.0",
     "@types/hoist-non-react-statics": "~3.3.7",
     "@types/katex": "~0.16.8",
     "@types/lodash-es": "~4.17.12",
