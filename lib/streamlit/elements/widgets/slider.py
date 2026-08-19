@@ -697,19 +697,27 @@ class SliderMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : "rerun", "ignore", or callable
+        on_change : callable, "rerun", "ignore", or None
             How the slider should respond to value changes. This controls
             whether or not the slider triggers a rerun and if a callback
             function is called. This can be one of the following values:
 
             - ``"rerun"`` (default): The slider value changes and the app
               reruns. No callback function is called.
-
-            - ``"ignore"``: The slider value changes and the app doesn't
-              rerun. No callback function is called.
-
+            - ``"ignore"``: The slider's UI updates and the app doesn't
+              rerun. No callback function is called. The command's return
+              value and ``st.session_state`` stay at the previous value
+              until another interaction reruns the app. Ignored changes are
+              held in the browser and are lost if the page is refreshed
+              before that rerun. Combined with ``bind="query-params"``,
+              ignored changes also do not update the URL; the query
+              parameter stays at the last value synced from a
+              rerun-triggering interaction, including after a later rerun
+              that delivers the buffered value to Python.
             - A ``callable``: The slider value changes and the app reruns.
               The callable is called before the rest of the app.
+            - ``None``: This is same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -756,6 +764,13 @@ class SliderMixin:
             Invalid query parameter values are ignored and removed
             from the URL. Range sliders use repeated parameters (e.g.,
             ``?price=10&price=90``).
+
+            When ``on_change="ignore"``, slider interactions do not update
+            the URL. The query parameter stays at the last value synced
+            from a rerun-triggering interaction, even after another
+            widget later reruns the app and delivers the buffered slider
+            value to Python. A page load or share therefore still uses
+            the previously committed URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -863,24 +878,19 @@ class SliderMixin:
     ) -> SliderReturn:
         key = to_key(key)
 
-        # Determine if on_change is a callback or a mode string
-        is_callback = callable(on_change)
+        validate_on_change_mode(on_change)
+
+        on_change_callback: WidgetCallback | None = (
+            on_change if callable(on_change) else None
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            cast("WidgetCallback | None", on_change) if is_callback else None,
+            on_change_callback,
             default_value=value,
-            enable_check_callback_rules=is_callback,
         )
         maybe_raise_label_warnings(label, label_visibility)
-
-        # Validate on_change mode early, before any expensive setup.
-        validate_on_change_mode(on_change)
-
-        on_change_callback: WidgetCallback | None = None
-        if callable(on_change):
-            on_change_callback = on_change
 
         element_id = compute_and_register_element_id(
             "slider",
@@ -1186,7 +1196,6 @@ class SliderMixin:
         if bind and key:
             slider_proto.query_param_key = str(key)
 
-        # Set ignore_rerun flag on proto if mode is "ignore"
         if on_change == "ignore":
             slider_proto.ignore_rerun = True
 

@@ -664,6 +664,23 @@ def test_id_stability():
     assert s1.id == s2.id
 
 
+def test_slider_on_change_callback_is_invoked() -> None:
+    """Test that a callable on_change runs when the slider value changes."""
+
+    def script() -> None:
+        import streamlit as st
+
+        def on_change() -> None:
+            st.session_state["called"] = True
+
+        st.slider("slider", value=0, key="slider", on_change=on_change)
+
+    at = AppTest.from_function(script).run()
+    assert "called" not in at.session_state
+    at = at.slider[0].set_value(5).run()
+    assert at.session_state["called"] is True
+
+
 class SliderStableIdTest(DeltaGeneratorTestCase):
     def test_stable_id_with_key(self):
         """Test that the widget ID is stable when a stable key is provided, unless whitelisted kwargs change."""

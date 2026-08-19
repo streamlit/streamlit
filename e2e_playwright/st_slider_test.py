@@ -717,6 +717,9 @@ def test_slider_on_change_ignore(app: Page):
     for _ in range(4):
         slider_role.press("ArrowRight")
 
+    expect(slider).to_contain_text("30")
+    expect_prefixed_markdown(app, "Ignore slider value:", "25")
+
     # Click button to trigger a rerun - accumulated value should be sent
     app.get_by_role("button", name="Apply ignore slider", exact=True).click()
     wait_for_app_run(app)
