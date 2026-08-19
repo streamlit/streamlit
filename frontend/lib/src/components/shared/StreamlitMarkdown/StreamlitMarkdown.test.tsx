@@ -1068,7 +1068,11 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveAttribute("translate", "no")
   })
 
-  describe("material icon prefix", () => {
+  // The generous timeout is for the lazily imported code-block chunk. The global
+  // `asyncUtilTimeout` is 5s and so is the default per-test timeout, so a cold
+  // dynamic import under CI contention exhausts the test before `waitFor` can
+  // report anything useful.
+  describe("material icon prefix", { timeout: 20_000 }, () => {
     // Whether a `:material/` prefix is an icon or literal text is the markdown
     // parser's decision, so these assert the rendered result rather than any
     // intermediate form. An icon renders as a <span> holding just the name; literal
@@ -1081,19 +1085,39 @@ describe("StreamlitMarkdown", () => {
     const ICON = 'span[role="img"]'
 
     /**
+     * Selector for content that only exists once the markdown has really rendered.
+     *
+     * `img` and `a` are included because an image-only or autolink-only source
+     * renders no text, so a text-based check would never settle for those.
+     */
+    const RENDERED_CONTENT =
+      "p, pre, h1, h2, h3, table, blockquote, ul, img, a"
+
+    /**
      * Renders `source` and resolves once any lazily loaded content has arrived.
      *
      * Code blocks sit behind Suspense, so they render a skeleton first and their
-     * text only appears on a later tick.
+     * real content only appears on a later tick.
+     *
+     * Both conditions are needed. Waiting only for the skeleton to disappear is not
+     * enough, because it is also absent in the frame before it mounts, so the wait
+     * would return before anything had rendered -- which is how the block-code cases
+     * silently asserted against empty output.
      */
     const renderSettled = async (source: string): Promise<HTMLElement> => {
       const { container } = render(
         <StreamlitMarkdown source={source} allowHTML={false} />
       )
-      await waitFor(() =>
-        expect(
-          container.querySelector('[data-testid="stSkeleton"]')
-        ).not.toBeInTheDocument()
+      await waitFor(
+        () => {
+          expect(
+            container.querySelector('[data-testid="stSkeleton"]')
+          ).not.toBeInTheDocument()
+          expect(container.querySelector(RENDERED_CONTENT)).toBeInTheDocument()
+        },
+        // Above the global `asyncUtilTimeout` of 5s, since this waits on a lazily
+        // imported chunk whose first load in a CI worker can exceed it.
+        { timeout: 15_000 }
       )
       return container
     }
