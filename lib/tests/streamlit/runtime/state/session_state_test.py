@@ -840,7 +840,7 @@ def test_fragment_callback_rerun_requeued() -> None:
 
 
 def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
-    """When targeted and default-scoped callbacks conflict, force a full-app rerun.
+    """A main-script interaction's default is app-wide, so it trumps the targets.
 
     - One callback requests a fragment-scoped rerun; another returns normally.
     - After both run: the targeted re-queue plus one forced full-app request.
@@ -869,6 +869,10 @@ def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
         ss._new_widget_state.set_from_value(wid, 1)
 
     mock_ctx = MagicMock()
+    # No fragment is running, so the interaction's default rerun is the full app.
+    # Pin it explicitly: a bare MagicMock attribute is truthy and would read as a
+    # fragment interaction.
+    mock_ctx.fragment_ids_this_run = None
     mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
         d
     )
@@ -886,6 +890,56 @@ def test_callbacks_targeted_and_default_force_full_app_rerun() -> None:
     assert forced.fragment_id_queue == []
     assert forced.is_fragment_scoped_rerun is False
     assert forced.widget_states is None
+
+
+def test_callbacks_targeted_and_default_in_fragment_do_not_force_full_app_rerun() -> (
+    None
+):
+    """A fragment interaction is not widened to the whole app by a normal return.
+
+    The interacting widget lives inside a fragment, so the rerun a normally-returning
+    callback leaves in place covers only that fragment. The targeted rerun replaces
+    it, per the spec's "a targeted rerun replaces the interaction's default rerun" —
+    forcing a full-app rerun here would discard the partial update instead.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    def cb_targeted() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["frag-1"], is_fragment_scoped_rerun=True)
+        )
+
+    ss = SessionState()
+    for wid, cb in [("w1", cb_targeted), ("w2", lambda: None)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+            fragment_id="frag-1",
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["frag-1"]
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the targeted re-queue: the fragment-scoped default was not escalated.
+    assert len(requeue_calls) == 1
+    assert requeue_calls[0].fragment_id_queue == ["frag-1"]
 
 
 def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:

@@ -594,8 +594,10 @@ class _CallbackRerunVotes:
     - ``wants_default_scope`` — a callback returned normally or called plain
       ``st.rerun()``, i.e. did not ask for a targeted fragment rerun.
 
-    When both are set, ``SessionState._call_callbacks`` forces a full-app rerun
-    so the default scope wins over the targeted requests.
+    When both are set, ``SessionState._call_callbacks`` re-queues the interaction's
+    default rerun so it wins over the targeted requests — but only when that default
+    is app-wide. "Default" is not a synonym for full-app: a widget inside a fragment
+    defaults to rerunning just that fragment, and the targeted reruns replace it.
     """
 
     requested_targeted: bool = False
@@ -915,11 +917,16 @@ class SessionState:
                 self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
 
         if votes.requested_targeted and votes.wants_default_scope:
-            # Default scope wins over targeted fragment requests: force an explicit
-            # full-app rerun so request coalescing collapses any queued fragment
-            # targets. Omit widget_states so this forced request does not re-fire
-            # callbacks.
-            self._request_full_app_rerun()
+            ctx = get_script_run_ctx()
+            if not (ctx and ctx.fragment_ids_this_run):
+                # A callback left the interaction's default rerun in place, and that
+                # default is app-wide, so it wins over the targeted requests. This
+                # run's body is about to be preempted, so re-queue the default
+                # explicitly — nothing else represents a callback that returned
+                # normally. A fragment interaction defaults to rerunning just its own
+                # fragment, which the targeted reruns replace rather than lose to, so
+                # nothing is forced there.
+                self._request_full_app_rerun()
 
     def _execute_widget_callback(
         self,
