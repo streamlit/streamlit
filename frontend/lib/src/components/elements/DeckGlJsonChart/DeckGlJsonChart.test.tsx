@@ -118,15 +118,18 @@ describe("DeckGlJsonChart", () => {
 
       if (setupSelection) {
         props.widgetMgr.setStringValue(
-          props.element,
+          props.element.id,
           JSON.stringify({
             selection: {
               indices: { [mockLayerId]: [0] },
               objects: { [mockLayerId]: [{}] },
             },
           }),
-          { fromUi: true },
-          props.fragmentId
+          {
+            formId: props.element.formId,
+            fragmentId: props.fragmentId,
+            fromUser: true,
+          }
         )
       }
 
@@ -146,15 +149,18 @@ describe("DeckGlJsonChart", () => {
 
     // Set up an active selection
     props.widgetMgr.setStringValue(
-      props.element,
+      props.element.id,
       JSON.stringify({
         selection: {
           indices: { [mockLayerId]: [0] },
           objects: { [mockLayerId]: [{ testProp: "value" }] },
         },
       }),
-      { fromUi: true },
-      props.fragmentId
+      {
+        formId: props.element.formId,
+        fragmentId: props.fragmentId,
+        fromUser: true,
+      }
     )
 
     render(<DeckGlJsonChart {...props} />)
@@ -175,15 +181,18 @@ describe("DeckGlJsonChart", () => {
 
     // Set up an active multi-selection
     props.widgetMgr.setStringValue(
-      props.element,
+      props.element.id,
       JSON.stringify({
         selection: {
           indices: { [mockLayerId]: [0, 2, 4] },
           objects: { [mockLayerId]: [{}, {}, {}] },
         },
       }),
-      { fromUi: true },
-      props.fragmentId
+      {
+        formId: props.element.formId,
+        fragmentId: props.fragmentId,
+        fromUser: true,
+      }
     )
 
     render(<DeckGlJsonChart {...props} />)

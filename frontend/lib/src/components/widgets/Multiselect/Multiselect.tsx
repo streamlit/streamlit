@@ -125,12 +125,11 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<MultiselectValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 /**
@@ -477,7 +476,7 @@ const Multiselect: FC<Props> = props => {
           newValue = [...value, ...optionsToAdd]
         }
 
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         setInputValue("")
         return
       }
@@ -495,7 +494,7 @@ const Multiselect: FC<Props> = props => {
           return
         }
         const newValue = [...value, inputValueRef.current]
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         setInputValue("")
         return
       }
@@ -526,7 +525,7 @@ const Multiselect: FC<Props> = props => {
         return
       }
 
-      setValueWithSource({ value: finalValue, fromUi: true })
+      setValueWithSource({ value: finalValue, fromUser: true })
       setInputValue("")
     },
     [element.maxSelections, setValueWithSource, value]
@@ -566,7 +565,7 @@ const Multiselect: FC<Props> = props => {
       const keysToRemove = new Set([...keys].map(String))
       const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
       valueRef.current = newValue
-      setValueWithSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUser: true })
     },
     [setValueWithSource]
   )
@@ -664,7 +663,7 @@ const Multiselect: FC<Props> = props => {
   )
 
   const handleClearAll = useCallback((): void => {
-    setValueWithSource({ value: [], fromUi: true })
+    setValueWithSource({ value: [], fromUser: true })
   }, [setValueWithSource])
 
   const handleContainerClick = useCallback(
@@ -750,7 +749,7 @@ const Multiselect: FC<Props> = props => {
               e.preventDefault()
               e.stopPropagation()
               const newValue = [...value, currentInput]
-              setValueWithSource({ value: newValue, fromUi: true })
+              setValueWithSource({ value: newValue, fromUser: true })
               setInputValue("")
               return
             }
@@ -775,7 +774,7 @@ const Multiselect: FC<Props> = props => {
         }
         const newValue = valueRef.current.slice(0, -1)
         valueRef.current = newValue
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
       }
     },
     [

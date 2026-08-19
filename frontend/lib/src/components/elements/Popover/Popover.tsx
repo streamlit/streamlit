@@ -147,12 +147,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // on subsequent reruns. Without this, a programmatic close (e.g.
     // st.session_state.key = False) would leave a stale "true" in the widget
     // state, causing the popover to reopen when another widget triggers a rerun.
-    widgetMgr?.setBoolValue(
-      { id: widgetId },
-      element.open,
-      { fromUi: false },
-      fragmentId
-    )
+    widgetMgr?.setBoolValue(widgetId, element.open, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   }, [widgetId, element.open])
 
   // Measure the trigger container's width so the portalled popover body can
@@ -183,12 +182,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(newOpen)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        newOpen,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr?.setBoolValue(widgetId, newOpen, {
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
     } else if (isPassivelyKeyed) {
       setStoredOpen(newOpen)
     }
@@ -198,12 +196,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(false)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        false,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr?.setBoolValue(widgetId, false, {
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
     } else if (isPassivelyKeyed) {
       setStoredOpen(false)
     }

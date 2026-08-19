@@ -201,12 +201,11 @@ function updateWidgetMgrState(
     return
   }
 
-  widgetMgr.setStringValue(
-    element,
-    JSON.stringify(vws.value),
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, JSON.stringify(vws.value), {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 type LayerDataInfo = {
@@ -418,7 +417,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     if (sanitized.changed) {
       setSelection({
-        fromUi: false,
+        fromUser: false,
         value: {
           selection: {
             indices: sanitized.indices,

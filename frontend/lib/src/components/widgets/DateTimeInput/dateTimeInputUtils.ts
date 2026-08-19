@@ -264,12 +264,11 @@ export function updateWidgetMgrState(
   const maxDateTime = isoToCalendarDateTime(element.max)
 
   const setArrayValue = (val: string | null): void => {
-    widgetMgr.setStringArrayValue(
-      element,
-      val ? [val] : [],
-      { fromUi: vws.fromUi },
-      fragmentId
-    )
+    widgetMgr.setStringArrayValue(element.id, val ? [val] : [], {
+      formId: element.formId,
+      fragmentId,
+      fromUser: vws.fromUser,
+    })
   }
 
   if (vws.value) {

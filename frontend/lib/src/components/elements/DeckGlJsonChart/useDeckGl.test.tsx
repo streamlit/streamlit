@@ -405,7 +405,7 @@ describe("useDeckGl", () => {
 
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [0] },
@@ -500,7 +500,7 @@ describe("useDeckGl", () => {
       // Set a selection on the layer
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "layer-to-remove": [0, 1] },
@@ -547,7 +547,7 @@ describe("useDeckGl", () => {
       // Select items at indices 2 and 4
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "shrinking-layer": [2, 4] },
@@ -591,7 +591,7 @@ describe("useDeckGl", () => {
       const unknownLayerId = "auto-layer-id"
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { [unknownLayerId]: [0] },
@@ -686,7 +686,7 @@ describe("useDeckGl", () => {
       // Set selections on layer "A" and a non-existent "old-layer"
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: {
@@ -749,7 +749,7 @@ describe("useDeckGl", () => {
       const layerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { [layerId]: [5, 10, 15] },
@@ -782,7 +782,7 @@ describe("useDeckGl", () => {
       // Select item at index 0
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "emptying-layer": [0] },
@@ -820,7 +820,7 @@ describe("useDeckGl", () => {
 
       act(() => {
         result.current.setSelection({
-          fromUi: true,
+          fromUser: true,
           value: {
             selection: {
               indices: { "object-layer": [1] },

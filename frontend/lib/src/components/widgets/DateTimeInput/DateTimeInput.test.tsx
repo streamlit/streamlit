@@ -101,12 +101,11 @@ describe("DateTimeInput widget", () => {
 
     render(<DateTimeInput {...props} />)
 
-    expect(spy).toHaveBeenCalledWith(
-      props.element,
-      props.element.default,
-      { fromUi: false },
-      undefined
-    )
+    expect(spy).toHaveBeenCalledWith(props.element.id, props.element.default, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: false,
+    })
   })
 
   it("renders date and time segments with default value", () => {
@@ -172,10 +171,9 @@ describe("DateTimeInput widget", () => {
     // Time (16:45) should be preserved with new date
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["2025-11-15T16:45"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -203,10 +201,9 @@ describe("DateTimeInput widget", () => {
 
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["2025-11-19T17:45"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -227,12 +224,11 @@ describe("DateTimeInput widget", () => {
     await user.click(clearButton)
 
     await waitFor(() => {
-      expect(spy).toHaveBeenCalledWith(
-        props.element,
-        [],
-        { fromUi: true },
-        undefined
-      )
+      expect(spy).toHaveBeenCalledWith(props.element.id, [], {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
     })
   })
 
@@ -326,10 +322,13 @@ describe("DateTimeInput widget", () => {
       render(<DateTimeInput {...props} />)
 
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
-        { fromUi: false },
-        "test-fragment-id"
+        {
+          formId: props.element.formId,
+          fragmentId: "test-fragment-id",
+          fromUser: false,
+        }
       )
     })
   })
@@ -356,10 +355,13 @@ describe("DateTimeInput widget", () => {
       props.widgetMgr.setFormSubmitBehaviors("form", true)
 
       props.widgetMgr.setStringArrayValue(
-        props.element,
+        props.element.id,
         ["2026-02-01T10:15"],
-        { fromUi: true },
-        props.fragmentId
+        {
+          formId: props.element.formId,
+          fragmentId: props.fragmentId,
+          fromUser: true,
+        }
       )
 
       render(<DateTimeInput {...props} />)
@@ -372,10 +374,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           props.element.default,
-          { fromUi: true },
-          props.fragmentId
+          {
+            formId: props.element.formId,
+            fragmentId: props.fragmentId,
+            fromUser: true,
+          }
         )
       })
     })
@@ -497,10 +502,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-06-15T09:30"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -562,10 +570,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:15"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -596,10 +607,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:15"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -630,10 +644,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:00"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -660,10 +677,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:15"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -739,10 +759,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
     })
@@ -818,12 +841,11 @@ describe("DateTimeInput widget", () => {
       await user.click(clearButton)
 
       await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element,
-          [],
-          { fromUi: true },
-          undefined
-        )
+        expect(spy).toHaveBeenCalledWith(props.element.id, [], {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
       })
     })
   })
@@ -947,10 +969,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1053,10 +1078,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
 
@@ -1104,10 +1132,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:00"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
 
@@ -1149,10 +1180,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
 
@@ -1199,10 +1233,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:00"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
 
@@ -1247,10 +1284,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
 
@@ -1292,10 +1332,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
 
@@ -1309,10 +1352,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T18:00"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
     })
@@ -1350,10 +1396,13 @@ describe("DateTimeInput widget", () => {
       // Time 14:30 should be preserved since Nov 15 is not a boundary date
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-15T14:30"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1535,10 +1584,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2026-11-19T16:45"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
       expect(
@@ -1682,10 +1734,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1729,10 +1784,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-15T17:45"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1781,10 +1839,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:15"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1824,10 +1885,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T12:00"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })

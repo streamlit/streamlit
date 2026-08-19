@@ -78,7 +78,12 @@ function LinkButton(props: Readonly<Props>): ReactElement {
       }
 
       if (!element.ignoreRerun && element.id) {
-        void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+        void widgetMgr.setTriggerValue(element.id, {
+          // Link buttons cannot be placed inside a form.
+          formId: undefined,
+          fragmentId,
+          fromUser: true,
+        })
       }
     },
     [element, fragmentId, isLinkBlocked, widgetMgr]

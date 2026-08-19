@@ -238,12 +238,11 @@ describe("widget mode (widgetMgr + element.id)", () => {
 
     await user.click(screen.getByText("hi"))
 
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: "expander-123" },
-      true,
-      { fromUi: true },
-      "frag-1"
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith("expander-123", true, {
+      formId: undefined,
+      fragmentId: "frag-1",
+      fromUser: true,
+    })
   })
 
   it("does not call setBoolValue when element.id is not set", async () => {
@@ -318,14 +317,13 @@ describe("widget mode (widgetMgr + element.id)", () => {
       </Expander>
     )
 
-    // The widget manager should be updated with fromUi: false so that
+    // The widget manager should be updated with fromUser: false so that
     // subsequent reruns send the correct value back to the backend
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: widgetId },
-      true,
-      { fromUi: false },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, true, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   })
 
   it("syncs widget manager state on programmatic collapse to prevent stale reopens", () => {
@@ -363,12 +361,11 @@ describe("widget mode (widgetMgr + element.id)", () => {
 
     // The widget manager must be updated with false so that the next rerun
     // (triggered by e.g. another widget) does not send stale "true" back
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: widgetId },
-      false,
-      { fromUi: false },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   })
 })
 

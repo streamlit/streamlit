@@ -263,12 +263,13 @@ const FileUploader = ({
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
       widgetMgr.setFileUploaderStateValue(
-        element,
+        element.id,
         toWidgetState(filesRef.current),
         {
-          fromUi: false,
-        },
-        fragmentId
+          formId: element.formId,
+          fragmentId,
+          fromUser: false,
+        }
       )
     }
   }, [widgetMgr, element, fragmentId])
@@ -284,26 +285,22 @@ const FileUploader = ({
     const newWidgetValue = toWidgetState(files)
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        newWidgetValue,
-        {
-          fromUi: true,
-        },
-        fragmentId
-      )
+      widgetMgr.setFileUploaderStateValue(element.id, newWidgetValue, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [status, files, widgetMgr, element, fragmentId])
 
   const onFormCleared = useCallback((): void => {
     setFilesImmediate(() => [])
     const newWidgetValue = toWidgetState([])
-    widgetMgr.setFileUploaderStateValue(
-      element,
-      newWidgetValue,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setFileUploaderStateValue(element.id, newWidgetValue, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }, [element, fragmentId, setFilesImmediate, widgetMgr])
 
   useFormClearHelper({

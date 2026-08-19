@@ -323,12 +323,11 @@ export function handleSelection(
   const newSelectionState = JSON.stringify(selectionState)
   if (currentSelectionState !== newSelectionState) {
     // Only update the widget state if it has changed
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setStringValue(element.id, newSelectionState, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 }
 
@@ -353,12 +352,11 @@ export function sendEmptySelection(
     },
   }
 
-  widgetMgr.setStringValue(
-    element,
-    JSON.stringify(emptySelectionState),
-    { fromUi: true },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, JSON.stringify(emptySelectionState), {
+    formId: element.formId,
+    fragmentId,
+    fromUser: true,
+  })
 }
 
 /**
@@ -417,11 +415,10 @@ export function handleClickEvent(
   const currentSelectionState = widgetMgr.getStringValue(element)
   const newSelectionState = JSON.stringify(selectionState)
   if (currentSelectionState !== newSelectionState) {
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setStringValue(element.id, newSelectionState, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 }

@@ -112,10 +112,13 @@ describe("Feedback widget", () => {
 
       render(<Feedback {...props} />)
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -125,10 +128,13 @@ describe("Feedback widget", () => {
 
       render(<Feedback {...props} />)
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "",
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -146,10 +152,9 @@ describe("Feedback widget", () => {
       await user.click(buttons[0])
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -168,10 +173,9 @@ describe("Feedback widget", () => {
       await user.click(buttons[0])
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -190,10 +194,9 @@ describe("Feedback widget", () => {
       await user.click(buttons[1])
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "0",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -205,19 +208,25 @@ describe("Feedback widget", () => {
       render(<Feedback {...props} />)
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "",
-        { fromUi: false },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        }
       )
 
       const buttons = getFeedbackButtons()
       await user.click(buttons[0])
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
   })
@@ -365,10 +374,13 @@ describe("Feedback widget", () => {
 
       // Should have called setStringValue with the default value
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "2",
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       // The first 3 buttons (0, 1, 2) should be shown as selected (filled stars)
@@ -461,10 +473,9 @@ describe("Feedback widget", () => {
       await user.keyboard("{Enter}")
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -482,10 +493,9 @@ describe("Feedback widget", () => {
       await user.keyboard(" ")
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })

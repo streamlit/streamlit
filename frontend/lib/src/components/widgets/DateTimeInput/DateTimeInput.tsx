@@ -144,7 +144,7 @@ function DateTimeInput({
       resetError()
 
       if (!dt) {
-        setValueWithSource({ value: null, fromUi: true })
+        setValueWithSource({ value: null, fromUser: true })
         return
       }
 
@@ -153,7 +153,7 @@ function DateTimeInput({
         setError(buildErrorMessage(errorType))
         return
       }
-      setValueWithSource({ value: calendarDateTimeToIso(dt), fromUi: true })
+      setValueWithSource({ value: calendarDateTimeToIso(dt), fromUser: true })
     },
     [
       buildErrorMessage,
@@ -192,7 +192,7 @@ function DateTimeInput({
       updateWidgetMgrState(
         element,
         widgetMgr,
-        { value: isoValue, fromUi: true },
+        { value: isoValue, fromUser: true },
         fragmentId
       )
     },
