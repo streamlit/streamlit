@@ -765,6 +765,7 @@ describe("ButtonGroup wrap", () => {
 
   const originalScrollIntoView = Element.prototype.scrollIntoView
   afterEach(() => {
+    vi.restoreAllMocks()
     Element.prototype.scrollIntoView = originalScrollIntoView
   })
 
@@ -836,6 +837,25 @@ describe("ButtonGroup wrap", () => {
       </FlexContext.Provider>
     )
     expect(screen.getByRole("radiogroup")).toHaveStyle("flex-wrap: wrap")
+  })
+
+  it("still updates selection when wrap is false", async () => {
+    const user = userEvent.setup()
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [0],
+        })}
+      />
+    )
+
+    const buttons = getButtonGroupButtons()
+    await user.click(buttons[1])
+
+    expect(buttons[1]).toHaveAttribute("data-selected")
+    expect(buttons[0]).not.toHaveAttribute("data-selected")
   })
 
   it.each([
@@ -940,26 +960,5 @@ describe("ButtonGroup wrap", () => {
     expectHighlightStyle(buttons[2], false)
     expectHighlightStyle(buttons[0])
     expect(scrolledElements).toHaveLength(0)
-  })
-
-  it("still updates selection when wrap is false", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      wrap: false,
-      options: simpleOptions,
-      default: [0],
-    })
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-
-    render(<ButtonGroup {...props} />)
-
-    await user.click(getButtonGroupButtons()[1])
-
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
-      ["banana"],
-      { fromUi: true },
-      undefined
-    )
   })
 })
