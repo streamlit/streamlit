@@ -3495,7 +3495,7 @@ __metadata:
     "@testing-library/react": "npm:^16.3.2"
     "@testing-library/user-event": "npm:^14.6.4"
     "@types/d3": "npm:^7.4.3"
-    "@types/d3-graphviz": "npm:^2.6.10"
+    "@types/d3-graphviz": "npm:^3.1.0"
     "@types/hoist-non-react-statics": "npm:~3.3.7"
     "@types/katex": "npm:~0.16.8"
     "@types/lodash-es": "npm:~4.17.12"
@@ -4266,14 +4266,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/d3-graphviz@npm:^2.6.10":
-  version: 2.6.10
-  resolution: "@types/d3-graphviz@npm:2.6.10"
+"@types/d3-graphviz@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "@types/d3-graphviz@npm:3.1.0"
   dependencies:
     "@types/d3-selection": "npm:^1"
     "@types/d3-transition": "npm:^1"
     "@types/d3-zoom": "npm:^1"
-  checksum: 10c0/bbb4143dcef1ebac612f93e448a53291cec3f708489261dc54c657db0441ed0a87c3bdf5e902e6d695918b7a39ace15bcf07e2c828d6568611eee8b5c15fe6c4
+  checksum: 10c0/62954353bb84601ed7a42118bf39d20df794f55326a9eba1a202c2dbb55365520bced263e49f1bac0505439427c69ba183b89d72403e32a2c7010c524409c5f9
   languageName: node
   linkType: hard
 
