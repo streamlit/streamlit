@@ -241,6 +241,9 @@ When `wrap=False` on a collection:
 - Native horizontal scrolling is enabled only when the items cannot shrink enough to fit.
 - Touch, trackpad, mouse shift-wheel, and keyboard scrolling continue to use browser-native
   behavior.
+- For option groups and selected-value chips, overflowing edges fade so it is clear that
+  more items can be scrolled into view. The native scrollbar is hidden so the control
+  keeps its one-row height.
 - Keyboard focus automatically scrolls an off-screen interactive item into view.
 - Existing item width and minimum-width rules still apply unless a command-specific rule
   below overrides them.
@@ -372,6 +375,9 @@ regions = st.multiselect(
 ```
 
 - Only the selected-chip area scrolls. The clear and dropdown controls stay pinned.
+- Overflowing edges of the chip area fade so it is clear that more chips can be
+  scrolled into view. The native scrollbar is hidden so the control keeps its one-row
+  height; scrolling stays native (touch, trackpad, shift-wheel, keyboard).
 - Focusing the input or adding a selection scrolls the newest selection and input into
   view.
 - Removing a chip preserves the nearest useful scroll position.
@@ -398,6 +404,9 @@ period = st.segmented_control(
 - With `width="stretch"`, options distribute across the available width when they fit.
   If they do not fit, they stop shrinking below their usable minimum width and the group
   scrolls.
+- Overflowing edges of the option group fade so it is clear that more options can be
+  scrolled into view. The native scrollbar is hidden so the control keeps its one-row
+  height; scrolling stays native (touch, trackpad, shift-wheel, keyboard).
 - On initial render, a selected option that would otherwise be off-screen is scrolled
   into view. Keyboard focus does the same while navigating.
 - Selection behavior, return values, and callbacks are unchanged.

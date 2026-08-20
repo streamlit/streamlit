@@ -43,7 +43,7 @@ import {
 import { formatMoment, MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 import {
   StyledRASlider,
@@ -405,21 +405,23 @@ function updateWidgetMgrState(
   vws: ValueWithSource<number[]>,
   fragmentId: string | undefined
 ): void {
+  const update: WidgetUpdate = {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  }
+
   if (isSelectSlider(element)) {
     // For select_slider, convert indices to string values
     const stringValues = indicesToStringValues(vws.value, element.options)
-    widgetMgr.setStringArrayValue(element.id, stringValues, {
-      formId: element.formId,
-      fragmentId,
-      fromUser: vws.fromUser,
-    })
+    widgetMgr.setStringArrayValue(element.id, stringValues, update)
   } else {
     // For regular slider, use numeric values directly
-    widgetMgr.setDoubleArrayValue(element.id, vws.value, {
-      formId: element.formId,
-      fragmentId,
-      fromUser: vws.fromUser,
-    })
+    widgetMgr.setDoubleArrayValue(element.id, vws.value, update)
   }
 }
 

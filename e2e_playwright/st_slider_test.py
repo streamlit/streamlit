@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 38
+NUM_SLIDER_WIDGETS = 39
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -691,3 +691,49 @@ def test_slider_setvalue_preserved_on_rerun(app: Page):
         wait_for_app_run(app)
         expect_markdown(app, f"Slider counter: {expected_counter}")
         expect(slider).to_contain_text("50")
+
+
+def test_slider_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore slider value:", "25")
+
+    slider = get_element_by_key(app, "ignore_slider")
+    slider_role = slider.get_by_role("slider")
+
+    # Change slider value - should NOT trigger a rerun, but should update the URL
+    slider_role.press("ArrowRight")
+
+    # Wait for any potential rerun to complete. If on_change="ignore" is working
+    # correctly, no rerun will occur, but this ensures that if a bug causes
+    # a rerun, we wait for it before checking.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 2")).not_to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_slider=26"))
+
+    # Increment value further (from 26 to 30)
+    for _ in range(4):
+        slider_role.press("ArrowRight")
+
+    expect(slider).to_contain_text("30")
+    expect_prefixed_markdown(app, "Ignore slider value:", "25")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_slider=30"))
+
+    # Click button to trigger a rerun - accumulated value should be sent
+    app.get_by_role("button", name="Apply ignore slider", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify the updated value is now visible
+    expect(app.get_by_text("Ignore slider value: 30", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore slider value: 30", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_element_by_key(app, "ignore_slider")).to_contain_text("30")
+    expect_prefixed_markdown(app, "Ignore slider value:", "30")

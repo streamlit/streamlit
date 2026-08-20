@@ -1808,28 +1808,37 @@ describe("Trigger JSON payloads (aggregated)", () => {
       })
     })
 
-    describe("URL sync respects triggerRerun (ignore mode)", () => {
-      it("does not sync the URL when triggerRerun is false (outside a form)", () => {
-        const widget = { id: "ignoreWidget", formId: "" }
-        widgetMgr.registerQueryParamBinding(
-          "ignoreWidget",
-          "name",
-          "string_value",
-          "",
-          false
-        )
+    describe("URL sync is independent of triggerRerun", () => {
+      it.each(["", "mockFormId"])(
+        "syncs the URL for a user change when triggerRerun is false (formId=%s)",
+        async formId => {
+          const widget = { id: "ignoreWidget", formId }
+          widgetMgr.registerQueryParamBinding(
+            "ignoreWidget",
+            "name",
+            "string_value",
+            "",
+            false
+          )
 
-        widgetMgr.setStringValue(widget.id, "Alice", {
-          formId: widget.formId,
-          fragmentId: undefined,
-          fromUser: true,
-          triggerRerun: false,
-        })
+          widgetMgr.setStringValue(widget.id, "Alice", {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+            triggerRerun: false,
+          })
 
-        // No rerun means the value is not committed, so the URL must not change.
-        expect(window.history.replaceState).not.toHaveBeenCalled()
-        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
-      })
+          // Same as a form: the URL reflects the UI value even though Python
+          // has not received it yet (no rerun / no submit).
+          expect(window.history.replaceState).toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=Alice")
+
+          await new Promise(resolve => {
+            setTimeout(resolve, 0)
+          })
+          expect(sendBackMsg).not.toHaveBeenCalled()
+        }
+      )
 
       it("still syncs the URL for a normal committed change (triggerRerun omitted)", () => {
         const widget = { id: "commitWidget", formId: "" }
@@ -1845,29 +1854,6 @@ describe("Trigger JSON payloads (aggregated)", () => {
           formId: widget.formId,
           fragmentId: undefined,
           fromUser: true,
-        })
-
-        expect(window.history.replaceState).toHaveBeenCalled()
-        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=Alice")
-      })
-
-      it("keeps syncing the URL for a bound widget inside a form even when triggerRerun is false", () => {
-        // Inside a form the value is committed on submit, so URL sync stays live
-        // (triggerRerun: false does not suppress URL sync inside forms).
-        const widget = { id: "formWidget", formId: "mockFormId" }
-        widgetMgr.registerQueryParamBinding(
-          "formWidget",
-          "name",
-          "string_value",
-          "",
-          false
-        )
-
-        widgetMgr.setStringValue(widget.id, "Alice", {
-          formId: widget.formId,
-          fragmentId: undefined,
-          fromUser: true,
-          triggerRerun: false,
         })
 
         expect(window.history.replaceState).toHaveBeenCalled()
