@@ -18,11 +18,8 @@ inputs:
 
 outputs:
   run_id:
-    description: Workflow run containing the selected artifact
+    description: ID of the workflow run containing the selected artifact
     value: ${{ steps.find-artifact.outputs.run_id }}
-  artifact_id:
-    description: ID of the selected artifact
-    value: ${{ steps.find-artifact.outputs.artifact_id }}
   artifact_size_in_bytes:
     description: Size of the selected artifact in bytes
     value: ${{ steps.find-artifact.outputs.artifact_size_in_bytes }}
@@ -40,13 +37,18 @@ runs:
       with:
         github-token: ${{ inputs.github_token }}
         script: |
+          // Bound both pagination and artifact lookups when no baseline exists.
           const MAX_PAGES = 10;
+          const MAX_CANDIDATE_RUNS = 20;
           const PAGE_SIZE = 100;
           let runsChecked = 0;
+          let candidateRunsChecked = 0;
           let cursor = null;
 
-          // GitHub's REST branch and status filters can return stale results.
-          // GraphQL explicitly orders runs, so apply those filters locally.
+          // GitHub's REST run filters (branch, status) can return stale results, so page
+          // through GraphQL's explicitly ordered runs and apply branch, event, and success
+          // checks locally. GraphQL can only look up a workflow by node ID, so resolve that
+          // via REST first.
           const { data: workflow } = await github.rest.actions.getWorkflow({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -90,6 +92,8 @@ runs:
             const { nodes: workflowRuns, pageInfo } = response.node.runs;
             runsChecked += workflowRuns.length;
 
+            // WorkflowRun does not expose branch or conclusion directly, so use its
+            // check suite and exclude PR or workflow_call runs from the baseline.
             const matchingRuns = workflowRuns.filter(run =>
               run.event === 'push' &&
               run.checkSuite?.branch?.name === process.env.TARGET_BRANCH &&
@@ -97,12 +101,16 @@ runs:
             );
 
             for (const run of matchingRuns) {
+              if (candidateRunsChecked >= MAX_CANDIDATE_RUNS) {
+                break;
+              }
+              candidateRunsChecked += 1;
+
               const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 run_id: run.databaseId,
                 name: process.env.TARGET_ARTIFACT_NAME,
-                per_page: PAGE_SIZE,
               });
               const artifact = artifacts.artifacts.find(candidate =>
                 candidate.name === process.env.TARGET_ARTIFACT_NAME && !candidate.expired
@@ -121,12 +129,11 @@ runs:
                 `Selected run ${run.databaseId} from ${run.createdAt} with artifact ${artifact.id}.`
               );
               core.setOutput('run_id', String(run.databaseId));
-              core.setOutput('artifact_id', String(artifact.id));
               core.setOutput('artifact_size_in_bytes', String(artifact.size_in_bytes));
               return;
             }
 
-            if (!pageInfo.hasNextPage) {
+            if (candidateRunsChecked >= MAX_CANDIDATE_RUNS || !pageInfo.hasNextPage) {
               break;
             }
             cursor = pageInfo.endCursor;
@@ -135,5 +142,6 @@ runs:
           core.warning(
             `No unexpired ${process.env.TARGET_ARTIFACT_NAME} artifact was found in a successful ` +
             `${process.env.TARGET_BRANCH} push among the latest ${runsChecked} ` +
-            `${process.env.TARGET_WORKFLOW} runs. Skipping the comparison.`
+            `${process.env.TARGET_WORKFLOW} runs (${candidateRunsChecked} matching candidates ` +
+            `checked). Skipping the comparison.`
           );
