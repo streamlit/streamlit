@@ -19,6 +19,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-playwright
   cancel-in-progress: true
 
+# Which tests the suite runs. Shared with the `check-e2e-test-count` job below so
+# that the counts it reports stay in sync with what actually runs; keep both jobs
+# reading these instead of spelling the arguments out again. The marker
+# expression is separate because it contains a space and has to stay quoted,
+# while the flags rely on word splitting.
+env:
+  E2E_SELECTION_FLAGS: --ignore ./custom_components --ignore ./load_testing --browser webkit --browser chromium --browser firefox
+  E2E_MARKER_EXPR: not performance
+
 jobs:
   playwright-e2e-tests:
     runs-on: ubuntu-latest-64-cores
@@ -58,7 +67,8 @@ jobs:
         # With psutil installed, pytest-xdist's `-n auto` uses physical cores (32 on 64-core runner)
         run: |
           cd e2e_playwright && rm -rf ./test-results
-          uv run pytest --ignore ./custom_components --ignore ./load_testing --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
+          # shellcheck disable=SC2086  # E2E_SELECTION_FLAGS must word split
+          uv run pytest $E2E_SELECTION_FLAGS -m "$E2E_MARKER_EXPR" -n auto --reruns 1
       - name: Upload test statistics
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -118,30 +128,48 @@ jobs:
           else
             echo "::warning::HEAD is not a PR merge commit, skipping the E2E test count check."
           fi
-      - name: Set Python version vars
+      # Most PRs touch no E2E test at all, and no E2E test imports `streamlit`,
+      # so nothing outside this directory can change what gets collected. Skip
+      # the environment setup and collection for those PRs; the comment step
+      # still runs, to clear a comment left on an earlier commit.
+      - name: Check for E2E test changes
+        id: e2e_changes
         if: steps.merge_commit.outputs.found
+        run: |
+          set -euo pipefail
+          if git diff --quiet HEAD^1 HEAD -- e2e_playwright; then
+            echo "No changes under e2e_playwright/, the test count cannot have changed."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Set Python version vars
+        if: steps.e2e_changes.outputs.changed
         uses: ./.github/actions/build_info
       - name: Setup virtual env
-        if: steps.merge_commit.outputs.found
+        if: steps.e2e_changes.outputs.changed
         uses: ./.github/actions/make_init
         with:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Collect test IDs for the PR and its merge base
-        if: steps.merge_commit.outputs.found
+        if: steps.e2e_changes.outputs.changed
         env:
           COLLECT_DIR: ${{ runner.temp }}
         run: |
           set -euo pipefail
-          # Collection args mirror the `playwright-e2e-tests` job above so that
-          # we count the tests that actually run in CI. Playwright browsers are
-          # not needed: collection never launches one. `addopts` is cleared
-          # because e2e_playwright/pytest.ini enables verbose output, which
-          # would replace the test IDs with human-readable lines.
+          # Counts the tests that CI actually runs: the selection comes from the
+          # same variables as the suite job above, and the plugin drops the tests
+          # Playwright would skip for their browser. The plugin lives in
+          # scripts/, which is never swapped out below, so both collections apply
+          # the PR's rules. Playwright browsers are not needed, since collection
+          # never launches one. `addopts` is cleared because
+          # e2e_playwright/pytest.ini turns on verbose output, which would
+          # replace the test IDs with human-readable lines.
           collect() {
-            (cd e2e_playwright && uv run pytest --collect-only -q -o addopts= \
-              --no-stats --ignore ./custom_components --ignore ./load_testing \
-              --browser webkit --browser chromium --browser firefox \
-              -m "not performance") > "$1"
+            # shellcheck disable=SC2086  # E2E_SELECTION_FLAGS must word split
+            (cd e2e_playwright && PYTHONPATH="$GITHUB_WORKSPACE/scripts" \
+              uv run pytest -p e2e_executable_tests_plugin --collect-only -q \
+              -o addopts= --no-stats $E2E_SELECTION_FLAGS \
+              -m "$E2E_MARKER_EXPR") > "$1"
           }
 
           collect "$COLLECT_DIR/head-test-ids.txt"
@@ -159,7 +187,7 @@ jobs:
 
           collect "$COLLECT_DIR/base-test-ids.txt"
       - name: Compare test counts
-        if: steps.merge_commit.outputs.found
+        if: steps.e2e_changes.outputs.changed
         env:
           COLLECT_DIR: ${{ runner.temp }}
         run: |
@@ -173,10 +201,20 @@ jobs:
       - name: Comment on the PR
         if: steps.merge_commit.outputs.found
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          # Empty when the PR changes no E2E test, so nothing was counted.
+          COUNTED: ${{ steps.e2e_changes.outputs.changed }}
+          # Only needed to find our comment when nothing was counted, since the
+          # summary that normally carries this was never produced. Must equal
+          # COMMENT_MARKER in scripts/compare_e2e_test_counts.py. Editing either
+          # one orphans the comments already posted on open PRs, so don't.
+          MARKER: "<!-- STREAMLIT-E2E-TEST-COUNT-CHECK -->"
         with:
           script: |
             const fs = require('fs');
-            const summary = JSON.parse(fs.readFileSync(process.env.SUMMARY_PATH, 'utf8'));
+            const summary = process.env.COUNTED
+              ? JSON.parse(fs.readFileSync(process.env.SUMMARY_PATH, 'utf8'))
+              : null;
 
             // Fork PRs get a read-only token, so commenting would fail. The
             // numbers are in the job logs of the previous step either way.
@@ -192,7 +230,24 @@ jobs:
               issue_number: context.issue.number,
               per_page: 100,
             });
-            const existingComment = comments.find(comment => comment.body.includes(summary.marker));
+            const marker = summary ? summary.marker : process.env.MARKER;
+            const existingComment = comments.find(comment => comment.body.includes(marker));
+
+            // An earlier commit of this PR changed E2E tests and this one does
+            // not, so whatever we said about it no longer applies.
+            if (!summary) {
+              if (existingComment) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                });
+                console.log('Deleted obsolete E2E test count comment');
+              } else {
+                console.log('PR changes no E2E tests, nothing to report');
+              }
+              return;
+            }
 
             // Only speak up about a significant increase, or to correct a
             // comment we already left on an earlier commit of this PR.

@@ -42,7 +42,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Final, NamedTuple
 
-# Comment marker used to find and update our own comment on a PR.
+# Comment marker used to find and update our own comment on a PR. Mirrored as
+# MARKER in .github/workflows/playwright.yml, which needs it for the case where
+# no count was produced. Editing either one orphans the comments already posted
+# on open PRs, so don't.
 COMMENT_MARKER: Final = "<!-- STREAMLIT-E2E-TEST-COUNT-CHECK -->"
 
 # Maximum number of test files listed in the per-file breakdown table.
