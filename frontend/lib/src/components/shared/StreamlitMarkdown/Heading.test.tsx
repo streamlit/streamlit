@@ -216,6 +216,7 @@ describe("Heading", () => {
     const horizontalContext: IFlexContext = {
       direction: Direction.HORIZONTAL,
       isInHorizontalLayout: true,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }
@@ -238,6 +239,7 @@ describe("Heading", () => {
     const verticalContext: IFlexContext = {
       direction: Direction.VERTICAL,
       isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }

@@ -448,6 +448,7 @@ describe("ElementNodeRenderer Block Component", () => {
     const verticalFlexContext: IFlexContext = {
       direction: Direction.VERTICAL,
       isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }
@@ -455,6 +456,7 @@ describe("ElementNodeRenderer Block Component", () => {
     const horizontalFlexContext: IFlexContext = {
       direction: Direction.HORIZONTAL,
       isInHorizontalLayout: true,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }

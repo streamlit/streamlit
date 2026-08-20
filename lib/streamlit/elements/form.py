@@ -427,10 +427,13 @@ class FormMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
+              layout. Inside a horizontal container or when the button is a
+              direct child of an ``st.columns`` column, the button keeps its
               standard, single-row height and truncates an overflowing label
               with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              additional lines. A form is a layout boundary, so placing the
+              form itself in a column does not make the submit button a
+              direct column child.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A

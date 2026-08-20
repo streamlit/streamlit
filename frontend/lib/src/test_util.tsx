@@ -71,6 +71,7 @@ import { createFormsData } from "./WidgetStateManager"
 const flexContextValue = {
   direction: Direction.VERTICAL,
   isInHorizontalLayout: false,
+  isDirectlyInColumn: false,
   isInRoot: false,
   isInContentWidthContainer: false,
 }

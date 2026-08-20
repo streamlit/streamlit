@@ -570,9 +570,10 @@ class ButtonGroupMixin:
             of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the options stay on a
-              single row and scroll horizontally if needed; in other layouts,
-              the options wrap onto additional rows.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
             - ``True``: If the options are too wide for the available space,
               they wrap onto additional rows.
             - ``False``: The options stay on a single row. If they are too
@@ -936,9 +937,10 @@ class ButtonGroupMixin:
             of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the options stay on a
-              single row and scroll horizontally if needed; in other layouts,
-              the options wrap onto additional rows.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
             - ``True``: If the options are too wide for the available space,
               they wrap onto additional rows.
             - ``False``: The options stay on a single row. If they are too

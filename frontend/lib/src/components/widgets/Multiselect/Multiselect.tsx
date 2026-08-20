@@ -308,8 +308,7 @@ const Multiselect: FC<Props> = props => {
 
   // Resolve the tri-state wrap proto field: true = chips wrap onto multiple
   // rows (grows vertically), false = chips stay in a single, horizontally
-  // scrollable row. Absent (auto) resolves to no-wrap inside a horizontal
-  // container and wrap otherwise.
+  // scrollable row.
   const wrap = useResolvedWrap(element.wrap)
   const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
     elementRef: tagsContainerRef,

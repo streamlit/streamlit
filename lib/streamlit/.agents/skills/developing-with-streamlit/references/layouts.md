@@ -71,15 +71,33 @@ thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 ```
 
+Controls placed directly in a column use the default `wrap=None`, which
+Streamlit resolves to no-wrap: labels ellipsize and option groups stay on one
+row (`st.button`, `st.pills`, `st.multiselect`, `st.checkbox`, and similar).
+Nested layout containers such as a vertical `st.container`, expander, tab, or
+form reset this, so inner controls wrap as usual. Pass `wrap=True` on a control
+to wrap even in a column.
+
 ## Horizontal containers for button groups
 
-Use `st.container(horizontal=True)` instead of columns for button groups:
+Use `st.container(horizontal=True)` instead of columns for button groups.
+Buttons and similar controls inside a horizontal container also stay on one
+row by default (the same auto `wrap` as direct column children). Pass
+`wrap=False` on the container to keep its child elements in one scrollable
+row instead of wrapping onto additional rows:
 
 ```python
 with st.container(horizontal=True):
     st.button("Cancel")
     st.button("Save")
     st.button("Submit")
+
+# Toolbar that must stay on one row
+with st.container(horizontal=True, wrap=False):
+    st.button("Edit")
+    st.button("Duplicate")
+    st.button("Archive")
+    st.button("Delete")
 ```
 
 ## Aligning elements
