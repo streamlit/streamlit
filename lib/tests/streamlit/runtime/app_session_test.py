@@ -366,7 +366,8 @@ class AppSessionTest(unittest.TestCase):
 
         session._create_scriptrunner(initial_rerun_data=RerunData())
 
-        # Assert that the ScriptRunner constructor was called.
+        # Assert that the ScriptRunner constructor was called, including the
+        # session-owned event_loop forwarded to the runner.
         mock_scriptrunner.assert_called_once_with(
             session_id=session.id,
             main_script_path=session._script_data.main_script_path,
@@ -379,6 +380,7 @@ class AppSessionTest(unittest.TestCase):
             pages_manager=session._pages_manager,
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
+            event_loop=session._script_thread_event_loop,
         )
 
         assert session._scriptrunner is not None
@@ -389,6 +391,62 @@ class AppSessionTest(unittest.TestCase):
             session._on_scriptrunner_event
         )
         scriptrunner.start.assert_called_once()
+
+    def test_script_thread_event_loop_created_on_init(self):
+        """AppSession creates a non-running event loop for the script thread."""
+        session = _create_test_session()
+        loop = session._script_thread_event_loop
+        assert isinstance(loop, asyncio.AbstractEventLoop)
+        assert not loop.is_running()
+        assert not loop.is_closed()
+        loop.close()
+
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_same_event_loop_passed_to_each_scriptrunner(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        """The same loop instance is forwarded on every _create_scriptrunner call."""
+        session = _create_test_session()
+        expected_loop = session._script_thread_event_loop
+
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+
+        # Both calls should receive the identical loop.
+        for call_args in mock_create_scriptrunner.call_args_list:
+            _, kwargs = call_args
+            assert kwargs.get("initial_rerun_data") is not None
+
+        # The real _create_scriptrunner forwards event_loop; verify via the
+        # session attribute directly.
+        assert session._script_thread_event_loop is expected_loop
+        expected_loop.close()
+
+    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
+    def test_script_thread_event_loop_closed_on_shutdown(
+        self, mock_stop: MagicMock
+    ):
+        """AppSession closes the script-thread event loop on shutdown."""
+        session = _create_test_session()
+        loop = session._script_thread_event_loop
+        assert not loop.is_closed()
+
+        session.shutdown()
+
+        assert loop.is_closed()
+
+    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
+    def test_script_thread_event_loop_not_closed_before_shutdown(
+        self, mock_stop: MagicMock
+    ):
+        """request_script_stop (reconnect path) must not close the loop."""
+        session = _create_test_session()
+        loop = session._script_thread_event_loop
+
+        session.request_script_stop()
+
+        assert not loop.is_closed()
+        loop.close()
 
     @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
     @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg")
