@@ -1493,14 +1493,13 @@ export class WidgetStateManager {
   }
 
   /**
-   * Sync widget value to URL if bound and the change should be reflected there.
-   * Orchestrates pure conversion and side-effect URL update.
+   * Sync widget value to URL if bound and the change came from the user.
    *
-   * The URL is synced for genuine user changes that are either committed to the
-   * backend (see `shouldTriggerRerun`) or batched inside a form (which commits
-   * on submit). An ignored change (`triggerRerun: false`) outside a form must
-   * NOT touch the URL, so the URL never diverges from the value the backend has
-   * actually received.
+   * User changes update the URL even when they do not trigger a rerun
+   * (`on_change="ignore"` / `triggerRerun: false`) and even inside a form.
+   * That matches form behavior: the URL can reflect a value the backend has
+   * not received yet, so a reload or share keeps the user's latest UI value.
+   * Programmatic writes (`fromUser: false`) do not update the URL.
    */
   private maybeSyncValueToUrl(
     widget: WidgetInfo,
@@ -1508,10 +1507,6 @@ export class WidgetStateManager {
     value: unknown
   ): void {
     if (!source.fromUser) return
-    // Inside a form the value is committed on submit, so keep syncing the URL
-    // live (matching non-form behavior); outside a form, an ignored change must
-    // not update the URL.
-    if (!isValidFormId(widget.formId) && !shouldTriggerRerun(source)) return
 
     const binding = this.boundWidgets.get(widget.id)
     if (!binding) return

@@ -710,11 +710,8 @@ class SliderMixin:
               The new value is available on the next rerun triggered by
               something else, such as another widget interaction. Ignored
               changes are held in the browser and are lost if the page is
-              refreshed before that rerun. Combined with
-              ``bind="query-params"``, ignored changes also do not update
-              the URL; the query parameter stays at the last value synced
-              from a rerun-triggering interaction, including after a later
-              rerun that delivers the buffered value to Python.
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``).
 
             - A ``callable``: Streamlit will rerun the app and execute the
               ``callable`` as a callback function before the rest of the app.
@@ -768,12 +765,10 @@ class SliderMixin:
             from the URL. Range sliders use repeated parameters (e.g.,
             ``?price=10&price=90``).
 
-            When ``on_change="ignore"``, slider interactions do not update
-            the URL. The query parameter stays at the last value synced
-            from a rerun-triggering interaction, even after another
-            widget later reruns the app and delivers the buffered slider
-            value to Python. A page load or share therefore still uses
-            the previously committed URL value.
+            When ``on_change="ignore"``, slider interactions still update
+            the URL immediately, the same as widgets inside a form. Python
+            receives the new value on the next rerun. A page load or share
+            uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.

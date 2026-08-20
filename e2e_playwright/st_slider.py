@@ -395,6 +395,7 @@ ignore_slider = st.slider(
     value=25,
     key="ignore_slider",
     on_change="ignore",
+    bind="query-params",
 )
 st.write("Ignore slider value:", ignore_slider)
 

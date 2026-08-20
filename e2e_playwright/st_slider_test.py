@@ -701,7 +701,7 @@ def test_slider_on_change_ignore(app: Page):
     slider = get_element_by_key(app, "ignore_slider")
     slider_role = slider.get_by_role("slider")
 
-    # Change slider value - should NOT trigger a rerun
+    # Change slider value - should NOT trigger a rerun, but should update the URL
     slider_role.press("ArrowRight")
 
     # Wait for any potential rerun to complete. If on_change="ignore" is working
@@ -712,6 +712,7 @@ def test_slider_on_change_ignore(app: Page):
     # Verify no rerun occurred (run count should still be 1)
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("Runs: 2")).not_to_be_visible()
+    expect(app).to_have_url(re.compile(r"ignore_slider=26"))
 
     # Increment value further (from 26 to 30)
     for _ in range(4):
@@ -719,6 +720,7 @@ def test_slider_on_change_ignore(app: Page):
 
     expect(slider).to_contain_text("30")
     expect_prefixed_markdown(app, "Ignore slider value:", "25")
+    expect(app).to_have_url(re.compile(r"ignore_slider=30"))
 
     # Click button to trigger a rerun - accumulated value should be sent
     app.get_by_role("button", name="Apply ignore slider", exact=True).click()
