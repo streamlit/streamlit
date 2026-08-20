@@ -73,174 +73,148 @@ jobs:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
 
+  # Reports how many E2E test cases a PR adds, by collecting test IDs on the PR
+  # and on its merge base. This deliberately does not compare against the test
+  # counts of a develop CI run: those runs drift with every merge, so the diff
+  # would include tests added by other PRs.
   check-e2e-test-count:
     runs-on: ubuntu-latest
-    needs: playwright-e2e-tests
+    timeout-minutes: 20
+    # A merge base only exists for pull_request events.
     if: github.event_name == 'pull_request' && github.repository == 'streamlit/streamlit'
     continue-on-error: true
 
     permissions:
       contents: read
       pull-requests: write
-      actions: read
+
+    defaults:
+      run:
+        shell: bash
 
     env:
       NEW_TEST_THRESHOLD: 30
+      SUMMARY_PATH: ${{ runner.temp }}/e2e-test-count-summary.json
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
-
-      - name: Download current test stats
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        continue-on-error: true
+          submodules: "recursive"
+          # For pull_request events, the checked out HEAD is the merge commit
+          # GitHub creates for the PR, so depth 2 also gets us its parents.
+          fetch-depth: 2
+      # Everything below relies on HEAD being that merge commit. If it is not
+      # (for example because the PR has conflicts), HEAD^1 would be the previous
+      # commit of the PR branch instead of the merge base, and the reported
+      # numbers would be nonsense. Skip the check rather than guess.
+      - name: Check for a PR merge commit
+        id: merge_commit
+        run: |
+          set -euo pipefail
+          if git rev-parse --verify --quiet HEAD^2 > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::HEAD is not a PR merge commit, skipping the E2E test count check."
+          fi
+      - name: Set Python version vars
+        if: steps.merge_commit.outputs.found
+        uses: ./.github/actions/build_info
+      - name: Setup virtual env
+        if: steps.merge_commit.outputs.found
+        uses: ./.github/actions/make_init
         with:
-          name: playwright_test_stats
-          path: current_stats
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+      - name: Collect test IDs for the PR and its merge base
+        if: steps.merge_commit.outputs.found
+        env:
+          COLLECT_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          # Collection args mirror the `playwright-e2e-tests` job above so that
+          # we count the tests that actually run in CI. Playwright browsers are
+          # not needed: collection never launches one. `addopts` is cleared
+          # because e2e_playwright/pytest.ini enables verbose output, which
+          # would replace the test IDs with human-readable lines.
+          collect() {
+            (cd e2e_playwright && uv run pytest --collect-only -q -o addopts= \
+              --no-stats --ignore ./custom_components --ignore ./load_testing \
+              --browser webkit --browser chromium --browser firefox \
+              -m "not performance") > "$1"
+          }
 
-      - name: Find latest develop test stats
-        id: get-latest-run
-        uses: ./.github/actions/find_latest_workflow_artifact
-        with:
-          workflow: playwright.yml
-          artifact_name: playwright_test_stats
+          collect "$COLLECT_DIR/head-test-ids.txt"
 
-      - name: Download develop test stats
-        if: steps.get-latest-run.outputs.run_id != ''
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        continue-on-error: true
-        with:
-          repository: streamlit/streamlit
-          run-id: ${{ steps.get-latest-run.outputs.run_id }}
-          name: playwright_test_stats
-          path: develop_stats
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # HEAD^1 of the merge commit is the develop commit this PR merges
+          # into, i.e. exactly the baseline the PR is responsible for changing.
+          git rev-parse --short HEAD^1 > "$COLLECT_DIR/base-ref.txt"
+          # Swap in the merge base's tests: restoring tracked files is not
+          # enough, because files the PR added would linger and inflate the
+          # baseline. `--no-renames` keeps a renamed file from being missed
+          # here (it would otherwise be reported as a rename, not an addition).
+          git diff --name-only -z --diff-filter=A --no-renames HEAD^1 HEAD \
+            -- e2e_playwright | xargs -0 -r rm -f
+          git checkout HEAD^1 -- e2e_playwright
 
-      - name: Compare test counts and comment
-        if: steps.get-latest-run.outputs.run_id != ''
+          collect "$COLLECT_DIR/base-test-ids.txt"
+      - name: Compare test counts
+        if: steps.merge_commit.outputs.found
+        env:
+          COLLECT_DIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          uv run python scripts/compare_e2e_test_counts.py \
+            --base "$COLLECT_DIR/base-test-ids.txt" \
+            --head "$COLLECT_DIR/head-test-ids.txt" \
+            --base-ref "$(cat "$COLLECT_DIR/base-ref.txt")" \
+            --threshold "$NEW_TEST_THRESHOLD" \
+            --output "$SUMMARY_PATH"
+      - name: Comment on the PR
+        if: steps.merge_commit.outputs.found
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');
-            const path = require('path');
-            const threshold = +process.env.NEW_TEST_THRESHOLD;
+            const summary = JSON.parse(fs.readFileSync(process.env.SUMMARY_PATH, 'utf8'));
 
-            const loadStats = (dir) => {
-              try {
-                const jsonPath = path.join(process.cwd(), dir, 'test-stats.json');
-                if (fs.existsSync(jsonPath)) {
-                  return JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-                }
-                console.log(`File not found: ${jsonPath}`);
-                return null;
-              } catch (e) {
-                console.log(`Error loading stats from ${dir}:`, e.message);
-                return null;
-              }
-            };
-
-            const currentStats = loadStats('current_stats');
-            const developStats = loadStats('develop_stats');
-
-            if (!currentStats) {
-              console.log('Missing current test stats, skipping comparison.');
-              return;
-            }
-
-            if (!developStats) {
-              console.log('Missing develop test stats, skipping comparison.');
-              return;
-            }
-
-            const currentTotal = currentStats.summary?.total_tests || 0;
-            const developTotal = developStats.summary?.total_tests || 0;
-            const newTests = currentTotal - developTotal;
-
-            console.log(`Current PR test count: ${currentTotal}`);
-            console.log(`Develop test count: ${developTotal}`);
-            console.log(`New tests: ${newTests}`);
-            console.log(`Threshold: ${threshold}`);
-
-            // Check if this PR is from a fork
-            const isForkPR = context.payload.pull_request?.head?.repo?.fork === true;
-            if (isForkPR) {
+            // Fork PRs get a read-only token, so commenting would fail. The
+            // numbers are in the job logs of the previous step either way.
+            if (context.payload.pull_request?.head?.repo?.fork === true) {
               console.log('PR is from a fork - skipping comment (insufficient permissions)');
-              console.log('Test count information is available in the job logs above.');
               return;
             }
 
-            const isSignificant = newTests > threshold;
-            const commentIdentifier = '<!-- STREAMLIT-E2E-TEST-COUNT-CHECK -->';
-
-            // Find existing comment
-            const { data: comments } = await github.rest.issues.listComments({
+            // Paginate: on a busy PR our comment can be well past the first page.
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
+              per_page: 100,
             });
-            const existingComment = comments.find(comment => comment.body.includes(commentIdentifier));
+            const existingComment = comments.find(comment => comment.body.includes(summary.marker));
 
-            // Only comment if tests increased significantly (> threshold)
-            if (isSignificant || existingComment) {
-              let header;
-              let message;
-              if (isSignificant) {
-                header = `### 🧪 Significant E2E test count increase detected`;
-                message = `This PR has **added ${newTests} E2E test cases** (threshold: ${threshold})`;
-              } else {
-                // Previous comment exists but change is now within range
-                header = `### ✅ E2E test count change is within normal range`;
-                if (newTests === 0) {
-                  message = `This PR has **no change** in E2E test count`;
-                } else if (newTests > 0) {
-                  message = `This PR has **added ${newTests} E2E test cases**`;
-                } else {
-                  message = `This PR has **removed ${Math.abs(newTests)} E2E test cases**`;
-                }
-              }
+            // Only speak up about a significant increase, or to correct a
+            // comment we already left on an earlier commit of this PR.
+            if (!summary.is_significant && !existingComment) {
+              console.log('Test count change is not significant, skipping comment');
+              return;
+            }
 
-              const lines = [
-                header,
-                '',
-                message,
-                '',
-                `- Current PR: ${currentTotal} tests`,
-                `- Latest develop: ${developTotal} tests`,
-              ];
-
-              if (isSignificant) {
-                lines.push(
-                  '',
-                  '> ⚠️ **Note:** E2E tests are expensive to run. Please ensure you\'re following best practices:',
-                  '> - Prefer aggregated scenario tests over many micro-tests',
-                  '> - Add tests to existing files when they fit the scope',
-                  '> - Test each aspect only once per browser run'
-                );
-              }
-
-              const commentBody = lines.join('\n');
-              const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
-
-              if (existingComment) {
-                await github.rest.issues.updateComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: existingComment.id,
-                  body: fullCommentBody
-                });
-                console.log('Updated existing E2E test count comment');
-              } else {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  body: fullCommentBody
-                });
-                console.log('Created new E2E test count comment');
-              }
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: summary.body,
+              });
+              console.log('Updated existing E2E test count comment');
             } else {
-              console.log('Test count change is not significant (added <= threshold), skipping comment');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summary.body,
+              });
+              console.log('Created new E2E test count comment');
             }
