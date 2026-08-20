@@ -86,6 +86,22 @@ ALLOWED_DATE_FORMATS: Final = re.compile(
 )
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
+
+
+def _date_to_proto_string(value: date) -> str:
+    """Serialize a date to ISO 8601 with a guaranteed four-digit year.
+
+    ``strftime("%Y-...")`` does not zero-pad years below 1000 on Linux/glibc,
+    but the frontend requires exactly four digits.
+    """
+    return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
+
+
+def _datetime_to_iso_string(value: datetime) -> str:
+    """Serialize a datetime to ISO 8601 with a guaranteed four-digit year."""
+    return f"{value.year:04d}-{value.month:02d}-{value.day:02d}T{value.hour:02d}:{value.minute:02d}"
+
+
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
 _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
@@ -301,7 +317,8 @@ def _default_max_datetime(base_date: date) -> datetime:
 
 
 def _datetime_to_proto_string(value: datetime) -> str:
-    return _normalize_datetime_value(value).strftime(_DATETIME_ISO_FORMAT)
+    normalized = _normalize_datetime_value(value)
+    return _datetime_to_iso_string(normalized)
 
 
 @dataclass(frozen=True)
@@ -665,7 +682,7 @@ class DateInputSerde:
             return []
 
         to_serialize = list(v) if isinstance(v, Sequence) else [v]
-        return [date.strftime(d, "%Y-%m-%d") for d in to_serialize]  # ty: ignore[invalid-argument-type]
+        return [_date_to_proto_string(d) for d in to_serialize]  # ty: ignore[invalid-argument-type]
 
 
 class TimeWidgetsMixin:
@@ -1904,9 +1921,9 @@ class TimeWidgetsMixin:
                 # For ID purposes, no need to parse the input string.
                 return v
             if isinstance(v, datetime):
-                return date.strftime(v.date(), "%Y-%m-%d")
+                return _date_to_proto_string(v.date())
             if isinstance(v, date):
-                return date.strftime(v, "%Y-%m-%d")
+                return _date_to_proto_string(v)
 
             return None
 
@@ -1989,10 +2006,10 @@ class TimeWidgetsMixin:
             date_input_proto.default[:] = []
         else:
             date_input_proto.default[:] = [
-                date.strftime(v, "%Y-%m-%d") for v in parsed_values.value
+                _date_to_proto_string(v) for v in parsed_values.value
             ]
-        date_input_proto.min = date.strftime(parsed_values.min, "%Y-%m-%d")
-        date_input_proto.max = date.strftime(parsed_values.max, "%Y-%m-%d")
+        date_input_proto.min = _date_to_proto_string(parsed_values.min)
+        date_input_proto.max = _date_to_proto_string(parsed_values.max)
         date_input_proto.form_id = current_form_id(self.dg)
 
         if help is not None:

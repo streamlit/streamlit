@@ -22,7 +22,11 @@ from streamlit.errors import StreamlitAPIException, StreamlitBadTimeStringError
 
 
 def adjust_years(input_date: date, years: int) -> date:
-    """Add or subtract years from a date, saturating at ``date.min`` / ``date.max``."""
+    """Add or subtract years from a date, clamped to ``date.min`` / ``date.max``.
+
+    Only used to derive default widget bounds, where a clamped bound beats the
+    ``ValueError`` that ``replace()`` raises outside years 1-9999.
+    """
     target_year = input_date.year + years
     if target_year > date.max.year:
         return date.max
