@@ -162,20 +162,14 @@ def test_audio_uses_unified_height(
     """Check that the audio component uses our default element height."""
     audio_element = themed_app.get_by_test_id("stAudio").first
 
-    # Wait until the browser has loaded at least the audio metadata (readyState
-    # >= 1), which is enough to confirm the element is rendered. Requiring
-    # readyState === 4 (fully downloaded) causes intermittent timeouts in CI
-    # when the audio asset loads slowly.
-    wait_until(
-        themed_app,
-        lambda: audio_element.evaluate("el => el.readyState") >= 1,
-        timeout=15000,
-    )
-
+    # The unified height (40px) is set by CSS and is independent of whether the
+    # audio asset has loaded. We wait for the element to have that height, which
+    # also implies it is attached and rendered.
     expect(audio_element).to_have_css("height", "40px")
 
-    # Hide the timeline to prevent flakiness in screenshots — native media
-    # controls can paint the scrubber inconsistently even after metadata loads.
+    # Hide the timeline scrubber to prevent rendering inconsistency in
+    # screenshots — native controls paint the scrubber in a non-deterministic
+    # state when the audio asset is still loading or blocked.
     hide_timeline_style = """
     audio::-webkit-media-controls-timeline { display: none; }
     """
