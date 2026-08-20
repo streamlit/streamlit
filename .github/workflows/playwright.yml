@@ -21,9 +21,9 @@ concurrency:
 
 # Which tests the suite runs. Shared with the `check-e2e-test-count` job below so
 # that the counts it reports stay in sync with what actually runs; keep both jobs
-# reading these instead of spelling the arguments out again. The marker
-# expression is separate because it contains a space and has to stay quoted,
-# while the flags rely on word splitting.
+# reading these instead of spelling the arguments out again. Both jobs split
+# E2E_SELECTION_FLAGS with `read -ra`, so no value in it may contain whitespace,
+# which is why the marker expression is separate: it contains a space.
 env:
   E2E_SELECTION_FLAGS: --ignore ./custom_components --ignore ./load_testing --browser webkit --browser chromium --browser firefox
   E2E_MARKER_EXPR: not performance
@@ -66,9 +66,9 @@ jobs:
       - name: Run playwright tests
         # With psutil installed, pytest-xdist's `-n auto` uses physical cores (32 on 64-core runner)
         run: |
+          read -ra selection_flags <<< "$E2E_SELECTION_FLAGS"
           cd e2e_playwright && rm -rf ./test-results
-          # shellcheck disable=SC2086  # E2E_SELECTION_FLAGS must word split
-          uv run pytest $E2E_SELECTION_FLAGS -m "$E2E_MARKER_EXPR" -n auto --reruns 1
+          uv run pytest "${selection_flags[@]}" -m "$E2E_MARKER_EXPR" -n auto --reruns 1
       - name: Upload test statistics
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -104,14 +104,21 @@ jobs:
 
     env:
       NEW_TEST_THRESHOLD: 30
-      SUMMARY_PATH: ${{ runner.temp }}/e2e-test-count-summary.json
+      # Just the file name: steps join it with $RUNNER_TEMP themselves, because
+      # job-level env cannot use `runner.temp` (the `runner` context is only
+      # available to steps, and an invalid expression here makes the whole
+      # workflow file unparseable rather than just this job).
+      SUMMARY_FILE: e2e-test-count-summary.json
 
     steps:
+      # This job imports PR-authored code (collection executes conftest.py and
+      # every test module) while holding `pull-requests: write`. That is only
+      # safe under `pull_request`, where GitHub downgrades the token to
+      # read-only for forks; never move this job to `pull_request_target`.
       - name: Checkout Streamlit code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          submodules: "recursive"
           # For pull_request events, the checked out HEAD is the merge commit
           # GitHub creates for the PR, so depth 2 also gets us its parents.
           fetch-depth: 2
@@ -128,16 +135,19 @@ jobs:
           else
             echo "::warning::HEAD is not a PR merge commit, skipping the E2E test count check."
           fi
-      # Most PRs touch no E2E test at all, and no E2E test imports `streamlit`,
-      # so nothing outside this directory can change what gets collected. Skip
-      # the environment setup and collection for those PRs; the comment step
-      # still runs, to clear a comment left on an earlier commit.
+      # Most PRs touch no E2E test at all, and nothing outside this directory
+      # feeds pytest's collection: every parametrized test takes its values from
+      # literals inside e2e_playwright/. So the count cannot have changed, and
+      # neither can snapshots change it. Skip the environment setup and the
+      # collection for those PRs; the comment step still runs, to correct a
+      # comment left by an earlier commit.
       - name: Check for E2E test changes
         id: e2e_changes
         if: steps.merge_commit.outputs.found
         run: |
           set -euo pipefail
-          if git diff --quiet HEAD^1 HEAD -- e2e_playwright; then
+          if git diff --quiet HEAD^1 HEAD -- e2e_playwright \
+            ':(exclude)e2e_playwright/__snapshots__'; then
             echo "No changes under e2e_playwright/, the test count cannot have changed."
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -152,52 +162,57 @@ jobs:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Collect test IDs for the PR and its merge base
         if: steps.e2e_changes.outputs.changed
-        env:
-          COLLECT_DIR: ${{ runner.temp }}
         run: |
           set -euo pipefail
-          # Counts the tests that CI actually runs: the selection comes from the
-          # same variables as the suite job above, and the plugin drops the tests
-          # Playwright would skip for their browser. The plugin lives in
-          # scripts/, which is never swapped out below, so both collections apply
-          # the PR's rules. Playwright browsers are not needed, since collection
-          # never launches one. `addopts` is cleared because
-          # e2e_playwright/pytest.ini turns on verbose output, which would
-          # replace the test IDs with human-readable lines.
+          # Counts the tests that CI actually runs:
+          # - the selection comes from the same variables as the suite job above,
+          #   and the plugin drops the tests Playwright would skip for their
+          #   browser;
+          # - the plugin lives in scripts/, which is never swapped out below, so
+          #   both collections apply the PR's rules;
+          # - Playwright browsers are not needed, since collection never launches
+          #   one;
+          # - `addopts` is cleared because e2e_playwright/pytest.ini turns on
+          #   verbose output, which would replace the test IDs with
+          #   human-readable lines;
+          # - `--no-stats` comes from e2e_playwright/shared/stats_reporter.py,
+          #   which the swap below replaces with the merge base's copy, so
+          #   renaming that option breaks the second collection.
+          read -ra selection_flags <<< "$E2E_SELECTION_FLAGS"
           collect() {
-            # shellcheck disable=SC2086  # E2E_SELECTION_FLAGS must word split
             (cd e2e_playwright && PYTHONPATH="$GITHUB_WORKSPACE/scripts" \
               uv run pytest -p e2e_executable_tests_plugin --collect-only -q \
-              -o addopts= --no-stats $E2E_SELECTION_FLAGS \
+              -o addopts= --no-stats "${selection_flags[@]}" \
               -m "$E2E_MARKER_EXPR") > "$1"
           }
 
-          collect "$COLLECT_DIR/head-test-ids.txt"
+          collect "$RUNNER_TEMP/head-test-ids.txt"
 
           # HEAD^1 of the merge commit is the develop commit this PR merges
           # into, i.e. exactly the baseline the PR is responsible for changing.
-          git rev-parse --short HEAD^1 > "$COLLECT_DIR/base-ref.txt"
+          git rev-parse --short HEAD^1 > "$RUNNER_TEMP/base-ref.txt"
           # Swap in the merge base's tests: restoring tracked files is not
           # enough, because files the PR added would linger and inflate the
           # baseline. `--no-renames` keeps a renamed file from being missed
           # here (it would otherwise be reported as a rename, not an addition).
+          # Deleting only those files, rather than the whole directory, keeps
+          # this off the untracked __pycache__ that the collection above is
+          # still writing: `rm -rf e2e_playwright` loses that race.
           git diff --name-only -z --diff-filter=A --no-renames HEAD^1 HEAD \
             -- e2e_playwright | xargs -0 -r rm -f
           git checkout HEAD^1 -- e2e_playwright
 
-          collect "$COLLECT_DIR/base-test-ids.txt"
+          collect "$RUNNER_TEMP/base-test-ids.txt"
       - name: Compare test counts
         if: steps.e2e_changes.outputs.changed
-        env:
-          COLLECT_DIR: ${{ runner.temp }}
         run: |
           set -euo pipefail
           uv run python scripts/compare_e2e_test_counts.py \
-            --base "$COLLECT_DIR/base-test-ids.txt" \
-            --head "$COLLECT_DIR/head-test-ids.txt" \
-            --base-ref "$(cat "$COLLECT_DIR/base-ref.txt")" \
+            --base "$RUNNER_TEMP/base-test-ids.txt" \
+            --head "$RUNNER_TEMP/head-test-ids.txt" \
+            --base-ref "$(cat "$RUNNER_TEMP/base-ref.txt")" \
             --threshold "$NEW_TEST_THRESHOLD" \
-            --output "$SUMMARY_PATH"
+            --output "$RUNNER_TEMP/$SUMMARY_FILE"
       - name: Comment on the PR
         if: steps.merge_commit.outputs.found
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -212,8 +227,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const summaryPath = `${process.env.RUNNER_TEMP}/${process.env.SUMMARY_FILE}`;
             const summary = process.env.COUNTED
-              ? JSON.parse(fs.readFileSync(process.env.SUMMARY_PATH, 'utf8'))
+              ? JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
               : null;
 
             // Fork PRs get a read-only token, so commenting would fail. The
@@ -234,15 +250,22 @@ jobs:
             const existingComment = comments.find(comment => comment.body.includes(marker));
 
             // An earlier commit of this PR changed E2E tests and this one does
-            // not, so whatever we said about it no longer applies.
+            // not, so correct what we said rather than delete it: a reviewer who
+            // saw the warning should see it withdrawn, not find it missing.
             if (!summary) {
               if (existingComment) {
-                await github.rest.issues.deleteComment({
+                await github.rest.issues.updateComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   comment_id: existingComment.id,
+                  body: [
+                    marker,
+                    '### ✅ No E2E test count change',
+                    '',
+                    'This PR no longer changes any E2E test cases.',
+                  ].join('\n'),
                 });
-                console.log('Deleted obsolete E2E test count comment');
+                console.log('Withdrew obsolete E2E test count comment');
               } else {
                 console.log('PR changes no E2E tests, nothing to report');
               }

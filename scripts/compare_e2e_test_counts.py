@@ -29,7 +29,7 @@ compares test IDs rather than plain totals, it reports what a PR actually
 changed even when tests were renamed or moved, and it can attribute the change
 to individual test files.
 
-Node IDs come from a `--collect-only` run, so the counts include every browser
+Test IDs come from a `--collect-only` run, so the counts include every browser
 parametrization (a single new test function adds one test case per browser).
 """
 
@@ -140,8 +140,9 @@ def _build_comment(
         else:
             message = f"This PR removes **{abs(net_change)} E2E test cases**"
 
-    # Only when the count grew: "removes 5 test cases, from 2 new test
-    # functions" would read as a contradiction.
+    # A net removal can still introduce new test functions, but "removes 5 test
+    # cases, from 2 new test functions" reads as a contradiction, so only mention
+    # them when the count grew.
     if new_functions and net_change > 0:
         message += (
             f", from {new_functions} new test "

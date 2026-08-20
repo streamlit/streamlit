@@ -19,9 +19,10 @@ Usage:
 
 Tests marked with `only_browser` or `skip_browser` are collected for every
 browser and then skipped during setup, so a plain `--collect-only` over-reports
-what a CI run executes (~250 test cases at the time of writing). Deselecting
-them makes `--collect-only` output list exactly the tests that would run, which
-is what the E2E test count check in `.github/workflows/playwright.yml` reports.
+what a CI run executes (by ~250 test cases at the time of writing). Deselecting
+them makes `--collect-only` output list the tests that would run, up to the
+runtime skips noted in `_would_run`, which is what the E2E test count check in
+`.github/workflows/playwright.yml` reports.
 
 This plugin lives in `scripts/` rather than in `e2e_playwright/` on purpose: the
 test count check swaps `e2e_playwright/` to the PR's merge base, so a plugin in
@@ -41,16 +42,19 @@ from pytest_playwright.pytest_playwright import _get_skiplist
 if TYPE_CHECKING:
     import pytest
 
-# The browsers Playwright can parametrize over, in the order it lists them.
+# Mirrors the browser list Playwright hardcodes in `pytest_runtest_setup`. Only
+# membership matters, not order, and a superset is fine: a test's `browser_name`
+# is always one that `--browser` selected.
 _BROWSERS: Final = ("chromium", "firefox", "webkit")
 
 
 def _would_run(item: pytest.Item) -> bool:
-    """Return whether this test runs, rather than being skipped.
+    """Return whether CI would execute this test, rather than skip it.
 
-    Note that `skipif` conditions are not evaluated: doing so needs pytest
-    internals, and no E2E test uses one today. Should that change, the reported
-    count is too high by the number of tests that the condition skips.
+    Neither `skipif` conditions nor `pytest.skip()` calls in a test body are
+    evaluated: doing so needs pytest internals or running the test itself. Both
+    inflate the count equally on each side of the comparison, so the delta the
+    check reports stays correct.
     """
     if item.get_closest_marker("skip") is not None:
         return False
@@ -70,7 +74,9 @@ def _would_run(item: pytest.Item) -> bool:
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    """Deselect every test Playwright would skip for its browser."""
+    """Deselect every test CI would skip: `skip`-marked ones, and the ones
+    Playwright skips for their browser.
+    """
     executable: list[pytest.Item] = []
     skipped: list[pytest.Item] = []
     for item in items:
