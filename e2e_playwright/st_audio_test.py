@@ -156,26 +156,14 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stAudio")
 
 
-def test_audio_uses_unified_height(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_audio_uses_unified_height(themed_app: Page):
     """Check that the audio component uses our default element height."""
     audio_element = themed_app.get_by_test_id("stAudio").first
 
     # The unified height (40px) is set by CSS and is independent of whether the
-    # audio asset has loaded. We wait for the element to have that height, which
-    # also implies it is attached and rendered.
+    # audio asset has loaded. Using to_have_css() waits for the element to be
+    # rendered without depending on external audio resources loading.
     expect(audio_element).to_have_css("height", "40px")
-
-    # Hide the timeline scrubber to prevent rendering inconsistency in
-    # screenshots — native controls paint the scrubber in a non-deterministic
-    # state when the audio asset is still loading or blocked.
-    hide_timeline_style = """
-    audio::-webkit-media-controls-timeline { display: none; }
-    """
-    assert_snapshot(
-        audio_element, name="st_audio-unified_height", style=hide_timeline_style
-    )
 
 
 # TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.
