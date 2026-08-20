@@ -7,11 +7,15 @@
     "component-lib/src/ArrowTable.ts": ["exports", "types"]
   },
   "ignoreDependencies": [
+    "@bufbuild/buf",
     "@deck.gl/extensions",
     "@deck.gl/widgets",
+    "@playwright/cli",
     "@swc/plugin-emotion",
     "eslint-plugin-streamlit-custom",
     "oxfmt",
+    "protobufjs",
+    "protobufjs-cli",
     "react-responsive-carousel",
     "typescript-v7"
   ],
