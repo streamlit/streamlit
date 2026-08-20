@@ -469,7 +469,12 @@ def test_switch_page_with_query_params(app: Page):
 
 
 def test_switch_page_from_callback_by_path(app: Page):
-    """Test that st.switch_page navigates when called from a widget callback."""
+    """Test that a callback can navigate with a string path.
+
+    The two argument forms resolve the target differently, so each needs its own case: a
+    string path is matched against the live page registry, which during a callback still
+    holds the previous run's pages.
+    """
 
     click_button(app, "callback nav by path")
 
@@ -477,7 +482,11 @@ def test_switch_page_from_callback_by_path(app: Page):
 
 
 def test_switch_page_from_callback_by_st_page(app: Page):
-    """Test that a callback can navigate with an st.Page object."""
+    """Test that a callback can navigate with an st.Page object.
+
+    This form carries a script hash computed when the Page was constructed, so it never
+    consults the page registry that the string form depends on.
+    """
 
     click_button(app, "callback nav by object")
 
