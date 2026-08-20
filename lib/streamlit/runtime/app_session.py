@@ -87,6 +87,29 @@ _LOGGER: Final = get_logger(__name__)
 _REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_failed"})
 
 
+def _close_script_thread_event_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """Best-effort teardown of the script-thread event loop at session end.
+
+    Cancels any outstanding tasks and shuts down async generators before
+    closing. All errors are swallowed so cleanup never blocks session shutdown.
+    """
+    if loop.is_closed():
+        return
+    try:
+        for task in asyncio.all_tasks(loop):
+            task.cancel()
+        loop.run_until_complete(loop.shutdown_asyncgens())
+    except Exception as ex:
+        _LOGGER.debug("Error while tearing down script thread event loop", exc_info=ex)
+    finally:
+        try:
+            loop.close()
+        except Exception as ex:
+            _LOGGER.debug(
+                "Error while closing script thread event loop", exc_info=ex
+            )
+
+
 class AppSessionState(Enum):
     APP_NOT_RUNNING = "APP_NOT_RUNNING"
     APP_IS_RUNNING = "APP_IS_RUNNING"
@@ -164,6 +187,14 @@ class AppSession:
         self.id = session_id_override or str(uuid.uuid4())
 
         self._event_loop = asyncio.get_running_loop()
+
+        # One persistent, non-running asyncio event loop for the session's
+        # script thread. Outlives individual ScriptRunners so that loop-bound
+        # objects stored in st.session_state or @st.cache_resource(scope=
+        # "session") remain valid across reruns and fastRerun churn.
+        self._script_thread_event_loop: asyncio.AbstractEventLoop = (
+            asyncio.new_event_loop()
+        )
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
@@ -341,6 +372,10 @@ class AppSession:
 
             # Clear any session caches. This ensures shutdown hooks are called.
             self.clear_session_caches()
+
+            # Close the script-thread event loop now that the session is truly
+            # done. Best-effort: swallow errors so they never block shutdown.
+            _close_script_thread_event_loop(self._script_thread_event_loop)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -542,6 +577,11 @@ class AppSession:
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
+        # Defensive recreate: if user code called loop.close() mid-session,
+        # replace the loop so the new ScriptRunner gets a working one.
+        if self._script_thread_event_loop.is_closed():
+            self._script_thread_event_loop = asyncio.new_event_loop()
+
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,
@@ -554,6 +594,7 @@ class AppSession:
             pages_manager=self._pages_manager,
             on_script_error=self._on_script_error,
             local_sources_watcher=self._local_sources_watcher,
+            event_loop=self._script_thread_event_loop,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
