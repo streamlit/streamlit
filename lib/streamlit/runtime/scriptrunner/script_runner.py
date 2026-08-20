@@ -247,9 +247,11 @@ class ScriptRunner:
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
-        # Emitted synchronously on the script or fragment-worker thread (not
-        # the thread that created this ScriptRunner) when a ScriptRunnerEvent
-        # occurs. Receivers are called as receiver(sender, event=..., **payload):
+        # Emitted synchronously when a ScriptRunnerEvent occurs, usually on the
+        # script or fragment-worker thread rather than the thread that created
+        # this ScriptRunner. Receivers are called as
+        # receiver(sender, event=..., **payload); events not listed below carry
+        # no payload:
         # - ENQUEUE_FORWARD_MSG: forward_msg
         # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
         # - SHUTDOWN: client_state

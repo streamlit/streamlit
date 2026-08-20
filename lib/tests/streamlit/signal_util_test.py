@@ -30,6 +30,14 @@ class _BoundReceiver:
         pass
 
 
+class _RecordingReceiver:
+    def __init__(self) -> None:
+        self.received: list[object] = []
+
+    def receive(self, sender: object) -> None:
+        self.received.append(sender)
+
+
 def test_send_without_receivers_is_noop() -> None:
     """Sending without receivers is a no-op."""
     signal = Signal()
@@ -95,6 +103,34 @@ def test_disconnect_matches_freshly_accessed_bound_method() -> None:
     assert not signal.has_receivers()
 
 
+def test_distinct_instances_of_same_method_are_separate_receivers() -> None:
+    """Bound methods of different instances are tracked independently."""
+    signal = Signal()
+    first = _RecordingReceiver()
+    second = _RecordingReceiver()
+    signal.connect(first.receive, weak=False)
+    signal.connect(second.receive, weak=False)
+
+    signal.disconnect(first.receive)
+    signal.send("sender")
+
+    assert first.received == []
+    assert second.received == ["sender"]
+
+
+def test_connect_returns_receiver_for_decorator_form() -> None:
+    """connect returns the receiver so @signal.connect keeps the function bound."""
+    signal = Signal()
+    received: list[object] = []
+
+    @signal.connect
+    def receiver(sender: object) -> None:
+        received.append(sender)
+
+    signal.send("sender")
+    assert received == ["sender"]
+
+
 def test_weak_bound_receiver_is_dropped_after_gc() -> None:
     """A weakly connected bound method is dropped when its instance is gone."""
     signal = Signal()
@@ -153,14 +189,18 @@ def test_strong_connection_retains_nested_function() -> None:
 def test_receiver_exception_propagates() -> None:
     """Exceptions raised by receivers propagate to the sender."""
     signal = Signal()
+    later_receiver = Mock()
 
     def receiver(sender: object) -> None:
         raise RuntimeError("receiver failed")
 
     signal.connect(receiver, weak=False)
+    signal.connect(later_receiver, weak=False)
 
     with pytest.raises(RuntimeError, match="receiver failed"):
         signal.send()
+
+    later_receiver.assert_not_called()
 
 
 def test_receiver_can_mutate_connections_during_send() -> None:

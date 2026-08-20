@@ -36,27 +36,30 @@ class Signal:
         # registry lock is held.
         self._lock = threading.RLock()
 
-    def connect(self, receiver: _Receiver, *, weak: bool = True) -> None:
-        """Connect a receiver. Weak by default so the signal does not keep it alive."""
+    def connect(self, receiver: _Receiver, *, weak: bool = True) -> _Receiver:
+        """Connect and return a receiver. Weak by default so the signal does not keep it alive."""
         receiver_key = _get_receiver_key(receiver)
         stored_receiver: _StoredReceiver
 
         if weak:
-            # Bound methods are ephemeral, so WeakMethod watches the instance.
-            # A normal weakref would go dead as soon as connect() returns.
+            # Weak so the cleanup callback does not keep this signal alive.
             signal_ref = weakref.ref(self)
 
             def remove_receiver(receiver_ref: weakref.ReferenceType[Any]) -> None:
                 signal = signal_ref()
                 if signal is None:
-                    return
+                    return  # pragma: no cover - defensive
 
                 with signal._lock:
                     # Skip if connect() later stored a different receiver at this key.
-                    if signal._receivers.get(receiver_key) is receiver_ref:
-                        del signal._receivers[receiver_key]
+                    if signal._receivers.get(receiver_key) is not receiver_ref:
+                        return  # pragma: no cover - defensive
+                    del signal._receivers[receiver_key]
 
             if inspect.ismethod(receiver):
+                # A bound method is created fresh on each attribute access, so a
+                # plain weakref would die as soon as connect() returns. WeakMethod
+                # tracks the underlying instance instead.
                 stored_receiver = weakref.WeakMethod(receiver, remove_receiver)
             else:
                 stored_receiver = weakref.ref(receiver, remove_receiver)
@@ -66,6 +69,8 @@ class Signal:
         with self._lock:
             self._receivers[receiver_key] = stored_receiver
 
+        return receiver
+
     def disconnect(self, receiver: _Receiver) -> None:
         """Disconnect a receiver if it is connected."""
         with self._lock:
@@ -74,7 +79,11 @@ class Signal:
     def send(self, sender: Any = None, /, **kwargs: Any) -> None:
         """Call each live receiver synchronously.
 
-        Uses a snapshot so receivers can connect or disconnect during dispatch.
+        Receivers run against a snapshot, so a receiver may connect or
+        disconnect during dispatch. Changes take effect on the next send: a
+        receiver disconnected mid-dispatch still runs for the current one. A
+        receiver exception propagates to the caller and skips remaining
+        receivers.
         """
         for receiver in self._get_live_receivers():
             receiver(sender, **kwargs)
@@ -94,7 +103,7 @@ class Signal:
                     else stored_receiver
                 )
                 if receiver is None:
-                    del self._receivers[receiver_key]
+                    self._receivers.pop(receiver_key, None)
                 else:
                     live_receivers.append(receiver)
 
