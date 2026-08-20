@@ -133,6 +133,9 @@ class DateInputTest(DeltaGeneratorTestCase):
             #       Add test for empty value list case
             ([date(2021, 4, 26)], "2011-04-26", "2031-04-26"),
             ([date(2007, 2, 4), date(2012, 1, 3)], "1997-02-04", "2022-01-03"),
+            # GH#7427: date.max / date.min clamp instead of overflowing
+            (date.max, "9989-12-31", "9999-12-31"),
+            (date.min, "0001-01-01", "0011-01-01"),
         ]
     )
     def test_min_max_values(self, arg_value, min_date_value, max_date_value):

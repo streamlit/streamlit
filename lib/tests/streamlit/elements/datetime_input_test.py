@@ -117,6 +117,14 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         assert proto.min == min_value.strftime(DATETIME_FORMAT)
         assert proto.max == max_value.strftime(DATETIME_FORMAT)
 
+    def test_min_max_values_clamp_at_year_limits(self):
+        """Test that default bounds clamp and serialize with a four-digit year (GH#7427)."""
+        st.datetime_input("the label", datetime.min)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.min == "0001-01-01T00:00"
+        assert proto.max == "0011-01-01T23:59"
+
     def test_label_visibility(self):
         """Test that label visibility works."""
         st.datetime_input("the label", label_visibility="hidden")
