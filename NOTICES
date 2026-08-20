@@ -696,7 +696,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: @internationalized/date, @internationalized/number, @internationalized/string, react-aria, react-aria-components, react-stately. A copy of the source code may be downloaded from https://github.com/adobe/react-spectrum/tree/main/packages/@internationalized/date (@internationalized/date), https://github.com/adobe/react-spectrum (@internationalized/number), https://github.com/adobe/react-spectrum (@internationalized/string), https://github.com/adobe/react-spectrum (react-aria), https://github.com/adobe/react-spectrum (react-aria-components), https://github.com/adobe/react-spectrum (react-stately). This software contains the following license and notice below:
+The following software may be included in this product: @internationalized/date, @internationalized/number, @internationalized/string, @react-types/shared, react-aria, react-aria-components, react-stately. A copy of the source code may be downloaded from https://github.com/adobe/react-spectrum/tree/main/packages/@internationalized/date (@internationalized/date), https://github.com/adobe/react-spectrum (@internationalized/number), https://github.com/adobe/react-spectrum (@internationalized/string), https://github.com/adobe/react-spectrum (@react-types/shared), https://github.com/adobe/react-spectrum (react-aria), https://github.com/adobe/react-spectrum (react-aria-components), https://github.com/adobe/react-spectrum (react-stately). This software contains the following license and notice below:
 
 Apache License
                            Version 2.0, January 2004
