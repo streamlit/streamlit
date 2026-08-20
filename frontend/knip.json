@@ -15,9 +15,6 @@
     "react-responsive-carousel",
     "typescript-v7"
   ],
-  "rules": {
-    "unlisted": "off"
-  },
   "workspaces": {
     ".": {
       "entry": ["vitest.setup.ts"]

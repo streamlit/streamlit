@@ -144,9 +144,7 @@ Run from the repo root (requires Node major version from `.nvmrc`):
 
 ## Knip configuration
 
-Unused `dependencies` and `devDependencies` fail the check. Knip's `unlisted` rule stays off because some imports resolve from nested packages.
-
-`ignoreDependencies` lists packages Knip cannot see as used, including Vite peer pins that the production build requires even though Streamlit source never imports them (`@deck.gl/extensions`, `@deck.gl/widgets`, `react-responsive-carousel`). The `buf`, `playwright-cli`, `pbjs`, and `pbts` scripts exist so Knip treats those binaries as used; they are thin wrappers, not no-ops.
+Unused `dependencies` and `devDependencies` fail the check. Direct imports must be declared in the importing workspace (`unlisted` is on). `ignoreDependencies` lists packages Knip cannot see as used, including Vite peer pins that the production build requires even though Streamlit source never imports them (`@deck.gl/extensions`, `@deck.gl/widgets`, `react-responsive-carousel`). The `buf`, `playwright-cli`, `pbjs`, and `pbts` scripts exist so Knip treats those binaries as used; they are thin wrappers, not no-ops.
 
 ## TypeScript Test Guide
 
