@@ -86,6 +86,8 @@ ALLOWED_DATE_FORMATS: Final = re.compile(
 )
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
+_DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
+_DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
 
 def _date_to_proto_string(value: date) -> str:
@@ -99,11 +101,7 @@ def _date_to_proto_string(value: date) -> str:
 
 def _datetime_to_iso_string(value: datetime) -> str:
     """Serialize a datetime to ISO 8601 with a guaranteed four-digit year."""
-    return f"{value.year:04d}-{value.month:02d}-{value.day:02d}T{value.hour:02d}:{value.minute:02d}"
-
-
-_DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
-_DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
+    return f"{_date_to_proto_string(value)}T{value.hour:02d}:{value.minute:02d}"
 
 
 def _convert_timelike_to_time(value: TimeValue) -> time:

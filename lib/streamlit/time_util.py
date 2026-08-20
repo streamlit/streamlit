@@ -22,10 +22,10 @@ from streamlit.errors import StreamlitAPIException, StreamlitBadTimeStringError
 
 
 def adjust_years(input_date: date, years: int) -> date:
-    """Add or subtract years from a date, clamped to ``date.min`` / ``date.max``.
+    """Add or subtract years from a date, clamping at ``date.min`` / ``date.max``.
 
-    Only used to derive default widget bounds, where a clamped bound beats the
-    ``ValueError`` that ``replace()`` raises outside years 1-9999.
+    A target year outside 1-9999 saturates at the calendar endpoint
+    (``0001-01-01`` / ``9999-12-31``) rather than raising.
     """
     target_year = input_date.year + years
     if target_year > date.max.year:
