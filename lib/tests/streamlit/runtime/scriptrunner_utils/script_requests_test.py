@@ -216,7 +216,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b", "frag_c"]
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
-    def test_full_app_rerun_pending_not_downgraded_by_targeted(self):
+    def test_pending_full_app_rerun_not_downgraded_by_targeted_rerun(self):
         """A pending full-app rerun is not downgraded when a targeted rerun arrives."""
         reqs = ScriptRequests()
         reqs.request_rerun(RerunData())  # full-app: empty queue, not fragment-scoped
@@ -224,7 +224,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == []
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
-    def test_full_app_rerun_pending_not_downgraded_by_bare_fragment_id(self):
+    def test_pending_full_app_rerun_not_downgraded_by_bare_fragment_id(self):
         """A pending full-app rerun survives a target sent as a bare fragment_id."""
         reqs = ScriptRequests()
         reqs.request_rerun(RerunData())  # full-app first

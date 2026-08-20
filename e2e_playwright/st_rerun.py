@@ -90,8 +90,7 @@ if "callback_count" not in st.session_state:
 def rerun_from_callback():
     st.session_state.callback_count += 1
     st.rerun()
-    # The test asserts this stays dead: st.rerun() interrupts the callback rather than
-    # warning and returning, which is what it did before callback reruns were supported.
+    # Must stay dead: st.rerun() interrupts the callback instead of returning.
     st.session_state.resumed_after_rerun = True  # type: ignore[unreachable]
 
 
@@ -99,10 +98,12 @@ callback_text = st.text_input(
     "rerun from callback", key="callback_text", on_change=rerun_from_callback
 )
 untouched_text = st.text_input("untouched by callbacks", key="untouched_text")
-button_in_body = st.button("rerun from button callback", on_click=rerun_from_callback)
+button_value_in_body = st.button(
+    "rerun from button callback", on_click=rerun_from_callback
+)
 
 st.write(f"callback text: {callback_text}")
 st.write(f"untouched text: {untouched_text}")
 st.write(f"callback count: {st.session_state.callback_count}")
-st.write(f"button in body: {button_in_body}")
+st.write(f"button in body: {button_value_in_body}")
 st.write(f"resumed after rerun: {'resumed_after_rerun' in st.session_state}")

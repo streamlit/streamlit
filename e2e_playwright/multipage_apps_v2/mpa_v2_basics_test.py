@@ -471,9 +471,9 @@ def test_switch_page_with_query_params(app: Page):
 def test_switch_page_from_callback_by_path(app: Page):
     """Test that a callback can navigate with a string path.
 
-    The two argument forms resolve the target differently, so each needs its own case: a
-    string path is matched against the live page registry, which during a callback still
-    holds the previous run's pages.
+    The two argument forms resolve the target differently, so each needs its own case:
+    Streamlit resolves a string path against the live page registry, which during a
+    callback still holds the previous run's pages.
     """
 
     click_button(app, "callback nav by path")

@@ -632,6 +632,8 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_fragment_queue_runs_descendant_when_ancestor_is_gone(self):
         """A queued descendant still runs if its queued ancestor never executed."""
+        # "outer" is queued but absent from storage, so it is skipped without running
+        # and must not suppress its descendant's own queued rerun.
         scriptrunner = TestScriptRunner(
             "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
         )
@@ -641,8 +643,6 @@ class ScriptRunnerTest(unittest.TestCase):
             "inner", inner, parent_fragment_id="outer"
         )
 
-        # "outer" is queued but absent from storage, so it is skipped without running
-        # and must not suppress its descendant's own queued rerun.
         scriptrunner.start()
         scriptrunner.join()
 
@@ -1296,6 +1296,8 @@ class ScriptRunnerTest(unittest.TestCase):
         was rendered inside of a dialog when two fragment-related reruns were handled
         in the same ScriptRunner thread.
         """
+        # Pass a fragment_id_queue so the runner keeps fragment_storage instead of
+        # clearing it.
         scriptrunner = TestScriptRunner(
             "good_script.py", RerunData(fragment_id_queue=["my_fragment1"])
         )
@@ -1337,6 +1339,8 @@ class ScriptRunnerTest(unittest.TestCase):
     def test_dg_stack_reset_for_full_app_rerun(self):
         """Tests that the dg_stack and cursor are reset for a full app rerun."""
 
+        # Pass a fragment_id_queue so the runner keeps fragment_storage instead of
+        # clearing it.
         scriptrunner = TestScriptRunner(
             "good_script.py", RerunData(fragment_id_queue=["my_fragment1"])
         )
@@ -1619,7 +1623,11 @@ class TestScriptRunner(ScriptRunner):
     __test__ = False
 
     def __init__(self, script_name: str, initial_rerun_data: RerunData | None = None):
-        """Initializes the ScriptRunner for the given script_name"""
+        """Initialize the ScriptRunner for the given script_name.
+
+        ``initial_rerun_data`` defaults to a full-app rerun; pass a
+        ``fragment_id_queue`` to start the runner in a fragment run.
+        """
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
 

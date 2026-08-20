@@ -539,7 +539,7 @@ class SessionStateTest(DeltaGeneratorTestCase):
         assert ctx.session_state["color"] is not color
 
 
-def test_callbacks_with_rerun():
+def test_callback_rerun_runs_the_script_body_once():
     """st.rerun() in a widget callback interrupts that callback and reruns the script once.
 
     Product behavior for the interaction:
@@ -638,7 +638,7 @@ def test_callback_rerun_resets_triggers() -> None:
     assert at.session_state["clicks"] == 2
 
 
-def test_callback_rerun_does_not_abort_the_other_callbacks() -> None:
+def test_callback_rerun_does_not_abort_other_callbacks() -> None:
     """One callback's st.rerun() must not silently kill the others in the interaction.
 
     The requests are queued only after the last callback returns. Queued mid-dispatch,
@@ -705,7 +705,7 @@ def _state_with_unregistered_widgets() -> SessionState:
     return ss
 
 
-def test_on_script_finished_can_skip_stale_widget_removal() -> None:
+def test_on_script_finished_keeps_widget_values_when_stale_removal_skipped() -> None:
     """``remove_stale_widgets=False`` resets triggers but keeps unseen widget values."""
     ss = _state_with_unregistered_widgets()
 
@@ -722,7 +722,7 @@ def test_on_script_finished_can_skip_stale_widget_removal() -> None:
 def test_on_script_finished_removes_stale_widgets_by_default() -> None:
     """A run that rendered still drops widget state that no widget re-registered.
 
-    The counterpart to the skip case above. ``script_started`` picks between the two,
+    The counterpart to the skip case above. ``has_script_started`` picks between the two,
     so without this test a gate stuck at False would leak stale widget state after
     every run while the skip test kept passing.
     """
@@ -740,7 +740,7 @@ def test_on_script_finished_removes_stale_widgets_by_default() -> None:
         ss["w-trig"]
 
 
-def test_callback_run_location_resets_after_rerun_exception() -> None:
+def test_rerun_exception_requeues_and_restores_run_location() -> None:
     """ThreadState leaves CALLBACK after a callback raises RerunException.
 
     ``ThreadState.scoped`` must restore the prior ``run_location`` so a raised
@@ -758,7 +758,7 @@ def test_callback_run_location_resets_after_rerun_exception() -> None:
         deserializer=lambda v: v,
         serializer=lambda v: v,
         value_type="int_value",
-        callback=cb,  # single on_change-style callback, fires on value change
+        callback=cb,  # The single-callback path, not the `callbacks` event dict.
         fragment_id="frag-1",
     )
 
@@ -782,7 +782,7 @@ def test_callback_run_location_resets_after_rerun_exception() -> None:
     mock_ctx.script_requests.request_rerun.assert_called_once()
 
 
-def test_single_callback_st_rerun_is_requeued() -> None:
+def test_on_change_callback_rerun_is_requeued() -> None:
     """st.rerun() in a single-callback widget re-queues the rerun."""
 
     requeue_calls: list[RerunData] = []
@@ -818,7 +818,7 @@ def test_single_callback_st_rerun_is_requeued() -> None:
     assert len(requeue_calls) == 1
 
 
-def test_callbacks_single_default_does_not_force_rerun() -> None:
+def test_normal_callback_return_queues_no_rerun() -> None:
     """A callback returning normally does not itself queue a rerun request."""
     ss = SessionState()
     wid = "w1"
@@ -884,7 +884,7 @@ def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
     assert mock_ctx.script_requests.request_rerun.call_count == 1
 
 
-def test_fragment_callback_rerun_requeued() -> None:
+def test_fragment_widget_callback_rerun_is_requeued() -> None:
     """A fragment widget callback calling st.rerun() re-queues the rerun."""
 
     requeue_calls: list[RerunData] = []
@@ -921,7 +921,7 @@ def test_fragment_callback_rerun_requeued() -> None:
     assert len(requeue_calls) == 1
 
 
-def test_callback_navigation_survives_the_deferred_queueing() -> None:
+def test_callback_switch_page_keeps_its_target_page() -> None:
     """st.switch_page() in a callback keeps its target page.
 
     switch_page queues a full-app RerunData carrying the *target* page_script_hash and then
@@ -971,7 +971,11 @@ def test_callback_navigation_survives_the_deferred_queueing() -> None:
 def _state_with_changed_widgets(
     widgets: list[tuple[str, Callable[[], None] | None]], *, disabled: bool = False
 ) -> SessionState:
-    """Build a SessionState where every listed widget changed, with the given callbacks."""
+    """Build a SessionState where every listed widget changed, with the given callbacks.
+
+    ``disabled`` applies to the callback-less widgets only, so a test can keep the
+    callback that competes with them enabled.
+    """
     ss = SessionState()
     for wid, cb in widgets:
         ss._set_widget_metadata(
@@ -994,7 +998,9 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
     requeue_calls: list[RerunData] = []
 
     mock_ctx = MagicMock()
-    # No fragment is running, so the interaction's default rerun is the full app.
+    # No fragment is running, so the interaction's default rerun is the full app. Pin
+    # this explicitly: a bare MagicMock attribute is truthy and would read as a
+    # fragment interaction.
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
         d
@@ -1010,23 +1016,29 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
     return requeue_calls
 
 
-def _keyed_target() -> None:
-    """Stand in for PR-3's st.rerun(scope="<key>"): a target naming another fragment."""
+def _raise_targeted_rerun() -> None:
+    """Raise what a targeted rerun at another fragment sends.
+
+    Stands in for ``st.rerun(scope="<key>")``, per
+    specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md.
+    """
     raise RerunException(
         RerunData(fragment_id_queue=["other-frag"], is_fragment_scoped_rerun=True)
     )
 
 
-def test_callback_less_change_votes_for_the_interaction_default() -> None:
+def test_changed_widget_without_callback_forces_app_wide_rerun() -> None:
     """A widget that changed without a callback still wants the default rerun.
 
-    This is the form shape: `check_callback_rules` forbids `on_change` on form fields, so a
-    field can only ever be callback-less and the submit button holds the only callback. If
-    the field cast no vote, a targeted rerun from that callback would preempt the body and
-    the submitted values would never be rendered.
+    This is how forms behave: ``check_callback_rules`` forbids ``on_change`` on form
+    fields, so a field can only ever be callback-less and the submit button holds the
+    only callback. If the field cast no vote, a targeted rerun from that callback would
+    preempt the body and the submitted values would never be rendered.
     """
 
-    ss = _state_with_changed_widgets([("field", None), ("submit", _keyed_target)])
+    ss = _state_with_changed_widgets(
+        [("field", None), ("submit", _raise_targeted_rerun)]
+    )
 
     requeue_calls = _call_callbacks_in_main_script(ss)
 
@@ -1037,7 +1049,7 @@ def test_callback_less_change_votes_for_the_interaction_default() -> None:
     assert not forced.is_fragment_scoped_rerun
 
 
-def test_callback_less_change_alone_queues_nothing() -> None:
+def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
     """The vote only breaks a tie; on its own it must not add a rerun.
 
     The interaction's own run is already underway, so a changed callback-less widget with
@@ -1049,14 +1061,14 @@ def test_callback_less_change_alone_queues_nothing() -> None:
     assert _call_callbacks_in_main_script(ss) == []
 
 
-def test_disabled_callback_less_change_does_not_vote() -> None:
+def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
     """A disabled widget's reported change is forged or stale, so it gets no vote.
 
     Without the disabled check it would force an app-wide rerun and override the target.
     """
 
     ss = _state_with_changed_widgets(
-        [("field", None), ("submit", _keyed_target)], disabled=True
+        [("field", None), ("submit", _raise_targeted_rerun)], disabled=True
     )
 
     requeue_calls = _call_callbacks_in_main_script(ss)
@@ -1065,7 +1077,7 @@ def test_disabled_callback_less_change_does_not_vote() -> None:
     assert requeue_calls[0].fragment_id_queue == ["other-frag"]
 
 
-def test_callbacks_targeted_and_default_in_main_script_force_full_app_rerun() -> None:
+def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
     """A main-script interaction's default is app-wide, so it trumps the targets.
 
     - One callback requests a fragment-scoped rerun; another returns normally.
@@ -1095,9 +1107,7 @@ def test_callbacks_targeted_and_default_in_main_script_force_full_app_rerun() ->
         ss._new_widget_state.set_from_value(wid, 1)
 
     mock_ctx = MagicMock()
-    # No fragment is running, so the interaction's default rerun is the full app.
-    # Pin it explicitly: a bare MagicMock attribute is truthy and would read as a
-    # fragment interaction.
+    # Main-script interaction; see _call_callbacks_in_main_script for why this is pinned.
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
         d
@@ -1118,15 +1128,14 @@ def test_callbacks_targeted_and_default_in_main_script_force_full_app_rerun() ->
     assert forced.widget_states is None
 
 
-def test_callbacks_targeted_and_default_in_fragment_do_not_force_full_app_rerun() -> (
-    None
-):
+def test_fragment_interaction_does_not_escalate_targeted_rerun() -> None:
     """A fragment interaction is not widened to the whole app by a normal return.
 
     The interacting widget lives inside a fragment, so the rerun a normally-returning
-    callback leaves in place covers only that fragment. The targeted rerun replaces
-    it, per the spec's "a targeted rerun replaces the interaction's default rerun" —
-    forcing a full-app rerun here would discard the partial update instead.
+    callback leaves in place covers only that fragment. The targeted rerun replaces it,
+    per specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md ("A targeted rerun
+    replaces the interaction's default rerun") — forcing a full-app rerun here would
+    discard the partial update instead.
     """
 
     requeue_calls: list[RerunData] = []

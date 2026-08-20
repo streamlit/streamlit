@@ -83,12 +83,12 @@ class ScriptRequest:
         return util.repr_(self)
 
 
-def _is_full_app_rerun(data: RerunData) -> bool:
-    """Whether ``data`` reruns the whole app rather than specific fragments."""
+def _is_full_app_rerun(rerun_data: RerunData) -> bool:
+    """Whether ``rerun_data`` reruns the whole app rather than specific fragments."""
     return (
-        not data.fragment_id
-        and not data.fragment_id_queue
-        and not data.is_fragment_scoped_rerun
+        not rerun_data.fragment_id
+        and not rerun_data.fragment_id_queue
+        and not rerun_data.is_fragment_scoped_rerun
     )
 
 
@@ -223,7 +223,7 @@ class ScriptRequests:
                 )
 
                 # Fold a bare fragment_id into fragment_id_queue so the coalescing
-                # below only has to read one field (the CONTINUE branch does the same).
+                # below only has to read one field.
                 if new_data.fragment_id:
                     new_data = replace(
                         new_data,
@@ -236,14 +236,15 @@ class ScriptRequests:
 
                 if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
                     # A full-app rerun anywhere in the interaction trumps every
-                    # targeted or fragment rerun. Collapse to a single full-app rerun
-                    # regardless of arrival order.
+                    # fragment-targeted one, since it reruns those fragments too.
+                    # Collapse to a single full-app rerun, whichever arrived first.
                     fragment_id_queue: list[str] = []
                     is_fragment_scoped_rerun = False
                 else:
-                    # No full-app rerun: union the fragment IDs (deduped,
-                    # order-preserving) and keep fragment-scoped semantics if
-                    # either request was fragment-scoped.
+                    # Both requests still need their fragments to run, so take the
+                    # union (deduped, order-preserving). Stay fragment-scoped if either
+                    # request was, since that is what lets the coalesced rerun preempt
+                    # the run in progress.
                     fragment_id_queue = [*self._rerun_data.fragment_id_queue]
                     for fragment_id in new_data.fragment_id_queue:
                         if fragment_id not in fragment_id_queue:

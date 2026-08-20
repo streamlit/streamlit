@@ -589,32 +589,30 @@ class PersistedWidgetTracker:
 def _interaction_default_is_app_wide(ctx: ScriptRunContext | None) -> bool:
     """Whether the interaction's default rerun covers the whole app, not one fragment.
 
-    A widget inside a fragment defaults to rerunning just that fragment.
+    A fragment is running (``ctx.fragment_ids_this_run`` is non-empty) exactly when the
+    interacting widget lives inside it, and such a widget defaults to rerunning only
+    that fragment. With no context, assume app-wide.
     """
     return not (ctx and ctx.fragment_ids_this_run)
 
 
 @dataclass(slots=True)
 class _CallbackRerunVotes:
-    """Records whether callbacks in one interaction asked for a targeted or default rerun.
+    """What the callbacks of one interaction asked for, collected during dispatch.
 
-    - ``requested_targeted`` — a callback asked to rerun specific fragments rather
-      than the full app: ``scope="fragment"`` today, and any non-empty
-      ``fragment_id_queue`` so future keyed targets classify the same way.
-    - ``wants_interaction_default`` — something in this interaction still expects the
-      default rerun: a callback returned normally or called plain ``st.rerun()``, or a
-      widget changed without firing any callback (every field of a form, for instance).
-    - ``pending_reruns`` — the requests raised by ``st.rerun()``, in call order, held
-      until every callback has run (see ``SessionState._run_widget_callback``).
-
-    When both flags are set, ``SessionState._call_callbacks`` re-queues the
-    interaction's default rerun so it wins over the targeted requests — but only when
-    that default is app-wide. "Default" is not a synonym for full-app: a widget inside
-    a fragment defaults to rerunning just that fragment, and the targets replace it.
+    ``SessionState._call_callbacks`` reads this once every callback has run, to queue
+    the requests and decide the interaction's rerun scope.
     """
 
+    # A callback asked to rerun specific fragments rather than the whole app. Only
+    # scope="fragment" does this today; the fragment_id_queue check also covers the
+    # keyed targets in specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md.
     requested_targeted: bool = False
+    # Something still expects the interaction's default rerun: a callback returned
+    # normally or called plain st.rerun(), or a widget changed without firing any
+    # callback (every field of a form, for instance).
     wants_interaction_default: bool = False
+    # Requests raised by st.rerun(), in call order, held until the last callback returns.
     pending_reruns: list[RerunData] = field(default_factory=list)
 
 
@@ -881,7 +879,9 @@ class SessionState:
         self._call_callbacks()
 
     def _call_callbacks(self) -> None:
-        """Call callbacks for widgets whose value changed or whose trigger fired."""
+        """Call callbacks for widgets whose value changed or whose trigger fired,
+        then queue the reruns they asked for.
+        """
         votes = _CallbackRerunVotes()
 
         # Skip callbacks for disabled widgets: a reported change can only come
@@ -895,10 +895,10 @@ class SessionState:
         # construction. Either way, a disabled widget's forged change is
         # suppressed.
 
-        # Path 1: single callback.
+        # Changed widgets, split by which dispatch path (if any) will handle them.
         changed_widget_ids_for_single_callback: list[str] = []
-        # Changed widgets with no callback machinery at all. Nothing dispatches for them, so
-        # they never reach _run_widget_callback to cast a vote of their own.
+        # Neither `callback` nor `callbacks`: no dispatch runs for these, so nothing
+        # downstream records what they need. The vote below speaks for them.
         changed_widget_ids_without_callback: list[str] = []
 
         for wid in self._new_widget_state:
@@ -911,9 +911,12 @@ class SessionState:
                 changed_widget_ids_for_single_callback.append(wid)
             elif metadata.callbacks is None:
                 changed_widget_ids_without_callback.append(wid)
+            # A widget with `callbacks` set lands in neither list: Path 2 below decides
+            # per event whether anything fires, which we cannot tell from here.
 
+        # Path 1: single callback.
         for wid in changed_widget_ids_for_single_callback:
-            self._run_widget_callback(
+            self._run_callback_and_record_rerun(
                 votes,
                 functools.partial(self._new_widget_state.call_callback, wid),
             )
@@ -937,23 +940,23 @@ class SessionState:
                 self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
 
         if changed_widget_ids_without_callback:
-            # A widget that changed without firing a callback still expects its new value to
-            # reach the body, so it votes for the interaction's default rerun. Inside a form
-            # that is the only possibility, since `check_callback_rules` forbids `on_change`
-            # on form fields: without this vote, a targeted rerun from the submit button
-            # would preempt the body and the submitted values would never be rendered.
+            # A widget that changed without firing a callback still needs its new value to
+            # reach the body, so it wants the interaction's default rerun. Form fields are
+            # always in this shape — `check_callback_rules` forbids `on_change` on them —
+            # so without this the submit button's targeted rerun would preempt the body
+            # and the submitted values would never render.
             votes.wants_interaction_default = True
 
         ctx = get_script_run_ctx()
 
-        # Queue the callbacks' reruns only now that every callback has run. Queuing one
-        # mid-dispatch would abort the callbacks after it: their first st.* call picks
-        # the pending request up at a yield point and raises, which is indistinguishable
-        # from their own st.rerun() and would be swallowed just as silently.
+        # Queue the callbacks' reruns only now that every callback has run. Queued
+        # mid-dispatch, the next callback's first st.* call would pick the request up
+        # at a yield point and raise; _run_callback_and_record_rerun cannot tell that
+        # from the callback's own st.rerun(), so it would swallow it and that callback
+        # would die.
         #
-        # Deliberately not wrapped in try/finally: if a callback raises, the interaction
-        # errored and nothing should be re-queued. Firing a rerun anyway would clear the
-        # exception element on the next SCRIPT_STARTED, hiding the error.
+        # No try/finally: if a callback raised, the interaction errored and queueing a
+        # rerun anyway would clear the exception element on the next SCRIPT_STARTED.
         if ctx and ctx.script_requests:
             for rerun_data in votes.pending_reruns:
                 ctx.script_requests.request_rerun(rerun_data)
@@ -964,9 +967,9 @@ class SessionState:
             and _interaction_default_is_app_wide(ctx)
         ):
             # An app-wide default trumps the targeted requests, so queue it explicitly:
-            # this run's body is about to be preempted, and nothing else represents a
-            # callback that returned normally. A fragment interaction's default covers
-            # only its own fragment, so the targeted reruns replace it instead.
+            # the callbacks that returned normally raised nothing, so no request in
+            # pending_reruns stands for them, and this run's body is about to be
+            # preempted before it can serve as their rerun.
             self._request_full_app_rerun()
 
     def _execute_widget_callback(
@@ -977,11 +980,7 @@ class SessionState:
         cb_args: WidgetArgs,
         cb_kwargs: dict[str, Any],
     ) -> None:
-        """Run a widget callback with ``run_location=CALLBACK`` and the widget's ``fragment_id``.
-
-        Delegates to ``_run_widget_callback``, which records the rerun-scope vote
-        and any ``st.rerun()`` raised during the callback.
-        """
+        """Run a widget callback with ``run_location=CALLBACK`` and the widget's ``fragment_id``."""
 
         def run() -> None:
             with ThreadState.scoped(
@@ -990,20 +989,20 @@ class SessionState:
             ):
                 callback_fn(*cb_args, **cb_kwargs)
 
-        self._run_widget_callback(votes, run)
+        self._run_callback_and_record_rerun(votes, run)
 
-    def _run_widget_callback(
+    def _run_callback_and_record_rerun(
         self, votes: _CallbackRerunVotes, run: Callable[[], None]
     ) -> None:
-        """Run one widget callback and record how it affects the interaction's rerun scope.
+        """Run one widget callback and record what it asked for on ``votes``.
 
-        ``st.rerun()`` interrupts the callback with a ``RerunException``. The request is
-        recorded on ``votes`` instead of being queued here, because a request queued
-        mid-dispatch would abort the remaining callbacks; ``_call_callbacks`` queues
-        them all once the last callback has run.
+        ``st.rerun()`` interrupts the callback with a ``RerunException``. Every such
+        request lands in ``votes.pending_reruns``, which ``_call_callbacks`` queues once
+        the last callback has run (see the comment there for why it waits), and the
+        callback's rerun scope is recorded as:
 
-        - Fragment-scoped or queued-fragment ``st.rerun()`` → ``votes.requested_targeted``
-        - Plain ``st.rerun()`` or a normal return → ``votes.wants_interaction_default``
+        - a fragment-scoped or fragment-queued rerun → ``requested_targeted``
+        - a plain ``st.rerun()``, or a normal return → ``wants_interaction_default``
         """
         from streamlit.runtime.scriptrunner import RerunException
 
@@ -1051,6 +1050,8 @@ class SessionState:
 
         Parameters
         ----------
+        votes : _CallbackRerunVotes
+            Accumulator that each dispatched callback records its rerun request on.
         wid : str
             The widget ID.
         metadata : WidgetMetadata[Any]
@@ -1116,6 +1117,8 @@ class SessionState:
 
         Parameters
         ----------
+        votes : _CallbackRerunVotes
+            Accumulator that each dispatched callback records its rerun request on.
         wid : str
             The widget ID.
         metadata : WidgetMetadata[Any]
@@ -1173,8 +1176,8 @@ class SessionState:
         *,
         remove_stale_widgets: bool = True,
     ) -> None:
-        """Called by ScriptRunner after its script finishes running.
-         Updates widgets to prepare for the next script run.
+        """Called by ScriptRunner when a script run ends, whether or not its body ran.
+        Updates widgets to prepare for the next script run.
 
         Parameters
         ----------

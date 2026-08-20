@@ -88,7 +88,7 @@ def test_clears_stale_elements_correctly(app: Page):
     expect(app.get_by_text("#8599 - Bug")).to_have_count(1)
 
 
-def test_st_rerun_in_widget_callback(app: Page):
+def test_st_rerun_in_widget_callback_preserves_widget_values(app: Page):
     """st.rerun() in a widget callback reruns without discarding widget values.
 
     One scenario test, since every step builds on the previous page state and e2e
@@ -117,8 +117,7 @@ def test_st_rerun_in_widget_callback(app: Page):
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "callback count:", "1", exact_match=True)
-    # The rerun takes effect: it interrupts the callback rather than warning and
-    # letting the rest of the callback body run.
+    # The rerun takes effect: it interrupts the callback body.
     expect_prefixed_markdown(app, "resumed after rerun:", "False", exact_match=True)
     # The interacting widget keeps the value the user just entered...
     expect_prefixed_markdown(app, "callback text:", "hello", exact_match=True)

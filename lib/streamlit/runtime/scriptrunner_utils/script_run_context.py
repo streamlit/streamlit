@@ -109,7 +109,7 @@ class FragmentThreadState:
 
     @property
     def in_fragment_callback(self) -> bool:
-        """True when this thread is inside a widget callback that belongs to a fragment."""
+        """True while a callback for a widget defined inside a fragment is running."""
         return (
             self.run_location is RunLocation.CALLBACK and self.fragment_id is not None
         )
@@ -313,12 +313,12 @@ class ScriptRunContext:
                 qp.populate_from_query_string(query_string)
 
     @property
-    def script_started(self) -> bool:
+    def has_script_started(self) -> bool:
         """Whether this run reached its script body.
 
-        False when a widget callback queued an ``st.rerun()`` that preempted
-        the run before its body. Stale-widget cleanup relies on the body having
-        re-registered its widgets, so it must be skipped in that case.
+        False when a widget callback queued an ``st.rerun()`` that preempted the run
+        before its body. ``SessionState.on_script_finished`` then skips stale-widget
+        cleanup, which assumes the body re-registered its widgets.
         """
         return self._has_script_started
 

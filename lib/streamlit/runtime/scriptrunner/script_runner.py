@@ -718,8 +718,9 @@ class ScriptRunner:
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states
                         )
-                        # Callbacks above may have re-queued an st.rerun(). Honor it now so
-                        # we don't execute this run's script body before that rerun takes effect.
+                        # Callbacks above may have queued an st.rerun(). Honor it before
+                        # on_script_start() below: leaving has_script_started False is
+                        # what tells on_script_finished to keep this run's widget values.
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
@@ -918,7 +919,7 @@ class ScriptRunner:
         if not premature_stop:
             self._session_state.on_script_finished(
                 ctx.shared.widget_ids_this_run.snapshot(),
-                remove_stale_widgets=ctx.script_started,
+                remove_stale_widgets=ctx.has_script_started,
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
