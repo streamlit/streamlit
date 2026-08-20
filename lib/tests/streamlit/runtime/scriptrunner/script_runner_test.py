@@ -1435,6 +1435,8 @@ class ScriptRunnerTest(unittest.TestCase):
         # The loop is only installed, never run.
         assert scriptrunner._session_state["loop_running"] is False
 
+        scriptrunner._test_event_loop.close()
+
     def test_event_loop_persists_across_reruns(self):
         """The same loop object is current on every rerun of a session."""
         scriptrunner = TestScriptRunner("asyncio_event_loop.py")
@@ -1446,6 +1448,8 @@ class ScriptRunnerTest(unittest.TestCase):
         captured = scriptrunner._session_state["captured_loops"]
         assert len(captured) == 2
         assert captured[0] is captured[1]
+
+        scriptrunner._test_event_loop.close()
 
     def test_asyncio_run_unaffected_by_persistent_loop(self):
         """User code calling asyncio.run() keeps working: our loop never runs,
@@ -1461,16 +1465,55 @@ class ScriptRunnerTest(unittest.TestCase):
         # asyncio.run() must not have closed the persistent loop.
         assert scriptrunner._session_state["persistent_loop_closed_mid_run"] is False
 
-    def test_event_loop_closed_on_shutdown(self):
-        """The persistent loop is closed and detached when the thread stops."""
-        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
-        scriptrunner.request_rerun(RerunData())
-        scriptrunner.start()
-        scriptrunner.join()
+        scriptrunner._test_event_loop.close()
 
-        loop = scriptrunner._session_state["captured_loops"][0]
-        assert loop.is_closed()
-        assert scriptrunner._event_loop is None
+    def test_event_loop_detached_after_scriptrunner_shutdown(self):
+        """After the script thread stops the runner's loop reference is cleared,
+        but the loop itself remains open — it is owned by AppSession (or the
+        test harness) and must survive runner churn."""
+        loop = asyncio.new_event_loop()
+        try:
+            scriptrunner = TestScriptRunner("asyncio_event_loop.py", event_loop=loop)
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+            # ScriptRunner cleared its own reference but did not close the loop.
+            assert scriptrunner._event_loop is None
+            assert not loop.is_closed()
+        finally:
+            loop.close()
+
+    def test_same_loop_across_sequential_scriptrunners(self):
+        """A loop shared across multiple sequential ScriptRunners (simulating
+        AppSession fastRerun churn) remains the same object throughout."""
+        shared_loop = asyncio.new_event_loop()
+        try:
+            first = TestScriptRunner("asyncio_event_loop.py", event_loop=shared_loop)
+            first.request_rerun(RerunData())
+            first.start()
+            first.join()
+            self._assert_no_exceptions(first)
+
+            # First runner captured the loop; it must be our shared_loop.
+            first_captured = first._session_state["captured_loops"][0]
+            assert first_captured is shared_loop
+
+            # Start a second runner with the same loop (simulates a fastRerun
+            # or reconnect where AppSession creates a new ScriptRunner but
+            # passes the same _script_thread_event_loop).
+            second = TestScriptRunner("asyncio_event_loop.py", event_loop=shared_loop)
+            second._session_state = first._session_state
+            second._session_state["captured_loops"] = []
+            second.request_rerun(RerunData())
+            second.start()
+            second.join()
+            self._assert_no_exceptions(second)
+
+            second_captured = second._session_state["captured_loops"][0]
+            assert second_captured is shared_loop
+        finally:
+            shared_loop.close()
 
     def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:
         """Assert that no uncaught exceptions were thrown in the
@@ -1538,7 +1581,11 @@ class TestScriptRunner(ScriptRunner):
     # To prevent PytestCollectionWarning we set __test__ property to False
     __test__ = False
 
-    def __init__(self, script_name: str):
+    def __init__(
+        self,
+        script_name: str,
+        event_loop: asyncio.AbstractEventLoop | None = None,
+    ):
         """Initializes the ScriptRunner for the given script_name"""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
@@ -1546,6 +1593,13 @@ class TestScriptRunner(ScriptRunner):
         main_script_path = os.path.join(
             os.path.dirname(__file__), "test_data", script_name
         )
+
+        # Caller-supplied loop (simulates AppSession ownership).  When none is
+        # provided we create a dedicated one so the runner has a loop to
+        # install; the caller is responsible for closing it when done.
+        if event_loop is None:
+            event_loop = asyncio.new_event_loop()
+        self._test_event_loop = event_loop
 
         script_cache = ScriptCache()
         super().__init__(
@@ -1558,6 +1612,7 @@ class TestScriptRunner(ScriptRunner):
             user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path, script_cache),
+            event_loop=event_loop,
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
