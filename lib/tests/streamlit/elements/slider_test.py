@@ -881,11 +881,12 @@ class SliderOnChangeModeTest(DeltaGeneratorTestCase):
         assert "on_change" in str(exc_info.value)
         assert "'rerun'" in str(exc_info.value)
         assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
 
     def test_on_change_unhashable_value_raises_exception(self):
         """Test that unhashable on_change value raises StreamlitValueError."""
         # Passing a list (unhashable) should raise StreamlitValueError,
-        # not TypeError from set membership check
+        # not TypeError from a membership test.
         with pytest.raises(st.errors.StreamlitValueError) as exc_info:
             st.slider("the label", on_change=[])  # type: ignore[arg-type]
 

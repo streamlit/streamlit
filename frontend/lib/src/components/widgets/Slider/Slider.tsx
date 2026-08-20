@@ -43,7 +43,7 @@ import {
 import { formatMoment, MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 import {
   StyledRASlider,
@@ -405,7 +405,7 @@ function updateWidgetMgrState(
   vws: ValueWithSource<number[]>,
   fragmentId: string | undefined
 ): void {
-  const update = {
+  const update: WidgetUpdate = {
     formId: element.formId,
     fragmentId,
     fromUser: vws.fromUser,

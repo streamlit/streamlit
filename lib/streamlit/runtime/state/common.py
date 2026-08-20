@@ -309,7 +309,11 @@ def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> 
     if on_change is None or callable(on_change):
         return
 
-    # Tuple membership (not a set) so unhashable values compare False instead
-    # of raising TypeError.
-    if on_change not in ("rerun", "ignore"):  # noqa: PLR6201
-        raise StreamlitValueError("on_change", ["'rerun'", "'ignore'", "a callable"])
+    # Require a str before membership so array-like values (e.g. NumPy arrays)
+    # cannot raise an ambiguous-truth ValueError from ``==``.
+    supported_modes = get_args(OnChangeMode)
+    if not isinstance(on_change, str) or on_change not in supported_modes:
+        raise StreamlitValueError(
+            "on_change",
+            [repr(mode) for mode in supported_modes] + ["a callback function"],
+        )

@@ -1194,7 +1194,7 @@ class SliderMixin:
         if bind and key:
             slider_proto.query_param_key = str(key)
 
-        if on_change == "ignore":
+        if isinstance(on_change, str) and on_change == "ignore":
             slider_proto.ignore_rerun = True
 
         serde = SliderSerde(

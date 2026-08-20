@@ -727,71 +727,71 @@ describe("Slider query param binding", () => {
 
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
+})
 
-  describe("on_change='ignore' mode", () => {
-    it("passes triggerRerun: false when ignoreRerun is true", async () => {
-      const props = getProps({ ignoreRerun: true })
-      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+describe("on_change='ignore' mode", () => {
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const props = getProps({ ignoreRerun: true })
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
-      render(<Slider {...props} />)
+    render(<Slider {...props} />)
 
-      const slider = screen.getByRole("slider")
-      await triggerChangeEvent(slider, "ArrowRight")
+    const slider = screen.getByRole("slider")
+    await triggerChangeEvent(slider, "ArrowRight")
 
-      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element.id,
-        [6],
-        {
-          formId: props.element.formId,
-          fragmentId: undefined,
-          fromUser: true,
-          triggerRerun: false,
-        }
-      )
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [6],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const props = getProps({ ignoreRerun: false })
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+    render(<Slider {...props} />)
+
+    const slider = screen.getByRole("slider")
+    await triggerChangeEvent(slider, "ArrowRight")
+
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [6],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+  })
+
+  it("forwards triggerRerun: false inside a form", async () => {
+    const props = getProps({
+      ignoreRerun: true,
+      formId: "testForm",
     })
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
-    it("does not pass triggerRerun when ignoreRerun is false", async () => {
-      const props = getProps({ ignoreRerun: false })
-      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+    render(<Slider {...props} />)
 
-      render(<Slider {...props} />)
+    const slider = screen.getByRole("slider")
+    await triggerChangeEvent(slider, "ArrowRight")
 
-      const slider = screen.getByRole("slider")
-      await triggerChangeEvent(slider, "ArrowRight")
-
-      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element.id,
-        [6],
-        {
-          formId: props.element.formId,
-          fragmentId: undefined,
-          fromUser: true,
-        }
-      )
-    })
-
-    it("forwards triggerRerun: false inside a form", async () => {
-      const props = getProps({
-        ignoreRerun: true,
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [6],
+      {
         formId: "testForm",
-      })
-      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
-
-      render(<Slider {...props} />)
-
-      const slider = screen.getByRole("slider")
-      await triggerChangeEvent(slider, "ArrowRight")
-
-      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element.id,
-        [6],
-        {
-          formId: "testForm",
-          fragmentId: undefined,
-          fromUser: true,
-          triggerRerun: false,
-        }
-      )
-    })
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
   })
 })
