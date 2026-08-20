@@ -82,6 +82,10 @@ message Block {
       STRETCH = 4;
     }
     Align align = 8;
+
+    // Whether the direct children can be resized by dragging the border
+    // between them. Only set by `st.columns`.
+    bool resizable = 9;
   }
 
   message Column {

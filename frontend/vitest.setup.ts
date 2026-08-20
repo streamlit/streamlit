@@ -144,6 +144,13 @@ Element.prototype.getAnimations = vi.fn().mockReturnValue([])
 // scrollIntoView is not implemented in JSDOM
 Element.prototype.scrollIntoView = vi.fn()
 
+// The Pointer Capture API is not implemented in JSDOM. Components that use it to
+// keep receiving pointer events during a drag (e.g. the column resize handle)
+// would otherwise crash on pointerdown.
+Element.prototype.setPointerCapture = vi.fn()
+Element.prototype.releasePointerCapture = vi.fn()
+Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(false)
+
 // matchMedia is not implemented in JSDOM
 Object.defineProperty(window, "matchMedia", {
   writable: true,

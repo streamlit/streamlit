@@ -16,7 +16,8 @@
 
 import { ReactElement } from "react"
 
-import { screen, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -38,15 +39,21 @@ function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   )
 }
 
-function makeHorizontalBlockWithColumns(
-  numColumns: number,
-  wrap = true
-): BlockNode {
-  const weight = 1 / numColumns
-
+function makeColumnsRow({
+  weights,
+  wrap = true,
+  resizable = false,
+  children,
+}: {
+  weights: number[]
+  wrap?: boolean
+  resizable?: boolean
+  /** Overrides the columns derived from `weights`, e.g. to nest a row. */
+  children?: BlockNode[]
+}): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
-    Array.from({ length: numColumns }, () => makeColumn(weight)),
+    children ?? weights.map(weight => makeColumn(weight)),
     new BlockProto({
       allowEmpty: true,
       flexContainer: {
@@ -55,9 +62,20 @@ function makeHorizontalBlockWithColumns(
         },
         direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
         wrap,
+        resizable,
       },
     })
   )
+}
+
+function makeHorizontalBlockWithColumns(
+  numColumns: number,
+  wrap = true
+): BlockNode {
+  return makeColumnsRow({
+    weights: Array.from({ length: numColumns }, () => 1 / numColumns),
+    wrap,
+  })
 }
 
 function makeVerticalBlock(
@@ -540,5 +558,220 @@ describe("BlockNodeRenderer transparent blocks", () => {
 
     // Transparent wrapper adds no extra stVerticalBlock.
     expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(2)
+  })
+})
+
+describe("resizable columns", () => {
+  /** Width the row is mocked at, so 80px of drag equals 10% of the row. */
+  const ROW_WIDTH = 800
+
+  const DRAG_START_X = 200
+
+  function setViewportWidth(innerWidth: number): void {
+    Object.defineProperty(window, "innerWidth", {
+      value: innerWidth,
+      writable: true,
+      configurable: true,
+    })
+  }
+
+  beforeEach(() => {
+    // Flush the drag's coalesced update synchronously so assertions don't have
+    // to await a real animation frame.
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => {
+      callback(0)
+      return 0
+    })
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    setViewportWidth(1024)
+  })
+
+  function renderRow(row: BlockNode): void {
+    renderWithContexts(makeVerticalBlockComponent(makeVerticalBlock([row])))
+
+    // jsdom reports a zero-size rect for every element, so every row has to be
+    // given a width for a pixel drag to translate into a width fraction.
+    for (const rowElement of screen.getAllByTestId("stHorizontalBlock")) {
+      vi.spyOn(rowElement, "getBoundingClientRect").mockReturnValue({
+        width: ROW_WIDTH,
+      } as DOMRect)
+    }
+  }
+
+  async function dragBy(handle: HTMLElement, deltaPx: number): Promise<void> {
+    const user = userEvent.setup()
+    const endX = DRAG_START_X + deltaPx
+
+    await user.pointer([
+      {
+        keys: "[MouseLeft>]",
+        target: handle,
+        coords: { clientX: DRAG_START_X },
+      },
+      { target: handle, coords: { clientX: endX } },
+      { keys: "[/MouseLeft]", target: handle, coords: { clientX: endX } },
+    ])
+  }
+
+  it("renders a handle between each adjacent pair of columns", () => {
+    renderRow(makeColumnsRow({ weights: [0.25, 0.25, 0.5], resizable: true }))
+
+    const columns = screen.getAllByTestId("stColumn")
+    expect(columns).toHaveLength(3)
+    // Two boundaries for three columns: the last column never gets a handle.
+    expect(screen.getAllByRole("separator")).toHaveLength(2)
+    for (const column of columns) {
+      // Anchors the absolutely positioned handle.
+      expect(column).toHaveStyle("position: relative")
+      // A wrapping column gets no min-width outside the stacking media query:
+      // one would let a clamped column claim more than its weight and wrap the
+      // row onto a second line, so the floor lives in the drag math instead.
+      expect(getComputedStyle(column).minWidth).toBe("")
+    }
+  })
+
+  it("renders no handle for a single resizable column", () => {
+    renderRow(makeColumnsRow({ weights: [1], resizable: true }))
+
+    expect(screen.getAllByTestId("stColumn")).toHaveLength(1)
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+  })
+
+  it("renders no handles for columns that did not opt in", () => {
+    renderRow(makeColumnsRow({ weights: [0.5, 0.5] }))
+
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+    for (const column of screen.getAllByTestId("stColumn")) {
+      expect(column).not.toHaveStyle("position: relative")
+    }
+  })
+
+  it("renders no handles when the row holds more than just columns", () => {
+    renderRow(
+      makeColumnsRow({
+        weights: [],
+        resizable: true,
+        children: [makeColumn(0.5), makeVerticalBlock([])],
+      })
+    )
+
+    expect(screen.getByTestId("stColumn")).toBeVisible()
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+  })
+
+  it("redistributes width between the dragged pair only", async () => {
+    renderRow(makeColumnsRow({ weights: [0.25, 0.25, 0.5], resizable: true }))
+    const columns = screen.getAllByTestId("stColumn")
+
+    await dragBy(screen.getAllByRole("separator")[0], 80)
+
+    expect(columns[0]).toHaveStyle("width: calc(35% - 1rem)")
+    expect(columns[1]).toHaveStyle("width: calc(15% - 1rem)")
+    // The column outside the dragged pair keeps its spec proportion.
+    expect(columns[2]).toHaveStyle("width: calc(50% - 1rem)")
+  })
+
+  it("stops shrinking a column at its minimum width", async () => {
+    renderRow(makeColumnsRow({ weights: [0.5, 0.5], resizable: true }))
+    const columns = screen.getAllByTestId("stColumn")
+
+    await dragBy(screen.getAllByRole("separator")[0], -10_000)
+
+    // 64px of an 800px row.
+    expect(columns[0]).toHaveStyle("width: calc(8% - 1rem)")
+    expect(columns[1]).toHaveStyle("width: calc(92% - 1rem)")
+  })
+
+  it("restores the spec proportions on double click", async () => {
+    const user = userEvent.setup()
+    renderRow(makeColumnsRow({ weights: [0.25, 0.25, 0.5], resizable: true }))
+    const columns = screen.getAllByTestId("stColumn")
+    const handle = screen.getAllByRole("separator")[0]
+    await dragBy(handle, 80)
+
+    await user.dblClick(handle)
+
+    expect(columns[0]).toHaveStyle("width: calc(25% - 1rem)")
+    expect(columns[1]).toHaveStyle("width: calc(25% - 1rem)")
+  })
+
+  it("resizes with the arrow keys and resets with Enter", async () => {
+    const user = userEvent.setup()
+    renderRow(makeColumnsRow({ weights: [0.25, 0.25, 0.5], resizable: true }))
+    const columns = screen.getAllByTestId("stColumn")
+    const handle = screen.getAllByRole("separator")[0]
+    handle.focus()
+
+    // Four 10px steps of an 800px row grow the left column by 5%.
+    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}")
+
+    expect(columns[0]).toHaveStyle("width: calc(30% - 1rem)")
+    expect(columns[1]).toHaveStyle("width: calc(20% - 1rem)")
+    expect(handle).toHaveAttribute("aria-valuenow", "60")
+
+    await user.keyboard("{Enter}")
+
+    expect(columns[0]).toHaveStyle("width: calc(25% - 1rem)")
+    expect(handle).toHaveAttribute("aria-valuenow", "50")
+  })
+
+  it("hides the handles while the columns are stacked", async () => {
+    setViewportWidth(400)
+    renderRow(makeColumnsRow({ weights: [0.25, 0.25, 0.5], resizable: true }))
+
+    expect(screen.getAllByTestId("stColumn")).toHaveLength(3)
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+
+    act(() => {
+      setViewportWidth(1000)
+      window.dispatchEvent(new Event("resize"))
+    })
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("separator")).toHaveLength(2)
+    )
+  })
+
+  it("keeps the handles on narrow viewports when the row cannot wrap", () => {
+    setViewportWidth(400)
+
+    renderRow(
+      makeColumnsRow({ weights: [0.5, 0.5], resizable: true, wrap: false })
+    )
+
+    // A `wrap=False` row scrolls horizontally instead of stacking, so its
+    // columns stay side by side and remain resizable.
+    expect(screen.getAllByRole("separator")).toHaveLength(1)
+  })
+
+  it("keeps nested resizable columns independent of the outer row", async () => {
+    const nestedRow = makeColumnsRow({ weights: [0.5, 0.5], resizable: true })
+    renderRow(
+      makeColumnsRow({
+        weights: [],
+        resizable: true,
+        children: [makeColumn(0.5), makeColumn(0.5, [nestedRow])],
+      })
+    )
+    const columns = screen.getAllByTestId("stColumn")
+
+    // One boundary in each row: without its own context, the nested row would
+    // render no handle at all and only the outer one would be found here.
+    const handles = screen.getAllByRole("separator")
+    expect(handles).toHaveLength(2)
+
+    // The nested handle comes second in document order, because the nested row
+    // lives in the second outer column.
+    await dragBy(handles[1], 80)
+
+    expect(columns[2]).toHaveStyle("width: calc(60% - 1rem)")
+    expect(columns[3]).toHaveStyle("width: calc(40% - 1rem)")
+    // Resizing a nested pair leaves the row it is nested in untouched.
+    expect(columns[0]).toHaveStyle("width: calc(50% - 1rem)")
+    expect(columns[1]).toHaveStyle("width: calc(50% - 1rem)")
   })
 })
