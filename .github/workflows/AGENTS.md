@@ -85,7 +85,7 @@ runner's system Python.
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `python-tests.yml` | Push/PR to `develop` | Python unit tests, linting, type checking across all supported Python versions |
-| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip dependency analysis (PR-blocking), and Vitest unit tests with coverage |
+| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip unused-export and unused-dependency analysis (PR-blocking), and Vitest unit tests with coverage |
 | `js-unit-tests.yml` | `workflow_call` | Reusable JS unit test workflow (called by other workflows) |
 | `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |

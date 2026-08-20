@@ -14,6 +14,8 @@
   "scripts": {
     "build": "node ./scripts/generate-proto.js",
     "generate-protobuf": "node ./scripts/generate-proto.js",
+    "pbjs": "pbjs",
+    "pbts": "pbts",
     "typesync": "typesync",
     "typesync:ci": "typesync --dry=fail"
   },

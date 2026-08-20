@@ -6,12 +6,18 @@
   "ignoreIssues": {
     "component-lib/src/ArrowTable.ts": ["exports", "types"]
   },
+  "ignoreDependencies": [
+    "@swc/plugin-emotion",
+    "eslint-plugin-streamlit-custom",
+    "oxfmt",
+    "typescript-v7"
+  ],
   "rules": {
-    "devDependencies": "off",
-    "dependencies": "off",
     "unlisted": "off"
   },
   "workspaces": {
-    ".": {}
+    ".": {
+      "entry": ["vitest.setup.ts"]
+    }
   }
 }

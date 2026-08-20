@@ -429,7 +429,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize oxfmt, oxlint, and ESLint.
+For Javascript/Typescript, we utilize oxfmt, oxlint, ESLint, and Knip.
 
 #### Formatting
 
@@ -455,6 +455,16 @@ For type-checking, run:
 ```bash
 make frontend-types
 ```
+
+#### Dependency analysis
+
+To check for unused exports and unused `dependencies` / `devDependencies`, run:
+
+```bash
+make frontend-knip
+```
+
+Undeclared (`unlisted`) imports stay off because some imports resolve from nested packages. See [`frontend/AGENTS.md`](./frontend/AGENTS.md).
 
 ### VS-Code / Cursor Setup
 
