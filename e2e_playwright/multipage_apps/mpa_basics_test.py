@@ -168,6 +168,31 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 
+def test_switch_page_from_callback(app: Page):
+    """Test that st.switch_page navigates when called from a widget callback."""
+
+    click_button(app, "callback nav to page 2")
+
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+
+def test_switch_page_from_callback_does_not_navigate_again(app: Page):
+    """Test that a callback's navigation is not replayed on the following run.
+
+    The clicked button's trigger has to be consumed by the run that navigated. If it
+    survived, returning to the main page would immediately bounce back to page 2.
+    """
+
+    click_button(app, "callback nav to page 2")
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    # Back to the main page via the sidebar.
+    app.get_by_test_id("stSidebarNav").locator("a").nth(0).click()
+    wait_for_app_loaded(app)
+
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
+
+
 def test_switch_page_preserves_embed_params(page: Page, app_base_url: str):
     """Test that st.switch_page only preserves embed params."""
 

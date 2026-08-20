@@ -63,6 +63,13 @@ def page_10():
         if st.button("Submit"):
             st.rerun()
 
+        # The interaction here is fragment-scoped while the navigation it asks for is
+        # app-wide, so this covers whether fragment scoping suppresses the page switch.
+        st.button(
+            "callback nav from fragment",
+            on_click=lambda: st.switch_page("page_5.py"),
+        )
+
     get_input()
 
 
@@ -150,6 +157,29 @@ if st.button("Navigate with query params"):
 
 if st.button("page 9"):
     st.switch_page(page9)
+
+
+def switch_to_page_5() -> None:
+    st.switch_page("page_5.py")
+
+
+def switch_to_page_5_with_query_params() -> None:
+    st.switch_page("page_5.py", query_params={"team": "streamlit"})
+
+
+def switch_to_page_9() -> None:
+    st.switch_page(page9)
+
+
+# Callback twins of the three buttons above. Navigating from a callback takes a different
+# path than navigating from the script body: the request is recorded during callback
+# dispatch and only queued once every callback has run.
+#
+# These labels deliberately avoid containing the labels above, because the e2e helper
+# selects buttons by substring and would otherwise match two elements.
+st.button("callback nav by path", on_click=switch_to_page_5)
+st.button("callback nav with params", on_click=switch_to_page_5_with_query_params)
+st.button("callback nav by object", on_click=switch_to_page_9)
 
 if st.checkbox("Show sidebar elements"):
     st.sidebar.write("Sidebar content")
