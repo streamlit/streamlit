@@ -1380,6 +1380,7 @@ describe("Multiselect tag accessibility", () => {
     const horizontalContext: IFlexContext = {
       direction: Direction.HORIZONTAL,
       isInHorizontalLayout: true,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }

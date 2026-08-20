@@ -132,9 +132,8 @@ function MenuButton(props: Props): ReactElement {
 
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
-  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
-  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
-  // skipped when help is set since help provides the tooltip.
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
 

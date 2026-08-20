@@ -41,9 +41,8 @@ function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const shortcut = element.shortcut ? element.shortcut : undefined
 
-  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
-  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
-  // skipped when help is set since help provides the tooltip.
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
 

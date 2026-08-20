@@ -23,6 +23,7 @@ import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
 import { render } from "~lib/test_util"
+import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import MenuButton, { Props } from "./MenuButton"
@@ -294,7 +295,12 @@ describe("MenuButton widget", () => {
 
       const button = screen.getByTestId("stMenuButtonButton")
       expect(button).toHaveTextContent("expand_more")
-      expect(screen.getByTitle("A very long menu label")).toBeVisible()
+      const label = screen.getByTitle("A very long menu label")
+      expect(label).toBeVisible()
+      expect(label.parentElement).toHaveStyle({
+        maxWidth: `calc(100% + ${iconSizes.lg} * 0.25)`,
+        marginRight: `calc(-${iconSizes.lg} * 0.25)`,
+      })
     })
 
     it("does not set a title when help is set (help tooltip takes over)", () => {

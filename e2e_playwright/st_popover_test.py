@@ -119,6 +119,17 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     columns_popover_1 = open_popover(app, "popover 16 (in column 1)")
     expect_markdown(columns_popover_1, "Popover in column 1")
 
+    # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
+    content_width_label = (
+        get_popover(app, "popover 17 (in column 2)")
+        .get_by_test_id("stMarkdownContainer")
+        .locator("p")
+    )
+    wait_until(
+        app,
+        lambda: content_width_label.evaluate("el => el.scrollWidth <= el.clientWidth"),
+    )
+
     assert_snapshot(
         columns_container,
         name="st_popover-columns",

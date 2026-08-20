@@ -21,6 +21,13 @@ import { Direction } from "./utils"
 export interface IFlexContext {
   direction: Direction | undefined
   isInHorizontalLayout: boolean
+  /**
+   * True when widgets here are direct layout children of an `st.columns`
+   * column. Nested layout providers create a new context and leave this
+   * false. Transparent blocks do not create a provider, so they keep the
+   * parent value.
+   */
+  isDirectlyInColumn: boolean
   isInRoot: boolean
   /**
    * Whether the nearest flex container allows children to wrap onto additional
@@ -61,6 +68,8 @@ FlexContext.displayName = "FlexContext"
  * @returns direction: The direction of the nearest `st.container` ancestor.
  * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
  *   a horizontal layout.
+ * @returns isDirectlyInColumn: Whether widgets in this context are direct
+ *   layout children of an `st.columns` column.
  * @returns parentWidth: The width of the parent container in pixels, if it has
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
@@ -73,6 +82,7 @@ export const FlexContextProvider: FC<
   PropsWithChildren<{
     direction: Direction
     isRoot?: boolean
+    isDirectlyInColumn?: boolean
     wrap?: boolean
     parentWidth?: number
     hasContentWidth?: boolean
@@ -83,6 +93,7 @@ export const FlexContextProvider: FC<
   children,
   direction,
   isRoot,
+  isDirectlyInColumn = false,
   wrap = true,
   parentWidth,
   hasContentWidth = false,
@@ -109,6 +120,7 @@ export const FlexContextProvider: FC<
     return {
       direction,
       isInHorizontalLayout,
+      isDirectlyInColumn,
       isInRoot: isRoot ?? false,
       wrap,
       parentWidth,
@@ -117,6 +129,7 @@ export const FlexContextProvider: FC<
   }, [
     direction,
     isRoot,
+    isDirectlyInColumn,
     wrap,
     parentWidth,
     hasContentWidth,
