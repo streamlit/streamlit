@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -50,7 +50,9 @@ def browser_context_args(
 @pytest.fixture
 def locale(browser_context_args: dict[str, Any]) -> str:
     """The locale the browser context for this test run was created with."""
-    return browser_context_args["locale"]
+    # browser_context_args is dict[str, Any]; the value is a str because the
+    # fixture above put it there.
+    return cast("str", browser_context_args["locale"])
 
 
 def test_single_date_calendar_picker_rendering(

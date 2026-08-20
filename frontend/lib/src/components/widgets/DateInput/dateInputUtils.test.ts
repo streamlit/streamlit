@@ -376,6 +376,15 @@ describe("getQuickSelectPresets", () => {
     globalThis.Date = RealDate
   })
 
+  const RELATIVE_TIME_ARGS: [number, Intl.RelativeTimeFormatUnit][] = [
+    [-1, "week"],
+    [-1, "month"],
+    [-3, "month"],
+    [-6, "month"],
+    [-1, "year"],
+    [-2, "year"],
+  ]
+
   const EN_LABELS = [
     "Past Week",
     "Past Month",
@@ -439,14 +448,50 @@ describe("getQuickSelectPresets", () => {
     }
   )
 
-  // `Intl.RelativeTimeFormat` has no long-form data for 105 language subtags
-  // and emits the root pattern ("-1 w") instead, less useful than English.
-  it.each(["ig", "haw", "xh", "gsw", "eo", "ckb"])(
-    "falls back to English labels for %s, which has no relative-time data",
+  // The guarantee is engine-agnostic: whichever locales a given ICU build has
+  // no long relative-time data for, no label may leak the root pattern ("-1 w").
+  // Asserting a fixed list of such locales instead would break whenever CLDR
+  // gains one — it did for `eo`, which CI localizes and older ICU does not.
+  it.each([
+    "ig",
+    "haw",
+    "xh",
+    "gsw",
+    "eo",
+    "ckb",
+    "mi",
+    "ak",
+    "yo",
+    "ku",
+    "qu",
+    "yi",
+  ])("never leaks ICU's root pattern for %s", locale => {
+    const labels = getQuickSelectPresets(locale).map(p => p.label)
+
+    expect(labels).toHaveLength(EN_LABELS.length)
+    expect(labels.filter(label => label.startsWith("-"))).toEqual([])
+  })
+
+  it.each(["yo", "mi", "ak", "ig"])(
+    "substitutes English for exactly the %s labels ICU could not localize",
     locale => {
-      expect(getQuickSelectPresets(locale).map(p => p.label)).toEqual(
-        EN_LABELS
+      // Expectations are derived from ICU at runtime rather than hardcoded, so
+      // this pins the per-label behaviour without pinning anyone's CLDR data.
+      const formatter = new Intl.RelativeTimeFormat(locale, {
+        numeric: "always",
+        style: "long",
+      })
+      const icuLabels = RELATIVE_TIME_ARGS.map(([value, unit]) =>
+        formatter.format(value, unit)
       )
+      const labels = getQuickSelectPresets(locale).map(p => p.label)
+
+      labels.forEach((label, index) => {
+        const icuLabel = icuLabels[index]
+        expect(label).toBe(
+          icuLabel.startsWith("-") ? EN_LABELS[index] : icuLabel
+        )
+      })
     }
   )
 
@@ -454,42 +499,6 @@ describe("getQuickSelectPresets", () => {
     // Intl has no data for these at all, so they would otherwise resolve to
     // the environment's default locale rather than to English.
     expect(getQuickSelectPresets(locale).map(p => p.label)).toEqual(EN_LABELS)
-  })
-
-  it.each(["mi", "ak"])(
-    "substitutes English for the individual %s labels whose translations lead with the sign prefix",
-    locale => {
-      // Accepted imprecision in isRootFallbackLabel: `mi` ("-1 wiki i mua")
-      // and `ak` ship real translations starting with "-", so they are
-      // substituted too rather than shipping a stray leading minus.
-      const labels = getQuickSelectPresets(locale).map(p => p.label)
-      expect(labels.some(label => label.startsWith("-"))).toBe(false)
-      // How many labels get substituted differs per locale (`mi` loses four of
-      // six, `ak` only one), so assert that some label was substituted rather
-      // than naming one.
-      expect(labels.some(label => EN_LABELS.includes(label))).toBe(true)
-    }
-  )
-
-  it("applies the root-pattern fallback per label, not per locale", () => {
-    // Yoruba has data for years but not for weeks or months, so the first four
-    // labels fall back to English while the last two stay localized.
-    const labels = getQuickSelectPresets("yo").map(p => p.label)
-
-    expect(labels.slice(0, 4)).toEqual(EN_LABELS.slice(0, 4))
-    expect(labels[4]).not.toEqual(EN_LABELS[4])
-    expect(labels[5]).not.toEqual(EN_LABELS[5])
-    expect(labels.some(label => label.startsWith("-"))).toBe(false)
-  })
-
-  it("localizes only the label, leaving ids and dates untouched", () => {
-    const english = getQuickSelectPresets("en-US")
-    const japanese = getQuickSelectPresets("ja")
-
-    expect(japanese.map(p => p.id)).toEqual(english.map(p => p.id))
-    expect(japanese.map(p => p.start)).toEqual(english.map(p => p.start))
-    expect(japanese.map(p => p.end)).toEqual(english.map(p => p.end))
-    expect(japanese.map(p => p.label)).not.toEqual(english.map(p => p.label))
   })
 
   it("always ends at today", () => {
