@@ -140,7 +140,6 @@ jobs:
         id: get-latest-run
         uses: ./.github/actions/find_latest_workflow_artifact
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: js-tests.yml
           artifact_name: vitest_coverage_json
 

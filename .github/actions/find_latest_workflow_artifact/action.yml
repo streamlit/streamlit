@@ -2,9 +2,6 @@ name: Find latest workflow artifact
 description: Find the newest unexpired artifact from a successful branch push
 
 inputs:
-  github_token:
-    description: GitHub token with Actions read access
-    required: true
   workflow:
     description: Workflow file name to inspect
     required: true
@@ -18,7 +15,7 @@ inputs:
 
 outputs:
   run_id:
-    description: ID of the workflow run containing the selected artifact
+    description: ID of the workflow run containing the selected artifact, or empty if none was found
     value: ${{ steps.find-artifact.outputs.run_id }}
   artifact_size_in_bytes:
     description: Size of the selected artifact in bytes
@@ -35,7 +32,7 @@ runs:
         TARGET_BRANCH: ${{ inputs.branch }}
         TARGET_WORKFLOW: ${{ inputs.workflow }}
       with:
-        github-token: ${{ inputs.github_token }}
+        github-token: ${{ github.token }}
         script: |
           // Bound both pagination and artifact lookups when no baseline exists.
           const MAX_PAGES = 10;
@@ -89,7 +86,14 @@ runs:
               }
             );
 
-            const { nodes: workflowRuns, pageInfo } = response.node.runs;
+            const runsConnection = response.node?.runs;
+            if (!runsConnection) {
+              throw new Error(
+                `GraphQL did not return runs for workflow ` +
+                `${process.env.TARGET_WORKFLOW} (node ${workflow.node_id}).`
+              );
+            }
+            const { nodes: workflowRuns, pageInfo } = runsConnection;
             runsChecked += workflowRuns.length;
 
             // WorkflowRun does not expose branch or conclusion directly, so use its
@@ -112,9 +116,9 @@ runs:
                 run_id: run.databaseId,
                 name: process.env.TARGET_ARTIFACT_NAME,
               });
-              const artifact = artifacts.artifacts.find(candidate =>
-                candidate.name === process.env.TARGET_ARTIFACT_NAME && !candidate.expired
-              );
+              // Expired artifacts remain listed but cannot be downloaded, so fall back
+              // to an older run when the named artifact is expired.
+              const artifact = artifacts.artifacts.find(candidate => !candidate.expired);
 
               if (!artifact) {
                 console.log(

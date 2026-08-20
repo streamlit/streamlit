@@ -105,7 +105,6 @@ jobs:
         id: get-latest-run
         uses: ./.github/actions/find_latest_workflow_artifact
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: playwright.yml
           artifact_name: playwright_test_stats
 

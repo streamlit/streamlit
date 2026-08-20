@@ -262,9 +262,8 @@ jobs:
         id: get-latest-run
         uses: ./.github/actions/find_latest_workflow_artifact
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: pr-preview.yml
-          artifact_name: whl_file
+          artifact_name: ${{ env.WHEEL_ARTIFACT_NAME }}
 
       - name: Compare wheel sizes
         if: steps.get-latest-run.outputs.run_id != ''
@@ -431,7 +430,6 @@ jobs:
         id: get-latest-run
         uses: ./.github/actions/find_latest_workflow_artifact
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: pr-preview.yml
           artifact_name: bundle_analysis_json
 
