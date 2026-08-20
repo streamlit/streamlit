@@ -1,5 +1,7 @@
 name: Find latest workflow artifact
-description: Find the newest unexpired artifact from a successful branch push
+description: >-
+  Find the newest unexpired artifact from a successful branch push.
+  Requires the calling job to grant actions read and check out the repository first.
 
 inputs:
   workflow:
@@ -34,12 +36,13 @@ runs:
       with:
         github-token: ${{ github.token }}
         script: |
-          // Bound both pagination and artifact lookups when no baseline exists.
+          // Cap GraphQL pages and REST artifact lookups so a missing baseline cannot
+          // scan unbounded history.
           const MAX_PAGES = 10;
           const MAX_CANDIDATE_RUNS = 20;
           const PAGE_SIZE = 100;
-          let runsChecked = 0;
-          let candidateRunsChecked = 0;
+          let runsScanned = 0;
+          let artifactLookups = 0;
           let cursor = null;
 
           // GitHub's REST run filters (branch, status) can return stale results, so page
@@ -94,10 +97,11 @@ runs:
               );
             }
             const { nodes: workflowRuns, pageInfo } = runsConnection;
-            runsChecked += workflowRuns.length;
+            runsScanned += workflowRuns.length;
 
-            // WorkflowRun does not expose branch or conclusion directly, so use its
-            // check suite and exclude PR or workflow_call runs from the baseline.
+            // Only successful branch pushes are valid baselines. PR runs build merge
+            // commits rather than the branch tip. Branch and conclusion live on the
+            // check suite because WorkflowRun does not expose them directly.
             const matchingRuns = workflowRuns.filter(run =>
               run.event === 'push' &&
               run.checkSuite?.branch?.name === process.env.TARGET_BRANCH &&
@@ -105,10 +109,10 @@ runs:
             );
 
             for (const run of matchingRuns) {
-              if (candidateRunsChecked >= MAX_CANDIDATE_RUNS) {
+              if (artifactLookups >= MAX_CANDIDATE_RUNS) {
                 break;
               }
-              candidateRunsChecked += 1;
+              artifactLookups += 1;
 
               const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
                 owner: context.repo.owner,
@@ -117,8 +121,11 @@ runs:
                 name: process.env.TARGET_ARTIFACT_NAME,
               });
               // Expired artifacts remain listed but cannot be downloaded, so fall back
-              // to an older run when the named artifact is expired.
-              const artifact = artifacts.artifacts.find(candidate => !candidate.expired);
+              // to an older run. Assert the name client-side in case the REST filter is
+              // not honored.
+              const artifact = artifacts.artifacts.find(candidate =>
+                candidate.name === process.env.TARGET_ARTIFACT_NAME && !candidate.expired
+              );
 
               if (!artifact) {
                 console.log(
@@ -137,7 +144,7 @@ runs:
               return;
             }
 
-            if (candidateRunsChecked >= MAX_CANDIDATE_RUNS || !pageInfo.hasNextPage) {
+            if (artifactLookups >= MAX_CANDIDATE_RUNS || !pageInfo.hasNextPage) {
               break;
             }
             cursor = pageInfo.endCursor;
@@ -145,7 +152,7 @@ runs:
 
           core.warning(
             `No unexpired ${process.env.TARGET_ARTIFACT_NAME} artifact was found in a successful ` +
-            `${process.env.TARGET_BRANCH} push among the latest ${runsChecked} ` +
-            `${process.env.TARGET_WORKFLOW} runs (${candidateRunsChecked} matching candidates ` +
+            `${process.env.TARGET_BRANCH} push among the latest ${runsScanned} ` +
+            `${process.env.TARGET_WORKFLOW} runs (${artifactLookups} matching candidates ` +
             `checked). Skipping the comparison.`
           );
