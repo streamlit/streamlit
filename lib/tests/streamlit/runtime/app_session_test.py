@@ -423,9 +423,7 @@ class AppSessionTest(unittest.TestCase):
         expected_loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_thread_event_loop_closed_on_shutdown(
-        self, mock_stop: MagicMock
-    ):
+    def test_script_thread_event_loop_closed_on_shutdown(self, mock_stop: MagicMock):
         """AppSession closes the script-thread event loop on shutdown."""
         session = _create_test_session()
         loop = session._script_thread_event_loop

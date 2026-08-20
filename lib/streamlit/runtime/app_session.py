@@ -105,9 +105,7 @@ def _close_script_thread_event_loop(loop: asyncio.AbstractEventLoop) -> None:
         try:
             loop.close()
         except Exception as ex:
-            _LOGGER.debug(
-                "Error while closing script thread event loop", exc_info=ex
-            )
+            _LOGGER.debug("Error while closing script thread event loop", exc_info=ex)
 
 
 class AppSessionState(Enum):
