@@ -464,7 +464,7 @@ To check for unused exports and unused `dependencies` / `devDependencies`, run:
 make frontend-knip
 ```
 
-Undeclared (`unlisted`) imports stay off because some imports resolve from nested packages. See [`frontend/AGENTS.md`](./frontend/AGENTS.md).
+Knip's `unlisted` rule (imports that are not declared in a `package.json`) is disabled, because some imports resolve from nested packages. See [`frontend/AGENTS.md`](./frontend/AGENTS.md).
 
 ### VS-Code / Cursor Setup
 

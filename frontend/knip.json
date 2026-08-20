@@ -7,9 +7,12 @@
     "component-lib/src/ArrowTable.ts": ["exports", "types"]
   },
   "ignoreDependencies": [
+    "@deck.gl/extensions",
+    "@deck.gl/widgets",
     "@swc/plugin-emotion",
     "eslint-plugin-streamlit-custom",
     "oxfmt",
+    "react-responsive-carousel",
     "typescript-v7"
   ],
   "rules": {
