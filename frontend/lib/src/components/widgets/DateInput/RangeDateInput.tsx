@@ -42,6 +42,7 @@ import {
   CalendarGridHeader,
   DateField,
   I18nProvider,
+  isRTL,
   Key,
   RangeCalendarStateContext,
 } from "react-aria-components"
@@ -219,17 +220,30 @@ function RangeDateInput({
   const errorId = `${id}-error`
   const popoverId = `${id}-calendar`
   const popoverDescId = `${id}-calendar-desc`
+  const quickSelectLabelId = `${id}-quick-select-label`
+  const quickSelectTriggerId = `${id}-quick-select-trigger`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
-  // today() inside getQuickSelectPresets is intentionally not a dep — the
-  // component remounts on each script rerun, so stale-day is not possible.
+  // Layout direction for the quick-select row, which renders outside the
+  // calendar's I18nProvider. Derived from the locale rather than from the label
+  // text, so the row does not re-flow when the selected preset changes (an
+  // English fallback label in an RTL app must not flip it back). Memoized
+  // because isRTL builds an Intl.Locale and maximizes it. Safe only because
+  // safeLocale is validated — isRTL throws on a malformed tag.
+  const quickSelectDirection = useMemo(
+    () => (isRTL(safeLocale) ? "rtl" : "ltr"),
+    [safeLocale]
+  )
+  // Preset labels are locale-dependent, hence the safeLocale dep. today()
+  // inside getQuickSelectPresets is intentionally not a dep — the component
+  // remounts on each script rerun, so stale-day is not possible.
   const quickSelectPresets = useMemo(() => {
-    const presets = getQuickSelectPresets()
+    const presets = getQuickSelectPresets(safeLocale)
     if (!maxDate) return presets
     return presets
       .filter(p => p.start.compare(maxDate) <= 0)
       .map(p => (p.end.compare(maxDate) > 0 ? { ...p, end: maxDate } : p))
-  }, [maxDate])
+  }, [maxDate, safeLocale])
   const quickSelectRef = useRef<HTMLDivElement>(null)
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -932,55 +946,85 @@ function RangeDateInput({
               </StyledRangeCalendarRoot>
             </I18nProvider>
             {enableQuickSelect && quickSelectPresets.length > 0 && (
-              <StyledQuickSelectRow
-                ref={quickSelectRef}
-                data-testid="stDateInputQuickSelect"
-              >
-                <StyledQuickSelectLabel>Date range</StyledQuickSelectLabel>
-                <StyledQuickSelectTrigger
-                  ref={setQuickSelectTrigger}
-                  $isPlaceholder={!activePreset}
-                  aria-label="Quick select a date range"
-                  aria-expanded={isQuickSelectOpen}
-                  aria-haspopup="listbox"
-                  onPress={() => setIsQuickSelectOpen(prev => !prev)}
+              /* The locale from useLocale() drives three things here: the dir
+                 React Aria puts on the dropdown, the RTL translation of
+                 placement ("end" becomes left), and the collator behind the
+                 ListBox's type-to-select. Without this provider it falls back
+                 to navigator.language, which matches the app locale only by
+                 coincidence today. */
+              <I18nProvider locale={safeLocale}>
+                <StyledQuickSelectRow
+                  ref={quickSelectRef}
+                  /* justifyContent: space-between swaps the label and trigger
+                     for free, which keeps the row consistent with the trigger
+                     and dropdown (both already mirror) and puts the trigger
+                     inboard so the dropdown's RTL "end" alignment extends into
+                     the popover rather than away from it. */
+                  dir={quickSelectDirection}
+                  data-testid="stDateInputQuickSelect"
                 >
-                  {activePresetLabel}
-                  <StyledCalendarHeaderSelectChevron>
-                    <KeyboardArrowDown size={theme.iconSizes.base} />
-                  </StyledCalendarHeaderSelectChevron>
-                </StyledQuickSelectTrigger>
-                <StyledDropdownPopover
-                  ref={setQuickSelectFloatingRef}
-                  triggerRef={quickSelectTriggerRef}
-                  isOpen={isQuickSelectOpen}
-                  onOpenChange={setIsQuickSelectOpen}
-                  isNonModal
-                  placement="bottom end"
-                  data-testid="stDateInputQuickSelectPopover"
-                >
-                  {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-                  <div onKeyDown={handleQuickSelectKeyDown}>
-                    <StyledDropdownListBox
-                      aria-label="Quick select a date range"
-                      selectionMode="single"
-                      disallowEmptySelection={!clearable}
-                      selectedKeys={activePreset ? [activePreset.id] : []}
-                      onSelectionChange={handleQuickSelectSelection}
-                      autoFocus
-                    >
-                      {quickSelectPresets.map(preset => (
-                        <StyledDropdownListBoxItem
-                          key={preset.id}
-                          id={preset.id}
-                        >
-                          {preset.label}
-                        </StyledDropdownListBoxItem>
-                      ))}
-                    </StyledDropdownListBox>
-                  </div>
-                </StyledDropdownPopover>
-              </StyledQuickSelectRow>
+                  <StyledQuickSelectLabel id={quickSelectLabelId}>
+                    Date range
+                  </StyledQuickSelectLabel>
+                  <StyledQuickSelectTrigger
+                    ref={setQuickSelectTrigger}
+                    id={quickSelectTriggerId}
+                    $isPlaceholder={!activePreset}
+                    /* Names the trigger after the visible row label plus its own
+                       content, so AT announces "Date range, Past Week". A plain
+                       aria-label would override the content and hide which
+                       preset is selected. React Aria's Select solves this by
+                       referencing a separate value element and putting the value
+                       first; a self-reference is equivalent here because the only
+                       other child is the chevron, whose icon is aria-hidden. */
+                    aria-labelledby={`${quickSelectLabelId} ${quickSelectTriggerId}`}
+                    aria-expanded={isQuickSelectOpen}
+                    aria-haspopup="listbox"
+                    onPress={() => setIsQuickSelectOpen(prev => !prev)}
+                  >
+                    {/* dir="auto" so an LTR label inside an RTL row keeps its
+                      trailing punctuation on the right ("Select..." rather than
+                      "...Select"); same for an English fallback label in an RTL
+                      locale. Safe here because this text is not a collection
+                      textValue — the same span on a ListBoxItem empties its
+                      textValue and kills type-to-select. */}
+                    <span dir="auto">{activePresetLabel}</span>
+                    <StyledCalendarHeaderSelectChevron>
+                      <KeyboardArrowDown size={theme.iconSizes.base} />
+                    </StyledCalendarHeaderSelectChevron>
+                  </StyledQuickSelectTrigger>
+                  <StyledDropdownPopover
+                    ref={setQuickSelectFloatingRef}
+                    triggerRef={quickSelectTriggerRef}
+                    isOpen={isQuickSelectOpen}
+                    onOpenChange={setIsQuickSelectOpen}
+                    isNonModal
+                    placement="bottom end"
+                    data-testid="stDateInputQuickSelectPopover"
+                  >
+                    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+                    <div onKeyDown={handleQuickSelectKeyDown}>
+                      <StyledDropdownListBox
+                        aria-labelledby={quickSelectLabelId}
+                        selectionMode="single"
+                        disallowEmptySelection={!clearable}
+                        selectedKeys={activePreset ? [activePreset.id] : []}
+                        onSelectionChange={handleQuickSelectSelection}
+                        autoFocus
+                      >
+                        {quickSelectPresets.map(preset => (
+                          <StyledDropdownListBoxItem
+                            key={preset.id}
+                            id={preset.id}
+                          >
+                            {preset.label}
+                          </StyledDropdownListBoxItem>
+                        ))}
+                      </StyledDropdownListBox>
+                    </div>
+                  </StyledDropdownPopover>
+                </StyledQuickSelectRow>
+              </I18nProvider>
             )}
           </StyledCalendarPopover>
         </FloatingPortal>

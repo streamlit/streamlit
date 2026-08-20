@@ -175,7 +175,10 @@ export function CalendarPopoverHeader(): ReactElement {
 
   return (
     <StyledCalendarHeader>
-      <StyledCalendarHeaderButton slot="previous" aria-label="Previous month">
+      {/* No aria-label on the nav buttons: React Aria's ButtonContext supplies
+          a localized "Previous"/"Next" for these slots, and a local aria-label
+          would override it (mergeProps prefers the local prop). */}
+      <StyledCalendarHeaderButton slot="previous">
         <Icon content={ArrowBack} size="base" />
       </StyledCalendarHeaderButton>
       <StyledCalendarHeaderPickerGroup>
@@ -206,7 +209,7 @@ export function CalendarPopoverHeader(): ReactElement {
           <Heading />
         </StyledCalendarHeadingFallback>
       </StyledCalendarHeaderPickerGroup>
-      <StyledCalendarHeaderButton slot="next" aria-label="Next month">
+      <StyledCalendarHeaderButton slot="next">
         <Icon content={ArrowForward} size="base" />
       </StyledCalendarHeaderButton>
     </StyledCalendarHeader>

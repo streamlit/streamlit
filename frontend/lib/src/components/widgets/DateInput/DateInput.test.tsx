@@ -711,6 +711,37 @@ describe("DateInput", () => {
 
         expect(await getCalendarHeader()).toHaveTextContent("MDMDFSS")
       })
+
+      it("uses React Aria's localized labels for the calendar navigation buttons", async () => {
+        const user = userEvent.setup()
+        const props = getProps()
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
+
+        await openCalendar(user)
+
+        // The nav buttons pass no aria-label of their own, so React Aria
+        // supplies a translated one. Hardcoding a label there would silently
+        // pin every locale back to English, which is what these assertions
+        // guard.
+        const calendar = await screen.findByTestId("stDateInputCalendar")
+        expect(within(calendar).getByLabelText("Zurück")).toBeVisible()
+        // React Aria also renders a hidden tabIndex={-1} twin of the *next*
+        // button, so assert on the focusable one: a plain non-empty check would
+        // pass on the twin alone even if the visible button lost its label.
+        expect(
+          within(calendar)
+            .getAllByLabelText("Weiter")
+            .filter(button => button.getAttribute("tabindex") !== "-1")
+        ).toHaveLength(1)
+        expect(
+          within(calendar).queryByLabelText("Previous month")
+        ).not.toBeInTheDocument()
+        expect(
+          within(calendar).queryByLabelText("Next month")
+        ).not.toBeInTheDocument()
+      })
     })
 
     describe("with a locale whose week starts on Saturday", () => {
@@ -786,7 +817,7 @@ describe("DateInput", () => {
       // Verify calendar is open but quick-select is absent.
       await screen.findByTestId("stDateInputCalendar")
       expect(
-        screen.queryByRole("button", { name: /quick select/i })
+        screen.queryByRole("button", { name: /^Date range/ })
       ).not.toBeInTheDocument()
     })
 
@@ -806,7 +837,7 @@ describe("DateInput", () => {
 
       // Quick select should be visible as a button trigger for the RAC Select.
       const quickSelect = await screen.findByRole("button", {
-        name: /quick select/i,
+        name: /^Date range/,
       })
       expect(quickSelect).toBeVisible()
     })
@@ -825,7 +856,7 @@ describe("DateInput", () => {
 
       // Quick select should be visible for range inputs with old minDate
       const quickSelect = await screen.findByRole("button", {
-        name: /quick select/i,
+        name: /^Date range/,
       })
       expect(quickSelect).toBeVisible()
     })
@@ -851,6 +882,139 @@ describe("DateInput", () => {
         .map(el => el.getAttribute("aria-label"))
       expect(pickerNames.sort()).toEqual(["month", "year"])
       expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    })
+
+    describe("localized preset labels", () => {
+      const openQuickSelect = async (
+        user: ReturnType<typeof userEvent.setup>
+      ): Promise<void> => {
+        const region = screen.getByTestId("stDateInput")
+        const { year } = getRangeDateSegments(region, "start")
+        await user.click(year)
+        await user.click(
+          await screen.findByRole("button", { name: /^Date range/ })
+        )
+      }
+
+      it("names the trigger after the row label and the selected preset", async () => {
+        const user = userEvent.setup()
+        const props = getProps({
+          isRange: true,
+          default: ["2020-01-01", "2020-01-31"],
+        })
+        render(<DateInput {...props} />)
+
+        await openQuickSelect(user)
+        const trigger = screen.getByRole("button", { name: /^Date range/ })
+
+        // The name is built from the visible "Date range" label plus the
+        // trigger's own content, so it must include the selection. A prefix
+        // match alone would still pass if the self-reference broke.
+        expect(trigger).toHaveAccessibleName("Date range Select...")
+
+        await user.click(
+          await screen.findByRole("option", { name: "Past Week" })
+        )
+
+        expect(trigger).toHaveAccessibleName("Date range Past Week")
+      })
+
+      it.each([
+        ["ar", "rtl"],
+        ["de", "ltr"],
+      ])(
+        "lays the trigger out %s-first regardless of the selected label",
+        async (locale, expectedDir) => {
+          const user = userEvent.setup()
+          const props = getProps({
+            isRange: true,
+            default: ["2020-01-01", "2020-01-31"],
+          })
+          renderWithContexts(<DateInput {...props} />, {
+            libConfigContext: { locale },
+          })
+
+          await openQuickSelect(user)
+          const row = screen.getByTestId("stDateInputQuickSelect")
+
+          // Direction comes from the locale, not the label text: the row must
+          // not re-flow when the placeholder is replaced by an RTL preset.
+          expect(row).toHaveAttribute("dir", expectedDir)
+          // The dropdown's dir comes from the row's I18nProvider rather than
+          // this attribute — React Aria's Popover reads it off useLocale().
+          expect(
+            screen.getByTestId("stDateInputQuickSelectPopover")
+          ).toHaveAttribute("dir", expectedDir)
+
+          await user.click(screen.getAllByRole("option")[0])
+
+          expect(row).toHaveAttribute("dir", expectedDir)
+        }
+      )
+
+      it("supports type-to-select in the preset listbox", async () => {
+        const user = userEvent.setup()
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+        const props = getProps({
+          isRange: true,
+          default: ["2020-01-01", "2020-01-31"],
+        })
+        render(<DateInput {...props} />)
+
+        await openQuickSelect(user)
+        await user.keyboard("Past Y")
+
+        // React Aria derives a ListBoxItem's textValue from *string* children.
+        // Wrapping the label in an element silently empties it, which kills
+        // type-to-select and logs a warning rather than failing anything.
+        expect(
+          await screen.findByRole("option", { name: "Past Year" })
+        ).toHaveFocus()
+        expect(warn).not.toHaveBeenCalledWith(
+          expect.stringContaining("textValue")
+        )
+        warn.mockRestore()
+      })
+
+      it("renders preset labels in the app locale", async () => {
+        const user = userEvent.setup()
+        const props = getProps({
+          isRange: true,
+          default: ["2020-01-01", "2020-01-31"],
+        })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale: "ja" },
+        })
+
+        await openQuickSelect(user)
+
+        expect(
+          await screen.findByRole("option", { name: "1 週間前" })
+        ).toBeVisible()
+        expect(
+          screen.queryByRole("option", { name: "Past Week" })
+        ).not.toBeInTheDocument()
+      })
+
+      it("falls back to English preset labels for an invalid locale", async () => {
+        const user = userEvent.setup()
+        const props = getProps({
+          isRange: true,
+          default: ["2020-01-01", "2020-01-31"],
+        })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale: "does-not-exist" },
+        })
+
+        await openQuickSelect(user)
+
+        expect(
+          await screen.findByRole("option", { name: "Past Week" })
+        ).toBeVisible()
+        expect(
+          screen.queryByRole("option", { name: /週間/ })
+        ).not.toBeInTheDocument()
+      })
     })
 
     describe("quick select range", () => {
@@ -912,7 +1076,7 @@ describe("DateInput", () => {
 
         // Quick select button trigger should be visible
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         expect(quickSelect).toBeVisible()
 
@@ -950,7 +1114,7 @@ describe("DateInput", () => {
         await user.click(year)
 
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         await user.click(quickSelect)
         const pastWeekOption = await screen.findByRole("option", {
@@ -983,7 +1147,7 @@ describe("DateInput", () => {
 
         // Select "Past Week"
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         await user.click(quickSelect)
         const pastWeekOption = await screen.findByRole("option", {
@@ -1030,7 +1194,7 @@ describe("DateInput", () => {
 
         // Select "Past Week"
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         await user.click(quickSelect)
         const pastWeekOption = await screen.findByRole("option", {
@@ -1077,7 +1241,7 @@ describe("DateInput", () => {
 
         // Initially should show "Select..." since default range doesn't match a preset
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         expect(quickSelect).toHaveTextContent("Select...")
 
@@ -1109,18 +1273,18 @@ describe("DateInput", () => {
 
         // Open the quick select dropdown
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         await user.click(quickSelect)
         expect(
-          screen.getByRole("listbox", { name: /quick select/i })
+          screen.getByRole("listbox", { name: /^Date range/ })
         ).toBeInTheDocument()
 
         // Press Escape — should close only the dropdown
         await user.keyboard("{Escape}")
         await waitFor(() => {
           expect(
-            screen.queryByRole("listbox", { name: /quick select/i })
+            screen.queryByRole("listbox", { name: /^Date range/ })
           ).not.toBeInTheDocument()
         })
 
@@ -1147,11 +1311,11 @@ describe("DateInput", () => {
 
         // Open the quick select dropdown
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         await user.click(quickSelect)
         expect(
-          screen.getByRole("listbox", { name: /quick select/i })
+          screen.getByRole("listbox", { name: /^Date range/ })
         ).toBeInTheDocument()
 
         // Click on the calendar grid (outside the quick-select row)
@@ -1161,7 +1325,7 @@ describe("DateInput", () => {
         // Dropdown should close
         await waitFor(() => {
           expect(
-            screen.queryByRole("listbox", { name: /quick select/i })
+            screen.queryByRole("listbox", { name: /^Date range/ })
           ).not.toBeInTheDocument()
         })
       })
@@ -1185,7 +1349,7 @@ describe("DateInput", () => {
 
         // Open the quick select dropdown
         const quickSelect = await screen.findByRole("button", {
-          name: /quick select/i,
+          name: /^Date range/,
         })
         await user.click(quickSelect)
 
@@ -1610,7 +1774,7 @@ describe("DateInput single-mode keyboard navigation", () => {
 
   it("Shift+Tab in calendar closes popover and returns focus to field", async () => {
     const user = userEvent.setup()
-    // Use a value well past min so Previous month button is enabled
+    // Use a value well past min so the previous-month button is enabled
     render(
       <DateInput
         {...getProps({ default: ["2020-06-15"], min: "2000-01-01" })}
@@ -1623,7 +1787,7 @@ describe("DateInput single-mode keyboard navigation", () => {
     const calendar = await screen.findByTestId("stDateInputCalendar")
 
     // Focus a header button (simulates mouse click on prev month)
-    const prevMonthBtn = within(calendar).getByLabelText("Previous month")
+    const prevMonthBtn = within(calendar).getByLabelText("Previous")
     act(() => prevMonthBtn.focus())
     expect(prevMonthBtn).toHaveFocus()
 
@@ -2527,15 +2691,13 @@ describe("DateInput range-mode keyboard navigation", () => {
     await user.click(year)
 
     const calendar = await screen.findByTestId("stDateInputCalendar")
-    const prevMonthBtn = within(calendar).getByLabelText("Previous month")
+    const prevMonthBtn = within(calendar).getByLabelText("Previous")
     act(() => prevMonthBtn.focus())
     expect(prevMonthBtn).toHaveFocus()
 
     // Tab moves to quick-select trigger (popover stays open)
     await user.tab()
-    const quickSelect = within(calendar).getByLabelText(
-      "Quick select a date range"
-    )
+    const quickSelect = within(calendar).getByLabelText(/^Date range/)
     expect(quickSelect).toHaveFocus()
     expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
 
@@ -2569,7 +2731,7 @@ describe("DateInput range-mode keyboard navigation", () => {
     await user.click(year)
 
     const calendar = await screen.findByTestId("stDateInputCalendar")
-    const prevMonthBtn = within(calendar).getByLabelText("Previous month")
+    const prevMonthBtn = within(calendar).getByLabelText("Previous")
     act(() => prevMonthBtn.focus())
     expect(prevMonthBtn).toHaveFocus()
 

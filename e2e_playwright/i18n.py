@@ -21,3 +21,12 @@ st.date_input(
     date(1970, 1, 1),
     min_value=date(1970, 1, 1),
 )
+
+# Range mode with a min_value more than 2 years old, which is what enables the
+# quick-select dropdown. Its preset labels are localized via
+# Intl.RelativeTimeFormat, so they need coverage in every locale.
+st.date_input(
+    "Range with quick select",
+    [date(2019, 7, 6), date(2019, 7, 8)],
+    min_value=date(1970, 1, 1),
+)

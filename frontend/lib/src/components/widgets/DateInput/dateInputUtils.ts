@@ -16,6 +16,7 @@
 
 import {
   CalendarDate,
+  type DateDuration,
   getLocalTimeZone,
   parseDate,
   today,
@@ -158,33 +159,131 @@ export interface QuickSelectPreset {
   end: CalendarDate
 }
 
-/** Range-mode quick-select presets. `end` is always today. */
-export function getQuickSelectPresets(): QuickSelectPreset[] {
-  const end = today(getLocalTimeZone())
-  return [
-    { id: "pastWeek", label: "Past Week", start: end.subtract({ weeks: 1 }) },
+/**
+ * Whether `label` is ICU's root-locale fallback ("-1 w", "-3 m") rather than
+ * usable text. CLDR has no long relative-time data for a long tail of locales
+ * (105 language subtags in ICU 76.1), and `Intl.RelativeTimeFormat` then
+ * silently emits the root pattern, which reads worse than the English label it
+ * replaced. The root pattern always leads with the sign prefix.
+ *
+ * Applied per label, not per locale: some locales have data for years but not
+ * for weeks or months (`yo`), so those lists end up partly translated.
+ *
+ * Not exact — a few locales ship real translations that also lead with the
+ * sign prefix, so those labels get replaced too: four of six for `mi`, one for
+ * `ak`. Accepted: a stray leading minus is not worth preserving.
+ */
+function isRootFallbackLabel(label: string): boolean {
+  return label.startsWith("-")
+}
+
+/** A quick-select preset before its dates are resolved against today. */
+interface QuickSelectPresetDescriptor {
+  id: string
+  /** Label used verbatim for English locales, so their wording stays stable. */
+  enLabel: string
+  /** Value passed to `Intl.RelativeTimeFormat` for non-English locales. */
+  relativeValue: number
+  /** Unit passed to `Intl.RelativeTimeFormat` for non-English locales. */
+  relativeUnit: Intl.RelativeTimeFormatUnit
+  /** Offset subtracted from today to get the preset's start date. */
+  duration: DateDuration
+}
+
+const QUICK_SELECT_PRESET_DESCRIPTORS: readonly QuickSelectPresetDescriptor[] =
+  [
+    {
+      id: "pastWeek",
+      enLabel: "Past Week",
+      relativeValue: -1,
+      relativeUnit: "week",
+      duration: { weeks: 1 },
+    },
     {
       id: "pastMonth",
-      label: "Past Month",
-      start: end.subtract({ months: 1 }),
+      enLabel: "Past Month",
+      relativeValue: -1,
+      relativeUnit: "month",
+      duration: { months: 1 },
     },
     {
       id: "pastThreeMonths",
-      label: "Past 3 Months",
-      start: end.subtract({ months: 3 }),
+      enLabel: "Past 3 Months",
+      relativeValue: -3,
+      relativeUnit: "month",
+      duration: { months: 3 },
     },
     {
       id: "pastSixMonths",
-      label: "Past 6 Months",
-      start: end.subtract({ months: 6 }),
+      enLabel: "Past 6 Months",
+      relativeValue: -6,
+      relativeUnit: "month",
+      duration: { months: 6 },
     },
-    { id: "pastYear", label: "Past Year", start: end.subtract({ years: 1 }) },
+    {
+      id: "pastYear",
+      enLabel: "Past Year",
+      relativeValue: -1,
+      relativeUnit: "year",
+      duration: { years: 1 },
+    },
     {
       id: "pastTwoYears",
-      label: "Past 2 Years",
-      start: end.subtract({ years: 2 }),
+      enLabel: "Past 2 Years",
+      relativeValue: -2,
+      relativeUnit: "year",
+      duration: { years: 2 },
     },
-  ].map(({ id, label, start }) => ({ id, label, start, end }))
+  ]
+
+/**
+ * Range-mode quick-select presets. `end` is always today.
+ *
+ * English locales keep the hand-written labels ("Past Week"); every other
+ * locale gets its labels from `Intl.RelativeTimeFormat` ("vor 1 Woche",
+ * "hace 1 semana"), so there is no translation catalog to ship. Locales that
+ * CLDR has no long relative-time data for fall back to the English label —
+ * see `isRootFallbackLabel`. Only `label` is locale-dependent; `id` and the
+ * dates are not.
+ *
+ * `locale` is run through `getSafeLocale` because `Intl` throws a
+ * `RangeError` on malformed tags.
+ */
+export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
+  const end = today(getLocalTimeZone())
+  const safeLocale = getSafeLocale(locale)
+  const language = new Intl.Locale(safeLocale).language
+  // Tags Intl has no data for at all ("und", "zz") would otherwise resolve to
+  // whatever the environment's default locale happens to be, so treat them as
+  // English alongside the en-* locales.
+  const hasRelativeTimeData =
+    Intl.RelativeTimeFormat.supportedLocalesOf(safeLocale).length > 0
+  // `numeric: "always"` keeps all six labels in one phrasing style. `"auto"`
+  // would localize more of them — `ig` gets three of six instead of zero — but
+  // mixes idiomatic wording, "N units ago" wording, and English in one list.
+  // The cost of "always" is point-in-time wording ("1 week ago") where the
+  // English label names a range ("Past Week"); "auto" would give the idiomatic
+  // "last week" for the three -1 presets.
+  const relativeTimeFormat =
+    language === "en" || !hasRelativeTimeData
+      ? null
+      : new Intl.RelativeTimeFormat(safeLocale, {
+          numeric: "always",
+          style: "long",
+        })
+
+  return QUICK_SELECT_PRESET_DESCRIPTORS.map(
+    ({ id, enLabel, relativeValue, relativeUnit, duration }) => {
+      const localized = relativeTimeFormat?.format(relativeValue, relativeUnit)
+      return {
+        id,
+        label:
+          localized && !isRootFallbackLabel(localized) ? localized : enLabel,
+        start: end.subtract(duration),
+        end,
+      }
+    }
+  )
 }
 
 export type DateValidationErrorType = "beforeMin" | "afterMax" | null

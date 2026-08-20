@@ -616,7 +616,7 @@ def test_quick_select_feature_visibility(app: Page):
     ).first.click()
 
     # Quick select should be visible for range inputs
-    quick_select = app.get_by_role("button", name="Quick select a date range")
+    quick_select = app.get_by_role("button", name=re.compile(r"^Date range"))
     expect(quick_select).to_be_visible()
 
     # Click "Past Week" and verify it commits the correct date range
