@@ -99,6 +99,14 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
+def _finished_run_ctx(*, has_script_started: bool) -> MagicMock:
+    """A ScriptRunContext stand-in for calling ``_on_script_finished`` directly."""
+    ctx = MagicMock()
+    ctx.has_script_started = has_script_started
+    ctx.shared.widget_ids_this_run.snapshot.return_value = frozenset()
+    return ctx
+
+
 class ScriptRunnerTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -1287,6 +1295,44 @@ class ScriptRunnerTest(unittest.TestCase):
         # culled it. Ensure widget cache no longer holds our widget ID.
         with pytest.raises(KeyError):
             scriptrunner._session_state[widget_id]
+
+    def test_orphan_cleanup_skipped_when_body_never_ran(self):
+        """A run preempted before its body must not collect what it never re-registered.
+
+        Session refs are cleared at the start of every full-app run, on the assumption
+        that the body re-registers whatever is still in use. A callback-queued
+        ``st.rerun()`` skips the body, so collecting here would delete files the app is
+        still displaying — the media analog of the stale-widget hole.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance.media_file_mgr.remove_orphaned_files = MagicMock()
+
+        scriptrunner._on_script_finished(
+            _finished_run_ctx(has_script_started=False),
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            premature_stop=False,
+        )
+
+        Runtime._instance.media_file_mgr.remove_orphaned_files.assert_not_called()
+        Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_not_called()
+
+    def test_orphan_cleanup_runs_when_body_ran(self):
+        """The counterpart to the skip case above.
+
+        Without this, a gate stuck at False would leak every media file and lazy
+        dataframe source for the life of the session while the skip test kept passing.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance.media_file_mgr.remove_orphaned_files = MagicMock()
+
+        scriptrunner._on_script_finished(
+            _finished_run_ctx(has_script_started=True),
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            premature_stop=False,
+        )
+
+        Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
+        Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
 
     def test_dg_stack_preserved_for_fragment_rerun(self):
         """Tests that the dg_stack and cursor are preserved for a fragment rerun.
