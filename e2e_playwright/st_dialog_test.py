@@ -295,13 +295,12 @@ def test_dialog_allows_interacting_with_menu_button(app: Page):
     dialog = app.get_by_test_id(modal_test_id)
     expect(dialog).to_be_visible()
 
-    # Open the menu button dropdown
     dialog.get_by_test_id("stMenuButtonButton").click()
     menu_body = app.get_by_test_id("stMenuButtonBody")
     expect(menu_body).to_be_visible()
 
     # Click a menu option — this verifies the menu items are not inert
-    menu_body.get_by_text("Beta", exact=True).click()
+    menu_body.get_by_role("menuitem", name="Beta").click()
     wait_for_app_run(app)
 
     expect_markdown(dialog, "menu selected: Beta")
@@ -316,13 +315,11 @@ def test_dialog_allows_interacting_with_json_path_tooltip(app: Page):
     dialog = app.get_by_test_id(modal_test_id)
     expect(dialog).to_be_visible()
 
-    # Click on a string value to trigger the path tooltip
     json_element = dialog.get_by_test_id("stJson")
     expect(json_element).to_be_visible()
     string_value = json_element.locator(".string-value").first
     string_value.click()
 
-    # Verify the path tooltip appears and is interactable
     tooltip = app.get_by_test_id("stJsonPathTooltip")
     expect(tooltip).to_be_visible()
 

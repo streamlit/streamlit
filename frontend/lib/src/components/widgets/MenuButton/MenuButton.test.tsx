@@ -89,9 +89,10 @@ describe("MenuButton widget", () => {
     render(<MenuButton {...props} />)
 
     await user.click(screen.getByTestId("stMenuButtonButton"))
+    const menuBody = await screen.findByTestId("stMenuButtonBody")
 
     const portalHost = document.getElementById(FLOATING_OVERLAY_PORTAL_ID)
-    expect(portalHost).toContainElement(screen.getByTestId("stMenuButtonBody"))
+    expect(portalHost).toContainElement(menuBody)
   })
 
   it("selects an option and triggers widget manager", async () => {
