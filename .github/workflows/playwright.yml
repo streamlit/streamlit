@@ -84,14 +84,19 @@ jobs:
           path: e2e_playwright/test-results
 
   # Reports how many E2E test cases a PR adds, by collecting test IDs on the PR
-  # and on its merge base. This deliberately does not compare against the test
+  # and on its base branch. This deliberately does not compare against the test
   # counts of a develop CI run: those runs drift with every merge, so the diff
   # would include tests added by other PRs.
   check-e2e-test-count:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # A merge base only exists for pull_request events.
-    if: github.event_name == 'pull_request' && github.repository == 'streamlit/streamlit'
+    # A pull request merge commit only exists for pull_request events. Fork PRs
+    # get a read-only token, so the comment would fail; skip the whole job rather
+    # than collect twice for a log line nobody reads.
+    if: >-
+      github.event_name == 'pull_request'
+      && github.repository == 'streamlit/streamlit'
+      && github.event.pull_request.head.repo.fork == false
     continue-on-error: true
 
     permissions:
@@ -124,7 +129,7 @@ jobs:
           fetch-depth: 2
       # Everything below relies on HEAD being that merge commit. If it is not
       # (for example because the PR has conflicts), HEAD^1 would be the previous
-      # commit of the PR branch instead of the merge base, and the reported
+      # commit of the PR branch instead of the base branch, and the reported
       # numbers would be nonsense. Skip the check rather than guess.
       - name: Check for a PR merge commit
         id: merge_commit
@@ -160,7 +165,7 @@ jobs:
         uses: ./.github/actions/make_init
         with:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
-      - name: Collect test IDs for the PR and its merge base
+      - name: Collect test IDs for the PR and its base branch
         if: steps.e2e_changes.outputs.changed
         run: |
           set -euo pipefail
@@ -176,7 +181,7 @@ jobs:
           #   verbose output, which would replace the test IDs with
           #   human-readable lines;
           # - `--no-stats` comes from e2e_playwright/shared/stats_reporter.py,
-          #   which the swap below replaces with the merge base's copy, so
+          #   which the swap below replaces with the base branch's copy, so
           #   renaming that option breaks the second collection.
           read -ra selection_flags <<< "$E2E_SELECTION_FLAGS"
           collect() {
@@ -191,13 +196,13 @@ jobs:
           # HEAD^1 of the merge commit is the develop commit this PR merges
           # into, i.e. exactly the baseline the PR is responsible for changing.
           git rev-parse --short HEAD^1 > "$RUNNER_TEMP/base-ref.txt"
-          # Swap in the merge base's tests: restoring tracked files is not
+          # Swap in the base branch's tests: restoring tracked files is not
           # enough, because files the PR added would linger and inflate the
           # baseline. `--no-renames` keeps a renamed file from being missed
           # here (it would otherwise be reported as a rename, not an addition).
-          # Deleting only those files, rather than the whole directory, keeps
-          # this off the untracked __pycache__ that the collection above is
-          # still writing: `rm -rf e2e_playwright` loses that race.
+          # Deleting only the added files, rather than the whole directory,
+          # preserves the __pycache__ that the first collection just wrote, so
+          # the second one does not recompile every test module.
           git diff --name-only -z --diff-filter=A --no-renames HEAD^1 HEAD \
             -- e2e_playwright | xargs -0 -r rm -f
           git checkout HEAD^1 -- e2e_playwright
@@ -231,13 +236,6 @@ jobs:
             const summary = process.env.COUNTED
               ? JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
               : null;
-
-            // Fork PRs get a read-only token, so commenting would fail. The
-            // numbers are in the job logs of the previous step either way.
-            if (context.payload.pull_request?.head?.repo?.fork === true) {
-              console.log('PR is from a fork - skipping comment (insufficient permissions)');
-              return;
-            }
 
             // Paginate: on a busy PR our comment can be well past the first page.
             const comments = await github.paginate(github.rest.issues.listComments, {

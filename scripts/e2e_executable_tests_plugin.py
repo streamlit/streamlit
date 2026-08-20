@@ -49,12 +49,12 @@ _BROWSERS: Final = ("chromium", "firefox", "webkit")
 
 
 def _would_run(item: pytest.Item) -> bool:
-    """Return whether CI would execute this test, rather than skip it.
+    """Return whether this test survives the skips known at collection time.
 
-    Neither `skipif` conditions nor `pytest.skip()` calls in a test body are
-    evaluated: doing so needs pytest internals or running the test itself. Both
-    inflate the count equally on each side of the comparison, so the delta the
-    check reports stays correct.
+    That covers `skip` markers and Playwright's browser skiplist. `skipif`
+    conditions and `pytest.skip()` calls in a test body are not evaluated, since
+    doing so needs pytest internals or running the test itself, so a PR that
+    adds or changes those moves what CI runs without a matching delta here.
     """
     if item.get_closest_marker("skip") is not None:
         return False

@@ -68,9 +68,9 @@ def parse_test_ids(path: Path) -> TestIds:
     cases = {
         line.strip()
         for line in path.read_text(encoding="utf-8").splitlines()
-        # Anything without "::" is a summary line ("6084 tests collected") or
-        # a warning, not a test ID.
-        if "::" in line
+        # Anything else is a summary line ("6084 tests collected") or a
+        # warning, not a test ID.
+        if ".py::" in line
     }
 
     return TestIds(
@@ -157,7 +157,7 @@ def _build_comment(
         "",
         f"{message}.",
         "",
-        f"- Merge base{base_label}: {len(base.cases)} test cases",
+        f"- Base branch{base_label}: {len(base.cases)} test cases",
         f"- This PR: {len(head.cases)} test cases",
         *_build_file_table(base, head),
     ]
@@ -190,7 +190,7 @@ def compare(
     if not base.cases or not head.cases:
         raise ValueError(
             "Collected no test IDs for "
-            f"{'the merge base' if not base.cases else 'this PR'}. "
+            f"{'the base branch' if not base.cases else 'this PR'}. "
             "The pytest collection step probably failed."
         )
 
@@ -218,7 +218,7 @@ def main() -> None:
         "--base",
         type=Path,
         required=True,
-        help="File with the test IDs collected at the merge base.",
+        help="File with the test IDs collected on the base branch.",
     )
     parser.add_argument(
         "--head",
@@ -230,12 +230,12 @@ def main() -> None:
         "--threshold",
         type=int,
         default=30,
-        help="Number of added test cases that is still considered normal.",
+        help="Largest net increase in test cases that is still considered normal.",
     )
     parser.add_argument(
         "--base-ref",
         default=None,
-        help="Merge base revision, shown in the comment for traceability.",
+        help="Base branch revision, shown in the comment for traceability.",
     )
     parser.add_argument(
         "--output",
