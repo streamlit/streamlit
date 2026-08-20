@@ -23,8 +23,6 @@ from enum import Enum
 from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
-from blinker import Signal
-
 from streamlit import config, runtime, util
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
@@ -60,6 +58,7 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
+from streamlit.signal_util import Signal
 from streamlit.source_util import page_sort_key
 
 if TYPE_CHECKING:
@@ -248,33 +247,14 @@ class ScriptRunner:
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
-        self.on_event = Signal(
-            doc="""Emitted when a ScriptRunnerEvent occurs.
-
-            This signal is generally emitted on the ScriptRunner's script
-            thread (which is *not* the same thread that the ScriptRunner was
-            created on).
-
-            Parameters
-            ----------
-            sender: ScriptRunner
-                The sender of the event (this ScriptRunner).
-
-            event : ScriptRunnerEvent
-
-            forward_msg : ForwardMsg | None
-                The ForwardMsg to send to the frontend. Set only for the
-                ENQUEUE_FORWARD_MSG event.
-
-            exception : BaseException | None
-                Our compile error. Set only for the
-                SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
-
-            widget_states : streamlit.proto.WidgetStates_pb2.WidgetStates | None
-                The ScriptRunner's final WidgetStates. Set only for the
-                SHUTDOWN event.
-            """
-        )
+        # Emitted synchronously on the script or fragment-worker thread (not
+        # the thread that created this ScriptRunner) when a ScriptRunnerEvent
+        # occurs. Receivers are called as receiver(sender, event=..., **payload):
+        # - ENQUEUE_FORWARD_MSG: forward_msg
+        # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
+        # - SHUTDOWN: client_state
+        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
+        self.on_event = Signal()
 
         # Set to true while we're executing. Used by
         # _maybe_handle_execution_control_request.
