@@ -287,6 +287,51 @@ def test_dialog_allows_interacting_with_color_picker(app: Page):
     expect(dialog).to_be_visible()
 
 
+def test_dialog_allows_interacting_with_menu_button(app: Page):
+    """A menu button dropdown opened inside an st.dialog must stay interactive
+    without dismissing the dialog.
+    """
+    click_button(app, "Open Dialog with Menu Button")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_test_id("stMenuButtonButton").click()
+    menu_body = app.get_by_test_id("stMenuButtonBody")
+    expect(menu_body).to_be_visible()
+
+    # Click a menu option — this verifies the menu items are not inert
+    menu_body.get_by_role("menuitem", name="Beta").click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "menu selected: Beta")
+    expect(dialog).to_be_visible()
+
+
+def test_dialog_allows_interacting_with_json_path_tooltip(app: Page):
+    """A JSON path tooltip opened inside an st.dialog must stay interactive
+    without dismissing the dialog.
+    """
+    click_button(app, "Open Dialog with JSON Path Tooltip")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    json_element = dialog.get_by_test_id("stJson")
+    expect(json_element).to_be_visible()
+    string_value = json_element.locator(".string-value").first
+    string_value.click()
+
+    tooltip = app.get_by_test_id("stJsonPathTooltip")
+    expect(tooltip).to_be_visible()
+
+    # The copy button inside the tooltip must be clickable (not inert)
+    copy_button = tooltip.get_by_role("button", name="Copy to clipboard")
+    expect(copy_button).to_be_visible()
+    copy_button.click()
+
+    # The dialog must not be dismissed by the interaction
+    expect(dialog).to_be_visible()
+
+
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
     """Dismissing a dialog is a UI-only interaction as of today (the Python backend does
     not know about this). We use a deltaMsgReceivedAt to differentiate React renders

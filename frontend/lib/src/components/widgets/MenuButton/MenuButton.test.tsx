@@ -20,6 +20,7 @@ import { vi } from "vitest"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -80,6 +81,18 @@ describe("MenuButton widget", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
     })
+  })
+
+  it("mounts the menu popover in the shared floating overlay portal", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<MenuButton {...props} />)
+
+    await user.click(screen.getByTestId("stMenuButtonButton"))
+    const menuBody = await screen.findByTestId("stMenuButtonBody")
+
+    const portalHost = document.getElementById(FLOATING_OVERLAY_PORTAL_ID)
+    expect(portalHost).toContainElement(menuBody)
   })
 
   it("selects an option and triggers widget manager", async () => {
