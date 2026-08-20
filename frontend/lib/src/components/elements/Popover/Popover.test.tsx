@@ -22,6 +22,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import * as UseFloatingOverlay from "~lib/hooks/useFloatingOverlay"
 import { render } from "~lib/test_util"
+import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { clampPopoverSize, PopoverProps } from "./Popover"
@@ -104,7 +105,12 @@ describe("Popover container", () => {
       expect(screen.getByTestId("stPopoverButton")).toHaveTextContent(
         "expand_more"
       )
-      expect(screen.getByTitle("A very long popover label")).toBeVisible()
+      const label = screen.getByTitle("A very long popover label")
+      expect(label).toBeVisible()
+      expect(label.parentElement).toHaveStyle({
+        maxWidth: `calc(100% + ${iconSizes.lg} * 0.25)`,
+        marginRight: `calc(-${iconSizes.lg} * 0.25)`,
+      })
     })
 
     it("does not set a title when help is set (help tooltip takes over)", () => {
