@@ -59,6 +59,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 | `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
+| `find_latest_workflow_artifact` | Selects the newest unexpired artifact from a successful branch push. Avoids GitHub REST run filters, which can return stale results. |
 
 ### Typical Usage Pattern
 
