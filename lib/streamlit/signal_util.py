@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Synchronous in-process signals for Streamlit internals."""
+"""Synchronous in-process signals for Streamlit internals.
+
+Intentionally minimal: receivers get every event (no per-sender filtering),
+return values are discarded, and async receivers are unsupported. Add
+capabilities only when a call site needs them.
+"""
 
 from __future__ import annotations
 
@@ -37,7 +42,13 @@ class Signal:
         self._lock = threading.RLock()
 
     def connect(self, receiver: _Receiver, *, weak: bool = True) -> _Receiver:
-        """Connect and return a receiver. Weak by default so the signal does not keep it alive."""
+        """Connect a receiver and return it, so this also works as a decorator.
+
+        Connections are weak by default: the signal does not keep the receiver
+        alive, so a receiver with no other strong reference (a lambda or nested
+        function) is dropped right away. Pass ``weak=False`` to let the signal
+        own the receiver until it is disconnected.
+        """
         receiver_key = _get_receiver_key(receiver)
         stored_receiver: _StoredReceiver
 
@@ -77,7 +88,7 @@ class Signal:
             self._receivers.pop(_get_receiver_key(receiver), None)
 
     def send(self, sender: Any = None, /, **kwargs: Any) -> None:
-        """Call each live receiver synchronously.
+        """Call each live receiver synchronously, in the order they connected.
 
         Receivers run against a snapshot, so a receiver may connect or
         disconnect during dispatch. Changes take effect on the next send: a
@@ -93,6 +104,7 @@ class Signal:
         return bool(self._get_live_receivers())
 
     def _get_live_receivers(self) -> list[_Receiver]:
+        """Return the live receivers, dropping entries whose weak reference died."""
         live_receivers: list[_Receiver] = []
 
         with self._lock:
@@ -102,7 +114,7 @@ class Signal:
                     if isinstance(stored_receiver, weakref.ReferenceType)
                     else stored_receiver
                 )
-                if receiver is None:
+                if receiver is None:  # pragma: no cover - defensive
                     self._receivers.pop(receiver_key, None)
                 else:
                     live_receivers.append(receiver)

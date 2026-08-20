@@ -23,6 +23,7 @@ from unittest.mock import Mock
 import pytest
 
 from streamlit.signal_util import Signal
+from tests.exception_capturing_thread import ExceptionCapturingThread
 
 
 class _BoundReceiver:
@@ -134,9 +135,11 @@ def test_connect_returns_receiver_for_decorator_form() -> None:
 def test_weak_bound_receiver_is_dropped_after_gc() -> None:
     """A weakly connected bound method is dropped when its instance is gone."""
     signal = Signal()
-    receiver = _BoundReceiver()
+    receiver = _RecordingReceiver()
     receiver_ref = weakref.ref(receiver)
     signal.connect(receiver.receive)
+    signal.send("sender")
+    assert receiver.received == ["sender"]
     assert signal.has_receivers()
 
     del receiver
@@ -162,6 +165,25 @@ def test_weak_nested_function_is_dropped_after_gc() -> None:
 
     assert receiver_ref() is None
     assert not signal.has_receivers()
+
+
+def test_reconnecting_weakly_connected_receiver_strongly_retains_it() -> None:
+    """Reconnecting a weak receiver with weak=False makes the signal retain it."""
+    signal = Signal()
+    received: list[object] = []
+
+    def connect_receiver() -> None:
+        def receiver(sender: object) -> None:
+            received.append(sender)
+
+        signal.connect(receiver)
+        signal.connect(receiver, weak=False)
+
+    connect_receiver()
+    gc.collect()
+
+    signal.send("sender")
+    assert received == ["sender"]
 
 
 def test_strong_connection_retains_nested_function() -> None:
@@ -241,7 +263,7 @@ def test_receiver_runs_outside_registry_lock() -> None:
     signal.connect(blocking_receiver, weak=False)
     signal.connect(snapshotted_receiver, weak=False)
 
-    send_thread = threading.Thread(target=signal.send)
+    send_thread = ExceptionCapturingThread(target=signal.send)
     send_thread.start()
     assert receiver_started.wait(timeout=5)
 
@@ -251,7 +273,7 @@ def test_receiver_runs_outside_registry_lock() -> None:
         signal.disconnect(snapshotted_receiver)
         connections_updated.set()
 
-    update_thread = threading.Thread(target=update_connections)
+    update_thread = ExceptionCapturingThread(target=update_connections)
     update_thread.start()
 
     try:
@@ -261,6 +283,8 @@ def test_receiver_runs_outside_registry_lock() -> None:
         send_thread.join(timeout=5)
         update_thread.join(timeout=5)
 
+    send_thread.assert_no_unhandled_exception()
+    update_thread.assert_no_unhandled_exception()
     assert not send_thread.is_alive()
     assert not update_thread.is_alive()
     snapshotted_receiver.assert_called_once_with(None)
