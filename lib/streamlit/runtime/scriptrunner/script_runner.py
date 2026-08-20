@@ -185,6 +185,7 @@ class ScriptRunner:
         pages_manager: PagesManager,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
+        event_loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -233,6 +234,15 @@ class ScriptRunner:
             The session's file watcher, if any.  Its ``on_script_run`` hook is
             called at the start of each script run (on the script thread)
             before any user code executes.
+
+        event_loop
+            A persistent, non-running asyncio event loop owned by the caller
+            (typically ``AppSession``). When provided the runner installs it on
+            the script thread and never closes it; the caller is responsible for
+            closing it when the session ends. When ``None`` (tests / standalone
+            use) the runner creates one itself on the first script thread, but
+            still does not close it — callers that care about cleanup should
+            close ``self._event_loop`` after joining.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -285,13 +295,14 @@ class ScriptRunner:
         # This is initialized in the start() method
         self._script_thread: threading.Thread | None = None
 
-        # A persistent, non-running asyncio event loop, installed on the script
-        # thread for the lifetime of the session. Many libraries call
-        # asyncio.get_event_loop() at import or construction time, which raises
-        # on a non-main thread that has no current loop (see #744). The loop is
-        # only installed, never run, so user code that calls asyncio.run() or
-        # loop.run_until_complete() keeps working without a nested-loop conflict.
-        self._event_loop: asyncio.AbstractEventLoop | None = None
+        # Persistent, non-running asyncio event loop for the script thread.
+        # Owned by AppSession (or the caller) for the full session lifetime;
+        # this runner only installs and re-asserts it — it never creates or
+        # closes it. Many libraries call asyncio.get_event_loop() at import or
+        # construction time, which raises on a non-main thread without a loop
+        # (see #744). Keeping it non-running means asyncio.run() and
+        # run_until_complete() continue to work without a nested-loop conflict.
+        self._event_loop: asyncio.AbstractEventLoop | None = event_loop
 
         # Coordinator blocking the script thread in join(); other threads poke
         # notify_yield_waiters() when rerun/stop is enqueued during that window.
@@ -435,7 +446,10 @@ class ScriptRunner:
                     f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
                 )
         finally:
-            self._close_event_loop()
+            # Unset the loop from this thread's local state. The loop itself is
+            # owned by AppSession and remains open for the next ScriptRunner.
+            asyncio.set_event_loop(None)
+            self._event_loop = None
 
         # Send a SHUTDOWN event before exiting, so some state can be saved
         # for use in a future script run when not triggered by the client.
@@ -453,45 +467,22 @@ class ScriptRunner:
         return self._script_thread == threading.current_thread()
 
     def _install_event_loop(self) -> None:
-        """Create a persistent event loop and make it the script thread's
-        current loop.
+        """Set the session event loop as the script thread's current loop.
 
-        The loop is installed once, before the first script run, and reused for
-        every rerun of the session. It is never run, so ``asyncio.get_event_loop()``
-        returns a stable loop while ``asyncio.run()`` and ``run_until_complete()``
-        remain free to spin up their own temporary loops.
-        """
-        self._event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._event_loop)
+        Uses the loop supplied at construction (owned by ``AppSession``).
+        Falls back to creating a new one when none was provided or when the
+        provided loop has been closed, so that ``asyncio.get_event_loop()``
+        always succeeds on the script thread.
 
-    def _close_event_loop(self) -> None:
-        """Tear down the persistent event loop when the script thread stops.
-
-        Best-effort: cancels any outstanding tasks and shuts down async
-        generators before closing. Any failure here is swallowed so it can
-        never block session shutdown.
+        The loop is never run here; ``asyncio.run()`` and
+        ``run_until_complete()`` remain free to spin up their own temporary
+        loops without conflict.
         """
         loop = self._event_loop
-        if loop is None:  # pragma: no cover - defensive
-            return
-
-        try:
-            for task in asyncio.all_tasks(loop):
-                task.cancel()
-            loop.run_until_complete(loop.shutdown_asyncgens())
-        except Exception as ex:
-            _LOGGER.debug(
-                "Error while tearing down script thread event loop", exc_info=ex
-            )
-        finally:
-            try:
-                loop.close()
-            except Exception as ex:
-                _LOGGER.debug(
-                    "Error while closing script thread event loop", exc_info=ex
-                )
-            asyncio.set_event_loop(None)
-            self._event_loop = None
+        if loop is None or loop.is_closed():
+            loop = asyncio.new_event_loop()
+            self._event_loop = loop
+        asyncio.set_event_loop(loop)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
