@@ -1,0 +1,139 @@
+name: Find latest workflow artifact
+description: Find the newest unexpired artifact from a successful branch push
+
+inputs:
+  github_token:
+    description: GitHub token with Actions read access
+    required: true
+  workflow:
+    description: Workflow file name to inspect
+    required: true
+  artifact_name:
+    description: Artifact name that the selected workflow run must contain
+    required: true
+  branch:
+    description: Branch whose successful push runs should be inspected
+    required: false
+    default: develop
+
+outputs:
+  run_id:
+    description: Workflow run containing the selected artifact
+    value: ${{ steps.find-artifact.outputs.run_id }}
+  artifact_id:
+    description: ID of the selected artifact
+    value: ${{ steps.find-artifact.outputs.artifact_id }}
+  artifact_size_in_bytes:
+    description: Size of the selected artifact in bytes
+    value: ${{ steps.find-artifact.outputs.artifact_size_in_bytes }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find latest successful branch artifact
+      id: find-artifact
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      env:
+        TARGET_ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        TARGET_BRANCH: ${{ inputs.branch }}
+        TARGET_WORKFLOW: ${{ inputs.workflow }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const MAX_PAGES = 10;
+          const PAGE_SIZE = 100;
+          let runsChecked = 0;
+          let cursor = null;
+
+          // GitHub's REST branch and status filters can return stale results.
+          // GraphQL explicitly orders runs, so apply those filters locally.
+          const { data: workflow } = await github.rest.actions.getWorkflow({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: process.env.TARGET_WORKFLOW,
+          });
+
+          for (let page = 0; page < MAX_PAGES; page += 1) {
+            const response = await github.graphql(
+              `query($workflowId: ID!, $cursor: String, $pageSize: Int!) {
+                node(id: $workflowId) {
+                  ... on Workflow {
+                    runs(
+                      first: $pageSize
+                      after: $cursor
+                      orderBy: {field: CREATED_AT, direction: DESC}
+                    ) {
+                      nodes {
+                        databaseId
+                        createdAt
+                        event
+                        checkSuite {
+                          branch { name }
+                          conclusion
+                        }
+                      }
+                      pageInfo {
+                        endCursor
+                        hasNextPage
+                      }
+                    }
+                  }
+                }
+              }`,
+              {
+                workflowId: workflow.node_id,
+                cursor,
+                pageSize: PAGE_SIZE,
+              }
+            );
+
+            const { nodes: workflowRuns, pageInfo } = response.node.runs;
+            runsChecked += workflowRuns.length;
+
+            const matchingRuns = workflowRuns.filter(run =>
+              run.event === 'push' &&
+              run.checkSuite?.branch?.name === process.env.TARGET_BRANCH &&
+              run.checkSuite?.conclusion === 'SUCCESS'
+            );
+
+            for (const run of matchingRuns) {
+              const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: run.databaseId,
+                name: process.env.TARGET_ARTIFACT_NAME,
+                per_page: PAGE_SIZE,
+              });
+              const artifact = artifacts.artifacts.find(candidate =>
+                candidate.name === process.env.TARGET_ARTIFACT_NAME && !candidate.expired
+              );
+
+              if (!artifact) {
+                console.log(
+                  `Run ${run.databaseId} has no unexpired ` +
+                  `${process.env.TARGET_ARTIFACT_NAME} artifact; ` +
+                  'checking the next run.'
+                );
+                continue;
+              }
+
+              console.log(
+                `Selected run ${run.databaseId} from ${run.createdAt} with artifact ${artifact.id}.`
+              );
+              core.setOutput('run_id', String(run.databaseId));
+              core.setOutput('artifact_id', String(artifact.id));
+              core.setOutput('artifact_size_in_bytes', String(artifact.size_in_bytes));
+              return;
+            }
+
+            if (!pageInfo.hasNextPage) {
+              break;
+            }
+            cursor = pageInfo.endCursor;
+          }
+
+          core.warning(
+            `No unexpired ${process.env.TARGET_ARTIFACT_NAME} artifact was found in a successful ` +
+            `${process.env.TARGET_BRANCH} push among the latest ${runsChecked} ` +
+            `${process.env.TARGET_WORKFLOW} runs. Skipping the comparison.`
+          );
