@@ -127,10 +127,11 @@ jobs:
           # For pull_request events, the checked out HEAD is the merge commit
           # GitHub creates for the PR, so depth 2 also gets us its parents.
           fetch-depth: 2
-      # Everything below relies on HEAD being that merge commit. If it is not
-      # (for example because the PR has conflicts), HEAD^1 would be the previous
-      # commit of the PR branch instead of the base branch, and the reported
-      # numbers would be nonsense. Skip the check rather than guess.
+      # Everything below relies on HEAD being that merge commit: otherwise HEAD^1
+      # is the PR branch's own previous commit rather than the base branch, and
+      # the numbers would be nonsense. Skip rather than guess. Conflicted PRs are
+      # not this case — GitHub keeps a stale merge ref for them, so the check
+      # still runs, comparing against that ref's own (older) base parent.
       - name: Check for a PR merge commit
         id: merge_commit
         run: |
