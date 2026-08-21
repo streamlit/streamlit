@@ -398,7 +398,6 @@ const NumberInput: React.FC<Props> = ({
           decrement()
           break
         case "Escape":
-          // Replaces BaseWeb's clearOnEscape — clear the value when widget has no default.
           if (clearable) {
             e.preventDefault()
             handleClear()
@@ -520,9 +519,8 @@ const NumberInput: React.FC<Props> = ({
             id={id}
             data-testid="stNumberInputField"
             type="number"
-            // Omit inputMode here — the native browser default for type="number"
-            // already provides the right mobile keyboard. The original BaseWeb
-            // code set inputMode="" to undo BaseWeb's own override to "text" (#8867).
+            // Omit inputMode because the native default for type="number" provides
+            // the appropriate mobile keyboard.
             step={step}
             min={min}
             max={max}

@@ -174,9 +174,8 @@ function useButtonColumnInteractions({
     ): void => {
       cancelPendingMenuOpen()
 
-      // When clicking between menu items or buttons, we need a clean transition.
-      // The frame boundary forces BaseUI's Popover to remount at the new click
-      // coordinates instead of reusing stale positioning from the previous menu.
+      // Clear the menu, then reopen on the next frame so the popover remounts
+      // at the new click coordinates instead of keeping the previous position.
       setButtonActionMenu(undefined)
       menuRafRef.current = requestAnimationFrame(() => {
         menuRafRef.current = null

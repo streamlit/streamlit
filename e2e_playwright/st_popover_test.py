@@ -624,10 +624,9 @@ def test_date_input_selection_does_not_dismiss_popover(app: Page):
     """Selecting a day in a date_input calendar opened inside a popover must not
     dismiss the popover.
 
-    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
-    popover read the click target at `click` time, but BaseWeb closes the
-    calendar synchronously on selection, detaching the clicked day before the
-    handler ran — so the popover treated it as an outside click and closed.
+    Regression test for https://github.com/streamlit/streamlit/issues/15959.
+    Day selection must stay inside the popover even if the calendar
+    synchronously detaches the clicked day before the click handler runs.
     """
     popover_container = open_popover(app, "popover 21 (date dismissal)")
     date_input = popover_container.get_by_test_id("stDateInput")

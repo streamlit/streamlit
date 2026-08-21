@@ -136,6 +136,10 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 | `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
 | `qa-testing-feature` | After implementing a feature to perform comprehensive QA testing before finalizing a PR |
 
+### Bundled user-facing skills
+
+Streamlit ships user-facing skills with the library under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). When adding or editing those skills, follow [`lib/streamlit/.agents/skills/AGENTS.md`](./lib/streamlit/.agents/skills/AGENTS.md).
+
 ## Style Guide
 
 Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://oxc.rs/docs/guide/usage/formatter), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
@@ -522,6 +526,8 @@ To reproduce CI or release-generated output, use the compiler version configured
 [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
 
 ## Introducing dependencies
+
+Add a dependency only when it provides meaningful value that cannot easily be replicated with an in-house implementation. Each dependency increases the risk of supply-chain attacks, breakage from incompatible new versions, and conflicts with other dependencies in users' environments.
 
 We aim to only introduce dependencies in this project that have reasonable restrictions and comply with various laws.
 
