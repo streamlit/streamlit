@@ -227,6 +227,14 @@ jobs:
             echo '{"comments":[]}' > inline_comments.json
           fi
 
+      - name: Record reviewed SHA
+        env:
+          REVIEWED_SHA: ${{ steps.pr-info.outputs.head_sha }}
+        run: |
+          # Write after the agent so checkout and the review cannot drop it.
+          # Post-review skips auto-approve if live HEAD no longer matches.
+          printf '%s\n' "$REVIEWED_SHA" > reviewed_sha.txt
+
       - name: Upload review artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -235,6 +243,7 @@ jobs:
             review.md
             inline_comments.json
             verdict.txt
+            reviewed_sha.txt
           retention-days: 1
 
   # Job 3: Consolidate multiple reviews into one (only runs for multi-model)
@@ -385,6 +394,19 @@ jobs:
             echo '{"comments":[]}' > inline_comments.json
           fi
 
+      - name: Record reviewed SHA
+        run: |
+          : > reviewed_sha.txt
+          for f in reviews/review-output-*/reviewed_sha.txt; do
+            [ -f "$f" ] || continue
+            sha=$(tr -d '[:space:]' < "$f")
+            if [ -n "$sha" ]; then
+              printf '%s\n' "$sha" > reviewed_sha.txt
+              echo "Reviewed SHA: $sha"
+              break
+            fi
+          done
+
       - name: Upload consolidated artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -393,6 +415,7 @@ jobs:
             review.md
             inline_comments.json
             verdict.txt
+            reviewed_sha.txt
           retention-days: 1
 
   # Job 4: Post the review with WRITE access (no agent)
@@ -490,13 +513,19 @@ jobs:
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           echo "" >> review.md
           echo "<!-- streamlit-ai-review run_id=\"$RUN_ID\" timestamp=\"$TIMESTAMP\" -->" >> review.md
-          # Always post the review body as COMMENT. Formal APPROVE is handled in a later
-          # step for ai-final-review only (never REQUEST_CHANGES). The verdict is still
-          # written to verdict.txt and used for labeling (e.g. do-not-merge).
+          # Always post the review body as COMMENT. A later step posts a formal
+          # APPROVE for ai-final-review only (never REQUEST_CHANGES). verdict.txt
+          # still drives labels such as do-not-merge.
           EVENT="COMMENT"
 
-          # Get head SHA for review API
-          HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
+          # Attach the review to the SHA the agents checked out, not live HEAD.
+          HEAD_SHA=""
+          if [ -f reviewed_sha.txt ]; then
+            HEAD_SHA=$(tr -d '[:space:]' < reviewed_sha.txt)
+          fi
+          if [ -z "$HEAD_SHA" ]; then
+            HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
+          fi
 
           # Build inline comments array (default to empty if missing/invalid).
           # Note: We don't pre-validate path/line against the PR diff here for simplicity.
@@ -595,10 +624,17 @@ jobs:
           fi
 
       # Auto-approve ai-final-review PRs with an APPROVED verdict, except:
-      # - change:spec
-      # - change:feature + impact:users (user-facing features)
-      # Requires "Allow GitHub Actions to create and approve pull requests".
-      # GITHUB_TOKEN approvals do not satisfy required CODEOWNERS reviews.
+      # - change:spec (always needs a human, regardless of impact)
+      # - change:feature + impact:users (new user-facing features)
+      # Bugfixes, chores, docs, and other impact:users PRs stay eligible:
+      # they are lower-risk than new user-facing features and benefit most
+      # from the speedup. Skip if PR HEAD has moved since the agents reviewed
+      # it, so we never formally approve a commit no model looked at.
+      # Requires the repository/organization Actions setting "Allow GitHub
+      # Actions to create and approve pull requests" (Settings > Actions >
+      # General > Workflow permissions).
+      # GitHub does not count GITHUB_TOKEN approvals toward required
+      # CODEOWNERS reviews.
       - name: Auto-approve on final review
         if: needs.parse-models.outputs.has_key == 'true' && needs.parse-models.outputs.trigger_label == 'ai-final-review' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
         env:
@@ -617,11 +653,31 @@ jobs:
             exit 0
           fi
 
-          if ! LABELS=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '[.labels[].name]'); then
-            echo "::warning::Failed to fetch PR labels, skipping auto-approve"
+          if [ ! -f reviewed_sha.txt ]; then
+            echo "Skipping auto-approve: reviewed_sha.txt not found"
             exit 0
           fi
+          REVIEWED_SHA=$(tr -d '[:space:]' < reviewed_sha.txt)
+          if [ -z "$REVIEWED_SHA" ]; then
+            echo "Skipping auto-approve: reviewed SHA is empty"
+            exit 0
+          fi
+
+          if ! PR_JSON=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV"); then
+            echo "::warning::Failed to fetch PR, skipping auto-approve"
+            exit 0
+          fi
+
+          CURRENT_SHA=$(echo "$PR_JSON" | jq -r '.head.sha')
+          LABELS=$(echo "$PR_JSON" | jq '[.labels[].name]')
           echo "PR labels: $LABELS"
+          echo "Reviewed SHA: $REVIEWED_SHA"
+          echo "Current HEAD: $CURRENT_SHA"
+
+          if [ "$REVIEWED_SHA" != "$CURRENT_SHA" ]; then
+            echo "Skipping auto-approve: PR HEAD has moved since the agents reviewed it"
+            exit 0
+          fi
 
           if ! echo "$LABELS" | jq -e 'type == "array"' >/dev/null; then
             echo "::warning::Could not parse PR labels, skipping auto-approve"
@@ -640,7 +696,11 @@ jobs:
             exit 0
           fi
 
-          echo "Auto-approving PR #$PR_NUMBER_ENV based on AI final review verdict"
-          if ! gh pr review "$PR_NUMBER_ENV" --repo "$REPOSITORY" --approve --body "Auto-approved by AI final review."; then
-            echo "::warning::Failed to auto-approve PR. Ensure 'Allow GitHub Actions to create and approve pull requests' is enabled."
+          echo "Auto-approving PR #$PR_NUMBER_ENV at $REVIEWED_SHA based on AI final review verdict"
+          if ! jq -n \
+            --arg commit_id "$REVIEWED_SHA" \
+            --arg body "Auto-approved by AI final review." \
+            '{commit_id: $commit_id, event: "APPROVE", body: $body}' \
+            | gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/reviews" -X POST --input -; then
+            echo "::warning::Failed to auto-approve PR. Ensure the repository/organization Actions setting 'Allow GitHub Actions to create and approve pull requests' is enabled (Settings > Actions > General > Workflow permissions)."
           fi
