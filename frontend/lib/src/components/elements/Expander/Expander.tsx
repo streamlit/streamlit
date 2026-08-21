@@ -182,24 +182,22 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     if (!widgetId || !notNullOrUndefined(element.expanded)) {
       return
     }
-    widgetMgr.setBoolValue(
-      { id: widgetId },
-      element.expanded,
-      { fromUi: false },
-      fragmentId
-    )
+    widgetMgr.setBoolValue(widgetId, element.expanded, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   }, [widgetId, element.expanded])
 
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
     (newOpen: boolean): void => {
       if (widgetMgr && widgetId) {
-        widgetMgr.setBoolValue(
-          { id: widgetId },
-          newOpen,
-          { fromUi: true },
-          fragmentId
-        )
+        widgetMgr.setBoolValue(widgetId, newOpen, {
+          formId: undefined,
+          fragmentId,
+          fromUser: true,
+        })
       }
     },
     [widgetMgr, widgetId, fragmentId]

@@ -156,6 +156,56 @@ export function parsePastedDateTime(
   }
 }
 
+// --- Step-snapping arithmetic ---
+
+/**
+ * Compute the next step-snapped value given the current total, step size,
+ * direction, and wrap boundary. Used for minute-granular (max=1440) and
+ * hour-only (max=24) step snapping on ArrowUp/ArrowDown.
+ */
+export function snapTimeStep(
+  current: number,
+  step: number,
+  up: boolean,
+  max: number
+): number {
+  const next = up
+    ? Math.floor(current / step) * step + step
+    : Math.ceil(current / step) * step - step
+  if (next >= max) return 0
+  if (next < 0) return Math.floor((max - 1) / step) * step
+  return next
+}
+
+/**
+ * Apply step-snapping to a CalendarDateTime based on segment type and step.
+ * Returns the new datetime if snapping applies, or null if default behavior should be used.
+ */
+export function computeStepSnap(
+  current: CalendarDateTime,
+  segmentType: string | null,
+  step: number,
+  up: boolean
+): CalendarDateTime | null {
+  if (segmentType === "minute" && step % 60 === 0) {
+    const stepMins = step / 60
+    if (stepMins <= 1) return null
+    const totalMins = current.hour * 60 + current.minute
+    const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
+    return current.set({
+      hour: Math.floor(wrapped / 60),
+      minute: wrapped % 60,
+    })
+  }
+  if (segmentType === "hour" && step % 3600 === 0) {
+    const stepHours = step / 3600
+    if (stepHours <= 1) return null
+    const wrapped = snapTimeStep(current.hour, stepHours, up, 24)
+    return current.set({ hour: wrapped, minute: 0 })
+  }
+  return null
+}
+
 // --- Segment state helper ---
 
 export interface SegmentState {
@@ -214,12 +264,11 @@ export function updateWidgetMgrState(
   const maxDateTime = isoToCalendarDateTime(element.max)
 
   const setArrayValue = (val: string | null): void => {
-    widgetMgr.setStringArrayValue(
-      element,
-      val ? [val] : [],
-      { fromUi: vws.fromUi },
-      fragmentId
-    )
+    widgetMgr.setStringArrayValue(element.id, val ? [val] : [], {
+      formId: element.formId,
+      fragmentId,
+      fromUser: vws.fromUser,
+    })
   }
 
   if (vws.value) {

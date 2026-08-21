@@ -18,9 +18,15 @@ import { ReactElement } from "react"
 
 import { screen, within } from "@testing-library/react"
 
-import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import {
+  Block as BlockProto,
+  Button as ButtonProto,
+  Element,
+  ForwardMsgMetadata,
+  streamlit,
+} from "@streamlit/protobuf"
 
-import { AppNode, BlockNode } from "~lib/AppNode"
+import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
@@ -31,7 +37,7 @@ import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
-function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
+function makeColumn(weight: number, children: AppNode[] = []): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
     children,
@@ -62,13 +68,41 @@ function makeHorizontalBlockWithColumns(
 }
 
 function makeVerticalBlock(
-  children: BlockNode[] = [],
+  children: AppNode[] = [],
   additionalProps: Partial<BlockProto> = {}
 ): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
     children,
     new BlockProto({ allowEmpty: true, ...additionalProps })
+  )
+}
+
+function makeButton(label: string): ElementNode {
+  const element = {
+    type: "button",
+    button: ButtonProto.create({ id: "column-wrap-button", label }),
+  } as unknown as Element
+
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    "",
+    FAKE_SCRIPT_HASH
+  )
+}
+
+function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    [makeColumn(1, columnChildren)],
+    new BlockProto({
+      allowEmpty: true,
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+        wrap: true,
+      },
+    })
   )
 }
 
@@ -651,5 +685,48 @@ describe("BlockNodeRenderer transparent blocks", () => {
 
     // Transparent wrapper adds no extra stVerticalBlock.
     expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(2)
+  })
+})
+
+describe("BlockNodeRenderer direct column wrapping context", () => {
+  const label = "Regenerate the complete quarterly report now"
+
+  async function renderColumnChildren(children: AppNode[]): Promise<void> {
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([makeColumnsBlock(children)])
+      )
+    )
+    expect(await screen.findByRole("button", { name: label })).toBeVisible()
+  }
+
+  it("resolves auto wrap to false for a button directly in a column", async () => {
+    await renderColumnChildren([makeButton(label)])
+
+    // Title is applied in an effect after Markdown renders the label text.
+    expect(await screen.findByTitle(label)).toBeVisible()
+  })
+
+  it("preserves direct column placement through transparent blocks", async () => {
+    const transparentBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeButton(label)],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    await renderColumnChildren([transparentBlock])
+
+    expect(await screen.findByTitle(label)).toBeVisible()
+  })
+
+  it("resets direct column placement in a nested layout container", async () => {
+    const nestedContainer = makeVerticalBlock([makeButton(label)], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        wrap: true,
+      },
+    })
+    await renderColumnChildren([nestedContainer])
+
+    expect(screen.queryByTitle(label)).not.toBeInTheDocument()
   })
 })

@@ -247,6 +247,29 @@ interface State {
   // the localhost / dismissal / snooze gates pass), and cleared when the
   // developer installs, snoozes (✕), or picks "Don't show again".
   showSkillsNudge: boolean
+
+  /**
+   * Whether the server recommended installing the bundled agent skills this
+   * session (agent present, skills not installed, not headless, no permanent
+   * dismissal marker). Drives the in-error "install skills" callout, which
+   * gates on it every render — independent of the one-shot toast logic above.
+   */
+  recommendSkillsInstall: boolean
+
+  /**
+   * Set once skills are installed this session (from any surface). The server
+   * only re-detects an install on a new session, so this hides the in-error
+   * callout (and any further nudge) for the rest of the current session.
+   */
+  skillsInstalledThisSession: boolean
+
+  /**
+   * Set once an install has genuinely failed this session (not merely dropped
+   * its connection). The cause is environmental — a blocked target, a read-only
+   * directory — so it will fail again, and without this every later error would
+   * offer the same doomed install.
+   */
+  skillsInstallFailedThisSession: boolean
 }
 
 export const LOG = getLogger("App")
@@ -342,6 +365,34 @@ export class App extends PureComponent<Props, State> {
   // reconnect from inflating either count.
   private skillsNudgeSuppressionReported: boolean = false
 
+  // Same once-per-page-load guard for the in-error callout's impression: the
+  // callout remounts whenever its error box remounts (across reruns), but the
+  // adoption funnel should count one "shown" per session per surface — matching
+  // the toast above — so a recurring error can't inflate the errorCallout count.
+  private errorCalloutShown: boolean = false
+
+  // Session-constant part of the in-error callout's gate. `isLocalhost()`,
+  // `isEmbed()`, and `localStorageAvailable()` don't change within a session,
+  // and `localStorageAvailable()` does a synchronous write probe — so compute
+  // them once (lazily) instead of on every render. The callout gate reaches
+  // this only after `recommendSkillsInstall` short-circuits, so apps without
+  // the agent recommendation never pay for it. (The dismissal check stays
+  // per-render, since a "don't show again" can flip it mid-session.)
+  private cachedSkillsCalloutEnvEligible?: boolean
+
+  // The install currently in flight, if any, so both surfaces share one
+  // operation instead of racing two against the same target tree. Cleared when
+  // it settles. See handleSkillsNudgeInstall.
+  private inFlightSkillsInstall: Promise<string | undefined> | null = null
+
+  private get skillsCalloutEnvEligible(): boolean {
+    if (this.cachedSkillsCalloutEnvEligible === undefined) {
+      this.cachedSkillsCalloutEnvEligible =
+        isLocalhost() && !isEmbed() && localStorageAvailable()
+    }
+    return this.cachedSkillsCalloutEnvEligible
+  }
+
   public constructor(props: Props) {
     super(props)
 
@@ -415,6 +466,9 @@ export class App extends PureComponent<Props, State> {
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
       showSkillsNudge: false,
+      recommendSkillsInstall: false,
+      skillsInstalledThisSession: false,
+      skillsInstallFailedThisSession: false,
     }
 
     this.connectionManager = null
@@ -1563,6 +1617,13 @@ export class App extends PureComponent<Props, State> {
     // (?embed=true) apps: they're meant to be chromeless, so a CTA card pinned
     // over the host page's content is inappropriate (and the developer can't
     // act on it inside someone else's page anyway).
+    // Store the server's recommendation so the in-error "install skills"
+    // callout (a separate, non-dismissable surface) can gate on it every
+    // render, independent of the one-shot toast-impression logic below.
+    this.setState({
+      recommendSkillsInstall: Boolean(initialize.recommendSkillsInstall),
+    })
+
     if (
       initialize.recommendSkillsInstall &&
       isLocalhost() &&
@@ -1570,6 +1631,17 @@ export class App extends PureComponent<Props, State> {
       localStorageAvailable() &&
       !isSkillsNudgeDismissed() &&
       !isSkillsNudgeSnoozed() &&
+      // Don't re-raise the toast for an install this session already settled.
+      // `skillsNudgeShown` below only stops a SECOND showing — a toast skipped
+      // on first connect (snoozed) leaves it false, so a reconnect once the
+      // snooze lapses would raise the toast even though the callout has since
+      // installed, or tried and failed. Failure matters most: the errored
+      // callout is exempt from the eligibility hide (an error report isn't a
+      // transaction that finishes), so without this the toast would appear
+      // beside it — offering the install that just failed, and breaking the
+      // mutual exclusion the two surfaces otherwise keep.
+      !this.state.skillsInstalledThisSession &&
+      !this.state.skillsInstallFailedThisSession &&
       // `handleInitialization` re-runs on reconnect; show + log the impression
       // only once per page load so a reconnect can't enqueue a duplicate nudge
       // or inflate the funnel's numerator.
@@ -1577,7 +1649,7 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.skillsNudgeShown = true
       this.setState({ showSkillsNudge: true })
-      this.trackSkillsNudge("skillsNudgeShown")
+      this.trackSkillsNudge("skillsNudgeShown", "toast")
     } else if (
       initialize.skillsNudgeSuppressedReason &&
       !this.skillsNudgeSuppressionReported &&
@@ -1592,7 +1664,8 @@ export class App extends PureComponent<Props, State> {
       // funnel treats shown and suppressed as mutually exclusive per session.
       this.skillsNudgeSuppressionReported = true
       this.trackSkillsNudge(
-        skillsNudgeSuppressedLabel(initialize.skillsNudgeSuppressedReason)
+        skillsNudgeSuppressedLabel(initialize.skillsNudgeSuppressedReason),
+        "toast"
       )
     }
   }
@@ -1600,18 +1673,44 @@ export class App extends PureComponent<Props, State> {
   /**
    * Record a skills-nudge interaction for telemetry. Routed through the
    * existing ``menuClick`` event (like the deploy button), so it is only sent
-   * when usage stats are enabled.
+   * when usage stats are enabled. ``surface`` attributes the event to the UI
+   * that emitted it (the nudge ``toast`` vs the in-error ``errorCallout``) so
+   * the shown → installed funnel can be sliced per surface.
    */
-  private readonly trackSkillsNudge = (label: string): void => {
-    this.metricsMgr.enqueue("menuClick", { label })
+  private readonly trackSkillsNudge = (
+    label: string,
+    surface: "toast" | "errorCallout"
+  ): void => {
+    this.metricsMgr.enqueue("menuClick", { label, surface })
   }
 
   /** Install the bundled skills via a backend operation (no script rerun). */
-  private readonly handleSkillsNudgeInstall = (): Promise<
-    string | undefined
-  > => {
-    this.trackSkillsNudge("skillsNudgeInstall")
-    return this.backendOperationClient
+  private readonly handleSkillsNudgeInstall = (
+    surface: "toast" | "errorCallout"
+  ): Promise<string | undefined> => {
+    // Both surfaces can be on screen at once (the sticky callout slot lets them
+    // transiently coexist), and each owns its own button. Hand a second clicker
+    // the install already in flight rather than starting another: two concurrent
+    // installs race on the same target tree, and the loser doesn't fail
+    // cleanly — on the symlink path it falls back to a GLOBAL install into the
+    // user's home dir that nobody asked for, and on the copy path it reports
+    // "could not write" for skills that are in fact installed. No second
+    // `skillsNudgeInstall` event either: it's one install, not two attempts.
+    //
+    // This covers one browser client. Two tabs still race, because the guard
+    // that would have to stop that lives in the server's InstallSkillsHandler.
+    //
+    // `surface` is whoever STARTED the install, not whoever joined it, so a
+    // joiner's click lands on the initiator's telemetry and confirmation. In the
+    // one case that reaches this — callout starts, user then clicks the toast —
+    // the toast is dismissed by the success below and the confirmation appears on
+    // the callout. A slightly odd frame in an already-rare race; not worth
+    // threading a second surface through for.
+    if (this.inFlightSkillsInstall) {
+      return this.inFlightSkillsInstall
+    }
+    this.trackSkillsNudge("skillsNudgeInstall", surface)
+    const install = this.backendOperationClient
       .requestInstallSkills()
       .then(result => {
         // The server has re-detected the now-installed skills (it clears its
@@ -1620,8 +1719,23 @@ export class App extends PureComponent<Props, State> {
         // which would conflate "installed" with a permanent opt-out. The card
         // shows its own success confirmation and auto-dismisses.
         this.trackSkillsNudge(
-          skillsNudgeInstallSuccessLabel(result.fallbackReason)
+          skillsNudgeInstallSuccessLabel(result.fallbackReason),
+          surface
         )
+        // Within this session the server won't re-run detection, so suppress
+        // any further install offer (notably the in-error callout, which can
+        // recur on every error) now that skills are installed.
+        this.setState(prevState => ({
+          skillsInstalledThisSession: true,
+          // An install from the in-error callout also clears the proactive
+          // toast if it happens to be up — the two can transiently coexist via
+          // the sticky callout slot — so it can't keep advertising an install
+          // that just completed. A toast-surface install leaves showSkillsNudge
+          // alone so the toast shows its own success confirmation before
+          // self-dismissing via onClose.
+          showSkillsNudge:
+            surface === "errorCallout" ? false : prevState.showSkillsNudge,
+        }))
         return result.detail ?? undefined
       })
       .catch((error: unknown) => {
@@ -1631,22 +1745,64 @@ export class App extends PureComponent<Props, State> {
         // and surface a reassuring, retry-friendly message; re-install is
         // idempotent.
         if (isSkillsNudgeDroppedConnection(error)) {
-          this.trackSkillsNudge("skillsNudgeInstallDropped")
+          this.trackSkillsNudge("skillsNudgeInstallDropped", surface)
           throw new Error(SKILLS_NUDGE_DROPPED_MESSAGE)
         }
         // Append the server's machine-readable reason as a label suffix, and
         // count a safety-gate refusal under its own event rather than as a
         // failure. See skillsNudgeInstallFailureLabel.
-        this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error))
-        // Re-throw so the toast renders its error state.
+        this.trackSkillsNudge(skillsNudgeInstallFailureLabel(error), surface)
+        // Stop offering the install on NEW callouts for the rest of the session.
+        // A failure here is a property of the machine (a blocked target, a
+        // read-only dir), not of this error, so every later error would offer the
+        // same doomed install — a fresh red box each time, none of them
+        // dismissable. The callout already showing keeps its Retry, since a
+        // non-idle callout ignores this gate. Deliberately NOT set for a dropped
+        // connection above: that one really is worth retrying.
+        this.setState({ skillsInstallFailedThisSession: true })
+        // Re-throw so the card / callout renders its error state.
         throw error
       })
+      // Clear the slot whatever the outcome, so a later Retry (or a genuinely
+      // new install after a dropped connection) isn't handed a settled promise.
+      .finally(() => {
+        this.inFlightSkillsInstall = null
+      })
+    this.inFlightSkillsInstall = install
+    return install
+  }
+
+  /** Toast's Install button — installs and tags telemetry with the toast surface. */
+  private readonly handleToastInstall = (): Promise<string | undefined> => {
+    return this.handleSkillsNudgeInstall("toast")
+  }
+
+  /**
+   * In-error callout's Install button — installs and tags telemetry with the
+   * errorCallout surface. Stable reference so the SkillsInstallContext value
+   * doesn't change every render.
+   */
+  private readonly handleErrorCalloutInstall = (): Promise<
+    string | undefined
+  > => {
+    return this.handleSkillsNudgeInstall("errorCallout")
+  }
+
+  /** Record the in-error callout's impression (tagged with the errorCallout surface). */
+  private readonly handleErrorCalloutShown = (): void => {
+    // Once per page load (see `errorCalloutShown`) so reruns that remount the
+    // error box don't re-log the impression.
+    if (this.errorCalloutShown) {
+      return
+    }
+    this.errorCalloutShown = true
+    this.trackSkillsNudge("skillsNudgeShown", "errorCallout")
   }
 
   /** Close (✕): snooze the nudge for ~24h. The card removes itself via onClose. */
   private readonly handleSkillsNudgeSnooze = (): void => {
     setSkillsNudgeSnoozed()
-    this.trackSkillsNudge("skillsNudgeSnoozed")
+    this.trackSkillsNudge("skillsNudgeSnoozed", "toast")
   }
 
   /**
@@ -1662,7 +1818,7 @@ export class App extends PureComponent<Props, State> {
     this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
       LOG.warn("Failed to persist skills nudge dismissal", error)
     })
-    this.trackSkillsNudge("skillsNudgeDontShowAgain")
+    this.trackSkillsNudge("skillsNudgeDontShowAgain", "toast")
   }
 
   /**
@@ -2702,6 +2858,29 @@ export class App extends PureComponent<Props, State> {
         showErrorLinks={this.state.showErrorLinks}
         disableDataExport={this.state.disableDataExport}
         backendOperationClient={this.backendOperationClient}
+        // In-error "install skills" callout. Gated on the server's
+        // recommendation plus localhost/embed (consistent with the exception
+        // box's own AI-links gate), not-yet-installed-this-session, and not
+        // permanently dismissed. `localStorageAvailable()` matches the toast's
+        // fail-closed behavior: without storage we can't remember a dismissal,
+        // so don't offer something the user can't make stick.
+        //
+        // Mutually exclusive with the proactive nudge toast (`!showSkillsNudge`):
+        // the two never show at once. The 24h snooze is intentionally NOT checked
+        // here — once the toast is snoozed/closed (`showSkillsNudge` flips false),
+        // an error is a higher-intent moment than a snoozed proactive nudge, so
+        // the callout may then appear. A permanent "don't show again" (or an
+        // install) from either surface suppresses both.
+        skillsInstallEnabled={
+          this.state.recommendSkillsInstall &&
+          this.skillsCalloutEnvEligible &&
+          !this.state.skillsInstalledThisSession &&
+          !this.state.skillsInstallFailedThisSession &&
+          !isSkillsNudgeDismissed() &&
+          !this.state.showSkillsNudge
+        }
+        onInstallSkills={this.handleErrorCalloutInstall}
+        onSkillsCalloutShown={this.handleErrorCalloutShown}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2739,7 +2918,7 @@ export class App extends PureComponent<Props, State> {
               skillsNudge={
                 this.state.showSkillsNudge ? (
                   <SkillsNudgeToast
-                    onInstall={this.handleSkillsNudgeInstall}
+                    onInstall={this.handleToastInstall}
                     onSnooze={this.handleSkillsNudgeSnooze}
                     onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
                     onClose={this.handleSkillsNudgeClose}

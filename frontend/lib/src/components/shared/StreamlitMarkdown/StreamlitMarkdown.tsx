@@ -176,6 +176,11 @@ export interface Props {
   inheritFont?: boolean
 
   /**
+   * Inherit line height from parent when truncating text
+   */
+  inheritLineHeight?: boolean
+
+  /**
    * Optional help text for inline help tooltips.
    * When present, :help[] markers in the source will use this text.
    */
@@ -1349,6 +1354,7 @@ const StreamlitMarkdown: FC<Props> = ({
   disableLinks,
   isToast,
   inheritFont,
+  inheritLineHeight,
   helpText,
   truncate,
   unterminatedParsing,
@@ -1362,6 +1368,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isInDialog={isInDialog}
       isLabel={isLabel}
       inheritFont={inheritFont}
+      inheritLineHeight={inheritLineHeight}
       boldLabel={boldLabel}
       isToast={isToast}
       truncate={truncate}

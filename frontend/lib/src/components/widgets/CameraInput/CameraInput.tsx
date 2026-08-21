@@ -549,14 +549,11 @@ const CameraInput = ({
   useEffect(() => {
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        toWidgetState(files),
-        {
-          fromUi: false,
-        },
-        fragmentId
-      )
+      widgetMgr.setFileUploaderStateValue(element.id, toWidgetState(files), {
+        formId: element.formId,
+        fragmentId,
+        fromUser: false,
+      })
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -576,14 +573,11 @@ const CameraInput = ({
     const newWidgetValue = toWidgetState(files)
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        newWidgetValue,
-        {
-          fromUi: true,
-        },
-        fragmentId
-      )
+      widgetMgr.setFileUploaderStateValue(element.id, newWidgetValue, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [status, files, widgetMgr, element, fragmentId])
 
@@ -595,12 +589,11 @@ const CameraInput = ({
     setImgSrc(null)
 
     const newWidgetValue = toWidgetState([])
-    widgetMgr.setFileUploaderStateValue(
-      element,
-      newWidgetValue,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setFileUploaderStateValue(element.id, newWidgetValue, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }, [element, fragmentId, widgetMgr])
 
   useFormClearHelper({

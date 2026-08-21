@@ -285,6 +285,7 @@ def _build_proto(
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
     required: bool = False,
+    wrap: bool | None = None,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -304,6 +305,12 @@ def _build_proto(
         )
         if help is not None:
             proto.help = help
+
+    # wrap is layout-only and intentionally excluded from the element id
+    # (it is not passed to compute_and_register_element_id), so toggling it
+    # never resets the widget's value.
+    if wrap is not None:
+        proto.wrap = wrap
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
@@ -337,6 +344,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V: ...
@@ -359,6 +367,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
@@ -381,6 +390,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
@@ -403,6 +413,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V]: ...
@@ -424,6 +435,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
@@ -553,6 +565,21 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the options can wrap onto multiple rows. This can be one
+            of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
+            - ``True``: If the options are too wide for the available space,
+              they wrap onto additional rows.
+            - ``False``: The options stay on a single row. If they are too
+              wide for the available space, the option group scrolls
+              horizontally.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -658,6 +685,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             bind=bind,
             persist_state=persist_state,
         )
@@ -682,6 +710,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V: ...
@@ -704,6 +733,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
@@ -726,6 +756,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
@@ -748,6 +779,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V]: ...
@@ -770,6 +802,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
@@ -899,6 +932,21 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the options can wrap onto multiple rows. This can be one
+            of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
+            - ``True``: If the options are too wide for the available space,
+              they wrap onto additional rows.
+            - ``False``: The options stay on a single row. If they are too
+              wide for the available space, the option group scrolls
+              horizontally.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -1007,6 +1055,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             bind=bind,
             persist_state=persist_state,
         )
@@ -1030,6 +1079,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
@@ -1158,6 +1208,7 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             options_format_func=actual_format_func,
             bind=bind,
             persist_state=persist_state,
@@ -1196,6 +1247,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         options_format_func: Callable[[Any], str] | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -1273,6 +1325,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             help=help,
             required=required,
+            wrap=wrap,
         )
 
         if bind == "query-params" and key is not None:

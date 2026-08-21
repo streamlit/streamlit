@@ -1533,6 +1533,102 @@ def get_button_group(app: Page, key: str) -> Locator:
     return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
 
 
+def get_button_group_options(app: Page, key: str) -> Locator:
+    """Get the option list inside a button group (pills / segmented control).
+
+    This is the horizontal scrollport when ``wrap`` is false.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the button group.
+
+    key : str
+        The key of the button group.
+
+    Returns
+    -------
+    Locator
+        The option list (``group`` or ``radiogroup`` role).
+    """
+    button_group = get_button_group(app, key)
+    return (
+        button_group.get_by_role("group")
+        .or_(button_group.get_by_role("radiogroup"))
+        .first
+    )
+
+
+def expect_button_group_overflows(options: Locator) -> None:
+    """Wait until the option list has local horizontal overflow and an edge fade.
+
+    The fade attributes (``data-can-scroll-start`` / ``data-can-scroll-end``)
+    prove the group itself is the scrollport, not the page.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              if (el.scrollWidth <= el.clientWidth) return false
+              return (
+                el.hasAttribute("data-can-scroll-start")
+                || el.hasAttribute("data-can-scroll-end")
+              )
+            }"""
+            )
+            is True
+        ),
+    )
+
+
+def expect_selected_option_in_view(options: Locator) -> None:
+    """Wait until the selected option is fully visible in the option list.
+
+    When an edge is fading (``data-can-scroll-start`` / ``end``), honors
+    ``scroll-padding-inline`` so an option sitting in that fade is not
+    treated as in view. First/last options can sit flush with a non-fading
+    edge because max scroll cannot inset them.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    expect(options.locator("button[data-selected]").first).to_be_visible()
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              const selected = el.querySelector('[data-selected]');
+              if (!selected) return false;
+              const group = el.getBoundingClientRect();
+              const sel = selected.getBoundingClientRect();
+              const cs = getComputedStyle(el);
+              const padStart = el.hasAttribute('data-can-scroll-start')
+                ? parseFloat(cs.scrollPaddingInlineStart) || 0
+                : 0;
+              const padEnd = el.hasAttribute('data-can-scroll-end')
+                ? parseFloat(cs.scrollPaddingInlineEnd) || 0
+                : 0;
+              // ±1px absorbs sub-pixel rounding across browsers.
+              return (
+                sel.left >= group.left + padStart - 1 &&
+                sel.right <= group.right - padEnd + 1
+              );
+            }"""
+            )
+            is True
+        ),
+    )
+
+
 def get_feedback(app: Page, key: str) -> Locator:
     """Get a feedback widget with the given key.
 
@@ -1649,40 +1745,3 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         }""",
         timeout=timeout,
     )
-
-
-def wait_for_datepicker_popover_animation(app: Page, calendar: Locator) -> None:
-    """Wait until a BaseWeb datepicker popover open animation has finished.
-
-    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
-    a ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
-    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
-    Chromium as ~8% pixel diffs).
-
-    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
-    transform share the 0.1s open transition, but a subsequent Popper
-    reposition can still nudge the calendar after opacity settles. Require a
-    stable calendar bounding box before screenshotting.
-    """
-    expect(calendar).to_be_visible()
-    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
-    expect(popover).to_have_css("opacity", "1")
-
-    previous: tuple[float, float, float, float] | None = None
-
-    def _calendar_box_is_stable() -> bool:
-        nonlocal previous
-        box = calendar.bounding_box()
-        if box is None:
-            return False
-        current = (box["x"], box["y"], box["width"], box["height"])
-        if previous is None:
-            previous = current
-            return False
-        stable = all(
-            abs(prev - curr) < 0.5 for prev, curr in zip(previous, current, strict=True)
-        )
-        previous = current
-        return stable
-
-    wait_until(app, _calendar_box_is_stable)

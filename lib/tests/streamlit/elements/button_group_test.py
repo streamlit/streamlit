@@ -30,7 +30,11 @@ from streamlit.elements.widgets.button_group import (
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
@@ -1112,6 +1116,38 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_wrap_default(self, command: Callable[..., None]):
+        """By default wrap is left unset (auto) so the frontend can resolve it
+        based on the layout."""
+        command(["a", "b", "c"])
+        proto = self.get_delta_from_queue().new_element.button_group
+        assert not proto.HasField("wrap")
+
+    @parameterized.expand(
+        [
+            (command, wrap_value)
+            for (command,) in get_command_matrix([])
+            for wrap_value in (True, False)
+        ]
+    )
+    def test_button_group_wrap(self, command: Callable[..., None], wrap_value: bool):
+        """The wrap parameter is forwarded to the button group proto."""
+        command(["a", "b", "c"], wrap=wrap_value)
+        proto = self.get_delta_from_queue().new_element.button_group
+        assert proto.wrap is wrap_value
+
+    def test_button_group_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the element id.
+
+        Two otherwise-identical pills that differ only in wrap collide on the
+        same auto-generated id, proving wrap is excluded from id computation and
+        so preserves widget state when toggled.
+        """
+        st.pills("same label", ["a", "b", "c"])
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.pills("same label", ["a", "b", "c"], wrap=False)
 
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""

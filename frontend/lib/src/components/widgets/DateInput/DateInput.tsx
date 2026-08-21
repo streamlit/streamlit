@@ -166,7 +166,7 @@ function DateInput({
       resetError()
 
       if (!date) {
-        setValueWithSource({ value: [], fromUi: true })
+        setValueWithSource({ value: [], fromUser: true })
         return
       }
 
@@ -175,7 +175,7 @@ function DateInput({
         setError(buildErrorMessage(errorType))
         return
       }
-      setValueWithSource({ value: [calendarDateToIso(date)], fromUi: true })
+      setValueWithSource({ value: [calendarDateToIso(date)], fromUser: true })
     },
     [
       buildErrorMessage,
@@ -207,7 +207,7 @@ function DateInput({
       resetError()
 
       if (dates.length === 0) {
-        setValueWithSource({ value: [], fromUi: true })
+        setValueWithSource({ value: [], fromUser: true })
         return
       }
 
@@ -225,7 +225,7 @@ function DateInput({
       }
       setValueWithSource({
         value: normalizeRangeOrder(newIsoDates),
-        fromUi: true,
+        fromUser: true,
       })
     },
     [
@@ -264,7 +264,7 @@ function DateInput({
       updateWidgetMgrState(
         element,
         widgetMgr,
-        { value: isoValue, fromUi: true },
+        { value: isoValue, fromUser: true },
         fragmentId
       )
     },
@@ -279,7 +279,7 @@ function DateInput({
         widgetMgr,
         {
           value: normalizeRangeOrder(dates.map(calendarDateToIso)),
-          fromUi: true,
+          fromUser: true,
         },
         fragmentId
       )
@@ -420,12 +420,11 @@ function updateWidgetMgrState(
   })
 
   if (isValid) {
-    widgetMgr.setStringArrayValue(
-      element,
-      vws.value,
-      { fromUi: vws.fromUi },
-      fragmentId
-    )
+    widgetMgr.setStringArrayValue(element.id, vws.value, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: vws.fromUser,
+    })
   }
 }
 

@@ -1604,10 +1604,10 @@ class LayoutsMixin:
             This can be one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A

@@ -101,12 +101,11 @@ describe("DateTimeInput widget", () => {
 
     render(<DateTimeInput {...props} />)
 
-    expect(spy).toHaveBeenCalledWith(
-      props.element,
-      props.element.default,
-      { fromUi: false },
-      undefined
-    )
+    expect(spy).toHaveBeenCalledWith(props.element.id, props.element.default, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: false,
+    })
   })
 
   it("renders date and time segments with default value", () => {
@@ -140,7 +139,7 @@ describe("DateTimeInput widget", () => {
     expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
   })
 
-  it("calendar selection commits to widget manager and preserves time", async () => {
+  it("calendar selection stays open and commits on close", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: ["2025-11-19T16:45"],
@@ -148,7 +147,12 @@ describe("DateTimeInput widget", () => {
       max: "2025-11-30T23:59",
     })
     const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<DateTimeInput {...props} />)
+    render(
+      <div>
+        <DateTimeInput {...props} />
+        <button data-testid="outside">outside</button>
+      </div>
+    )
     spy.mockClear()
 
     // Open calendar
@@ -156,22 +160,20 @@ describe("DateTimeInput widget", () => {
     await user.click(segments[0])
     expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
 
-    // Click a different day (Nov 15)
+    // Click a different day (Nov 15) — popover stays open
     const day15 = screen.getByRole("button", { name: /15/ })
     await user.click(day15)
+    expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
 
-    // Calendar should close
-    expect(
-      screen.queryByTestId("stDateTimeInputCalendar")
-    ).not.toBeInTheDocument()
+    // Close by clicking outside
+    await user.click(screen.getByTestId("outside"))
 
     // Time (16:45) should be preserved with new date
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["2025-11-15T16:45"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -199,10 +201,9 @@ describe("DateTimeInput widget", () => {
 
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["2025-11-19T17:45"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -223,12 +224,11 @@ describe("DateTimeInput widget", () => {
     await user.click(clearButton)
 
     await waitFor(() => {
-      expect(spy).toHaveBeenCalledWith(
-        props.element,
-        [],
-        { fromUi: true },
-        undefined
-      )
+      expect(spy).toHaveBeenCalledWith(props.element.id, [], {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
     })
   })
 
@@ -322,10 +322,13 @@ describe("DateTimeInput widget", () => {
       render(<DateTimeInput {...props} />)
 
       expect(spy).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
-        { fromUi: false },
-        "test-fragment-id"
+        {
+          formId: props.element.formId,
+          fragmentId: "test-fragment-id",
+          fromUser: false,
+        }
       )
     })
   })
@@ -352,10 +355,13 @@ describe("DateTimeInput widget", () => {
       props.widgetMgr.setFormSubmitBehaviors("form", true)
 
       props.widgetMgr.setStringArrayValue(
-        props.element,
+        props.element.id,
         ["2026-02-01T10:15"],
-        { fromUi: true },
-        props.fragmentId
+        {
+          formId: props.element.formId,
+          fragmentId: props.fragmentId,
+          fromUser: true,
+        }
       )
 
       render(<DateTimeInput {...props} />)
@@ -368,10 +374,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           props.element.default,
-          { fromUi: true },
-          props.fragmentId
+          {
+            formId: props.element.formId,
+            fragmentId: props.fragmentId,
+            fromUser: true,
+          }
         )
       })
     })
@@ -493,10 +502,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-06-15T09:30"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -558,10 +570,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:15"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -592,10 +607,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:15"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -626,10 +644,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:00"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -656,10 +677,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T16:15"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -735,10 +759,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          "fragment"
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
     })
@@ -814,12 +841,11 @@ describe("DateTimeInput widget", () => {
       await user.click(clearButton)
 
       await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element,
-          [],
-          { fromUi: true },
-          undefined
-        )
+        expect(spy).toHaveBeenCalledWith(props.element.id, [], {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
       })
     })
   })
@@ -943,25 +969,416 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2025-11-19T17:45"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("formCommit writes new value before click fires on dismiss-target (form race guard)", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      // Record the order of WM writes vs submit-button click
+      const callLog: string[] = []
+      const wmSpy = vi
+        .spyOn(props.widgetMgr, "setStringArrayValue")
+        .mockImplementation((_el, value) => {
+          callLog.push(`wmWrite:${JSON.stringify(value)}`)
+        })
+
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button
+            data-testid="submit"
+            onClick={() => callLog.push("submitClick")}
+          >
+            Submit
+          </button>
+        </div>
+      )
+      wmSpy.mockClear()
+      callLog.length = 0
+
+      // Edit a value so pending differs from committed
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+      wmSpy.mockClear()
+      callLog.length = 0
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click Submit button — pointerdown fires dismiss, click fires submit
+      await user.click(screen.getByTestId("submit"))
+
+      // The sync formCommit write MUST appear before the click handler
+      const writeIdx = callLog.findIndex(e =>
+        e.includes('["2025-11-19T17:45"]')
+      )
+      const clickIdx = callLog.indexOf("submitClick")
+      expect(writeIdx).toBeGreaterThanOrEqual(0)
+      expect(clickIdx).toBeGreaterThanOrEqual(0)
+      expect(writeIdx).toBeLessThan(clickIdx)
+
+      wmSpy.mockRestore()
+    })
+  })
+
+  describe("Dedup guard prevents redundant commits on dismissal", () => {
+    it("outside-click triggers one commit (sync formCommit + async effect) in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Edit a value so pending differs from committed
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click outside to dismiss — this triggers overlay onClose + blur
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
+        )
+      })
+
+      // One commit = 2 WM writes (sync formCommit + async effect).
+      // A duplicate commit (onClose + blur both firing) would produce 4.
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
+      )
+      expect(matchingCalls).toHaveLength(2)
+    })
+
+    it("Tab-away from last segment triggers one commit in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Edit a value
+      const segments = screen.getAllByRole("spinbutton")
+      const minuteSegment = segments.find(
+        s => s.getAttribute("data-type") === "minute"
+      )
+      await user.click(minuteSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Tab away from the last segment — this closes popover + triggers blur
+      await user.tab()
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
+        )
+      })
+
+      // One commit = 2 WM writes (sync formCommit + async effect)
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
+      )
+      expect(matchingCalls).toHaveLength(2)
+    })
+
+    it("Escape triggers one commit in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      // Edit a value
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Escape to dismiss
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
+        )
+      })
+
+      // One commit = 2 WM writes (sync formCommit + async effect)
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
+      )
+      expect(matchingCalls).toHaveLength(2)
+    })
+
+    it("outside-click from popover TimeField triggers one commit in form mode", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Open popover and navigate to the TimeField
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Click into popover TimeField and edit time
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverMinute = timeRow.querySelectorAll('[role="spinbutton"]')[1]
+      await user.click(popoverMinute)
+      await user.keyboard("{ArrowUp}")
+
+      // Click outside to dismiss
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
+        )
+      })
+
+      // One commit = 2 WM writes (sync formCommit + async effect)
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
+      )
+      expect(matchingCalls).toHaveLength(2)
+    })
+
+    it("outside-click commits exactly once in non-form mode (no double onChange)", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+        }),
+        fragmentId: "fragment",
+      }
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Edit a value so pending differs from committed
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+
+      // Popover should be open
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Click outside to dismiss — this triggers overlay onClose + blur
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
+        )
+      })
+
+      // The critical assertion: exactly ONE write, not two
+      const matchingCalls = spy.mock.calls.filter(
+        call =>
+          JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
+      )
+      expect(matchingCalls).toHaveLength(1)
+    })
+
+    it("Escape does not block subsequent Tab-away commit (no leaked ref)", async () => {
+      const user = userEvent.setup()
+      const props = {
+        ...getProps({
+          default: ["2025-11-19T16:45"],
+          formId: "form",
+        }),
+        fragmentId: "fragment",
+      }
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">Outside</button>
+        </div>
+      )
+
+      // Open popover, edit hour, then Escape to dismiss (commits 17:45)
+      const segments = screen.getAllByRole("spinbutton")
+      const hourSegment = segments.find(
+        s => s.getAttribute("data-type") === "hour"
+      )
+      await user.click(hourSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
+        )
+      })
+
+      spy.mockClear()
+
+      // After Escape, focus is restored to the last segment (minute).
+      // Edit again via ArrowUp (step-snap 17:45 → 18:00) without reopening.
+      await user.keyboard("{ArrowUp}")
+      // Tab away from last segment — must still commit the new value.
+      await user.tab()
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T18:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: "fragment",
+            fromUser: true,
+          }
         )
       })
     })
   })
 
-  describe("Boundary time clamping on calendar selection", () => {
-    it("preserves time when selecting a boundary date and time is in range", async () => {
+  describe("Boundary time on calendar selection", () => {
+    it("preserves time when selecting a non-boundary date", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: ["2025-11-19T14:30"],
-        min: "2025-11-19T09:00",
-        max: "2025-11-19T17:00",
+        min: "2025-11-01T09:00",
+        max: "2025-11-30T17:00",
       })
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(<DateTimeInput {...props} />)
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
       spy.mockClear()
 
       // Open calendar
@@ -969,22 +1386,28 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
 
-      // Click the min boundary date (Nov 19 — same date, so time stays)
-      const day19 = screen.getByRole("button", { name: /19/ })
-      await user.click(day19)
+      // Click a non-boundary date (Nov 15 — time should be preserved as-is)
+      const day15 = screen.getByRole("button", { name: /15/ })
+      await user.click(day15)
 
-      // Time 14:30 is within [09:00, 17:00], so it should be preserved
+      // Close the popover
+      await user.click(screen.getByTestId("outside"))
+
+      // Time 14:30 should be preserved since Nov 15 is not a boundary date
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
-          ["2025-11-19T14:30"],
-          { fromUi: true },
-          undefined
+          props.element.id,
+          ["2025-11-15T14:30"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
 
-    it("clamps time to max boundary when current time exceeds max on selected date", async () => {
+    it("reverts when selecting boundary date makes time out of max bounds", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: ["2025-11-01T22:00"],
@@ -992,7 +1415,12 @@ describe("DateTimeInput widget", () => {
         max: "2025-11-30T17:00",
       })
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(<DateTimeInput {...props} />)
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
       spy.mockClear()
 
       // Open calendar
@@ -1004,18 +1432,24 @@ describe("DateTimeInput widget", () => {
       const day30 = screen.getByRole("button", { name: /November 30/ })
       await user.click(day30)
 
-      // 22:00 exceeds max's time of 17:00 on Nov 30, so time should be clamped
+      // Live validation: error shows immediately after boundary pick
       await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element,
-          ["2025-11-30T17:00"],
-          { fromUi: true },
-          undefined
-        )
+        expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
       })
+
+      // Close the popover — 22:00 on Nov 30 exceeds max (17:00), so display reverts
+      await user.click(screen.getByTestId("outside"))
+
+      // Should NOT commit (out of bounds → revert)
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
     })
 
-    it("clamps time to min boundary when current time is below min on selected date", async () => {
+    it("reverts when selecting boundary date makes time below min bounds", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: ["2025-11-25T07:00"],
@@ -1023,7 +1457,12 @@ describe("DateTimeInput widget", () => {
         max: "2025-11-30T17:00",
       })
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(<DateTimeInput {...props} />)
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
       spy.mockClear()
 
       // Open calendar
@@ -1035,15 +1474,21 @@ describe("DateTimeInput widget", () => {
       const day19 = screen.getByRole("button", { name: /November 19/ })
       await user.click(day19)
 
-      // 07:00 is below min's time of 09:00 on Nov 19, so time should be clamped up
+      // Live validation: error shows immediately after boundary pick
       await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element,
-          ["2025-11-19T09:00"],
-          { fromUi: true },
-          undefined
-        )
+        expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
       })
+
+      // Close the popover — 07:00 on Nov 19 is below min (09:00), so display reverts
+      await user.click(screen.getByTestId("outside"))
+
+      // Should NOT commit (out of bounds → revert)
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
     })
   })
 
@@ -1139,10 +1584,13 @@ describe("DateTimeInput widget", () => {
 
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2026-11-19T16:45"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
       expect(
@@ -1230,6 +1678,257 @@ describe("DateTimeInput widget", () => {
         expect(calendar).toHaveAttribute("role", "dialog")
         expect(calendar).toHaveAttribute("aria-modal", "true")
       })
+    })
+  })
+
+  describe("Popover TimeField", () => {
+    it("renders popover TimeField with correct time value", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      expect(timeRow).toBeVisible()
+      expect(timeRow).toHaveTextContent("Time")
+
+      // TimeField should show the current time segments (16:45)
+      const popoverSegments = timeRow.querySelectorAll('[role="spinbutton"]')
+      expect(popoverSegments.length).toBe(2) // hour, minute
+    })
+
+    it("editing popover time updates inline segments", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Find the popover time hour segment and change it
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverHour = timeRow.querySelector(
+        '[data-type="hour"]'
+      ) as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("{ArrowUp}")
+
+      // Close popover to commit
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("calendar selection keeps popover open for time editing", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Select a date — popover stays open
+      const day15 = screen.getByRole("button", { name: /15/ })
+      await user.click(day15)
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+      // Edit time in popover
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverHour = timeRow.querySelector(
+        '[data-type="hour"]'
+      ) as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("{ArrowUp}")
+
+      // Close to commit combined value
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-15T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("popover TimeField does not show when popover is closed", () => {
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      render(<DateTimeInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stDateTimeInputPopoverTime")
+      ).not.toBeInTheDocument()
+    })
+
+    it("popover TimeField applies step-snapping on ArrowUp/Down", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:00"],
+        step: 900, // 15-min step
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // ArrowUp on popover minute should snap by 15 (step=900)
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverMinute = timeRow.querySelector(
+        '[data-type="minute"]'
+      ) as HTMLElement
+      await user.click(popoverMinute)
+      await user.keyboard("{ArrowUp}")
+
+      // Close to commit — should snap from 16:00 to 16:15
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T16:15"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("popover TimeField step-snapping with hour steps", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T10:00"],
+        step: 10800, // 3-hour step
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Open calendar
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // ArrowUp on popover hour should snap by 3 (step=10800)
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverHour = timeRow.querySelector(
+        '[data-type="hour"]'
+      ) as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("{ArrowUp}")
+
+      // Close to commit — should snap from 10:00 to 12:00
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T12:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("Tab cycles between calendar and TimeField in active mode", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      render(<DateTimeInput {...props} />)
+
+      // Enter active mode
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+      await waitFor(() => {
+        const calendar = screen.getByTestId("stDateTimeInputCalendar")
+        expect(calendar).toHaveAttribute("role", "dialog")
+      })
+
+      // Tab should eventually reach the TimeField segments
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = timeRow.querySelectorAll('[role="spinbutton"]')
+
+      // Tab multiple times to reach TimeField
+      let reachedTimeField = false
+      for (let i = 0; i < 15; i++) {
+        await user.tab()
+        if (
+          popoverSegments[0] === document.activeElement ||
+          popoverSegments[1] === document.activeElement
+        ) {
+          reachedTimeField = true
+          break
+        }
+      }
+      expect(reachedTimeField).toBe(true)
     })
   })
 })

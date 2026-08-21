@@ -109,3 +109,8 @@ if TYPE_CHECKING:
         multiselect("foo", ["a", "b"], bind="query-params", accept_new_options=True),
         list[str],
     )
+
+    # Check wrap parameter
+    assert_type(multiselect("foo", ["a", "b"], wrap=True), list[str])
+    assert_type(multiselect("foo", ["a", "b"], wrap=False), list[str])
+    assert_type(multiselect("foo", ["a", "b"], wrap=None), list[str])

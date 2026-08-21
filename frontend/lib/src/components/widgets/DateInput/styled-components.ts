@@ -50,16 +50,19 @@ export const StyledDateFieldContainer = styled.div({
 export const StyledDateField = styled("div", {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
-  flex: $isRange ? "0 0 auto" : 1,
+  flex: $isRange ? "0 0 auto" : "1 0 auto",
   minWidth: 0,
   ...($isRange && {
     "&:first-of-type": {
       paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
     },
+    "&[data-range-field='end']": {
+      paddingRight: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+    },
   }),
 }))
 
-/** Mirrors TimeInput's StyledTimeInputWrapper for cross-widget consistency. */
+/** Outer border wrapper for date/datetime fields. Scrolls in narrow layouts. */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -70,6 +73,12 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
+  // Scroll horizontally in narrow layouts instead of overflowing the border.
+  // Hidden scrollbar avoids stealing height (same pattern as Tabs/Multiselect).
+  overflowX: "auto" as const,
+  overflowY: "hidden" as const,
+  scrollbarWidth: "none",
+  "&::-webkit-scrollbar": { display: "none" },
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
@@ -94,14 +103,16 @@ export const StyledDateFieldInput = styled(Group, {
 })<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
   display: "flex",
   alignItems: "center",
-  flex: 1,
+  flex: "1 0 auto",
   minWidth: 0,
   paddingTop: theme.spacing.sm,
   paddingBottom: theme.spacing.sm,
   paddingLeft: $isRange
     ? theme.spacing.none
     : `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
-  paddingRight: $isRange ? theme.spacing.none : theme.spacing.sm,
+  paddingRight: $isRange
+    ? theme.spacing.none
+    : `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
   outline: "none",
 }))
 
@@ -604,6 +615,17 @@ export const StyledCalendarCell = styled(CalendarCell, {
 
     "&[data-outside-month]": {
       color: theme.colors.fadedText40,
+    },
+
+    // React Aria sets data-today; :not([data-outside-month]) keeps the
+    // mark on the visible month only. Underline intentionally blends with
+    // the primary fill when today is also selected. Hardcoded px because
+    // text-decoration has no related theme token.
+    "&[data-today]:not([data-outside-month])": {
+      textDecorationLine: "underline",
+      textDecorationColor: primary,
+      textDecorationThickness: "2px",
+      textUnderlineOffset: "3px",
     },
   }
 })

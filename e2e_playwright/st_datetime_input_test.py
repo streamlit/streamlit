@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 18
+NUM_DATETIME_INPUTS = 19
 
 
 def test_datetime_input_widget_rendering(
@@ -112,6 +112,16 @@ def test_datetime_input_dropdown(app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(calendar, name="st_datetime_input-dropdown")
 
 
+def test_datetime_input_narrow_rendering(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that datetime input renders correctly in a narrow container."""
+    assert_snapshot(
+        get_element_by_key(app, "narrow_datetime"),
+        name="st_datetime_input-narrow",
+    )
+
+
 def test_help_tooltip(app: Page):
     element_with_help = get_datetime_input(app, "Datetime input 2 (help)")
     expect_help_tooltip(app, element_with_help, "Help text")
@@ -146,11 +156,53 @@ def test_handles_datetime_selection_with_popover(app: Page):
     datetime_input = get_datetime_input(app, "Datetime input 1 (base)")
     datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
 
-    # Type the new value into the segmented field (replaces existing segments)
-    type_date(datetime_field, "2025", "11", "25", "09", "30")
+    # Click into segments to open the calendar popover
+    datetime_field.get_by_role("spinbutton").first.click()
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # Select a date in the calendar — popover stays open
+    calendar.get_by_role("button", name=re.compile(r"November 25")).click()
+    expect(calendar).to_be_visible()
+
+    # Edit time via the popover TimeField
+    time_row = app.get_by_test_id("stDateTimeInputPopoverTime")
+    hour_segment = time_row.get_by_role("spinbutton").first
+    hour_segment.click()
+    # Decrement hour via keyboard (16 -> 15)
+    hour_segment.press("ArrowDown")
+
+    # Close popover by clicking outside
+    app.get_by_text("Value 1:").click()
+    expect(calendar).not_to_be_visible()
     wait_for_app_run(app)
 
-    expect_markdown(app, "Value 1: 2025-11-25 09:30:00")
+    expect_markdown(app, "Value 1: 2025-11-25 15:45:00")
+
+
+def test_popover_time_only_change(app: Page):
+    """Test that changing only the time via popover TimeField commits correctly."""
+    datetime_input = get_datetime_input(app, "Datetime input 1 (base)")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+
+    # Open popover
+    datetime_field.get_by_role("spinbutton").first.click()
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # Edit only the time in the popover (don't select a date)
+    # Default step=900 (15 min), so ArrowUp on minute snaps 45 → 00 (next 15-min boundary = 17:00)
+    time_row = app.get_by_test_id("stDateTimeInputPopoverTime")
+    minute_segment = time_row.get_by_role("spinbutton").last
+    minute_segment.click()
+    minute_segment.press("ArrowUp")
+
+    # Close popover
+    app.get_by_text("Value 1:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Value 1: 2025-11-19 17:00:00")
 
 
 def test_step_interval_applied(app: Page):
