@@ -156,7 +156,39 @@ should verify:
 - package versions match the tag;
 - all required automated and focused manual tests passed.
 
-### 7. Verify and close out
+### 7. Update the documentation
+
+1. In the `streamlit/streamlit` repository, generate the release notes from the
+   previous release tag to the new release tag:
+
+   ```text
+   /generating-changelog <previous-version-tag> <new-version-tag>
+   ```
+
+   For example:
+
+   ```text
+   /generating-changelog 1.61.0 1.62.0
+   ```
+
+   Review the generated changelog before continuing.
+
+2. In the `streamlit/docs` repository, run the
+   [`update-docs-for-release`](https://github.com/streamlit/docs/blob/main/.cursor/skills/update-docs-for-release/SKILL.md)
+   skill with the new release tag:
+
+   ```text
+   /update-docs-for-release <new-version-tag>
+   ```
+
+   The skill runs the relevant documentation updates and creates a PR in the
+   docs repository. Provide the generated changelog when prompted.
+3. Wait for Netlify to create a preview deployment and post its link in a
+   comment on the docs PR.
+4. Verify the documentation changes using the Netlify preview.
+5. Merge the docs PR. Merging updates the main documentation site.
+
+### 8. Verify and close out
 
 1. Confirm the new version appears in the
    [Streamlit PyPI history](https://pypi.org/project/streamlit/#history).
@@ -173,8 +205,7 @@ should verify:
    starts successfully.
 4. Confirm the GitHub release exists and skim its generated notes.
 5. Merge the release PR back into `develop`.
-6. Complete the documentation release, public release notes, and any relevant
-   issue or forum follow-ups.
+6. Complete any relevant issue or forum follow-ups.
 7. Wait for the automated release PR to appear in the
    [conda-forge Streamlit feedstock](https://github.com/conda-forge/streamlit-feedstock/pulls).
    This can take a couple of hours after the PyPI release.
@@ -244,7 +275,8 @@ Use the same steps as a regular release:
 1. [Create the tag and merge-back PR](#4-create-the-tag-and-merge-back-pr).
 2. [Deploy static assets for SiS](#5-deploy-static-assets-for-sis-streamlit-in-snowflake).
 3. [Build and publish](#6-build-and-publish) from the patch tag.
-4. [Verify and close out](#7-verify-and-close-out).
+4. [Update the documentation](#7-update-the-documentation).
+5. [Verify and close out](#8-verify-and-close-out).
 
 Also respond to the people who reported the issue. For a significant incident
 or a failed emergency release, create a postmortem and schedule a review
