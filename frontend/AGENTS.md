@@ -131,7 +131,7 @@ Run from the repo root (requires Node major version from `.nvmrc`):
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).
 - `make frontend-lint`: Lint and check formatting of frontend files (oxlint + eslint).
-- `make frontend-knip`: Run Knip dependency analysis.
+- `make frontend-knip`: Run Knip unused-export and unused-dependency analysis.
 - `make frontend-types`: Run the TypeScript type checker (tsc).
 - `make frontend-format`: Format frontend files (oxfmt).
 - `make frontend-tests`: Run all frontend unit tests (vitest).
