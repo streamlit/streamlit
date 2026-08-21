@@ -75,6 +75,12 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
     aligned; do not relitigate them. Instead, verify that the implementation follows the spec
     and separately assess any user-facing behavior that the merged spec does not cover. A new
     or modified spec in the current PR is not already approved by this rule.
+  - A new user-facing feature or significant public API change requires a product spec
+    already merged into the base branch. If none exists, call this out as a merge-blocking
+    Product Alignment issue: merge the product spec first, then the implementation (see
+    `specs/README.md` and `specs/AGENTS.md`). A spec that exists only on this implementation
+    PR is not sufficient. Bug fixes, DevOps work, and small non-controversial enhancements
+    do not need a spec.
   - If no merged spec covers a product decision, that absence is not approval.
     Request changes for material product/API alignment issues.
   - Inspect analogous Streamlit APIs, configs, and behaviors. Check that the proposed surface
@@ -141,10 +147,12 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 [State whether the PR has user-facing product impact. If yes, identify any relevant product
 spec already merged into the base branch, treat its documented product decisions as approved,
-and assess whether the implementation follows it. For user-facing aspects not covered by an
-approved spec, assess the user value and complexity tradeoff, consistency with analogous
-Streamlit surfaces, and alignment with the principles in `specs/AGENTS.md`; clearly identify
-material issues that warrant requested changes. If no, state why this section is not applicable.]
+and assess whether the implementation follows it. If this is a new user-facing feature or
+significant public API change with no merged product spec, request that the spec be merged
+before this implementation PR. For user-facing aspects not covered by an approved spec,
+assess the user value and complexity tradeoff, consistency with analogous Streamlit surfaces,
+and alignment with the principles in `specs/AGENTS.md`; clearly identify material issues that
+warrant requested changes. If no, state why this section is not applicable.]
 
 ## Code Quality
 
@@ -193,7 +201,7 @@ meaningful performance impact, say why briefly.]
 
 Verdict criteria:
 - **APPROVED**: If there are no critical/merge-blocking issues. Minor suggestions or optional improvements should not block approval — those can be addressed in follow-up PRs.
-- **CHANGES REQUESTED**: Only use this for merge-blocking issues such as: bugs, security vulnerabilities, material performance regressions, breaking changes, missing required tests, or clear material violations of documented Streamlit product/API principles and patterns. Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES REQUESTED.
+- **CHANGES REQUESTED**: Only use this for merge-blocking issues such as: bugs, security vulnerabilities, material performance regressions, breaking changes, missing required tests, a new user-facing feature or significant public API change without a product spec already merged into the base branch, or clear material violations of documented Streamlit product/API principles and patterns. Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES REQUESTED.
 
 ---
 *This is an automated AI review. Please verify the feedback and use your judgment.*
@@ -206,8 +214,10 @@ Verdict criteria:
 - Focus on the root cause of issues, not cascading failures.
 - Be specific with file references and line numbers when noting issues.
 - Product feedback must cite concrete changed behavior and the relevant documented principle or
-  established Streamlit pattern. A missing merged spec does not make product-alignment findings
-  non-blocking. Product questions and optional refinements are non-blocking; request changes when
-  a mismatch would create material user harm or lasting, unjustified complexity in the public
-  surface.
+  established Streamlit pattern. A new user-facing feature or significant public API change
+  without a product spec already merged into the base branch is merge-blocking: request that
+  the spec land first. For smaller changes that do not require a spec, a missing merged spec
+  is expected; still request changes for material alignment issues. Product questions and
+  optional refinements are non-blocking; request changes when a mismatch would create
+  material user harm or lasting, unjustified complexity in the public surface.
 - Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.
