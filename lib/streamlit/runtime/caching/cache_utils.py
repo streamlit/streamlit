@@ -93,8 +93,7 @@ CacheScope: TypeAlias = Literal["global", "session"]
 # How a cache entry is refreshed once its ttl expires.
 RefreshMode: TypeAlias = Literal["foreground", "background"]
 
-# Historical default and fallback so unset or invalid config still hard-expires
-# at 2 * ttl.
+# Unset or invalid config still hard-expires background caches at 2 * ttl.
 _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2.0
 
 # Configured multipliers we have already warned about. Many cached functions can
@@ -139,11 +138,12 @@ def _warn_background_refresh_ttl_multiplier(configured: object, reason: str) -> 
     )
 
 
-def _get_background_refresh_ttl_multiplier() -> float:
-    """Return a valid hard-expiration multiplier for background caches.
+def _resolve_background_refresh_ttl_multiplier() -> tuple[float, object]:
+    """Return ``(multiplier, configured)`` for the hard-expiration bound.
 
     Invalid values fall back to the default so malformed configuration cannot break
-    cache creation or make the hard TTL shorter than the freshness TTL.
+    cache creation or make the hard TTL shorter than the freshness TTL. The raw
+    configured value is returned so overflow warnings can log it as the user wrote it.
     """
     from streamlit import config
 
@@ -156,24 +156,25 @@ def _get_background_refresh_ttl_multiplier() -> float:
     if multiplier is None or not math.isfinite(multiplier) or multiplier <= 1.0:
         _warn_background_refresh_ttl_multiplier(
             configured,
-            "it must be a finite number greater than 1.0 and produce a finite "
-            "hard-expiration TTL.",
+            "it must be a finite number greater than 1.0.",
         )
-        return _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER
+        return _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER, configured
 
+    return multiplier, configured
+
+
+def _get_background_refresh_ttl_multiplier() -> float:
+    """Return a valid hard-expiration multiplier for background caches."""
+    multiplier, _configured = _resolve_background_refresh_ttl_multiplier()
     return multiplier
 
 
 def _get_background_refresh_hard_ttl(fresh_ttl_seconds: float) -> float:
     """Return the configured hard-expiration TTL for a background cache."""
-    multiplier = _get_background_refresh_ttl_multiplier()
+    multiplier, configured = _resolve_background_refresh_ttl_multiplier()
     hard_ttl_seconds = fresh_ttl_seconds * multiplier
     # A huge-but-finite multiplier can overflow the product to inf.
     if math.isfinite(fresh_ttl_seconds) and not math.isfinite(hard_ttl_seconds):
-        from streamlit import config
-
-        # Use the raw configured value so a quoted TOML number is logged as written.
-        configured = config.get_option("runner.cacheBackgroundRefreshTTLMultiplier")
         _warn_background_refresh_ttl_multiplier(
             configured,
             "ttl * multiplier overflows to infinity.",
@@ -201,6 +202,12 @@ def get_hard_ttl_seconds(
 
     Background caches use a later hard-expiration TTL so stale values can still be
     served while a refresh runs. Foreground caches use the freshness TTL as-is.
+
+    The multiplier is captured when the cache is created, not on later reuse, so a
+    live ``config.toml`` edit does not re-bound existing caches (same as
+    ``runner.cacheBackgroundRefreshMaxWorkers``). ``config.get_option`` takes
+    ``_config_lock`` while callers hold ``_caches_lock``; that is safe because this
+    option is not scriptable.
     """
     if refresh_mode != "background" or fresh_ttl_seconds is None:
         return fresh_ttl_seconds
@@ -321,7 +328,8 @@ class Cache(Generic[R]):
 
         Delegates to ``read_result`` and to ``_is_stale``. Foreground caches are never
         stale; background-mode caches override ``_is_stale`` to detect entries that are
-        past their freshness TTL but not yet hard-expired.
+        past their freshness TTL. Hard-expired keys never reach this method: the
+        storage layer treats them as missing.
 
         Raises
         ------
@@ -334,10 +342,11 @@ class Cache(Generic[R]):
 
     # Positional-only so subclasses can name the parameter freely (e.g. result).
     def _is_stale(self, _result: CachedResult[R], /) -> bool:
-        """Whether a present entry is past its fresh ttl.
+        """Whether a present entry is past its freshness TTL.
 
-        Always ``False`` for foreground caches. Background-mode caches override this to
-        report entries that are past their freshness TTL but not yet hard-expired.
+        Always ``False`` for foreground caches. Background-mode caches override this.
+        Hard-expired keys never reach this method: the storage layer treats them as
+        missing.
         """
         return False
 

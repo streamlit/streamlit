@@ -837,9 +837,13 @@ _create_option(
         keep one long-idle cache also keeps stale entries for every other
         background cache for (multiplier - 1) * ttl.
 
-        Values must be finite and greater than 1.0. Invalid values, and values
-        that cannot produce a finite hard-expiration ttl, are ignored with a
-        warning and the default is used instead. Larger values keep entries
+        Values must be finite and greater than 1.0. Values of 1.0 or below
+        would remove the stale window and are rejected; use
+        refresh_mode="foreground" to never serve stale values, or
+        runner.cacheBackgroundRefreshMaxWorkers = 0 to skip background
+        refresh while still serving stale values until hard expiry. If the
+        multiplier or resulting hard-expiration TTL is not finite, Streamlit
+        warns and uses the default multiplier. Larger values keep entries
         longer after idle periods or refresh failures, at the cost of higher
         memory use and older served data. Applies to both @st.cache_data and
         @st.cache_resource.

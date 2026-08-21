@@ -158,9 +158,7 @@ class ResourceCaches(StatsProvider):
             if cache is not None:
                 cache.mark_detached()
 
-            # Capture the multiplier only when creating a cache, not on the reuse
-            # path above. A live config.toml edit therefore does not re-bound
-            # existing caches (same as runner.cacheBackgroundRefreshMaxWorkers).
+            # Multiplier is captured at creation; existing caches are not re-bound.
             hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
@@ -740,7 +738,11 @@ class ResourceCache(Cache[R]):
         return self._mem_cache.ttl
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
-        """Whether a present entry is past its freshness TTL but not yet hard-expired."""
+        """Whether a present entry is past its freshness TTL.
+
+        Hard-expired keys never reach this method: the storage layer treats them as
+        missing.
+        """
         # Unlike DataCache, no ``fresh_ttl_seconds is None`` guard is needed here:
         # resource caches always resolve it to a float (ttl uses coerce_none_to_inf).
         if self.refresh_mode != "background" or result.stored_at is None:

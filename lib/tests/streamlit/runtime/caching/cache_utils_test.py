@@ -111,8 +111,7 @@ def test_background_refresh_ttl_multiplier_warns_once_per_invalid_value() -> Non
         "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: %s Falling "
         "back to the default multiplier of %s.",
         "'bad-repeat'",
-        "it must be a finite number greater than 1.0 and produce a finite "
-        "hard-expiration TTL.",
+        "it must be a finite number greater than 1.0.",
         2.0,
     )
 

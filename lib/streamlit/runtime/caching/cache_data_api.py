@@ -247,11 +247,7 @@ class DataCaches(StatsProvider):
                 ttl,
             )
 
-            # Capture the multiplier only when creating a cache, not on the reuse
-            # path above. A live config.toml edit therefore does not re-bound
-            # existing caches (same as runner.cacheBackgroundRefreshMaxWorkers).
-            # get_option takes _config_lock while _caches_lock is held; that is
-            # safe because this option is not scriptable.
+            # Multiplier is captured at creation; existing caches are not re-bound.
             hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
@@ -834,7 +830,11 @@ class DataCache(Cache[R]):
             raise CacheError(f"Failed to unpickle {value_key}") from exc
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
-        """Whether a present entry is past its freshness TTL but not yet hard-expired."""
+        """Whether a present entry is past its freshness TTL.
+
+        Hard-expired keys never reach this method: the storage layer treats them as
+        missing.
+        """
         if (
             self.refresh_mode != "background"
             or result.stored_at is None
