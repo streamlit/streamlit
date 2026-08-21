@@ -158,37 +158,12 @@ should verify:
 
 ### 7. Update the documentation
 
-1. In the `streamlit/streamlit` repository, generate the release notes from the
-   previous release tag to the new release tag:
+Slash commands in this section are coding-agent skills. Invoke them from an
+agent session that supports repository skills, such as Cursor or Claude Code,
+rather than from a shell.
 
-   ```text
-   /generating-changelog <previous-version-tag> <new-version-tag>
-   ```
-
-   For example:
-
-   ```text
-   /generating-changelog 1.61.0 1.62.0
-   ```
-
-   Review the generated changelog before continuing.
-
-2. In the `streamlit/docs` repository, run the
-   [`update-docs-for-release`](https://github.com/streamlit/docs/blob/main/.cursor/skills/update-docs-for-release/SKILL.md)
-   skill with the new release tag:
-
-   ```text
-   /update-docs-for-release <new-version-tag>
-   ```
-
-   The skill runs the relevant documentation updates and creates a PR in the
-   docs repository. Provide the generated changelog when prompted.
-3. Wait for Netlify to create a preview deployment and post its link in a
-   comment on the docs PR.
-4. Verify the documentation changes using the Netlify preview.
-5. Merge the docs PR. Merging updates the main documentation site.
-
-### 8. Verify and close out
+Before generating and publishing the documentation, verify that the new package
+is available:
 
 1. Confirm the new version appears in the
    [Streamlit PyPI history](https://pypi.org/project/streamlit/#history).
@@ -203,15 +178,58 @@ should verify:
 
 3. Confirm the command prints the expected version and smoke-test that the app
    starts successfully.
-4. Confirm the GitHub release exists and skim its generated notes.
-5. Merge the release PR back into `develop`.
-6. Complete any relevant issue or forum follow-ups.
-7. Wait for the automated release PR to appear in the
+4. In the `streamlit/streamlit` repository, use the
+   [`generating-changelog`](../.claude/skills/generating-changelog/SKILL.md)
+   skill to generate the release notes from the previous release tag to the new
+   release tag:
+
+   ```text
+   /generating-changelog <previous-version-tag> <new-version-tag>
+   ```
+
+   For example:
+
+   ```text
+   /generating-changelog 1.61.0 1.62.0
+   ```
+
+   Review the generated changelog before continuing.
+
+5. In the `streamlit/docs` repository, update the release documentation:
+
+   - For a regular `x.y.0` release, run the
+     [`update-docs-for-release`](https://github.com/streamlit/docs/blob/main/.cursor/skills/update-docs-for-release/SKILL.md)
+     skill with the new release tag:
+
+     ```text
+     /update-docs-for-release <new-version-tag>
+     ```
+
+     The skill runs the relevant documentation updates and creates a PR in the
+     docs repository. Provide the generated changelog when prompted.
+
+   - For a patch release, add the generated changelog to
+     `content/develop/quick-references/release-notes/_index.md` and the current
+     year's `content/develop/quick-references/release-notes/<year>.md` file,
+     then open a docs PR. Do not run the full skill or regenerate docstrings,
+     API tiles, or API pages; those updates target `x.y.0` releases.
+
+6. Wait for Netlify to create a preview deployment and post its link in a
+   comment on the docs PR.
+7. Verify the documentation changes using the Netlify preview.
+8. Merge the docs PR. Merging updates the main documentation site.
+
+### 8. Verify and close out
+
+1. Confirm the GitHub release exists and skim its generated notes.
+2. Merge the release PR back into `develop`.
+3. Complete any relevant issue or forum follow-ups.
+4. Wait for the automated release PR to appear in the
    [conda-forge Streamlit feedstock](https://github.com/conda-forge/streamlit-feedstock/pulls).
    This can take a couple of hours after the PyPI release.
-8. Confirm the feedstock PR checks pass, fix any failures if needed, and merge
+5. Confirm the feedstock PR checks pass, fix any failures if needed, and merge
    the PR.
-9. Request publication to the default Conda channel in the Snowflake-internal
+6. Request publication to the default Conda channel in the Snowflake-internal
    [#anaconda-snowflake-technical](https://snowflake.enterprise.slack.com/archives/C02D68R4D0D)
    Slack channel. This keeps Streamlit current in the main `anaconda` channel
    (separate from conda-forge). You may need to request access to the channel
@@ -275,7 +293,9 @@ Use the same steps as a regular release:
 1. [Create the tag and merge-back PR](#4-create-the-tag-and-merge-back-pr).
 2. [Deploy static assets for SiS](#5-deploy-static-assets-for-sis-streamlit-in-snowflake).
 3. [Build and publish](#6-build-and-publish) from the patch tag.
-4. [Update the documentation](#7-update-the-documentation).
+4. [Update the documentation](#7-update-the-documentation), using the
+   patch-release path in that section (release notes only; skip docstring
+   generation and API tiles/pages).
 5. [Verify and close out](#8-verify-and-close-out).
 
 Also respond to the people who reported the issue. For a significant incident
