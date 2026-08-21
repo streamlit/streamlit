@@ -143,8 +143,8 @@ function ColumnMenu({
     isOpen: true,
     onClose: onCloseMenu,
     floatingSetFn: refs.setFloating,
-    // Portal sub-menus render outside this panel. Match their production
-    // classes so outside-click does not close the column menu.
+    // The statistics and formatting sub-menus render in a portal outside this
+    // panel, so pointer events inside them must not count as outside clicks.
     excludeSelectors: [
       ".stDataFrameColumnFormattingMenu",
       ".stDataFrameStatisticsMenu",

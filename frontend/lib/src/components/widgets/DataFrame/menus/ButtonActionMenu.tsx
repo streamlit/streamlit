@@ -67,8 +67,9 @@ function ButtonActionMenu({
     isOpen: true,
     onClose: onCloseMenu,
     floatingSetFn: refs.setFloating,
-    // The invisible floating-ui reference sits outside the menu panel.
-    // Match its production class so clicks on it do not count as outside.
+    // Defensive: the floating-ui reference sits outside the menu panel and is
+    // not passed as referenceSetFn. It is pointer-events:none today, so it
+    // should never receive a pointerdown.
     excludeSelectors: [".stDataFrameButtonActionMenuTarget"],
   })
 

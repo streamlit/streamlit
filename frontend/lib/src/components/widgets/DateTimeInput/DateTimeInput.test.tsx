@@ -139,7 +139,7 @@ describe("DateTimeInput widget", () => {
     expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
   })
 
-  it("renders the calendar header picker with the overlay-dismissal class", async () => {
+  it("Escape closes the month picker without closing the calendar", async () => {
     const user = userEvent.setup()
     render(<DateTimeInput {...getProps()} />)
 
@@ -149,6 +149,15 @@ describe("DateTimeInput widget", () => {
     expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
       "stDateInputHeaderPickerPopover"
     )
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
   })
 
   it("calendar selection stays open and commits on close", async () => {
