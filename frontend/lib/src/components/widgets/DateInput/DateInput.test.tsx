@@ -994,8 +994,16 @@ describe("DateInput", () => {
 
         await openQuickSelect(user)
 
+        // Derived from Intl rather than hardcoded: this test only needs to
+        // prove the locale is wired through, and pinning CLDR text breaks on
+        // an ICU bump (see the eo split in dateInputUtils.test.ts).
+        const pastWeekInJapanese = new Intl.RelativeTimeFormat("ja", {
+          numeric: "always",
+          style: "long",
+        }).format(-1, "week")
+
         expect(
-          await screen.findByRole("option", { name: "1 週間前" })
+          await screen.findByRole("option", { name: pastWeekInJapanese })
         ).toBeVisible()
         expect(
           screen.queryByRole("option", { name: "Past Week" })

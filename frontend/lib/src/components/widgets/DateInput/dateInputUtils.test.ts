@@ -376,9 +376,10 @@ describe("getQuickSelectPresets", () => {
     globalThis.Date = RealDate
   })
 
-  // Mirrors ICU_ROOT_PATTERN in dateInputUtils.ts. Matched exactly, so a real
-  // translation that leads with a sign (`mi`, `ak`) is not mistaken for it.
-  const ICU_ROOT_PATTERN = /^-\p{Nd}+ [wmy]$/u
+  // Root-pattern shape, deliberately looser than the production check so it
+  // holds for any numbering system ("-1 w", "-۱ w", "-一 w") while still not
+  // matching a real translation that leads with a sign (`mi`, `ak`).
+  const ICU_ROOT_PATTERN = /^-\S+ [wmy]$/u
 
   const RELATIVE_TIME_ARGS: [number, Intl.RelativeTimeFormatUnit][] = [
     [-1, "week"],
@@ -460,6 +461,10 @@ describe("getQuickSelectPresets", () => {
     "ku",
     "qu",
     "yi",
+    // Non-decimal numbering systems: these render the root pattern as "-一 w",
+    // which no `\p{Nd}`-style character class matches.
+    "yo-u-nu-hanidec",
+    "ig-u-nu-hanidec",
   ])("never leaks ICU's root pattern for %s", locale => {
     const labels = getQuickSelectPresets(locale).map(p => p.label)
 

@@ -221,15 +221,14 @@ function RangeDateInput({
   const popoverId = `${id}-calendar`
   const popoverDescId = `${id}-calendar-desc`
   const quickSelectLabelId = `${id}-quick-select-label`
-  const quickSelectTriggerId = `${id}-quick-select-trigger`
+  const quickSelectValueId = `${id}-quick-select-value`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
-  // Layout direction for the quick-select row, which renders outside the
-  // calendar's I18nProvider. Derived from the locale rather than from the label
-  // text, so the row does not re-flow when the selected preset changes (an
-  // English fallback label in an RTL app must not flip it back). Memoized
-  // because isRTL builds an Intl.Locale and maximizes it. Safe only because
-  // safeLocale is validated — isRTL throws on a malformed tag.
+  // Layout direction for the quick-select row (a plain div, so it cannot read
+  // direction from I18nProvider). Derived from the locale rather than from the
+  // label text, so an English fallback in an RTL app does not re-flow the row.
+  // Memoized because isRTL builds and maximizes an Intl.Locale. safeLocale is
+  // validated — isRTL throws on a malformed tag.
   const quickSelectDirection = useMemo(
     () => (isRTL(safeLocale) ? "rtl" : "ltr"),
     [safeLocale]
@@ -967,15 +966,15 @@ function RangeDateInput({
                   </StyledQuickSelectLabel>
                   <StyledQuickSelectTrigger
                     ref={setQuickSelectTrigger}
-                    id={quickSelectTriggerId}
                     $isPlaceholder={!activePreset}
-                    /* Include the visible row label and this button's own
-                       text in the accessible name, giving "Date range Past
-                       Week". The self-reference is what carries the selected
-                       preset — a plain aria-label would override the content
-                       and hide it. The chevron's icon is aria-hidden, so it
-                       contributes nothing. */
-                    aria-labelledby={`${quickSelectLabelId} ${quickSelectTriggerId}`}
+                    /* Name the trigger from the visible row label plus the
+                       value span, giving "Date range Past Week". A plain
+                       aria-label would override the content and hide which
+                       preset is selected. Referencing the span rather than the
+                       button itself because Firefox drops self-references from
+                       the name (Mozilla bug 1717461), which would announce
+                       only "Date range". */
+                    aria-labelledby={`${quickSelectLabelId} ${quickSelectValueId}`}
                     aria-expanded={isQuickSelectOpen}
                     aria-haspopup="listbox"
                     onPress={() => setIsQuickSelectOpen(prev => !prev)}
@@ -986,7 +985,9 @@ function RangeDateInput({
                       locale. Safe here because this text is not a collection
                       textValue — the same span on a ListBoxItem empties its
                       textValue and kills type-to-select. */}
-                    <span dir="auto">{activePresetLabel}</span>
+                    <span id={quickSelectValueId} dir="auto">
+                      {activePresetLabel}
+                    </span>
                     <StyledCalendarHeaderSelectChevron>
                       <KeyboardArrowDown size={theme.iconSizes.base} />
                     </StyledCalendarHeaderSelectChevron>

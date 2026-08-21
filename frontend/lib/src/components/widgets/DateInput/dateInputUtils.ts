@@ -159,31 +159,37 @@ export interface QuickSelectPreset {
   end: CalendarDate
 }
 
-/**
- * ICU's root-locale relative-time pattern: a sign, digits, a space, and a
- * single unit letter — "-1 w", "-3 m", "-2 y".
- *
- * `\p{Nd}` rather than `\d` because the digits follow the locale's numbering
- * system: `fa` emits "-۱ w", `hi` "-१ w", `ar` "-١ w", `nqo` "-߁ w". An
- * ASCII-only class would miss four of the five numbering systems in use.
- */
-const ICU_ROOT_PATTERN = /^-\p{Nd}+ [wmy]$/u
+/** Trailing literal of ICU's root pattern: a space and one unit letter. */
+const ROOT_UNIT_SUFFIX = /^ [wmy]$/
 
 /**
- * True when ICU emitted its root-locale fallback instead of a real
+ * True when ICU emitted its root-locale fallback ("-1 w") instead of a real
  * translation. CLDR lacks long relative-time data for many locales, and
- * `Intl.RelativeTimeFormat` then prints a signed root pattern that reads worse
+ * `Intl.RelativeTimeFormat` then prints the root pattern, which reads worse
  * than the English label it replaced.
+ *
+ * Detected from the parts rather than the formatted string, so it holds for
+ * any numbering system — the root pattern renders as "-1 w" in Latin digits
+ * but "-۱ w" in Persian and "-一 w" under `-u-nu-hanidec`, and no character
+ * class covers all of them.
  *
  * Checked per label, not per locale:
  * - Some locales have data for years but not weeks (`yo`), so a list can end
  *   up partly translated.
- * - Real translations that also start with "-" are kept, not replaced (`mi`
- *   "-1 wiki i mua", `ak` "-1 bosome a atwam"). Those users get their own
- *   language, upstream's leading minus and all, in preference to English.
+ * - Real translations that also start with "-" are kept, not replaced: `mi`
+ *   gives "-1 wiki i mua" and `ak` "-1 bosome a atwam", whose trailing
+ *   literals are words rather than a bare unit letter. Those users get their
+ *   own language, upstream's leading minus and all, in preference to English.
  */
-function isRootFallbackLabel(label: string): boolean {
-  return ICU_ROOT_PATTERN.test(label)
+function isRootFallback(parts: Intl.RelativeTimeFormatPart[]): boolean {
+  const first = parts.at(0)
+  const last = parts.at(-1)
+  return (
+    first?.type === "literal" &&
+    first.value === "-" &&
+    last?.type === "literal" &&
+    ROOT_UNIT_SUFFIX.test(last.value)
+  )
 }
 
 /** A quick-select preset before its dates are resolved against today. */
@@ -282,11 +288,17 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
 
   return QUICK_SELECT_PRESET_DESCRIPTORS.map(
     ({ id, enLabel, relativeValue, relativeUnit, duration }) => {
-      const localized = relativeTimeFormat?.format(relativeValue, relativeUnit)
+      const parts = relativeTimeFormat?.formatToParts(
+        relativeValue,
+        relativeUnit
+      )
+      const localized =
+        parts && !isRootFallback(parts)
+          ? parts.map(part => part.value).join("")
+          : null
       return {
         id,
-        label:
-          localized && !isRootFallbackLabel(localized) ? localized : enLabel,
+        label: localized ?? enLabel,
         start: end.subtract(duration),
         end,
       }

@@ -130,6 +130,7 @@ def test_range_quick_select_rendering(
     # covers the option labels; this covers the other half of the change — the
     # row's locale-derived direction and the trigger's own label, which is where
     # a bidi regression would show up (especially for ar-EG).
+    selected_preset = options.first.inner_text().strip()
     options.first.click()
     wait_for_app_run(app)
     date_input.get_by_test_id("stDateInputField").get_by_role(
@@ -138,7 +139,17 @@ def test_range_quick_select_rendering(
 
     quick_select_row = app.get_by_test_id("stDateInputQuickSelect")
     expect(quick_select_row).to_be_visible()
-    app.wait_for_timeout(500)
+    # Waits for the committed preset to reach the trigger, which also asserts
+    # the placeholder was replaced — deterministic where a fixed timeout is not.
+    expect(quick_select_row).not_to_contain_text("Select...")
+
+    # The accessible name must carry the selected preset, not just the row
+    # label. A "^Date range" prefix match would still pass if the value were
+    # dropped, so assert the whole name in every browser.
+    trigger = quick_select_row.get_by_role("button")
+    expect(trigger).to_have_accessible_name(
+        f"Date range {selected_preset}", ignore_case=False
+    )
 
     assert_snapshot(
         quick_select_row,
