@@ -25,10 +25,7 @@ _LOGGER: Final = get_logger(__name__)
 
 ## Metrics
 
-- Reserve `gather_metrics` for public `st.*` API paths. Do not add it to
-  internal helpers, except where an internal function is the single
-  instrumentation point for a public command (e.g. `_create_connection` for
-  `st.connection`).
+- Use `gather_metrics` only for public `st.*` APIs. Never use it for internal methods or functions.
 
 ## Streamlit Backend Performance Hot Paths
 
