@@ -147,6 +147,8 @@ def _resolve_background_refresh_ttl_multiplier() -> tuple[float, object]:
     """
     from streamlit import config
 
+    # Callers hold `_caches_lock` while `config.get_option` takes `_config_lock`.
+    # Safe because no `_on_config_parsed` receiver acquires a cache-registry lock.
     configured = config.get_option("runner.cacheBackgroundRefreshTTLMultiplier")
     try:
         multiplier = float(configured)
@@ -161,12 +163,6 @@ def _resolve_background_refresh_ttl_multiplier() -> tuple[float, object]:
         return _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER, configured
 
     return multiplier, configured
-
-
-def _get_background_refresh_ttl_multiplier() -> float:
-    """Return a valid hard-expiration multiplier for background caches."""
-    multiplier, _configured = _resolve_background_refresh_ttl_multiplier()
-    return multiplier
 
 
 def _get_background_refresh_hard_ttl(fresh_ttl_seconds: float) -> float:
@@ -202,12 +198,6 @@ def get_hard_ttl_seconds(
 
     Background caches use a later hard-expiration TTL so stale values can still be
     served while a refresh runs. Foreground caches use the freshness TTL as-is.
-
-    The multiplier is captured when the cache is created, not on later reuse, so a
-    live ``config.toml`` edit does not re-bound existing caches (same as
-    ``runner.cacheBackgroundRefreshMaxWorkers``). ``config.get_option`` takes
-    ``_config_lock`` while callers hold ``_caches_lock``; that is safe because this
-    option is not scriptable.
     """
     if refresh_mode != "background" or fresh_ttl_seconds is None:
         return fresh_ttl_seconds

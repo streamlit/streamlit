@@ -47,7 +47,7 @@ def _reset_multiplier_warnings(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_background_refresh_ttl_multiplier_defaults_to_two() -> None:
     """The default background-refresh TTL multiplier is 2.0."""
-    assert cache_utils._get_background_refresh_ttl_multiplier() == 2.0
+    assert cache_utils._get_background_refresh_hard_ttl(10) == 20
 
 
 @pytest.mark.parametrize(
@@ -67,7 +67,7 @@ def test_background_refresh_ttl_multiplier_accepts_numeric_representations(
     the declared type.
     """
     with patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": value}):
-        assert cache_utils._get_background_refresh_ttl_multiplier() == expected
+        assert cache_utils._get_background_refresh_hard_ttl(10) == expected * 10
 
 
 @pytest.mark.parametrize(
@@ -91,7 +91,7 @@ def test_background_refresh_ttl_multiplier_falls_back_for_invalid_values(
         patch.object(cache_utils._LOGGER, "warning") as mock_warning,
         patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": value}),
     ):
-        assert cache_utils._get_background_refresh_ttl_multiplier() == 2.0
+        assert cache_utils._get_background_refresh_hard_ttl(10) == 20
 
     mock_warning.assert_called_once()
 
@@ -104,8 +104,8 @@ def test_background_refresh_ttl_multiplier_warns_once_per_invalid_value() -> Non
             {"runner.cacheBackgroundRefreshTTLMultiplier": "bad-repeat"}
         ),
     ):
-        assert cache_utils._get_background_refresh_ttl_multiplier() == 2.0
-        assert cache_utils._get_background_refresh_ttl_multiplier() == 2.0
+        assert cache_utils._get_background_refresh_hard_ttl(10) == 20
+        assert cache_utils._get_background_refresh_hard_ttl(10) == 20
 
     mock_warning.assert_called_once_with(
         "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: %s Falling "

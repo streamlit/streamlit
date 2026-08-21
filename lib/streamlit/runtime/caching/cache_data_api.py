@@ -247,7 +247,7 @@ class DataCaches(StatsProvider):
                 ttl,
             )
 
-            # Multiplier is captured at creation; existing caches are not re-bound.
+            # Resolved after the reuse check so the hot path never reads config.
             hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
@@ -595,11 +595,10 @@ class CacheDataAPI:
               value is ready.
             - ``"background"``: Return the expired value immediately and update it in
               the background. By default, Streamlit can keep returning the expired
-              value for one extra ``ttl``. Set
-              ``runner.cacheBackgroundRefreshTTLMultiplier`` to change that
-              hard-expiration bound. After hard expiry, the next call waits for a
-              new value. This mode requires a ``ttl`` and can't be used with
-              ``persist``.
+              value for one extra ``ttl``; after that, the next call waits for a new
+              value. To change how long expired values can be returned, use the
+              ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
+              This mode requires a ``ttl`` and can't be used with ``persist``.
 
             .. note::
                 A function that refreshes in the background can't use session-specific

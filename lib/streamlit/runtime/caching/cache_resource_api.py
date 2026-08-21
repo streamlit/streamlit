@@ -158,7 +158,7 @@ class ResourceCaches(StatsProvider):
             if cache is not None:
                 cache.mark_detached()
 
-            # Multiplier is captured at creation; existing caches are not re-bound.
+            # Resolved after the reuse check so the hot path never reads config.
             hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
@@ -518,10 +518,10 @@ class CacheResourceAPI:
               resource is ready.
             - ``"background"``: Return the expired resource immediately and update it
               in the background. By default, Streamlit can keep returning the expired
-              resource for one extra ``ttl``. Set
-              ``runner.cacheBackgroundRefreshTTLMultiplier`` to change that
-              hard-expiration bound. After hard expiry, the next call waits for a
-              new resource. This mode requires a ``ttl``. If you set ``on_release``,
+              resource for one extra ``ttl``; after that, the next call waits for a
+              new resource. To change how long expired resources can be returned, use
+              the ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
+              This mode requires a ``ttl``. If you set ``on_release``,
               Streamlit calls it for the old resource after a successful update.
 
             .. note::
