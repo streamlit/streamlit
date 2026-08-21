@@ -197,7 +197,8 @@ is available:
 
 5. In the `streamlit/docs` repository, update the release documentation:
 
-   - For a regular `x.y.0` release, run the
+   - For a regular `x.y.0` release, paste the generated changelog into the
+     agent session and run the
      [`update-docs-for-release`](https://github.com/streamlit/docs/blob/main/.cursor/skills/update-docs-for-release/SKILL.md)
      skill with the new release tag:
 
@@ -206,7 +207,7 @@ is available:
      ```
 
      The skill runs the relevant documentation updates and creates a PR in the
-     docs repository. Provide the generated changelog when prompted.
+     docs repository.
 
    - For a patch release, add the generated changelog to
      `content/develop/quick-references/release-notes/_index.md` and the current
