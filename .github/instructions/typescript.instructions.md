@@ -39,9 +39,20 @@ applyTo: "**/*.ts, **/*.tsx"
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
 
+## Streamlit Frontend Performance Hot Paths
+
+Changes to these high-fan-out internals can affect every message, delta, element, or rerun. Keep work in them minimal, and benchmark changes with representative stress-test apps:
+
+- **WebSocket and protobuf handling** (`connection/src/WebsocketConnection.tsx`, `ForwardMessageCache.ts`): Avoid extra payload copies, decoding passes, synchronous dispatch work, and unbounded cache scans or retention.
+- **Delta tree updates** (`lib/src/render-tree/`): Preserve immutable-update short circuits, payload reuse, and staleness-cleanup efficiency. Avoid additional full-tree traversals or work proportional to all siblings for each delta.
+- **React reconciliation and element identity** (`RenderNodeVisitor`, `Block`, `ElementNodeRenderer`): Keep keys, element IDs, hashes, props, and callbacks stable so elements do not rerender or remount unnecessarily.
+- **Shared renderers, especially `StreamlitMarkdown`**: Markdown appears in many elements and widget labels. Preserve memoization and conditional plugin loading; streaming updates can repeatedly parse a growing Markdown payload.
+- **Widget state and rerun messages** (`WidgetStateManager`, `App.tsx`): Avoid duplicate reruns, unbatched updates, extra state serialization, and repeated scans over all widgets or cached-message hashes.
+- **Large-data and layout paths** (dataframes, Arrow/Quiver, charts, resize observers): Avoid repeated parsing, per-cell work, dataframe copies, forced layout reads, and unstable dependencies that reinitialize heavy renderers.
+
 ## Theming and Styling
 
-- **Use theme properties**: Always strongly prefer theme properties from `useEmotionTheme()` instead of hardcoded values: `theme.colors`, `theme.spacing`, `theme.sizes`, `theme.radii`, `theme.fontSizes`, `theme.fontWeights`, `theme.fonts`, `theme.lineHeights`, `theme.shadows`, `theme.iconSizes`, `theme.breakpoints`, `theme.zIndices`. See `frontend/lib/src/theme/` to find out more about theming.
+- **Use theme properties**: Always strongly prefer theme properties from `useEmotionTheme()` instead of hardcoded values so components respond correctly to Streamlit's configurable theme options: `theme.colors`, `theme.spacing`, `theme.sizes`, `theme.radii`, `theme.fontSizes`, `theme.fontWeights`, `theme.fonts`, `theme.lineHeights`, `theme.shadows`, `theme.iconSizes`, `theme.breakpoints`, `theme.zIndices`. See `frontend/lib/src/theme/` to find out more about theming.
 - **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Leverage object style notation in Emotion.
 - **Avoid complex/deeply nested CSS selectors**: Prefer flat, simple selectors in styled components. Deeply nested selectors (e.g., `& > div > span > button`) are fragile, hard to maintain, and often indicate a need to refactor into smaller styled components.
@@ -49,6 +60,7 @@ applyTo: "**/*.ts, **/*.tsx"
 - Utilize props in styled components to display elements that may have some interactivity.
 - Avoid the need to target other components.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
+- **Never use `data-testid` attributes as CSS selectors in production code**: Test IDs are exclusively for unit and E2E testing. Use styled components, props, semantic selectors, or dedicated CSS classes for production styling.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
 
 ## Accessibility (a11y) Guidelines (must-follow)
