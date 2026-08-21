@@ -393,7 +393,8 @@ class TextWidgetsMixin:
               something else, such as another widget interaction. Ignored
               commits are held in the browser and are lost if the page is
               refreshed before that rerun, unless ``bind="query-params"``
-              is set (see ``bind``).
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
 
             - A ``callable``: Streamlit will rerun the app and execute the
               ``callable`` as a callback function before the rest of the app.
@@ -514,11 +515,11 @@ class TextWidgetsMixin:
             This can't be used with ``type="password"``. An empty
             query parameter (e.g., ``?my_key=``) clears the widget.
 
-            When ``on_change="ignore"``, a committed text input value still
-            updates the URL immediately (Enter, blur, or search-clear), the
-            same as widgets inside a form. Python receives the new value on
-            the next rerun. A page load or share uses the updated URL value.
-            Typing without committing does not update the URL.
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (Enter, blur, or search-clear) — the same as
+            widgets inside a form. Typing alone does not update it. Python
+            receives the new value on the next rerun, so a page load or
+            share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.

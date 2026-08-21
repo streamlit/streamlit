@@ -1173,11 +1173,17 @@ describe("TextInput query param binding", () => {
 describe("on_change='ignore' mode", () => {
   it("passes triggerRerun: false when ignoreRerun is true", async () => {
     const user = userEvent.setup()
-    const props = getProps({ ignoreRerun: true })
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
     const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<TextInput {...props} />)
     setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
 
     await user.type(screen.getByRole("textbox"), "testing{Enter}")
 
@@ -1191,6 +1197,7 @@ describe("on_change='ignore' mode", () => {
         triggerRerun: false,
       }
     )
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 
   it("does not pass triggerRerun when ignoreRerun is false", async () => {
@@ -1250,14 +1257,23 @@ describe("on_change='ignore' mode", () => {
 
   it("passes triggerRerun: false when search clear is clicked", async () => {
     const user = userEvent.setup()
-    const props = getProps({
-      ignoreRerun: true,
-      type: TextInputProto.Type.SEARCH,
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
     })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        type: TextInputProto.Type.SEARCH,
+      },
+      { widgetMgr }
+    )
     const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<TextInput {...props} />)
     setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
 
     const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
     await user.type(searchbox, "laptops")
@@ -1271,5 +1287,6 @@ describe("on_change='ignore' mode", () => {
       fromUser: true,
       triggerRerun: false,
     })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

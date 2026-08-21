@@ -764,7 +764,10 @@ def test_text_input_on_change_ignore(app: Page):
 
     # Fill without committing - URL should not update until Enter.
     text_input_field.fill("world")
-    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text=world"))
+    expect(text_input_field).to_have_value("world")
+    # Typing alone must not touch the bound query param.
+    wait_for_app_run(app)
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text="))
 
     # Commit with Enter - should NOT trigger a rerun, but should update the URL
     text_input_field.press("Enter")
@@ -791,10 +794,21 @@ def test_text_input_on_change_ignore(app: Page):
         app.get_by_text("Applied ignore text value: world", exact=True)
     ).to_be_visible()
 
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    text_input_field.fill("blurred")
+    expect(text_input_field).to_have_value("blurred")
+    app.get_by_role("button", name="Apply ignore text", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore text value: blurred", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text value: blurred", exact=True)
+    ).to_be_visible()
+
     # Bound ignore-mode values persist across reload via the URL.
     app.reload()
     wait_for_app_loaded(app)
     expect(
         get_text_input(app, "Ignore change text input").locator("input").first
-    ).to_have_value("world")
-    expect_prefixed_markdown(app, "Ignore text value:", "world")
+    ).to_have_value("blurred")
+    expect_prefixed_markdown(app, "Ignore text value:", "blurred")
