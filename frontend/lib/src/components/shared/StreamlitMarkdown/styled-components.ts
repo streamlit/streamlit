@@ -389,29 +389,30 @@ export const StyledStreamlitMarkdown =
         },
 
         // Shimmer animation for loading/thinking text. Uses mask-image with an
-        // animated gradient to fade text opacity in and out. The shimmer uses
-        // fadedText60 as its base color. When nesting with color directives:
+        // animated gradient to fade text opacity in and out. The element's
+        // color is the brightest the mask can get, so inherit the surrounding
+        // text instead of pinning fadedText60 (which would make the whole
+        // sweep sit in a muted range). When nesting with color directives:
         // - :shimmer[:red[text]] - inner color wins (displays red)
-        // - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
+        // - :red[:shimmer[text]] - shimmer inherits the red
         "span.stMarkdownShimmer": {
-          // Use theme's secondary text color for shimmer text
-          color: theme.colors.fadedText60,
-          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          color: "inherit",
+          // Mask gradient: fades from 55% opacity to 100% at the shimmer peak and back
           maskImage: `linear-gradient(
             90deg,
-            rgba(0, 0, 0, 0.4) 0%,
-            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.55) 40%,
             rgba(0, 0, 0, 1) 50%,
-            rgba(0, 0, 0, 0.4) 60%,
-            rgba(0, 0, 0, 0.4) 100%
+            rgba(0, 0, 0, 0.55) 60%,
+            rgba(0, 0, 0, 0.55) 100%
           )`,
           WebkitMaskImage: `linear-gradient(
             90deg,
-            rgba(0, 0, 0, 0.4) 0%,
-            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.55) 40%,
             rgba(0, 0, 0, 1) 50%,
-            rgba(0, 0, 0, 0.4) 60%,
-            rgba(0, 0, 0, 0.4) 100%
+            rgba(0, 0, 0, 0.55) 60%,
+            rgba(0, 0, 0, 0.55) 100%
           )`,
           maskSize: "200% 100%",
           WebkitMaskSize: "200% 100%",

@@ -16,11 +16,12 @@ Invoke this skill when the user's request involves:
 - Beautifying or improving the visual design of a Streamlit app
 - Optimizing Streamlit performance (caching, fragments, reruns)
 - Building and running Streamlit apps
+- Building chat, conversational, or agentic UIs (AI assistants, thinking expanders, chain-of-thought, tool-call timelines)
 - Styling widgets (button colors, backgrounds, CSS customization)
 - Advanced server configuration with `st.App`, ASGI, Starlette, FastAPI integration, custom routes, middleware, or lifespan hooks
 - Any question about Streamlit widgets, layouts, or components
 
-**Trigger phrases:** "streamlit", "st.", "st.App", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache"
+**Trigger phrases:** "streamlit", "st.", "st.App", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache", "chat", "agentic", "chain of thought"
 
 ## Workflow
 
@@ -133,12 +134,12 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect`, including modern replacements for deprecated patterns | read `references/selection-widgets.md` |
 | **Custom themes, colors, or styling requests** — configuring colors in `.streamlit/config.toml`, reading the active theme at runtime via `st.context.theme`, and targeting widgets with `st.markdown` CSS injection | read `references/theme.md` |
 | **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, and when to use each container type | read `references/layouts.md` |
-| **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, chart selection, and best practices for large datasets | read `references/data-display.md` |
+| **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, chart selection, and best practices for large datasets | read `references/data-display.md` |
 | **Multi-page app architecture** — `st.navigation`, `st.Page`, page routing, shared state across pages, and structuring apps with multiple views | read `references/multipage-apps.md` |
 | **Persisting values across reruns** — `st.session_state`, widget keys, callbacks (`on_change`, `on_click`), and patterns for stateful interactions | read `references/session-state.md` |
 | **Discovering available Streamlit public APIs, looking up `st.<command>` commands, exact parameters, docstrings, signatures, public annotation types, or choosing the right top-level command** — quick table of public `st` commands, related public objects, and `streamlit.typing` exports plus CLI instructions for inspecting local docstrings | read `references/api-reference.md` |
 | **Rich text formatting** — Markdown in `st.markdown` and widget labels, colored text (`:red[...]`), badges, Material Symbols icons (`:material/icon_name:`), LaTeX math, and Mermaid diagrams | read `references/markdown.md` |
-| **Chat and conversational UIs** — `st.chat_message`, `st.chat_input`, streaming responses with `st.write_stream`, and building AI assistant interfaces | read `references/chat-ui.md` |
+| **Chat, conversational, and agentic UIs** — `st.chat_message`, `st.chat_input`, streaming responses with `st.write_stream`, compact thinking expanders with `type="compact"`, chain-of-thought / tool-call timelines with `type="step"` (including nesting steps inside a compact expander), and building AI assistant interfaces | read `references/chat-ui.md` |
 | **Connecting to Snowflake** — `st.connection("snowflake")`, secrets configuration, querying data, and Snowflake-specific patterns | read `references/snowflake-connection.md` |
 | **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | read `references/custom-components-v2.md` — **IMPORTANT: `st.components.v1` is deprecated. Never use v1 for new components; always use `st.components.v2.component()`.** |
 | **Using third-party community components** — `streamlit-extras` (pagination, annotated text), `streamlit-pivot-table`, and other popular packages that extend Streamlit's built-in capabilities | read `references/third-party-components.md` |

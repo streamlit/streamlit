@@ -11,7 +11,7 @@ description: Validates all code changes before committing by running format, lin
 make check
 ```
 
-This runs formatting, linting, type checking, and unit tests on all uncommitted files (staged, unstaged, and untracked).
+This runs formatting, linting, type checking, Knip unused-export and unused-dependency analysis, and unit tests on all uncommitted files (staged, unstaged, and untracked).
 
 ## Workflow
 
