@@ -77,6 +77,8 @@ st.dataframe(df, width="content")
 
 Use `column_config` where it adds value—formatting currencies, showing progress bars, displaying links or images. Don't add config just for labels or tooltips that don't meaningfully improve readability. Works with both `st.dataframe` and `st.data_editor`.
 
+Before configuring a column, proactively inspect the relevant column type's current docstring with `streamlit docs <command>` (for example, `streamlit docs st.column_config.NumberColumn`) to confirm its parameters, supported formats, and behavior.
+
 ```python
 st.dataframe(
     df,
@@ -117,8 +119,8 @@ st.dataframe(
 - `LineChartColumn` → Sparkline charts
 - `LinkColumn` → Clickable links
 - `ListColumn` → Display lists/arrays
-- `MarkdownColumn` → Markdown text
-- `MultiselectColumn` → Multi-value selection
+- `MarkdownColumn` → Raw Markdown text with a rendered detail overlay
+- `MultiselectColumn` → Multi-value selection or colored badges in read-only dataframes
 - `NumberColumn` → Numbers with formatting
 - `ProgressColumn` → Progress bars
 - `SelectboxColumn` → Editable dropdown
@@ -126,9 +128,42 @@ st.dataframe(
 - `TimeColumn` → Time only (no date)
 - `VideoColumn` → Video playback
 
+## Markdown in dataframe cells
+
+Unlike `st.table`, `st.dataframe` and `st.data_editor` cannot render Markdown directly inside cells. Use `st.table` when a small, static table needs visible Markdown formatting in its cells, index labels, or headers.
+
+`MarkdownColumn` does not change the inline cell rendering: the cell still shows the raw Markdown source string. When a user clicks the cell, a detail overlay opens and renders the Markdown. Use `MarkdownColumn` only when showing the raw source in the table and the rendered content on demand is acceptable.
+
+## Colored badges with MultiselectColumn
+
+Use `MultiselectColumn` in a read-only `st.dataframe` to render list values as compact colored badges. This works well for categories, tags, roles, and statuses. Use `color="auto"` for theme-aware categorical colors, a single color for all badges, or a list of colors mapped to `options`.
+
+```python
+df = pd.DataFrame(
+    {
+        "project": ["Atlas", "Beacon", "Comet"],
+        "tags": [["Python", "Data"], ["Frontend"], ["Python", "AI"]],
+    }
+)
+
+st.dataframe(
+    df,
+    column_config={
+        "tags": st.column_config.MultiselectColumn(
+            "Tags",
+            options=["Python", "Data", "Frontend", "AI"],
+            color="auto",
+        ),
+    },
+    hide_index=True,
+)
+```
+
 ## Row actions with ButtonColumn
 
 Use `ButtonColumn` for clickable, per-row actions in `st.dataframe` or `st.data_editor`. The cell value is the button label (supports `:material/...:` icons). A cell holding a **list** renders a dropdown menu of multiple actions.
+
+Prefer `ButtonColumn` over `st.dataframe` row selection when a click should trigger a one-off action for a specific row, such as opening a dialog, showing details, or running an operation. Button clicks are transient and reset after the click-triggered rerun. Row selection represents ongoing state and persists across reruns until the selection is changed or cleared, so reserve it for cases where the app needs to keep track of selected rows.
 
 ```python
 df = pd.DataFrame(
