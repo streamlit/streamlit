@@ -82,11 +82,14 @@ class UploadedFile(io.BytesIO):
         The name of the uploaded file. For directory uploads, this is the path
         of the file relative to the selected directory. The name is provided by
         the user's browser and isn't sanitized. Don't use it directly as a path
-        when writing the file to disk.
+        when writing the file to disk; choose an app-controlled destination
+        instead.
     type : str
         The MIME type of the uploaded file. For user-selected files, this is the
         type reported by the user's browser, or ``"application/octet-stream"``
-        if the browser doesn't report one.
+        if the browser doesn't report one. For ``st.camera_input``, this is
+        ``"image/jpeg"``. For ``st.audio_input`` and ``ChatInputValue.audio``,
+        this is ``"audio/wav"``.
     size : int
         The size of the uploaded file in bytes.
     """
