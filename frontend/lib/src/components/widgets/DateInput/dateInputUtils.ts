@@ -160,21 +160,30 @@ export interface QuickSelectPreset {
 }
 
 /**
- * Whether `label` is ICU's root-locale fallback ("-1 w", "-3 m") rather than
- * usable text. CLDR has no long relative-time data for a long tail of locales
- * (105 language subtags in ICU 76.1), and `Intl.RelativeTimeFormat` then
- * silently emits the root pattern, which reads worse than the English label it
- * replaced. The root pattern always leads with the sign prefix.
+ * ICU's root-locale relative-time pattern: a sign, digits, a space, and a
+ * single unit letter — "-1 w", "-3 m", "-2 y".
  *
- * Applied per label, not per locale: some locales have data for years but not
- * for weeks or months (`yo`), so those lists end up partly translated.
+ * `\p{Nd}` rather than `\d` because the digits follow the locale's numbering
+ * system: `fa` emits "-۱ w", `hi` "-१ w", `ar` "-١ w", `nqo` "-߁ w". An
+ * ASCII-only class would miss four of the five numbering systems in use.
+ */
+const ICU_ROOT_PATTERN = /^-\p{Nd}+ [wmy]$/u
+
+/**
+ * True when ICU emitted its root-locale fallback instead of a real
+ * translation. CLDR lacks long relative-time data for many locales, and
+ * `Intl.RelativeTimeFormat` then prints a signed root pattern that reads worse
+ * than the English label it replaced.
  *
- * Not exact — a few locales ship real translations that also lead with the
- * sign prefix, so those labels get replaced too: four of six for `mi`, one for
- * `ak`. Accepted: a stray leading minus is not worth preserving.
+ * Checked per label, not per locale:
+ * - Some locales have data for years but not weeks (`yo`), so a list can end
+ *   up partly translated.
+ * - Real translations that also start with "-" are kept, not replaced (`mi`
+ *   "-1 wiki i mua", `ak` "-1 bosome a atwam"). Those users get their own
+ *   language, upstream's leading minus and all, in preference to English.
  */
 function isRootFallbackLabel(label: string): boolean {
-  return label.startsWith("-")
+  return ICU_ROOT_PATTERN.test(label)
 }
 
 /** A quick-select preset before its dates are resolved against today. */
@@ -253,18 +262,17 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
   const end = today(getLocalTimeZone())
   const safeLocale = getSafeLocale(locale)
   const language = new Intl.Locale(safeLocale).language
-  // Tags Intl has no data for at all ("und", "zz") would otherwise resolve to
-  // whatever the environment's default locale happens to be, so treat them as
-  // English alongside the en-* locales.
   const hasRelativeTimeData =
     Intl.RelativeTimeFormat.supportedLocalesOf(safeLocale).length > 0
-  // `numeric: "always"` keeps all six labels in one phrasing style. `"auto"`
-  // would localize more of them — `ig` gets three of six instead of zero — but
-  // mixes idiomatic wording, "N units ago" wording, and English in one list.
-  // The cost of "always" is point-in-time wording ("1 week ago") where the
-  // English label names a range ("Past Week"); "auto" would give the idiomatic
-  // "last week" for the three -1 presets.
+  // One phrasing style for all six labels, at the cost of point-in-time
+  // wording ("1 week ago") where English names a range ("Past Week").
+  // - `"auto"` localizes more labels (`ig` gets three of six instead of zero)
+  //   and gives the idiomatic "last week" for the three -1 presets...
+  // - ...but mixes idiomatic, "N units ago", and English wording in one list.
   const relativeTimeFormat =
+    // No data at all ("und", "zz") would otherwise resolve to whatever the
+    // environment's default locale happens to be, so treat those as English
+    // alongside the en-* locales.
     language === "en" || !hasRelativeTimeData
       ? null
       : new Intl.RelativeTimeFormat(safeLocale, {

@@ -920,11 +920,11 @@ describe("DateInput", () => {
       })
 
       it.each([
-        ["ar", "rtl"],
-        ["de", "ltr"],
+        ["rtl", "ar"],
+        ["ltr", "de"],
       ])(
-        "lays the trigger out %s-first regardless of the selected label",
-        async (locale, expectedDir) => {
+        "sets quick-select direction to %s in the %s locale",
+        async (expectedDir, locale) => {
           const user = userEvent.setup()
           const props = getProps({
             isRange: true,
@@ -961,19 +961,25 @@ describe("DateInput", () => {
         })
         render(<DateInput {...props} />)
 
-        await openQuickSelect(user)
-        await user.keyboard("Past Y")
+        try {
+          await openQuickSelect(user)
+          await user.keyboard("Past Y")
 
-        // React Aria derives a ListBoxItem's textValue from *string* children.
-        // Wrapping the label in an element silently empties it, which kills
-        // type-to-select and logs a warning rather than failing anything.
-        expect(
-          await screen.findByRole("option", { name: "Past Year" })
-        ).toHaveFocus()
-        expect(warn).not.toHaveBeenCalledWith(
-          expect.stringContaining("textValue")
-        )
-        warn.mockRestore()
+          // React Aria derives a ListBoxItem's textValue from *string*
+          // children. Wrapping the label in an element silently empties it,
+          // which kills type-to-select and logs a warning rather than failing
+          // anything.
+          expect(
+            await screen.findByRole("option", { name: "Past Year" })
+          ).toHaveFocus()
+          expect(warn).not.toHaveBeenCalledWith(
+            expect.stringContaining("textValue")
+          )
+        } finally {
+          // Restore even on failure: nothing sets restoreMocks, so a leaked
+          // stub would silence console.warn for later tests in this file.
+          warn.mockRestore()
+        }
       })
 
       it("renders preset labels in the app locale", async () => {

@@ -18,7 +18,7 @@ from typing import Any, cast
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import get_date_input
 
 """
@@ -50,8 +50,8 @@ def browser_context_args(
 @pytest.fixture
 def locale(browser_context_args: dict[str, Any]) -> str:
     """The locale the browser context for this test run was created with."""
-    # browser_context_args is dict[str, Any]; the value is a str because the
-    # fixture above put it there.
+    # Playwright types this fixture as dict[str, Any]; this module's
+    # browser_context_args always sets locale to a str.
     return cast("str", browser_context_args["locale"])
 
 
@@ -100,10 +100,8 @@ def test_range_quick_select_rendering(
         "spinbutton"
     ).first.click()
 
-    # The trigger is named after the visible "Date range" row label plus the
-    # selected preset. That label is still English (localizing the popover's
-    # static strings needs a message catalog we don't have), so anchoring on
-    # its prefix keeps this selector stable across locales.
+    # Anchor on the "Date range" prefix: the row label is still English, so a
+    # prefix match is the one selector that holds across all four locales.
     app.get_by_role("button", name=re.compile(r"^Date range")).click()
 
     quick_select_popover = app.get_by_test_id("stDateInputQuickSelectPopover")
@@ -126,4 +124,23 @@ def test_range_quick_select_rendering(
     assert_snapshot(
         quick_select_popover,
         name="st_date_input-range_quick_select",
+    )
+
+    # Select a preset and snapshot the row itself. The dropdown snapshot above
+    # covers the option labels; this covers the other half of the change — the
+    # row's locale-derived direction and the trigger's own label, which is where
+    # a bidi regression would show up (especially for ar-EG).
+    options.first.click()
+    wait_for_app_run(app)
+    date_input.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+
+    quick_select_row = app.get_by_test_id("stDateInputQuickSelect")
+    expect(quick_select_row).to_be_visible()
+    app.wait_for_timeout(500)
+
+    assert_snapshot(
+        quick_select_row,
+        name="st_date_input-range_quick_select_row",
     )

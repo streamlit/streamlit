@@ -376,6 +376,10 @@ describe("getQuickSelectPresets", () => {
     globalThis.Date = RealDate
   })
 
+  // Mirrors ICU_ROOT_PATTERN in dateInputUtils.ts. Matched exactly, so a real
+  // translation that leads with a sign (`mi`, `ak`) is not mistaken for it.
+  const ICU_ROOT_PATTERN = /^-\p{Nd}+ [wmy]$/u
+
   const RELATIVE_TIME_ARGS: [number, Intl.RelativeTimeFormatUnit][] = [
     [-1, "week"],
     [-1, "month"],
@@ -403,39 +407,30 @@ describe("getQuickSelectPresets", () => {
     }
   )
 
-  it.each<[string, string[]]>([
-    [
-      "ja",
-      ["1 週間前", "1 か月前", "3 か月前", "6 か月前", "1 年前", "2 年前"],
-    ],
-    [
-      "de",
-      [
-        "vor 1 Woche",
-        "vor 1 Monat",
-        "vor 3 Monaten",
-        "vor 6 Monaten",
-        "vor 1 Jahr",
-        "vor 2 Jahren",
-      ],
-    ],
-    [
-      "es",
-      [
-        "hace 1 semana",
-        "hace 1 mes",
-        "hace 3 meses",
-        "hace 6 meses",
-        "hace 1 año",
-        "hace 2 años",
-      ],
-    ],
-  ])(
-    "localizes labels via Intl.RelativeTimeFormat for %s",
-    (locale, expected) => {
+  // One locale asserted exactly, as readable documentation of what a
+  // non-English user actually sees. German rather than Japanese because the CJK
+  // strings embed spacing that a CLDR rewording would silently churn.
+  it("localizes labels via Intl.RelativeTimeFormat", () => {
+    expect(getQuickSelectPresets("de").map(p => p.label)).toEqual([
+      "vor 1 Woche",
+      "vor 1 Monat",
+      "vor 3 Monaten",
+      "vor 6 Monaten",
+      "vor 1 Jahr",
+      "vor 2 Jahren",
+    ])
+  })
+
+  // Other well-supported locales are asserted structurally, so a CLDR
+  // rewording cannot break them.
+  it.each(["ja", "es", "pt-BR", "ru"])(
+    "returns six localized labels for %s",
+    locale => {
       const labels = getQuickSelectPresets(locale).map(p => p.label)
-      expect(labels).toEqual(expected)
-      expect(labels).not.toContain("Past Week")
+
+      expect(labels).toHaveLength(EN_LABELS.length)
+      expect(labels.filter(label => EN_LABELS.includes(label))).toEqual([])
+      expect(labels.filter(label => ICU_ROOT_PATTERN.test(label))).toEqual([])
     }
   )
 
@@ -469,7 +464,7 @@ describe("getQuickSelectPresets", () => {
     const labels = getQuickSelectPresets(locale).map(p => p.label)
 
     expect(labels).toHaveLength(EN_LABELS.length)
-    expect(labels.filter(label => label.startsWith("-"))).toEqual([])
+    expect(labels.filter(label => ICU_ROOT_PATTERN.test(label))).toEqual([])
   })
 
   it.each(["yo", "mi", "ak", "ig"])(
@@ -489,9 +484,23 @@ describe("getQuickSelectPresets", () => {
       labels.forEach((label, index) => {
         const icuLabel = icuLabels[index]
         expect(label).toBe(
-          icuLabel.startsWith("-") ? EN_LABELS[index] : icuLabel
+          ICU_ROOT_PATTERN.test(icuLabel) ? EN_LABELS[index] : icuLabel
         )
       })
+    }
+  )
+
+  it.each(["mi", "ak"])(
+    "keeps %s translations that lead with a sign rather than replacing them",
+    locale => {
+      // CLDR gives `mi` "-1 wiki i mua" and `ak` "-1 bosome a atwam" — genuine
+      // translations, not root patterns. Deliberate policy: those users get
+      // their own language, upstream's leading minus and all, over English.
+      const labels = getQuickSelectPresets(locale).map(p => p.label)
+      const signed = labels.filter(label => label.startsWith("-"))
+
+      expect(signed).not.toHaveLength(0)
+      expect(signed.filter(label => ICU_ROOT_PATTERN.test(label))).toEqual([])
     }
   )
 

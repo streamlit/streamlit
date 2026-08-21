@@ -915,6 +915,14 @@ function RangeDateInput({
                 close.
               </StyledVisuallyHidden>
             )}
+            {/* I18nProvider so React Aria uses the sanitized app locale for:
+                - dir on the quick-select dropdown
+                - RTL mapping of its placement ("end" becomes left)
+                - the ListBox type-to-select collator
+                The field above pins en-US, so without this React Aria would
+                read navigator.language — which matches LibConfig.locale in
+                production, but not under getSafeLocale's en-US fallback or in
+                tests that inject a locale. */}
             <I18nProvider locale={safeLocale}>
               <StyledRangeCalendarRoot
                 aria-label="Choose date range"
@@ -944,22 +952,13 @@ function RangeDateInput({
                   </CalendarGridBody>
                 </StyledCalendarGrid>
               </StyledRangeCalendarRoot>
-            </I18nProvider>
-            {enableQuickSelect && quickSelectPresets.length > 0 && (
-              /* The locale from useLocale() drives three things here: the dir
-                 React Aria puts on the dropdown, the RTL translation of
-                 placement ("end" becomes left), and the collator behind the
-                 ListBox's type-to-select. Without this provider it falls back
-                 to navigator.language, which matches the app locale only by
-                 coincidence today. */
-              <I18nProvider locale={safeLocale}>
+              {enableQuickSelect && quickSelectPresets.length > 0 && (
                 <StyledQuickSelectRow
                   ref={quickSelectRef}
-                  /* justifyContent: space-between swaps the label and trigger
-                     for free, which keeps the row consistent with the trigger
-                     and dropdown (both already mirror) and puts the trigger
-                     inboard so the dropdown's RTL "end" alignment extends into
-                     the popover rather than away from it. */
+                  /* RTL mirrors the row for free via the existing
+                     justify-content: space-between (see styled-components.ts),
+                     which keeps the trigger inboard so the dropdown's "end"
+                     alignment extends into the popover. */
                   dir={quickSelectDirection}
                   data-testid="stDateInputQuickSelect"
                 >
@@ -970,13 +969,12 @@ function RangeDateInput({
                     ref={setQuickSelectTrigger}
                     id={quickSelectTriggerId}
                     $isPlaceholder={!activePreset}
-                    /* Names the trigger after the visible row label plus its own
-                       content, so AT announces "Date range, Past Week". A plain
-                       aria-label would override the content and hide which
-                       preset is selected. React Aria's Select solves this by
-                       referencing a separate value element and putting the value
-                       first; a self-reference is equivalent here because the only
-                       other child is the chevron, whose icon is aria-hidden. */
+                    /* Include the visible row label and this button's own
+                       text in the accessible name, giving "Date range Past
+                       Week". The self-reference is what carries the selected
+                       preset — a plain aria-label would override the content
+                       and hide it. The chevron's icon is aria-hidden, so it
+                       contributes nothing. */
                     aria-labelledby={`${quickSelectLabelId} ${quickSelectTriggerId}`}
                     aria-expanded={isQuickSelectOpen}
                     aria-haspopup="listbox"
@@ -1024,8 +1022,8 @@ function RangeDateInput({
                     </div>
                   </StyledDropdownPopover>
                 </StyledQuickSelectRow>
-              </I18nProvider>
-            )}
+              )}
+            </I18nProvider>
           </StyledCalendarPopover>
         </FloatingPortal>
       )}
