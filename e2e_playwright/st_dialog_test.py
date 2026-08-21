@@ -31,6 +31,7 @@ from e2e_playwright.shared.app_utils import (
     get_color_picker,
     get_markdown,
     is_child_bounding_box_inside_parent,
+    open_json_path_tooltip,
     select_selectbox_option,
 )
 from e2e_playwright.shared.dataframe_utils import (
@@ -317,11 +318,7 @@ def test_dialog_allows_interacting_with_json_path_tooltip(app: Page):
 
     json_element = dialog.get_by_test_id("stJson")
     expect(json_element).to_be_visible()
-    string_value = json_element.locator(".string-value").first
-    string_value.click()
-
-    tooltip = app.get_by_test_id("stJsonPathTooltip")
-    expect(tooltip).to_be_visible()
+    tooltip = open_json_path_tooltip(app, json_element)
 
     # The copy button inside the tooltip must be clickable (not inert)
     copy_button = tooltip.get_by_role("button", name="Copy to clipboard")
