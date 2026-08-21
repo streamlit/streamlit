@@ -490,9 +490,9 @@ jobs:
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           echo "" >> review.md
           echo "<!-- streamlit-ai-review run_id=\"$RUN_ID\" timestamp=\"$TIMESTAMP\" -->" >> review.md
-          # Always post as COMMENT — the bot should never formally approve or request
-          # changes on a PR. The verdict is still written to verdict.txt and used for
-          # labeling (e.g. do-not-merge), but the GitHub review event is always COMMENT.
+          # Always post the review body as COMMENT. Formal APPROVE is handled in a later
+          # step for ai-final-review only (never REQUEST_CHANGES). The verdict is still
+          # written to verdict.txt and used for labeling (e.g. do-not-merge).
           EVENT="COMMENT"
 
           # Get head SHA for review API
@@ -585,11 +585,62 @@ jobs:
             exit 0
           fi
 
-          VERDICT=$(cat verdict.txt | tr -d '[:space:]')
+          VERDICT=$(tr -d '[:space:]' < verdict.txt)
           if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
             echo "Adding 'do-not-merge' label"
             gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
           elif [ "$VERDICT" = "APPROVED" ]; then
             echo "Removing 'do-not-merge' label if present"
             gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
+          fi
+
+      # Auto-approve ai-final-review PRs with an APPROVED verdict, except:
+      # - change:spec
+      # - change:feature + impact:users (user-facing features)
+      # Requires "Allow GitHub Actions to create and approve pull requests".
+      # GITHUB_TOKEN approvals do not satisfy required CODEOWNERS reviews.
+      - name: Auto-approve on final review
+        if: needs.parse-models.outputs.has_key == 'true' && needs.parse-models.outputs.trigger_label == 'ai-final-review' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ ! -f verdict.txt ]; then
+            echo "Skipping auto-approve: verdict.txt not found"
+            exit 0
+          fi
+
+          VERDICT=$(tr -d '[:space:]' < verdict.txt)
+          if [ "$VERDICT" != "APPROVED" ]; then
+            echo "Skipping auto-approve: verdict is '$VERDICT' (expected APPROVED)"
+            exit 0
+          fi
+
+          if ! LABELS=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '[.labels[].name]'); then
+            echo "::warning::Failed to fetch PR labels, skipping auto-approve"
+            exit 0
+          fi
+          echo "PR labels: $LABELS"
+
+          if ! echo "$LABELS" | jq -e 'type == "array"' >/dev/null; then
+            echo "::warning::Could not parse PR labels, skipping auto-approve"
+            exit 0
+          fi
+
+          if echo "$LABELS" | jq -e 'index("change:spec") != null' >/dev/null; then
+            echo "Skipping auto-approve: PR is labeled change:spec"
+            exit 0
+          fi
+
+          HAS_FEATURE=$(echo "$LABELS" | jq 'index("change:feature") != null')
+          HAS_USERS=$(echo "$LABELS" | jq 'index("impact:users") != null')
+          if [ "$HAS_FEATURE" = "true" ] && [ "$HAS_USERS" = "true" ]; then
+            echo "Skipping auto-approve: PR is labeled change:feature and impact:users"
+            exit 0
+          fi
+
+          echo "Auto-approving PR #$PR_NUMBER_ENV based on AI final review verdict"
+          if ! gh pr review "$PR_NUMBER_ENV" --repo "$REPOSITORY" --approve --body "Auto-approved by AI final review."; then
+            echo "::warning::Failed to auto-approve PR. Ensure 'Allow GitHub Actions to create and approve pull requests' is enabled."
           fi
