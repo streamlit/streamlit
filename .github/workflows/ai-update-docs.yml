@@ -115,16 +115,18 @@ jobs:
           SINCE_DATE=$(date -u -d "$RECENT_CHANGES_DAYS days ago" +%Y-%m-%d)
           echo "since_date=$SINCE_DATE" >> "$GITHUB_OUTPUT"
 
-          gh pr list \
+          if ! gh pr list \
             --repo "$REPOSITORY" \
             --state merged \
             --base develop \
-            --search "merged:>=$SINCE_DATE sort:updated-desc" \
+            --search "merged:>=$SINCE_DATE sort:merged-desc" \
             --limit 100 \
             --json number,title,url,mergedAt,author,labels,changedFiles,additions,deletions \
             | jq 'sort_by(.mergedAt) | reverse' \
-            > work-tmp/recent-merged-prs.json \
-            || echo '[]' > work-tmp/recent-merged-prs.json
+            > work-tmp/recent-merged-prs.json; then
+            echo "::warning::Failed to list recently merged PRs; continuing with an empty list."
+            echo '[]' > work-tmp/recent-merged-prs.json
+          fi
 
           PR_COUNT=$(jq 'length' work-tmp/recent-merged-prs.json)
           echo "pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"

@@ -1434,10 +1434,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_time_input",
             user_key=key,
-            # When a key is set, format and step stay in the widget identity.
-            # A stored datetime cannot be reinterpreted under a new date
-            # pattern (01/02 is Jan 2 vs Feb 1). A new step invalidates the
-            # current selection.
+            # When a key is set, format and step stay in the widget identity,
+            # so a format change resets the widget and a new step invalidates
+            # the current selection.
             key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
@@ -1942,9 +1941,8 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            # When a key is set, only format stays in the widget identity.
-            # A stored date cannot be reinterpreted under a new pattern
-            # (01/02/2024 is Jan 2 vs Feb 1). min_value and max_value can
+            # When a key is set, only format stays in the widget identity, so a
+            # format change resets the widget. min_value and max_value can
             # change without remounting.
             key_as_main_identity={"format"},
             dg=self.dg,
