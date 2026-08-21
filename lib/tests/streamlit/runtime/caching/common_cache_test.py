@@ -61,7 +61,7 @@ from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def get_text_or_block(delta):
@@ -1211,7 +1211,7 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
     )
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_hard_expiry_blocks_foreground(self, _, cache_decorator, timer_patch: Mock):
-        """Past 2*ttl the entry is a hard miss: a blocking foreground recompute, no stale serve."""
+        """Past the default 2*ttl hard bound, the call blocks and recomputes."""
         call_count = [0]
 
         @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
@@ -1228,6 +1228,82 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
             assert foo() == 2
             # A hard miss is not a stale serve, so no background refresh is triggered.
             submit_mock.assert_not_called()
+
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_configured_multiplier_extends_hard_expiry(
+        self, _name: str, cache_decorator: Any, timer_patch: Mock
+    ) -> None:
+        """A larger multiplier serves stale beyond 2*ttl until its new hard bound."""
+        call_count = [0]
+
+        with patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": 4.0}):
+
+            @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+            def foo() -> int:
+                call_count[0] += 1
+                return call_count[0]
+
+            timer_patch.return_value = 0
+            assert foo() == 1
+
+            # Fail the refresh so the stale value stays cached past 2*ttl.
+            with patch.object(
+                cache_background_refresh.get_background_refresh_manager(),
+                "submit",
+                return_value=False,
+            ) as submit_mock:
+                timer_patch.return_value = _BG_TTL * 2.5
+                assert foo() == 1
+                submit_mock.assert_called_once()
+                assert call_count[0] == 1
+
+                submit_mock.reset_mock()
+                timer_patch.return_value = _BG_TTL * 4 + 1
+                assert foo() == 2
+                submit_mock.assert_not_called()
+
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_configured_multiplier_can_shorten_hard_expiry(
+        self, _name: str, cache_decorator: Any, timer_patch: Mock
+    ) -> None:
+        """A multiplier below 2.0 hard-expires before the default 2*ttl bound."""
+        call_count = [0]
+
+        with patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": 1.5}):
+
+            @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+            def foo() -> int:
+                call_count[0] += 1
+                return call_count[0]
+
+            timer_patch.return_value = 0
+            assert foo() == 1
+
+            # Fail the refresh so the stale value stays until hard expiry.
+            with patch.object(
+                cache_background_refresh.get_background_refresh_manager(),
+                "submit",
+                return_value=False,
+            ) as submit_mock:
+                timer_patch.return_value = _BG_TTL * 1.25
+                assert foo() == 1
+                submit_mock.assert_called_once()
+                assert call_count[0] == 1
+
+                submit_mock.reset_mock()
+                timer_patch.return_value = _BG_TTL * 1.75
+                assert foo() == 2
+                submit_mock.assert_not_called()
 
         assert call_count[0] == 2
 

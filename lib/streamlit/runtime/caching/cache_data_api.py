@@ -195,15 +195,7 @@ class DataCaches(StatsProvider):
             context.
         """
 
-        # The user-facing freshness ttl. In background mode the underlying storage uses
-        # a hard-eviction ttl of 2*ttl and tracks freshness separately via stored_at.
         fresh_ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
-        if refresh_mode == "background" and fresh_ttl_seconds is not None:
-            hard_ttl_seconds: float | None = (
-                fresh_ttl_seconds * cache_utils.BACKGROUND_REFRESH_TTL_MULTIPLIER
-            )
-        else:
-            hard_ttl_seconds = fresh_ttl_seconds
 
         # Fetch the session ID. Note that this will throw an exception if there is no
         # session associated with the current thread.
@@ -253,6 +245,10 @@ class DataCaches(StatsProvider):
                 persist,
                 max_entries,
                 ttl,
+            )
+
+            hard_ttl_seconds = cache_utils._hard_ttl_seconds(
+                refresh_mode, fresh_ttl_seconds
             )
 
             cache_context = self.create_cache_storage_context(
@@ -597,9 +593,11 @@ class CacheDataAPI:
               runs the cached function synchronously. The app rerun waits until the new
               value is ready.
             - ``"background"``: Return the expired value immediately and update it in
-              the background. Streamlit can keep returning the expired value for up to
-              one additional ``ttl``. After that, the next call waits for a new value.
-              This mode requires a ``ttl`` and can't be used with ``persist``.
+              the background. Streamlit can keep returning the expired value until
+              the hard-expiration bound, which is ``ttl`` multiplied by the
+              ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option
+              (default ``2.0``). After that bound, the next call waits for a new
+              value. This mode requires a ``ttl`` and can't be used with ``persist``.
 
             .. note::
                 A function that refreshes in the background can't use session-specific
@@ -782,8 +780,8 @@ class DataCache(Cache[R]):
         self.key = key
         self.display_name = display_name
         self.storage = storage
-        # In background mode this is the hard-eviction bound (2*ttl); freshness within
-        # the fresh window is tracked separately via CachedResult.stored_at.
+        # In background mode this is the configured hard-expiration bound; freshness
+        # within the fresh window is tracked separately via CachedResult.stored_at.
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.persist = persist
@@ -831,7 +829,7 @@ class DataCache(Cache[R]):
             raise CacheError(f"Failed to unpickle {value_key}") from exc
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
-        """Whether a present entry is in the stale grace window ``[ttl, 2*ttl)``."""
+        """Whether a present entry is past its freshness TTL but not yet hard-expired."""
         if (
             self.refresh_mode != "background"
             or result.stored_at is None

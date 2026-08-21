@@ -298,12 +298,14 @@ Keep these caveats in mind:
 - **This does not refresh before the TTL.** Calls made while the entry is fresh return the
   current value without executing the cached function. Polling controls how soon the server
   notices expiration and triggers background refresh.
-- **Poll comfortably below `ttl`.** Background refresh serves the stale value for only one
-  extra `ttl`; past `2 × ttl` the entry is hard-evicted and the next call (including a
-  scheduled touch) blocks on a foreground recompute. Keep the interval well under `ttl` (not
-  just under `2 × ttl`) so several touches land in the `[ttl, 2 × ttl)` grace window, giving
-  the scheduler multiple chances to trigger a refresh before hard eviction if a touch is
-  delayed or a refresh runs long.
+- **Poll comfortably below `ttl`.** By default, background refresh serves the stale value for
+  one extra `ttl`; past `2 × ttl` the entry is hard-evicted and the next call (including a
+  scheduled touch) blocks on a foreground recompute. The
+  `runner.cacheBackgroundRefreshTTLMultiplier` configuration option changes that process-wide
+  hard-expiration bound to `M × ttl` for a multiplier `M` greater than `1.0`. Keep the polling
+  interval well under `ttl` so several touches land in the stale grace window, giving the
+  scheduler multiple chances to trigger a refresh before hard eviction if a touch is delayed
+  or a refresh runs long.
 - **Stale values remain possible.** The scheduled touch preserves the last good value while
   refreshing, but users can receive it until the refresh completes. If uninterrupted,
   atomically replaced fresh reads are required, refresh a shared external store instead.

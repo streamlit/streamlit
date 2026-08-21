@@ -785,6 +785,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.level",
                 "logger.messageFormat",
                 "runner.cacheBackgroundRefreshMaxWorkers",
+                "runner.cacheBackgroundRefreshTTLMultiplier",
                 "runner.cacheHashSeed",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
@@ -1062,6 +1063,14 @@ class ConfigTest(unittest.TestCase):
         assert option.default_val == []
         assert option.visibility == "hidden"
         assert config.get_option("server.unsafeMetricsUserAttributes") == []
+
+    def test_cache_background_refresh_ttl_multiplier_option_attrs(self) -> None:
+        """The background-refresh TTL multiplier is visible and defaults to 2.0."""
+        option = config._config_options["runner.cacheBackgroundRefreshTTLMultiplier"]
+        assert option.default_val == 2.0
+        assert option.type is float
+        assert option.visibility == "visible"
+        assert config.get_option("runner.cacheBackgroundRefreshTTLMultiplier") == 2.0
 
     def test_unsafe_metrics_user_attributes_parses_from_toml(self):
         toml_content = """

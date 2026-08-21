@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import inspect
+import math
 import threading
 import time
 from abc import abstractmethod
@@ -92,9 +93,13 @@ CacheScope: TypeAlias = Literal["global", "session"]
 # How a cache entry is refreshed once its ttl expires.
 RefreshMode: TypeAlias = Literal["foreground", "background"]
 
-# The hard-expiration TTL for background refresh caches is this multiple of the
-# user-facing freshness TTL.
-BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2
+# Default hard-expiration multiplier for background-refresh caches.
+# Hard TTL is ttl multiplied by this value.
+_DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2.0
+
+# Values already warned about. Many cached functions can be created under one
+# misconfiguration, so warning unconditionally would flood the log.
+_warned_background_refresh_ttl_multipliers: Final[set[str]] = set()
 
 # How long (in seconds) to wait before retrying a background refresh after a failure,
 # so a persistently failing upstream isn't retried on every rerun.
@@ -105,13 +110,87 @@ _FAILURE_COOLDOWN_SECONDS: Final = 60.0
 class CacheReadResult(Generic[R]):
     """The result of a cache read together with its freshness.
 
-    ``is_stale`` is only ever ``True`` for ``refresh_mode="background"`` caches when
-    the entry is within the stale grace window ``[ttl, 2*ttl)``. Fresh hits and any
-    foreground-mode read report ``is_stale=False``.
+    ``is_stale`` is ``True`` only when a ``refresh_mode="background"`` entry is past
+    its freshness TTL but still within the configured hard-expiration TTL. Fresh hits
+    and foreground-mode reads report ``is_stale=False``.
     """
 
     result: CachedResult[R]
     is_stale: bool
+
+
+def _warn_unusable_background_refresh_ttl_multiplier(configured: object) -> None:
+    """Warn that the TTL multiplier is being ignored, once per distinct value.
+
+    Keyed on the repr so a quoted and an unquoted TOML value are reported as the
+    user wrote them, and so an unhashable value cannot raise from here.
+    """
+    key = repr(configured)
+    if key in _warned_background_refresh_ttl_multipliers:
+        return
+    _warned_background_refresh_ttl_multipliers.add(key)
+    _LOGGER.warning(
+        "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: it must be a "
+        "finite number greater than 1.0 and produce a finite hard-expiration TTL. "
+        "Falling back to the default multiplier of %s.",
+        key,
+        _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER,
+    )
+
+
+def _get_background_refresh_ttl_multiplier() -> float:
+    """Return a valid hard-expiration multiplier for background caches.
+
+    Invalid values fall back to the default so malformed configuration cannot break
+    cache creation or make the hard TTL shorter than the freshness TTL.
+    """
+    from streamlit import config
+
+    configured = config.get_option("runner.cacheBackgroundRefreshTTLMultiplier")
+    try:
+        multiplier = float(configured)
+    except (TypeError, ValueError, OverflowError):
+        multiplier = None
+
+    if multiplier is None or not math.isfinite(multiplier) or multiplier <= 1.0:
+        _warn_unusable_background_refresh_ttl_multiplier(configured)
+        return _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER
+
+    return multiplier
+
+
+def _get_background_refresh_hard_ttl(fresh_ttl_seconds: float) -> float:
+    """Return the configured hard-expiration TTL for a background cache."""
+    multiplier = _get_background_refresh_ttl_multiplier()
+    hard_ttl_seconds = fresh_ttl_seconds * multiplier
+    # A huge-but-finite multiplier can overflow the product to inf.
+    if math.isfinite(fresh_ttl_seconds) and not math.isfinite(hard_ttl_seconds):
+        _warn_unusable_background_refresh_ttl_multiplier(multiplier)
+        return fresh_ttl_seconds * _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER
+    return hard_ttl_seconds
+
+
+@overload
+def _hard_ttl_seconds(refresh_mode: RefreshMode, fresh_ttl_seconds: float) -> float: ...
+
+
+@overload
+def _hard_ttl_seconds(
+    refresh_mode: RefreshMode, fresh_ttl_seconds: float | None
+) -> float | None: ...
+
+
+def _hard_ttl_seconds(
+    refresh_mode: RefreshMode, fresh_ttl_seconds: float | None
+) -> float | None:
+    """Return the eviction TTL for a cache.
+
+    Background caches use a later hard-expiration TTL so stale values can still be
+    served while a refresh runs. Foreground caches use the freshness TTL as-is.
+    """
+    if refresh_mode != "background" or fresh_ttl_seconds is None:
+        return fresh_ttl_seconds
+    return _get_background_refresh_hard_ttl(fresh_ttl_seconds)
 
 
 def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
@@ -227,8 +306,8 @@ class Cache(Generic[R]):
         """Read a value together with its freshness.
 
         Delegates to ``read_result`` and to ``_is_stale``. Foreground caches are never
-        stale; background-mode caches override ``_is_stale`` to detect entries in the
-        stale grace window ``[ttl, 2*ttl)``.
+        stale; background-mode caches override ``_is_stale`` to detect entries that are
+        past their freshness TTL but not yet hard-expired.
 
         Raises
         ------
@@ -244,7 +323,7 @@ class Cache(Generic[R]):
         """Whether a present entry is past its fresh ttl.
 
         Always ``False`` for foreground caches. Background-mode caches override this to
-        report entries in the stale grace window ``[ttl, 2*ttl)``.
+        report entries that are past their freshness TTL but not yet hard-expired.
         """
         return False
 
