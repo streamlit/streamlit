@@ -120,6 +120,8 @@ Note: `rainbow` is not supported for backgrounds or badges. Standalone badges al
 
 Use Google Material Symbols with `:material/icon_name:` syntax. Find icons at [fonts.google.com/icons](https://fonts.google.com/icons)
 
+Full list of icons available in Streamlit: [material_icon_names.py](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py)
+
 ```python
 st.markdown(":material/check_circle: Complete")
 ```
