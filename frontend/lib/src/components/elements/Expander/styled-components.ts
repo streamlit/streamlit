@@ -211,6 +211,12 @@ function getSummaryStyle(
           // On hover, remove opacity for normal appearance (no background)
           opacity: 1,
         },
+        // Parent opacity cannot be undone from inside `:shimmer[]`, and the
+        // sweep is unreadable if it is stacked with this mute. While the label
+        // is shimmering, drop the compact fade so the animation can read.
+        "&:has(.stMarkdownShimmer)": {
+          opacity: 1,
+        },
       }
     default:
       return {

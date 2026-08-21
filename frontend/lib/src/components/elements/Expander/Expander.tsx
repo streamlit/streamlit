@@ -225,10 +225,18 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // A step without content has nothing to reveal, so it stays a plain header.
   const isCollapsible = !isStep || !empty
 
+  // Compact + shimmer: the sweep is the in-progress cue (see compact summary
+  // styles). A leading spinner next to it is a second loading indicator on an
+  // already-minimal header.
+  const hideCompactSpinnerForShimmer =
+    isCompact && icon === "spinner" && label.includes(":shimmer[")
+
   // Leading icon logic: normal mode swaps between chevron and user icon on hover;
   // compact mode always shows user icon (if any) since the chevron is trailing.
   const showLeadingChevron = !isCompact && (!icon || isHovered)
-  const showLeadingUserIcon = isCompact ? Boolean(icon) : icon && !isHovered
+  const showLeadingUserIcon = isCompact
+    ? Boolean(icon) && !hideCompactSpinnerForShimmer
+    : icon && !isHovered
 
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({

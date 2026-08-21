@@ -389,13 +389,14 @@ export const StyledStreamlitMarkdown =
         },
 
         // Shimmer animation for loading/thinking text. Uses mask-image with an
-        // animated gradient to fade text opacity in and out. The shimmer uses
-        // fadedText60 as its base color. When nesting with color directives:
+        // animated gradient to fade text opacity in and out. The element's
+        // color is the brightest the mask can get, so inherit the surrounding
+        // text instead of pinning fadedText60 (which would make the whole
+        // sweep sit in a muted range). When nesting with color directives:
         // - :shimmer[:red[text]] - inner color wins (displays red)
-        // - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
+        // - :red[:shimmer[text]] - shimmer inherits the red
         "span.stMarkdownShimmer": {
-          // Use theme's secondary text color for shimmer text
-          color: theme.colors.fadedText60,
+          color: "inherit",
           // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
           maskImage: `linear-gradient(
             90deg,

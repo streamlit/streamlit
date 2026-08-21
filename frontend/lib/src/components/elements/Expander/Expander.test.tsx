@@ -549,6 +549,37 @@ describe("compact mode (type=COMPACT)", () => {
     expect(screen.getByTestId("stExpanderIcon")).toBeVisible()
     expect(screen.getByText("psychology")).toBeVisible()
   })
+
+  it("hides the compact spinner when the label uses :shimmer[]", () => {
+    const props = getProps({
+      icon: "spinner",
+      label: ":shimmer[Thinking]",
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(
+      screen.queryByTestId("stExpanderIconSpinner")
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("Thinking")).toBeVisible()
+  })
+
+  it("keeps the compact spinner when the label does not shimmer", () => {
+    const props = getProps({
+      icon: "spinner",
+      label: "Thinking",
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIconSpinner")).toBeVisible()
+  })
 })
 
 describe("step mode (type=STEP)", () => {
