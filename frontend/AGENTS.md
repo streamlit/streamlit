@@ -62,6 +62,12 @@
   - Don't remove focus outlines without replacing them. Prefer `:focus-visible` styles and use `theme.shadows` values for consistent rings.
 - **Keyboard dismissal shouldn’t steal focus**: Popovers/tooltips/dialogs should support Escape to dismiss while keeping focus on the trigger unless there’s a strong reason to move it.
 
+## Floating Portals
+
+- **Always pass an `id` to `<FloatingPortal>`**: A bare `<FloatingPortal>` appends a new `<div>` directly to `document.body`. React Aria’s `ModalOverlay` (used by `st.dialog` and other modal contexts) marks every other child of `document.body` as `inert`, which blocks interaction, prevents focus, and hides the content from assistive technology. Default to `id={FLOATING_OVERLAY_PORTAL_ID}` (from `~lib/components/core/Portal/constants`) so the portal renders inside the shared host that carries `data-react-aria-top-layer`.
+  - Exception: dataframe overlays use `DataFrameOverlayPortal` (`DATAFRAME_PORTAL_ID`), which glide-data-grid requires by name.
+  - Exception: app-chrome menus (`MainMenu`, `TopNavSection`) use a bare `<FloatingPortal>` because they are never opened from inside a dialog.
+
 ## Logging
 
 - Use `loglevel`'s `getLogger` for logging (e.g. warnings / errors). Create a module-level `LOG` constant with a descriptive name:
