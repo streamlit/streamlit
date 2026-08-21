@@ -626,6 +626,7 @@ jobs:
       # Auto-approve ai-final-review PRs with an APPROVED verdict, except:
       # - change:spec (always needs a human, regardless of impact)
       # - change:feature + impact:users (new user-facing features)
+      # - more than 1000 changed lines (additions + deletions)
       # Bugfixes, chores, docs, and other impact:users PRs stay eligible:
       # they are lower-risk than new user-facing features and benefit most
       # from the speedup. Skip if PR HEAD has moved since the agents reviewed
@@ -693,6 +694,19 @@ jobs:
           HAS_USERS=$(echo "$LABELS" | jq 'index("impact:users") != null')
           if [ "$HAS_FEATURE" = "true" ] && [ "$HAS_USERS" = "true" ]; then
             echo "Skipping auto-approve: PR is labeled change:feature and impact:users"
+            exit 0
+          fi
+
+          ADDITIONS=$(echo "$PR_JSON" | jq -r '.additions')
+          DELETIONS=$(echo "$PR_JSON" | jq -r '.deletions')
+          if ! [[ "$ADDITIONS" =~ ^[0-9]+$ && "$DELETIONS" =~ ^[0-9]+$ ]]; then
+            echo "::warning::Could not parse PR line counts, skipping auto-approve"
+            exit 0
+          fi
+          CHANGED_LINES=$((ADDITIONS + DELETIONS))
+          echo "PR changed lines: $CHANGED_LINES (additions=$ADDITIONS, deletions=$DELETIONS)"
+          if [ "$CHANGED_LINES" -gt 1000 ]; then
+            echo "Skipping auto-approve: PR has $CHANGED_LINES changed lines (limit 1000)"
             exit 0
           fi
 
