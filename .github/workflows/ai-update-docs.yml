@@ -119,10 +119,12 @@ jobs:
             --repo "$REPOSITORY" \
             --state merged \
             --base develop \
-            --search "merged:>=$SINCE_DATE" \
+            --search "merged:>=$SINCE_DATE sort:updated-desc" \
             --limit 100 \
             --json number,title,url,mergedAt,author,labels,changedFiles,additions,deletions \
-            > work-tmp/recent-merged-prs.json
+            | jq 'sort_by(.mergedAt) | reverse' \
+            > work-tmp/recent-merged-prs.json \
+            || echo '[]' > work-tmp/recent-merged-prs.json
 
           PR_COUNT=$(jq 'length' work-tmp/recent-merged-prs.json)
           echo "pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"

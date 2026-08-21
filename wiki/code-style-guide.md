@@ -52,7 +52,7 @@ This means you should always have logs, warnings, errors, and notices end up in
   - All styled components begin with the word `Styled` to indicate it's a styled component.
   - We use [Object Styles](https://emotion.sh/docs/object-styles) where possible to leverage TypeScript's benefits.
   - Utilize props in styled components to display elements that may have some interactivity.
-  - Never use `data-testid` attributes as CSS selectors in production code. Test IDs are exclusively for unit and E2E testing.
+  - Never use `data-testid` attributes as CSS selectors in production code. Test IDs are not a styling hook.
   - Where possible, avoid the need to [target other components](https://emotion.sh/docs/styled#targeting-another-emotion-component). Sometimes, targeting outside components is necessary, but we want to try to avoid the interconnectedness between these components where possible.
   - Use the theme everywhere. Each styled component has a function input with a `theme` parameter (in addition to any props). The theme argument will be equivalent in structure to the main theme. Use the proper values that match the color/spacing/sizing/font style you are looking for.
   - Sometimes, the theme won't provide a valid value. That is fine, hard-code the value if needed in either the Theme (if it can be generalized) or in the styled component (if it is a special case)

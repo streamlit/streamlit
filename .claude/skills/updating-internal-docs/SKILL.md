@@ -33,8 +33,9 @@ Priority files (most likely to contain codebase-specific instructions):
 - `.github/copilot-instructions.md`
 - `.github/instructions/*.md`
 - `.cursor/rules/*.mdc`
+- `.claude/agents/reviewing-local-changes.md` from `## Review Checklist` onward (generated from `scripts/assets/code-review-instructions.md`)
 
-If you edit a source `AGENTS.md`, run `uv run python scripts/generate_agent_rules.py` so generated copies stay in sync.
+If you edit a source `AGENTS.md` or `scripts/assets/code-review-instructions.md`, run `uv run python scripts/generate_agent_rules.py` so generated copies stay in sync.
 
 ## Verification checklist
 

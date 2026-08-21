@@ -60,7 +60,7 @@ Changes to these high-fan-out internals can affect every message, delta, element
 - Utilize props in styled components to display elements that may have some interactivity.
 - Avoid the need to target other components.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
-- **Never use `data-testid` attributes as CSS selectors in production code**: Test IDs are exclusively for unit and E2E testing. Use styled components, props, semantic selectors, or dedicated CSS classes for production styling.
+- **Never use `data-testid` attributes as CSS selectors in production code**: Test IDs are not a styling hook. Use styled components, props, semantic selectors, or dedicated CSS classes for production styling.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
 
 ## Accessibility (a11y) Guidelines (must-follow)

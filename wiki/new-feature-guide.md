@@ -19,7 +19,7 @@ New features should include:
 
 2. **Backend** in `lib/streamlit/`
    - New elements: add to `lib/streamlit/__init__.py`
-   - Public `st.*` commands: decorate with `gather_metrics`. Use it only for those public APIs, not internal helpers.
+   - Public `st.*` commands: decorate with `gather_metrics`. Do not add it to internal helpers, except where an internal function is the single instrumentation point for a public command.
 
 3. **Python unit tests** in `lib/tests`
    - Run: `uv run pytest lib/tests/streamlit/the_test_name.py`
