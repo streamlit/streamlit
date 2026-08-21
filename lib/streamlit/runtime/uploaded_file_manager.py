@@ -59,12 +59,21 @@ class DeletedFile(NamedTuple):
 
 
 class UploadedFile(io.BytesIO):
-    """A mutable uploaded file.
+    """A file uploaded through a Streamlit input widget.
 
-    To use this type in an annotation, import it from ``streamlit.typing``.
+    ``UploadedFile`` is a subclass of ``io.BytesIO`` and therefore supports
+    Python's file-like interface. You can pass it anywhere a file-like object is
+    accepted. To use this type in an annotation, import it from
+    ``streamlit.typing``.
 
-    This class extends BytesIO, which has copy-on-write semantics when
-    initialized with `bytes`.
+    Attributes
+    ----------
+    name : str
+        The name of the uploaded file.
+    type : str
+        The MIME type of the uploaded file.
+    size : int
+        The size of the uploaded file in bytes.
     """
 
     def __init__(self, record: UploadedFileRec, file_urls: FileURLsProto) -> None:
