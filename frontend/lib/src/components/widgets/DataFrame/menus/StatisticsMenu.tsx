@@ -296,6 +296,7 @@ function StatisticsMenu({
               Allows keyboard users to navigate the parent column menu while
               viewing statistics. */}
           <StyledSubMenuPanel
+            className="stDataFrameStatisticsMenu"
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameStatisticsMenu"

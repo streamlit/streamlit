@@ -479,7 +479,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
-      insideSubMenu.setAttribute("data-testid", "stDataFrameStatisticsMenu")
+      insideSubMenu.className = "stDataFrameStatisticsMenu"
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
 
@@ -488,8 +488,8 @@ describe("DataFrame ColumnMenu", () => {
 
         expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
       } finally {
-        // Always remove the node so a failed assertion can't leak a
-        // testid-bearing element into subsequent tests.
+        // Always detach the synthetic node so a failed assertion cannot leak
+        // it into later tests.
         insideSubMenu.remove()
       }
     })
@@ -519,10 +519,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
-      insideSubMenu.setAttribute(
-        "data-testid",
-        "stDataFrameColumnFormattingMenu"
-      )
+      insideSubMenu.className = "stDataFrameColumnFormattingMenu"
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
 
@@ -531,8 +528,8 @@ describe("DataFrame ColumnMenu", () => {
 
         expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
       } finally {
-        // Always remove the node so a failed assertion can't leak a
-        // testid-bearing element into subsequent tests.
+        // Always detach the synthetic node so a failed assertion cannot leak
+        // it into later tests.
         insideSubMenu.remove()
       }
     })
@@ -558,12 +555,12 @@ describe("DataFrame ColumnMenu", () => {
   describe("click-outside sub-menu guard", () => {
     it.each(["stDataFrameStatisticsMenu", "stDataFrameColumnFormattingMenu"])(
       "does not close the menu on pointer down inside a %s sub-menu",
-      async testId => {
+      async className => {
         const user = userEvent.setup()
         render(<ColumnMenu {...defaultProps} />)
 
         const subMenuNode = document.createElement("div")
-        subMenuNode.setAttribute("data-testid", testId)
+        subMenuNode.className = className
         document.body.appendChild(subMenuNode)
 
         try {
@@ -571,9 +568,9 @@ describe("DataFrame ColumnMenu", () => {
 
           expect(defaultProps.onCloseMenu).not.toHaveBeenCalled()
         } finally {
-          // Always remove the node so a failed assertion can't leak a
-          // testid-bearing element into subsequent tests.
-          document.body.removeChild(subMenuNode)
+          // Always detach the synthetic node so a failed assertion cannot leak
+          // it into later tests.
+          subMenuNode.remove()
         }
       }
     )

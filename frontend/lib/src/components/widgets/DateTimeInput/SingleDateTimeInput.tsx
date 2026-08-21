@@ -304,7 +304,7 @@ function SingleDateTimeInput({
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year picker popover so Escape closes it first, not the whole calendar.
-      excludeSelectors: ['[data-testid="stDateInputHeaderPickerPopover"]'],
+      excludeSelectors: [".stDateInputHeaderPickerPopover"],
       excludeEscape: true,
     })
 

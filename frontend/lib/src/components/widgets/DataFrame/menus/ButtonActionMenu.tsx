@@ -67,7 +67,9 @@ function ButtonActionMenu({
     isOpen: true,
     onClose: onCloseMenu,
     floatingSetFn: refs.setFloating,
-    excludeSelectors: ['[data-testid="stDataFrameButtonActionMenuTarget"]'],
+    // The invisible floating-ui reference sits outside the menu panel.
+    // Match its production class so clicks on it do not count as outside.
+    excludeSelectors: [".stDataFrameButtonActionMenuTarget"],
   })
 
   // Close menu on any scroll in the document (fixed positioning would misalign
@@ -121,6 +123,7 @@ function ButtonActionMenu({
        * Its position (top/left from canvas coords) determines where the menu appears.
        */}
       <div
+        className="stDataFrameButtonActionMenuTarget"
         ref={refs.setReference}
         data-testid="stDataFrameButtonActionMenuTarget"
         style={{

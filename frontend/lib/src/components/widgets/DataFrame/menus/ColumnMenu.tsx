@@ -143,9 +143,11 @@ function ColumnMenu({
     isOpen: true,
     onClose: onCloseMenu,
     floatingSetFn: refs.setFloating,
+    // Portal sub-menus render outside this panel. Match their production
+    // classes so outside-click does not close the column menu.
     excludeSelectors: [
-      '[data-testid="stDataFrameColumnFormattingMenu"]',
-      '[data-testid="stDataFrameStatisticsMenu"]',
+      ".stDataFrameColumnFormattingMenu",
+      ".stDataFrameStatisticsMenu",
     ],
   })
 
@@ -267,11 +269,9 @@ function ColumnMenu({
                     onFocus={() => handleStatsOpenChange(true)}
                     onBlur={e => {
                       if (pointerDownRef.current) return
-                      const related = e.relatedTarget
+                      // Keep the sub-menu open when focus moves into its portal panel.
                       if (
-                        related?.closest(
-                          '[data-testid="stDataFrameStatisticsMenu"]'
-                        )
+                        e.relatedTarget?.closest(".stDataFrameStatisticsMenu")
                       ) {
                         return
                       }
@@ -313,10 +313,10 @@ function ColumnMenu({
                   onFocus={() => handleFormatOpenChange(true)}
                   onBlur={e => {
                     if (pointerDownRef.current) return
-                    const related = e.relatedTarget
+                    // Keep the sub-menu open when focus moves into its portal panel.
                     if (
-                      related?.closest(
-                        '[data-testid="stDataFrameColumnFormattingMenu"]'
+                      e.relatedTarget?.closest(
+                        ".stDataFrameColumnFormattingMenu"
                       )
                     ) {
                       return

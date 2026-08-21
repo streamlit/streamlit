@@ -49,6 +49,7 @@ describe("ButtonActionMenu", () => {
     render(<ButtonActionMenu {...defaultProps} />)
 
     const menuTarget = screen.getByTestId("stDataFrameButtonActionMenuTarget")
+    expect(menuTarget).toHaveClass("stDataFrameButtonActionMenuTarget")
     expect(menuTarget).toHaveStyle("position: fixed")
     expect(menuTarget).toHaveStyle("top: 100px")
     expect(menuTarget).toHaveStyle("left: 200px")

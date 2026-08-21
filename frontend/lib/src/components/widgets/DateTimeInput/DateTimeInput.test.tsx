@@ -139,6 +139,18 @@ describe("DateTimeInput widget", () => {
     expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
   })
 
+  it("renders the calendar header picker with the overlay-dismissal class", async () => {
+    const user = userEvent.setup()
+    render(<DateTimeInput {...getProps()} />)
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    await user.click(screen.getByRole("button", { name: "month" }))
+
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
+      "stDateInputHeaderPickerPopover"
+    )
+  })
+
   it("calendar selection stays open and commits on close", async () => {
     const user = userEvent.setup()
     const props = getProps({

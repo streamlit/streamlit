@@ -416,9 +416,11 @@ function RangeDateInput({
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
+      // Exclude the month/year and quick-select popovers so Escape closes
+      // them first, not the whole calendar.
       excludeSelectors: [
-        '[data-testid="stDateInputHeaderPickerPopover"]',
-        '[data-testid="stDateInputQuickSelectPopover"]',
+        ".stDateInputHeaderPickerPopover",
+        ".stDateInputQuickSelectPopover",
       ],
       excludeEscape: true,
     })
@@ -951,6 +953,7 @@ function RangeDateInput({
                   </StyledCalendarHeaderSelectChevron>
                 </StyledQuickSelectTrigger>
                 <StyledDropdownPopover
+                  className="stDateInputQuickSelectPopover"
                   ref={setQuickSelectFloatingRef}
                   triggerRef={quickSelectTriggerRef}
                   isOpen={isQuickSelectOpen}

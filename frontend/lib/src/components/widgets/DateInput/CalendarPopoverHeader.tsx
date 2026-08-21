@@ -130,6 +130,7 @@ function HeaderPickerSelect({
         </StyledCalendarHeaderSelectChevron>
       </StyledCalendarHeaderSelectTrigger>
       <StyledDropdownPopover
+        className="stDateInputHeaderPickerPopover"
         ref={setFloatingRef}
         isNonModal
         data-testid="stDateInputHeaderPickerPopover"

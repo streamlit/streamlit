@@ -204,6 +204,7 @@ function FormattingMenu({
       {isOpen && (
         <DataFrameOverlayPortal>
           <StyledSubMenuPanel
+            className="stDataFrameColumnFormattingMenu"
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameColumnFormattingMenu"
