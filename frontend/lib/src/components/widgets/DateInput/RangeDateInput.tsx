@@ -42,7 +42,6 @@ import {
   CalendarGridHeader,
   DateField,
   I18nProvider,
-  isRTL,
   Key,
   RangeCalendarStateContext,
 } from "react-aria-components"
@@ -224,15 +223,6 @@ function RangeDateInput({
   const quickSelectValueId = `${id}-quick-select-value`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
-  // Layout direction for the quick-select row (a plain div, so it cannot read
-  // direction from I18nProvider). Derived from the locale rather than from the
-  // label text, so an English fallback in an RTL app does not re-flow the row.
-  // Memoized because isRTL builds and maximizes an Intl.Locale. safeLocale is
-  // validated — isRTL throws on a malformed tag.
-  const quickSelectDirection = useMemo(
-    () => (isRTL(safeLocale) ? "rtl" : "ltr"),
-    [safeLocale]
-  )
   // Preset labels are locale-dependent, hence the safeLocale dep. today()
   // inside getQuickSelectPresets is intentionally not a dep — the component
   // remounts on each script rerun, so stale-day is not possible.
@@ -918,10 +908,10 @@ function RangeDateInput({
                 - dir on the quick-select dropdown
                 - RTL mapping of its placement ("end" becomes left)
                 - the ListBox type-to-select collator
-                The field above pins en-US, so without this React Aria would
-                read navigator.language — which matches LibConfig.locale in
-                production, but not under getSafeLocale's en-US fallback or in
-                tests that inject a locale. */}
+                The field above pins en-US, so without this React Aria falls
+                back to navigator.language — which usually equals
+                LibConfig.locale, but not when getSafeLocale falls back to
+                en-US, and not in tests that inject a locale. */}
             <I18nProvider locale={safeLocale}>
               <StyledRangeCalendarRoot
                 aria-label="Choose date range"
@@ -954,11 +944,6 @@ function RangeDateInput({
               {enableQuickSelect && quickSelectPresets.length > 0 && (
                 <StyledQuickSelectRow
                   ref={quickSelectRef}
-                  /* RTL mirrors the row for free via the existing
-                     justify-content: space-between (see styled-components.ts),
-                     which keeps the trigger inboard so the dropdown's "end"
-                     alignment extends into the popover. */
-                  dir={quickSelectDirection}
                   data-testid="stDateInputQuickSelect"
                 >
                   <StyledQuickSelectLabel id={quickSelectLabelId}>
@@ -979,12 +964,14 @@ function RangeDateInput({
                     aria-haspopup="listbox"
                     onPress={() => setIsQuickSelectOpen(prev => !prev)}
                   >
-                    {/* dir="auto" so an LTR label inside an RTL row keeps its
-                      trailing punctuation on the right ("Select..." rather than
-                      "...Select"); same for an English fallback label in an RTL
-                      locale. Safe here because this text is not a collection
-                      textValue — the same span on a ListBoxItem empties its
-                      textValue and kills type-to-select. */}
+                    {/* The label text picks its own direction. The row itself
+                        deliberately does not mirror, because React Aria's
+                        calendar above it renders LTR in every locale — so an
+                        RTL preset still orders its digits correctly, and an
+                        LTR fallback label keeps its trailing punctuation on
+                        the right ("Select..." rather than "...Select").
+                        Do not reuse this span on a ListBoxItem: an element
+                        child empties its textValue and kills type-to-select. */}
                     <span id={quickSelectValueId} dir="auto">
                       {activePresetLabel}
                     </span>

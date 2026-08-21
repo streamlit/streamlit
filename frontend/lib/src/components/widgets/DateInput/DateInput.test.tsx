@@ -923,7 +923,7 @@ describe("DateInput", () => {
         ["rtl", "ar"],
         ["ltr", "de"],
       ])(
-        "sets quick-select direction to %s in the %s locale",
+        "gives the dropdown %s direction in the %s locale without mirroring the row",
         async (expectedDir, locale) => {
           const user = userEvent.setup()
           const props = getProps({
@@ -935,20 +935,28 @@ describe("DateInput", () => {
           })
 
           await openQuickSelect(user)
-          const row = screen.getByTestId("stDateInputQuickSelect")
 
-          // Direction comes from the locale, not the label text: the row must
-          // not re-flow when the placeholder is replaced by an RTL preset.
-          expect(row).toHaveAttribute("dir", expectedDir)
-          // The dropdown's dir comes from the row's I18nProvider rather than
-          // this attribute — React Aria's Popover reads it off useLocale().
+          // The dropdown's dir comes from the popover's I18nProvider — React
+          // Aria's Popover reads it off useLocale(). This is the only assertion
+          // pinning that provider.
           expect(
             screen.getByTestId("stDateInputQuickSelectPopover")
           ).toHaveAttribute("dir", expectedDir)
 
+          // The row itself deliberately does not mirror: the calendar above it
+          // renders LTR in every locale, so flipping only the row would make
+          // the popover internally inconsistent.
+          const row = screen.getByTestId("stDateInputQuickSelect")
+          expect(row).not.toHaveAttribute("dir")
+
+          // The label text picks its own direction instead, so it stays correct
+          // whether the selected preset is RTL or an English fallback.
+          const value = row.querySelector("span[dir]")
+          expect(value).toHaveAttribute("dir", "auto")
+
           await user.click(screen.getAllByRole("option")[0])
 
-          expect(row).toHaveAttribute("dir", expectedDir)
+          expect(row).not.toHaveAttribute("dir")
         }
       )
 

@@ -90,7 +90,7 @@ EN_QUICK_SELECT_LABELS = [
 ]
 
 
-def test_range_quick_select_rendering(
+def test_range_quick_select_localization(
     app: Page, assert_snapshot: ImageCompareFunction, locale: str
 ):
     """Test that the range quick-select preset labels are localized."""

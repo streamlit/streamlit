@@ -169,9 +169,10 @@ const ROOT_UNIT_SUFFIX = /^ [wmy]$/
  * than the English label it replaced.
  *
  * Detected from the parts rather than the formatted string, so it holds for
- * any numbering system — the root pattern renders as "-1 w" in Latin digits
- * but "-۱ w" in Persian and "-一 w" under `-u-nu-hanidec`, and no character
- * class covers all of them.
+ * any numbering system: the root pattern renders as "-1 w" in Latin digits,
+ * "-۱ w" in Persian and "-一 w" under `-u-nu-hanidec`. An ASCII-only or even
+ * decimal-only character class would miss every non-Latin numbering system
+ * CLDR uses here.
  *
  * Checked per label, not per locale:
  * - Some locales have data for years but not weeks (`yo`), so a list can end
@@ -256,10 +257,9 @@ const QUICK_SELECT_PRESET_DESCRIPTORS: readonly QuickSelectPresetDescriptor[] =
  *
  * English locales keep the hand-written labels ("Past Week"); every other
  * locale gets its labels from `Intl.RelativeTimeFormat` ("vor 1 Woche",
- * "hace 1 semana"), so there is no translation catalog to ship. Locales that
- * CLDR has no long relative-time data for fall back to the English label —
- * see `isRootFallbackLabel`. Only `label` is locale-dependent; `id` and the
- * dates are not.
+ * "hace 1 semana"), so there is no translation catalog to ship. See
+ * `isRootFallback` for when a label falls back to English anyway. Only
+ * `label` is locale-dependent; `id` and the dates are not.
  *
  * `locale` is run through `getSafeLocale` because `Intl` throws a
  * `RangeError` on malformed tags.
@@ -270,11 +270,6 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
   const language = new Intl.Locale(safeLocale).language
   const hasRelativeTimeData =
     Intl.RelativeTimeFormat.supportedLocalesOf(safeLocale).length > 0
-  // One phrasing style for all six labels, at the cost of point-in-time
-  // wording ("1 week ago") where English names a range ("Past Week").
-  // - `"auto"` localizes more labels (`ig` gets three of six instead of zero)
-  //   and gives the idiomatic "last week" for the three -1 presets...
-  // - ...but mixes idiomatic, "N units ago", and English wording in one list.
   const relativeTimeFormat =
     // No data at all ("und", "zz") would otherwise resolve to whatever the
     // environment's default locale happens to be, so treat those as English
@@ -282,6 +277,12 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
     language === "en" || !hasRelativeTimeData
       ? null
       : new Intl.RelativeTimeFormat(safeLocale, {
+          // Chosen for one phrasing style across all six labels, at the cost
+          // of point-in-time wording ("1 week ago") where English names a
+          // range ("Past Week"). `"auto"` would localize more labels — `ig`
+          // gets three of six instead of zero — and give the idiomatic "last
+          // week" for the three -1 presets, but mixes idiomatic, "N units
+          // ago", and English wording in one list.
           numeric: "always",
           style: "long",
         })

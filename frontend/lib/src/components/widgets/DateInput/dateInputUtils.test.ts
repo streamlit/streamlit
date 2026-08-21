@@ -411,7 +411,7 @@ describe("getQuickSelectPresets", () => {
   // One locale asserted exactly, as readable documentation of what a
   // non-English user actually sees. German rather than Japanese because the CJK
   // strings embed spacing that a CLDR rewording would silently churn.
-  it("localizes labels via Intl.RelativeTimeFormat", () => {
+  it("localizes labels for de via Intl.RelativeTimeFormat", () => {
     expect(getQuickSelectPresets("de").map(p => p.label)).toEqual([
       "vor 1 Woche",
       "vor 1 Monat",
