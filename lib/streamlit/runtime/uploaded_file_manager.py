@@ -59,10 +59,13 @@ class DeletedFile(NamedTuple):
 
 
 class UploadedFile(io.BytesIO):
-    """A file uploaded through ``st.file_uploader``, ``st.camera_input``,
-    ``st.audio_input``, or ``st.chat_input``.
+    """A file uploaded by a user.
 
     To use this type in an annotation, import it from ``streamlit.typing``.
+
+    ``st.file_uploader``, ``st.camera_input``, and ``st.audio_input`` return
+    ``UploadedFile`` objects. ``st.chat_input`` returns them in the ``files``
+    and ``audio`` attributes of its ``ChatInputValue``.
 
     ``UploadedFile`` is a subclass of ``io.BytesIO`` and therefore supports
     Python's file-like interface. You can pass it anywhere a file-like object is
@@ -77,11 +80,13 @@ class UploadedFile(io.BytesIO):
     ----------
     name : str
         The name of the uploaded file. For directory uploads, this is the path
-        of the file relative to the selected directory.
+        of the file relative to the selected directory. The name is provided by
+        the user's browser and isn't sanitized. Don't use it directly as a path
+        when writing the file to disk.
     type : str
-        The MIME type of the uploaded file, as reported by the user's browser.
-        This is ``"application/octet-stream"`` if the browser doesn't report a
-        type.
+        The MIME type of the uploaded file. For user-selected files, this is the
+        type reported by the user's browser, or ``"application/octet-stream"``
+        if the browser doesn't report one.
     size : int
         The size of the uploaded file in bytes.
     """
