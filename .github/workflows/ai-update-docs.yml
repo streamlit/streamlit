@@ -119,7 +119,7 @@ jobs:
             --repo "$REPOSITORY" \
             --state merged \
             --base develop \
-            --search "merged:>=$SINCE_DATE sort:merged-desc" \
+            --search "merged:>=$SINCE_DATE sort:updated-desc" \
             --limit 100 \
             --json number,title,url,mergedAt,author,labels,changedFiles,additions,deletions \
             | jq 'sort_by(.mergedAt) | reverse' \
