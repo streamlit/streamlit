@@ -37,7 +37,7 @@
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",
-    "@swc/core": "^1.15.3",
+    "@swc/core": "^1.16.1",
     "@typescript-eslint/utils": "^8.58.2",
     "@typescript-eslint/scope-manager": "^8.58.2",
     "@typescript-eslint/types": "^8.58.2",
