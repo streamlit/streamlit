@@ -96,9 +96,11 @@ differs from OS preference, and for pathological section colors — see the beha
 
 `type` answers "does the app look light or dark?" Resolve from the active theme/section:
 
-1. If `backgroundColor` is a valid hex color (`#rgb`, `#rgba`, `#rrggbb`, or `#rrggbbaa`)
-   → use luminance (authoritative: what is painted). Short forms are expanded before
-   computing luminance (e.g. `#fff` → `#ffffff`); alpha channels are ignored.
+1. If `backgroundColor` is a color the backend can parse — hex in 3, 4, 6, or 8 digits
+   (with or without the leading `#`), a CSS named color, `rgb()`, or `hsl()` → use its
+   luminance, since that is what gets painted. Alpha channels are ignored, matching the
+   frontend. A value in a syntax the backend cannot parse falls through to step 2, and the
+   frontend corrects it (see the [tech spec](./tech-spec.md) §4).
 2. Else if `base` is `"light"` or `"dark"` → use it (it determines which preset background
    fills in):
    - **Single `[theme]`:** `base` is whatever the user set, if anything.
@@ -156,7 +158,7 @@ docstring wording change.
 | Single `[theme]` with `base = "dark"`                | `"light"`            | `"dark"`                     |
 | Single `[theme]` with `#121212` bg, no `base`        | `"light"`            | `"dark"` (hex luminance)     |
 | Single `[theme]` with `#fff` bg, no `base`           | `"light"`            | `"light"` (short hex → luminance) |
-| Single `[theme]` with non-hex bg, no `base`          | `"light"`            | `"light"` (fallback) — ⚠️ **wrong when the color is dark**, e.g. `backgroundColor = "black"` paints dark but reports `"light"`. Theme colors are not hex-validated, so this is reachable; see open question 5 |
+| Single `[theme]` with non-hex bg, no `base`          | `"light"`            | `"dark"` for `backgroundColor = "black"` — the painted value. Named colours, `rgb()` and `hsl()` are parsed on the backend, so this is correct on the first run with no extra rerun |
 | `[theme.light]` + `[theme.dark]`, both well-authored | `"dark"`             | `"dark"` (section bg or forced variant base) |
 | `[theme.dark]` with light hex bg (pathological)      | `"dark"`             | `"light"` (what is painted)  |
 | Only `[theme.sidebar]` set (no main-area config)     | `"dark"`             | `"light"` (main area = lightTheme) |
@@ -167,10 +169,12 @@ docstring wording change.
 Independent of A/B/C, once fixed:
 
 1. **First script run** — `type` is correct for that run (including `[theme]` / `[theme.light]` / `[theme.dark]`).
-   - *Caveat:* With an embedding host (SiS/Cloud) that pushes its own theme, the first run may resolve from the
-     other source — host theme vs `config.toml` — depending on whether the host's theme arrives before or after
-     the app's first message to the server. Both orderings are corrected by an immediate auto-rerun; see the
-     ordering table in the [tech spec](./tech-spec.md).
+   - *Caveat:* In the few cases where the backend cannot determine the appearance itself — an embedding host
+     (SiS/Cloud) that pushes its own theme after the app connects, or a `backgroundColor` in a CSS syntax the
+     backend cannot parse — the first run may briefly hold the other value. The backend reports what the script
+     saw, the client notices the disagreement, and one immediate auto-rerun corrects it; see the
+     [tech spec](./tech-spec.md) §4. Apps that only render from `type` see a flicker at worst; apps with side
+     effects on their first run would perform them with the earlier value.
 2. **Appearance change** (menu System/Light/Dark, host theme message, OS change while on System) — app reruns and
    `type` updates without a manual rerun.
 3. **MPA deep links** — non-default page + `[theme]` still lands on that page (no #11797 regression).
@@ -209,9 +213,9 @@ let A and C coexist. That is **out of scope** for #11920 and belongs with
 
 | Item                       | ✅ or comment                                                                                         |
 | -------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | Yes — host theme messages must update `type` (re-enable skipped hostframe E2E)                        |
+| Works on SiS, Cloud, etc?  | Yes — host theme messages update `type`; re-enables the hostframe E2E skipped since #11870 |
 | No breaking API changes    | Attribute name/shape unchanged; semantics clarified and made reliable                                 |
-| No new dependencies        | Expected                                                                                              |
+| No new dependencies        | Yes — backend color parsing uses `PIL.ImageColor`, already a runtime dependency               |
 | Metrics collected          | Existing `context.theme` metrics remain; no new public API                                            |
 | Any security/legal impact? | No                                                                                                    |
 | Any docs changes needed?   | Yes — docstring/docs must match the chosen A/B/C meaning and drop stale first-load / settings caveats |
@@ -220,16 +224,10 @@ let A and C coexist. That is **out of scope** for #11920 and belongs with
 
 These need explicit reviewer sign-off before (or as) the implementation PR:
 
-1. **Semantics:** Confirm Option C (preferred), or choose A or B?
-2. **Public preference later?** Should #11536 (or a follow-up) add `st.context.theme.preference` so preference and
+1. **Public preference later?** Should #11536 (or a follow-up) add `st.context.theme.preference` so preference and
    appearance can both be queried?
-3. **System + OS change:** When selection is System and the OS theme flips, should that always trigger an auto-rerun
-   (proposed: yes, as an allowlisted source)?
-4. **SiS / embedded hosts:** Any host-specific constraints on sending preference or auto-rerunning on
-   `SET_CUSTOM_THEME_CONFIG` / theme messages beyond the hostframe E2E?
-5. **Non-hex `backgroundColor`:** Theme color options are not validated as hex today, so
-   `backgroundColor = "black"` (or `rgb()` / `hsl()`) is accepted and paints dark, while the backend
-   resolver can only read hex and would report `"light"`. Which way do we go — accept and document the
-   wrong value, teach the resolver named colors and `rgb()`/`hsl()`, or start validating theme colors as
-   hex in config (a breaking change for configs that work today)? See the limitation in the
-   [tech spec](./tech-spec.md) §2.
+2. **System + OS change:** When the selection is System and the OS flips light↔dark, the app reruns so `type`
+   keeps up. Is an automatic rerun on an OS-level change what we want, given the script re-executes without
+   the user touching anything?
+3. **SiS / embedded hosts:** Any host-specific constraints on sending preference, or on auto-rerunning in
+   response to `SET_CUSTOM_THEME_CONFIG`, beyond what the hostframe E2E covers?
