@@ -81,9 +81,9 @@ class UploadedFile(io.BytesIO):
     name : str
         The name of the uploaded file. For directory uploads, this is the file's
         path within the selected directory, including the directory name (for
-        example, ``"photos/2024/a.jpg"``). The name is provided by the user's
-        browser and isn't sanitized. Don't use it directly as a path when
-        writing the file to disk; choose an app-controlled destination instead.
+        example, ``"photos/2024/a.jpg"``). Streamlit does not sanitize this
+        value. Don't use it directly as a path when writing the file to disk;
+        choose an app-controlled destination instead.
     type : str
         The MIME type of the uploaded file.
 
