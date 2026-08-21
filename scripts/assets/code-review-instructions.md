@@ -36,8 +36,8 @@
 - Assess whether the implementation's complexity is proportionate to the value it provides.
   Call out unnecessary abstractions, indirection, state, dependencies, or maintenance burden.
 - Assess performance impact. For backend or frontend runtime changes, apply the
-  [backend performance hot-path guidance](../../lib/streamlit/AGENTS.md#streamlit-backend-performance-hot-paths)
-  and [frontend performance hot-path guidance](../../frontend/AGENTS.md#streamlit-frontend-performance-hot-paths).
+  `lib/streamlit/AGENTS.md` ("Streamlit Backend Performance Hot Paths") and
+  `frontend/AGENTS.md` ("Streamlit Frontend Performance Hot Paths") guidance.
   Watch for unnecessary renders or remounts, unstable props or callbacks, repeated
   parsing, copying, serialization, or full-data scans, blocking work, and inefficient
   algorithms. Hot-path changes should include performance coverage when practical.

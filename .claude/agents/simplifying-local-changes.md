@@ -65,9 +65,7 @@ git diff "origin/$BASE_BRANCH"
 
 ### Comments, docstrings, and naming
 
-Follow the `/reviewing-readability` skill to evaluate comments, docstrings, and names (variables, functions, parameters) in the changed code, and apply its proposed rewrites. Scope constraint: **only touch comments and names on lines you are actively changing — never modify or remove comments in surrounding unchanged code.**
-
-- If the branch introduced or changed a comment, rewrite it so it describes current behavior or why the code exists — not a previous state or change history.
+Follow the `/reviewing-readability` skill to evaluate comments, docstrings, and names (variables, functions, parameters) in the changed code, and apply its proposed rewrites. Scope constraint: **only touch comments and names on lines you are actively changing — never modify or remove comments in surrounding unchanged code.** When the branch introduced or changed a comment, rewrite it so it describes current behavior or why the code exists — not a previous state or change history.
 
 ### Python
 

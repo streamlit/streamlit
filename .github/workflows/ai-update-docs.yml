@@ -119,7 +119,7 @@ jobs:
             --repo "$REPOSITORY" \
             --state merged \
             --base develop \
-            --search "merged:>=$SINCE_DATE base:develop" \
+            --search "merged:>=$SINCE_DATE" \
             --limit 100 \
             --json number,title,url,mergedAt,author,labels,changedFiles,additions,deletions \
             > work-tmp/recent-merged-prs.json
@@ -127,6 +127,9 @@ jobs:
           PR_COUNT=$(jq 'length' work-tmp/recent-merged-prs.json)
           echo "pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"
           echo "Found $PR_COUNT PRs merged into develop since $SINCE_DATE."
+          if [ "$PR_COUNT" -eq 100 ]; then
+            echo "::warning::Reached the 100-PR cap for recent develop changes; older merges in the window may be omitted."
+          fi
 
           jq -r '.[] | "- #\(.number): \(.title) (\(.mergedAt))"' work-tmp/recent-merged-prs.json
 
