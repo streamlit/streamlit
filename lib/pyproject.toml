@@ -163,10 +163,13 @@ exclude = ["tests", "tests.*"]
 [tool.setuptools.package-data]
 streamlit = [
     "py.typed",
-    ".agents/**/*.md",
-    ".agents/skills/**/assets/templates/**/*.py",
-    ".agents/skills/**/assets/templates/**/*.toml",
-    ".agents/meta-skill/**/*.py",
+    # Published skill trees only. Other files under .agents are repo-local
+    # (authoring guidance) and are not part of the package.
+    ".agents/meta-skill/developing-with-streamlit/**/*.md",
+    ".agents/meta-skill/developing-with-streamlit/**/*.py",
+    ".agents/skills/developing-with-streamlit/**/*.md",
+    ".agents/skills/developing-with-streamlit/assets/templates/**/*.py",
+    ".agents/skills/developing-with-streamlit/assets/templates/**/*.toml",
     "hello/**/*.py",
 ]
 
