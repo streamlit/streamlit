@@ -19,6 +19,7 @@ New features should include:
 
 2. **Backend** in `lib/streamlit/`
    - New elements: add to `lib/streamlit/__init__.py`
+   - Public `st.*` commands: decorate with `gather_metrics`. Use it only for those public APIs, not internal helpers.
 
 3. **Python unit tests** in `lib/tests`
    - Run: `uv run pytest lib/tests/streamlit/the_test_name.py`
@@ -36,3 +37,5 @@ New features should include:
 7. **Autofix** formatting and linting: `make autofix`
 
 8. **Verify** the implementation: `make check`
+
+9. **Bundled agent skills** (user-facing features): update `lib/streamlit/.agents/skills/` following [`lib/streamlit/.agents/skills/AGENTS.md`](../lib/streamlit/.agents/skills/AGENTS.md)

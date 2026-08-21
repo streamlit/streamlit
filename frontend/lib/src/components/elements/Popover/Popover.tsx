@@ -333,11 +333,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // can't cause the next outside click to be misclassified as inside.
     interactionInsideRef.current = false
 
-    // True when a node belongs to this popover, its trigger, or any Streamlit
-    // overlay surface (BaseWeb dropdowns/calendars, dataframe portals, and —
-    // via `data-st-overlay-root` on the popover body — nested popovers). Clicks
-    // on these must not dismiss the popover, matching the same contract the
-    // modal dialog uses (see Modal's shouldCloseOnInteractOutside).
+    // Do not dismiss when the click target belongs to this popover, its trigger,
+    // or any Streamlit overlay (dropdowns, calendars, dataframe portals, and —
+    // via `data-st-overlay-root` on the popover body — nested popovers). This
+    // matches the modal dialog contract (see Modal's shouldCloseOnInteractOutside).
     const isInsidePopoverOrOverlay = (target: Node | null): boolean => {
       if (!target) return false
       const targetElement =

@@ -63,6 +63,7 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
   - `lib/tests/AGENTS.md` — for Python unit tests (inside `lib/tests/`)
   - `lib/AGENTS.md` — for any Python changes (`*.py` files)
   - `lib/streamlit/AGENTS.md` — for any Python library changes (inside `lib/streamlit/`)
+  - `lib/streamlit/.agents/skills/AGENTS.md` — for bundled agent skills (inside `lib/streamlit/.agents/skills/`)
   - `proto/streamlit/proto/AGENTS.md` — for protobuf changes (inside `proto/streamlit/proto/`)
 - Product alignment is explicitly assessed for user-facing changes. Treat a change as user-facing
   when it adds or modifies a public API, configuration option, CLI surface, rendered UI or
@@ -74,8 +75,13 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
     aligned; do not relitigate them. Instead, verify that the implementation follows the spec
     and separately assess any user-facing behavior that the merged spec does not cover. A new
     or modified spec in the current PR is not already approved by this rule.
+  - If no merged spec covers a product decision, that absence is not approval.
+    Request changes for material product/API alignment issues.
   - Inspect analogous Streamlit APIs, configs, and behaviors. Check that the proposed surface
     uses established names, defaults, interaction patterns, return types, and error behavior.
+    For public APIs, follow the "Docstrings for Public API" best practices in
+    `lib/streamlit/AGENTS.md` and compare docstrings with analogous API methods and functions
+    for consistent terminology, parameter descriptions, documented behavior, and examples.
   - Confirm that the change solves a clear user problem, keeps the common case simple, exposes
     complexity progressively, composes with existing features, and adds no more permanent
     user-facing surface area than its value justifies.
@@ -83,6 +89,14 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
     backwards-compatible evolution, and behavior across supported platforms when relevant.
   - If the PR has no user-facing product impact, state that explicitly rather than inventing
     product concerns.
+- Assess whether the implementation's complexity is proportionate to the value it provides.
+  Call out unnecessary abstractions, indirection, state, dependencies, or maintenance burden.
+- Assess performance impact. For backend or frontend runtime changes, apply the
+  [backend performance hot-path guidance](../../lib/streamlit/AGENTS.md#streamlit-backend-performance-hot-paths)
+  and [frontend performance hot-path guidance](../../frontend/AGENTS.md#streamlit-frontend-performance-hot-paths).
+  Watch for unnecessary renders or remounts, unstable props or callbacks, repeated
+  parsing, copying, serialization, or full-data scans, blocking work, and inefficient
+  algorithms. Hot-path changes should include performance coverage when practical.
 - No risky aspects that could cause security issues or regressions. Pay closer attention to changes in these security-sensitive areas:
   - WebSocket connection handling, server endpoints, authentication, and session management
   - File upload, file/asset serving, and path traversal risks
@@ -108,10 +122,11 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
    `specs/AGENTS.md`, inspect comparable existing Streamlit surfaces, and perform the product
    alignment assessment from the checklist. If it does not, mark the Product Alignment section as not
    applicable and explain why briefly.
-6. Run an explicit external-test risk assessment using `/assessing-external-test-risk` and determine whether this branch should include `@pytest.mark.external_test` coverage.
-7. Evaluate readability: run the `/reviewing-readability` skill on the changed code (comments, docstrings, naming) and the `/reviewing-pr-description` skill on the PR title/description if a PR exists, and include their findings and proposed rewrites in your review.
-8. Perform a thorough code review based on the checklist above.
-9. Write your review following the output format below.
+6. Assess performance impact, including the backend and frontend hot paths.
+7. Run an explicit external-test risk assessment using `/assessing-external-test-risk` and determine whether this branch should include `@pytest.mark.external_test` coverage.
+8. Evaluate readability: run the `/reviewing-readability` skill on the changed code (comments, docstrings, naming) and the `/reviewing-pr-description` skill on the PR title/description if a PR exists, and include their findings and proposed rewrites in your review.
+9. Perform a thorough code review based on the checklist above.
+10. Write your review following the output format below.
 
 ## Output Format
 
@@ -128,12 +143,21 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 spec already merged into the base branch, treat its documented product decisions as approved,
 and assess whether the implementation follows it. For user-facing aspects not covered by an
 approved spec, assess the user value and complexity tradeoff, consistency with analogous
-Streamlit surfaces, and alignment with the principles in `specs/AGENTS.md`. If no, state why
-this section is not applicable.]
+Streamlit surfaces, and alignment with the principles in `specs/AGENTS.md`; clearly identify
+material issues that warrant requested changes. If no, state why this section is not applicable.]
 
 ## Code Quality
 
-[Brief assessment of code structure, patterns, and maintainability. Note any issues with specific file references and line numbers.]
+[Brief assessment of code structure, patterns, and maintainability. Call out aspects whose
+complexity appears disproportionate to the value they provide. Note any issues with specific
+file references and line numbers.]
+
+## Performance
+
+[Assess runtime and frontend performance impact. Apply the backend and frontend hot-path
+guidance. Call out unnecessary renders, remounts, repeated work, blocking operations, or
+other regressions. Note coverage or benchmarks for hot-path changes. If there is no
+meaningful performance impact, say why briefly.]
 
 ## Test Coverage
 
@@ -169,7 +193,7 @@ this section is not applicable.]
 
 Verdict criteria:
 - **APPROVED**: If there are no critical/merge-blocking issues. Minor suggestions or optional improvements should not block approval — those can be addressed in follow-up PRs.
-- **CHANGES REQUESTED**: Only use this for merge-blocking issues such as: bugs, security vulnerabilities, breaking changes, missing required tests, or clear material violations of documented Streamlit product/API principles and patterns. Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES REQUESTED.
+- **CHANGES REQUESTED**: Only use this for merge-blocking issues such as: bugs, security vulnerabilities, material performance regressions, breaking changes, missing required tests, or clear material violations of documented Streamlit product/API principles and patterns. Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES REQUESTED.
 
 ---
 *This is an automated AI review. Please verify the feedback and use your judgment.*
@@ -182,7 +206,8 @@ Verdict criteria:
 - Focus on the root cause of issues, not cascading failures.
 - Be specific with file references and line numbers when noting issues.
 - Product feedback must cite concrete changed behavior and the relevant documented principle or
-  established Streamlit pattern. Product questions and optional refinements are non-blocking;
-  request changes only when the mismatch would create material user harm or lasting,
-  unjustified complexity in the public surface.
+  established Streamlit pattern. A missing merged spec does not make product-alignment findings
+  non-blocking. Product questions and optional refinements are non-blocking; request changes when
+  a mismatch would create material user harm or lasting, unjustified complexity in the public
+  surface.
 - Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.

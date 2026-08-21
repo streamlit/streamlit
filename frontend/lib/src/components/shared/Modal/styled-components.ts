@@ -25,11 +25,10 @@ import {
 /**
  * Full-screen backdrop overlay rendered in a portal.
  *
- * overflow-y: auto matches the original BaseUI Root behavior, allowing the
- * dialog panel to grow to its natural height and scroll via the backdrop when
- * content is taller than the viewport. This keeps the body free of any
- * overflow container so that absolutely-positioned element toolbars (which
- * use top: -2.65rem) are never clipped.
+ * overflow-y: auto allows the dialog panel to grow to its natural height and
+ * scroll via the backdrop when content is taller than the viewport. This keeps
+ * the body free of any overflow container so that absolutely-positioned element
+ * toolbars (which use top: -2.65rem) are never clipped.
  */
 export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
   position: "fixed",

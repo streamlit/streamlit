@@ -26,7 +26,7 @@ def _check_expected_elements_disabled(app: Page):
     expect(app.get_by_test_id("stCheckbox").locator("input")).to_have_attribute(
         "disabled", ""
     )
-    # Slider - Baseweb uses a div with role="slider"
+    # Slider
     slider = app.get_by_test_id("stSlider").get_by_role("slider")
     expect(slider).to_have_attribute("disabled", "")
 

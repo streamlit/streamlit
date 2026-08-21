@@ -24,6 +24,7 @@ Priority files (most likely to contain codebase-specific instructions):
 - `.claude/agents/*.md` - Subagent definitions
 - `wiki/**/*.md` - Developer wiki
 - `CONTRIBUTING.md` - Contributor guide
+- `lib/streamlit/.agents/skills/AGENTS.md` - Authoring instructions for bundled skills
 - `lib/streamlit/.agents/skills/*/SKILL.md` - **Bundled skills for Streamlit app development** (shipped with the library)
 - `lib/streamlit/.agents/skills/*/references/*.md` - Reference docs for bundled skills
 
@@ -32,6 +33,8 @@ Priority files (most likely to contain codebase-specific instructions):
 - `.github/copilot-instructions.md`
 - `.github/instructions/*.md`
 - `.cursor/rules/*.mdc`
+
+If you edit a source `AGENTS.md`, run `uv run python scripts/generate_agent_rules.py` so generated copies stay in sync.
 
 ## Verification checklist
 
@@ -51,9 +54,13 @@ Priority files (most likely to contain codebase-specific instructions):
 
 When a PR **adds or changes a Streamlit feature** (new widget, API change, deprecation, new capability), check if the bundled skills need updates:
 
+- Read `lib/streamlit/.agents/skills/AGENTS.md` before editing bundled skills. It decides which features get prominent guidance and how to update references, examples, routing, and public API summaries.
 - **Reference docs** in `lib/streamlit/.agents/skills/developing-with-streamlit/references/` — update the relevant existing reference to document the new feature or API change
 
+For periodic reviews, treat recently merged PRs as leads for documentation drift. Inspect those diffs, then verify the current code before updating docs. A merge does not by itself require a bundled-skill update; apply the prominence and scope rules in `lib/streamlit/.agents/skills/AGENTS.md`.
+
 Common triggers for bundled skill updates:
+
 - New `st.*` commands or widgets
 - Parameter changes to existing commands
 - Deprecated APIs or patterns (add warnings, remove outdated examples)
@@ -125,6 +132,8 @@ Options: "1" | "1,2,3" | "all" | "skip 3"
 
 - **Verify before proposing**: Always check the codebase before suggesting a fix
 - **Minimal changes**: Only change what's actually wrong
+- **Keep all documentation selective and brief**: Not every codebase detail needs to be documented. Add information only when it is relevant to developer decisions, correct usage, maintenance, or preventing likely mistakes; do not expand docs with minor details merely for completeness.
+- **Prefer durable, high-level descriptions**: Describe make commands and workflows briefly in terms of their purpose, trigger, and when to use them. Avoid documenting individual implementation steps, options, or mechanics unless they are important for correct use or maintenance.
 - **Test commands**: Run commands before documenting them
 - **Keep style consistent**: Match existing documentation style
 
