@@ -832,6 +832,11 @@ _create_option(
         multiplier * ttl. The default is 2.0, so stale values can be served
         for one additional ttl while Streamlit attempts a background refresh.
 
+        This is a process-wide bound for every refresh_mode="background"
+        function in the process, not a per-function default. Raising it to
+        keep one long-idle cache also keeps stale entries for every other
+        background cache for (multiplier - 1) * ttl.
+
         Values must be finite and greater than 1.0. Invalid values, and values
         that cannot produce a finite hard-expiration ttl, are ignored with a
         warning and the default is used instead. Larger values keep entries

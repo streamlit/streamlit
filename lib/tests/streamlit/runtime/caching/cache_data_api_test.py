@@ -956,10 +956,11 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             ("overflow_fallback", 1e308, 200),
         ]
     )
-    def test_multiplier_sets_hard_ttl(
+    # Each case needs a distinct key so it builds a fresh cache rather than reusing one.
+    def test_configured_multiplier_sets_background_hard_ttl(
         self, case: str, multiplier: float, expected_hard_ttl: float
     ) -> None:
-        """The configured multiplier sets hard TTL; overflow falls back to the default."""
+        """The configured multiplier sets background hard TTL; overflow falls back."""
         with patch_config_options(
             {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
         ):

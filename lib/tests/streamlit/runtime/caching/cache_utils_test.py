@@ -37,6 +37,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+@pytest.fixture(autouse=True)
+def _reset_multiplier_warnings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolate the warn-once set so a failed test cannot leak into later ones."""
+    monkeypatch.setattr(
+        cache_utils, "_warned_background_refresh_ttl_multipliers", set()
+    )
+
+
 def test_background_refresh_ttl_multiplier_defaults_to_two() -> None:
     """The default background-refresh TTL multiplier is 2.0."""
     assert cache_utils._get_background_refresh_ttl_multiplier() == 2.0
@@ -79,8 +87,6 @@ def test_background_refresh_ttl_multiplier_falls_back_for_invalid_values(
     value: object,
 ) -> None:
     """Malformed values fall back to 2.0 and warn, rather than breaking cache creation."""
-    cache_utils._warned_background_refresh_ttl_multipliers.clear()
-
     with (
         patch.object(cache_utils._LOGGER, "warning") as mock_warning,
         patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": value}),
@@ -92,8 +98,6 @@ def test_background_refresh_ttl_multiplier_falls_back_for_invalid_values(
 
 def test_background_refresh_ttl_multiplier_warns_once_per_invalid_value() -> None:
     """One bad value can be read for many cache creations, so it must not flood the log."""
-    cache_utils._warned_background_refresh_ttl_multipliers.clear()
-
     with (
         patch.object(cache_utils._LOGGER, "warning") as mock_warning,
         patch_config_options(
@@ -104,25 +108,36 @@ def test_background_refresh_ttl_multiplier_warns_once_per_invalid_value() -> Non
         assert cache_utils._get_background_refresh_ttl_multiplier() == 2.0
 
     mock_warning.assert_called_once_with(
-        "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: it must be a "
-        "finite number greater than 1.0 and produce a finite hard-expiration TTL. "
-        "Falling back to the default multiplier of %s.",
+        "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: %s Falling "
+        "back to the default multiplier of %s.",
         "'bad-repeat'",
+        "it must be a finite number greater than 1.0 and produce a finite "
+        "hard-expiration TTL.",
         2.0,
     )
 
 
 def test_background_refresh_ttl_multiplier_overflow_uses_default() -> None:
     """A finite multiplier that overflows ``ttl * multiplier`` falls back to the default."""
-    cache_utils._warned_background_refresh_ttl_multipliers.clear()
-
     with (
         patch.object(cache_utils._LOGGER, "warning") as mock_warning,
         patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": 1e308}),
     ):
         assert cache_utils._get_background_refresh_hard_ttl(10) == 20
 
-    mock_warning.assert_called_once()
+    mock_warning.assert_called_once_with(
+        "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: %s Falling "
+        "back to the default multiplier of %s.",
+        "1e+308",
+        "ttl * multiplier overflows to infinity.",
+        2.0,
+    )
+
+
+def test_multiplier_does_not_affect_foreground_caches() -> None:
+    """The multiplier only applies to refresh_mode="background"."""
+    with patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": 4.0}):
+        assert cache_utils.get_hard_ttl_seconds("foreground", 100) == 100
 
 
 def function_for_testing(

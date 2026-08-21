@@ -1115,8 +1115,8 @@ def test_arrow_replay():
     assert not at.exception
 
 
-# The fresh ttl (in seconds) used across the background-refresh tests. The hard
-# eviction bound is 2*_BG_TTL, and the stale grace window is [_BG_TTL, 2*_BG_TTL).
+# The fresh ttl (in seconds) used across the background-refresh tests. Default
+# hard eviction bound is 2*_BG_TTL; individual tests may override the multiplier.
 _BG_TTL = 100
 
 
@@ -1232,54 +1232,41 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
         assert call_count[0] == 2
 
     @parameterized.expand(
-        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+        [
+            ("cache_data_widen", cache_data, 4.0, _BG_TTL * 2.5, _BG_TTL * 4 + 1),
+            (
+                "cache_resource_widen",
+                cache_resource,
+                4.0,
+                _BG_TTL * 2.5,
+                _BG_TTL * 4 + 1,
+            ),
+            ("cache_data_shorten", cache_data, 1.5, _BG_TTL * 1.25, _BG_TTL * 1.75),
+            (
+                "cache_resource_shorten",
+                cache_resource,
+                1.5,
+                _BG_TTL * 1.25,
+                _BG_TTL * 1.75,
+            ),
+        ]
     )
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
-    def test_configured_multiplier_extends_hard_expiry(
-        self, _name: str, cache_decorator: Any, timer_patch: Mock
+    def test_configured_multiplier_sets_hard_expiry(
+        self,
+        _name: str,
+        cache_decorator: Any,
+        multiplier: float,
+        stale_at: float,
+        expired_at: float,
+        timer_patch: Mock,
     ) -> None:
-        """A larger multiplier serves stale beyond 2*ttl until its new hard bound."""
+        """The configured multiplier sets when a stale value is served vs hard-expired."""
         call_count = [0]
 
-        with patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": 4.0}):
-
-            @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
-            def foo() -> int:
-                call_count[0] += 1
-                return call_count[0]
-
-            timer_patch.return_value = 0
-            assert foo() == 1
-
-            # Fail the refresh so the stale value stays cached past 2*ttl.
-            with patch.object(
-                cache_background_refresh.get_background_refresh_manager(),
-                "submit",
-                return_value=False,
-            ) as submit_mock:
-                timer_patch.return_value = _BG_TTL * 2.5
-                assert foo() == 1
-                submit_mock.assert_called_once()
-                assert call_count[0] == 1
-
-                submit_mock.reset_mock()
-                timer_patch.return_value = _BG_TTL * 4 + 1
-                assert foo() == 2
-                submit_mock.assert_not_called()
-
-        assert call_count[0] == 2
-
-    @parameterized.expand(
-        [("cache_data", cache_data), ("cache_resource", cache_resource)]
-    )
-    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
-    def test_configured_multiplier_can_shorten_hard_expiry(
-        self, _name: str, cache_decorator: Any, timer_patch: Mock
-    ) -> None:
-        """A multiplier below 2.0 hard-expires before the default 2*ttl bound."""
-        call_count = [0]
-
-        with patch_config_options({"runner.cacheBackgroundRefreshTTLMultiplier": 1.5}):
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
 
             @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
             def foo() -> int:
@@ -1295,13 +1282,13 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
                 "submit",
                 return_value=False,
             ) as submit_mock:
-                timer_patch.return_value = _BG_TTL * 1.25
+                timer_patch.return_value = stale_at
                 assert foo() == 1
                 submit_mock.assert_called_once()
                 assert call_count[0] == 1
 
                 submit_mock.reset_mock()
-                timer_patch.return_value = _BG_TTL * 1.75
+                timer_patch.return_value = expired_at
                 assert foo() == 2
                 submit_mock.assert_not_called()
 

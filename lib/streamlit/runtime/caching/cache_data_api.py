@@ -247,7 +247,12 @@ class DataCaches(StatsProvider):
                 ttl,
             )
 
-            hard_ttl_seconds = cache_utils._hard_ttl_seconds(
+            # Capture the multiplier only when creating a cache, not on the reuse
+            # path above. A live config.toml edit therefore does not re-bound
+            # existing caches (same as runner.cacheBackgroundRefreshMaxWorkers).
+            # get_option takes _config_lock while _caches_lock is held; that is
+            # safe because this option is not scriptable.
+            hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
 

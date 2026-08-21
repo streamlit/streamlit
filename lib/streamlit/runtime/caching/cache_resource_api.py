@@ -158,7 +158,10 @@ class ResourceCaches(StatsProvider):
             if cache is not None:
                 cache.mark_detached()
 
-            hard_ttl_seconds = cache_utils._hard_ttl_seconds(
+            # Capture the multiplier only when creating a cache, not on the reuse
+            # path above. A live config.toml edit therefore does not re-bound
+            # existing caches (same as runner.cacheBackgroundRefreshMaxWorkers).
+            hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
 

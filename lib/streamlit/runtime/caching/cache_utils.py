@@ -93,12 +93,13 @@ CacheScope: TypeAlias = Literal["global", "session"]
 # How a cache entry is refreshed once its ttl expires.
 RefreshMode: TypeAlias = Literal["foreground", "background"]
 
-# Default hard-expiration multiplier for background-refresh caches.
-# Hard TTL is ttl multiplied by this value.
+# Historical default and fallback so unset or invalid config still hard-expires
+# at 2 * ttl.
 _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2.0
 
-# Values already warned about. Many cached functions can be created under one
-# misconfiguration, so warning unconditionally would flood the log.
+# Configured multipliers we have already warned about. Many cached functions can
+# be created under one misconfiguration, so warning on every read would flood
+# the log.
 _warned_background_refresh_ttl_multipliers: Final[set[str]] = set()
 
 # How long (in seconds) to wait before retrying a background refresh after a failure,
@@ -119,7 +120,7 @@ class CacheReadResult(Generic[R]):
     is_stale: bool
 
 
-def _warn_unusable_background_refresh_ttl_multiplier(configured: object) -> None:
+def _warn_background_refresh_ttl_multiplier(configured: object, reason: str) -> None:
     """Warn that the TTL multiplier is being ignored, once per distinct value.
 
     Keyed on the repr so a quoted and an unquoted TOML value are reported as the
@@ -130,10 +131,10 @@ def _warn_unusable_background_refresh_ttl_multiplier(configured: object) -> None
         return
     _warned_background_refresh_ttl_multipliers.add(key)
     _LOGGER.warning(
-        "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: it must be a "
-        "finite number greater than 1.0 and produce a finite hard-expiration TTL. "
-        "Falling back to the default multiplier of %s.",
+        "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: %s Falling "
+        "back to the default multiplier of %s.",
         key,
+        reason,
         _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER,
     )
 
@@ -153,7 +154,11 @@ def _get_background_refresh_ttl_multiplier() -> float:
         multiplier = None
 
     if multiplier is None or not math.isfinite(multiplier) or multiplier <= 1.0:
-        _warn_unusable_background_refresh_ttl_multiplier(configured)
+        _warn_background_refresh_ttl_multiplier(
+            configured,
+            "it must be a finite number greater than 1.0 and produce a finite "
+            "hard-expiration TTL.",
+        )
         return _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER
 
     return multiplier
@@ -165,22 +170,31 @@ def _get_background_refresh_hard_ttl(fresh_ttl_seconds: float) -> float:
     hard_ttl_seconds = fresh_ttl_seconds * multiplier
     # A huge-but-finite multiplier can overflow the product to inf.
     if math.isfinite(fresh_ttl_seconds) and not math.isfinite(hard_ttl_seconds):
-        _warn_unusable_background_refresh_ttl_multiplier(multiplier)
+        from streamlit import config
+
+        # Use the raw configured value so a quoted TOML number is logged as written.
+        configured = config.get_option("runner.cacheBackgroundRefreshTTLMultiplier")
+        _warn_background_refresh_ttl_multiplier(
+            configured,
+            "ttl * multiplier overflows to infinity.",
+        )
         return fresh_ttl_seconds * _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER
     return hard_ttl_seconds
 
 
 @overload
-def _hard_ttl_seconds(refresh_mode: RefreshMode, fresh_ttl_seconds: float) -> float: ...
+def get_hard_ttl_seconds(
+    refresh_mode: RefreshMode, fresh_ttl_seconds: float
+) -> float: ...
 
 
 @overload
-def _hard_ttl_seconds(
+def get_hard_ttl_seconds(
     refresh_mode: RefreshMode, fresh_ttl_seconds: float | None
 ) -> float | None: ...
 
 
-def _hard_ttl_seconds(
+def get_hard_ttl_seconds(
     refresh_mode: RefreshMode, fresh_ttl_seconds: float | None
 ) -> float | None:
     """Return the eviction TTL for a cache.
