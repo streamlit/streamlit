@@ -1120,8 +1120,7 @@ describe("StreamlitMarkdown", () => {
     )
     const shimmerElement = screen.getByText("Loading...")
     expect(shimmerElement).toHaveClass("stMarkdownShimmer")
-    // Verify the parent span has the color directive class (shimmer uses fadedText60,
-    // but the outer :red[] span still has its color class applied)
+    // Outer :red[] still applies; shimmer inherits that color.
     const parentSpan = shimmerElement.parentElement
     expect(parentSpan).not.toBeNull()
     expect(parentSpan).toHaveClass("stMarkdownColoredText")
