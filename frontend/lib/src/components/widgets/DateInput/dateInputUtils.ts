@@ -159,48 +159,12 @@ export interface QuickSelectPreset {
   end: CalendarDate
 }
 
-/** Trailing literal of ICU's root pattern: a space and one unit letter. */
-const ROOT_UNIT_SUFFIX = /^ [wmy]$/
-
-/**
- * True when ICU emitted its root-locale fallback ("-1 w") instead of a real
- * translation. CLDR lacks long relative-time data for many locales, and
- * `Intl.RelativeTimeFormat` then prints the root pattern, which reads worse
- * than the English label it replaced.
- *
- * Detected from the parts rather than the formatted string, so it holds for
- * any numbering system: the root pattern renders as "-1 w" in Latin digits,
- * "-۱ w" in Persian and "-一 w" under `-u-nu-hanidec`. An ASCII-only or even
- * decimal-only character class would miss every non-Latin numbering system
- * CLDR uses here.
- *
- * Checked per label, not per locale:
- * - Some locales have data for years but not weeks (`yo`), so a list can end
- *   up partly translated.
- * - Real translations that also start with "-" are kept, not replaced: `mi`
- *   gives "-1 wiki i mua" and `ak` "-1 bosome a atwam", whose trailing
- *   literals are words rather than a bare unit letter. Those users get their
- *   own language, upstream's leading minus and all, in preference to English.
- */
-function isRootFallback(parts: Intl.RelativeTimeFormatPart[]): boolean {
-  const first = parts.at(0)
-  const last = parts.at(-1)
-  return (
-    first?.type === "literal" &&
-    first.value === "-" &&
-    last?.type === "literal" &&
-    ROOT_UNIT_SUFFIX.test(last.value)
-  )
-}
-
 /** A quick-select preset before its dates are resolved against today. */
 interface QuickSelectPresetDescriptor {
   id: string
   /** Label used verbatim for English locales, so their wording stays stable. */
   enLabel: string
-  /** Value passed to `Intl.RelativeTimeFormat` for non-English locales. */
   relativeValue: number
-  /** Unit passed to `Intl.RelativeTimeFormat` for non-English locales. */
   relativeUnit: Intl.RelativeTimeFormatUnit
   /** Offset subtracted from today to get the preset's start date. */
   duration: DateDuration
@@ -304,6 +268,52 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
         end,
       }
     }
+  )
+}
+
+/**
+ * Trailing literal of ICU's root pattern: a space plus the unit's initial,
+ * derived from the descriptors so that adding a preset in a new unit cannot
+ * silently stop the detector from matching. (Root uses the unit's first letter
+ * for every unit these presets could use — week, month, year, day, hour,
+ * second; `minute` is the lone exception at " min".)
+ */
+const ROOT_UNIT_SUFFIX = new RegExp(
+  `^ [${[
+    ...new Set(
+      QUICK_SELECT_PRESET_DESCRIPTORS.map(
+        ({ relativeUnit }) => relativeUnit[0]
+      )
+    ),
+  ].join("")}]$`
+)
+
+/**
+ * True when ICU emitted its root-locale fallback ("-1 w") instead of a real
+ * translation. CLDR lacks long relative-time data for many locales, and
+ * `Intl.RelativeTimeFormat` then prints the root pattern, which reads worse
+ * than the English label it replaced.
+ *
+ * Detected from `formatToParts` rather than the formatted string, so it holds
+ * for any numbering system — the root pattern renders as "-1 w", "-۱ w", or
+ * "-一 w" depending on the locale's digits.
+ *
+ * Checked per label, not per locale:
+ * - Some locales have data for years but not weeks (`yo`), so a list can end
+ *   up partly translated.
+ * - Real translations that also start with "-" are kept, not replaced: `mi`
+ *   gives "-1 wiki i mua" and `ak` "-1 bosome a atwam", whose trailing
+ *   literals are words rather than a bare unit letter. Those users get their
+ *   own language, upstream's leading minus and all, in preference to English.
+ */
+function isRootFallback(parts: Intl.RelativeTimeFormatPart[]): boolean {
+  const first = parts.at(0)
+  const last = parts.at(-1)
+  return (
+    first?.type === "literal" &&
+    first.value === "-" &&
+    last?.type === "literal" &&
+    ROOT_UNIT_SUFFIX.test(last.value)
   )
 }
 

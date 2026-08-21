@@ -126,10 +126,10 @@ def test_range_quick_select_localization(
         name="st_date_input-range_quick_select",
     )
 
-    # Select a preset and snapshot the row itself. The dropdown snapshot above
-    # covers the option labels; this covers the other half of the change — the
-    # row's locale-derived direction and the trigger's own label, which is where
-    # a bidi regression would show up (especially for ar-EG).
+    # Select a preset and snapshot the row. The dropdown snapshot above covers
+    # option labels; this covers the row's fixed LTR layout and the trigger's
+    # dir="auto" label, where a bidi regression would show up (especially
+    # ar-EG).
     selected_preset = options.first.inner_text().strip()
     options.first.click()
     wait_for_app_run(app)

@@ -964,14 +964,11 @@ function RangeDateInput({
                     aria-haspopup="listbox"
                     onPress={() => setIsQuickSelectOpen(prev => !prev)}
                   >
-                    {/* The label text picks its own direction. The row itself
-                        deliberately does not mirror, because React Aria's
-                        calendar above it renders LTR in every locale — so an
-                        RTL preset still orders its digits correctly, and an
-                        LTR fallback label keeps its trailing punctuation on
-                        the right ("Select..." rather than "...Select").
-                        Do not reuse this span on a ListBoxItem: an element
-                        child empties its textValue and kills type-to-select. */}
+                    {/* dir="auto" so an RTL preset orders its digits correctly
+                        and an LTR fallback keeps its trailing punctuation on
+                        the right ("Select...", not "...Select"). Only the text
+                        flips — the row stays LTR to match React Aria's
+                        calendar above it. */}
                     <span id={quickSelectValueId} dir="auto">
                       {activePresetLabel}
                     </span>
@@ -998,6 +995,8 @@ function RangeDateInput({
                         onSelectionChange={handleQuickSelectSelection}
                         autoFocus
                       >
+                        {/* String child only: an element child empties a
+                            ListBoxItem's textValue and kills type-to-select. */}
                         {quickSelectPresets.map(preset => (
                           <StyledDropdownListBoxItem
                             key={preset.id}
