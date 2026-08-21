@@ -517,11 +517,11 @@ class CacheResourceAPI:
               runs the cached function synchronously. The app rerun waits until the new
               resource is ready.
             - ``"background"``: Return the expired resource immediately and update it
-              in the background. Streamlit can keep returning the expired resource
-              until the hard-expiration bound, which is ``ttl`` multiplied by the
-              ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option
-              (default ``2.0``). After that bound, the next call waits for a new
-              resource. This mode requires a ``ttl``. If you set ``on_release``,
+              in the background. By default, Streamlit can keep returning the expired
+              resource for one extra ``ttl``. Set
+              ``runner.cacheBackgroundRefreshTTLMultiplier`` to change that
+              hard-expiration bound. After hard expiry, the next call waits for a
+              new resource. This mode requires a ``ttl``. If you set ``on_release``,
               Streamlit calls it for the old resource after a successful update.
 
             .. note::

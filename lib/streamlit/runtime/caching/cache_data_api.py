@@ -594,11 +594,12 @@ class CacheDataAPI:
               runs the cached function synchronously. The app rerun waits until the new
               value is ready.
             - ``"background"``: Return the expired value immediately and update it in
-              the background. Streamlit can keep returning the expired value until
-              the hard-expiration bound, which is ``ttl`` multiplied by the
-              ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option
-              (default ``2.0``). After that bound, the next call waits for a new
-              value. This mode requires a ``ttl`` and can't be used with ``persist``.
+              the background. By default, Streamlit can keep returning the expired
+              value for one extra ``ttl``. Set
+              ``runner.cacheBackgroundRefreshTTLMultiplier`` to change that
+              hard-expiration bound. After hard expiry, the next call waits for a
+              new value. This mode requires a ``ttl`` and can't be used with
+              ``persist``.
 
             .. note::
                 A function that refreshes in the background can't use session-specific
