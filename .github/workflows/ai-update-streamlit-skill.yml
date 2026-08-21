@@ -1,0 +1,388 @@
+# AI Update Streamlit Skill workflow uses Cursor CLI to keep the developing-with-streamlit skill current
+name: AI Update Streamlit Skill
+
+on:
+  schedule:
+    # Run weekly on Fridays at 14:30 UTC (6:30 AM PST / 7:30 AM PDT)
+    - cron: "30 14 * * Fri"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of days to look back for merged feature PRs"
+        required: false
+        type: number
+        default: 7
+      model:
+        description: "Model to use for skill reference review"
+        required: false
+        type: string
+        default: "claude-opus-4-7-thinking-xhigh"
+      dry_run:
+        description: "Run without creating PR"
+        type: boolean
+        required: false
+        default: false
+
+env:
+  MODEL: ${{ inputs.model || 'claude-opus-4-7-thinking-xhigh' }}
+  DAYS: ${{ inputs.days || 7 }}
+  SKILL_DIR: lib/streamlit/.agents/skills/developing-with-streamlit
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit'
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CURSOR_API_KEY is not available."
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  ai-update-streamlit-skill:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    concurrency:
+      group: ${{ github.workflow }}-ai-update-streamlit-skill
+      cancel-in-progress: true
+
+    outputs:
+      develop_sha: ${{ steps.get-sha.outputs.sha }}
+      since_date: ${{ steps.recent-feature-prs.outputs.since_date }}
+      feature_pr_count: ${{ steps.recent-feature-prs.outputs.feature_pr_count }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Capture develop SHA
+        id: get-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Fetch recent merged feature PRs
+        id: recent-feature-prs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p work-tmp
+
+          if ! [[ "$DAYS" =~ ^[0-9]+$ ]]; then
+            echo "::error::days must be a positive integer."
+            exit 1
+          fi
+
+          if [ "$DAYS" -lt 1 ] || [ "$DAYS" -gt 30 ]; then
+            echo "::error::days must be between 1 and 30."
+            exit 1
+          fi
+
+          SINCE_DATE=$(date -u -d "$DAYS days ago" +%Y-%m-%d)
+          echo "since_date=$SINCE_DATE" >> "$GITHUB_OUTPUT"
+
+          gh pr list \
+            --repo "$REPOSITORY" \
+            --state merged \
+            --base develop \
+            --label "change:feature" \
+            --search "merged:>=$SINCE_DATE" \
+            --limit 100 \
+            --json number,title,url,mergedAt,author,labels,body \
+            > work-tmp/recent-feature-prs.json
+
+          PR_COUNT=$(jq 'length' work-tmp/recent-feature-prs.json)
+          echo "feature_pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$PR_COUNT" -eq 0 ]; then
+            echo "No merged feature PRs found since $SINCE_DATE."
+          else
+            jq -r '.[] | "- #\(.number): \(.title) (\(.mergedAt))"' work-tmp/recent-feature-prs.json
+          fi
+
+      - name: Install Cursor CLI
+        if: steps.recent-feature-prs.outputs.feature_pr_count != '0'
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
+      - name: AI skill reference review
+        if: steps.recent-feature-prs.outputs.feature_pr_count != '0'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+          SINCE_DATE: ${{ steps.recent-feature-prs.outputs.since_date }}
+          FEATURE_PR_COUNT: ${{ steps.recent-feature-prs.outputs.feature_pr_count }}
+        run: |
+          PROMPT=$(cat <<PROMPT_EOF
+          You are operating in a GitHub Actions runner to keep the bundled developing-with-streamlit skill references up to date.
+
+          ## Context
+          - Repository: ${REPO_NAME}
+          - Main branch: develop
+          - Skill directory: ${SKILL_DIR}
+          - Merged feature PR lookback: ${DAYS} days, since ${SINCE_DATE}
+          - Recent merged feature PR count: ${FEATURE_PR_COUNT}
+          - Recent feature PR metadata: work-tmp/recent-feature-prs.json
+
+          The repository is checked out at develop with full git history.
+          The dev environment is set up - you can run make commands if needed.
+          The GitHub CLI (gh) is available for READ operations.
+
+          Useful read-only commands:
+          - gh pr view <number> --json title,body,labels,files,mergedAt,url
+          - gh pr diff <number>
+          - git show
+          - git diff
+
+          ## Task
+          1. Read work-tmp/recent-feature-prs.json. It contains PRs labeled change:feature that merged into develop in the lookback window.
+          2. For each PR that may affect how users create, edit, debug, style, optimize, or deploy Streamlit apps, inspect the PR details and diff.
+          3. Decide whether ${SKILL_DIR}/SKILL.md or markdown references in ${SKILL_DIR}/references need updates. Focus on public Streamlit app-development guidance: new or changed st.* APIs, widgets, parameters, deprecations, layouts, theming, data display, session state, CLI behavior, custom components, and recommended patterns.
+          4. Apply only necessary updates directly. Keep the references concise and durable. Do not copy PR descriptions wholesale.
+          5. Only edit ${SKILL_DIR}/SKILL.md and ${SKILL_DIR}/references/*.md. Do not edit Streamlit source code, tests, templates, assets, or unrelated docs.
+
+          After completing the review and applying changes, write a summary to work-tmp/changes.md listing:
+          - PR numbers analyzed
+          - Skill reference files modified
+          - A short rationale for each update
+
+          If no updates were needed, write exactly: No developing-with-streamlit skill reference updates needed for recent feature PRs.
+          PROMPT_EOF
+          )
+
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+
+      - name: Create patch
+        id: create-patch
+        env:
+          SINCE_DATE: ${{ steps.recent-feature-prs.outputs.since_date }}
+          FEATURE_PR_COUNT: ${{ steps.recent-feature-prs.outputs.feature_pr_count }}
+        run: |
+          mkdir -p work-tmp
+
+          if [ ! -f work-tmp/changes.md ]; then
+            if [ "${FEATURE_PR_COUNT}" = "0" ]; then
+              echo "No merged feature PRs found since ${SINCE_DATE}." > work-tmp/changes.md
+            else
+              echo "No developing-with-streamlit skill reference updates needed for recent feature PRs." > work-tmp/changes.md
+            fi
+          fi
+
+          ALL_CHANGED_FILES=$(git status --porcelain --untracked-files=all | sed -E 's/^...//' | grep -v '^work-tmp/' || true)
+          if [ -n "$ALL_CHANGED_FILES" ]; then
+            OUT_OF_SCOPE_CHANGED_FILES=$(printf '%s\n' "$ALL_CHANGED_FILES" | grep -Ev "^${SKILL_DIR}/(SKILL\\.md|references/[^/]+\\.md)$" || true)
+            if [ -n "$OUT_OF_SCOPE_CHANGED_FILES" ]; then
+              echo "::error::AI changed files outside allowed skill reference paths:"
+              printf '%s\n' "$OUT_OF_SCOPE_CHANGED_FILES"
+              exit 1
+            fi
+          fi
+
+          git add -A "$SKILL_DIR"
+
+          if [ -n "$(git diff --cached --name-only)" ]; then
+            echo "changes_found=true" >> "$GITHUB_OUTPUT"
+            git diff --cached --binary > work-tmp/streamlit-skill-update.patch
+            echo "Patch created:"
+            git diff --cached --stat
+          else
+            echo "changes_found=false" >> "$GITHUB_OUTPUT"
+            echo "No changes found"
+            touch work-tmp/streamlit-skill-update.patch
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: streamlit-skill-update-output
+          path: |
+            work-tmp/streamlit-skill-update.patch
+            work-tmp/changes.md
+            work-tmp/recent-feature-prs.json
+          retention-days: 1
+
+  create-pr:
+    needs: [check-secrets, ai-update-streamlit-skill]
+    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-update-streamlit-skill.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.ai-update-streamlit-skill.outputs.develop_sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: streamlit-skill-update-output
+          path: work-tmp
+
+      - name: Apply patch and check for changes
+        id: apply-patch
+        run: |
+          if [ -f work-tmp/changes.md ]; then
+            echo "changes_summary<<CHANGES_SUMMARY_HEREDOC_DELIMITER" >> "$GITHUB_OUTPUT"
+            cat work-tmp/changes.md >> "$GITHUB_OUTPUT"
+            echo "CHANGES_SUMMARY_HEREDOC_DELIMITER" >> "$GITHUB_OUTPUT"
+          else
+            echo "changes_summary=No summary available." >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -s work-tmp/streamlit-skill-update.patch ]; then
+            echo "Applying patch..."
+            git apply work-tmp/streamlit-skill-update.patch
+            echo "changes_found=true" >> "$GITHUB_OUTPUT"
+            git status --porcelain
+          else
+            echo "changes_found=false" >> "$GITHUB_OUTPUT"
+            echo "No changes to apply"
+          fi
+
+      - name: Configure Git
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create branch
+        id: create-branch
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          BRANCH_NAME="ai-streamlit-skill-update-$(date +%Y-%m-%d)-${RUN_NUMBER}"
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Commit and push
+        if: steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          git add -A
+          git commit -m "[docs] AI-assisted Streamlit skill reference updates"
+          git push origin "$BRANCH_NAME"
+
+      - name: Create PR
+        id: create_pr
+        if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v9
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+          MODEL_NAME: ${{ env.MODEL }}
+          DAYS_LOOKBACK: ${{ env.DAYS }}
+          SINCE_DATE: ${{ needs.ai-update-streamlit-skill.outputs.since_date }}
+          FEATURE_PR_COUNT: ${{ needs.ai-update-streamlit-skill.outputs.feature_pr_count }}
+          CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const model = process.env.MODEL_NAME;
+            const days = process.env.DAYS_LOOKBACK;
+            const sinceDate = process.env.SINCE_DATE;
+            const featurePrCount = process.env.FEATURE_PR_COUNT;
+            const changesSummary = process.env.CHANGES_SUMMARY;
+
+            const title = `[docs] AI-assisted Streamlit skill reference updates`;
+            const body = `## Summary
+
+            Automated PR to update the bundled \`developing-with-streamlit\` skill references based on recently merged feature PRs.
+
+            This PR was created by the \`ai-update-streamlit-skill\` workflow using \`${model}\`.
+
+            - Lookback: ${days} days, since ${sinceDate}
+            - Merged feature PRs reviewed: ${featurePrCount}
+
+            ## Changes
+
+            ${changesSummary}
+
+            ---
+            *This is an automated Streamlit skill reference update by \`${model}\`.*`.replace(/^ +/gm, '');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base: 'develop',
+              body,
+            });
+            core.setOutput('pr_url', pr.html_url);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['change:docs', 'impact:internal'],
+            });
+
+      - name: Write step summary
+        env:
+          CHANGES_FOUND: ${{ steps.apply-patch.outputs.changes_found }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SINCE_DATE: ${{ needs.ai-update-streamlit-skill.outputs.since_date }}
+          FEATURE_PR_COUNT: ${{ needs.ai-update-streamlit-skill.outputs.feature_pr_count }}
+        run: |
+          {
+            echo "## AI Streamlit Skill Reference Update Summary";
+            echo "- Model: $MODEL";
+            echo "- Days looked back: $DAYS";
+            echo "- Since date: ${SINCE_DATE:-n/a}";
+            echo "- Merged feature PRs reviewed: ${FEATURE_PR_COUNT:-0}";
+            echo "- Changes found: ${CHANGES_FOUND}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${CHANGES_FOUND}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No updates needed, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
