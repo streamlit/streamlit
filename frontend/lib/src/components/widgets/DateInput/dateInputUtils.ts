@@ -232,13 +232,13 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
   const end = today(getLocalTimeZone())
   const safeLocale = getSafeLocale(locale)
   const language = new Intl.Locale(safeLocale).language
-  const hasRelativeTimeData =
+  const isSupportedByIntl =
     Intl.RelativeTimeFormat.supportedLocalesOf(safeLocale).length > 0
   const relativeTimeFormat =
     // No data at all ("und", "zz") would otherwise resolve to whatever the
     // environment's default locale happens to be, so treat those as English
     // alongside the en-* locales.
-    language === "en" || !hasRelativeTimeData
+    language === "en" || !isSupportedByIntl
       ? null
       : new Intl.RelativeTimeFormat(safeLocale, {
           // Chosen for one phrasing style across all six labels, at the cost

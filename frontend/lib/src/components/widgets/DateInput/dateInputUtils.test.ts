@@ -477,21 +477,27 @@ describe("getQuickSelectPresets", () => {
     locale => {
       // Expectations are derived from ICU at runtime rather than hardcoded, so
       // this pins the per-label behaviour without pinning anyone's CLDR data.
-      const formatter = new Intl.RelativeTimeFormat(locale, {
-        numeric: "always",
-        style: "long",
-      })
-      const icuLabels = RELATIVE_TIME_ARGS.map(([value, unit]) =>
-        formatter.format(value, unit)
-      )
-      const labels = getQuickSelectPresets(locale).map(p => p.label)
+      // The formatter mirrors the production guard: if a future ICU drops the
+      // locale entirely, a bare formatter would silently resolve to the
+      // environment default while production returns English.
+      const formatter =
+        Intl.RelativeTimeFormat.supportedLocalesOf(locale).length > 0
+          ? new Intl.RelativeTimeFormat(locale, {
+              numeric: "always",
+              style: "long",
+            })
+          : null
 
-      labels.forEach((label, index) => {
-        const icuLabel = icuLabels[index]
-        expect(label).toBe(
-          ICU_ROOT_PATTERN.test(icuLabel) ? EN_LABELS[index] : icuLabel
-        )
-      })
+      const expected = formatter
+        ? RELATIVE_TIME_ARGS.map(([value, unit], index) => {
+            const icuLabel = formatter.format(value, unit)
+            return ICU_ROOT_PATTERN.test(icuLabel)
+              ? EN_LABELS[index]
+              : icuLabel
+          })
+        : EN_LABELS
+
+      expect(getQuickSelectPresets(locale).map(p => p.label)).toEqual(expected)
     }
   )
 
@@ -504,8 +510,12 @@ describe("getQuickSelectPresets", () => {
       const labels = getQuickSelectPresets(locale).map(p => p.label)
       const signed = labels.filter(label => label.startsWith("-"))
 
-      expect(signed).not.toHaveLength(0)
       expect(signed.filter(label => ICU_ROOT_PATTERN.test(label))).toEqual([])
+      // With CLDR data these locales keep signed translations; if a future ICU
+      // drops them the list is all English and nothing is signed.
+      expect(signed.length > 0).toBe(
+        Intl.RelativeTimeFormat.supportedLocalesOf(locale).length > 0
+      )
     }
   )
 

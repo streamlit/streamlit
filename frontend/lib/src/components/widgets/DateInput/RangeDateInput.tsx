@@ -904,14 +904,12 @@ function RangeDateInput({
                 close.
               </StyledVisuallyHidden>
             )}
-            {/* I18nProvider so React Aria uses the sanitized app locale for:
-                - dir on the quick-select dropdown
-                - RTL mapping of its placement ("end" becomes left)
-                - the ListBox type-to-select collator
-                The field above pins en-US, so without this React Aria falls
-                back to navigator.language — which usually equals
-                LibConfig.locale, but not when getSafeLocale falls back to
-                en-US, and not in tests that inject a locale. */}
+            {/* Visitor locale for the calendar (weekdays, month/year, nav) and
+                the quick-select dropdown (dir and type-to-select; its
+                placement is pinned physical, see below). The field above pins en-US, so without this
+                React Aria would use navigator.language — usually the same as
+                LibConfig.locale, except when getSafeLocale falls back to en-US,
+                and in tests that inject a locale. */}
             <I18nProvider locale={safeLocale}>
               <StyledRangeCalendarRoot
                 aria-label="Choose date range"
@@ -982,7 +980,12 @@ function RangeDateInput({
                     isOpen={isQuickSelectOpen}
                     onOpenChange={setIsQuickSelectOpen}
                     isNonModal
-                    placement="bottom end"
+                    /* Physical rather than "bottom end": the row stays LTR in
+                       every locale, so the trigger is always at its right edge
+                       and the dropdown should always extend left into the
+                       popover. A logical placement would flip to bottom-left
+                       under an RTL locale and extend away from it. */
+                    placement="bottom right"
                     data-testid="stDateInputQuickSelectPopover"
                   >
                     {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
