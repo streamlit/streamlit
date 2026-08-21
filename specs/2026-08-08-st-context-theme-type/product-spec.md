@@ -75,10 +75,8 @@ three different things (current docs describe **C** — "inferred from the backg
 | B. Theme identity          | "Which application theme is active?" | The theme name/variant: Default Light, Default Dark, Custom, Custom Light, Custom Dark  |
 | C. Visual appearance       | "Does the app look light or dark?"  | `base` / luminance of the rendered background                                           |
 
-Where they diverge in practice (see the "Expected `type` under Option C" behavior matrix in the Proposal section
-below): A/B/C agree for presets and well-authored dual themes;
-they disagree for a single custom theme whose appearance differs from OS preference, and for pathological section
-colors.
+A/B/C agree for presets and well-authored dual themes. They diverge for a single custom theme whose appearance
+differs from OS preference, and for pathological section colors — see the behavior matrix below.
 
 ### Related issues
 
@@ -101,10 +99,13 @@ colors.
 1. If `backgroundColor` is a valid hex color (`#rgb`, `#rgba`, `#rrggbb`, or `#rrggbbaa`)
    → use luminance (authoritative: what is painted). Short forms are expanded before
    computing luminance (e.g. `#fff` → `#ffffff`); alpha channels are ignored.
-2. Else if `base` is `"light"` or `"dark"` → use it (determines which preset bg fills in).
-   For dual themes, `base` is always present — the FE forces it from the section variant
-   name via `handleSectionInheritance` (e.g. `"dark"` for `[theme.dark]`), so step 2
-   always applies unless a hex `backgroundColor` is set (step 1).
+2. Else if `base` is `"light"` or `"dark"` → use it (it determines which preset background
+   fills in):
+   - **Single `[theme]`:** `base` is whatever the user set, if anything.
+   - **Dual themes:** `base` is always present, because the frontend forces it from the
+     section variant via `handleSectionInheritance` (e.g. `"dark"` for `[theme.dark]`) — so
+     step 2 always applies unless a hex `backgroundColor` is set. Note that `base` is not a
+     valid key inside `[theme.light]` / `[theme.dark]`; only `[theme]` accepts it.
 3. Else `"light"` (the frontend default for single `[theme]` when `base` is unspecified).
 
 **Sidebar-only configs:** Setting only `[theme.sidebar]` (without any main-area keys in
@@ -155,7 +156,7 @@ docstring wording change.
 | Single `[theme]` with `base = "dark"`                | `"light"`            | `"dark"`                     |
 | Single `[theme]` with `#121212` bg, no `base`        | `"light"`            | `"dark"` (hex luminance)     |
 | Single `[theme]` with `#fff` bg, no `base`           | `"light"`            | `"light"` (short hex → luminance) |
-| Single `[theme]` with non-hex bg, no `base`          | `"light"`            | `"light"` (fallback)         |
+| Single `[theme]` with non-hex bg, no `base`          | `"light"`            | `"light"` (fallback) — ⚠️ **wrong when the color is dark**, e.g. `backgroundColor = "black"` paints dark but reports `"light"`. Theme colors are not hex-validated, so this is reachable; see open question 5 |
 | `[theme.light]` + `[theme.dark]`, both well-authored | `"dark"`             | `"dark"` (section bg or forced variant base) |
 | `[theme.dark]` with light hex bg (pathological)      | `"dark"`             | `"light"` (what is painted)  |
 | Only `[theme.sidebar]` set (no main-area config)     | `"dark"`             | `"light"` (main area = lightTheme) |
@@ -166,15 +167,18 @@ docstring wording change.
 Independent of A/B/C, once fixed:
 
 1. **First script run** — `type` is correct for that run (including `[theme]` / `[theme.light]` / `[theme.dark]`).
-   - *Caveat:* Host-provided themes (SiS/Cloud) that arrive after the FE's first BackMsg may have a one-run
-     delay corrected by immediate auto-rerun. In practice this race is rare (hosts send theme during iframe init).
+   - *Caveat:* With an embedding host (SiS/Cloud) that pushes its own theme, the first run may resolve from the
+     other source — host theme vs `config.toml` — depending on whether the host's theme arrives before or after
+     the app's first message to the server. Both orderings are corrected by an immediate auto-rerun; see the
+     ordering table in the [tech spec](./tech-spec.md).
 2. **Appearance change** (menu System/Light/Dark, host theme message, OS change while on System) — app reruns and
    `type` updates without a manual rerun.
 3. **MPA deep links** — non-default page + `[theme]` still lands on that page (no #11797 regression).
 4. **CSS overrides** — injected CSS backgrounds remain out of scope for `type`.
 5. **Host theme vs config.toml** — runtime host themes (`SET_CUSTOM_THEME_CONFIG`) replace config.toml on the
-   FE (no merge, last-write-wins). Pre-load host customizations (`LIGHT_THEME`/`DARK_THEME`) merge into
-   presets only but do not propagate into config.toml custom themes. `type` always reflects what is painted.
+   frontend (no merge, last-write-wins). Pre-load host customizations (`LIGHT_THEME`/`DARK_THEME`) merge into
+   presets only but do not propagate into config.toml custom themes. `type` always reflects what is painted —
+   including after the user switches between a host theme and a config.toml theme in the settings menu.
 
 ### API surface
 
@@ -223,3 +227,9 @@ These need explicit reviewer sign-off before (or as) the implementation PR:
    (proposed: yes, as an allowlisted source)?
 4. **SiS / embedded hosts:** Any host-specific constraints on sending preference or auto-rerunning on
    `SET_CUSTOM_THEME_CONFIG` / theme messages beyond the hostframe E2E?
+5. **Non-hex `backgroundColor`:** Theme color options are not validated as hex today, so
+   `backgroundColor = "black"` (or `rgb()` / `hsl()`) is accepted and paints dark, while the backend
+   resolver can only read hex and would report `"light"`. Which way do we go — accept and document the
+   wrong value, teach the resolver named colors and `rgb()`/`hsl()`, or start validating theme colors as
+   hex in config (a breaking change for configs that work today)? See the limitation in the
+   [tech spec](./tech-spec.md) §2.
