@@ -397,22 +397,22 @@ export const StyledStreamlitMarkdown =
         // - :red[:shimmer[text]] - shimmer inherits the red
         "span.stMarkdownShimmer": {
           color: "inherit",
-          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          // Mask gradient: fades from 55% opacity to 100% at the shimmer peak and back
           maskImage: `linear-gradient(
             90deg,
-            rgba(0, 0, 0, 0.4) 0%,
-            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.55) 40%,
             rgba(0, 0, 0, 1) 50%,
-            rgba(0, 0, 0, 0.4) 60%,
-            rgba(0, 0, 0, 0.4) 100%
+            rgba(0, 0, 0, 0.55) 60%,
+            rgba(0, 0, 0, 0.55) 100%
           )`,
           WebkitMaskImage: `linear-gradient(
             90deg,
-            rgba(0, 0, 0, 0.4) 0%,
-            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.55) 40%,
             rgba(0, 0, 0, 1) 50%,
-            rgba(0, 0, 0, 0.4) 60%,
-            rgba(0, 0, 0, 0.4) 100%
+            rgba(0, 0, 0, 0.55) 60%,
+            rgba(0, 0, 0, 0.55) 100%
           )`,
           maskSize: "200% 100%",
           WebkitMaskSize: "200% 100%",

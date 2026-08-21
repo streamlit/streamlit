@@ -80,13 +80,13 @@ prompt = st.chat_input("Ask a question", submit_mode="stop")
 
 ## Thinking and agent steps
 
-Use `type="compact"` or `type="step"` on `st.status` or `st.expander` inside a chat message to disclose reasoning without the default bordered container. Prefer `st.status` for live thinking (spinner, then check); `st.expander` is fine for static replay from history.
+Use `type="compact"` or `type="step"` on `st.status` or `st.expander` inside a chat message to disclose reasoning without the default bordered container. Prefer `st.status` for live thinking; `st.expander` is fine for static replay from history.
 
-**Compact thinking expander.** A borderless inline toggle—the ChatGPT/Claude-style "Thought for N seconds" pattern. Use this for a single reasoning block.
+**Compact thinking expander.** A borderless inline toggle—the ChatGPT/Claude-style "Thought for N seconds" pattern. Use this for a single reasoning block. While work is running, wrap the compact label in `:shimmer[...]` so the text itself is the in-progress cue; update to a static label when complete.
 
 ```python
 with st.chat_message("assistant"):
-    with st.status("Thinking", type="compact") as status:
+    with st.status(":shimmer[Thinking]", type="compact") as status:
         st.write(reasoning)
         status.update(label="Thought for 4 seconds", state="complete")
 
@@ -113,7 +113,7 @@ The connector already stops when the next sibling is not a step, so you do not n
 
 ```python
 with st.chat_message("assistant"):
-    with st.status("Thinking", type="compact") as status:
+    with st.status(":shimmer[Thinking]", type="compact") as status:
         with st.status("Searching docs", type="step"):
             sources = search(prompt)
             st.write(sources[0])
