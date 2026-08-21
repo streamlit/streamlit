@@ -15,6 +15,7 @@
 """text_input unit test."""
 
 import re
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -754,6 +755,55 @@ class TextInputTest(DeltaGeneratorTestCase):
             )
 
         assert "password" in str(exc.value).lower()
+
+
+class TextInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ):
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.text_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self):
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.text_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_unhashable_value_raises_exception(self):
+        """Test that unhashable on_change value raises StreamlitValueError."""
+        # Passing a list (unhashable) should raise StreamlitValueError,
+        # not TypeError from a membership test.
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.text_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self):
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.text_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.text_input
+        assert c.ignore_rerun is True
 
 
 class SomeObj:

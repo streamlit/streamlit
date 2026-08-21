@@ -82,6 +82,10 @@ st.button("Add 5", on_click=increment, args=(5,))
 
 Access a widget's value in its own callback via `st.session_state.key`, not the return variable.
 
+### Suppressing reruns (`on_change="ignore"`)
+
+`st.text_input` and `st.slider` accept `on_change="ignore"` in addition to a callback, `"rerun"` (the default), or `None` (an alias for `"rerun"`). `"ignore"` updates the widget in the UI without rerunning and without calling a callback; Python receives the new value on the next rerun triggered by something else (for example a button click). For text input, that commit is Enter, blur, or search-clear — not each keystroke. Ignored changes are held in the browser and are lost on refresh unless `bind="query-params"` is set. Other widgets still rerun on every interaction; use `st.form` to batch those.
+
 ## Initialization patterns
 
 Initialize all state at the top of your app for clarity:

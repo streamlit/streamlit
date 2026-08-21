@@ -36,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 33
+TEXT_INPUT_ELEMENTS = 34
 
 
 def test_text_input_widget_rendering(
@@ -752,3 +752,49 @@ def test_text_input_setvalue_preserved_on_rerun(app: Page):
         wait_for_app_run(app)
         expect_markdown(app, f"Text input counter: {expected_counter}")
         expect(text_input_field).to_have_value("fixed_value")
+
+
+def test_text_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore text value:", "hello")
+
+    text_input = get_text_input(app, "Ignore change text input")
+    text_input_field = text_input.locator("input").first
+
+    # Fill without committing - URL should not update until Enter.
+    text_input_field.fill("world")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text=world"))
+
+    # Commit with Enter - should NOT trigger a rerun, but should update the URL
+    text_input_field.press("Enter")
+
+    # Wait for any potential rerun to complete. If on_change="ignore" is working
+    # correctly, no rerun will occur, but this ensures that if a bug causes
+    # a rerun, we wait for it before checking.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Rerun counter: 2", exact=True)).not_to_be_visible()
+    expect(text_input_field).to_have_value("world")
+    expect_prefixed_markdown(app, "Ignore text value:", "hello")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_text=world"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore text", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify the updated value is now visible
+    expect(app.get_by_text("Ignore text value: world", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text value: world", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_text_input(app, "Ignore change text input").locator("input").first
+    ).to_have_value("world")
+    expect_prefixed_markdown(app, "Ignore text value:", "world")

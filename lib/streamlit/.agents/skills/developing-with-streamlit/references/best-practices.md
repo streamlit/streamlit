@@ -222,6 +222,16 @@ if submitted:
     results = search(query, category)
 ```
 
+For `st.text_input` and `st.slider`, `on_change="ignore"` suppresses that widget's rerun without a form. Python sees the new value on the next rerun (for example a button click). Prefer a form when you need to batch widgets that do not support this yet.
+
+```python
+# GOOD: Text and slider updates do not rerun until Apply
+query = st.text_input("Query", on_change="ignore")
+threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
+if st.button("Apply"):
+    run(query, threshold)
+```
+
 Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
 
 ```python
