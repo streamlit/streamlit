@@ -68,28 +68,31 @@ class UploadedFile(io.BytesIO):
     and ``audio`` attributes of its ``ChatInputValue``.
 
     ``UploadedFile`` is a subclass of ``io.BytesIO`` and therefore supports
-    Python's file-like interface. You can pass it anywhere a file-like object is
-    accepted.
+    Python's file-like interface. You can pass it anywhere a binary file-like
+    object is accepted.
 
     .. note::
-        Calling ``read()`` advances the file position. After reading all data,
-        another call returns no data. Use ``getvalue()`` to read the full
-        contents without changing the position, or ``seek(0)`` to rewind.
+        After you read the file to the end, another ``read()`` returns no data.
+        Use ``getvalue()`` to read the full contents without changing the
+        position, or ``seek(0)`` to rewind.
 
     Attributes
     ----------
     name : str
-        The name of the uploaded file. For directory uploads, this is the path
-        of the file relative to the selected directory. The name is provided by
-        the user's browser and isn't sanitized. Don't use it directly as a path
-        when writing the file to disk; choose an app-controlled destination
-        instead.
+        The name of the uploaded file. For directory uploads, this is the file's
+        path within the selected directory, including the directory name (for
+        example, ``"photos/2024/a.jpg"``). The name is provided by the user's
+        browser and isn't sanitized. Don't use it directly as a path when
+        writing the file to disk; choose an app-controlled destination instead.
     type : str
-        The MIME type of the uploaded file. For user-selected files, this is the
-        type reported by the user's browser, or ``"application/octet-stream"``
-        if the browser doesn't report one. For ``st.camera_input``, this is
-        ``"image/jpeg"``. For ``st.audio_input`` and ``ChatInputValue.audio``,
-        this is ``"audio/wav"``.
+        The MIME type of the uploaded file.
+
+        - For user-selected files, this is the type reported by the user's
+          browser, or ``"application/octet-stream"`` if the browser doesn't
+          report one.
+        - For ``st.camera_input``, this is ``"image/jpeg"``.
+        - For ``st.audio_input`` and ``ChatInputValue.audio``, this is
+          ``"audio/wav"``.
     size : int
         The size of the uploaded file in bytes.
     """
