@@ -51,6 +51,8 @@ Format: `:material/icon_name:`
 
 Find icons: https://fonts.google.com/icons
 
+Full list of icons available in Streamlit: [material_icon_names.py](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py)
+
 **Popular icons by category:**
 
 | Category | Icons |

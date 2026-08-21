@@ -94,7 +94,7 @@ runner's system Python.
 | `python-tests.yml` | Push/PR to `develop` | Python unit tests, linting, type checking across all supported Python versions |
 | `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip unused-export and unused-dependency analysis (PR-blocking), and Vitest unit tests with coverage |
 | `js-unit-tests.yml` | `workflow_call` | Reusable JS unit test workflow (called by other workflows) |
-| `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox. On PRs, a second job counts how many E2E test cases the PR adds relative to its merge base (via `scripts/compare_e2e_test_counts.py`) and comments if the increase is significant |
+| `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |
 | `playwright-custom-components.yml` | Push/PR to `develop` | E2E tests specifically for custom components |
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |

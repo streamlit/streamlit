@@ -1745,3 +1745,24 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         }""",
         timeout=timeout,
     )
+
+
+def open_json_path_tooltip(page: Page, json_element: Locator) -> Locator:
+    """Click a JSON string value and wait for the path tooltip.
+
+    react-json-view puts a collapse-toggle on ``.string-value`` and the
+    path-select handler on the parent ``.variable-value``. On webkit, the
+    child re-render can swallow the bubbled click so the tooltip never
+    opens. If that happens, click the parent to fire ``onSelect`` directly.
+    """
+    string_value = json_element.locator(".string-value").first
+    expect(string_value).to_be_visible()
+    string_value.click()
+
+    tooltip = page.get_by_test_id("stJsonPathTooltip")
+    try:
+        expect(tooltip).to_be_visible(timeout=1000)
+    except AssertionError:
+        json_element.locator(".variable-value").first.evaluate("el => el.click()")
+        expect(tooltip).to_be_visible()
+    return tooltip
