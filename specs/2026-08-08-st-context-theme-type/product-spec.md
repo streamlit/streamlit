@@ -20,11 +20,14 @@ design.
 ### Motivation / demand
 
 [#11920](https://github.com/streamlit/streamlit/issues/11920) is currently the **highest-upvoted open theming
-issue** on the Streamlit tracker (21 👍 as of this writing — ahead of other open `feature:theming` issues). Fixing
-it also **unblocks** [#11536](https://github.com/streamlit/streamlit/issues/11536) (expose all theming config
-options in `st.context.theme`, also highly upvoted): that expansion reuses the same frontend→backend theme sync
-path, so shipping more fields on a still-stale `st.context.theme` would inherit the same first-run and
-appearance-change bugs. Correctness first, then richer theme context.
+issue** on the Streamlit tracker (21 👍 as of this writing — ahead of other open `feature:theming` issues).
+
+Correctness here is also a prerequisite for any future expansion of `st.context.theme`
+([#11536](https://github.com/streamlit/streamlit/issues/11536)): more fields on a still-stale object would
+inherit the same first-run and appearance-change bugs. Note that #11536's direction is itself contested —
+exposing the whole theme means attaching many properties to every rerun, and CSS variables on the frontend
+([#4198](https://github.com/streamlit/streamlit/issues/4198)) are arguably the better answer for the underlying
+use case of styling custom HTML. This spec takes no position on that; it only fixes what exists.
 
 ### Use cases
 
@@ -85,7 +88,7 @@ differs from OS preference, and for pathological section colors — see the beha
 | [#11920](https://github.com/streamlit/streamlit/issues/11920) | Umbrella: make `type` correct in all situations (highest-upvoted open theming issue) |
 | [#11797](https://github.com/streamlit/streamlit/issues/11797) | MPA deep-link regression (closed by #11870)                                          |
 | [#15287](https://github.com/streamlit/streamlit/issues/15287) | No auto-update on settings theme change (dup of #11920)                              |
-| [#11536](https://github.com/streamlit/streamlit/issues/11536) | Expose all theming config options — unblocked by this work; still out of scope here  |
+| [#11536](https://github.com/streamlit/streamlit/issues/11536) | Expose all theming config options — out of scope, and its direction is contested (see #4198)  |
 | [#5009](https://github.com/streamlit/streamlit/issues/5009)   | Original light/dark detection request (closed by #10972)                             |
 
 ## Proposal
@@ -175,8 +178,11 @@ Independent of A/B/C, once fixed:
      saw, the client notices the disagreement, and one immediate auto-rerun corrects it; see the
      [tech spec](./tech-spec.md) §4. Apps that only render from `type` see a flicker at worst; apps with side
      effects on their first run would perform them with the earlier value.
-2. **Appearance change** (menu System/Light/Dark, host theme message, OS change while on System) — app reruns and
-   `type` updates without a manual rerun.
+2. **Appearance change** (menu System/Light/Dark, host theme message, OS change while on System) — for apps that
+   read `st.context.theme`, the app reruns and `type` updates without a manual rerun. Apps that never read it are
+   **not** rerun: `type` is read by roughly 0.6% of apps, so the correction is gated on actual use rather than
+   charged to everyone. Such an app pays at most one correction per session — see the
+   [tech spec](./tech-spec.md) access gate.
 3. **MPA deep links** — non-default page + `[theme]` still lands on that page (no #11797 regression).
 4. **CSS overrides** — injected CSS backgrounds remain out of scope for `type`.
 5. **Host theme vs config.toml** — runtime host themes (`SET_CUSTOM_THEME_CONFIG`) replace config.toml on the
@@ -224,10 +230,14 @@ let A and C coexist. That is **out of scope** for #11920 and belongs with
 
 These need explicit reviewer sign-off before (or as) the implementation PR:
 
-1. **Public preference later?** Should #11536 (or a follow-up) add `st.context.theme.preference` so preference and
-   appearance can both be queried?
-2. **System + OS change:** When the selection is System and the OS flips light↔dark, the app reruns so `type`
+1. **Adoption vs. cost.** `st.context.theme.type` is read by roughly **0.6% of apps**. The tech spec's access
+   gate keeps the other 99.4% free of extra reruns, and its scope decision offers a lighter variant that drops
+   the backend resolver at the price of a visibly wrong first paint. Which variant do we want?
+2. **Public preference later?** Should a follow-up add `st.context.theme.preference` so preference and
+   appearance can both be queried? (Reviewer feedback so far: preference and theme identity are not useful on
+   the backend, so probably not.)
+3. **System + OS change:** When the selection is System and the OS flips light↔dark, the app reruns so `type`
    keeps up. Is an automatic rerun on an OS-level change what we want, given the script re-executes without
    the user touching anything?
-3. **SiS / embedded hosts:** Any host-specific constraints on sending preference, or on auto-rerunning in
+4. **SiS / embedded hosts:** Any host-specific constraints on sending preference, or on auto-rerunning in
    response to `SET_CUSTOM_THEME_CONFIG`, beyond what the hostframe E2E covers?

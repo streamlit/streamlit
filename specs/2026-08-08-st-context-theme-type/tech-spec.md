@@ -16,6 +16,15 @@ Fix `st.context.theme.type` with a two-way exchange:
    **before** the script runs. Otherwise it trusts the client's own `color_scheme`.
 3. The backend **echoes** whatever the script saw back in `NewSession`. The client reruns
    once whenever what it paints disagrees with that echo.
+4. The echo is **gated**: it is sent only on the first `NewSession` of a session, or once a
+   run has actually read `st.context.theme`. With no echo there is nothing to compare, so
+   the client does not rerun.
+
+Point 4 matters as much as the rest. `st.context.theme.type` is read by roughly **0.6% of
+apps**, so a correction mechanism that fired for everyone would charge the other 99.4% for a
+value they never read. See [the access gate](#the-access-gate-required-by-either-approach)
+for what it costs them (one correction per session, not zero) and for the client-side
+condition that makes gating safe rather than harmful.
 
 The echo is what makes the system self-correcting. The backend resolver is deliberately
 best-effort — it parses most CSS colours but not every syntax — and any disagreement, from
@@ -29,16 +38,14 @@ this design depends on, and that are easy to get wrong.
 
 ### Terms
 
+Four terms this design leans on, which are easy to conflate:
+
 | Term | Meaning |
 |------|---------|
-| **Frontend** / **FE**, **Backend** / **BE** | The React app in `frontend/` and the Python runtime in `lib/`, respectively |
 | **Appearance preference** | What the user or their OS asked for: menu `Light` / `Dark` / `System`, with `System` resolved against `prefers-color-scheme`. Sent as `theme_preference` |
 | **Painted appearance** | Whether the app actually renders light or dark, from the active theme's background luminance (`getThemeColorScheme`). What Option C defines `type` to mean |
 | **Theme applied** | Whether the client is painting its *final* theme for this session, which makes its own `color_scheme` authoritative. Sent as `theme_applied` |
 | **Echo** | `NewSession.resolved_color_scheme` — the value the script actually saw, sent back so the client can detect a disagreement |
-| **Dual theme** | A `config.toml` with `[theme.light]` and/or `[theme.dark]` sections, which makes the FE build separate light and dark custom themes |
-| **Section variant** | Which half of a dual theme is active — `"light"` or `"dark"`. The FE forces the theme's `base` from it |
-| **Host theme** | A theme pushed by an embedding host at runtime via the `SET_CUSTOM_THEME_CONFIG` postMessage, which replaces `config.toml` on the FE |
 
 ## Problem
 
@@ -63,8 +70,10 @@ with.
 4. FE applies custom theme via `processThemeInput` → UI is correct; Python is stale.
 
 The only entity that has **both** preference **and** `config.toml` at first-run time is
-the backend. True first-execution correctness requires backend resolution (or a slower
-pre-session handshake — rejected below).
+the backend. So getting the *first* run right means either resolving it there, or reordering
+the handshake so the client has the theme before it asks for a run — which is what
+[the design space](#the-design-space-three-approaches) weighs. Everything after the first run
+is correctable without either.
 
 ### Why the old auto-rerun broke MPA
 
@@ -84,21 +93,6 @@ page ([#11797](https://github.com/streamlit/streamlit/issues/11797)).
 restore** name-based `componentDidUpdate` reruns.
 
 ## Proposal
-
-### High-level flow
-
-```mermaid
-sequenceDiagram
-    participant FE as Frontend
-    participant BE as Backend
-
-    FE->>BE: BackMsg.rerun (theme_preference, theme_applied=false, color_scheme)
-    BE->>BE: theme_applied false → resolve from preference + config.toml
-    BE->>BE: Script runs; st.context.theme.type is the resolved value
-    BE->>FE: NewSession (custom_theme, resolved_color_scheme)
-    FE->>FE: Apply custom theme, compare paint against resolved_color_scheme
-    FE->>BE: One rerun, only if they disagree (theme_applied=true from here on)
-```
 
 ### 1. Proto
 
@@ -133,6 +127,11 @@ optional string resolved_color_scheme = 12;
 `color_scheme` remains what Python exposes via `st.context.theme.type`; the backend
 overwrites it only in the `theme_applied=false` window.
 
+`resolved_color_scheme` is **conditionally** populated — see
+[the access gate](#the-access-gate-required-by-either-approach). Its absence is meaningful
+rather than merely empty: it tells the client there is nothing to keep truthful, and the
+client must clear its copy rather than retain the last value.
+
 **Backward compatibility.** Old FE + new BE: no `theme_preference`, so `color_scheme` is
 left exactly as sent — no regression. New FE + old BE: no `resolved_color_scheme`, so the
 client never sees a disagreement and behaves as it does today.
@@ -149,38 +148,11 @@ theming calculations belong on the frontend, and this is the one window where th
 cannot know the answer. It also points at `handleSectionInheritance` /
 `createCustomThemes` in `frontend/lib/src/theme/utils.ts` as the rules being mirrored.
 
-```python
-def resolve_theme_type(preference: ThemeType) -> ThemeType:
-    theme = config.get_options_for_section("theme")
-    light = config.get_options_for_section("theme.light")
-    dark = config.get_options_for_section("theme.dark")
-    sidebar = config.get_options_for_section("theme.sidebar")
-    light_sidebar = config.get_options_for_section("theme.light.sidebar")
-    dark_sidebar = config.get_options_for_section("theme.dark.sidebar")
-
-    if not any(
-        _has_section_content(section)
-        for section in (theme, light, dark, sidebar, light_sidebar, dark_sidebar)
-    ):
-        # Presets only: the frontend paints whatever was preferred.
-        return preference
-
-    # The frontend enters dual-theme mode when [theme.light] / [theme.dark] have
-    # content, or when their nested sidebar subsections do (hasThemeSectionConfigs
-    # checks one level into nested objects).
-    if any(
-        _has_section_content(section)
-        for section in (light, dark, light_sidebar, dark_sidebar)
-    ):
-        section = dark if preference == "dark" else light
-        merged = _merge_for_dual_theme(theme, section, variant=preference)
-        return _type_from_bg_or_base(merged, fallback=preference)
-
-    # A single custom theme. With neither background nor base set the frontend
-    # inherits from lightTheme, so it paints light. This also covers sidebar-only
-    # configs, where the main area always follows lightTheme.
-    return _type_from_bg_or_base(theme, fallback="light")
-```
+It reads all six theme sections (`theme`, `theme.light`, `theme.dark`, and their `.sidebar`
+subsections) and branches in this order: **no theme config at all** → return the preference;
+**any light/dark section has content** → dual-theme path; **otherwise** → single custom theme.
+Dual-theme detection must include the nested `.sidebar` subsections, because the frontend's
+`hasThemeSectionConfigs` looks one level into nested objects.
 
 | Config shape | Resolved `type` |
 |--------------|-----------------|
@@ -207,43 +179,30 @@ base is an explicit section `backgroundColor`.
 fallback. It assumes `base` is already `"light"`/`"dark"`;
 `config_util.process_theme_inheritance` guarantees that.
 
-`_parse_color` handles the CSS colour space rather than hex alone, using
-`PIL.ImageColor.getrgb` — **no new dependency**, since `pillow>=7.1.0,<13` is already a
-runtime dependency of the library. That covers hex in 3/4/6/8 digits, all 148 CSS named
-colours, `rgb()` with numbers or percentages, and `hsl()`; alpha is dropped, matching the
-frontend. It is imported lazily because the resolver runs at most once per session and the
-runtime should not pay for Pillow at startup.
+**Colour handling** must match the frontend, because a mismatch reports the inverse of what
+is painted:
 
-`_luminance` computes WCAG relative luminance (sRGB linearization + BT.709) with threshold
-`> 0.5` — identical to color2k's `getLuminance`, which the FE uses via
-`hasLightBackgroundColor`. Pin these boundary values in the tests, measured against the
-vendored color2k:
-
-| Color | `getLuminance` | Classified |
-|-------|---------------|------------|
-| `#7f7f7f` | 0.2122 | dark |
-| `#808080` | 0.2159 | dark |
-| `#bbbbbb` | 0.4969 | **dark** — just below |
-| `#bcbcbc` | 0.5029 | **light** — just above |
-
-`#bbbbbb`/`#bcbcbc` is the real crossing. Mid-gray sits at ~0.21 and would pass any
-implementation, proving nothing.
-
-`_parse_color` must also retry with a `#` prefix, because the frontend's `parseColor` does
-— which makes a bare `backgroundColor = "121212"` a working config that the backend would
-otherwise misread.
-
-**Still best-effort, but the gap is narrow.** What remains unparsed is CSS's
-space-separated syntax (`rgb(0 0 0)`, `hsl(0 0% 10%)`) and the `transparent` keyword. Those
-fall through to the fallback and can be the inverse of what is painted. The resolver
-deliberately does **not** grow a full CSS parser to chase them — the echo covers them at
-the cost of one extra rerun on that load, which is also what lets the resolver stay small
-as frontend theme logic evolves. Pin the remaining gap in a test so it stays visible.
+- `_parse_color` uses `PIL.ImageColor.getrgb` — **no new dependency**, `pillow>=7.1.0,<13`
+  is already required — covering hex in 3/4/6/8 digits, the 148 CSS named colours, `rgb()`
+  with numbers or percentages, and `hsl()`. Alpha is dropped, matching the frontend. Import
+  it lazily: the resolver runs at most once per session.
+- It must **retry with a `#` prefix**, because the frontend's `parseColor` does — otherwise a
+  bare `backgroundColor = "121212"` is a working config the backend misreads.
+- `_luminance` is WCAG relative luminance (sRGB linearization + BT.709) with threshold
+  `> 0.5`, identical to color2k's `getLuminance`. Pin the boundary in tests at **`#bbbbbb`
+  (0.4969, dark) / `#bcbcbc` (0.5029, light)** — that is the real crossing. Mid-gray sits at
+  ~0.21 and would pass any implementation, proving nothing.
+- **Still best-effort.** CSS's space-separated syntax (`rgb(0 0 0)`, `hsl(0 0% 10%)`) and
+  `transparent` remain unparsed and fall through to the fallback. The resolver deliberately
+  does not grow a full CSS parser: the echo covers them at the cost of one rerun, which is
+  what lets the resolver stay small as frontend theme logic evolves. Pin that gap in a test
+  so it stays visible.
 
 #### Wiring in `app_session.py`
 
-`request_rerun` resolves onto the session's **cached** `_client_state`, and `RerunData`
-then reads from that copy — the incoming `client_state` is a different object:
+`request_rerun` resolves onto the session's **cached** `_client_state` — the incoming
+`client_state` is a different object, so resolving on the parameter would never reach the
+script — and then hands `RerunData` a fresh snapshot of the result:
 
 ```python
 if client_state.HasField("context_info"):
@@ -253,15 +212,20 @@ if client_state.HasField("context_info"):
 query_string = sanitize_query_string(client_state.query_string)
 rerun_data = RerunData(
     ...
-    # Read from the cached copy, not the incoming parameter: the
-    # resolution above only applies to _client_state, and for a client
-    # BackMsg these are distinct objects.
-    context_info=self._client_state.context_info,
+    # A snapshot, NOT the session's own object -- see below.
+    context_info=context_info,
 )
 ```
 
-Resolving on the cached copy also means server-initiated reruns (run-on-save, fragment
-reruns) use the resolved value.
+**Hand `RerunData` a copy, not `_client_state.context_info`.** `RerunData` is a snapshot,
+but the session's `context_info` is long-lived and every later rerun request overwrites it
+in place, while `ScriptRunContext` holds whatever object it was given and `st.context` reads
+it lazily at property-access time. Passing the live object lets an incoming request change
+what an *already-running* script sees — for `theme.type` and equally for `timezone`,
+`locale`, `url`, and `is_embedded`. Resolve onto `_client_state` (so server-initiated reruns
+keep the value), then `CopyFrom` it into a fresh `ContextInfo` for `RerunData`. A test that
+only asserts the incoming BackMsg is untouched will not catch this; assert the *outgoing*
+snapshot is stable across a second request.
 
 ```python
 def _resolve_color_scheme(context_info: ContextInfo) -> None:
@@ -280,14 +244,16 @@ def _resolve_color_scheme(context_info: ContextInfo) -> None:
     context_info.color_scheme = theme_type.resolve_theme_type(preference)
 ```
 
-`_create_new_session_message` sends the echo, left unset when there is no value yet (e.g.
-a server-initiated first run) so the client treats it as "unknown" rather than a mismatch:
+`_create_new_session_message` sends the echo — **subject to the
+[access gate](#the-access-gate-required-by-either-approach)**, and left unset when there is
+no value yet (e.g. a server-initiated first run), which the client treats as "nothing to
+compare" rather than a mismatch:
 
 ```python
-if self._client_state.context_info.color_scheme:
-    msg.new_session.resolved_color_scheme = (
-        self._client_state.context_info.color_scheme
-    )
+correction_can_matter = not self._has_sent_new_session or self._context_theme_was_read
+if correction_can_matter and self._client_state.context_info.color_scheme:
+    msg.new_session.resolved_color_scheme = self._client_state.context_info.color_scheme
+self._has_sent_new_session = True
 ```
 
 ### 3. Frontend: what it sends
@@ -317,11 +283,8 @@ getResolvedThemePreference = (): "light" | "dark" => {
 
 `state.themeHash` is `""` **exactly** during the pre-`processThemeInput` window — a
 session with no custom theme still gets a non-empty sentinel hash — so it is a reliable
-"has the final theme been applied" test. `hostThemeApplied` is a monotonic flag set **inside** each of
-`handleThemeMessage`'s three branches, never after the chain: a host message that matches no
-branch paints nothing, so it must not claim the client's `colorScheme` is authoritative.
-Once a branch does paint, the flag stays set for the session, which is why it needs no
-clearing.
+"has the final theme been applied" test. `hostThemeApplied` covers the other way the window
+can close; see §4 for how it is set.
 
 Because `theme_preference` is consulted **only** inside that startup window — before any
 in-session interaction — the cached selection and the OS preference are the whole story.
@@ -335,8 +298,12 @@ Three instance fields on `App`:
 | Field | Meaning |
 |-------|---------|
 | `backendColorScheme: "light" \| "dark" \| null` | What Python currently believes `type` is. `null` means we have not been told yet, which is **not** a disagreement |
-| `hostThemeApplied: boolean` | A host has pushed a theme. Monotonic — never cleared, so there is no stale-flag failure mode |
-| `pendingThemeRerun: boolean` | A theme rerun that could not be sent because we were busy or offline |
+| `hostThemeApplied: boolean` | A host has pushed a theme. Set **inside** each `handleThemeMessage` branch, never after the chain — a message matching no branch paints nothing and must not claim authority. Monotonic thereafter |
+| `themeCorrectionInFlight: boolean` | A correction was sent and the server has not answered. Cleared only on observed events (see below) |
+
+There is deliberately **no** "pending rerun" flag. The disagreement between what we paint
+and `backendColorScheme` *is* the pending state, and unlike a flag it survives disconnects
+and sends that never reach the server.
 
 Four hooks:
 
@@ -353,71 +320,76 @@ if (
 }
 ```
 
-**2. `sendRerunBackMsg`**, after the message is sent, records what Python will now believe:
+**`sendRerunBackMsg` must NOT record what Python will believe.** The echo is the only
+writer of `backendColorScheme`. Predicting it at send time is unsound, because
+`ConnectionManager.sendMessage` logs an error and returns `void` when disconnected — the
+caller cannot tell whether the message went out. A predicted update after a discarded send
+would leave the client believing Python holds a value it never received, with no
+disagreement left to detect.
+
+**2. `componentDidUpdate`**, appended after the existing `scriptRunState` handling — one
+unconditional re-evaluation:
 
 ```tsx
-this.backendColorScheme = contextInfo.themeApplied
-  ? (contextInfo.colorScheme as "light" | "dark")
-  : null
-this.pendingThemeRerun = false
+this.maybeRerunForThemeChange()
 ```
 
-When we claimed our theme was applied, Python gets exactly the `colorScheme` we sent.
-Otherwise the backend is resolving and we learn the value from the echo.
-
-**3. `componentDidUpdate`**, appended after the existing `scriptRunState` handling:
-
-```tsx
-// Rerun when what we paint disagrees with what Python holds. `null` means we
-// have not been told yet, which is not a disagreement.
-if (
-  this.backendColorScheme !== null &&
-  this.getThemeColorScheme() !== this.backendColorScheme
-) {
-  this.maybeRerunForThemeChange()
-}
-
-if (this.pendingThemeRerun) {
-  this.maybeRerunForThemeChange()
-}
-```
-
-**4. `maybeRerunForThemeChange`** re-checks, defers, or sends:
+**3. `maybeRerunForThemeChange`** compares, and either sends or does nothing:
 
 ```tsx
 private maybeRerunForThemeChange = (): void => {
-  // Same predicate as the caller: null means we have not been told what Python
-  // holds, which is not a disagreement to correct.
+  // `null` means we have not been told what Python holds, so there is nothing
+  // to correct yet.
   if (
     this.backendColorScheme === null ||
     this.getThemeColorScheme() === this.backendColorScheme
   ) {
-    this.pendingThemeRerun = false
     return
   }
+
   if (
     !this.isServerConnected() ||
     this.state.scriptRunState !== ScriptRunState.NOT_RUNNING
   ) {
-    this.pendingThemeRerun = true
+    // Cannot send right now. Nothing to remember: the disagreement persists, and
+    // reconnecting or the script finishing both re-render and re-check.
     return
   }
-  // Left set until the BackMsg is actually sent, so a send that silently
-  // fails (e.g. the socket dropped underneath us) is retried rather than lost.
+
   this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+
+  // Suppress duplicate sends until the server answers.
+  this.themeCorrectionInFlight = true
 }
 ```
 
-**Why this preserves the current page.** The `undefined` argument to
-`sendUpdateWidgetsMessage` is the *fragment id*, which makes this a full-app rerun. The page
-hash matters separately: `WidgetStateManager.sendUpdateWidgetsMessage` always calls
-`sendRerunBackMsg` with `pageScriptHash` as `undefined`, and `sendRerunBackMsg` then falls
-through to `this.state.currentPageScriptHash`. So the rerun cannot carry a stale or empty
-page, which is what broke deep links in #11797.
+Four constraints on this, each of which is easy to get wrong:
 
-**Loop safety.** Every send refreshes `backendColorScheme`, and the `NewSession` echo
-reports what the script actually saw, so once the two agree the comparison short-circuits.
-The menu E2E should assert a run counter, proving exactly one rerun per toggle (Principle 34).
+**Use a local flag, not `scriptRunState`.** Marking the app `RERUN_REQUESTED` is tempting —
+it would block a second send and let the reconnect path retry a dropped one — but that state
+makes `isElementStale` return `true` for *every* element and shows a running indicator, so a
+theme change would grey out the whole app. `sendUpdateWidgetsMessage` avoids it for the same
+reason (see the `ChatInput` comment).
+
+**Clear the flag only on observed events**, never on the assumption a send succeeded:
+`ConnectionManager.sendMessage` discards messages and returns `void` when disconnected. Clear
+it when a `NewSession` arrives, and when the connection drops — the latter is what retries a
+discarded send, since the disagreement is still recorded and reconnecting re-renders.
+
+**The echo is the only writer of `backendColorScheme`.** Do not also set it at send time from
+the value just sent: that is predicting the server's answer, and a discarded send would leave
+the client believing Python holds a value it never received, with no disagreement left to
+detect. Loop safety then follows — once the echo and the paint agree, the comparison
+short-circuits.
+
+**Corrections land one script completion later.** The echo rides on `NewSession`, which
+carries `sessionStatus.scriptIsRunning = true`, so the client learns Python's value while the
+script is running and the correction waits for that run to finish. Never same-run.
+
+The rerun preserves the current page, which is what #11797 turned on: `undefined` here is the
+*fragment id*, making this a full-app rerun, while `WidgetStateManager` separately passes
+`pageScriptHash` as `undefined`, so `sendRerunBackMsg` falls through to
+`this.state.currentPageScriptHash` and cannot carry a stale or empty page.
 
 **Why this does not regress MPA:**
 
@@ -427,7 +399,7 @@ The menu E2E should assert a run counter, proving exactly one rerun per toggle (
 | Fired on page navigation / reconnection | Same — a new `NewSession` re-applies the same theme and echoes the same value |
 | Used theme NAME comparison | Nothing reads theme names; the comparison is `getThemeColorScheme()` vs. the echo |
 | `sendRerunBackMsg()` without page context lost current page | The rerun goes through `sendUpdateWidgetsMessage`, so `sendRerunBackMsg` falls through to `this.state.currentPageScriptHash` |
-| Theme change while script running was silently dropped | `pendingThemeRerun`, drained by `componentDidUpdate` once connected and `NOT_RUNNING` |
+| Theme change while script running was silently dropped | Nothing to drop: the disagreement persists in state, and the script finishing re-renders and re-checks |
 
 **Invariant the trigger depends on:** it only fires when React renders. `App` is a
 `PureComponent` but re-renders on every `ThemedApp` render because `useThemeManager`
@@ -443,27 +415,20 @@ differs from what the client paints.** The echo then corrects it in one rerun. K
 |------|----------------------|
 | `backgroundColor` in a CSS syntax Pillow cannot parse — `rgb(0 0 0)`, `hsl(0 0% 10%)`, `transparent` | The frontend's parser accepts more syntax than Pillow's. Named colours, `rgb()`, `rgb(%)` and `hsl()` **are** handled and are correct on the first run |
 | Host theme applied around or after the first `BackMsg` | The guess comes from `config.toml`, but a host theme is what gets painted |
-| A mirror divergence not yet found | The resolver re-implements five frontend rules; any of them could drift |
+| A mirror divergence not yet found | The resolver re-implements three frontend rules; any could drift |
 
-Two properties worth stating explicitly, because they bound how much this matters:
+**No case is silently wrong** — if the client's luminance agrees with the guess then `type`
+equals the painted appearance by definition, so every divergence is detectable and produces
+exactly one corrective rerun. **But the correction is not free:** run 1 *executed* with the
+wrong value, and the output is visible before it settles. A light logo on a dark background
+is not a subliminal flicker, and a script with side effects on that run — a log, an API call,
+a counter — performed them with the wrong `type`. That residue is the strongest argument for
+approach C, and why approach A is not simply a cheaper B.
 
-**No silently-wrong case remains.** If the client's luminance agrees with the guess, then
-`type` equals the painted appearance, which is correct by definition. So every divergence
-is detectable, and every detectable divergence produces exactly one corrective rerun.
-
-**But "corrected in milliseconds" is not free.** The first run *executed* with the wrong
-value. For pure rendering the output flashes and settles, invisibly. For a script with
-side effects on that run — logging, an API call, a counter, an email — the work was done
-with the wrong `type`. This is the inherent cost of any resolver-based approach and the
-strongest argument for alternative C.
-
-By contrast, `config.toml` precedence is **not** a source of first-run error. The resolver
-reads through `get_options_for_section` *after* all merging has happened — global and
-project `config.toml`, environment variables, CLI flags, and `theme.base` file inheritance
-(`config_util.process_theme_inheritance` clears and re-applies every `theme.*` option,
-sections included). We read the merged answer rather than re-deriving it, so multi-config
-precedence cannot drift. Only the section→appearance mapping is mirrored, and that is what
-the echo guards.
+Note that `config.toml` **precedence** is not a source of error: the resolver reads
+`get_options_for_section` *after* all merging — global and project config, env vars, CLI
+flags, and `theme.base` file inheritance — so it reads the merged answer rather than
+re-deriving it. Only the section→appearance mapping is mirrored.
 
 ### 5. Docs
 
@@ -498,11 +463,25 @@ In `app_session_test.py`, four cases around the wiring:
 - `_create_new_session_message` populates the echo, and leaves it unset when there is no
   value to send.
 
+**Python unit, the gate** — three cases on `_create_new_session_message`: the first
+`NewSession` echoes; a later one does **not** when no run has read the theme; a later one
+does once a run has. Plus, on the notification path: reading `st.context.theme` sets the
+flag, reading a sibling like `st.context.timezone` does **not**, and a `None` handler is
+harmless (which is how `AppTest` runs).
+
 **Frontend unit** — `App.test.tsx` needs the two new `contextInfo` fields added to the three
 existing `sendRerunBackMsg` assertions, plus dedicated coverage for the parts E2E reaches
 awkwardly: `isThemeApplied` across the startup window and after a host theme;
-`getResolvedThemePreference` for each source; and `maybeRerunForThemeChange` deferring while
-`RUNNING` or disconnected and draining once idle.
+`getResolvedThemePreference` for each source; `maybeRerunForThemeChange` deferring while
+`RUNNING` or disconnected and draining once idle; and **that the client stops correcting once
+the echo stops arriving** — the test that catches the infinite-loop failure mode described in
+the access gate.
+
+**Mutation-test every guard.** Each of these tests should be verified by removing the
+protection it covers and confirming it goes red. A guard test that cannot fail is worse than
+no test, because it manufactures confidence. The failure mode is specific and easy to hit
+here: a guard test can be satisfied by a rerun from an unrelated code path and pass whether
+or not the guard exists.
 
 **E2E** — one module per theme configuration, since a module can only apply one (see
 [Implementation notes](#implementation-notes)):
@@ -512,7 +491,8 @@ awkwardly: `isThemeApplied` across the startup window and after a host theme;
 | First-run correctness — the core of #11920 | `base=dark` + a dark `backgroundColor`, light OS preference | `type` is `"dark"` with no interaction, and stays `"dark"` across a rerun (covering the handoff to the client's own value) |
 | Non-hex background | `backgroundColor="black"`, light OS preference | the computed background really is `rgb(0, 0, 0)`, and `type` is `"dark"` on the first run |
 | Menu appearance change — #15287 | none (presets) | Light→Dark→Light from the settings menu updates `type` with no manual rerun, and a run counter proves exactly one rerun per toggle |
-| MPA deep link — the #11797 guard | `[theme]` set | entering a non-default page by direct URL still lands on that page. **No such test exists today:** `mpa_v2_custom_theme_test.py` configures a theme but navigates by clicking, and `mpa_basics_test.py` deep-links with no theme — so the regression this design must not reintroduce is currently unguarded |
+| MPA deep link — the #11797 guard | `[theme]` set | entering a non-default page by direct URL still lands on that page. Belongs in `mpa_v2_custom_theme_test.py`, which already configures a theme; verify it by reintroducing #10972's name-diff rerun and checking the test fails |
+| **An app that never reads `st.context.theme`** | presets | count the reruns across several menu toggles. Assert the *number*, not the absence of a correction — an absence assertion passes even when the gate is broken. This is the only test that measures the cost to the 99.4% |
 
 Also unskip [`hostframe_app_test.py::test_st_context_theme_respects_dark_theme_message`](../../e2e_playwright/hostframe_app_test.py),
 skipped since #11870. No new CI infrastructure — the hostframe suite already exists.
@@ -555,68 +535,142 @@ surrounding code, and each one will cost time if it is discovered late.
   retries with a `#` prefix, and warns only on real failure. So `"black"` is a valid,
   working config that must not be rejected — which is precisely why the echo exists.
 
+## The design space: three approaches
+
+Everything else in this spec is shared: the echo (`resolved_color_scheme`), the client
+comparison in §3-§4, and the access gate below. The three approaches differ **only in how
+the first script run gets its value**.
+
+These are approaches to *implementation*. They are unrelated to the product spec's Options
+A/B/C, which decide what `type` should *mean*; that decision is settled as Option C
+(visual appearance) and all three approaches below implement it.
+
+| | **A — lightweight** | **B — robust** (proposed) | **C — push theme ahead** |
+|---|---|---|---|
+| How run 1 gets its value | the client's provisional value; corrected on run 2 | the backend resolves from `config.toml` before the run | the backend sends the theme *before* the client's first rerun |
+| Run 1, ordinary custom theme | **wrong** — visible flash | **right** | **right** |
+| Run 1, host theme (SiS) | wrong → corrected | wrong → corrected | **still wrong** — host themes come from the embedder, not the server |
+| Added latency | none | none | +1 RTT before first content, every session, every app |
+| Proto change | 1 field | 3 fields, all additive | protocol reordering |
+| Backend code | none | ~110 lines | new pre-session message + handshake ordering |
+| Mirrors frontend rules | no | 3 rules | no |
+| Verdict | viable fallback | **proposed** | rejected — see below |
+
+### A vs B, in detail
+
+These are the two live candidates. C is rejected on grounds that do not depend on the
+adoption argument (see the end of this section).
+
+| | **A — lightweight** | **B — robust** |
+|---|---|---|
+| `theme_type.py` | not needed | ~110 lines; 189 with docs |
+| Of which mirrors frontend behaviour | — | 3 rules: section inheritance, dual-theme detection, single-theme light fallback |
+| Of which is standard or delegated | — | `_luminance` is the published WCAG formula; `_parse_color` delegates to Pillow |
+| Proto fields | `resolved_color_scheme` | + `theme_preference`, `theme_applied` |
+| `app_session` wiring | unchanged | must pass a **copy** of `context_info` to `RerunData` (§2) |
+| `AGENTS.md` "no backend theming" | not engaged | narrow exception; the rule targets styling/layout math, and its stated worry — the backend cannot see the active theme — is exactly what the echo answers |
+| Reruns, app that reads `type` | 2 on first load | 1 on first load |
+| Reruns, app that does not | none, after the gate | none, after the gate |
+| Residual wrong first runs | all custom themes | unparseable colour syntax; host-theme race |
+| Ongoing maintenance | none | keep 3 rules in step with the frontend |
+
+**What A costs the user.** Not an invisible delay. Run 1 renders with the wrong value — a
+light logo on a dark background, or `plotly_white` on a dark page — and then flips. For an
+API whose whole purpose is contrast adaptation, the first paint *is* the product, and "first
+run with a custom theme" is the first failure mode
+[#11920](https://github.com/streamlit/streamlit/issues/11920) lists. A closes the issue's
+second half and leaves the first visible on every load.
+
+**What B costs the team.** Three mirrored rules, anchored to the *public* `[theme]` config
+schema. That schema is user-facing contract and does not churn freely — it last changed when
+dual themes were introduced. So drift is a real but modest risk, and the echo bounds any
+drift to one wrong first run rather than a stale session. Note also that neither option
+avoids the harder part: six of the defects found while developing this design were in the
+shared client trigger, which A and B need identically. A is smaller, not safer.
+
+**Decision rule.** If a visible wrong-contrast flash on first load is acceptable, take A and
+delete the resolver. If it is not — and for a contrast-adaptation API that is hard to argue
+— take B. Nothing else changes either way, so A stays a clean retreat if the mirror ever
+becomes a burden.
+
+### Why C is rejected
+
+On connect the backend would send the `config.toml` theme; the client applies it and only
+then sends its first rerun, already carrying a correct `color_scheme`. That buys a correct
+first run with no resolver and no mirror — genuinely attractive — but:
+
+1. **An extra round trip before the script starts, every session.** `connect → client rerun
+   → script runs` becomes `connect → server theme → client applies → client rerun → script
+   runs`. The delay lands on time to first *content*; the client already paints a cached or
+   preset theme immediately, so users would see chrome as fast as ever and then wait longer
+   for the body.
+2. **Every app pays it**, to fix a value ~0.6% of apps read.
+3. **It hurts the deployments least able to absorb it** — Community Cloud and especially
+   SiS/SPCS sit behind longer paths, an iframe, and a container or warehouse layer, on top of
+   cold-start latency users already notice.
+4. **It does not fix the host-theme case, which is the SiS case.** Host themes arrive from
+   the embedder via `SET_CUSTOM_THEME_CONFIG`, not from the server, so the backend cannot
+   push them ahead of the first run. C would still need the echo — for exactly the platform
+   paying the most latency for it.
+5. **Protocol reordering rather than additive fields**, so version-skew combinations need
+   real thought instead of falling out of optional-field semantics.
+
+Point 4 is decisive: a universal, SiS-weighted latency cost that still does not remove the
+correction mechanism.
+
+### The access gate (required by either approach)
+
+`st.context.theme.type` is read by roughly **0.6% of apps**, so no approach may add reruns
+for the other 99.4%. Send `resolved_color_scheme` only when a correction could matter:
+
+```python
+correction_can_matter = not self._has_sent_new_session or self._context_theme_was_read
+```
+
+**Do not use `gather_metrics` to detect the access.** `@gather_metrics("context.theme")`
+only records when `ctx.gather_usage_stats` is true, and `metrics_util` skips tracking
+entirely when `browser.gatherUsageStats` is off — so telemetry-disabled deployments would
+silently lose corrections. Notify explicitly instead: `ContextProxy.theme` calls an
+`on_context_theme_read` callback carried on `ScriptRunContext`, following the route
+`on_script_error` already takes (`AppSession` → `ScriptRunner` → context). `AppSession`
+holds the memory in two sticky booleans, because a per-run context cannot outlive the run
+that made the access. There is no pre-existing "have we sent a `NewSession`" signal; add one.
+
+Put the callback *before* the `context_info is None` early return, so an access counts even
+when there is no value yet. Note the gate is intentionally coarse: bare `st.context.theme`
+with no field access still counts. `ContextProxy` is a plain class rather than a dict, so
+the property is the only door and both `.type` and `["type"]` route through it.
+
+**The client must treat an absent echo as "nothing to compare", not "keep the old value".**
+This is the part that is easy to get wrong and it is load-bearing:
+
+```tsx
+this.backendColorScheme =
+  resolved === "light" || resolved === "dark" ? resolved : null
+```
+
+Retaining the previous value instead — an `if (valid) { assign }` — creates an **infinite
+correction loop** once the gate engages: the client corrects, the resulting `NewSession`
+carries no echo, the stale value is kept while `themeCorrectionInFlight` is cleared, so the
+disagreement never resolves and the client corrects again, forever. The backend gate alone
+is *worse* than no gate. Cover this with a test that counts reruns rather than asserting an
+absence.
+
+**What it actually costs a non-reading app: one correction per session, not zero.** The
+first `NewSession` is emitted at `SCRIPT_STARTED`, before any user code runs, so the client
+necessarily holds a comparable value through run 1. A no-read app therefore pays exactly one
+correction — on the first theme change after load — and none thereafter, since the unechoed
+`NewSession` from that very rerun nulls the client's copy. If any unrelated rerun happens
+first, the cost is zero. The saving is one-per-session instead of one-per-theme-change.
+
 ## Alternatives considered
 
-Two of these are genuinely simpler than the proposal and deserve a real decision rather
-than a dismissal, because both eliminate the resolver — and with it the FE/BE mirror that
-is this design's main long-term liability. The proposal sits deliberately between them.
-
-### A. Echo only — delete the resolver
-
-Keep `resolved_color_scheme`, drop `theme_type.py` and `theme_preference` entirely. The
-first run uses whatever the client's provisional `color_scheme` says; the echo detects the
-disagreement and reruns once.
-
-- **Buys:** no second implementation of frontend theme rules in Python, so the drift risk
-  and the non-hex gap both disappear. Materially less code.
-- **Costs:** the first script run is wrong for *every* custom theme, not just edge cases —
-  which is the larger half of [#11920](https://github.com/streamlit/streamlit/issues/11920).
-
-Worth noting this is exactly what the proposal already does for non-hex backgrounds,
-generalized to all custom themes. **Rejected** for first-run correctness, but it is the
-right fallback if the mirror proves hard to maintain.
-
-### B. Backend uses config `base` / `backgroundColor` only (no preference)
+### Resolve from config alone, ignoring the client's preference
 
 Fixes single-custom-with-`base` quickly; fails for dual light/dark sections and
 preset-only Dark menu selection. **Rejected** as sole fix.
 
-### C. Push the theme to the client before the first script run
-
-On connect, the backend sends the `config.toml` theme; the client applies it and only then
-sends its first rerun, already carrying a correct `color_scheme`.
-
-**Buys:** no resolver, no mirror of frontend rules, no colour-parsing gap at all, and a
-correct first run for `config.toml` themes.
-
-**Costs — and they are larger than they first look:**
-
-1. **An extra round trip before the script starts, on every session.** Today the sequence
-   is `connect → client rerun → script runs`. This makes it
-   `connect → server theme → client applies → client rerun → script runs`. The delay lands
-   on **time to first content**, not time to first paint — the client already paints a
-   cached or preset theme immediately, so users would see the chrome just as fast and then
-   wait longer for the app body.
-2. **Every app pays it, to fix a value most apps read once or never.** The cost is
-   universal; the benefit is confined to apps that read `st.context.theme.type` on their
-   first run.
-3. **It hurts the deployments least able to absorb it.** Community Cloud and especially
-   SiS/SPCS sit behind longer network paths, an embedding iframe, and a container or
-   warehouse layer. An added RTT there is materially worse than on localhost, and it
-   compounds with cold-start latency that users already notice.
-4. **It does not even fix the host-theme case — which is the SiS case.** Host themes arrive
-   from the *embedder* via `SET_CUSTOM_THEME_CONFIG` postMessage, not from the server, so
-   the backend cannot push them ahead of the first run. C would still need a correction
-   mechanism for exactly the platform paying the most latency for it.
-5. **Protocol reordering rather than additive fields**, so old/new client-server
-   combinations need real thought instead of falling out of optional-field semantics.
-
-**Rejected.** Point 4 is decisive: C pays a universal, SiS-weighted latency cost and still
-does not remove the need for the echo. If reviewers weight first-run side effects heavily
-(see [When the first run is still wrong](#when-the-first-run-is-still-wrong)), the cheaper
-move is to narrow the resolver's remaining gaps rather than reorder the handshake.
-
-### D. Have the client *predict* the backend's answer instead of being told it
+### Have the client *predict* the backend's answer instead of being told it
 
 Instead of the echo, the client could key its rerun on the inputs the backend resolves
 from — the appearance preference plus a flag for whether a host theme is active — and rerun
@@ -631,7 +685,7 @@ explicitly about host-message arrival ordering. It also fires redundant reruns w
 preference changes but config pins the appearance either way — and it cannot detect a
 backend/frontend disagreement at all, which is the failure mode most worth catching.
 
-### If product picks A or B instead of C
+### If the product spec picks semantics A or B instead of C
 
 Only §2 changes. The proto and the §3/§4 exchange are agnostic to *what* the backend
 resolves — the echo compares whatever the script saw against what is painted either way.
