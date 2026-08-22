@@ -337,7 +337,7 @@ this.maybeRerunForThemeChange()
 **3. `maybeRerunForThemeChange`** compares, and either sends or does nothing:
 
 ```tsx
-private maybeRerunForThemeChange = (): void => {
+private readonly maybeRerunForThemeChange = (): void => {
   // `null` means we have not been told what Python holds, so there is nothing
   // to correct yet.
   if (
@@ -348,11 +348,13 @@ private maybeRerunForThemeChange = (): void => {
   }
 
   if (
+    this.themeCorrectionInFlight ||
     !this.isServerConnected() ||
     this.state.scriptRunState !== ScriptRunState.NOT_RUNNING
   ) {
-    // Cannot send right now. Nothing to remember: the disagreement persists, and
-    // reconnecting or the script finishing both re-render and re-check.
+    // Cannot or should not send right now. Nothing to remember: the disagreement
+    // persists in state, and reconnecting, the script finishing, or the server
+    // answering all re-render and re-check.
     return
   }
 
