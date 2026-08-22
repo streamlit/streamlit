@@ -209,7 +209,7 @@ Note: `parallel=True` applies to full-app reruns; `run_every` triggers fragment-
 By default, every widget interaction triggers a full rerun. Use `st.form` to batch multiple inputs and only rerun on submit.
 
 ```python
-# BAD: Reruns when each text input is committed (blur/Enter) and on every selection
+# BAD: Reruns on every keystroke and selection
 name = st.text_input("Name")
 email = st.text_input("Email")
 role = st.selectbox("Role", ["Admin", "User"])
@@ -238,37 +238,11 @@ with st.form("search", border=False):
 
 **When to use forms:**
 
-- Multiple related inputs (signup, filters, settings), especially when mixing widgets that still rerun on every interaction
-- Explicit "submit" semantics
+- Multiple related inputs (signup, filters, settings)
+- Text inputs where typing triggers expensive operations
+- Any UI where "submit" semantics make sense
 
 **When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
-
-## Suppressing reruns with `on_change="ignore"`
-
-`st.text_input` and `st.slider` accept `on_change="ignore"` to update the widget in the UI without triggering a rerun. Python receives the new value on the next rerun triggered by something else (a button, another widget, `st.rerun()`, and so on). Other widgets do not support this yet—use a form to batch those.
-
-```python
-# GOOD: Tweaking these widgets does not rerun; Train does
-threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
-query = st.text_input("Query", on_change="ignore")
-
-if st.button("Train"):
-    train_model(query, threshold)
-```
-
-**When to use `on_change="ignore"`:**
-
-- `st.text_input` or `st.slider` changes should not immediately run expensive work
-- You want those widgets to stay outside a form so other widgets can still rerun independently
-
-**When to use a form instead:**
-
-- Batching widgets that do not support `on_change="ignore"` (for example `st.selectbox`)
-- Explicit submit semantics (`st.form_submit_button`)
-
-Ignored values live in the browser until the next rerun. A page refresh loses them unless `bind="query-params"` is set. With `bind="query-params"`, the URL still updates at commit time even without a rerun (for text input: Enter, blur, or search-clear).
-
-This is different from layout containers like `st.tabs` and `st.expander`, whose default `on_change="ignore"` means open state is not tracked (see [Conditional rendering](#conditional-rendering)).
 
 ## Conditional rendering
 

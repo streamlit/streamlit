@@ -130,7 +130,7 @@ Manages all widget state on the frontend.
 3. Trigger widget batching (coalesces updates via `setTimeout(0)`)
 4. Query parameter bindings
 
-**Methods**: Provides getter/setter pairs for each value type (`setTriggerValue`/`getTriggerValue`, `setStringValue`/`getStringValue`, `setBoolValue`/`getBoolValue`, etc.). Setters take a `Source` with optional `triggerRerun` (defaults to `fromUser`). Widgets using `on_change="ignore"` pass `triggerRerun: false` to buffer the value without scheduling a rerun; the value is included in the next `BackMsg`. Inside a form the flag is ignored (the form owns commit timing). Bound widgets still update the URL immediately.
+**Methods**: Provides getter/setter pairs for each value type (`setTriggerValue`/`getTriggerValue`, `setStringValue`/`getStringValue`, `setBoolValue`/`getBoolValue`, etc.).
 
 **Trigger batching**: Multiple trigger calls in same macrotask are batched to prevent race conditions.
 
