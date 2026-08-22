@@ -99,9 +99,11 @@ comparison in §3-§4, and the access gate in §5. The three approaches differ *
 the first script run gets its value**.
 
 These are approaches to *implementation*. They are unrelated to the product spec's Options
-A/B/C, which decide what `type` should *mean*; that decision is **proposed** as Option C
-(visual appearance) and still open for sign-off on the product spec. All three approaches
-below implement whichever meaning is chosen.
+A/B/C, which decide what `type` should *mean*. That decision is **Option C** (visual
+appearance), owned by the [product spec](./product-spec.md) and settled by merging it. All
+three approaches below implement that meaning; see
+[Alternatives considered](#if-the-product-spec-picks-meaning-a-or-b-instead-of-c) for what
+changes if it lands differently.
 
 | | **A — lightweight** | **B — robust** (proposed) | **C — push theme ahead** |
 |---|---|---|---|
@@ -286,8 +288,12 @@ is painted:
   `> 0.5`, identical to color2k's `getLuminance`. Pin the boundary in tests at **`#bbbbbb`
   (0.4969, dark) / `#bcbcbc` (0.5029, light)** — that is the real crossing. Mid-gray sits at
   ~0.21 and would pass any implementation, proving nothing.
-- **Still best-effort.** CSS's space-separated syntax (`rgb(0 0 0)`, `hsl(0 0% 10%)`) and
-  `transparent` remain unparsed and fall through to the fallback. The resolver deliberately
+- **Still best-effort, and the gap is wider than it looks.** Unparsed: CSS's space-separated
+  syntax (`rgb(0 0 0)`, `hsl(0 0% 10%)`), `transparent`, and the modern colour functions
+  `oklch()`, `oklab()`, `lab()`, `lch()`, `hwb()`. Those five are not hypothetical —
+  `frontend/lib/src/theme/utils.test.ts` pins them as accepted `backgroundColor` values, so
+  each is a working config whose first run the backend gets wrong. All fall through to the
+  fallback. The resolver deliberately
   does not grow a full CSS parser: the echo covers them at the cost of one rerun, which is
   what lets the resolver stay small as frontend theme logic evolves. Pin that gap in a test
   so it stays visible.
@@ -325,11 +331,15 @@ must come back untouched — then `CopyFrom` the result into a fresh `ContextInf
 `RerunData`. A test that only asserts the incoming BackMsg is untouched will not catch the
 aliasing; assert the *outgoing* snapshot is stable across a second request.
 
-Note what this does **not** buy: a server-initiated rerun (file watcher, `st.rerun` from the
-server side) takes the `RerunData()` branch with `context_info=None`, and nothing falls back
-to `_client_state`, so `st.context.theme.type` is `None` for that run. That is today's
-behaviour and this design does not change it — but it is why the echo must stay unset there
-rather than reporting the last known value, which the script did not see.
+Resolving onto the cache is also what carries the value across reruns the client did not
+ask for. **These are not a special case, and it is worth being precise, because assuming
+they were would invent one:** `run_on_save` calls `request_rerun(self._client_state)`, and
+`st.rerun()` / `st.switch_page()` pass `context_info=ctx.context_info` into `RerunData`
+([`execution_control.py`](../../lib/streamlit/commands/execution_control.py)) — all of them
+reuse the last client context, so the echo should report whatever that run actually saw, as
+usual. The only path with `context_info=None` is `request_rerun(None)`, used by
+`Runtime.does_script_run_without_error` (the app-warmup check) and by tests, where there is
+no browser: `type` is `None` for that run and the echo correctly stays unset.
 
 ```python
 def _resolve_color_scheme(context_info: ContextInfo) -> None:
@@ -350,8 +360,8 @@ def _resolve_color_scheme(context_info: ContextInfo) -> None:
 
 `_create_new_session_message` sends the echo — **subject to the
 [access gate](#5-the-access-gate)**, and left unset when there is
-no value yet (e.g. a server-initiated first run), which the client treats as "nothing to
-compare" rather than a mismatch:
+no value yet (e.g. the `request_rerun(None)` warmup path), which the client treats as
+"nothing to compare" rather than a mismatch:
 
 ```python
 # `color_scheme_this_run` arrives on the SCRIPT_STARTED event, NOT from
@@ -432,11 +442,16 @@ and sends that never reach the server.
 
 Four hooks:
 
-**1. `handleNewSession`** records the echo *before* `processThemeInput`, so the
-`componentDidUpdate` that follows the theme application can compare the two. An absent or
-unrecognized echo must be recorded as `null` — **not** skipped, leaving the previous value
-in place, which is the infinite-loop failure mode described in §5. Any `NewSession` is also
-the observed event that clears the in-flight flag:
+**1. `handleNewSession`** records the echo near the **top** of the method — after the
+version-reload return, and **above the `if (!fragmentIdsThisRun.length)` branch**. Do not
+put it next to `processThemeInput`: that call lives inside the full-app branch, so fragment
+reruns skip it, and tying the recording to it would make every fragment `NewSession` skip
+both the echo and the flag clear. The only ordering the comparison needs is "before the
+`componentDidUpdate` that follows", which holds anywhere in this method; applying the theme
+is unrelated. An absent or unrecognized echo must be recorded as `null` — **not** skipped,
+leaving the previous value in place, which is the infinite-loop failure mode described in
+§5. Any `NewSession`, fragment or not, is also the observed event that clears the in-flight
+flag:
 
 ```tsx
 const resolved = newSessionProto.resolvedColorScheme
@@ -490,6 +505,20 @@ private readonly maybeRerunForThemeChange = (): void => {
 }
 ```
 
+**4. `handleConnectionStateChanged`** is the other half of that flag's lifecycle, and the
+reason a dropped send is not lost forever. It is easy to omit, because nothing fails visibly
+without it — the correction is simply never retried:
+
+```tsx
+// Leaving CONNECTED: the in-flight send may have been discarded, since
+// ConnectionManager.sendMessage drops messages and returns normally when
+// disconnected. Forget the in-flight assumption so the disagreement -- still
+// recorded in backendColorScheme -- is retried on the reconnect re-render.
+if (this.state.connectionState === ConnectionState.CONNECTED) {
+  this.themeCorrectionInFlight = false
+}
+```
+
 Four constraints on this, each of which is easy to get wrong:
 
 **Use a local flag, not `scriptRunState`.** Marking the app `RERUN_REQUESTED` is tempting —
@@ -537,7 +566,7 @@ differs from what the client paints.** The echo then corrects it in one rerun. K
 
 | Case | Why the guess differs |
 |------|----------------------|
-| `backgroundColor` in a CSS syntax Pillow cannot parse — `rgb(0 0 0)`, `hsl(0 0% 10%)`, `transparent` | The frontend's parser accepts more syntax than Pillow's. Named colours, `rgb()`, `rgb(%)` and `hsl()` **are** handled and are correct on the first run |
+| `backgroundColor` in a CSS syntax Pillow cannot parse — space-separated `rgb()`/`hsl()`, `transparent`, and `oklch()`/`oklab()`/`lab()`/`lch()`/`hwb()` | The frontend's parser accepts more syntax than Pillow's. Named colours, `rgb()`, `rgb(%)` and `hsl()` **are** handled and are correct on the first run |
 | Host theme applied around or after the first `BackMsg` | The guess comes from `config.toml`, but a host theme is what gets painted |
 | A mirror divergence not yet found | The resolver re-implements three frontend rules; any could drift |
 
@@ -614,7 +643,9 @@ the CSS-override note, which remains true.
   being ignored.
 - **Colour parsing.** Hex in all four lengths, named colours, `rgb()`, `rgb(%)`, `hsl()`;
   and rejection of genuine garbage. Also pin the syntax that is *not* parsed
-  (`rgb(0 0 0)`, `transparent`) so the remaining gap stays visible rather than silent.
+  (space-separated `rgb()`/`hsl()`, `transparent`, and `oklch()`/`oklab()`/`lab()`/`lch()`/
+  `hwb()`) so the size of the gap stays visible rather than silent — and so that Pillow
+  learning one of them shows up as a test change instead of a behaviour change.
 - **The resolver matrix**, one case per row of the product spec's behavior table: presets
   follow preference; single custom `base`; hex and non-hex backgrounds; background winning
   over `base`; no-`base`-no-background falling to light; sidebar-only; dual themes following
@@ -646,9 +677,19 @@ harmless (which is how `AppTest` runs).
 existing `sendRerunBackMsg` assertions, plus dedicated coverage for the parts E2E reaches
 awkwardly: `isThemeApplied` across the startup window and after a host theme;
 `getResolvedThemePreference` for each source; `maybeRerunForThemeChange` deferring while
-`RUNNING` or disconnected and draining once idle; and **that the client stops correcting once
-the echo stops arriving** — the test that catches the infinite-loop failure mode described in
-the access gate.
+`RUNNING` or disconnected and draining once idle; a dropped send being retried after a
+reconnect (the hook-4 clear); **that the client stops correcting once the echo stops
+arriving** — the test that catches the infinite-loop failure mode described in the access
+gate; and **that a fragment rerun's `NewSession` records the echo**, which is what pins the
+recording above the full-app branch.
+
+Two warnings on that last one, both learned the hard way. Assert the **positive** — a
+fragment echo that disagrees *does* produce a correction. The tempting negative form ("an
+unechoed fragment `NewSession` causes no further correction") passes even with the recording
+inside the full-app branch, because the uncleared in-flight flag suppresses the send by
+itself. And do not reach for a disconnect to clear that flag: on reconnect the app requests
+its own rerun when the last run was a fragment, so the rerun count stops measuring
+corrections.
 
 **Mutation-test every guard.** Each of these tests should be verified by removing the
 protection it covers and confirming it goes red. A guard test that cannot fail is worse than
@@ -717,12 +758,16 @@ surrounding code, and each one will cost time if it is discovered late.
   normalizes it to `"light"`/`"dark"` before options are read, so
   `_type_from_bg_or_base` can treat `base` as a plain variant name. Do not make it resolve
   paths.
-- **Fragment reruns emit a `NewSession` too**, so they run the echo path. `SCRIPT_STARTED`
-  builds and enqueues the message unconditionally, with `fragment_ids_this_run` set. This is
-  benign but worth knowing: by the time fragments run, `theme_applied` is true, so the echo
-  is the client's own `color_scheme` and the comparison agrees — no correction fires. It does
-  mean a fragment's `NewSession` clears `themeCorrectionInFlight`; the `NOT_RUNNING` condition
-  in the trigger is what keeps that from turning into a duplicate send.
+- **Fragment reruns emit a `NewSession` too**, on both sides. The backend builds and enqueues
+  it unconditionally at `SCRIPT_STARTED` with `fragment_ids_this_run` set; on the client,
+  `handleNewSession` runs for it but **skips the `if (!fragmentIdsThisRun.length)` branch**
+  that applies the theme. That asymmetry is why §4 puts the echo recording above that branch
+  — see the note there. Recording a fragment's echo is benign in itself: `theme_applied` is
+  true by then, so it is the client's own `color_scheme` and the comparison agrees. A
+  fragment `NewSession` therefore also clears `themeCorrectionInFlight`, and the trigger's
+  `NOT_RUNNING` condition is what keeps that from becoming a duplicate send — fragment runs
+  do flip `scriptRunState` to `RUNNING`, since the backend enters `APP_IS_RUNNING` for them
+  and emits `session_status_changed`.
 - **Non-hex `backgroundColor` is deliberately supported by the frontend.** `parseColor` in
   `frontend/lib/src/theme/utils.ts` runs the value through the browser's CSS parser,
   retries with a `#` prefix, and warns only on real failure. So `"black"` is a valid,
