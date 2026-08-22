@@ -180,8 +180,10 @@ Independent of A/B/C, once fixed:
      effects on their first run would perform them with the earlier value.
 2. **Appearance change** (menu System/Light/Dark, host theme message, OS change while on System) — for apps that
    read `st.context.theme`, the app reruns and `type` updates without a manual rerun. Apps that never read it are
-   **not** rerun: `type` is read by roughly 0.6% of apps, so the correction is gated on actual use rather than
-   charged to everyone. Such an app pays at most one correction per session — see the
+   **not charged per theme change**: `type` is read by roughly 0.6% of apps, so the correction is gated on actual
+   use rather than charged to everyone. Precisely, a no-read app pays **at most one** correction per session — on
+   the first appearance change after load, and only if no other rerun happened first — then none thereafter. Not
+   zero, because the first `NewSession` is sent before any user code can declare a read; see the
    [tech spec](./tech-spec.md) access gate.
 3. **MPA deep links** — non-default page + `[theme]` still lands on that page (no #11797 regression).
 4. **CSS overrides** — injected CSS backgrounds remain out of scope for `type`.
@@ -228,7 +230,9 @@ let A and C coexist. That is **out of scope** for #11920 and belongs with
 
 ## Open questions
 
-These need explicit reviewer sign-off before (or as) the implementation PR:
+These are sign-off gates on the **implementation** PR, not blockers for agreeing the direction
+here. Merging this spec settles the meaning of `type` (Option C) and the preferred approach;
+these four still need an explicit answer before the implementation lands:
 
 1. **Adoption vs. cost.** `st.context.theme.type` is read by roughly **0.6% of apps**. The tech spec's access
    gate keeps the other 99.4% free of extra reruns, and its scope decision offers a lighter variant that drops

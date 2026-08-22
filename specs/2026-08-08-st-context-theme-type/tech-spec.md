@@ -99,8 +99,9 @@ comparison in §3-§4, and the access gate in §5. The three approaches differ *
 the first script run gets its value**.
 
 These are approaches to *implementation*. They are unrelated to the product spec's Options
-A/B/C, which decide what `type` should *mean*; that decision is settled as Option C
-(visual appearance) and all three approaches below implement it.
+A/B/C, which decide what `type` should *mean*; that decision is **proposed** as Option C
+(visual appearance) and still open for sign-off on the product spec. All three approaches
+below implement whichever meaning is chosen.
 
 | | **A — lightweight** | **B — robust** (proposed) | **C — push theme ahead** |
 |---|---|---|---|
@@ -253,9 +254,15 @@ Dual-theme detection must include the nested `.sidebar` subsections, because the
 nor an empty list — empty lists are discounted because the frontend's
 `hasThemeSectionConfigs` treats them as "no config" too.
 `get_options_for_section` returns every registered key even when the user never wrote the
-TOML header, so the *values* are the signal. This is the same determination
-`_populate_theme_msg` makes before sending a theme to the client, and the two must agree —
-otherwise the backend resolves against config the frontend was never told about.
+TOML header, so the *values* are the signal.
+
+**Mirror `hasThemeSectionConfigs`, not `_populate_theme_msg`.** The nearby backend check is
+the tempting model and it is the wrong one: `_populate_theme_msg` early-returns only on
+`all(val is None ...)`, so it counts `chartCategoricalColors = []` as content, while the
+frontend discounts empty lists. Copying the backend check would put the resolver on the
+dual-theme path for a `[theme.light]` holding only an empty colour list, while the client
+builds a single custom theme — the two would then disagree about which theme is even active.
+The frontend is the authority here, because what it paints is what `type` must report.
 
 `_merge_for_dual_theme` lets section values win over `[theme]`, then forces
 `base = variant`, mirroring the FE merging `{ base }` last. (`base` is only registered on
@@ -312,10 +319,17 @@ but the session's `context_info` is long-lived and every later rerun request ove
 in place, while `ScriptRunContext` holds whatever object it was given and `st.context` reads
 it lazily at property-access time. Passing the live object lets an incoming request change
 what an *already-running* script sees — for `theme.type` and equally for `timezone`,
-`locale`, `url`, and `is_embedded`. Resolve onto `_client_state` (so server-initiated reruns
-keep the value), then `CopyFrom` it into a fresh `ContextInfo` for `RerunData`. A test that
-only asserts the incoming BackMsg is untouched will not catch this; assert the *outgoing*
-snapshot is stable across a second request.
+`locale`, `url`, and `is_embedded`. Copy the incoming context into the session cache and
+resolve *there* — never on the `client_state` parameter, which is the caller's message and
+must come back untouched — then `CopyFrom` the result into a fresh `ContextInfo` for
+`RerunData`. A test that only asserts the incoming BackMsg is untouched will not catch the
+aliasing; assert the *outgoing* snapshot is stable across a second request.
+
+Note what this does **not** buy: a server-initiated rerun (file watcher, `st.rerun` from the
+server side) takes the `RerunData()` branch with `context_info=None`, and nothing falls back
+to `_client_state`, so `st.context.theme.type` is `None` for that run. That is today's
+behaviour and this design does not change it — but it is why the echo must stay unset there
+rather than reporting the last known value, which the script did not see.
 
 ```python
 def _resolve_color_scheme(context_info: ContextInfo) -> None:
@@ -340,11 +354,32 @@ no value yet (e.g. a server-initiated first run), which the client treats as "no
 compare" rather than a mismatch:
 
 ```python
+# `color_scheme_this_run` arrives on the SCRIPT_STARTED event, NOT from
+# `self._client_state` -- see below.
 correction_can_matter = not self._has_sent_new_session or self._context_theme_was_read
-if correction_can_matter and self._client_state.context_info.color_scheme:
-    msg.new_session.resolved_color_scheme = self._client_state.context_info.color_scheme
+if correction_can_matter and color_scheme_this_run:
+    msg.new_session.resolved_color_scheme = color_scheme_this_run
 self._has_sent_new_session = True
 ```
+
+**The echo must come from the run's own snapshot, not `_client_state`.** This is the same
+aliasing hazard as `RerunData` above, on the reporting side, and it is easy to miss because
+the buggy version reads naturally. `ScriptRunner` emits `SCRIPT_STARTED` from the **script
+thread**, and `_on_scriptrunner_event` hands it to the event loop via
+`call_soon_threadsafe`; `_create_new_session_message` therefore runs *later* than the
+moment the run began. A `BackMsg` arriving in that gap runs `request_rerun` on the loop
+first, overwriting `_client_state.context_info` in place, so an echo read from there can
+report a value **this run never saw**.
+
+The consequence is worse than a spurious rerun: if the stale echo happens to match what the
+client paints, the client sees agreement, the real disagreement is never corrected, and
+`type` stays wrong for the rest of the session — silently, and precisely the bug #11920 is
+about. Carry the run's value on the event instead. `SCRIPT_STARTED` already passes per-run
+data (`page_script_hash`, `fragment_ids_this_run`, `pages`), and at the emission site
+`rerun_data.context_info` is in scope — the very object just handed to `ctx.reset()`, so it
+is by construction what the script sees. Note that stashing the snapshot on the session at
+`request_rerun` time does **not** work: a second request would overwrite that field before
+the first `SCRIPT_STARTED` is processed, reproducing the same race one level down.
 
 ### 3. Frontend: what it sends
 
@@ -398,16 +433,16 @@ and sends that never reach the server.
 Four hooks:
 
 **1. `handleNewSession`** records the echo *before* `processThemeInput`, so the
-`componentDidUpdate` that follows the theme application can compare the two. Anything
-other than `"light"`/`"dark"` (including unset) is ignored:
+`componentDidUpdate` that follows the theme application can compare the two. An absent or
+unrecognized echo must be recorded as `null` — **not** skipped, leaving the previous value
+in place, which is the infinite-loop failure mode described in §5. Any `NewSession` is also
+the observed event that clears the in-flight flag:
 
 ```tsx
-if (
-  newSessionProto.resolvedColorScheme === "light" ||
-  newSessionProto.resolvedColorScheme === "dark"
-) {
-  this.backendColorScheme = newSessionProto.resolvedColorScheme
-}
+const resolved = newSessionProto.resolvedColorScheme
+this.backendColorScheme =
+  resolved === "light" || resolved === "dark" ? resolved : null
+this.themeCorrectionInFlight = false
 ```
 
 **`sendRerunBackMsg` must NOT record what Python will believe.** The echo is the only
@@ -596,6 +631,10 @@ In `app_session_test.py`, four cases around the wiring:
 - A client sending no `theme_preference` passes straight through, covering old frontends.
 - `_create_new_session_message` populates the echo, and leaves it unset when there is no
   value to send.
+- **The echo reports the run's own value, not a later one.** Deliver `SCRIPT_STARTED` for a
+  run carrying `"light"`, then apply a second `request_rerun` carrying `"dark"` *before*
+  building the message, and assert the echo is still `"light"`. Without this, the aliasing
+  bug is invisible: every single-request test passes either way.
 
 **Python unit, the gate** — three cases on `_create_new_session_message`: the first
 `NewSession` echoes; a later one does **not** when no run has read the theme; a later one
@@ -631,6 +670,20 @@ or not the guard exists.
 Also unskip [`hostframe_app_test.py::test_st_context_theme_respects_dark_theme_message`](../../e2e_playwright/hostframe_app_test.py),
 skipped since #11870. No new CI infrastructure — the hostframe suite already exists.
 
+**External-host coverage is a separate question from that unskip**, and the split is not
+uniform across these tests. `@pytest.mark.external_test` runs a test against an externally
+hosted app or an embedding host page (`--external-app-url` / `--external-host-url`); per
+`e2e_playwright/AGENTS.md` the marker is a manual, per-test decision.
+
+- The config-driven tests (first-run correctness, non-hex background) are **not** candidates.
+  They depend on a module-scoped `@pytest.mark.early` config fixture applied before the local
+  server boots — exactly the local-harness coupling the marker excludes.
+- The **host-theme** path is the strongest candidate, since it needs no `config.toml` and is
+  the SiS case: `SET_CUSTOM_THEME_CONFIG` across a real iframe boundary, plus the
+  `localStorage` theme cache in a third-party frame, are what a local hostframe approximates
+  rather than reproduces. `hostframe_app_test.py` carries no `external_test` marker today, so
+  this is a decision for the implementation PR — the unskip does not deliver it.
+
 Run the theme E2Es on Firefox and WebKit as well as Chromium: the trigger depends on React
 lifecycle timing, which is the kind of thing that differs between engines.
 
@@ -664,6 +717,12 @@ surrounding code, and each one will cost time if it is discovered late.
   normalizes it to `"light"`/`"dark"` before options are read, so
   `_type_from_bg_or_base` can treat `base` as a plain variant name. Do not make it resolve
   paths.
+- **Fragment reruns emit a `NewSession` too**, so they run the echo path. `SCRIPT_STARTED`
+  builds and enqueues the message unconditionally, with `fragment_ids_this_run` set. This is
+  benign but worth knowing: by the time fragments run, `theme_applied` is true, so the echo
+  is the client's own `color_scheme` and the comparison agrees — no correction fires. It does
+  mean a fragment's `NewSession` clears `themeCorrectionInFlight`; the `NOT_RUNNING` condition
+  in the trigger is what keeps that from turning into a duplicate send.
 - **Non-hex `backgroundColor` is deliberately supported by the frontend.** `parseColor` in
   `frontend/lib/src/theme/utils.ts` runs the value through the browser's CSS parser,
   retries with a `#` prefix, and warns only on real failure. So `"black"` is a valid,
