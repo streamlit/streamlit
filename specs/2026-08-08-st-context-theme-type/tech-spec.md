@@ -22,7 +22,7 @@ Fix `st.context.theme.type` with a two-way exchange:
 
 Point 4 matters as much as the rest. `st.context.theme.type` is read by roughly **0.6% of
 apps**, so a correction mechanism that fired for everyone would charge the other 99.4% for a
-value they never read. See [the access gate](#the-access-gate-required-by-either-approach)
+value they never read. See [the access gate](#5-the-access-gate)
 for what it costs them (one correction per session, not zero) and for the client-side
 condition that makes gating safe rather than harmful.
 
@@ -92,7 +92,94 @@ page ([#11797](https://github.com/streamlit/streamlit/issues/11797)).
 [#11870](https://github.com/streamlit/streamlit/pull/11870) removed that path. **Do not
 restore** name-based `componentDidUpdate` reruns.
 
+## The design space: three approaches
+
+Everything else in this spec is shared: the echo (`resolved_color_scheme`), the client
+comparison in §3-§4, and the access gate in §5. The three approaches differ **only in how
+the first script run gets its value**.
+
+These are approaches to *implementation*. They are unrelated to the product spec's Options
+A/B/C, which decide what `type` should *mean*; that decision is settled as Option C
+(visual appearance) and all three approaches below implement it.
+
+| | **A — lightweight** | **B — robust** (proposed) | **C — push theme ahead** |
+|---|---|---|---|
+| How run 1 gets its value | the client's provisional value; corrected on run 2 | the backend resolves from `config.toml` before the run | the backend sends the theme *before* the client's first rerun |
+| Run 1, ordinary custom theme | **wrong** — visible flash | **right** | **right** |
+| Run 1, host theme (SiS) | wrong → corrected | wrong → corrected | **still wrong** — host themes come from the embedder, not the server |
+| Added latency | none | none | +1 RTT before first content, every session, every app |
+| Proto change | 1 field | 3 fields, all additive | protocol reordering |
+| Backend code | none | ~110 lines | new pre-session message + handshake ordering |
+| Mirrors frontend rules | no | 3 rules | no |
+| Verdict | viable fallback | **proposed** | rejected — see below |
+
+### A vs B, in detail
+
+These are the two live candidates. C is rejected on grounds that do not depend on the
+adoption argument (see the end of this section).
+
+| | **A — lightweight** | **B — robust** |
+|---|---|---|
+| `theme_type.py` | not needed | ~110 lines; 189 with docs |
+| Of which mirrors frontend behaviour | — | 3 rules: section inheritance, dual-theme detection, single-theme light fallback |
+| Of which is standard or delegated | — | `_luminance` is the published WCAG formula; `_parse_color` delegates to Pillow |
+| Proto fields | `resolved_color_scheme` | + `theme_preference`, `theme_applied` |
+| `app_session` wiring | unchanged | must pass a **copy** of `context_info` to `RerunData` (§2) |
+| `AGENTS.md` "no backend theming" | not engaged | narrow exception; the rule targets styling/layout math, and its stated worry — the backend cannot see the active theme — is exactly what the echo answers |
+| Reruns, app that reads `type` | 2 on first load | 1 on first load |
+| Reruns, app that does not | none, after the gate | none, after the gate |
+| Residual wrong first runs | all custom themes | unparseable colour syntax; host-theme race |
+| Ongoing maintenance | none | keep 3 rules in step with the frontend |
+
+**What A costs the user.** Not an invisible delay. Run 1 renders with the wrong value — a
+light logo on a dark background, or `plotly_white` on a dark page — and then flips. For an
+API whose whole purpose is contrast adaptation, the first paint *is* the product, and "first
+run with a custom theme" is the first failure mode
+[#11920](https://github.com/streamlit/streamlit/issues/11920) lists. A closes the issue's
+second half and leaves the first visible on every load.
+
+**What B costs the team.** Three mirrored rules, anchored to the *public* `[theme]` config
+schema. That schema is user-facing contract and does not churn freely — it last changed when
+dual themes were introduced. So drift is a real but modest risk, and the echo bounds any
+drift to one wrong first run rather than a stale session. Note also that neither option
+avoids the harder part — the shared client trigger in §4, where the subtle failure modes live
+(dropped sends, duplicate corrections, stale comparisons) and which A and B need identically.
+A is smaller, not safer.
+
+**Decision rule.** If a visible wrong-contrast flash on first load is acceptable, take A and
+delete the resolver. If it is not — and for a contrast-adaptation API that is hard to argue
+— take B. Nothing else changes either way, so A stays a clean retreat if the mirror ever
+becomes a burden.
+
+### Why C is rejected
+
+On connect the backend would send the `config.toml` theme; the client applies it and only
+then sends its first rerun, already carrying a correct `color_scheme`. That buys a correct
+first run with no resolver and no mirror — genuinely attractive — but:
+
+1. **An extra round trip before the script starts, every session.** `connect → client rerun
+   → script runs` becomes `connect → server theme → client applies → client rerun → script
+   runs`. The delay lands on time to first *content*; the client already paints a cached or
+   preset theme immediately, so users would see chrome as fast as ever and then wait longer
+   for the body.
+2. **Every app pays it**, to fix a value ~0.6% of apps read.
+3. **It hurts the deployments least able to absorb it** — Community Cloud and especially
+   SiS/SPCS sit behind longer paths, an iframe, and a container or warehouse layer, on top of
+   cold-start latency users already notice.
+4. **It does not fix the host-theme case, which is the SiS case.** Host themes arrive from
+   the embedder via `SET_CUSTOM_THEME_CONFIG`, not from the server, so the backend cannot
+   push them ahead of the first run. C would still need the echo — for exactly the platform
+   paying the most latency for it.
+5. **Protocol reordering rather than additive fields**, so version-skew combinations need
+   real thought instead of falling out of optional-field semantics.
+
+Point 4 is decisive: a universal, SiS-weighted latency cost that still does not remove the
+correction mechanism.
+
 ## Proposal
+
+This describes **approach B**. Under approach A, §2 is dropped entirely and §1 carries only
+`resolved_color_scheme`; everything else — §3 through §7 — is identical.
 
 ### 1. Proto
 
@@ -128,7 +215,7 @@ optional string resolved_color_scheme = 12;
 overwrites it only in the `theme_applied=false` window.
 
 `resolved_color_scheme` is **conditionally** populated — see
-[the access gate](#the-access-gate-required-by-either-approach). Its absence is meaningful
+[the access gate](#5-the-access-gate). Its absence is meaningful
 rather than merely empty: it tells the client there is nothing to keep truthful, and the
 client must clear its copy rather than retain the last value.
 
@@ -209,10 +296,13 @@ if client_state.HasField("context_info"):
     self._client_state.context_info.CopyFrom(client_state.context_info)
     _resolve_color_scheme(self._client_state.context_info)
 
+# A snapshot, NOT the session's own object -- see below.
+context_info = ContextInfo()
+context_info.CopyFrom(self._client_state.context_info)
+
 query_string = sanitize_query_string(client_state.query_string)
 rerun_data = RerunData(
     ...
-    # A snapshot, NOT the session's own object -- see below.
     context_info=context_info,
 )
 ```
@@ -245,7 +335,7 @@ def _resolve_color_scheme(context_info: ContextInfo) -> None:
 ```
 
 `_create_new_session_message` sends the echo — **subject to the
-[access gate](#the-access-gate-required-by-either-approach)**, and left unset when there is
+[access gate](#5-the-access-gate)**, and left unset when there is
 no value yet (e.g. a server-initiated first run), which the client treats as "nothing to
 compare" rather than a mismatch:
 
@@ -378,11 +468,8 @@ reason (see the `ChatInput` comment).
 it when a `NewSession` arrives, and when the connection drops — the latter is what retries a
 discarded send, since the disagreement is still recorded and reconnecting re-renders.
 
-**The echo is the only writer of `backendColorScheme`.** Do not also set it at send time from
-the value just sent: that is predicting the server's answer, and a discarded send would leave
-the client believing Python holds a value it never received, with no disagreement left to
-detect. Loop safety then follows — once the echo and the paint agree, the comparison
-short-circuits.
+**The echo is the only writer of `backendColorScheme`** (hook 1). Loop safety follows from
+that: once the echo and the paint agree, the comparison short-circuits.
 
 **Corrections land one script completion later.** The echo rides on `NewSession`, which
 carries `sessionStatus.scriptIsRunning = true`, so the client learns Python's value while the
@@ -432,13 +519,58 @@ Note that `config.toml` **precedence** is not a source of error: the resolver re
 flags, and `theme.base` file inheritance — so it reads the merged answer rather than
 re-deriving it. Only the section→appearance mapping is mirrored.
 
-### 5. Docs
+### 5. The access gate
+
+`st.context.theme.type` is read by roughly **0.6% of apps**, so no approach may add reruns
+for the other 99.4%. Send `resolved_color_scheme` only when a correction could matter:
+
+```python
+correction_can_matter = not self._has_sent_new_session or self._context_theme_was_read
+```
+
+**Do not use `gather_metrics` to detect the access.** `@gather_metrics("context.theme")`
+only records when `ctx.gather_usage_stats` is true, and `metrics_util` skips tracking
+entirely when `browser.gatherUsageStats` is off — so telemetry-disabled deployments would
+silently lose corrections. Notify explicitly instead: `ContextProxy.theme` calls an
+`on_context_theme_read` callback carried on `ScriptRunContext`, following the route
+`on_script_error` already takes (`AppSession` → `ScriptRunner` → context). `AppSession`
+holds the memory in two sticky booleans, because a per-run context cannot outlive the run
+that made the access. There is no pre-existing "have we sent a `NewSession`" signal; add one.
+
+Put the callback *before* the `context_info is None` early return, so an access counts even
+when there is no value yet. Note the gate is intentionally coarse: bare `st.context.theme`
+with no field access still counts. `ContextProxy` is a plain class rather than a dict, so
+the property is the only door and both `.type` and `["type"]` route through it.
+
+**The client must treat an absent echo as "nothing to compare", not "keep the old value".**
+This is the part that is easy to get wrong and it is load-bearing:
+
+```tsx
+this.backendColorScheme =
+  resolved === "light" || resolved === "dark" ? resolved : null
+```
+
+Retaining the previous value instead — an `if (valid) { assign }` — creates an **infinite
+correction loop** once the gate engages: the client corrects, the resulting `NewSession`
+carries no echo, the stale value is kept while `themeCorrectionInFlight` is cleared, so the
+disagreement never resolves and the client corrects again, forever. The backend gate alone
+is *worse* than no gate. Cover this with a test that counts reruns rather than asserting an
+absence.
+
+**What it actually costs a non-reading app: one correction per session, not zero.** The
+first `NewSession` is emitted at `SCRIPT_STARTED`, before any user code runs, so the client
+necessarily holds a comparable value through run 1. A no-read app therefore pays exactly one
+correction — on the first theme change after load — and none thereafter, since the unechoed
+`NewSession` from that very rerun nulls the client's copy. If any unrelated rerun happens
+first, the cost is zero. The saving is one-per-session instead of one-per-theme-change.
+
+### 6. Docs
 
 Update the [`context.py`](../../lib/streamlit/runtime/context.py) `theme.type` docstring:
 drop the stale first-load and settings-change caveats (both fixed by this design), and keep
 the CSS-override note, which remains true.
 
-### 6. Testing
+### 7. Testing
 
 **Python unit** — a new `lib/tests/streamlit/runtime/theme_type_test.py`:
 
@@ -537,135 +669,11 @@ surrounding code, and each one will cost time if it is discovered late.
   retries with a `#` prefix, and warns only on real failure. So `"black"` is a valid,
   working config that must not be rejected — which is precisely why the echo exists.
 
-## The design space: three approaches
-
-Everything else in this spec is shared: the echo (`resolved_color_scheme`), the client
-comparison in §3-§4, and the access gate below. The three approaches differ **only in how
-the first script run gets its value**.
-
-These are approaches to *implementation*. They are unrelated to the product spec's Options
-A/B/C, which decide what `type` should *mean*; that decision is settled as Option C
-(visual appearance) and all three approaches below implement it.
-
-| | **A — lightweight** | **B — robust** (proposed) | **C — push theme ahead** |
-|---|---|---|---|
-| How run 1 gets its value | the client's provisional value; corrected on run 2 | the backend resolves from `config.toml` before the run | the backend sends the theme *before* the client's first rerun |
-| Run 1, ordinary custom theme | **wrong** — visible flash | **right** | **right** |
-| Run 1, host theme (SiS) | wrong → corrected | wrong → corrected | **still wrong** — host themes come from the embedder, not the server |
-| Added latency | none | none | +1 RTT before first content, every session, every app |
-| Proto change | 1 field | 3 fields, all additive | protocol reordering |
-| Backend code | none | ~110 lines | new pre-session message + handshake ordering |
-| Mirrors frontend rules | no | 3 rules | no |
-| Verdict | viable fallback | **proposed** | rejected — see below |
-
-### A vs B, in detail
-
-These are the two live candidates. C is rejected on grounds that do not depend on the
-adoption argument (see the end of this section).
-
-| | **A — lightweight** | **B — robust** |
-|---|---|---|
-| `theme_type.py` | not needed | ~110 lines; 189 with docs |
-| Of which mirrors frontend behaviour | — | 3 rules: section inheritance, dual-theme detection, single-theme light fallback |
-| Of which is standard or delegated | — | `_luminance` is the published WCAG formula; `_parse_color` delegates to Pillow |
-| Proto fields | `resolved_color_scheme` | + `theme_preference`, `theme_applied` |
-| `app_session` wiring | unchanged | must pass a **copy** of `context_info` to `RerunData` (§2) |
-| `AGENTS.md` "no backend theming" | not engaged | narrow exception; the rule targets styling/layout math, and its stated worry — the backend cannot see the active theme — is exactly what the echo answers |
-| Reruns, app that reads `type` | 2 on first load | 1 on first load |
-| Reruns, app that does not | none, after the gate | none, after the gate |
-| Residual wrong first runs | all custom themes | unparseable colour syntax; host-theme race |
-| Ongoing maintenance | none | keep 3 rules in step with the frontend |
-
-**What A costs the user.** Not an invisible delay. Run 1 renders with the wrong value — a
-light logo on a dark background, or `plotly_white` on a dark page — and then flips. For an
-API whose whole purpose is contrast adaptation, the first paint *is* the product, and "first
-run with a custom theme" is the first failure mode
-[#11920](https://github.com/streamlit/streamlit/issues/11920) lists. A closes the issue's
-second half and leaves the first visible on every load.
-
-**What B costs the team.** Three mirrored rules, anchored to the *public* `[theme]` config
-schema. That schema is user-facing contract and does not churn freely — it last changed when
-dual themes were introduced. So drift is a real but modest risk, and the echo bounds any
-drift to one wrong first run rather than a stale session. Note also that neither option
-avoids the harder part: six of the defects found while developing this design were in the
-shared client trigger, which A and B need identically. A is smaller, not safer.
-
-**Decision rule.** If a visible wrong-contrast flash on first load is acceptable, take A and
-delete the resolver. If it is not — and for a contrast-adaptation API that is hard to argue
-— take B. Nothing else changes either way, so A stays a clean retreat if the mirror ever
-becomes a burden.
-
-### Why C is rejected
-
-On connect the backend would send the `config.toml` theme; the client applies it and only
-then sends its first rerun, already carrying a correct `color_scheme`. That buys a correct
-first run with no resolver and no mirror — genuinely attractive — but:
-
-1. **An extra round trip before the script starts, every session.** `connect → client rerun
-   → script runs` becomes `connect → server theme → client applies → client rerun → script
-   runs`. The delay lands on time to first *content*; the client already paints a cached or
-   preset theme immediately, so users would see chrome as fast as ever and then wait longer
-   for the body.
-2. **Every app pays it**, to fix a value ~0.6% of apps read.
-3. **It hurts the deployments least able to absorb it** — Community Cloud and especially
-   SiS/SPCS sit behind longer paths, an iframe, and a container or warehouse layer, on top of
-   cold-start latency users already notice.
-4. **It does not fix the host-theme case, which is the SiS case.** Host themes arrive from
-   the embedder via `SET_CUSTOM_THEME_CONFIG`, not from the server, so the backend cannot
-   push them ahead of the first run. C would still need the echo — for exactly the platform
-   paying the most latency for it.
-5. **Protocol reordering rather than additive fields**, so version-skew combinations need
-   real thought instead of falling out of optional-field semantics.
-
-Point 4 is decisive: a universal, SiS-weighted latency cost that still does not remove the
-correction mechanism.
-
-### The access gate (required by either approach)
-
-`st.context.theme.type` is read by roughly **0.6% of apps**, so no approach may add reruns
-for the other 99.4%. Send `resolved_color_scheme` only when a correction could matter:
-
-```python
-correction_can_matter = not self._has_sent_new_session or self._context_theme_was_read
-```
-
-**Do not use `gather_metrics` to detect the access.** `@gather_metrics("context.theme")`
-only records when `ctx.gather_usage_stats` is true, and `metrics_util` skips tracking
-entirely when `browser.gatherUsageStats` is off — so telemetry-disabled deployments would
-silently lose corrections. Notify explicitly instead: `ContextProxy.theme` calls an
-`on_context_theme_read` callback carried on `ScriptRunContext`, following the route
-`on_script_error` already takes (`AppSession` → `ScriptRunner` → context). `AppSession`
-holds the memory in two sticky booleans, because a per-run context cannot outlive the run
-that made the access. There is no pre-existing "have we sent a `NewSession`" signal; add one.
-
-Put the callback *before* the `context_info is None` early return, so an access counts even
-when there is no value yet. Note the gate is intentionally coarse: bare `st.context.theme`
-with no field access still counts. `ContextProxy` is a plain class rather than a dict, so
-the property is the only door and both `.type` and `["type"]` route through it.
-
-**The client must treat an absent echo as "nothing to compare", not "keep the old value".**
-This is the part that is easy to get wrong and it is load-bearing:
-
-```tsx
-this.backendColorScheme =
-  resolved === "light" || resolved === "dark" ? resolved : null
-```
-
-Retaining the previous value instead — an `if (valid) { assign }` — creates an **infinite
-correction loop** once the gate engages: the client corrects, the resulting `NewSession`
-carries no echo, the stale value is kept while `themeCorrectionInFlight` is cleared, so the
-disagreement never resolves and the client corrects again, forever. The backend gate alone
-is *worse* than no gate. Cover this with a test that counts reruns rather than asserting an
-absence.
-
-**What it actually costs a non-reading app: one correction per session, not zero.** The
-first `NewSession` is emitted at `SCRIPT_STARTED`, before any user code runs, so the client
-necessarily holds a comparable value through run 1. A no-read app therefore pays exactly one
-correction — on the first theme change after load — and none thereafter, since the unechoed
-`NewSession` from that very rerun nulls the client's copy. If any unrelated rerun happens
-first, the cost is zero. The saving is one-per-session instead of one-per-theme-change.
-
 ## Alternatives considered
+
+Approach C — pushing the theme ahead of the first rerun — is the main rejected alternative;
+it is weighed with A and B in
+[the design space](#the-design-space-three-approaches) rather than repeated here.
 
 ### Resolve from config alone, ignoring the client's preference
 
@@ -687,9 +695,10 @@ explicitly about host-message arrival ordering. It also fires redundant reruns w
 preference changes but config pins the appearance either way — and it cannot detect a
 backend/frontend disagreement at all, which is the failure mode most worth catching.
 
-### If the product spec picks semantics A or B instead of C
+### If the product spec picks meaning A or B instead of C
 
-Only §2 changes. The proto and the §3/§4 exchange are agnostic to *what* the backend
+That is the product spec's Options A/B/C — what `type` *means* — not the implementation
+approaches above. Only §2 changes. The proto and the §3/§4 exchange are agnostic to *what* the backend
 resolves — the echo compares whatever the script saw against what is painted either way.
 
 ## Out of scope
@@ -711,4 +720,4 @@ resolves — the echo compares whatever the script saw against what is painted e
 | No new dependencies | `_parse_color` uses `PIL.ImageColor`, already a runtime dependency (`pillow>=7.1.0,<13`), imported lazily |
 | Metrics collected | Existing `context.theme` metrics sufficient |
 | Any security/legal impact? | No |
-| Any docs changes needed? | Yes — the `context.py` docstring (§5) |
+| Any docs changes needed? | Yes — the `context.py` docstring (§6) |
