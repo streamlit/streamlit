@@ -25,8 +25,11 @@ st.date_input(
 # Range mode with a min_value more than 2 years old, which is what enables the
 # quick-select dropdown. Its preset labels are localized via
 # Intl.RelativeTimeFormat, so they need coverage in every locale.
-st.date_input(
+quick_select_range = st.date_input(
     "Range with quick select",
     [date(2019, 7, 6), date(2019, 7, 8)],
     min_value=date(1970, 1, 1),
 )
+# Written out so the locale-parameterized test can assert that selecting a
+# localized preset still commits the right range, not just the right label.
+st.write("Quick select value:", quick_select_range)

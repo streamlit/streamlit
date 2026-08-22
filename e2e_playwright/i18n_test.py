@@ -13,13 +13,17 @@
 # limitations under the License.
 
 import re
+from datetime import date, timedelta
 from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_date_input
+from e2e_playwright.shared.app_utils import (
+    expect_prefixed_markdown,
+    get_date_input,
+)
 
 """
 Any tests that should be tested against multiple locales should be placed here.
@@ -133,6 +137,18 @@ def test_range_quick_select_localization(
     selected_preset = options.first.inner_text().strip()
     options.first.click()
     wait_for_app_run(app)
+
+    # The first preset is "past week", so the committed range must run from a
+    # week ago to today in every locale — the labels differ, the dates do not.
+    # st.write renders the tuple's repr, hence the datetime.date(...) form.
+    today = date.today()
+    week_ago = today - timedelta(weeks=1)
+    expect_prefixed_markdown(
+        app,
+        "Quick select value:",
+        f"(datetime.date({week_ago.year}, {week_ago.month}, {week_ago.day}), "
+        f"datetime.date({today.year}, {today.month}, {today.day}))",
+    )
     date_input.get_by_test_id("stDateInputField").get_by_role(
         "spinbutton"
     ).first.click()

@@ -241,12 +241,10 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
     language === "en" || !isSupportedByIntl
       ? null
       : new Intl.RelativeTimeFormat(safeLocale, {
-          // Chosen for one phrasing style across all six labels, at the cost
-          // of point-in-time wording ("1 week ago") where English names a
-          // range ("Past Week"). `"auto"` would localize more labels — `ig`
-          // gets three of six instead of zero — and give the idiomatic "last
-          // week" for the three -1 presets, but mixes idiomatic, "N units
-          // ago", and English wording in one list.
+          // One phrasing style for all six labels, at the cost of
+          // point-in-time wording ("1 week ago") where English names a range
+          // ("Past Week"). `"auto"` localizes more labels but mixes idiomatic,
+          // "N units ago", and English wording in one list.
           numeric: "always",
           style: "long",
         })
@@ -273,10 +271,9 @@ export function getQuickSelectPresets(locale: string): QuickSelectPreset[] {
 
 /**
  * Trailing literal of ICU's root pattern: a space plus the unit's initial,
- * derived from the descriptors so that adding a preset in a new unit cannot
- * silently stop the detector from matching. (Root uses the unit's first letter
- * for every unit these presets could use — week, month, year, day, hour,
- * second; `minute` is the lone exception at " min".)
+ * derived from the descriptors so a new unit is picked up automatically. Holds
+ * for every unit these presets could plausibly use; `minute` would need a
+ * special case, since root spells it " min" rather than " m".
  */
 const ROOT_UNIT_SUFFIX = new RegExp(
   `^ [${[

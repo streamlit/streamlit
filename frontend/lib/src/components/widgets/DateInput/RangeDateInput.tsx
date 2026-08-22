@@ -904,12 +904,12 @@ function RangeDateInput({
                 close.
               </StyledVisuallyHidden>
             )}
-            {/* Visitor locale for the calendar (weekdays, month/year, nav) and
-                the quick-select dropdown (dir and type-to-select; its
-                placement is pinned physical, see below). The field above pins en-US, so without this
-                React Aria would use navigator.language — usually the same as
-                LibConfig.locale, except when getSafeLocale falls back to en-US,
-                and in tests that inject a locale. */}
+            {/* Visitor locale for the calendar (weekdays, month/year, nav
+                labels) and the quick-select dropdown (dir and type-to-select).
+                The popover is portaled, so it inherits no provider — without
+                this, React Aria falls back to navigator.language, which differs
+                from LibConfig.locale when getSafeLocale falls back to en-US and
+                in tests that inject a locale. */}
             <I18nProvider locale={safeLocale}>
               <StyledRangeCalendarRoot
                 aria-label="Choose date range"
@@ -962,10 +962,9 @@ function RangeDateInput({
                     aria-haspopup="listbox"
                     onPress={() => setIsQuickSelectOpen(prev => !prev)}
                   >
-                    {/* dir="auto" so an RTL preset orders its digits correctly
-                        and an LTR fallback keeps its trailing punctuation on
-                        the right ("Select...", not "...Select"). Only the text
-                        flips — the row stays LTR to match React Aria's
+                    {/* dir="auto" so an RTL preset's digits and words order
+                        correctly inside the LTR row. Only this text picks its
+                        own direction — the row stays LTR to match React Aria's
                         calendar above it. */}
                     <span id={quickSelectValueId} dir="auto">
                       {activePresetLabel}

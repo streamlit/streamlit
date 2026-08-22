@@ -376,10 +376,11 @@ describe("getQuickSelectPresets", () => {
     globalThis.Date = RealDate
   })
 
-  // Root-pattern shape, deliberately looser than the production check so it
-  // holds for any numbering system ("-1 w", "-۱ w", "-一 w") while still not
-  // matching a real translation that leads with a sign (`mi`, `ak`).
-  const ICU_ROOT_PATTERN = /^-\S+ [wmy]$/u
+  // Root-pattern shape, deliberately looser than the production check: any
+  // numbering system ("-1 w", "-۱ w", "-一 w") and any unit letter, so a future
+  // preset in a new unit cannot leak "-30 d" past these tests. Still does not
+  // match a real translation that leads with a sign (`mi`, `ak`).
+  const ICU_ROOT_PATTERN = /^-\S+ [a-z]$/u
 
   const RELATIVE_TIME_ARGS: [number, Intl.RelativeTimeFormatUnit][] = [
     [-1, "week"],
@@ -523,6 +524,18 @@ describe("getQuickSelectPresets", () => {
     // Intl has no data for these at all, so they would otherwise resolve to
     // the environment's default locale rather than to English.
     expect(getQuickSelectPresets(locale).map(p => p.label)).toEqual(EN_LABELS)
+  })
+
+  it("varies only the label by locale", () => {
+    // Backs the JSDoc claim that `id` and the dates are locale-independent —
+    // the other date assertions here only ever pass "en-US".
+    const en = getQuickSelectPresets("en-US")
+    const ja = getQuickSelectPresets("ja")
+
+    expect(ja.map(({ id, start, end }) => ({ id, start, end }))).toEqual(
+      en.map(({ id, start, end }) => ({ id, start, end }))
+    )
+    expect(ja.map(p => p.label)).not.toEqual(en.map(p => p.label))
   })
 
   it("always ends at today", () => {
