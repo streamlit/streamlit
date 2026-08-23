@@ -9,7 +9,7 @@ created: 2026-08-23
 
 Add `st.card`, an opinionated, theme-aware container for grouping related content in a
 recognizable card surface. A card can include an optional full-bleed header image and a
-consistent header with a label, icon, description, and help tooltip, while its body accepts
+consistent header with a label, icon, caption, and help tooltip, while its body accepts
 arbitrary Streamlit elements.
 
 ## Problem
@@ -89,9 +89,8 @@ st.card(
     label: str | None = None,
     *,
     image: ImageInput | None = None,
-    image_alt: str | None = None,
     icon: str | None = None,
-    description: str | None = None,
+    caption: str | None = None,
     help: str | None = None,
     key: Key | None = None,
     width: "stretch" | "content" | int = "stretch",
@@ -107,9 +106,8 @@ not accepted.
 | --- | --- |
 | `label` | Optional card title. It supports the inline Markdown accepted by other Streamlit labels. It is displayed on one line and ellipsized when necessary. |
 | `image` | Optional header image rendered full width against the top and side edges of the card. |
-| `image_alt` | Optional alternative text for the header image. It must be provided when `image` is set without `label`. |
 | `icon` | Optional emoji, Material icon, or `"spinner"` displayed before the label, following existing Streamlit icon behavior. |
-| `description` | Optional secondary text displayed below the label. It supports inline Markdown and describes the card. |
+| `caption` | Optional secondary text displayed below the label. It supports inline Markdown and describes the card rather than the header image. |
 | `help` | Optional Markdown tooltip displayed beside the label. |
 | `key` | Optional identifier that follows `st.container` behavior, including adding an `st-key-<key>` CSS class. |
 | `width` | Uses the same values and behavior as `st.container`. |
@@ -119,14 +117,12 @@ not accepted.
 a "title," Streamlit's standard public API term is `label`, as used by `st.expander`,
 `st.popover`, and `st.status`.
 
-`icon`, `description`, and `help` require `label`. `image_alt` requires `image`. Passing
-an unsupported combination raises a clear exception. `st.card()` remains valid for a
-body-only card. A media-only card requires a nonempty alternative description:
-`st.card(image=..., image_alt=...)`.
+`icon`, `caption`, and `help` require `label`. Passing an unsupported combination raises a
+clear exception. `st.card()` and `st.card(image=...)` remain valid for body-only and
+media-only cards.
 
-Empty and whitespace-only `label` and `image_alt` values are treated as absent for these
-validation rules. A blank label does not enable label-dependent fields or make a header
-image decorative, and a required `image_alt` must contain non-whitespace text.
+Empty and whitespace-only `label` values are treated as absent for these validation rules.
+A blank label does not enable label-dependent fields.
 
 The command returns a container, supporting both context-manager and object notation:
 
@@ -143,7 +139,7 @@ revenue_card.metric("Q3 revenue", "$1.2M", "8.4%")
 A card has up to three regions in this order:
 
 1. **Media:** the optional full-bleed header image.
-2. **Header:** the optional icon, label, help tooltip, and description.
+2. **Header:** the optional icon, label, help tooltip, and caption.
 3. **Body:** arbitrary elements added to the returned container.
 
 Omitted regions consume no space. A body to which no elements are added is omitted, so
@@ -154,15 +150,15 @@ content are composed in the body rather than passed through card-specific parame
 The label uses a dedicated card-title style, visually similar to a subheader but without
 an anchor. It stays on one line so repeated cards remain compact. The complete label
 remains the card's accessible name and is available on hover when the visible text is
-truncated. The description also stays on one line and ellipsizes so the header height
+truncated. The caption also stays on one line and ellipsizes so the header height
 remains consistent across cards. Its complete text is exposed as the card's accessible
 description and is available on hover when truncated.
 
-The card is exposed as an accessible named group when it has a label. In that case, the
-header image is decorative by default because the label names the card. Authors can
-provide `image_alt` when the image conveys additional meaning, such as a chart, screenshot,
-or logo. When an image is set without a label, a nonempty `image_alt` is required and the
-image is exposed with that alternative text.
+The card is exposed as an accessible named group when it has a label. Header images are
+decorative in the initial API, including on media-only cards. The docstring should
+recommend providing a descriptive `label` and, when useful, `help` so the card has an
+accessible name and additional context. Authors should not rely on the header image alone
+to convey information required to understand or operate the app.
 
 ### Header image
 
@@ -266,7 +262,7 @@ with st.card(
     "Matterhorn",
     image="matterhorn.jpg",
     icon=":material/landscape:",
-    description="Valais, Switzerland",
+    caption="Valais, Switzerland",
     help="Photo from the alpine image collection",
 ):
     st.write("A classic pyramidal peak in the Alps.")
@@ -286,7 +282,7 @@ destinations = [
 
 for column, (name, image, country) in zip(st.columns(3), destinations):
     with column:
-        with st.card(name, image=image, description=country, height="stretch"):
+        with st.card(name, image=image, caption=country, height="stretch"):
             st.write("Trail conditions and trip details.")
             st.button("Open", key=name, width="stretch")
 ```
@@ -329,16 +325,16 @@ existing issue and internal proposal, and is used by `st.dialog`. However, a new
 should follow the shared vocabulary unless its semantics require a different term. The
 visible text can still be documented as the card title.
 
-### `description` vs. `caption`
+### `caption` vs. `description`
 
-**`description` is preferred** because the command also accepts `image`. On `st.image`,
-`caption` describes the image, so using it for supporting card text would make the same
-parameter name mean two different things in closely related APIs. `description`
-unambiguously refers to the card and follows common card terminology.
+**`caption` is preferred** because the slot has the same short, muted visual treatment as
+`st.caption`, and it matches existing Streamlit vocabulary for secondary text.
 
-`caption` is shorter and is used for secondary option text in `st.radio`, but that command
-does not also accept an image. Avoiding the image-caption ambiguity outweighs the shorter
-name here.
+The drawback is that `st.image(caption=...)` captions an image, so
+`st.card(image=..., caption=...)` could be read the same way. The card docstring must state
+that `caption` describes the card and appears below its label, not below the image.
+`description` avoids this ambiguity, but introduces new vocabulary and suggests longer
+text than this single-line slot supports. Longer descriptions belong in the card body.
 
 ### Natural image ratio vs. fixed media ratio
 
@@ -354,6 +350,9 @@ controls should be considered only after observing real card usage.
   the existing primary/secondary theme color swap instead.
 - `image_height`, `aspect_ratio`, crop mode, and focal-point controls.
 - Multiple header images, image carousels, and video header media.
+- Alternative text for header images. Header media is decorative in v1; an `image_alt`
+  parameter can be added if real-world card usage shows a need for meaningful header
+  imagery.
 - Image or avatar inputs for `icon`; the initial API supports emoji, Material icons, and
   `"spinner"`.
 - Built-in footer or action parameters. Use buttons and horizontal containers in the body.
@@ -378,15 +377,15 @@ controls should be considered only after observing real card usage.
   currently teach card-like layouts with bordered containers or custom CSS.
 - Document that header images preserve their aspect ratio and that equal-ratio images are
   needed for aligned gallery headers.
-- Add card usage to command metrics. No label, image, image alternative text, description,
-  or body content is included in telemetry.
-- Add Python validation and typing coverage for image inputs, `image_alt`,
-  label-dependent header fields, `key`, and width and height values.
-- Add frontend and E2E coverage for full-bleed images, image alternative text, ellipsis,
-  missing and empty regions, content-width image cards, fixed and stretch heights, light
-  and dark themes, nested layout contexts, and narrow viewports. Include charts and inputs
-  in cards in the main app, sidebar, and another card to verify the expected theme swaps.
-  Verify that the shadow renders in light mode and is absent in dark mode.
+- Add card usage to command metrics. No label, image, caption, or body content is included
+  in telemetry.
+- Add Python validation and typing coverage for image inputs, label-dependent header
+  fields, `key`, and width and height values.
+- Add frontend and E2E coverage for full-bleed decorative images, ellipsis, missing and
+  empty regions, content-width image cards, fixed and stretch heights, light and dark
+  themes, nested layout contexts, and narrow viewports. Include charts and inputs in cards
+  in the main app, sidebar, and another card to verify the expected theme swaps. Verify
+  that the shadow renders in light mode and is absent in dark mode.
 
 ## Checklist
 
