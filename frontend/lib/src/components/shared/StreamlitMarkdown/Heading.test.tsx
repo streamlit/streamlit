@@ -109,6 +109,35 @@ describe("Heading", () => {
     })
   })
 
+  it.each([
+    ["sidebar", IsSidebarContext],
+    ["dialog", IsDialogContext],
+  ])(
+    "keeps the help icon visible for truncated %s headings",
+    (_name, Context) => {
+      const props = getHeadingProps({
+        body: "hello world",
+        wrap: false,
+        help: "help text",
+      })
+      render(
+        <Context.Provider value={true}>
+          <Heading {...props} />
+        </Context.Provider>
+      )
+
+      expect(
+        screen.getByTestId("stHeadingWithActionElements")
+      ).toBeInTheDocument()
+      expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
+      expect(screen.queryByTitle("hello world")).not.toBeInTheDocument()
+      expect(screen.getByRole("heading")).toHaveStyle({
+        overflow: "hidden",
+        display: "flex",
+      })
+    }
+  )
+
   it("renders properly without a new line", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import re
+from functools import partial
 
 import pytest
 from playwright.sync_api import Locator, Page, expect
@@ -462,13 +463,16 @@ def test_wrap_false_ellipsizes_headings_and_sets_title(app: Page):
     """
     container = get_element_by_key(app, "wrap_false_headings")
     expect(container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(3)
-    for tag in ("h1", "h2", "h3"):
-        heading = container.locator(tag)
-        wait_until(
-            app,
-            lambda h=heading: h.evaluate(
+
+    def heading_overflows(locator: Locator) -> bool:
+        return bool(
+            locator.evaluate(
                 "el => { const t = el.querySelector('span'); "
                 "return t ? t.scrollWidth > t.clientWidth : "
                 "el.scrollWidth > el.clientWidth; }"
-            ),
+            )
         )
+
+    for tag in ("h1", "h2", "h3"):
+        heading = container.locator(tag)
+        wait_until(app, partial(heading_overflows, heading))
