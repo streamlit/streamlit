@@ -4220,6 +4220,7 @@ describe("App", () => {
 
       getMockConnectionManager(true)
 
+      // Hold Cmd+C, then release Cmd before C.
       await user.keyboard("[MetaLeft>][KeyC>][/MetaLeft][/KeyC]")
 
       expect(
