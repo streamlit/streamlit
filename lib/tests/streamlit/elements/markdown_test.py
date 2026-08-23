@@ -18,7 +18,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -95,6 +95,25 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "some markdown"
         assert el.markdown.help == "help text"
+
+    def test_st_markdown_wrap(self):
+        """Test that wrap is True by default and can be set to False."""
+        st.markdown("some markdown")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is True
+
+        st.markdown("some markdown", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is False
+
+        st.markdown("some markdown", wrap=True)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is True
+
+    def test_st_markdown_invalid_wrap(self):
+        """Test that a non-bool wrap value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.markdown("some markdown", wrap="yes")  # type: ignore[arg-type]
 
     def test_st_markdown_with_width(self):
         """Test st.markdown with different width types."""
@@ -216,6 +235,21 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
         st.caption("some caption", help="help text")
         el = self.get_delta_from_queue().new_element
         assert el.markdown.help == "help text"
+
+    def test_st_caption_wrap(self):
+        """Test that wrap is True by default and can be set to False."""
+        st.caption("some caption")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is True
+
+        st.caption("some caption", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is False
+
+    def test_st_caption_invalid_wrap(self):
+        """Test that a non-bool wrap value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.caption("some caption", wrap="yes")  # type: ignore[arg-type]
 
     def test_st_caption_with_width(self):
         """Test st.caption with different width types."""
@@ -389,6 +423,21 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
 
         assert el.markdown.body == ":blue-badge[Badge without help]"
         assert not getattr(el.markdown, "help", None)
+
+    def test_st_badge_wrap(self):
+        """Test that wrap is True by default and can be set to False."""
+        st.badge("Badge")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is True
+
+        st.badge("Badge", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is False
+
+    def test_st_badge_invalid_wrap(self):
+        """Test that a non-bool wrap value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.badge("Badge", wrap="yes")  # type: ignore[arg-type]
 
 
 class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):

@@ -120,3 +120,10 @@ st.subheader(
     text_alignment="justify",
     help="This is a help tooltip!",
 )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_headings", width=200):
+    st.title(_WRAP_TEXT, wrap=False)
+    st.header(_WRAP_TEXT, wrap=False)
+    st.subheader(_WRAP_TEXT, wrap=False)

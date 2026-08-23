@@ -24,6 +24,7 @@ from streamlit.errors import (
     StreamlitInvalidTextAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
@@ -375,6 +376,12 @@ def validate_text_alignment(text_alignment: TextAlignment) -> None:
         raise StreamlitInvalidTextAlignmentError(
             "text_alignment", ["'left'", "'center'", "'right'", "'justify'"]
         )
+
+
+def validate_wrap(wrap: bool) -> None:
+    """Raise StreamlitValueError if wrap is not a bool."""
+    if not isinstance(wrap, bool):
+        raise StreamlitValueError("wrap", ["True", "False"])
 
 
 map_to_flex_terminology = {

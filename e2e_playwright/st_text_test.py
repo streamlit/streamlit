@@ -15,11 +15,12 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_target import AppTarget
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    get_element_by_key,
     get_expander,
     get_text,
 )
@@ -115,3 +116,31 @@ def test_text_text_alignment(
     text_element.scroll_into_view_if_needed()
 
     assert_snapshot(text_element, name=f"st_text-text_alignment_{alignment_value}")
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+WRAPPED_HEIGHT_MARGIN = 4
+
+
+def test_wrap_false_ellipsizes_text_and_sets_title(app: Page):
+    """wrap=False keeps plain text on one line, ellipsizes overflow, and exposes
+    the full text via a native title. wrap=True wraps and has no title.
+    """
+    no_wrap = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
+    wraps = get_element_by_key(app, "wrap_true_text").get_by_test_id("stText")
+
+    expect(no_wrap).to_have_attribute("title", WRAP_TEXT)
+    expect(wraps).not_to_have_attribute("title", WRAP_TEXT)
+    wait_until(
+        app,
+        lambda: no_wrap.evaluate(
+            "el => Array.from(el.querySelectorAll('span')).some("
+            "t => t.scrollWidth > t.clientWidth)"
+        ),
+    )
+
+    false_box = no_wrap.bounding_box()
+    true_box = wraps.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN

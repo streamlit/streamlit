@@ -51,4 +51,27 @@ describe("TextElement element", () => {
     const helpText = await screen.findAllByText("help text")
     expect(helpText[0].textContent).toBe("help text")
   })
+
+  it("does not truncate by default", () => {
+    render(<TextElement {...getProps()} />)
+    expect(screen.getByText("some plain text")).not.toHaveStyle({
+      "text-overflow": "ellipsis",
+    })
+    expect(screen.queryByTitle("some plain text")).not.toBeInTheDocument()
+  })
+
+  it("truncates and exposes the full text via a native title when wrap is false", async () => {
+    render(<TextElement {...getProps({ wrap: false })} />)
+    expect(screen.getByText("some plain text")).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+    })
+    expect(await screen.findByTitle("some plain text")).toBeVisible()
+  })
+
+  it("does not set a native title when wrap is false and help is set", () => {
+    render(<TextElement {...getProps({ wrap: false, help: "help text" })} />)
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+    expect(screen.queryByTitle("some plain text")).not.toBeInTheDocument()
+  })
 })

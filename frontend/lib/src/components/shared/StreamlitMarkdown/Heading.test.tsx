@@ -61,6 +61,33 @@ describe("Heading", () => {
     expect(headingElement).toHaveClass("stHeading")
   })
 
+  it("hides extra body lines when wrap is false", () => {
+    const props = getHeadingProps({ wrap: false })
+    render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent("hello world")
+    expect(screen.queryByText("this is a new line")).not.toBeInTheDocument()
+  })
+
+  it("exposes the full heading via a native title when wrap is false", async () => {
+    const props = getHeadingProps({ body: "hello world", wrap: false })
+    render(<Heading {...props} />)
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+  })
+
+  it("does not set a native title when wrap is false and help is set", () => {
+    const props = getHeadingProps({
+      body: "hello world",
+      wrap: false,
+      help: "help text",
+    })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
+    expect(screen.queryByTitle("hello world")).not.toBeInTheDocument()
+  })
+
   it("renders properly without a new line", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)

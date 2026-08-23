@@ -74,6 +74,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const { tag, anchor, body, help, hideAnchor, divider } = element
   const isInDialog = useContext(IsDialogContext)
   const flexContext = useContext(FlexContext)
+  const truncate = element.wrap === false
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
@@ -84,6 +85,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
         isCaption={Boolean(false)}
         isInDialog={isInDialog}
         isInHorizontalLayout={flexContext?.isInHorizontalLayout}
+        truncate={truncate}
         data-testid="stMarkdownContainer"
       >
         <HeadingWithActionElements
@@ -91,6 +93,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
           help={help}
           hideAnchor={hideAnchor}
           tag={tag}
+          truncate={truncate}
         >
           <RenderedMarkdown
             allowHTML={false}
@@ -99,8 +102,8 @@ function Heading(props: HeadingProtoProps): ReactElement {
             overrideComponents={OVERRIDE_COMPONENTS}
           />
         </HeadingWithActionElements>
-        {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
-        {rest.length > 0 && (
+        {/* Extra body lines render as markdown below the heading. wrap=false hides them. */}
+        {!truncate && rest.length > 0 && (
           <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
         )}
       </StyledStreamlitMarkdown>

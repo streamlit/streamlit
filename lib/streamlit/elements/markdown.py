@@ -21,6 +21,7 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     WidthWithoutContent,
     create_layout_config,
+    validate_wrap,
 )
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -46,8 +47,10 @@ class MarkdownMixin:
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
         anchors: bool = True,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
+        validate_wrap(wrap)
         markdown_proto = MarkdownProto()
 
         markdown_proto.body = clean_text(body)
@@ -55,6 +58,7 @@ class MarkdownMixin:
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
         markdown_proto.hide_anchors = not anchors
+        markdown_proto.wrap = wrap
         if help:
             markdown_proto.help = help
 
@@ -79,6 +83,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         anchors: bool = True,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -217,6 +222,25 @@ class MarkdownMixin:
             This is useful when Markdown headings are used purely for
             styling and the anchor link icons would be visual noise.
 
+        wrap : bool
+            Whether the text can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the text is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The text stays on one line. Overflow is truncated
+              with an ellipsis.
+
+            When ``wrap`` is ``False``, Markdown is limited to inline
+            formatting (the same subset used in widget labels). When no
+            ``help`` is set, hovering reveals the full text.
+
+            .. note::
+                Truncation only appears when the element is narrower than
+                its text. In a horizontal container, the default
+                ``width="auto"`` sizes to the content, so pass
+                ``width="stretch"`` or a pixel width with ``wrap=False``.
+
         Examples
         --------
         >>> import streamlit as st
@@ -247,6 +271,7 @@ class MarkdownMixin:
             width=width,
             text_alignment=text_alignment,
             anchors=anchors,
+            wrap=wrap,
         )
 
     @gather_metrics("caption")
@@ -258,6 +283,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in small font.
 
@@ -325,6 +351,19 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the caption can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the caption is too wide for the element,
+              it wraps onto additional lines.
+            - ``False``: The caption stays on one line. Overflow is truncated
+              with an ellipsis.
+
+            When ``wrap`` is ``False``, Markdown is limited to inline
+            formatting (the same subset used in widget labels). When no
+            ``help`` is set, hovering reveals the full text.
+
         Examples
         --------
         >>> import streamlit as st
@@ -333,10 +372,12 @@ class MarkdownMixin:
         >>> st.caption("A caption with _italics_ :blue[colors] and emojis :sunglasses:")
 
         """
+        validate_wrap(wrap)
         caption_proto = MarkdownProto()
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.element_type = MarkdownProto.Type.CAPTION
+        caption_proto.wrap = wrap
         if help:
             caption_proto.help = help
 
@@ -470,6 +511,7 @@ class MarkdownMixin:
         ] = "blue",
         width: Width = "content",
         help: str | None = None,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display a colored badge with an icon and label.
 
@@ -545,6 +587,23 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        wrap : bool
+            Whether the badge label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``True`` (default): If the label is too wide for the badge, it
+              wraps onto additional lines.
+            - ``False``: The badge stays on one line. Overflow is truncated
+              with an ellipsis.
+
+            When ``wrap`` is ``False`` and no ``help`` is set, hovering
+            reveals the full label.
+
+            .. note::
+                Truncation only appears when the badge is narrower than its
+                label. The default ``width="content"`` sizes to the label, so
+                pass ``width="stretch"`` or a pixel width with ``wrap=False``.
+
         Examples
         --------
         Create standalone badges with ``st.badge`` (with or without icons). If
@@ -565,6 +624,7 @@ class MarkdownMixin:
             height: 220px
 
         """
+        validate_wrap(wrap)
         icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
@@ -573,6 +633,7 @@ class MarkdownMixin:
         badge_proto = MarkdownProto()
         badge_proto.body = f":{color}-badge[{icon_str}{escaped_label}]"
         badge_proto.element_type = MarkdownProto.Type.NATIVE
+        badge_proto.wrap = wrap
 
         if help is not None:
             badge_proto.help = help

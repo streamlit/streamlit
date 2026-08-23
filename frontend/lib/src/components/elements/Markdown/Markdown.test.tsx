@@ -292,6 +292,58 @@ describe("Markdown element with help", () => {
   })
 })
 
+describe("Markdown wrap", () => {
+  it("does not truncate by default", () => {
+    render(<Markdown {...getProps()} />)
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+      "text-overflow": "ellipsis",
+    })
+    expect(screen.queryByTitle(/Emphasis/)).not.toBeInTheDocument()
+  })
+
+  it("truncates and uses label-mode markdown when wrap is false", () => {
+    const props = getProps({
+      body: "# Heading that should be inline",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+    })
+    // Label mode unwraps headings so the element stays on one line.
+    expect(
+      screen.queryByRole("heading", { name: "Heading that should be inline" })
+    ).not.toBeInTheDocument()
+    expect(container).toHaveTextContent("Heading that should be inline")
+  })
+
+  it("exposes the full plain text via a native title when wrap is false", async () => {
+    const props = getProps({
+      body: "**Bold** report",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByTitle("Bold report")).toBeVisible()
+    expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
+  })
+
+  it("does not set a native title when wrap is false and help is set", () => {
+    const props = getProps({
+      body: "Overflowing markdown",
+      wrap: false,
+      help: "help text",
+    })
+    render(<Markdown {...props} />)
+
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+    expect(screen.queryByTitle("Overflowing markdown")).not.toBeInTheDocument()
+  })
+})
+
 describe("Markdown badge with help", () => {
   it("renders a markdown badge and displays a tooltip when help is provided", async () => {
     const user = userEvent.setup()

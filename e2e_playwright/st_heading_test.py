@@ -17,19 +17,24 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    get_element_by_key,
     get_heading,
     reset_focus,
     tab_until_focused,
 )
 
 # Does not include divider header/subheaders
-TITLE_COUNT = 11
-HEADER_COUNT = 10
-SUBHEADER_COUNT = 13
+TITLE_COUNT = 12
+HEADER_COUNT = 11
+SUBHEADER_COUNT = 14
 
 
 def _get_title_elements(app: Page) -> Locator:
@@ -446,3 +451,24 @@ def test_subheader_text_alignment(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(
         subheader_justify, name="st_subheader-text_alignment_justify_with_help"
     )
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+
+def test_wrap_false_ellipsizes_headings_and_sets_title(app: Page):
+    """wrap=False keeps titles, headers, and subheaders on one line and exposes
+    the full text via a native title.
+    """
+    container = get_element_by_key(app, "wrap_false_headings")
+    expect(container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(3)
+    for tag in ("h1", "h2", "h3"):
+        heading = container.locator(tag)
+        wait_until(
+            app,
+            lambda h=heading: h.evaluate(
+                "el => { const t = el.querySelector('span'); "
+                "return t ? t.scrollWidth > t.clientWidth : "
+                "el.scrollWidth > el.clientWidth; }"
+            ),
+        )

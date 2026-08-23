@@ -233,6 +233,27 @@ st.markdown(
 )  # stretch, content, or pixels (e.g. 400)
 ```
 
+## Keep text on one line with wrap
+
+`st.markdown`, `st.caption`, `st.badge`, `st.title`, `st.header`,
+`st.subheader`, and `st.text` accept `wrap`. The default is `True` (text
+wraps onto additional lines). Pass `wrap=False` to keep the text on one
+ellipsized line. Hovering shows the full text unless `help` is set.
+
+When `wrap=False`, Markdown commands use the same inline-only subset as
+widget labels (no headings, lists, tables, or block quotes).
+
+```python
+st.markdown(
+    "Quarterly revenue versus plan for the complete fiscal year",
+    wrap=False,
+    width="stretch",
+)
+st.caption("Last updated just now", wrap=False)
+st.title("Dashboard", wrap=False)
+st.text("A long status line", wrap=False, width="stretch")
+```
+
 ## HTML (use very sparingly!)
 
 Mix Markdown with HTML using `unsafe_allow_html=True`. For pure HTML without markdown processing, use `st.html()` instead.

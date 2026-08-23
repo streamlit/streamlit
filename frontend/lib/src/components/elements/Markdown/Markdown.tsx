@@ -22,6 +22,7 @@ import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonT
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 
 export interface MarkdownProps {
   element: MarkdownProto
@@ -48,80 +49,77 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
+  const isDivider = elementType === MarkdownProto.Type.DIVIDER
+  // wrap=false ellipsizes. Latex and divider never truncate: clipping would
+  // hide formulas and horizontal rules.
+  const truncate = element.wrap === false && !isLatex && !isDivider
 
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
     elementType === MarkdownProto.Type.NATIVE &&
     SINGLE_BADGE_REGEX.test(body.trim())
 
+  const addTitleTooltip = truncate && !help
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(
+    addTitleTooltip,
+    body
+  )
+
+  // Put help in the markdown source only when it can sit inline without being
+  // clipped by truncation. Otherwise render the help icon as a sibling.
+  const useInlineHelpDirective =
+    Boolean(help) && !truncate && !isSingleBadgeOnly && !isLatex && !allowHtml
+  const source = useInlineHelpDirective ? `${body} :help[]` : body
+
+  const markdown = (
+    // display:contents adds no box, so layout and ellipsis stay on the
+    // markdown container. The span lets the title hook read plain text.
+    <span ref={labelTextRef} style={{ display: "contents" }}>
+      <StreamlitMarkdown
+        isCaption={isCaption}
+        source={source}
+        allowHTML={allowHtml}
+        helpText={useInlineHelpDirective ? help : undefined}
+        unterminatedParsing={unterminatedParsing}
+        hideAnchors={hideAnchors}
+        // Label mode keeps inline-only markdown so the text can ellipsize on
+        // one line. Inherit the parent font so markdown does not shrink to
+        // widget-label size; captions already use the smaller font.
+        isLabel={truncate}
+        truncate={truncate}
+        inheritFont={truncate && !isCaption}
+      />
+    </span>
+  )
+
   let content: ReactElement
   if (help && isSingleBadgeOnly) {
     // For single badge markdown with help, show the BaseButtonTooltip
     content = (
       <BaseButtonTooltip help={help} containerWidth={false}>
-        <StreamlitMarkdown
-          isCaption={isCaption}
-          source={body}
-          allowHTML={allowHtml}
-          unterminatedParsing={unterminatedParsing}
-          hideAnchors={hideAnchors}
-        />
+        {markdown}
       </BaseButtonTooltip>
     )
-  } else if (help && isLatex) {
-    // For LaTeX with help, use the inline tooltip icon. Adding a directive
-    // breaks the LaTeX rendering, and we don't support text alignment for LaTeX.
+  } else if (help && (isLatex || allowHtml || truncate)) {
+    // Keep the help icon outside truncated text so it is not clipped.
+    // For LaTeX and raw HTML, a trailing :help[] directive would also break
+    // rendering (gh-15211).
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
-        <StreamlitMarkdown
-          isCaption={isCaption}
-          source={body}
-          allowHTML={allowHtml}
-          unterminatedParsing={unterminatedParsing}
-          hideAnchors={hideAnchors}
-        />
+        {markdown}
         <InlineTooltipIcon content={help} isLatex={isLatex} />
       </StyledLabelHelpWrapper>
     )
-  } else if (help && allowHtml) {
-    // For raw HTML with help, render the inline tooltip icon directly:
-    // CommonMark's HTML-block rule swallows a trailing `:help[]` directive
-    // appended to block-level HTML (gh-15211).
-    content = (
-      <StyledLabelHelpWrapper>
-        <StreamlitMarkdown
-          isCaption={isCaption}
-          source={body}
-          allowHTML={allowHtml}
-          unterminatedParsing={unterminatedParsing}
-          hideAnchors={hideAnchors}
-        />
-        <InlineTooltipIcon content={help} />
-      </StyledLabelHelpWrapper>
-    )
   } else {
-    // For other markdown, render with inline help icon
-    // Use :help[] as a marker where the help icon should appear.
-    // The actual help text is passed via helpText prop to avoid limitations
-    // with special characters in text directive labels.
-    const source = help ? `${body} :help[]` : body
-
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
-        <StreamlitMarkdown
-          isCaption={isCaption}
-          source={source}
-          allowHTML={allowHtml}
-          helpText={help}
-          unterminatedParsing={unterminatedParsing}
-          hideAnchors={hideAnchors}
-        />
+        {markdown}
       </StyledLabelHelpWrapper>
     )
   }
 
   return (
-    <div className="stMarkdown" data-testid="stMarkdown">
+    <div className="stMarkdown" data-testid="stMarkdown" ref={titleRef}>
       {content}
     </div>
   )

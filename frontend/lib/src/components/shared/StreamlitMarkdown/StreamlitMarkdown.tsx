@@ -61,6 +61,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
@@ -71,6 +72,7 @@ import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import {
   StyledHeadingActionElements,
+  StyledHeadingText,
   StyledHeadingWithActionElements,
   StyledHelpIconWrapper,
   StyledLinkIcon,
@@ -334,6 +336,11 @@ interface HeadingWithActionElementsProps {
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
   help?: string
+  /**
+   * When true, the heading text stays on one line and ellipsizes.
+   * Action icons remain visible.
+   */
+  truncate?: boolean
 }
 
 export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
@@ -343,6 +350,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   hideAnchor,
   children,
   tagProps,
+  truncate = false,
 }) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
@@ -395,6 +403,11 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
+  const addTitleTooltip = truncate && !help
+  // Heading children are React nodes; pass "" and let the hook read the
+  // rendered plain text from the DOM.
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(addTitleTooltip, "")
+
   const actionElements = (
     <HeaderActionElements
       elementId={elementId}
@@ -433,23 +446,43 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     ...ariaLabelledbyAttribute,
   }
   const Tag = tag
+  const needsHeadingTextSpan = Boolean(headingTextId) || truncate
+  const headingText = needsHeadingTextSpan ? (
+    <StyledHeadingText
+      id={headingTextId}
+      ref={labelTextRef}
+      $truncate={truncate}
+    >
+      {children}
+    </StyledHeadingText>
+  ) : (
+    children
+  )
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
   const headerElementWithActions = (
     <Tag {...tagProps} {...mergedAttributes}>
-      {headingTextId ? <span id={headingTextId}>{children}</span> : children}
+      {headingText}
       {actionElements}
     </Tag>
   )
 
-  // we don't want to apply styling, so return the "raw" header
+  // Skip heading-action styling in the sidebar and dialog. When truncating,
+  // keep an unstyled wrapper so the native title tooltip has a node to attach to.
   if (isInSidebarOrDialog) {
+    if (addTitleTooltip) {
+      return <div ref={titleRef}>{headerElementWithActions}</div>
+    }
     return headerElementWithActions
   }
 
   return (
-    <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
+    <StyledHeadingWithActionElements
+      ref={titleRef}
+      $truncate={truncate}
+      data-testid="stHeadingWithActionElements"
+    >
       {headerElementWithActions}
     </StyledHeadingWithActionElements>
   )

@@ -16,23 +16,44 @@
 
 import styled from "@emotion/styled"
 
+interface StyledTextProps {
+  $truncate?: boolean
+}
+
 // Text element itself - rendered inline-block so it stays with help icon
-export const StyledText = styled.span(({ theme }) => ({
-  fontFamily: theme.genericFonts.bodyFont,
-  color: theme.colors.bodyText,
-  whiteSpace: "pre-line",
-  whiteSpaceCollapse: "preserve",
-  wordBreak: "break-word",
-  display: "inline-block",
-  verticalAlign: "middle",
-  width: "100%",
-}))
+export const StyledText = styled.span<StyledTextProps>(
+  ({ theme, $truncate }) => ({
+    fontFamily: theme.genericFonts.bodyFont,
+    color: theme.colors.bodyText,
+    whiteSpace: $truncate ? "nowrap" : "pre-line",
+    whiteSpaceCollapse: "preserve",
+    wordBreak: $truncate ? "normal" : "break-word",
+    display: $truncate ? "flex" : "inline-block",
+    alignItems: $truncate ? "center" : undefined,
+    verticalAlign: "middle",
+    width: "100%",
+    minWidth: $truncate ? 0 : undefined,
+    overflow: $truncate ? "hidden" : undefined,
+  })
+)
+
+export const StyledTextBody = styled.span<{ $truncate?: boolean }>(
+  ({ $truncate }) => ({
+    ...($truncate && {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      minWidth: 0,
+    }),
+  })
+)
 
 // Inline help icon wrapper to keep it flowing with the text
 export const StyledInlineHelpIcon = styled.span(({ theme }) => ({
   display: "inline-block",
   verticalAlign: "middle",
   marginLeft: theme.spacing.twoXS,
+  flexShrink: 0,
   // Fine-tune vertical positioning for perfect visual centering
   transform: "translateY(-0.05em)",
 }))

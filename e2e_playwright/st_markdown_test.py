@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expand_sidebar,
     expect_help_tooltip,
+    expect_label_truncated,
     get_caption,
     get_element_by_key,
     get_markdown,
@@ -790,3 +791,35 @@ def test_mermaid_invalid_syntax_shows_error(app: Page):
     # The error chart is the 3rd one (index 2)
     error_chart = mermaid_charts.nth(2)
     expect(error_chart.locator("img")).to_have_count(0)
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+WRAPPED_HEIGHT_MARGIN = 4
+
+
+def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
+    """wrap=False keeps markdown on one line, ellipsizes overflow, and exposes
+    the full text via a native title. wrap=True wraps and has no title.
+    """
+    no_wrap = get_element_by_key(app, "wrap_false_markdown").get_by_test_id(
+        "stMarkdown"
+    )
+    wraps = get_element_by_key(app, "wrap_true_markdown").get_by_test_id("stMarkdown")
+    badge = get_element_by_key(app, "wrap_false_badge").get_by_test_id("stMarkdown")
+
+    expect(no_wrap).to_have_attribute("title", WRAP_TEXT)
+    expect(wraps).not_to_have_attribute("title", WRAP_TEXT)
+    expect(badge).to_have_attribute("title", WRAP_TEXT)
+    expect_label_truncated(no_wrap)
+
+    horizontal = get_element_by_key(
+        app, "wrap_false_horizontal_markdown"
+    ).get_by_test_id("stMarkdown")
+    expect(horizontal).to_have_attribute("title", WRAP_TEXT)
+    expect_label_truncated(horizontal)
+
+    false_box = no_wrap.bounding_box()
+    true_box = wraps.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN

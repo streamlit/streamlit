@@ -20,8 +20,13 @@ import { Text as TextProto } from "@streamlit/protobuf"
 
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 
-import { StyledInlineHelpIcon, StyledText } from "./styled-components"
+import {
+  StyledInlineHelpIcon,
+  StyledText,
+  StyledTextBody,
+} from "./styled-components"
 
 export interface TextProps {
   element: TextProto
@@ -31,10 +36,23 @@ export interface TextProps {
  * Functional element representing preformatted (plain) text.
  */
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
+  const truncate = element.wrap === false
+  const addTitleTooltip = truncate && !element.help
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(
+    addTitleTooltip,
+    element.body
+  )
+
   return (
-    <StyledLabelHelpWrapper className="stText" data-testid="stText">
-      <StyledText>
-        {element.body}
+    <StyledLabelHelpWrapper
+      className="stText"
+      data-testid="stText"
+      ref={titleRef}
+    >
+      <StyledText $truncate={truncate}>
+        <StyledTextBody ref={labelTextRef} $truncate={truncate}>
+          {element.body}
+        </StyledTextBody>
         {element.help && (
           <StyledInlineHelpIcon>
             <InlineTooltipIcon content={element.help} />

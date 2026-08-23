@@ -70,6 +70,21 @@ class StHeaderTest(DeltaGeneratorTestCase):
         assert el.heading.help == "help text"
         assert not el.heading.divider
 
+    def test_st_header_wrap(self):
+        """Test that wrap is True by default and can be set to False."""
+        st.header("some header")
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.wrap is True
+
+        st.header("some header", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.wrap is False
+
+    def test_st_header_invalid_wrap(self):
+        """Test that a non-bool wrap value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.header("some header", wrap="yes")  # type: ignore[arg-type]
+
     def test_st_header_with_divider_true(self):
         """Test st.header with divider True."""
         st.header("some header", divider=True)
@@ -204,6 +219,21 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         assert el.heading.tag == "h3"
         assert el.heading.help == "help text"
         assert not el.heading.divider
+
+    def test_st_subheader_wrap(self):
+        """Test that wrap is True by default and can be set to False."""
+        st.subheader("some subheader")
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.wrap is True
+
+        st.subheader("some subheader", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.wrap is False
+
+    def test_st_subheader_invalid_wrap(self):
+        """Test that a non-bool wrap value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.subheader("some subheader", wrap="yes")  # type: ignore[arg-type]
 
     def test_st_subheader_with_divider_true(self):
         """Test st.subheader with divider True."""
@@ -346,6 +376,21 @@ class StTitleTest(DeltaGeneratorTestCase):
         assert el.heading.tag == "h1"
         assert el.heading.help == "help text"
         assert not el.heading.divider
+
+    def test_st_title_wrap(self):
+        """Test that wrap is True by default and can be set to False."""
+        st.title("some title")
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.wrap is True
+
+        st.title("some title", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.wrap is False
+
+    def test_st_title_invalid_wrap(self):
+        """Test that a non-bool wrap value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.title("some title", wrap="yes")  # type: ignore[arg-type]
 
     def test_st_title_with_invalid_divider(self):
         """Test st.title with invalid divider."""

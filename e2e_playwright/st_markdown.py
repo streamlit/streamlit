@@ -606,3 +606,19 @@ this is not valid mermaid syntax
 ```
 """
     )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_markdown", width=200):
+    st.markdown(_WRAP_TEXT, wrap=False)
+with st.container(key="wrap_true_markdown", width=200):
+    st.markdown(_WRAP_TEXT, wrap=True)
+with st.container(key="wrap_false_badge", width=200):
+    st.badge(_WRAP_TEXT, wrap=False, width="stretch")
+with st.container(
+    key="wrap_false_horizontal_markdown",
+    horizontal=True,
+    wrap=False,
+    width=200,
+):
+    st.markdown(_WRAP_TEXT, wrap=False, width="stretch")

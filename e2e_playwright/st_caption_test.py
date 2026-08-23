@@ -14,13 +14,17 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expand_sidebar, expect_help_tooltip
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.shared.app_utils import (
+    expand_sidebar,
+    expect_help_tooltip,
+    get_element_by_key,
+)
 
 
 def test_correct_number_of_elements(app: Page):
     caption_containers = app.get_by_test_id("stCaptionContainer")
-    expect(caption_containers).to_have_count(5)
+    expect(caption_containers).to_have_count(6)
 
 
 def test_correct_content_in_caption(app: Page):
@@ -93,3 +97,23 @@ def test_match_snapshot_in_sidebar(
     sidebar = expand_sidebar(themed_app)
     caption_in_sidebar = sidebar.get_by_test_id("stCaptionContainer")
     assert_snapshot(caption_in_sidebar, name="st_caption-sidebar_caption")
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+
+def test_wrap_false_ellipsizes_caption_and_sets_title(app: Page):
+    """wrap=False keeps a caption on one line, ellipsizes overflow, and exposes
+    the full text via a native title.
+    """
+    container = get_element_by_key(app, "wrap_false_caption")
+    caption = container.get_by_test_id("stCaptionContainer")
+    expect(container.get_by_test_id("stMarkdown")).to_have_attribute("title", WRAP_TEXT)
+    wait_until(
+        app,
+        lambda: caption.evaluate(
+            "el => { const p = el.querySelector('p'); "
+            "return p ? p.scrollWidth > p.clientWidth : "
+            "el.scrollWidth > el.clientWidth; }"
+        ),
+    )

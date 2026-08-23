@@ -230,7 +230,9 @@ export const StyledStreamlitMarkdown =
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
-        width: isLabel ? "" : "100%",
+        // Labels without truncation shrink to content. Truncated labels still
+        // need 100% width so ellipsis can apply in stretch layouts.
+        width: isLabel && !truncate ? "" : "100%",
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
@@ -481,7 +483,9 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   },
 }))
 
-export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
+export const StyledHeadingWithActionElements = styled.div<{
+  $truncate?: boolean
+}>(({ theme, $truncate }) => ({
   "h1, h2, h3, h4, h5, h6, span": {
     scrollMarginTop: theme.sizes.headerHeight,
   },
@@ -500,12 +504,38 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
       pointerEvents: "auto",
     },
   },
+
+  ...($truncate && {
+    minWidth: 0,
+    maxWidth: "100%",
+    "h1, h2, h3, h4, h5, h6": {
+      display: "flex",
+      alignItems: "center",
+      overflow: "hidden",
+      minWidth: 0,
+      whiteSpace: "nowrap",
+      textWrap: "nowrap",
+    },
+  }),
 }))
+
+export const StyledHeadingText = styled.span<{ $truncate?: boolean }>(
+  ({ $truncate }) => ({
+    ...($truncate && {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      minWidth: 0,
+    }),
+  })
+)
 
 export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   display: "inline-flex",
   gap: theme.spacing.sm,
+  // Keep anchor and help icons visible when the heading text ellipsizes.
+  flexShrink: 0,
 
   verticalAlign: "middle",
 

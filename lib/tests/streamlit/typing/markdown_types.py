@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from streamlit.elements.markdown import MarkdownMixin
 
     markdown = MarkdownMixin().markdown
+    caption = MarkdownMixin().caption
+    badge = MarkdownMixin().badge
 
     # =====================================================================
     # st.markdown return type tests
@@ -63,6 +65,10 @@ if TYPE_CHECKING:
     assert_type(markdown("# H", anchors=True), DeltaGenerator)
     assert_type(markdown("# H", anchors=False), DeltaGenerator)
 
+    # Markdown with wrap parameter (keyword-only)
+    assert_type(markdown("Text", wrap=True), DeltaGenerator)
+    assert_type(markdown("Text", wrap=False), DeltaGenerator)
+
     # Markdown with all parameters combined
     assert_type(
         markdown(
@@ -72,6 +78,7 @@ if TYPE_CHECKING:
             width="stretch",
             text_alignment="center",
             anchors=False,
+            wrap=False,
         ),
         DeltaGenerator,
     )
@@ -91,3 +98,17 @@ if TYPE_CHECKING:
 
     # Invalid anchors value (must be bool)
     markdown("# H", anchors="yes")  # type: ignore[arg-type]
+
+    # Invalid wrap value (must be bool)
+    markdown("Text", wrap="yes")  # type: ignore[arg-type]
+
+    # =====================================================================
+    # st.caption and st.badge wrap
+    # =====================================================================
+
+    assert_type(caption("Note", wrap=True), DeltaGenerator)
+    assert_type(caption("Note", wrap=False), DeltaGenerator)
+    assert_type(badge("New", wrap=True), DeltaGenerator)
+    assert_type(badge("New", wrap=False), DeltaGenerator)
+    caption("Note", wrap="yes")  # type: ignore[arg-type]
+    badge("New", wrap="yes")  # type: ignore[arg-type]

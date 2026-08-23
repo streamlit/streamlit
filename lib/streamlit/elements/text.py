@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.elements.lib.layout_utils import create_layout_config, validate_wrap
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -36,6 +36,7 @@ class TextMixin:
         help: str | None = None,
         width: Width = "content",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         r"""Write text without Markdown or HTML parsing.
 
@@ -86,6 +87,24 @@ class TextMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the text can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the text is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The text stays on one line. Overflow is truncated
+              with an ellipsis.
+
+            When ``wrap`` is ``False`` and no ``help`` is set, hovering
+            reveals the full text.
+
+            .. note::
+                Truncation only appears when the element is narrower than
+                its text. Combine ``wrap=False`` with ``width="stretch"`` or
+                a pixel width; the default ``width="content"`` sizes to the
+                full text.
+
         Examples
         --------
         >>> import streamlit as st
@@ -97,8 +116,10 @@ class TextMixin:
             height: 220px
 
         """
+        validate_wrap(wrap)
         text_proto = TextProto()
         text_proto.body = clean_text(body)
+        text_proto.wrap = wrap
         if help:
             text_proto.help = help
 
