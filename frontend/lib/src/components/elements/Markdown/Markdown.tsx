@@ -71,49 +71,55 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     Boolean(help) && !truncate && !isSingleBadgeOnly && !isLatex && !allowHtml
   const source = useInlineHelpDirective ? `${body} :help[]` : body
 
-  const markdown = (
-    // display:contents adds no box, so layout and ellipsis stay on the
-    // markdown container. The span lets the title hook read plain text.
+  const streamlitMarkdown = (
+    <StreamlitMarkdown
+      isCaption={isCaption}
+      source={source}
+      allowHTML={allowHtml}
+      helpText={useInlineHelpDirective ? help : undefined}
+      unterminatedParsing={unterminatedParsing}
+      hideAnchors={hideAnchors}
+      // Label mode keeps inline-only markdown so the text can ellipsize on
+      // one line. Inherit the parent font so markdown does not shrink to
+      // widget-label size; captions already use the smaller font.
+      isLabel={truncate}
+      truncate={truncate}
+      inheritFont={truncate && !isCaption}
+    />
+  )
+  // display:contents adds no box, so layout and ellipsis stay on the
+  // markdown container. The span is only needed so the title hook can
+  // read plain text; omit it otherwise so inline colored spans remain
+  // the first <span> in the element.
+  const markdown = addTitleTooltip ? (
     <span ref={labelTextRef} style={{ display: "contents" }}>
-      <StreamlitMarkdown
-        isCaption={isCaption}
-        source={source}
-        allowHTML={allowHtml}
-        helpText={useInlineHelpDirective ? help : undefined}
-        unterminatedParsing={unterminatedParsing}
-        hideAnchors={hideAnchors}
-        // Label mode keeps inline-only markdown so the text can ellipsize on
-        // one line. Inherit the parent font so markdown does not shrink to
-        // widget-label size; captions already use the smaller font.
-        isLabel={truncate}
-        truncate={truncate}
-        inheritFont={truncate && !isCaption}
-      />
+      {streamlitMarkdown}
     </span>
+  ) : (
+    streamlitMarkdown
   )
 
   let content: ReactElement
-  if (help && isSingleBadgeOnly) {
-    // For single badge markdown with help, show the BaseButtonTooltip
+  if (help && isSingleBadgeOnly && !truncate) {
+    // Hover-on-badge tooltip. Cap to the parent so a long chip ellipsizes
+    // instead of growing past the element (width:auto would size to the
+    // label and overflow). wrap=False uses a sibling help icon so the glyph
+    // stays visible next to the truncated chip.
     content = (
-      <BaseButtonTooltip help={help} containerWidth={false}>
+      <BaseButtonTooltip help={help} containerWidth={true}>
         {markdown}
       </BaseButtonTooltip>
     )
-  } else if (help && (isLatex || allowHtml || truncate)) {
+  } else {
     // Keep the help icon outside truncated text so it is not clipped.
     // For LaTeX and raw HTML, a trailing :help[] directive would also break
     // rendering (gh-15211).
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
         {markdown}
-        <InlineTooltipIcon content={help} isLatex={isLatex} />
-      </StyledLabelHelpWrapper>
-    )
-  } else {
-    content = (
-      <StyledLabelHelpWrapper isLatex={isLatex}>
-        {markdown}
+        {help && (isLatex || allowHtml || truncate) && (
+          <InlineTooltipIcon content={help} isLatex={isLatex} />
+        )}
       </StyledLabelHelpWrapper>
     )
   }

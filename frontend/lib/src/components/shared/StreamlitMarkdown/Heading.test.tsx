@@ -88,6 +88,27 @@ describe("Heading", () => {
     expect(screen.queryByTitle("hello world")).not.toBeInTheDocument()
   })
 
+  it.each([
+    ["sidebar", IsSidebarContext],
+    ["dialog", IsDialogContext],
+  ])("ellipsizes %s headings when wrap is false", async (_name, Context) => {
+    const props = getHeadingProps({ body: "hello world", wrap: false })
+    render(
+      <Context.Provider value={true}>
+        <Heading {...props} />
+      </Context.Provider>
+    )
+
+    expect(
+      screen.getByTestId("stHeadingWithActionElements")
+    ).toBeInTheDocument()
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByRole("heading")).toHaveStyle({
+      overflow: "hidden",
+      display: "flex",
+    })
+  })
+
   it("renders properly without a new line", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)

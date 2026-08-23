@@ -592,6 +592,10 @@ with st.container(horizontal=True, wrap=False):
 - `st.text` ellipsizes as plain text. Newlines in the body are not shown as extra
   lines.
 - Help icons remain visible and are not clipped by the ellipsis.
+- `st.badge` chips already stay on one line via existing CSS. `wrap=False` still
+  ellipsizes in a bounded width. When `help` is set, the help icon is a sibling
+  of the chip so the chip can shrink and the icon stays visible. The default
+  (`wrap=True`) keeps today's hover-on-badge tooltip.
 - `st.latex` and `st.divider` are unchanged and do not take `wrap`.
 
 This addresses #12583.

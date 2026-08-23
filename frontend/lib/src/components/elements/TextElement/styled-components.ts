@@ -25,15 +25,23 @@ export const StyledText = styled.span<StyledTextProps>(
   ({ theme, $truncate }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     color: theme.colors.bodyText,
-    whiteSpace: $truncate ? "nowrap" : "pre-line",
     whiteSpaceCollapse: "preserve",
-    wordBreak: $truncate ? "normal" : "break-word",
-    display: $truncate ? "flex" : "inline-block",
-    alignItems: $truncate ? "center" : undefined,
     verticalAlign: "middle",
     width: "100%",
-    minWidth: $truncate ? 0 : undefined,
-    overflow: $truncate ? "hidden" : undefined,
+    ...($truncate
+      ? {
+          whiteSpace: "nowrap",
+          wordBreak: "normal",
+          display: "flex",
+          alignItems: "center",
+          minWidth: 0,
+          overflow: "hidden",
+        }
+      : {
+          whiteSpace: "pre-line",
+          wordBreak: "break-word",
+          display: "inline-block",
+        }),
   })
 )
 

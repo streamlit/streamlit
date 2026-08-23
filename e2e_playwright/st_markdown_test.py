@@ -17,7 +17,7 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expand_sidebar,
@@ -823,3 +823,26 @@ def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
     assert false_box is not None
     assert true_box is not None
     assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+
+
+def test_wrap_false_badge_with_help_stays_in_container(app: Page):
+    """wrap=False + help ellipsizes the badge chip and keeps the help icon
+    visible inside the parent instead of overflowing.
+    """
+    container = get_element_by_key(app, "wrap_false_badge_help")
+    badge = container.get_by_test_id("stMarkdown")
+
+    expect(badge).not_to_have_attribute("title", WRAP_TEXT)
+    expect_help_tooltip(app, badge, "wrap help text")
+
+    chip = badge.locator(".stMarkdownBadge")
+    wait_until(
+        app,
+        lambda: chip.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
+
+    container_box = container.bounding_box()
+    badge_box = badge.bounding_box()
+    assert container_box is not None
+    assert badge_box is not None
+    assert badge_box["width"] <= container_box["width"] + 1

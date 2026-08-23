@@ -327,6 +327,8 @@ function Tooltip({
                 flexDirection: "row",
                 justifyContent: inline ? "flex-end" : "",
                 width: containerWidth ? "100%" : "auto",
+                maxWidth: "100%",
+                minWidth: 0,
                 ...style,
               }}
               testId={

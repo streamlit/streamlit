@@ -299,6 +299,13 @@ describe("Markdown wrap", () => {
       "text-overflow": "ellipsis",
     })
     expect(screen.queryByTitle(/Emphasis/)).not.toBeInTheDocument()
+    // The title-hook wrapper is omitted unless wrap=false, so colored
+    // markdown spans stay the first <span> in the element.
+    expect(
+      screen
+        .getByTestId("stMarkdown")
+        .querySelector("span[style*='display: contents']")
+    ).toBeNull()
   })
 
   it("truncates and uses label-mode markdown when wrap is false", () => {
@@ -341,6 +348,20 @@ describe("Markdown wrap", () => {
 
     expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
     expect(screen.queryByTitle("Overflowing markdown")).not.toBeInTheDocument()
+  })
+
+  it("keeps a sibling help icon for a truncated single badge", () => {
+    const props = getProps({
+      body: ":blue-badge[Overflowing badge]",
+      wrap: false,
+      help: "help text",
+      elementType: MarkdownProto.Type.NATIVE,
+    })
+    render(<Markdown {...props} />)
+
+    expect(screen.getByText("Overflowing badge")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Help" })).toBeVisible()
+    expect(screen.queryByTitle("Overflowing badge")).not.toBeInTheDocument()
   })
 })
 

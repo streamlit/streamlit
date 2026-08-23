@@ -615,6 +615,8 @@ with st.container(key="wrap_true_markdown", width=200):
     st.markdown(_WRAP_TEXT, wrap=True)
 with st.container(key="wrap_false_badge", width=200):
     st.badge(_WRAP_TEXT, wrap=False, width="stretch")
+with st.container(key="wrap_false_badge_help", width=200):
+    st.badge(_WRAP_TEXT, wrap=False, width="stretch", help="wrap help text")
 with st.container(
     key="wrap_false_horizontal_markdown",
     horizontal=True,

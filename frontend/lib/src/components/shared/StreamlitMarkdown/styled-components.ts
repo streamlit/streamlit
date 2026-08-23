@@ -230,8 +230,8 @@ export const StyledStreamlitMarkdown =
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
-        // Labels without truncation shrink to content. Truncated labels still
-        // need 100% width so ellipsis can apply in stretch layouts.
+        // Truncated labels need 100% width so ellipsis can apply in stretch
+        // layouts. Other labels shrink to content.
         width: isLabel && !truncate ? "" : "100%",
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
@@ -386,6 +386,8 @@ export const StyledStreamlitMarkdown =
           overflow: "hidden",
           textOverflow: "ellipsis",
           maxWidth: "100%",
+          // Shrink inside a flex row (e.g. wrap=false next to a help icon).
+          minWidth: 0,
           display: "inline-block",
           verticalAlign: "middle",
         },

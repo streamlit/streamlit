@@ -43,7 +43,7 @@ The lists below are not exhaustive. Always use `streamlit docs st.<command>` to 
 - `st.markdown()`, `st.write()`, `st.caption()`, `st.info()`, `st.warning()`, `st.error()`, `st.success()`, `st.table` cells, index labels, and headers, tooltips (`help` parameter)
 
 **Label subset** — Inline formatting only (see table above). Block elements (e.g. headings, lists, tables) are silently stripped:
-- Widget and element labels (`st.button`, `st.checkbox`, `st.radio`, `st.expander`, `st.page_link`, etc.), `st.radio` and `st.select_slider` options, `st.tabs` names, `st.metric` label/value/delta, `st.title`, `st.header`, `st.subheader`, `st.image` caption, `st.dialog` title, `st.progress`, `st.spinner`.
+- Widget and element labels (`st.button`, `st.checkbox`, `st.radio`, `st.expander`, `st.page_link`, etc.), `st.radio` and `st.select_slider` options, `st.tabs` names, `st.metric` label/value/delta, `st.title`, `st.header`, `st.subheader`, `st.image` caption, `st.dialog` title, `st.progress`, `st.spinner`, `st.markdown` / `st.caption` when `wrap=False`.
 
 **No Markdown** — Text displays literally:
 - `st.text()`, `st.json()`, `st.dataframe()` / `st.data_editor()` cells, `st.selectbox` / `st.multiselect` options, input placeholders, `st.Page` titles, chart/map labels
@@ -239,9 +239,13 @@ st.markdown(
 `st.subheader`, and `st.text` accept `wrap`. The default is `True` (text
 wraps onto additional lines). Pass `wrap=False` to keep the text on one
 ellipsized line. Hovering shows the full text unless `help` is set.
+Truncation only appears when the element is narrower than its text, so
+pass `width="stretch"` or a pixel width in a horizontal container.
 
-When `wrap=False`, Markdown commands use the same inline-only subset as
-widget labels (no headings, lists, tables, or block quotes).
+When `wrap=False`, `st.markdown` and `st.caption` use the same inline-only
+subset as widget labels (no headings, lists, tables, or block quotes).
+`st.badge` chips already stay on one line; `wrap=False` still ellipsizes
+when the badge has a bounded width.
 
 ```python
 st.markdown(

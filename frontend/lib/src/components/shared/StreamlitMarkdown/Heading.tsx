@@ -102,7 +102,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
             overrideComponents={OVERRIDE_COMPONENTS}
           />
         </HeadingWithActionElements>
-        {/* Extra body lines render as markdown below the heading. wrap=false hides them. */}
+        {/* wrap=false keeps only the first line; extra body lines would otherwise render as markdown below. */}
         {!truncate && rest.length > 0 && (
           <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
         )}

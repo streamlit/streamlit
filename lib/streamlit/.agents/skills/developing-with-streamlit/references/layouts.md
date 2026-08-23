@@ -78,6 +78,11 @@ Nested layout containers such as a vertical `st.container`, expander, tab, or
 form reset this, so inner controls wrap as usual. Pass `wrap=True` on a control
 to wrap even in a column.
 
+Text commands (`st.markdown`, `st.title`, `st.header`, `st.subheader`,
+`st.caption`, `st.badge`, `st.text`) keep wrapping by default even inside
+columns or horizontal containers. Pass `wrap=False` on the text command
+itself to ellipsize.
+
 ## Horizontal containers for button groups
 
 Use `st.container(horizontal=True)` instead of columns for button groups.

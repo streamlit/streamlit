@@ -588,13 +588,15 @@ class MarkdownMixin:
             parameter of ``st.markdown``.
 
         wrap : bool
-            Whether the badge label can wrap onto multiple lines. This can be
-            one of the following:
+            Whether the badge stays on one line. This can be one of the
+            following:
 
-            - ``True`` (default): If the label is too wide for the badge, it
-              wraps onto additional lines.
+            - ``True`` (default): The badge chip stays on one line (existing
+              chip styles). Overflow ellipsizes only when the badge is
+              narrower than its label.
             - ``False``: The badge stays on one line. Overflow is truncated
-              with an ellipsis.
+              with an ellipsis. When ``help`` is set, the help icon stays
+              visible next to the truncated chip.
 
             When ``wrap`` is ``False`` and no ``help`` is set, hovering
             reveals the full label.

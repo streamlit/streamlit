@@ -14,10 +14,11 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     expand_sidebar,
     expect_help_tooltip,
+    expect_label_truncated,
     get_element_by_key,
 )
 
@@ -106,14 +107,8 @@ def test_wrap_false_ellipsizes_caption_and_sets_title(app: Page):
     """wrap=False keeps a caption on one line, ellipsizes overflow, and exposes
     the full text via a native title.
     """
-    container = get_element_by_key(app, "wrap_false_caption")
-    caption = container.get_by_test_id("stCaptionContainer")
-    expect(container.get_by_test_id("stMarkdown")).to_have_attribute("title", WRAP_TEXT)
-    wait_until(
-        app,
-        lambda: caption.evaluate(
-            "el => { const p = el.querySelector('p'); "
-            "return p ? p.scrollWidth > p.clientWidth : "
-            "el.scrollWidth > el.clientWidth; }"
-        ),
+    markdown = get_element_by_key(app, "wrap_false_caption").get_by_test_id(
+        "stMarkdown"
     )
+    expect(markdown).to_have_attribute("title", WRAP_TEXT)
+    expect_label_truncated(markdown)
