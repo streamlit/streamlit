@@ -4203,6 +4203,29 @@ describe("App", () => {
         vi.useRealTimers()
       }
     })
+
+    it("does not clear caches when the copy modifier is released first", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+      })
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      getMockConnectionManager(true)
+
+      await user.keyboard("[MetaLeft>][KeyC>][/MetaLeft][/KeyC]")
+
+      expect(
+        screen.queryByTestId("stClearCacheDialog")
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("showDevelopmentMenu", () => {

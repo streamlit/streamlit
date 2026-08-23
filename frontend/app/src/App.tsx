@@ -2688,6 +2688,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
+    // react-hot-keys also invokes onKeyDown for matching keyup events. Ignoring
+    // them prevents a modified shortcut from becoming a bare-key shortcut when
+    // the user releases the modifier first (for example, Cmd+C).
+    if (keyboardEvent?.type === "keyup") {
+      return
+    }
+
     // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
     // We never fire global single-letter shortcuts while the user is typing.
     if (

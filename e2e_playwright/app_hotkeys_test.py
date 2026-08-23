@@ -35,6 +35,15 @@ def test_does_not_show_clear_cache_when_modifier_c_is_pressed(app: Page):
     expect(app.get_by_test_id("stClearCacheDialog")).not_to_be_visible()
 
 
+def test_does_not_show_clear_cache_when_copy_modifier_is_released_first(app: Page):
+    for key in modifier_keys:
+        app.keyboard.down(key)
+        app.keyboard.down("c")
+        app.keyboard.up(key)
+        app.keyboard.up("c")
+    expect(app.get_by_test_id("stClearCacheDialog")).not_to_be_visible()
+
+
 def test_does_not_clear_cache_dialog_when_c_is_pressed_inside_text_input(app: Page):
     app.get_by_test_id("stTextInput").type("c")
     expect(app.get_by_test_id("stClearCacheDialog")).not_to_be_visible()
