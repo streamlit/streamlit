@@ -442,23 +442,36 @@ and sends that never reach the server.
 
 Four hooks:
 
-**1. `handleNewSession`** records the echo near the **top** of the method — after the
-version-reload return, and **above the `if (!fragmentIdsThisRun.length)` branch**. Do not
-put it next to `processThemeInput`: that call lives inside the full-app branch, so fragment
-reruns skip it, and tying the recording to it would make every fragment `NewSession` skip
-both the echo and the flag clear. The only ordering the comparison needs is "before the
-`componentDidUpdate` that follows", which holds anywhere in this method; applying the theme
-is unrelated. An absent or unrecognized echo must be recorded as `null` — **not** skipped,
-leaving the previous value in place, which is the infinite-loop failure mode described in
-§5. Any `NewSession`, fragment or not, is also the observed event that clears the in-flight
-flag:
+**1. `handleNewSession`** does two things that **must not be placed together**, which is the
+single most error-prone detail in this design:
 
 ```tsx
+// Above the fragment branch: EVERY NewSession records the echo.
 const resolved = newSessionProto.resolvedColorScheme
 this.backendColorScheme =
   resolved === "light" || resolved === "dark" ? resolved : null
-this.themeCorrectionInFlight = false
+
+if (!fragmentIdsThisRun.length) {
+  // Inside it: only a full-app NewSession answers a correction.
+  this.themeCorrectionInFlight = false
+  ...
+}
 ```
+
+**Recording goes above the `if (!fragmentIdsThisRun.length)` branch.** Do not put it next to
+`processThemeInput`, which lives inside that branch: fragment reruns skip it, and the
+"absent echo means stop comparing" rule of §5 has to hold for every `NewSession` or a stale
+value survives. An absent or unrecognized echo must be recorded as `null`, **not** skipped —
+skipping is the infinite-loop mode described in §5. The only ordering the comparison needs is
+"before the `componentDidUpdate` that follows", which holds anywhere in this method;
+applying the theme is unrelated.
+
+**Clearing the in-flight flag stays inside the full-app branch.** A correction is always a
+full-app rerun, so only a full-app `NewSession` can answer one. Clearing on a fragment's
+`NewSession` releases the guard while the disagreement is still unresolved, and the next
+render sends a **second, redundant full-app correction** — one theme change, two app runs.
+Moving both statements together looks like the tidy refactor and is a defect; there is a
+regression test for it in §7.
 
 **`sendRerunBackMsg` must NOT record what Python will believe.** The echo is the only
 writer of `backendColorScheme`. Predicting it at send time is unsound, because
@@ -680,16 +693,20 @@ awkwardly: `isThemeApplied` across the startup window and after a host theme;
 `RUNNING` or disconnected and draining once idle; a dropped send being retried after a
 reconnect (the hook-4 clear); **that the client stops correcting once the echo stops
 arriving** — the test that catches the infinite-loop failure mode described in the access
-gate; and **that a fragment rerun's `NewSession` records the echo**, which is what pins the
-recording above the full-app branch.
+gate; and **two tests for the split in §4's hook 1**, which pin it from both sides:
 
-Two warnings on that last one, both learned the hard way. Assert the **positive** — a
-fragment echo that disagrees *does* produce a correction. The tempting negative form ("an
-unechoed fragment `NewSession` causes no further correction") passes even with the recording
-inside the full-app branch, because the uncleared in-flight flag suppresses the send by
-itself. And do not reach for a disconnect to clear that flag: on reconnect the app requests
-its own rerun when the last run was a fragment, so the rerun count stops measuring
-corrections.
+- *A fragment `NewSession` records the echo* — pins the recording above the full-app branch.
+  Assert the **positive**: a fragment echo that disagrees *does* produce a correction. The
+  tempting negative form ("an unechoed fragment `NewSession` causes no further correction")
+  passes even with the recording inside the branch, because the uncleared in-flight flag
+  suppresses the send by itself. And do not reach for a disconnect to clear that flag: on
+  reconnect the app requests its own rerun when the last run was a fragment, so the rerun
+  count stops measuring corrections.
+- *A fragment `NewSession` does not reopen an unresolved correction* — pins the flag clear
+  inside the branch. Send a correction, then deliver a fragment `NewSession` still echoing
+  the stale value, and assert the rerun count is **unchanged**. Without this, moving both
+  statements above the branch — which reads as the obvious cleanup — silently doubles the
+  reruns for a single theme change.
 
 **Mutation-test every guard.** Each of these tests should be verified by removing the
 protection it covers and confirming it goes red. A guard test that cannot fail is worse than
@@ -762,12 +779,12 @@ surrounding code, and each one will cost time if it is discovered late.
   it unconditionally at `SCRIPT_STARTED` with `fragment_ids_this_run` set; on the client,
   `handleNewSession` runs for it but **skips the `if (!fragmentIdsThisRun.length)` branch**
   that applies the theme. That asymmetry is why §4 puts the echo recording above that branch
-  — see the note there. Recording a fragment's echo is benign in itself: `theme_applied` is
-  true by then, so it is the client's own `color_scheme` and the comparison agrees. A
-  fragment `NewSession` therefore also clears `themeCorrectionInFlight`, and the trigger's
-  `NOT_RUNNING` condition is what keeps that from becoming a duplicate send — fragment runs
-  do flip `scriptRunState` to `RUNNING`, since the backend enters `APP_IS_RUNNING` for them
-  and emits `session_status_changed`.
+  — while the flag clear stays inside it. A fragment `NewSession` must **not** clear
+  `themeCorrectionInFlight`. Do not expect the trigger's `NOT_RUNNING` condition to save you
+  here: fragment runs do flip `scriptRunState` to `RUNNING` (the backend enters
+  `APP_IS_RUNNING` and emits `session_status_changed`), but that message is enqueued *after*
+  the `NewSession`, so the client can act on the echo while it still believes nothing is
+  running.
 - **Non-hex `backgroundColor` is deliberately supported by the frontend.** `parseColor` in
   `frontend/lib/src/theme/utils.ts` runs the value through the browser's CSS parser,
   retries with a `#` prefix, and warns only on real failure. So `"black"` is a valid,
