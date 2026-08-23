@@ -108,7 +108,7 @@ not accepted.
 | `label` | Optional card title. It supports the inline Markdown accepted by other Streamlit labels. It is displayed on one line and ellipsized when necessary. |
 | `image` | Optional header image rendered full width against the top and side edges of the card. |
 | `image_alt` | Optional alternative text for the header image. It must be provided when `image` is set without `label`. |
-| `icon` | Optional emoji or Material icon displayed before the label, following existing Streamlit icon behavior. |
+| `icon` | Optional emoji, Material icon, or `"spinner"` displayed before the label, following existing Streamlit icon behavior. |
 | `description` | Optional secondary text displayed below the label. It supports inline Markdown and describes the card. |
 | `help` | Optional Markdown tooltip displayed beside the label. |
 | `key` | Optional identifier that follows `st.container` behavior, including adding an `st-key-<key>` CSS class. |
@@ -123,6 +123,10 @@ a "title," Streamlit's standard public API term is `label`, as used by `st.expan
 an unsupported combination raises a clear exception. `st.card()` remains valid for a
 body-only card. A media-only card requires a nonempty alternative description:
 `st.card(image=..., image_alt=...)`.
+
+Empty and whitespace-only `label` and `image_alt` values are treated as absent for these
+validation rules. A blank label does not enable label-dependent fields or make a header
+image decorative, and a required `image_alt` must contain non-whitespace text.
 
 The command returns a container, supporting both context-manager and object notation:
 
@@ -151,7 +155,8 @@ The label uses a dedicated card-title style, visually similar to a subheader but
 an anchor. It stays on one line so repeated cards remain compact. The complete label
 remains the card's accessible name and is available on hover when the visible text is
 truncated. The description also stays on one line and ellipsizes so the header height
-remains consistent across cards.
+remains consistent across cards. Its complete text is exposed as the card's accessible
+description and is available on hover when truncated.
 
 The card is exposed as an accessible named group when it has a label. In that case, the
 header image is decorative by default because the label names the card. Authors can
@@ -189,8 +194,8 @@ surface:
   reverse.
 - Nested cards swap again; a card in the sidebar uses `backgroundColor` as its surface.
 
-Applying this through a nested theme context lets Streamlit buttons, inputs, charts, and
-other theme-aware children adapt to the card surface.
+This pairing lets Streamlit buttons, inputs, charts, and other theme-aware children adapt
+to the card surface.
 
 For example, an app can create white cards on a gray page through its existing theme:
 
@@ -223,10 +228,10 @@ card variants, and configurable elevation remain separate follow-ups for
 Cards should reuse the visual language of
 [`st.expander`](https://docs.streamlit.io/develop/api-reference/layout/st.expander),
 including its border, radius, header typography, icon placement, and spacing, without
-expander interaction. They omit the chevron, hover-as-toggle treatment, pointer cursor,
-and open/close behavior. Prototype this against the filled surface above; the public
-contract is a static, outlined, filled card, not a new expander type. The card adds its
-full-bleed media region and keeps the body permanently visible.
+expander interaction. They omit the chevron, do not toggle on header hover, do not use a
+pointer cursor, and have no open/close behavior. Prototype this against the filled surface
+above; the public contract is a static, outlined, filled card, not a new expander type. The
+card adds its full-bleed media region and keeps the body permanently visible.
 
 This would make the card feel native to Streamlit and reduce the number of distinct
 container styles. The design must still look clearly static; copying interactive expander
@@ -349,7 +354,8 @@ controls should be considered only after observing real card usage.
   the existing primary/secondary theme color swap instead.
 - `image_height`, `aspect_ratio`, crop mode, and focal-point controls.
 - Multiple header images, image carousels, and video header media.
-- Image or avatar inputs for `icon`; the initial API supports emoji and Material icons.
+- Image or avatar inputs for `icon`; the initial API supports emoji, Material icons, and
+  `"spinner"`.
 - Built-in footer or action parameters. Use buttons and horizontal containers in the body.
 - Clickable or selectable cards. Track this separately with
   [#10678](https://github.com/streamlit/streamlit/issues/10678).
