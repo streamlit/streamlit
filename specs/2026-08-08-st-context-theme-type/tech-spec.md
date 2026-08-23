@@ -5,6 +5,12 @@ created: 2026-08-08
 
 # Make `st.context.theme.type` correct — tech design
 
+> **Status: proposed, not fully vetted.** This documents a design and the hazards found while
+> developing it. It is **not** a validated implementation plan, and the approach itself is
+> still open. Read [What is not settled](#what-is-not-settled) before implementing —
+> the self-correcting trigger in §4 has produced a defect in every review round so far, the
+> most recent depending on forward-message ordering that nothing in the design surfaces.
+
 ## Summary
 
 Fix `st.context.theme.type` with a two-way exchange:
@@ -91,6 +97,45 @@ extra `rerun_script` → page context not preserved → deep link bounces to the
 page ([#11797](https://github.com/streamlit/streamlit/issues/11797)).
 [#11870](https://github.com/streamlit/streamlit/pull/11870) removed that path. **Do not
 restore** name-based `componentDidUpdate` reruns.
+
+## What is not settled
+
+Recorded plainly so nobody mistakes this document for a vetted plan.
+
+**The approach is undecided.** A vs B below is an open cost question, and it is not a detail:
+B exists to make the first run correct, and B's version of "correct" is partial — every modern
+CSS colour function (`oklch()` and friends, which the frontend explicitly supports) is wrong on
+the first run, as is any host-provided theme. That set grows as CSS evolves and Pillow trails
+it, so B's benefit decays while its cost — a mirror of three frontend rules, plus a documented
+exception to `AGENTS.md`'s "no backend theming" — is permanent.
+
+**The self-correcting trigger (§4) is the risk, and it is shared by A and B.** Its state space
+is larger than it looks: reconnects, dropped sends that return `void`, fragment reruns, the
+access gate, and message ordering all interact. Defects found there across review rounds
+include two aliasing races, an infinite-correction loop, and a duplicate correction caused by
+clearing the in-flight flag on a fragment `NewSession`. Each was individually subtle, each
+looked correct when written, and several survived passing tests — they were caught by review,
+not by the suite. Expect more.
+
+**Nothing here has run end to end.** §7 is a test plan, not results. There is no E2E coverage
+of this design, and the trigger depends on React lifecycle timing that has not been checked
+across browser engines.
+
+**Two product questions are unanswered**, and either could remove work rather than add it:
+
+1. Do we want a script to re-execute because the OS flipped to dark at sunset? If not, the
+   appearance-change half — and most of §4's complexity — should not be built.
+2. Is any of this justified at **~0.6%** adoption? Note that the echo now requires changing
+   `ScriptRunner`'s `SCRIPT_STARTED` payload and `AppSession`'s handler signatures — core
+   plumbing every session traverses.
+
+**A smaller decomposition exists** and is worth considering before building the whole design.
+The two fixes are separable: first-run correctness needs only §2's resolver plus the two
+`ContextInfo` fields — no echo, no trigger, no gate, no rerun-behaviour change — because once
+`theme_applied` is true the client's own value is authoritative, so a wrong first run
+self-corrects on the next rerun anyway. The echo and trigger earn their place only for the
+appearance-change half ([#15287](https://github.com/streamlit/streamlit/issues/15287)). The
+cost of splitting is that #11920 cannot be fully closed by the first half alone.
 
 ## The design space: three approaches
 

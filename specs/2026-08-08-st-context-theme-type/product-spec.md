@@ -15,6 +15,11 @@ This product spec owns the decision of **what `type` means** now that appearance
 are separate. See the [tech spec](./tech-spec.md) for protocol, backend resolution, and the MPA-safe auto-rerun
 design.
 
+> **Status: proposed, not scheduled.** The semantics below (Option C) are the decision this spec asks for. The
+> *implementation* is not vetted — see [What is not settled](./tech-spec.md#what-is-not-settled) in the tech spec,
+> which records the open approach decision, the residual first-run gaps, and why the auto-rerun mechanism is the
+> risky part. Whether the fix is worth building at ~0.6% adoption is an open question, not a settled yes.
+
 ## Problem
 
 ### Motivation / demand
