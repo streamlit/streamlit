@@ -18,9 +18,8 @@ There are two coherent product directions:
    pane that keeps the main canvas interactive.
 
 Both address valid use cases, but they have different execution and state lifecycles.
-This spec compares them rather than hiding both behaviors behind one overloaded API.
-The decorator direction is specified in more detail so reviewers can evaluate the
-simpler v1 independently.
+This spec recommends the modal decorator for v1 and retains the modeless root designs
+as future alternatives rather than hiding both behaviors behind one overloaded API.
 
 ## Problem
 
@@ -39,8 +38,10 @@ Streamlit has no side surface for substantial secondary content:
   interactions.
 - [#1980](https://github.com/streamlit/streamlit/issues/1980) requests a right-hand
   surface for explanations, settings, help, and assistants.
-- [#7311](https://github.com/streamlit/streamlit/issues/7311) requests configurable
-  sidebar placement.
+
+[#7311](https://github.com/streamlit/streamlit/issues/7311), which requests
+configurable sidebar placement, is related but out of scope. A drawer does not move or
+reconfigure `st.sidebar`.
 
 ### Use cases
 
@@ -116,9 +117,25 @@ requires Session State plus an `on_dismiss` callback, or a new rule that event c
 survives full reruns. Both are substantially more complex than the apparent boolean.
 
 Therefore, the decorator proposal below is modal in v1 and has no `modal` parameter.
-The root-container proposal owns the modeless use case.
+The future root-container direction owns the modeless use case.
 
-## Option 1: Modal decorator
+## Option 1: Modal decorator ✅ PREFERRED
+
+The modal decorator is the preferred v1 because it is a useful, self-contained feature
+with the smallest new API and implementation. It covers action-opened details,
+secondary workflows, and help while reusing the lifecycle users already know from
+`@st.dialog`. A modeless companion pane remains valuable future work, but needs more
+state and layout design before it is implementation-ready.
+
+### Why not extend `st.dialog`?
+
+Adding `position="left" | "right"` to `st.dialog` would avoid a new command, but would
+make one API represent both a centered dialog and a full-height edge surface. Those
+forms have different names and expectations in common design systems, and drawer
+discoverability should not depend on learning a dialog placement parameter. A separate
+`st.drawer` also leaves room for drawer-specific evolution without adding unrelated
+parameters to `st.dialog`. The implementation should still extend and share the dialog
+infrastructure rather than duplicate it.
 
 ### Proposed API
 
@@ -161,9 +178,9 @@ the drawer and renders its Streamlit commands inside the drawer body.
 | Parameter | Proposed behavior |
 |---|---|
 | `title` | Optional visible header title. Supports the same inline Markdown as `st.dialog`. If omitted, the sticky header contains only the close control and the surface uses the accessible name “Drawer.” |
-| `position` | Edge from which the drawer enters: `"right"` (default) or `"left"`. Top and bottom add height and mobile-policy questions, so they are deferred. |
+| `position` | Edge from which the drawer enters: `"right"` (default) or `"left"`. A left drawer overlays any `st.sidebar`; it does not move or replace it. Top and bottom add height and mobile-policy questions, so they are deferred. |
 | `width` | Reuse `st.dialog` values and dimensions: `"small"` (default), `"medium"`, or `"large"`. On a narrow viewport, available width wins. |
-| `dismissible` | Match `st.dialog`. When `True`, X, `Escape`, and backdrop press dismiss. When `False`, those paths are disabled and app logic must call a full `st.rerun()` to close. |
+| `dismissible` | Match `st.dialog`. When `True`, X, `Escape`, and backdrop press dismiss. When `False`, those paths are disabled and app logic must call a full `st.rerun()` to close. Backdrop dismissal intentionally follows `st.dialog` rather than the non-dismissible backdrop described by #8186's “Focused” mode. |
 | `icon` | Optional emoji, Material icon, or `"spinner"`, following `st.dialog`. Supplying an icon without a title raises `StreamlitAPIException`. |
 | `on_dismiss` | Match `st.dialog`: `"ignore"`, `"rerun"`, or a callback that runs before the dismissal rerun. |
 
@@ -254,6 +271,8 @@ function are unsupported.
 - The drawer overlays the entire app from the configured edge and spans the dynamic
   viewport height.
 - A light backdrop keeps page context visible while communicating that it is inert.
+- A left drawer stacks above `st.sidebar`; the sidebar and main app are both inert
+  while the drawer is open. Left remains a first-class v1 position.
 - A sticky header holds the optional icon and title plus the close control. The body
   scrolls independently.
 - Width uses the selected dialog preset and is capped by available viewport width.
@@ -308,7 +327,7 @@ The drawer uses modal dialog semantics:
 - Large drawers can feel unnecessarily modal for reference content used alongside the
   page.
 
-## Option 2: Modeless root container with `update()`
+## Future alternative 1: Modeless root container with `update()`
 
 ```python
 def show_order(order_id: str) -> None:
@@ -328,10 +347,11 @@ main area by default. Users can undock it into a modeless overlay. When there is
 enough room for the drawer plus at least `480px` of main content, it becomes a modal
 sheet.
 
-`update(open=True)` follows the mutable-container pattern established by
-`st.status().update(...)`. Passive content collapses to a framework-owned edge
-launcher; an app-controlled opening dismisses without a launcher and reopens only
-through another app action.
+This alternative is not proposed for v1. Unlike the instance method returned by
+`st.status()`, `st.drawer.update(open=True)` would introduce an imperative method on a
+singleton root container. Before this direction is implementation-ready, it needs an
+explicit contract for its framework-owned launcher, app-controlled openings, user
+dismissal, and why those states should not use the Session State pattern below.
 
 **Pros**
 
@@ -346,9 +366,10 @@ through another app action.
   frontend-owned state.
 - Eager content executes on full reruns even while closed.
 - Python cannot observe browser-only dismissal or run a callback.
-- Passive versus app-controlled close behavior is implicit.
+- The framework cannot infer whether user dismissal should reveal a launcher or
+  require another app action.
 
-## Option 3: Stateful root container
+## Future alternative 2: Stateful root container
 
 ```python
 drawer = st.drawer(
@@ -387,7 +408,7 @@ adds `open`, `key`, `on_change`, `args`, `kwargs`, and a returned `.open` proper
 - Inherits widget restrictions in cached functions, forms, and fragment writes to
   outside containers.
 
-## Option 4: Combine decorator and root container
+## Rejected alternative: Combine decorator and root container
 
 ```python
 with st.drawer:
@@ -408,20 +429,16 @@ short name; the same syntax family should have one lifecycle.
 
 ## Decision framework
 
-The design-system survey does not make one direction objectively correct. The decision
-depends on which primary job v1 promises:
+v1 should promise one primary job, then use the matching lifecycle. This spec chooses
+the **modal decorator** because simplicity, details, forms, and action-triggered
+content are the launch priorities. It is a strong, self-contained feature, but
+intentionally leaves #1980's persistent pane unsolved.
 
-- Choose the **modal decorator** when simplicity, details, forms, and action-triggered
-  content are primary. This is a strong, self-contained feature, but it intentionally
-  leaves #1980's persistent pane unsolved.
-- Choose the **modeless root container** when copilots, agent canvases, and simultaneous
-  work are primary. This covers more use cases but requires substantially more product,
-  state, and frontend layout design.
-
-If the decorator is selected, ship it as modal-only rather than adding a misleadingly
-simple `modal=False`. If the root is selected, prefer `update(open=...)` for the
-smallest v1 unless Python-readable dismissal and lazy execution are launch
-requirements.
+If copilots, agent canvases, and simultaneous work become the priority, revisit a
+**modeless root container** as a separate follow-up. That direction covers more use
+cases but requires substantially more product, state, accessibility, and frontend
+layout design. The `update()` and stateful sketches above identify possible Python
+forms; neither is approved for implementation by this spec.
 
 ## Technical feasibility
 
