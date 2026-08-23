@@ -93,6 +93,8 @@ st.card(
     caption: str | None = None,
     help: str | None = None,
     key: Key | None = None,
+    background: bool | Literal["auto"] = "auto",
+    shadow: bool = False,
     width: "stretch" | "content" | int = "stretch",
     height: "content" | "stretch" | int = "content",
 ) -> DeltaGenerator
@@ -110,6 +112,8 @@ not accepted.
 | `caption` | Optional secondary text displayed below the label. It supports inline Markdown and describes the card rather than the header image. |
 | `help` | Optional Markdown tooltip displayed beside the label. |
 | `key` | Optional identifier that follows `st.container` behavior, including adding an `st-key-<key>` CSS class. |
+| `background` | Whether to use a filled card surface. `"auto"` enables it in dark mode and disables it in light mode. |
+| `shadow` | Whether to add subtle elevation in light mode. Shadows are not rendered in dark mode. |
 | `width` | Uses the same values and behavior as `st.container`. |
 | `height` | Uses the same values and behavior as `st.container`. |
 
@@ -173,14 +177,23 @@ later if usage shows that preprocessing images is too burdensome.
 
 ### Surface style
 
-Cards always use one opinionated, theme-aware surface style:
+Cards always have a subtle outline using the theme's standard border color and the
+standard Streamlit corner radius. `background` and `shadow` provide two constrained,
+theme-aware adjustments:
 
-- a subtle outline using the theme's standard border color;
-- the standard Streamlit corner radius;
-- a filled surface using `secondaryBackgroundColor`; and
-- a subtle low-elevation shadow in light mode only.
+| Value | Light mode | Dark mode |
+| --- | --- | --- |
+| `background="auto"` (default) | Transparent | Filled |
+| `background=True` | Filled | Filled |
+| `background=False` | Transparent | Transparent |
+| `shadow=True` | Subtle low-elevation shadow | No shadow |
+| `shadow=False` (default) | No shadow | No shadow |
 
-The background follows the theme-aware color swap proposed for
+`"auto"` is resolved from the active theme's light or dark base, not by measuring the
+surface color. This makes the default resemble an outlined expander in light mode while
+adding tonal separation where shadows are ineffective in dark mode.
+
+When background is enabled, it follows the theme-aware color swap proposed for
 [`st.container(background=True)` in #14683](https://github.com/streamlit/streamlit/pull/14683).
 Cards invert the app/sidebar theme pairing so child widgets stay readable on the filled
 surface:
@@ -193,7 +206,11 @@ surface:
 This pairing lets Streamlit buttons, inputs, charts, and other theme-aware children adapt
 to the card surface.
 
-For example, an app can create white cards on a gray page through its existing theme:
+When background is disabled, the card surface is transparent and descendants inherit the
+surrounding theme unchanged.
+
+For example, with `background=True`, an app can create white cards on a gray page through
+its existing theme:
 
 ```toml
 [theme]
@@ -205,16 +222,16 @@ Third-party components that do not consume Streamlit's theme context may not ada
 automatically.
 
 The exact spacing and design tokens should be finalized in the design system, but the
-public contract is an outlined, filled card that is visually distinguishable without
-app-level styling. Dark mode uses the outline and tonal background difference instead of
-a shadow, which would provide little visible separation on a dark surface. There are no
-`border`, `background`, or `shadow` parameters and no card-specific theme option in the
-initial API.
+public contract is an outlined card with adaptive fill and optional light-mode elevation.
+Dark mode never renders a shadow because it provides little visible separation on a dark
+surface. The outline remains visible for every combination. There is no `border`
+parameter or card-specific theme option in the initial API.
 
 This keeps `st.card` recognizable across apps and avoids turning it into a second,
-partially overlapping `st.container` styling API. The card reuses the background behavior
-from #14683 but does not expose it as a card parameter. General container fills, custom
-card variants, and configurable elevation remain separate follow-ups for
+partially overlapping `st.container` styling API. The parameters choose among a small
+set of designed card surfaces; they do not accept arbitrary colors or shadow levels.
+General container fills, custom card variants, and configurable elevation remain separate
+follow-ups for
 [#10531](https://github.com/streamlit/streamlit/issues/10531),
 [#12418](https://github.com/streamlit/streamlit/issues/12418), and
 [#12301](https://github.com/streamlit/streamlit/issues/12301).
@@ -225,9 +242,9 @@ Cards should reuse the visual language of
 [`st.expander`](https://docs.streamlit.io/develop/api-reference/layout/st.expander),
 including its border, radius, header typography, icon placement, and spacing, without
 expander interaction. They omit the chevron, do not toggle on header hover, do not use a
-pointer cursor, and have no open/close behavior. Prototype this against the filled surface
-above; the public contract is a static, outlined, filled card, not a new expander type. The
-card adds its full-bleed media region and keeps the body permanently visible.
+pointer cursor, and have no open/close behavior. Prototype this against the adaptive
+surface above; the public contract is a static, outlined card, not a new expander type.
+The card adds its full-bleed media region and keeps the body permanently visible.
 
 This would make the card feel native to Streamlit and reduce the number of distinct
 container styles. The design must still look clearly static; copying interactive expander
@@ -264,10 +281,15 @@ with st.card(
     icon=":material/landscape:",
     caption="Valais, Switzerland",
     help="Photo from the alpine image collection",
+    shadow=True,
 ):
     st.write("A classic pyramidal peak in the Alps.")
     st.link_button("View route", "https://example.com/matterhorn")
 ```
+
+The shadow appears in light mode. In dark mode, the card uses its default filled
+background and outline without a shadow. Pass `background=True` to keep the filled surface
+in both modes, or `background=False` to keep it transparent in both.
 
 #### Gallery with equal card heights
 
@@ -293,8 +315,8 @@ for column, (name, image, country) in zip(st.columns(3), destinations):
 
 - **Pros:** Discoverable; concise; gives cards a consistent structure; enables full-bleed
   media without CSS; leaves arbitrary body content composable.
-- **Cons:** Adds a command that overlaps with `st.container`; authors cannot customize the
-  initial surface style.
+- **Cons:** Adds a command that overlaps with `st.container`; the two surface parameters
+  increase the initial API.
 
 ### Option B: Extend `st.container`
 
@@ -311,8 +333,20 @@ For example, `st.container(background="secondary", shadow="small")`.
 
 - **Pros:** More flexible and can reproduce many card styles.
 - **Cons:** Does not solve full-bleed media or consistent headers; expands styling across
-  multiple layout commands. The card can reuse the theme-aware background behavior from
-  #14683 without exposing general styling controls.
+  multiple layout commands. The card's `background` and `shadow` controls are deliberately
+  narrower than a general container styling API.
+
+### Adaptive surface vs. a fixed card style
+
+**Adaptive background with optional shadow is preferred.** The prototype showed that a
+transparent outlined card is sufficient in light mode, while dark mode benefits from a
+filled surface because shadows provide little separation. The `"auto"` default captures
+that behavior without app code, while explicit booleans cover dashboards that need a
+consistent surface across themes.
+
+A fixed filled-and-shadowed design would keep the API smaller, but it looked unnecessarily
+heavy in light mode and ineffective in dark mode. Arbitrary colors or shadow sizes would
+offer more control but would reintroduce child-theme and visual-consistency problems.
 
 ### `label` vs. `title`
 
@@ -345,7 +379,7 @@ controls should be considered only after observing real card usage.
 
 ## Out of scope and follow-ups
 
-- Custom border visibility, background colors, shadow controls, or card variants.
+- Custom border visibility, arbitrary background colors, shadow sizes, or card variants.
 - A `theme.cardBackgroundColor` option or other card-specific theme controls; cards use
   the existing primary/secondary theme color swap instead.
 - `image_height`, `aspect_ratio`, crop mode, and focal-point controls.
@@ -380,12 +414,13 @@ controls should be considered only after observing real card usage.
 - Add card usage to command metrics. No label, image, caption, or body content is included
   in telemetry.
 - Add Python validation and typing coverage for image inputs, label-dependent header
-  fields, `key`, and width and height values.
+  fields, `key`, `background`, `shadow`, and width and height values.
 - Add frontend and E2E coverage for full-bleed decorative images, ellipsis, missing and
   empty regions, content-width image cards, fixed and stretch heights, light and dark
-  themes, nested layout contexts, and narrow viewports. Include charts and inputs in cards
-  in the main app, sidebar, and another card to verify the expected theme swaps. Verify
-  that the shadow renders in light mode and is absent in dark mode.
+  themes, every background/shadow mode, nested layout contexts, and narrow viewports.
+  Include charts and inputs in cards in the main app, sidebar, and another card to verify
+  the expected theme swaps. Verify that `shadow=True` renders elevation in light mode and
+  no shadow in dark mode.
 
 ## Checklist
 
