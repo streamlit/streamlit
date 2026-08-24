@@ -37,6 +37,7 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RerunException,
     ScriptRunContext,
     get_script_run_ctx,
 )
@@ -234,17 +235,27 @@ def rerun(  # type: ignore[misc]
         cached_message_hashes = ctx.cached_message_hashes
         fragment_id_queue = _new_fragment_id_queue(ctx, scope)
 
-        ctx.script_requests.request_rerun(
-            RerunData(
-                query_string=query_string,
-                page_script_hash=page_script_hash,
-                fragment_id_queue=fragment_id_queue,
-                is_fragment_scoped_rerun=_is_fragment_scoped(scope),
-                cached_message_hashes=cached_message_hashes,
-                context_info=ctx.context_info,
-            )
+        rerun_data = RerunData(
+            query_string=query_string,
+            page_script_hash=page_script_hash,
+            fragment_id_queue=fragment_id_queue,
+            is_fragment_scoped_rerun=_is_fragment_scoped(scope),
+            cached_message_hashes=cached_message_hashes,
+            context_info=ctx.context_info,
         )
-        # Force a yield point so the runner can do the rerun
+
+        ctx.script_requests.request_rerun(rerun_data)
+
+        if ThreadState.get().run_location == RunLocation.CALLBACK:
+            # Raise directly so the callback halts immediately.
+            # _run_callback_and_record_rerun catches this to classify the
+            # rerun and record it on the interaction's votes.  The body-level
+            # compose/preempt decision is already encoded in rerun_data and
+            # queued via request_rerun above.
+            raise RerunException(rerun_data)
+
+        # Body-level calls: halt via a yield point so the script runner can
+        # inspect the request and decide whether to preempt.
         st.empty()
 
 

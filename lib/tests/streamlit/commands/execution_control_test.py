@@ -33,7 +33,7 @@ from streamlit.errors import (
     StreamlitPageNotFoundError,
 )
 from streamlit.navigation.page import Page
-from streamlit.runtime.scriptrunner import RerunData
+from streamlit.runtime.scriptrunner import RerunData, RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
@@ -86,6 +86,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
 def test_st_rerun_is_fragment_scoped_rerun_flag_false(patched_get_script_run_ctx):
     ctx = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
     rerun(scope="app")
 
@@ -109,6 +110,7 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_false(patched_get_script_run_ctx
 def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx):
     ctx = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
     rerun(scope="fragment")
 
@@ -131,7 +133,7 @@ def test_st_rerun_scope_positional() -> None:
     ) as mock_ctx_fn:
         ctx = MagicMock()
         mock_ctx_fn.return_value = ctx
-        # "app" positionally should produce is_fragment_scoped_rerun=False.
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
         rerun("app")
         ctx.script_requests.request_rerun.assert_called_once()
         call = ctx.script_requests.request_rerun.call_args[0][0]
@@ -169,13 +171,15 @@ def test_key_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> No
 
     ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
-    rerun("charts")
+    with pytest.raises(RerunException) as exc_info:
+        rerun("charts")
 
     ctx.fragment_storage.resolve_target.assert_called_once_with("charts")
     ctx.script_requests.request_rerun.assert_called_once()
     call = ctx.script_requests.request_rerun.call_args[0][0]
     assert call.fragment_id_queue == ["frag_id_1"]
     assert call.is_fragment_scoped_rerun is True
+    assert exc_info.value.rerun_data is call
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
@@ -193,11 +197,38 @@ def test_key_scope_from_fragment_callback_composes(
 
     ThreadState.initialize(run_location=RunLocation.CALLBACK, fragment_id="enclosing")
 
-    rerun("charts")
+    with pytest.raises(RerunException) as exc_info:
+        rerun("charts")
 
     call = ctx.script_requests.request_rerun.call_args[0][0]
     assert call.fragment_id_queue == ["frag_id_1"]
     assert call.is_fragment_scoped_rerun is False
+    assert exc_info.value.rerun_data is call
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_callback_rerun_always_raises_rerun_exception(
+    patched_get_script_run_ctx,
+) -> None:
+    """st.rerun() from a callback raises RerunException directly for all scopes.
+
+    This ensures the callback halts immediately and _run_callback_and_record_rerun
+    can classify the request, regardless of the compose/preempt flag.
+    """
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_id"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    for scope, fragment_id in [
+        ("app", None),
+        ("charts", None),
+        ("charts", "enclosing"),
+    ]:
+        ThreadState.initialize(
+            run_location=RunLocation.CALLBACK, fragment_id=fragment_id
+        )
+        with pytest.raises(RerunException):
+            rerun(scope)
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
@@ -209,7 +240,8 @@ def test_list_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> N
 
     ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
-    rerun(["charts", "table"])
+    with pytest.raises(RerunException):
+        rerun(["charts", "table"])
 
     ctx.fragment_storage.resolve_target.assert_called_once_with(["charts", "table"])
     call = ctx.script_requests.request_rerun.call_args[0][0]
