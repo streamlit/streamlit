@@ -35,6 +35,13 @@ export interface TextProps {
 /**
  * Functional element representing preformatted (plain) text.
  */
+function collapseNewlines(body: string): string {
+  // wrap=False uses nowrap + white-space-collapse:preserve so extra spaces
+  // stay visible (GH#10062). That combination computes to white-space:pre,
+  // which would otherwise honor newlines as extra rows.
+  return body.replace(/\r\n|\r|\n/g, " ")
+}
+
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
   const truncate = element.wrap === false
   const addTitleTooltip = truncate
@@ -42,6 +49,9 @@ function TextElement({ element }: Readonly<TextProps>): ReactElement {
     addTitleTooltip,
     element.body
   )
+  const displayedBody = truncate
+    ? collapseNewlines(element.body)
+    : element.body
 
   return (
     <StyledLabelHelpWrapper
@@ -51,9 +61,9 @@ function TextElement({ element }: Readonly<TextProps>): ReactElement {
     >
       <StyledText $truncate={truncate}>
         {truncate ? (
-          <StyledTextBody ref={labelTextRef}>{element.body}</StyledTextBody>
+          <StyledTextBody ref={labelTextRef}>{displayedBody}</StyledTextBody>
         ) : (
-          element.body
+          displayedBody
         )}
         {element.help && (
           <StyledInlineHelpIcon>

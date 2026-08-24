@@ -94,7 +94,8 @@ class TextMixin:
             - ``True`` (default): If the text is too wide for the element, it
               wraps onto additional lines.
             - ``False``: The text stays on one line. Overflow is truncated
-              with an ellipsis. Truncation only appears when the element is
+              with an ellipsis. Newlines in the body are not shown as extra
+              lines. Truncation only appears when the element is
               narrower than its text. Combine ``wrap=False`` with
               ``width="stretch"`` or a pixel width; the default
               ``width="content"`` sizes to the full text.

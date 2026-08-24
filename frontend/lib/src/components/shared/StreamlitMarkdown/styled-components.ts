@@ -257,11 +257,33 @@ export const StyledStreamlitMarkdown =
           // parent so the ellipsis can appear.
           minWidth: 0,
 
+          // Label mode unwraps block constructs; leftover siblings would
+          // still stack as block boxes. Keep them inline so wrap=False
+          // stays one ellipsized line.
+          "& p, & pre, & h1, & h2, & h3, & h4, & h5, & h6, & ul, & ol, & li, & blockquote, & table, & thead, & tbody, & tr, & th, & td, & hr, & div":
+            {
+              display: "inline",
+              margin: 0,
+              padding: 0,
+              border: "none",
+              whiteSpace: "nowrap",
+              verticalAlign: "bottom",
+            },
+
           "& p": {
+            // overflow other than visible makes inline compute as
+            // inline-block; cap width so a single paragraph still
+            // ellipsizes inside a narrower parent.
+            maxWidth: "100%",
             overflow: "hidden",
-            whiteSpace: "nowrap",
             textOverflow: "ellipsis",
             lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
+          },
+
+          // Inline code uses pre-wrap; nowrap so a fenced block's trailing
+          // newline cannot become a second row.
+          "& code": {
+            whiteSpace: "nowrap",
           },
         }),
 

@@ -152,3 +152,27 @@ def test_wrap_false_ellipsizes_text_and_sets_title(app: Page):
     assert false_box is not None
     assert true_box is not None
     assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+
+
+WRAP_NEWLINE_TEXT = "Line one Line two Line three extra"
+
+
+def test_wrap_false_collapses_text_newlines(app: Page):
+    """wrap=False keeps st.text on one line even when the body contains newlines."""
+    no_wrap = get_element_by_key(app, "wrap_false_text_newlines").get_by_test_id(
+        "stText"
+    )
+    wraps = get_element_by_key(app, "wrap_true_text_newlines").get_by_test_id("stText")
+    single_line = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
+
+    expect(no_wrap).to_have_attribute("title", WRAP_NEWLINE_TEXT)
+    expect(wraps).not_to_have_attribute("title", WRAP_NEWLINE_TEXT)
+
+    false_box = no_wrap.bounding_box()
+    true_box = wraps.bounding_box()
+    single_box = single_line.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert single_box is not None
+    assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+    assert abs(false_box["height"] - single_box["height"]) < WRAPPED_HEIGHT_MARGIN

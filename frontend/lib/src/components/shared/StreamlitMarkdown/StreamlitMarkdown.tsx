@@ -508,6 +508,14 @@ StreamingContext.displayName = "StreamingContext"
 const HideAnchorsContext = createContext<boolean>(false)
 HideAnchorsContext.displayName = "HideAnchorsContext"
 
+/**
+ * True when markdown is rendered as a widget label or wrap=False text.
+ * Fenced code must stay inline so it cannot grow into a syntax highlighter
+ * or mermaid diagram.
+ */
+const IsLabelContext = createContext(false)
+IsLabelContext.displayName = "IsLabelContext"
+
 const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   const hideAnchor = useContext(HideAnchorsContext)
@@ -579,6 +587,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 }) => {
   const match = /language-(\w+)/.exec(className || "")
   const isStreaming = useContext(StreamingContext)
+  const isLabel = useContext(IsLabelContext)
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
@@ -586,9 +595,19 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const language = match?.[1] || ""
 
+  // Labels and wrap=False text stay inline: fenced blocks must not grow into
+  // syntax highlighters or mermaid diagrams.
+  if (isLabel || inline) {
+    return (
+      <StyledInlineCode className={className} {...omit(props, "node")}>
+        {children}
+      </StyledInlineCode>
+    )
+  }
+
   // Handle mermaid code blocks: render as a diagram unless streaming
   // (see StreamingContext for rationale).
-  if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
+  if (language.toLowerCase() === "mermaid" && !isStreaming) {
     return (
       <ErrorBoundary>
         <Suspense
@@ -602,7 +621,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     )
   }
 
-  return !inline ? (
+  return (
     <ErrorBoundary>
       <Suspense
         fallback={
@@ -617,10 +636,6 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
         </StreamlitSyntaxHighlighter>
       </Suspense>
     </ErrorBoundary>
-  ) : (
-    <StyledInlineCode className={className} {...omit(props, "node")}>
-      {children}
-    </StyledInlineCode>
   )
 }
 
@@ -1126,8 +1141,10 @@ const BASE_REMARK_PLUGINS = [
 
 // Sets disallowed markdown for widget labels
 const LABEL_DISALLOWED_ELEMENTS = [
-  // Restricts table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-  // Note that images are allowed but have a max height equal to the text height
+  // Restricts table elements, headings, unordered/ordered lists, task lists,
+  // horizontal rules, blockquotes, and fenced code wrappers. Inner `code` still
+  // renders inline via IsLabelContext. Images are allowed but have a max height
+  // equal to the text height.
   "table",
   "thead",
   "tbody",
@@ -1146,6 +1163,7 @@ const LABEL_DISALLOWED_ELEMENTS = [
   "input",
   "hr",
   "blockquote",
+  "pre",
 ]
 
 // Add link disallowing to the base disallowed elements
@@ -1351,19 +1369,21 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
       <HelpTextContext.Provider value={helpText}>
         <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
-          <ErrorBoundary>
-            <ReactMarkdown
-              remarkPlugins={remarkPlugins}
-              rehypePlugins={rehypePlugins}
-              components={renderers}
-              urlTransform={transformLinkUri}
-              disallowedElements={disallowed}
-              // unwrap and render children from invalid markdown
-              unwrapDisallowed={true}
-            >
-              {processedSource}
-            </ReactMarkdown>
-          </ErrorBoundary>
+          <IsLabelContext.Provider value={Boolean(isLabel)}>
+            <ErrorBoundary>
+              <ReactMarkdown
+                remarkPlugins={remarkPlugins}
+                rehypePlugins={rehypePlugins}
+                components={renderers}
+                urlTransform={transformLinkUri}
+                disallowedElements={disallowed}
+                // unwrap and render children from invalid markdown
+                unwrapDisallowed={true}
+              >
+                {processedSource}
+              </ReactMarkdown>
+            </ErrorBoundary>
+          </IsLabelContext.Provider>
         </HideAnchorsContext.Provider>
       </HelpTextContext.Provider>
     </StreamingContext.Provider>

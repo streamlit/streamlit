@@ -622,3 +622,19 @@ with st.container(
     width=200,
 ):
     st.markdown(_WRAP_TEXT, wrap=False, width="stretch")
+
+_WRAP_BLOCK_MD = """# Heading
+
+- item
+
+| a | b |
+| - | - |
+| 1 | 2 |
+
+```
+code block
+```
+"""
+
+with st.container(key="wrap_false_block_markdown", width=200):
+    st.markdown(_WRAP_BLOCK_MD, wrap=False)

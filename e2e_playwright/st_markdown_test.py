@@ -823,6 +823,28 @@ def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
     assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
 
 
+def test_wrap_false_keeps_block_markdown_on_one_line(app: Page):
+    """wrap=False label-mode markdown stays one line even with headings, tables,
+    and fenced code. Block tags are omitted or unwrapped; height matches a
+    single-sentence wrap=False markdown element.
+    """
+    block = get_element_by_key(app, "wrap_false_block_markdown").get_by_test_id(
+        "stMarkdown"
+    )
+    single = get_element_by_key(app, "wrap_false_markdown").get_by_test_id("stMarkdown")
+
+    expect(block.get_by_test_id("stMarkdownPre")).to_have_count(0)
+    expect(block.get_by_role("heading")).to_have_count(0)
+    expect(block.locator("table")).to_have_count(0)
+    expect(block.locator("ul")).to_have_count(0)
+
+    block_box = block.bounding_box()
+    single_box = single.bounding_box()
+    assert block_box is not None
+    assert single_box is not None
+    assert abs(block_box["height"] - single_box["height"]) < WRAPPED_HEIGHT_MARGIN
+
+
 def test_badge_with_help_stays_in_container(app: Page):
     """A long badge with help ellipsizes the chip and stays inside the parent
     instead of overflowing.

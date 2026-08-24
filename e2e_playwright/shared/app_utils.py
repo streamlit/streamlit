@@ -1123,13 +1123,12 @@ def expect_label_truncated(element: Locator) -> None:
         A locator whose subtree contains a single label markdown or caption
         container (e.g. a button, popover trigger, or ``st.caption``).
     """
-    label = (
-        element.locator(
-            '[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"]'
-        )
-        .locator("p")
-        .first
-    )
+    # Ellipsis is applied on the markdown/caption container (and may also be
+    # on nested paragraphs). Measure the container so this stays valid when
+    # wrap=False flattens leftover block remnants into inline siblings.
+    label = element.locator(
+        '[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"]'
+    ).first
     expect(label).to_be_visible()
     # Retry until layout is stable — a one-shot evaluate can race with flex
     # sizing even after the label is visible.

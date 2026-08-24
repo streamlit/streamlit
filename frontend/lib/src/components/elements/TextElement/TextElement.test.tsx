@@ -82,4 +82,24 @@ describe("TextElement element", () => {
     expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
     expect(await screen.findByTitle("some plain text")).toBeVisible()
   })
+
+  it("collapses newlines when wrap is false so the body stays one line", async () => {
+    render(
+      <TextElement
+        {...getProps({
+          body: "Line one\nLine two\nLine three extra",
+          wrap: false,
+        })}
+      />
+    )
+    const body = screen.getByText("Line one Line two Line three extra")
+    expect(body.textContent).not.toContain("\n")
+    expect(body).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+    })
+    expect(
+      await screen.findByTitle("Line one Line two Line three extra")
+    ).toBeVisible()
+  })
 })

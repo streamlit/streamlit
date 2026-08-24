@@ -327,6 +327,22 @@ describe("Markdown wrap", () => {
     expect(container).toHaveTextContent("Heading that should be inline")
   })
 
+  it("keeps wrap=false block markdown on one inline line without fenced code", () => {
+    const props = getProps({
+      body: "# Heading\n\n- item\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n```\ncode block\n```",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument()
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
+    expect(container).toHaveStyle({ "white-space": "nowrap" })
+    expect(container).toHaveTextContent(/code block/)
+  })
+
   it("exposes the full plain text via a native title when wrap is false", async () => {
     const props = getProps({
       body: "**Bold** report",

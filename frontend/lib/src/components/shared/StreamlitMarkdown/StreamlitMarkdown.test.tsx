@@ -831,6 +831,7 @@ describe("StreamlitMarkdown", () => {
     },
     { input: horizontalRule, tag: "hr", expected: "Horizontal rule" },
     { input: "> Blockquote", tag: "blockquote", expected: "> Blockquote" },
+    { input: "```\ncode block\n```", tag: "pre", expected: "code block" },
   ]
 
   it.each(invalidCases)(
@@ -847,6 +848,44 @@ describe("StreamlitMarkdown", () => {
       cleanup()
     }
   )
+
+  it("does not render fenced code blocks when isLabel is true", () => {
+    render(
+      <StreamlitMarkdown
+        source={"```\nfenced code\n```"}
+        allowHTML={false}
+        isLabel
+      />
+    )
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.getByText(/fenced code/)).toBeInTheDocument()
+  })
+
+  it("keeps truncated label markdown on one line when the source has blocks", () => {
+    const source = [
+      "# Heading",
+      "",
+      "- item",
+      "",
+      "| a | b |",
+      "| - | - |",
+      "| 1 | 2 |",
+      "",
+      "```",
+      "code block",
+      "```",
+    ].join("\n")
+    render(
+      <StreamlitMarkdown source={source} allowHTML={false} isLabel truncate />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument()
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveTextContent(/code block/)
+  })
 
   it("doesn't render links when disableLinks is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
