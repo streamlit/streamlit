@@ -699,12 +699,15 @@ class ScriptRunner:
                     # Run callbacks for widgets whose values have changed.
                     if rerun_data.widget_states is not None:
                         self._session_state.on_script_will_rerun(
-                            rerun_data.widget_states
+                            rerun_data.widget_states,
+                            suppress_callbacks=rerun_data.suppress_callbacks,
                         )
-                        # Callbacks above may have queued an st.rerun(). Honor it before
-                        # on_script_start() below: leaving has_script_started False is
-                        # what tells on_script_finished to keep this run's widget values.
-                        self._maybe_handle_execution_control_request()
+                        if not rerun_data.suppress_callbacks:
+                            # Callbacks above may have queued an st.rerun(). Honor
+                            # it before on_script_start() below: leaving
+                            # has_script_started False is what tells
+                            # on_script_finished to keep this run's widget values.
+                            self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
 

@@ -53,6 +53,25 @@ _KEYED_RERUN_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset(
 )
 
 
+def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
+    """Whether the rerun should preempt the run in progress.
+
+    ``scope="app"`` → ``False`` (full-app rerun, not fragment-scoped).
+    ``scope="fragment"`` → ``True`` (always preempts).
+    Keyed target (anything else) → depends on where the callback's widget lives:
+    a main-script widget returns ``True`` (the keyed target replaces the default
+    full-app rerun), a fragment widget returns ``False`` (the keyed target composes
+    with the fragment's own rerun — both run).
+    """
+    if scope == "app":
+        return False
+    if scope == "fragment":
+        return True
+    # Keyed target: origin-dependent.
+    ts = ThreadState.get()
+    return ts.fragment_id is None
+
+
 @gather_metrics("stop")
 def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
     """Stops execution immediately.
@@ -195,9 +214,8 @@ def rerun(  # type: ignore[misc]
           empty list is a no-op — it does not trigger any rerun.
 
     """
-    # An explicitly empty list of keys means "rerun nothing"; do not degrade to
-    # a full-app rerun just because the caller's list happened to be empty.
-    if not isinstance(scope, str) and not scope:
+    # An empty scope (empty string, empty list) means "rerun nothing".
+    if not scope:
         return  # type: ignore[misc]  # ty: ignore[invalid-return-type]
 
     ctx = get_script_run_ctx()
@@ -213,7 +231,7 @@ def rerun(  # type: ignore[misc]
                 query_string=query_string,
                 page_script_hash=page_script_hash,
                 fragment_id_queue=fragment_id_queue,
-                is_fragment_scoped_rerun=scope != "app",
+                is_fragment_scoped_rerun=_is_fragment_scoped(scope),
                 cached_message_hashes=cached_message_hashes,
                 context_info=ctx.context_info,
             )

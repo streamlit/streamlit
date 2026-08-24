@@ -57,6 +57,11 @@ class RerunData:
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
+    # When True, widget_states carry values but callbacks should not re-fire.
+    # Used by the forced full-app rerun that escalates a targeted rerun from a
+    # main-script interaction: the callbacks already ran, and the body just needs
+    # to see the submitted values (including form submit triggers).
+    suppress_callbacks: bool = False
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
@@ -263,6 +268,10 @@ class ScriptRequests:
                     cached_message_hashes=new_data.cached_message_hashes,
                     is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,
+                    suppress_callbacks=(
+                        self._rerun_data.suppress_callbacks
+                        or new_data.suppress_callbacks
+                    ),
                     context_info=new_data.context_info,
                 )
 
