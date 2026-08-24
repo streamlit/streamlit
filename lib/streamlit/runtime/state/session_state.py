@@ -679,8 +679,12 @@ class SessionState:
         default_factory=PersistedWidgetTracker
     )
 
-    # The proto widget_states from the current interaction, stashed during
-    # on_script_will_rerun so _request_full_app_rerun can forward them.
+    # The widget_states proto for the current interaction.
+    # on_script_will_rerun stashes this so _request_full_app_rerun can forward
+    # the values (including triggers) in its follow-up rerun.  Without the
+    # stash the proto would be a local variable unreachable by the time the
+    # callback-less vote fires.  Cleared after callbacks finish or when
+    # suppress_callbacks skips dispatch.
     _current_interaction_widget_states: WidgetStatesProto | None = field(
         default=None, repr=False
     )
@@ -899,10 +903,9 @@ class SessionState:
         Parameters
         ----------
         suppress_callbacks
-            When True, apply the widget values but skip callback dispatch.
-            Used by the forced full-app rerun that escalates a targeted rerun:
-            the callbacks already ran, and the body just needs to see the
-            submitted values (including form submit triggers).
+            When True, apply widget values but skip callback dispatch.
+            Set on the full-app rerun queued by ``_request_full_app_rerun``
+            after callbacks have already run in this interaction.
         """
         self._reset_triggers()
         self._compact_state()

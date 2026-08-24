@@ -703,10 +703,9 @@ class ScriptRunner:
                             suppress_callbacks=rerun_data.suppress_callbacks,
                         )
                         if not rerun_data.suppress_callbacks:
-                            # Callbacks above may have queued an st.rerun(). Honor
-                            # it before on_script_start() below: leaving
-                            # has_script_started False is what tells
-                            # on_script_finished to keep this run's widget values.
+                            # A callback may have queued an st.rerun(). Check now
+                            # — while has_script_started is still False — so
+                            # on_script_finished preserves this run's widget values.
                             self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()

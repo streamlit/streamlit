@@ -285,9 +285,10 @@ class MemoryFragmentStorage(FragmentStorage):
             current = parent_id
 
     def _index_target_key(self, fragment_id: str, target_key: str | None) -> None:
-        """Point the name index at fragment_id under target_key, reconciling any prior
-        name. The id is positional and stable across key changes, so a changed or
-        removed key is detached first.
+        """Add or update the mapping from ``target_key`` to ``fragment_id``.
+
+        If this fragment was previously indexed under a different key, the old
+        entry is removed first so each fragment id maps to at most one key.
         """
         if self._target_key_by_id.get(fragment_id) != target_key:
             self._unindex_target_key(fragment_id)
@@ -298,7 +299,7 @@ class MemoryFragmentStorage(FragmentStorage):
                 ids.append(fragment_id)
 
     def _unindex_target_key(self, fragment_id: str) -> None:
-        """Remove fragment_id from the name index entirely (eviction or key change)."""
+        """Remove fragment_id from the key-to-id index."""
         target_key = self._target_key_by_id.pop(fragment_id, None)
         if target_key is None:
             return

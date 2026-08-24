@@ -48,20 +48,27 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 if TYPE_CHECKING:
     from streamlit.runtime.state.query_params import QueryParams, QueryParamsInput
 
+# Keyed reruns (st.rerun("<key>")) are only valid from widget callbacks.
+# Calling from the main body or a fragment body would abort the current run
+# mid-execution, which is not a supported pattern.
 _KEYED_RERUN_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset(
     {RunLocation.CALLBACK}
 )
 
 
 def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
-    """Whether the rerun should preempt the run in progress.
+    """Whether this rerun should preempt the current run or compose with it.
 
-    ``scope="app"`` → ``False`` (full-app rerun, not fragment-scoped).
-    ``scope="fragment"`` → ``True`` (always preempts).
-    Keyed target (anything else) → depends on where the callback's widget lives:
-    a main-script widget returns ``True`` (the keyed target replaces the default
-    full-app rerun), a fragment widget returns ``False`` (the keyed target composes
-    with the fragment's own rerun — both run).
+    Returns ``True`` (preempt) or ``False`` (compose), stored as
+    ``RerunData.is_fragment_scoped_rerun``.
+
+    - ``"app"`` → ``False`` — full-app rerun, not fragment-scoped.
+    - ``"fragment"`` → ``True`` — the current fragment reruns itself.
+    - Keyed target → origin-dependent:
+      - ``True`` when the widget lives in the main script (the keyed target
+        replaces the default full-app rerun).
+      - ``False`` when the widget lives inside a fragment (the keyed target
+        composes with the originating fragment's own rerun — both run).
     """
     if scope == "app":
         return False
@@ -102,6 +109,7 @@ def _new_fragment_id_queue(
     ctx: ScriptRunContext,
     scope: str | Sequence[str],
 ) -> list[str]:
+    """Build the fragment_id_queue for a rerun request from ``scope``."""
     if scope == "app":
         return []
 
@@ -118,7 +126,7 @@ def _new_fragment_id_queue(
             )
         return ctx.fragment_storage.resolve_target(scope)
 
-    # > scope == "fragment"
+    # scope == "fragment": rerun the fragment that is currently executing.
     curr_queue = ctx.fragment_ids_this_run
 
     # If st.rerun(scope="fragment") is called during a full script run, we raise an

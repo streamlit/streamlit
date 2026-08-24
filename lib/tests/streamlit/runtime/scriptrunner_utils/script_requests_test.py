@@ -302,10 +302,10 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data == RerunData(fragment_id_queue=["my_fragment_id"])
 
     def test_compose_fragment_rerun_lets_body_finish_then_serves_target(self):
-        """A non-scoped fragment rerun composes: body finishes, then target runs.
+        """A composing fragment rerun lets the body finish before running the target.
 
-        on_scriptrunner_yield returns None (body not preempted), and
-        on_scriptrunner_ready returns the pending fragment rerun afterwards.
+        on_scriptrunner_yield returns None (the runner does not preempt the body),
+        and on_scriptrunner_ready returns the pending fragment rerun afterwards.
         """
         reqs = ScriptRequests()
         rerun_data = RerunData(fragment_id_queue=["target-frag"])

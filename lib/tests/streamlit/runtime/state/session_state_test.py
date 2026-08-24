@@ -1029,10 +1029,10 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
 
 
 def _raise_targeted_rerun() -> None:
-    """Raise what a main-script-origin targeted rerun sends (preempts).
+    """Simulate ``st.rerun("<key>")`` from a main-script widget callback.
 
-    Stands in for ``st.rerun(scope="<key>")`` from a main-script widget callback.
-    ``is_fragment_scoped_rerun=True`` causes the target to preempt the run in progress.
+    ``is_fragment_scoped_rerun=True`` tells the runner to preempt the current
+    run and execute the targeted fragment immediately.
     """
     raise RerunException(
         RerunData(
@@ -1044,11 +1044,10 @@ def _raise_targeted_rerun() -> None:
 
 
 def _raise_composing_targeted_rerun() -> None:
-    """Raise what a fragment-origin targeted rerun sends (composes).
+    """Simulate ``st.rerun("<key>")`` from a fragment widget callback.
 
-    Stands in for ``st.rerun(scope="<key>")`` from a fragment widget callback.
-    ``is_fragment_scoped_rerun=False`` lets the enclosing fragment finish first, then
-    the target runs.
+    ``is_fragment_scoped_rerun=False`` lets the enclosing fragment finish before
+    the targeted fragment runs (composing, not preempting).
     """
     raise RerunException(
         RerunData(
@@ -1079,12 +1078,13 @@ def test_changed_widget_without_callback_does_not_escalate() -> None:
 
 
 def test_composing_target_with_callback_less_vote_does_not_escalate() -> None:
-    """A composing targeted rerun (flag False) is not escalated by the vote.
+    """A callback-less vote does not escalate a composing targeted rerun.
 
-    When the keyed target has is_fragment_scoped_rerun=False (fragment-origin
-    interaction), the target does not preempt the body. The vote fires because a
-    callback-less field changed, but the flag stays False — there is no preemption to
-    escape, so the vote has no effect.
+    When the keyed target originates from a fragment callback
+    (``is_fragment_scoped_rerun=False``), it composes rather than preempts.
+    The vote still fires (a callback-less field changed), but there is no
+    preemption to override, so the vote adds a full-app rerun with
+    ``suppress_callbacks=True`` that simply replays the values.
     """
     ss = _state_with_changed_widgets(
         [("field", None), ("submit", _raise_composing_targeted_rerun)]
