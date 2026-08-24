@@ -430,10 +430,10 @@ export const StyledStreamlitMarkdown =
           fontSize: "inherit",
         },
 
-        // Do not set a width here. `fit-content` floors at min-content, which the
-        // inherited `overflow-wrap: break-word` cannot shrink, so a single long
-        // token (e.g. a file path) sizes the list wider than its container
-        // (gh-16618). Lists take their width from the markdown container instead.
+        // Lists take their width from the markdown container so a long unbreakable
+        // token (e.g. a file path) can wrap. `width: fit-content` floors at
+        // min-content, which the inherited `overflow-wrap: break-word` cannot
+        // shrink (gh-16618).
         "& > ul, & > ol": {
           // Keep list text left-aligned even when `text_alignment` centers,
           // right-aligns, or justifies the surrounding markdown.

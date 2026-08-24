@@ -568,7 +568,8 @@ def test_long_word_in_list_does_not_overflow_container(
     instead of spilling out of it.
 
     Element screenshots clip to the container, so the overflow is cropped out of
-    a snapshot — assert the geometry instead.
+    the snapshot. The geometry assertions catch the overflow; the snapshot guards
+    the wrapped rendering.
     """
     container = get_element_by_key(app, "long_word_in_list")
     expect(container).to_be_visible()
@@ -579,9 +580,12 @@ def test_long_word_in_list_does_not_overflow_container(
     expect_font(app, "Source Sans")
 
     # The single-line item is the reference height for "did not wrap".
-    short_box = container.locator("li").filter(has_text="short item").bounding_box()
+    short_box = (
+        container.get_by_role("listitem").filter(has_text="short item").bounding_box()
+    )
     assert short_box is not None
 
+    # These two need CSS selectors to tell the unordered and ordered lists apart.
     for long_item in (
         container.locator("ul li").filter(has_text="bucket1/"),
         container.locator("ol li").filter(has_text="bucket2/"),
@@ -601,7 +605,8 @@ def test_long_word_in_list_does_not_overflow_container(
     for list_locator in (container.locator("ul"), container.locator("ol")):
         list_box = list_locator.bounding_box()
         assert list_box is not None
-        # Allow a sub-pixel tolerance for fractional layout widths.
+        # Checked by hand rather than with `is_child_bounding_box_inside_parent`,
+        # which has no tolerance for the fractional layout widths involved here.
         assert list_box["x"] + list_box["width"] <= right_edge + 1, (
             "List overflows the right edge of its markdown container"
         )
