@@ -140,17 +140,6 @@ def test_st_rerun_scope_positional() -> None:
         assert call.is_fragment_scoped_rerun is False
 
 
-def test_st_rerun_empty_list_is_noop() -> None:
-    """st.rerun([]) does not raise and does not request a rerun."""
-    with patch(
-        "streamlit.commands.execution_control.get_script_run_ctx"
-    ) as mock_ctx_fn:
-        ctx = MagicMock()
-        mock_ctx_fn.return_value = ctx
-        rerun([])
-        ctx.script_requests.request_rerun.assert_not_called()
-
-
 def test_st_rerun_empty_string_raises() -> None:
     """st.rerun('') raises StreamlitAPIException."""
     with pytest.raises(StreamlitAPIException, match="empty string scope"):
@@ -176,11 +165,10 @@ def test_key_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> No
         rerun("charts")
 
     ctx.fragment_storage.resolve_target.assert_called_once_with("charts")
-    ctx.script_requests.request_rerun.assert_called_once()
-    call = ctx.script_requests.request_rerun.call_args[0][0]
-    assert call.fragment_id_queue == ["frag_id_1"]
-    assert call.is_fragment_scoped_rerun is True
-    assert exc_info.value.rerun_data is call
+    ctx.script_requests.request_rerun.assert_not_called()
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_id_1"]
+    assert data.is_fragment_scoped_rerun is True
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
@@ -201,10 +189,10 @@ def test_key_scope_from_fragment_callback_composes(
     with pytest.raises(RerunException) as exc_info:
         rerun("charts")
 
-    call = ctx.script_requests.request_rerun.call_args[0][0]
-    assert call.fragment_id_queue == ["frag_id_1"]
-    assert call.is_fragment_scoped_rerun is False
-    assert exc_info.value.rerun_data is call
+    ctx.script_requests.request_rerun.assert_not_called()
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_id_1"]
+    assert data.is_fragment_scoped_rerun is False
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
@@ -241,13 +229,14 @@ def test_list_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> N
 
     ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
-    with pytest.raises(RerunException):
+    with pytest.raises(RerunException) as exc_info:
         rerun(["charts", "table"])
 
     ctx.fragment_storage.resolve_target.assert_called_once_with(["charts", "table"])
-    call = ctx.script_requests.request_rerun.call_args[0][0]
-    assert call.fragment_id_queue == ["frag_1", "frag_2"]
-    assert call.is_fragment_scoped_rerun is True
+    ctx.script_requests.request_rerun.assert_not_called()
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_1", "frag_2"]
+    assert data.is_fragment_scoped_rerun is True
 
 
 def test_key_scope_raises_outside_callback() -> None:

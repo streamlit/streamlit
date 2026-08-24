@@ -254,18 +254,18 @@ def rerun(  # type: ignore[misc]
             context_info=ctx.context_info,
         )
 
-        ctx.script_requests.request_rerun(rerun_data)
-
         if ThreadState.get().run_location == RunLocation.CALLBACK:
             # Raise directly so the callback halts immediately.
             # _run_callback_and_record_rerun catches this to classify the
-            # rerun and record it on the interaction's votes.  The body-level
-            # compose/preempt decision is already encoded in rerun_data and
-            # queued via request_rerun above.
+            # rerun and record it on the interaction's votes.  The request is
+            # NOT queued here — _call_callbacks flushes votes.pending_reruns
+            # after the last callback returns, which prevents a sibling
+            # callback's yield point from picking up this request early.
             raise RerunException(rerun_data)
 
-        # Body-level calls: halt via a yield point so the script runner can
-        # inspect the request and decide whether to preempt.
+        # Body-level calls: queue the request and halt via a yield point so
+        # the script runner can inspect it and decide whether to preempt.
+        ctx.script_requests.request_rerun(rerun_data)
         st.empty()
 
 
