@@ -377,6 +377,7 @@ _InstallCompleteness = Literal[
     "absent",  # No target dir in either scope has the skill.
     "complete",  # Some scope has it in every target dir we could read.
     "partial",  # Some scope has it in some target dirs, and neither is complete.
+    "unknown",  # There were target dirs, but not one of them could be read.
 ]
 
 
@@ -390,7 +391,11 @@ def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
 
     Best-effort: target dirs that cannot be resolved are skipped, and target
     dirs that cannot be read count as unknown rather than missing, so a
-    permissions error never reports a correctly-installed user as partial.
+    permissions error never reports a correctly-installed user as partial. When
+    no target dir in any scope can be read the whole answer is ``unknown``
+    rather than ``absent``, since "we could not look" is not evidence that the
+    skill is missing - and marker detection cannot see through those directories
+    either, so nothing else would catch it.
     Deliberately uncached, so repairing a partial install takes effect at once.
 
     Parameters
@@ -423,12 +428,12 @@ def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
         pass
 
     partial = False
+    read_a_target = False
     # Project scope first only because a project-local install is the more
     # specific choice; a complete scope wins wherever it is found, so the order
     # does not change the answer.
-    for scope_dirs in (project_dirs, global_dirs):
-        if not scope_dirs:
-            continue
+    scopes = [scope_dirs for scope_dirs in (project_dirs, global_dirs) if scope_dirs]
+    for scope_dirs in scopes:
         # Directories we could not read are dropped rather than treated as
         # missing: an unreadable path means "unknown", and reporting the skill
         # as uninstalled because of a permissions error would pester users who
@@ -438,11 +443,26 @@ def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
             for present in (_skill_present_in(target_dir) for target_dir in scope_dirs)
             if present is not None
         ]
-        if known and all(known):
+        if not known:
+            # Not one target in this scope answered, so it is evidence of
+            # nothing - neither an install nor a missing one.
+            continue
+        read_a_target = True
+        if all(known):
             return "complete"
         if any(known):
             partial = True
-    return "partial" if partial else "absent"
+
+    if partial:
+        return "partial"
+    if scopes and not read_a_target:
+        # We knew where to look and could not look anywhere: reporting "absent"
+        # here would tell both surfaces the skill is missing on the strength of
+        # a permissions error, nagging a correctly-installed user every rerun.
+        # Note this is narrower than resolving no target dirs at all, which
+        # stays "absent": there the install we recommend can still succeed.
+        return "unknown"
+    return "absent"
 
 
 def are_skills_installed() -> bool:
@@ -456,9 +476,14 @@ def are_skills_installed() -> bool:
     the missing agent directory - the case that matters when an agent is
     installed after ``streamlit skills`` last ran.
 
+    An install we could not inspect at all - target dirs resolved, but every one
+    of them raised - also reports ``True``. "We could not look" is not evidence
+    the skill is missing, the recommendation has no dismissal path, and the
+    install it points at would hit the same error.
+
     Best-effort: it does not validate skill contents.
     """
-    return _install_completeness() == "complete"
+    return _install_completeness() in {"complete", "unknown"}
 
 
 def _skill_present_in(target_dir: Path) -> bool | None:
@@ -1526,7 +1551,7 @@ _NudgeSuppressionReason = Literal[
     "dismissed",  # The user asked never to see it again.
     # Names the stage that failed, not just "error": the sibling telemetry labels
     # are install failures, so a bare "error" would read as one.
-    "check_failed",  # The eligibility check itself threw; withheld defensively.
+    "check_failed",  # The check could not answer: it threw, or no target read.
     "headless",  # Headless mode: deployments, CI, SiS.
     "installed",  # The bundled skills are already present.
     "no_agent",  # No AI agent harness on this machine.
@@ -1565,9 +1590,10 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         detection result. Falls back to the current working directory when
         ``None``.
 
-    Best-effort: returns ``"check_failed"`` on any failure so a detection failure
-    never blocks app startup or surfaces a spurious nudge. Note this is a *reason*,
-    not a falsy value — the nudge stays hidden, as before.
+    Best-effort: returns ``"check_failed"`` whenever the check cannot answer -
+    it threw, or every install target was unreadable - so a detection failure
+    never blocks app startup or surfaces a spurious nudge. Note this is a
+    *reason*, not a falsy value — the nudge stays hidden, as before.
     """
     from streamlit import config
 
@@ -1592,11 +1618,16 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         # "absent" still suppresses: the marker came from a harness we do not
         # install for (a hand-placed .cursor/skills copy, say), and nudging that
         # user would be noise.
-        if (
-            detect_installed_skills(app_dir)
-            and _install_completeness(app_dir) != "partial"
-        ):
+        completeness = _install_completeness(app_dir)
+        if detect_installed_skills(app_dir) and completeness != "partial":
             return "installed"
+        # No marker found and nothing readable either: every target dir raised,
+        # so "not installed" is a conclusion we cannot draw, and the one-click
+        # install we would offer hits the same error. Withhold instead of
+        # nudging a user whose setup may be fine, reusing "check_failed" because
+        # the cause is the same - the eligibility check could not answer.
+        if completeness == "unknown":
+            return "check_failed"
         # No usable install found. Withhold only on a deterministic conflict at
         # every target; the other always-fail causes (missing bundled package, a
         # copy that errors on permissions/path-length) stay fail-open, since those

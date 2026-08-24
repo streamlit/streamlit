@@ -194,7 +194,10 @@ breaking changes roll out to users.
   directories counts as *not* installed, so the startup recommendation and the
   in-app nudge both prompt again and the re-run fills in the missing agent
   directory. Completeness is judged per scope and either scope satisfying it is
-  enough, so a deliberate global-only install is not flagged in every project.
+  enough, so a deliberate global-only install is not flagged in every project. An
+  install that cannot be inspected at all - every target directory raises, e.g.
+  on permissions - counts as installed rather than missing: neither surface can
+  tell, and the install they would recommend hits the same error.
 - **Idempotent:** Safe to run multiple times; reports "up to date" for existing
   installs, repairs broken links, skips user-managed files with conflict warning,
   and updates global skill if the versioned tag has changed on GitHub

@@ -21,6 +21,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, get_args
 from unittest.mock import patch
@@ -49,17 +50,66 @@ def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
         )
 
 
-@pytest.fixture(autouse=True)
-def _reset_claude_detection_cache() -> Iterator[None]:
-    """Clear the cached Claude Code detection around every test.
+# POSIX-only: Windows ignores these bits, and root is exempt from them, so a
+# test that relies on a directory being unreadable proves nothing there.
+_needs_permission_bits = pytest.mark.skipif(
+    os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+    reason="permission bits do not gate reads on Windows or as root",
+)
 
-    ``_is_claude_code_present`` is memoized for the process, so without this a
-    test that sets up a temp HOME would inherit (or hand on) another test's
-    answer and pass or fail depending on collection order.
+
+@contextmanager
+def _unreadable(*dirs: Path) -> Iterator[None]:
+    """Make ``dirs`` impossible to stat into, restoring them on the way out.
+
+    Restoring matters even when the test fails: pytest cannot clean up a
+    ``tmp_path`` containing a 0o000 directory.
+    """
+    for target in dirs:
+        target.chmod(0o000)
+    try:
+        yield
+    finally:
+        for target in dirs:
+            target.chmod(0o700)
+
+
+@pytest.fixture
+def claude_code_present() -> bool | None:
+    """What ``_is_claude_code_present`` reports for a test.
+
+    Override with ``None`` to opt out and exercise the real detector; a test that
+    wants the other answer can pin it in place, as several below do.
+    """
+    return False
+
+
+@pytest.fixture(autouse=True)
+def _isolate_claude_detection(claude_code_present: bool | None) -> Iterator[None]:
+    """Keep Claude Code detection off the ambient environment, and uncached.
+
+    Detection consults ``PATH``, so left real it adds a ``.claude/skills`` target
+    on any contributor machine with the CLI installed while staying absent in CI -
+    a latent flake for every assertion about install targets, which this file is
+    largely made of. Pinning it here makes that hermetic by default rather than
+    leaving the next added assertion to rediscover it.
+
+    The cache is cleared around each test as well: ``_is_claude_code_present`` is
+    memoized for the process, so a test that sets up a temp HOME would otherwise
+    inherit (or hand on) another test's answer and pass or fail depending on
+    collection order.
     """
     skills._is_claude_code_present.cache_clear()
-    yield
-    skills._is_claude_code_present.cache_clear()
+    try:
+        if claude_code_present is None:
+            yield
+        else:
+            with patch.object(
+                skills, "_is_claude_code_present", return_value=claude_code_present
+            ):
+                yield
+    finally:
+        skills._is_claude_code_present.cache_clear()
 
 
 @pytest.fixture
@@ -473,6 +523,11 @@ class TestGetGlobalTargetDirs:
 class TestIsClaudeCodePresent:
     """Tests for _is_claude_code_present."""
 
+    @pytest.fixture
+    def claude_code_present(self) -> bool | None:
+        """Opt out of the file-wide pin: these tests are the detector."""
+        return None
+
     @pytest.mark.parametrize(
         ("marker", "expected"),
         [(".claude", True), (".claude.json", True), (None, False)],
@@ -835,6 +890,67 @@ class TestInstallCompleteness:
             ),
         ):
             assert skills._install_completeness() == expected
+
+    @_needs_permission_bits
+    def test_targets_we_cannot_read_at_all_are_unknown_not_absent(
+        self, tmp_path: Path
+    ) -> None:
+        """No readable target anywhere means we learned nothing, so say so.
+
+        Dropping unreadable targets is right per scope, but if *every* target is
+        unreadable the drop empties the evidence and "absent" would be an answer
+        drawn purely from a permissions error. Marker detection cannot see into
+        those directories either, so both surfaces would then pester a
+        correctly-installed user on every rerun.
+        """
+        agents_dir = tmp_path / "home" / ".agents" / "skills"
+        claude_dir = tmp_path / "home" / ".claude" / "skills"
+        for target in (agents_dir, claude_dir):
+            (target / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", side_effect=OSError),
+            patch.object(
+                skills, "_get_global_target_dirs", return_value=[agents_dir, claude_dir]
+            ),
+            _unreadable(agents_dir, claude_dir),
+        ):
+            assert skills._install_completeness() == "unknown"
+
+    @_needs_permission_bits
+    def test_one_readable_scope_still_reports_absent(self, tmp_path: Path) -> None:
+        """An unreadable scope does not turn a genuinely empty one into unknown.
+
+        The project targets answer "no skill here", and an install into them
+        would work, so there is something to recommend - unlike the case above.
+        """
+        project_dir = tmp_path / "project" / ".agents" / "skills"
+        project_dir.mkdir(parents=True)
+        global_dir = tmp_path / "home" / ".agents" / "skills"
+        (global_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(
+                skills, "_get_project_target_dirs", return_value=[project_dir]
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+            _unreadable(global_dir),
+        ):
+            assert skills._install_completeness() == "absent"
+
+    def test_unresolvable_targets_stay_absent(self) -> None:
+        """No target dirs at all is still absent, not unknown.
+
+        Deliberately narrower than the unknown case: there we know where to look
+        and cannot, here we never got that far, and an install may well succeed
+        once whatever broke the lookup clears.
+        """
+        with (
+            patch.object(skills, "_find_project_root", side_effect=OSError),
+            patch.object(skills, "_get_global_target_dirs", return_value=[]),
+        ):
+            assert skills._install_completeness() == "absent"
 
     def test_resolves_the_project_root_from_app_dir(self, tmp_path: Path) -> None:
         """``app_dir`` picks the project root an install from that app would use.
@@ -1294,6 +1410,9 @@ class TestInstallSkillsCli:
             ),
             patch("pathlib.Path.cwd", return_value=project_dir),
             patch("pathlib.Path.home", return_value=home),
+            # ~/.claude above says Claude Code is present; pin it so the
+            # .claude target does not depend on the machine's PATH.
+            patch.object(skills, "_is_claude_code_present", return_value=True),
         ):
             result = runner.invoke(cli.main, ["skills", "--yes"])
 
@@ -1367,6 +1486,9 @@ class TestInstallSkillsCli:
             patch.object(
                 skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
+            # ~/.claude above says Claude Code is present; pin it so the
+            # .claude target does not depend on the machine's PATH.
+            patch.object(skills, "_is_claude_code_present", return_value=True),
         ):
             result = runner.invoke(cli.main, ["skills", "-g", "-y"])
 
@@ -1914,6 +2036,9 @@ class TestGlobalInstallationConflicts:
                     OSError(errno.ENOSPC, "No space left"),
                 ],
             ),
+            # ~/.claude above says Claude Code is present; pin it so the
+            # .claude target does not depend on the machine's PATH.
+            patch.object(skills, "_is_claude_code_present", return_value=True),
             pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_global_skills(yes=True)
@@ -1947,6 +2072,9 @@ class TestGlobalInstallationConflicts:
                 "copytree",
                 side_effect=[None, OSError("Permission denied")],
             ),
+            # ~/.claude above says Claude Code is present; pin it so the
+            # .claude target does not depend on the machine's PATH.
+            patch.object(skills, "_is_claude_code_present", return_value=True),
             pytest.raises(skills.InstallError) as exc,
         ):
             skills._install_global_skills(yes=True)
@@ -2029,7 +2157,14 @@ def _evaluate_nudge_reason(
     marker_exists: bool = False,
     would_be_refused: bool = False,
 ) -> str:
-    """Run ``nudge_suppression_reason`` with the given conditions patched in."""
+    """Run ``nudge_suppression_reason`` with the given conditions patched in.
+
+    ``completeness`` defaults to ``absent`` to match ``installed_skills=()``, so
+    the default world is a machine with nothing installed. Pass it whenever
+    ``installed_skills`` is non-empty: the two together decide this gate, and
+    leaving the default in place describes a marker from a harness we do not
+    write to rather than an install of ours.
+    """
     marker = tmp_path / ".skills_nudge_dismissed"
     if marker_exists:
         marker.touch()
@@ -2072,7 +2207,24 @@ def _evaluate_nudge_reason(
         ({"hide_welcome": True}, "welcome_hidden"),
         ({"marker_exists": True}, "dismissed"),
         ({"agents": ()}, "no_agent"),
-        ({"installed_skills": ("home:claude:developing-with-streamlit",)}, "installed"),
+        (
+            {
+                "installed_skills": ("home:claude:developing-with-streamlit",),
+                "completeness": "complete",
+            },
+            "installed",
+        ),
+        # A marker plus an install we could not read is still an install: the
+        # marker is the evidence, so report "installed" rather than the
+        # could-not-tell reason below.
+        (
+            {
+                "installed_skills": ("home:claude:developing-with-streamlit",),
+                "completeness": "unknown",
+            },
+            "installed",
+        ),
+        ({"completeness": "unknown"}, "check_failed"),
         (
             {
                 "installed_skills": ("home:agents:developing-with-streamlit",),
@@ -2131,11 +2283,17 @@ def test_should_show_skills_nudge_hidden_when_no_agent(tmp_path: Path) -> None:
 
 
 def test_should_show_skills_nudge_hidden_when_skills_installed(tmp_path: Path) -> None:
-    """No nudge when the bundled skills are already installed."""
+    """No nudge when the bundled skills are already installed.
+
+    ``completeness`` is passed explicitly: the helper defaults to ``absent`` so
+    its default world is coherent (nothing installed anywhere), which would make
+    this the foreign-harness branch rather than the finished install it describes.
+    """
     assert (
         _evaluate_nudge(
             tmp_path,
             installed_skills=("home:claude:developing-with-streamlit",),
+            completeness="complete",
         )
         is False
     )
@@ -2196,6 +2354,40 @@ def test_nudge_is_not_suppressed_by_a_real_partial_tree(tmp_path: Path) -> None:
         patch.object(skills, "_one_click_install_would_be_refused", return_value=False),
     ):
         assert skills.nudge_suppression_reason() == ""
+
+
+@_needs_permission_bits
+def test_nudge_is_hidden_when_no_install_target_can_be_read(tmp_path: Path) -> None:
+    """End-to-end over the real predicate: an unreadable tree does not nudge.
+
+    The tree is installed but every target dir raises, so the marker scan sees
+    nothing either. Without the ``unknown`` state both blind checks would agree
+    on "nothing installed" and nudge a correctly-installed user on every rerun -
+    with a one-click install that hits the same permissions error.
+    """
+    agents_dir = tmp_path / "project" / ".agents" / "skills"
+    (agents_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+    options = {"server.headless": False, "logger.hideWelcomeMessage": False}
+
+    with (
+        patch("streamlit.config.get_option", side_effect=options.__getitem__),
+        patch.object(
+            skills,
+            "_nudge_dismissed_marker_path",
+            return_value=tmp_path / ".skills_nudge_dismissed",
+        ),
+        patch.object(skills, "detect_installed_agents", return_value=["claude"]),
+        # Empty for the same reason the dirs are unreadable: the marker scan
+        # cannot see into them either.
+        patch.object(skills, "detect_installed_skills", return_value=[]),
+        patch.object(skills, "_find_project_root", return_value=tmp_path / "project"),
+        patch.object(skills, "_get_project_target_dirs", return_value=[agents_dir]),
+        patch.object(skills, "_get_global_target_dirs", return_value=[]),
+        patch.object(skills, "_one_click_install_would_be_refused", return_value=False),
+        _unreadable(agents_dir),
+    ):
+        assert skills.nudge_suppression_reason() == "check_failed"
 
 
 def test_should_show_skills_nudge_hidden_when_marker_is_from_another_harness(
@@ -2479,6 +2671,9 @@ class TestInstallDetectRoundtrip:
             patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
             # Not headless / welcome message not hidden, so only detection gates.
             patch("streamlit.config.get_option", return_value=False),
+            # ~/.claude above says Claude Code is present; pin it so the
+            # .claude target does not depend on the machine's PATH.
+            patch.object(skills, "_is_claude_code_present", return_value=True),
         ):
             clear_caches()
             # Pre-install the nudge is recommended (agent present, no skills).
@@ -2893,6 +3088,9 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
         with (
             patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
             patch("streamlit.config.get_option", return_value=False),
+            # ~/.claude above says Claude Code is present; pin it so the
+            # .claude target does not depend on the machine's PATH.
+            patch.object(skills, "_is_claude_code_present", return_value=True),
         ):
             self._clear_caches()
             assert skills.should_show_skills_nudge(str(app_dir)) is True
@@ -3137,6 +3335,26 @@ class TestAreSkillsInstalledErrorHandling:
         ):
             assert skills.are_skills_installed() is True
 
+    @_needs_permission_bits
+    def test_install_we_cannot_inspect_does_not_print_the_recommendation(
+        self, tmp_path: Path
+    ) -> None:
+        """Every target unreadable reports installed, so the tip stays quiet.
+
+        The startup recommendation has no dismissal path, and the install it
+        points at would hit the same permissions error, so printing it on every
+        run of a possibly-fine setup is the worse error.
+        """
+        agents_dir = tmp_path / "home" / ".agents" / "skills"
+        (agents_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", side_effect=OSError),
+            patch.object(skills, "_get_global_target_dirs", return_value=[agents_dir]),
+            _unreadable(agents_dir),
+        ):
+            assert skills.are_skills_installed() is True
+
 
 class TestSkillPresentIn:
     """Tests for _skill_present_in's three-way answer."""
@@ -3163,13 +3381,7 @@ class TestSkillPresentIn:
         (target_dir / skills._GLOBAL_SKILL_NAME).symlink_to(tmp_path / "gone")
         assert skills._skill_present_in(target_dir) is True
 
-    @pytest.mark.skipif(
-        os.name == "nt", reason="POSIX permission bits do not gate reads on Windows"
-    )
-    @pytest.mark.skipif(
-        hasattr(os, "geteuid") and os.geteuid() == 0,
-        reason="root bypasses the permission bits this test relies on",
-    )
+    @_needs_permission_bits
     def test_unreadable_dir_is_unknown(self, tmp_path: Path) -> None:
         """A dir we lack permission to stat into is unknown, not absent.
 
@@ -3178,11 +3390,8 @@ class TestSkillPresentIn:
         """
         target_dir = tmp_path / "skills"
         (target_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
-        target_dir.chmod(0o000)
-        try:
+        with _unreadable(target_dir):
             assert skills._skill_present_in(target_dir) is None
-        finally:
-            target_dir.chmod(0o700)
 
 
 class TestConfirmProjectInstallationEdgeCases:
