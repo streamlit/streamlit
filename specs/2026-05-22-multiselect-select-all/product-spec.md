@@ -23,15 +23,13 @@ The widget was later migrated from BaseWeb to React Aria Components (PR [#16175]
 
 ### User Pain Points
 
-1. **No way to disable "Select all" for typical lists:** Apps with fewer than 1000 options still always show "Select all". Some workflows require deliberate individual selections (for example picking 2–3 clients from ~500), and the shortcut undermines that. Users still resort to workarounds (below).
+1. **No way to disable "Select all" for typical lists:** Apps with fewer than 1000 options still always show "Select all". Some workflows require deliberate individual selections (for example picking 2–3 clients from ~500), and the shortcut undermines that. Because the bulk-action row is the first dropdown item, search-then-Enter activates "Select X matches" rather than adding the first match. Users still resort to workarounds (below).
 
-2. **Search-then-Enter bulk-selects instead of adding the first match:** The bulk-action row is injected as the first dropdown item whenever two or more selectable options are visible. Typing a query and pressing Enter therefore activates "Select X matches" rather than adding the first match. A single-match search already behaves as users expect, because the 2+ selectable minimum hides the bulk action.
+2. **No way to enable "Select all" for large lists:** Apps with 1000+ options cannot opt back in, even when bulk-select is intentional and the list is not large enough to freeze the browser.
 
-3. **No way to enable "Select all" for large lists:** Apps with 1000+ options cannot opt back in, even when bulk-select is intentional and the list is not large enough to freeze the browser.
+3. **Cluttered UI with Many Selections:** For use cases like plotting, selecting 1000+ options creates unusable visualizations with cluttered charts and excessive rendering time.
 
-4. **Cluttered UI with Many Selections:** For use cases like plotting, selecting 1000+ options creates unusable visualizations with cluttered charts and excessive rendering time.
-
-5. **Confusing Interaction with `max_selections`:** When `max_selections` is set, clicking "Select all" only selects up to the limit. Users see "Select all" but not all options get selected, which is confusing.
+4. **Confusing Interaction with `max_selections`:** When `max_selections` is set, clicking "Select all" only selects up to the limit. Users see "Select all" but not all options get selected, which is confusing.
 
 The original freeze from clicking "Select all" on 100k+ options ([#15299](https://github.com/streamlit/streamlit/issues/15299)) is already mitigated by hiding the action at 1000+ total options. Selecting that many values would still be expensive (`select_all=True` would re-expose it), because the widget must serialize all selected values, re-render a tag per selection, and send the data to the backend.
 
@@ -160,9 +158,9 @@ Both "Select all" and "Select X matches" are controlled by the same parameter. W
 
 **Keyboard / Enter:**
 
-When the bulk-action row is visible, it is the first dropdown item, so Enter activates "Select all" / "Select X matches". That is current shipped behavior and stays when the action is shown.
+When the bulk-action row is visible, it is the first dropdown item, so Enter activates "Select all" / "Select X matches". That is intended: if bulk-select is shown, it is the default Enter target.
 
-When the bulk action is hidden (`select_all=False`, the threshold is not met, or fewer than 2 selectable options), Enter selects the first matching option. That is the supported way to restore the search-then-Enter workflow from [#16537](https://github.com/streamlit/streamlit/issues/16537). Changing Enter to skip a *visible* bulk-action row is out of scope.
+When the bulk action is hidden (`select_all=False`, the threshold is not met, or fewer than 2 selectable options), Enter selects the first matching option. Apps that want search-then-Enter to add the first match should hide the bulk action with `select_all=False` ([#16537](https://github.com/streamlit/streamlit/issues/16537)).
 
 **Interaction with `max_selections`:**
 
@@ -233,7 +231,6 @@ The frontend could measure device capabilities and auto-adjust the threshold.
 
 - **Custom "Select all" label:** Users might want to customize "Select all" to "Add all to cart" etc.
 - **"Select none" / "Clear all" option:** A separate dropdown option to deselect everything. The widget already has a clear-all button on the trigger; this would be a dropdown counterpart.
-- **Enter skips a visible bulk-action row:** Always add the first real option on Enter even when "Select all" / "Select X matches" is shown. Overlaps with keyboard-nav requests such as [#15697](https://github.com/streamlit/streamlit/issues/15697). `select_all=False` is the supported way to get search-then-Enter-selects-first-match.
 - **Confirmation dialog for large selections:** Warn users before selecting many options
 - **Server-side selection for very large datasets:** Would require architectural changes to stream selections
 
