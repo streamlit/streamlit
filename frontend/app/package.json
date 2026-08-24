@@ -76,7 +76,7 @@
     "vite": "^8.2.1",
     "vite-bundle-analyzer": "^1.3.9",
     "vite-plugin-terminal": "^1.4.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "typesync": {
     "ignorePackages": [
