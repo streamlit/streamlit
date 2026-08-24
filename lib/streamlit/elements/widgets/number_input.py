@@ -65,8 +65,9 @@ if TYPE_CHECKING:
 
 
 Number: TypeAlias = int | float
-# When value is omitted these TypeVars are unsolved. Without default=,
-# mypy uses the full constraint (int | None / float | None).
+# Omitted value infers int/float, not int | None / float | None.
+# default= makes that explicit for checkers that leave an unsolved TypeVar
+# as Unknown (pyright). This repo's mypy already infers that without default=.
 IntOrNone = TypeVar("IntOrNone", int, None, default=int)
 FloatOrNone = TypeVar("FloatOrNone", float, None, default=float)
 

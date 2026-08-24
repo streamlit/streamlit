@@ -94,7 +94,8 @@ if TYPE_CHECKING:
     required: bool = False
     assert_type(segmented_control("foo", options, required=required), int | None)
 
-    # mypy rejects required=True with selection_mode="multi".
+    # required=True with selection_mode="multi" raises StreamlitAPIException at
+    # runtime, so the overloads reject it statically too.
     segmented_control(  # type: ignore[call-overload]
         "foo", options, selection_mode="multi", required=True
     )

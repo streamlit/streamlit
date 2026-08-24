@@ -91,7 +91,7 @@ if TYPE_CHECKING:
 
     def on_number_change(prefix: str) -> None: ...
 
-    # All parameters combined
+    # Common parameters combined
     assert_type(
         number_input(
             "foo",

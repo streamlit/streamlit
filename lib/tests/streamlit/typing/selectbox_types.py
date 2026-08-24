@@ -104,7 +104,7 @@ if TYPE_CHECKING:
 
     def on_selectbox_change(prefix: str) -> None: ...
 
-    # All parameters combined
+    # Common parameters combined
     assert_type(
         selectbox(
             "foo",

@@ -130,6 +130,10 @@ if TYPE_CHECKING:
     # Test audio_sample_rate parameter (only with accept_audio=True)
     # =====================================================================
 
+    # audio_sample_rate is only on the accept_audio=True overloads, so passing
+    # it with accept_audio omitted is a type error.
+    chat_input("Message", audio_sample_rate=16000)  # type: ignore[call-overload]
+
     assert_type(
         chat_input("Message", accept_audio=True, audio_sample_rate=16000),
         ChatInputValue | None,

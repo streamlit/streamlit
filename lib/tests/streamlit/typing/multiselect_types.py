@@ -117,7 +117,7 @@ if TYPE_CHECKING:
 
     def on_multiselect_change(prefix: str) -> None: ...
 
-    # All parameters combined
+    # Common parameters combined
     assert_type(
         multiselect(
             "foo",

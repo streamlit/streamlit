@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 
     def on_select_slider_change(prefix: str) -> None: ...
 
-    # All parameters combined
+    # Common parameters combined
     assert_type(
         select_slider(
             "foo",

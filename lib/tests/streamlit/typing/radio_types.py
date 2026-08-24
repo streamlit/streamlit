@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
     def on_radio_change(prefix: str) -> None: ...
 
-    # All parameters combined
+    # Common parameters combined
     assert_type(
         radio(
             "foo",

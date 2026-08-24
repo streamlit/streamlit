@@ -151,15 +151,11 @@ class FileUploaderSerde:
 
 
 class FileUploaderMixin:
-    # Multiple overloads are defined on `file_uploader()` below to represent
-    # the different return types of `file_uploader()`.
-    # These return types differ according to the value of the `accept_multiple_files` argument.
+    # The overloads below narrow the return type by `accept_multiple_files`:
+    # `True`/`"directory"` return a list, `False` (or omitted) returns a single
+    # file or None. Each case is duplicated because `type` can be passed
+    # positionally or keyword-only (https://github.com/python/mypy/issues/4020).
     # A final fallback covers non-literal AcceptMultipleFiles values.
-    # There are 3 associated variables, each with 2+ options.
-    # 1. The `accept_multiple_files` argument is set as `True` or `"directory"`,
-    #    or it is set as `False` or omitted, in which case the default value `False`.
-    # 2. The `type` argument may or may not be provided as a keyword-only argument.
-    # 3. Directory uploads always return a list of UploadedFile objects.
 
     # 1. type is given as not a keyword-only argument
     # 2. accept_multiple_files = True or "directory"

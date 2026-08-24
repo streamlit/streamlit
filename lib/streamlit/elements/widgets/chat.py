@@ -622,7 +622,8 @@ class ChatMixin:
     ) -> ChatInputValue | None: ...
 
     # Non-literal accept_file / accept_audio values return the union of both
-    # result types.
+    # result types. audio_sample_rate is omitted so that kwarg still requires
+    # an accept_audio=True overload to match.
     @overload
     def chat_input(
         self,
@@ -634,7 +635,6 @@ class ChatMixin:
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
-        audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         submit_mode: Literal["submit", "disable", "stop"] = "submit",
         on_submit: WidgetCallback | None = None,

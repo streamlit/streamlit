@@ -65,8 +65,11 @@ typing errors in parameters or return types by using mypy and `assert_type`.
 - Do **not** use `def test_*()` functions or `import streamlit as st`.
 - Import from Mixin classes directly (e.g. `LayoutsMixin().expander`).
 - Always include `from __future__ import annotations` at the top.
-- For Literal-discriminated `@overload`s, include a fallback overload for
-  non-literal arguments and assert both the literal cases and that fallback.
+- Overloads discriminated on `bool` need an explicit fallback overload for
+  non-literal values, because mypy does not expand `bool` into
+  `Literal[True] | Literal[False]`. String-`Literal` discriminators do not:
+  mypy expands union arguments, so assert the union result directly.
+  Cover both the literal cases and the non-literal case.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
   (e.g. `radio_types.py`, `file_uploader_types.py`).
 - For dict-like return values backed by `AttributeDictionary` /
