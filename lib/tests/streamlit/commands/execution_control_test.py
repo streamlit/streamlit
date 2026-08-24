@@ -151,15 +151,16 @@ def test_st_rerun_empty_list_is_noop() -> None:
         ctx.script_requests.request_rerun.assert_not_called()
 
 
-def test_st_rerun_empty_string_is_noop() -> None:
-    """st.rerun('') does not raise and does not request a rerun."""
-    with patch(
-        "streamlit.commands.execution_control.get_script_run_ctx"
-    ) as mock_ctx_fn:
-        ctx = MagicMock()
-        mock_ctx_fn.return_value = ctx
+def test_st_rerun_empty_string_raises() -> None:
+    """st.rerun('') raises StreamlitAPIException."""
+    with pytest.raises(StreamlitAPIException, match="empty string scope"):
         rerun("")
-        ctx.script_requests.request_rerun.assert_not_called()
+
+
+def test_st_rerun_empty_list_raises() -> None:
+    """st.rerun([]) raises StreamlitAPIException."""
+    with pytest.raises(StreamlitAPIException, match="empty list scope"):
+        rerun([])
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")

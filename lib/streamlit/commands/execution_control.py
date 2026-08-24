@@ -70,6 +70,10 @@ def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
         replaces the default full-app rerun).
       - ``False`` when the widget lives inside a fragment (the keyed target
         composes with the originating fragment's own rerun — both run).
+
+    Note: for main-script keyed targets, callback-vote coalescing may still
+    escalate to a full-app rerun when a callback-less widget also changed;
+    that escalation happens in ``SessionState._call_callbacks``, not here.
     """
     if scope == "app":
         return False
@@ -219,13 +223,19 @@ def rerun(  # type: ignore[misc]
           fragment(s). The key must match the ``key`` argument passed to
           ``@st.fragment(key=...)``. This form is only valid from a widget
           callback (``on_change`` / ``on_click``); calling it from the main
-          script body or a fragment body raises ``StreamlitAPIException``. An
-          empty list is a no-op — it does not trigger any rerun.
+          script body or a fragment body raises ``StreamlitAPIException``.
 
     """
-    # An empty scope (empty string, empty list) means "rerun nothing".
-    if not scope:
-        return  # type: ignore[misc]  # ty: ignore[invalid-return-type]
+    if isinstance(scope, str) and scope == "":
+        raise StreamlitAPIException(
+            "st.rerun() was called with an empty string scope. "
+            "Pass a fragment key, a list of keys, 'app', or 'fragment'."
+        )
+    if isinstance(scope, Sequence) and not isinstance(scope, str) and len(scope) == 0:
+        raise StreamlitAPIException(
+            "st.rerun() was called with an empty list scope. "
+            "Pass a fragment key, a list of keys, 'app', or 'fragment'."
+        )
 
     ctx = get_script_run_ctx()
 

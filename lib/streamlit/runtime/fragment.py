@@ -860,9 +860,9 @@ def fragment(
             unless you coordinate access explicitly.
 
     key : str or None
-        An optional name for the fragment. When set, ``st.rerun(key)``
-        re-runs this fragment from a widget callback (``on_change`` /
-        ``on_click``). If the fragment function is called from multiple
+        An optional name for the fragment. When set,
+        ``st.rerun(scope="<key>")`` re-runs this fragment from a widget
+        callback (``on_change`` / ``on_click``). If the fragment function is called from multiple
         sites, every call site re-runs together. If this is ``None``
         (default), the fragment can only be re-run from within itself via
         ``st.rerun(scope="fragment")``.

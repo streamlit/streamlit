@@ -1077,29 +1077,40 @@ def test_changed_widget_without_callback_does_not_escalate() -> None:
     assert requeue_calls[0].fragment_id_queue == ["other-frag"]
 
 
-def test_composing_target_with_callback_less_vote_does_not_escalate() -> None:
-    """A callback-less vote does not escalate a composing targeted rerun.
+def test_composing_target_with_callback_less_change_does_not_escalate() -> None:
+    """A callback-less widget change does not escalate a composing targeted rerun.
 
-    When the keyed target originates from a fragment callback
-    (``is_fragment_scoped_rerun=False``), it composes rather than preempts.
-    The vote still fires (a callback-less field changed), but there is no
-    preemption to override, so the vote adds a full-app rerun with
-    ``suppress_callbacks=True`` that simply replays the values.
+    When the interaction originates inside a fragment, the default rerun
+    covers only that fragment — not the full app.  A composing targeted
+    rerun (``is_fragment_scoped_rerun=False``) plus a callback-less widget
+    change should NOT trigger ``_request_full_app_rerun``.
     """
+
+    requeue_calls: list[RerunData] = []
+
     ss = _state_with_changed_widgets(
         [("field", None), ("submit", _raise_composing_targeted_rerun)]
     )
 
-    requeue_calls = _call_callbacks_in_main_script(ss)
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["enclosing-frag"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
-    # The composing targeted re-queue plus the forced app-wide default.
-    assert len(requeue_calls) == 2
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the composing targeted re-queue; no full-app escalation.
+    assert len(requeue_calls) == 1
     targeted = requeue_calls[0]
     assert targeted.fragment_id_queue == ["other-frag"]
     assert targeted.is_fragment_scoped_rerun is False
-    forced = requeue_calls[-1]
-    assert not forced.fragment_id_queue
-    assert forced.suppress_callbacks is True
 
 
 def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
@@ -1120,19 +1131,51 @@ def test_forced_full_app_rerun_carries_widget_states_with_suppress() -> None:
     The forced full-app rerun that escalates a targeted rerun carries the current
     interaction's widget_states so the body sees submitted values (including triggers),
     and suppress_callbacks=True so callbacks are not re-dispatched.
+
+    Escalation requires a callback that explicitly wants the default (returns normally)
+    alongside a targeted rerun.
     """
-    ss = _state_with_changed_widgets(
-        [("field", None), ("submit", _raise_targeted_rerun)]
-    )
+
+    requeue_calls: list[RerunData] = []
+
+    ss = SessionState()
+    for wid, cb in [
+        ("targeted_btn", _raise_targeted_rerun),
+        ("normal_btn", lambda: None),
+    ]:
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=cb,
+            )
+        )
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
     # Simulate on_script_will_rerun stashing the proto.
     proto_states = WidgetStatesProto()
-    for wid in ("field", "submit"):
+    for wid in ("targeted_btn", "normal_btn"):
         ws = proto_states.widgets.add()
         ws.id = wid
         ws.int_value = 1
     ss._current_interaction_widget_states = proto_states
 
-    requeue_calls = _call_callbacks_in_main_script(ss)
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
 
     assert len(requeue_calls) == 2
     forced = requeue_calls[-1]

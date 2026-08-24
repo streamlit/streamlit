@@ -267,10 +267,7 @@ class ScriptRequests:
                     cached_message_hashes=new_data.cached_message_hashes,
                     is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,
-                    suppress_callbacks=(
-                        self._rerun_data.suppress_callbacks
-                        or new_data.suppress_callbacks
-                    ),
+                    suppress_callbacks=new_data.suppress_callbacks,
                     context_info=new_data.context_info,
                 )
 
