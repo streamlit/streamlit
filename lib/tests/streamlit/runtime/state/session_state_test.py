@@ -52,6 +52,10 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime import runtime_util
 from streamlit.runtime.runtime_util import WidgetStateSizeError
 from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_requests import (
+    ScriptRequests,
+    ScriptRequestType,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
@@ -681,6 +685,53 @@ def test_callback_rerun_does_not_abort_other_callbacks() -> None:
     assert at.session_state["body_runs"] == 2
 
 
+def test_callback_switch_page_wins_over_a_competing_callback_rerun() -> None:
+    """A callback st.switch_page() navigates even when another callback reruns.
+
+    Both requests are parked until the last callback returns, and coalescing them takes
+    the page and query params from whichever is queued last. Queueing the plain
+    ``st.rerun()`` last therefore pointed the rerun back at the page the user asked to
+    leave — a silent no-op with no error and no log line.
+    """
+
+    def script():
+        import streamlit as st
+
+        def other():
+            st.text("other page")
+
+        def home():
+            def go():
+                st.switch_page(
+                    st.Page(other, title="Other", url_path="other"),
+                    query_params={"utm_source": "home"},
+                )
+
+            def just_rerun():
+                st.rerun()
+
+            st.text_input("nav", key="nav", on_change=go)
+            st.text_input("plain", key="plain", on_change=just_rerun)
+
+        st.navigation(
+            [
+                st.Page(home, title="Home", url_path="home", default=True),
+                st.Page(other, title="Other", url_path="other"),
+            ]
+        ).run()
+
+    at = AppTest.from_function(script).run()
+
+    # Both widgets change in one interaction, so both callbacks are dispatched.
+    at.text_input(key="nav").input("x")
+    at.text_input(key="plain").input("y")
+    at.run()
+
+    assert len(at.exception) == 0
+    assert [text.value for text in at.text] == ["other page"]
+    assert at.query_params == {"utm_source": ["home"]}
+
+
 def _state_with_unregistered_widgets() -> SessionState:
     """Build state holding one value widget and one fired trigger, neither registered.
 
@@ -921,51 +972,11 @@ def test_fragment_widget_callback_rerun_is_requeued() -> None:
     assert len(requeue_calls) == 1
 
 
-def test_callback_switch_page_keeps_its_target_page() -> None:
-    """st.switch_page() in a callback keeps its target page.
-
-    switch_page queues a full-app RerunData carrying the *target* page_script_hash and then
-    forces a yield point, so the callback sees a RerunException holding that data. Since
-    callback requests are queued only once every callback has run, that deferred queueing is
-    what carries the navigation through: losing page_script_hash there would silently leave
-    the user on the current page.
-    """
-
-    requeue_calls: list[RerunData] = []
-    target_page = "target-page-hash"
-
-    def cb_navigate() -> None:
-        # What switch_page's forced yield point raises inside a callback.
-        raise RerunException(RerunData(page_script_hash=target_page))
-
-    ss = SessionState()
-    wid = "w-nav"
-    meta = WidgetMetadata(
-        id=wid,
-        deserializer=lambda v: v,
-        serializer=lambda v: v,
-        value_type="int_value",
-        callback=cb_navigate,
-    )
-    ss._set_widget_metadata(meta)
-    ss._old_state[wid] = 0
-    ss._new_widget_state.set_from_value(wid, 1)
-
-    mock_ctx = MagicMock()
-    mock_ctx.fragment_ids_this_run = None
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
-    )
-    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
-
-    with patch(
-        "streamlit.runtime.state.session_state.get_script_run_ctx",
-        return_value=mock_ctx,
-    ):
-        ss._call_callbacks()
-
-    assert len(requeue_calls) == 1
-    assert requeue_calls[0].page_script_hash == target_page
+# The page the interaction is running on. A mocked ctx has to pin it and every
+# non-navigating request has to carry it: a bare MagicMock attribute never equals a
+# RerunData's page_script_hash, so an unpinned ctx makes every request look like an
+# st.switch_page() to somewhere else.
+_CURRENT_PAGE_HASH = "current-page-hash"
 
 
 def _state_with_changed_widgets(
@@ -1002,6 +1013,7 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
     # this explicitly: a bare MagicMock attribute is truthy and would read as a
     # fragment interaction.
     mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
     mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
         d
     )
@@ -1023,7 +1035,11 @@ def _raise_targeted_rerun() -> None:
     specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md.
     """
     raise RerunException(
-        RerunData(fragment_id_queue=["other-frag"], is_fragment_scoped_rerun=True)
+        RerunData(
+            page_script_hash=_CURRENT_PAGE_HASH,
+            fragment_id_queue=["other-frag"],
+            is_fragment_scoped_rerun=True,
+        )
     )
 
 
@@ -1089,7 +1105,11 @@ def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
 
     def cb_targeted() -> None:
         raise RerunException(
-            RerunData(fragment_id_queue=["frag-1"], is_fragment_scoped_rerun=True)
+            RerunData(
+                page_script_hash=_CURRENT_PAGE_HASH,
+                fragment_id_queue=["frag-1"],
+                is_fragment_scoped_rerun=True,
+            )
         )
 
     ss = SessionState()
@@ -1109,6 +1129,7 @@ def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
     mock_ctx = MagicMock()
     # Main-script interaction; see _call_callbacks_in_main_script for why this is pinned.
     mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
     mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
         d
     )
@@ -1242,7 +1263,9 @@ def test_callbacks_queued_target_without_fragment_scope_counts_as_targeted() -> 
     requeue_calls: list[RerunData] = []
 
     def cb_queued_target() -> None:
-        raise RerunException(RerunData(fragment_id_queue=["frag-1"]))
+        raise RerunException(
+            RerunData(page_script_hash=_CURRENT_PAGE_HASH, fragment_id_queue=["frag-1"])
+        )
 
     ss = SessionState()
     for wid, cb in [("w1", cb_queued_target), ("w2", lambda: None)]:
@@ -1259,6 +1282,7 @@ def test_callbacks_queued_target_without_fragment_scope_counts_as_targeted() -> 
 
     mock_ctx = MagicMock()
     mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
     mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
         d
     )
@@ -1275,6 +1299,240 @@ def test_callbacks_queued_target_without_fragment_scope_counts_as_targeted() -> 
     assert len(requeue_calls) == 2
     assert requeue_calls[0].fragment_id_queue == ["frag-1"]
     assert requeue_calls[-1].fragment_id_queue == []
+
+
+_TARGET_PAGE_HASH = "target-page-hash"
+_CURRENT_QUERY_STRING = "from=current"
+_TARGET_QUERY_STRING = "utm_source=nav"
+
+
+def _raise_switch_page() -> None:
+    """Raise what ``st.switch_page()`` sends: a full-app rerun of another page.
+
+    It carries its own ``query_string`` because ``st.switch_page`` rewrites the query
+    params before requesting the rerun.
+    """
+    raise RerunException(
+        RerunData(
+            query_string=_TARGET_QUERY_STRING,
+            page_script_hash=_TARGET_PAGE_HASH,
+        )
+    )
+
+
+def _raise_plain_rerun() -> None:
+    """Raise what a plain ``st.rerun()`` sends: a full-app rerun of the current page."""
+    raise RerunException(
+        RerunData(
+            query_string=_CURRENT_QUERY_STRING,
+            page_script_hash=_CURRENT_PAGE_HASH,
+        )
+    )
+
+
+def _raise_fragment_scoped_rerun() -> None:
+    """Raise what ``st.rerun(scope="fragment")`` sends: this page, one fragment."""
+    raise RerunException(
+        RerunData(
+            query_string=_CURRENT_QUERY_STRING,
+            page_script_hash=_CURRENT_PAGE_HASH,
+            fragment_id_queue=["frag-1"],
+            is_fragment_scoped_rerun=True,
+        )
+    )
+
+
+def _coalesce_callback_requests(
+    callbacks: list[Callable[[], None]],
+    *,
+    fragment_ids_this_run: list[str] | None = None,
+) -> RerunData:
+    """Run an interaction's callbacks against a real ``ScriptRequests``.
+
+    Returns the single request the ScriptRunner would then pick up, so a test sees what
+    coalescing actually produced rather than what ``_call_callbacks`` passed in.
+    ``callbacks`` are dispatched in the order given: dispatch order within an
+    interaction is not guaranteed, so each shape has to hold for either order.
+    """
+    ss = SessionState()
+    for index, callback in enumerate(callbacks):
+        wid = f"w{index}"
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=callback,
+            )
+        )
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    script_requests = ScriptRequests()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = fragment_ids_this_run
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.query_string = _CURRENT_QUERY_STRING
+    mock_ctx.cached_message_hashes = frozenset()
+    mock_ctx.context_info = None
+    mock_ctx.script_requests = script_requests
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    request = script_requests.on_scriptrunner_ready()
+    assert request.type is ScriptRequestType.RERUN
+    return request.rerun_data
+
+
+def test_callback_switch_page_keeps_its_target_page() -> None:
+    """A lone st.switch_page() in a callback navigates.
+
+    The ordinary case, and the baseline the two-callback tests below must match:
+    the coalesced request names the target page and carries the query params
+    ``st.switch_page`` set.
+    """
+    rerun_data = _coalesce_callback_requests([_raise_switch_page])
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+
+
+@pytest.mark.parametrize("switch_page_first", [True, False])
+def test_callback_switch_page_survives_a_second_plain_rerun(
+    switch_page_first: bool,
+) -> None:
+    """st.switch_page() and st.rerun() in one interaction still navigate.
+
+    Both requests are parked until the last callback returns and then replayed into
+    ``ScriptRequests``, where coalescing takes ``page_script_hash`` and ``query_string``
+    from whichever request came last. Replaying the plain st.rerun() last therefore
+    silently redirected the app back to the page the user asked to leave, dropping the
+    navigation and its query params with no error anywhere.
+    """
+    callbacks = [_raise_switch_page, _raise_plain_rerun]
+    if not switch_page_first:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(callbacks)
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+
+
+@pytest.mark.parametrize("switch_page_first", [True, False])
+def test_callback_switch_page_survives_a_fragment_scoped_rerun(
+    switch_page_first: bool,
+) -> None:
+    """st.switch_page() beats a fragment-scoped rerun from the same interaction.
+
+    Navigating reruns the whole app, so the fragment target is dropped either way —
+    but the target page and its query params must survive. Runs as a fragment
+    interaction because that is the only way ``st.rerun(scope="fragment")`` is reachable.
+    """
+    callbacks = [_raise_switch_page, _raise_fragment_scoped_rerun]
+    if not switch_page_first:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(
+        callbacks, fragment_ids_this_run=["frag-1"]
+    )
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+    assert rerun_data.fragment_id_queue == []
+    assert rerun_data.is_fragment_scoped_rerun is False
+
+
+@pytest.mark.parametrize("switch_page_first", [True, False])
+def test_pending_navigation_suppresses_forced_full_app_rerun(
+    switch_page_first: bool,
+) -> None:
+    """A pending navigation stands in for the forced full-app rerun.
+
+    The forced request exists to guarantee an app-wide rerun when a targeted one would
+    otherwise preempt the body, but it always names the *current* page. Navigating is
+    already app-wide, so queueing it on top would only undo the navigation.
+    """
+    callbacks = [_raise_switch_page, _raise_targeted_rerun]
+    if not switch_page_first:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(callbacks)
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+    assert rerun_data.fragment_id_queue == []
+
+
+def test_targeted_rerun_without_navigation_still_forces_full_app_rerun() -> None:
+    """Without a navigation the forced full-app rerun still fires.
+
+    The counterpart to the suppression test above: the guard keys on a pending
+    navigation only, so a targeted rerun competing with a normal return must still get
+    the app-wide request queued on top of it, on the page already running.
+    """
+    ss = _state_with_changed_widgets(
+        [("w1", _raise_targeted_rerun), ("w2", lambda: None)]
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert forced.page_script_hash == _CURRENT_PAGE_HASH
+    assert forced.fragment_id_queue == []
+
+
+def test_reruns_without_navigation_keep_their_dispatch_order() -> None:
+    """Reordering is a no-op when nothing navigates.
+
+    Every request names the current page, so the sort that moves a navigating request
+    last must leave the queue exactly as the callbacks produced it.
+    """
+    ss = _state_with_changed_widgets(
+        [("w1", _raise_fragment_scoped_rerun), ("w2", _raise_plain_rerun)]
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    # The two callback requests in dispatch order, then the forced app-wide default.
+    assert [data.fragment_id_queue for data in requeue_calls] == [["frag-1"], [], []]
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_two_fragment_targets_from_two_callbacks_both_run(reverse: bool) -> None:
+    """Two targeted callbacks still contribute both fragments to the coalesced queue.
+
+    Reordering only moves navigating requests, and there are none here, so the union
+    ``ScriptRequests`` builds must keep both targets in dispatch order.
+    """
+
+    def cb_frag_2() -> None:
+        raise RerunException(
+            RerunData(
+                page_script_hash=_CURRENT_PAGE_HASH,
+                fragment_id_queue=["frag-2"],
+                is_fragment_scoped_rerun=True,
+            )
+        )
+
+    callbacks = [_raise_fragment_scoped_rerun, cb_frag_2]
+    if reverse:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(
+        callbacks, fragment_ids_this_run=["frag-1", "frag-2"]
+    )
+
+    expected = ["frag-2", "frag-1"] if reverse else ["frag-1", "frag-2"]
+    assert rerun_data.fragment_id_queue == expected
+    assert rerun_data.page_script_hash == _CURRENT_PAGE_HASH
 
 
 def test_updates():

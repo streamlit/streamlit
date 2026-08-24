@@ -596,6 +596,20 @@ def _interaction_default_is_app_wide(ctx: ScriptRunContext | None) -> bool:
     return not (ctx and ctx.fragment_ids_this_run)
 
 
+def _navigation_is_pending(
+    pending_reruns: list[RerunData], ctx: ScriptRunContext | None
+) -> bool:
+    """Whether any pending request runs a page other than the one running now.
+
+    Only ``st.switch_page()`` builds such a request from a callback. With no context
+    there is no current page to compare against, so nothing counts as navigation.
+    """
+    return ctx is not None and any(
+        rerun_data.page_script_hash != ctx.page_script_hash
+        for rerun_data in pending_reruns
+    )
+
+
 @dataclass(slots=True)
 class _CallbackRerunVotes:
     """What the callbacks of one interaction asked for, collected during dispatch.
@@ -940,11 +954,8 @@ class SessionState:
                 self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
 
         if changed_widget_ids_without_callback:
-            # A widget that changed without firing a callback still needs its new value to
-            # reach the body, so it wants the interaction's default rerun. Form fields are
-            # always in this shape — `check_callback_rules` forbids `on_change` on them —
-            # so without this the submit button's targeted rerun would preempt the body
-            # and the submitted values would never render.
+            # A changed widget with no callback still needs the body to run so its
+            # new value is rendered, so it wants the interaction's default rerun.
             votes.wants_interaction_default = True
 
         ctx = get_script_run_ctx()
@@ -958,18 +969,30 @@ class SessionState:
         # No try/finally: if a callback raised, the interaction errored and queueing a
         # rerun anyway would clear the exception element on the next SCRIPT_STARTED.
         if ctx and ctx.script_requests:
-            for rerun_data in votes.pending_reruns:
+            # Queue a navigating request last: request_rerun takes page_script_hash
+            # (and query_string) from the newest request, so an st.rerun() coalesced
+            # after an st.switch_page() would point the rerun back at the page the
+            # user asked to leave.
+            current_page = ctx.page_script_hash
+            for rerun_data in sorted(
+                votes.pending_reruns,
+                key=lambda data: data.page_script_hash != current_page,
+            ):
                 ctx.script_requests.request_rerun(rerun_data)
 
         if (
             votes.requested_targeted
             and votes.wants_interaction_default
             and _interaction_default_is_app_wide(ctx)
+            and not _navigation_is_pending(votes.pending_reruns, ctx)
         ):
             # An app-wide default trumps the targeted requests, so queue it explicitly:
             # the callbacks that returned normally raised nothing, so no request in
             # pending_reruns stands for them, and this run's body is about to be
             # preempted before it can serve as their rerun.
+            #
+            # A pending navigation already reruns the whole app, so this request would
+            # add nothing but its own page — the one being navigated away from.
             self._request_full_app_rerun()
 
     def _execute_widget_callback(
