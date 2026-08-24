@@ -621,8 +621,8 @@ class _CallbackRerunVotes:
     the requests and decide the interaction's rerun scope.
     """
 
-    # A callback asked to rerun specific fragments rather than the whole app
-    # (``is_fragment_scoped_rerun=True``, i.e. ``scope="fragment"``).
+    # A callback requested specific fragment targets (non-empty fragment_id_queue),
+    # whether via scope="fragment" or a keyed scope like scope="charts".
     requested_targeted: bool = False
     # A callback explicitly expects the interaction's default rerun: it returned
     # normally or called plain st.rerun().

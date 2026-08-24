@@ -153,8 +153,9 @@ def test_st_rerun_empty_list_raises() -> None:
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
-def test_key_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> None:
-    """st.rerun('charts') calls fragment_storage.resolve_target and queues the result."""
+def test_key_scope_resolves_target_without_queueing(patched_get_script_run_ctx) -> None:
+    """st.rerun('charts') resolves the key via fragment_storage but does not
+    call request_rerun — the request is deferred to _call_callbacks."""
     ctx = MagicMock()
     ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
     patched_get_script_run_ctx.return_value = ctx

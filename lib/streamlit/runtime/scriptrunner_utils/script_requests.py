@@ -116,16 +116,12 @@ def _coalesce_widget_states(
     *,
     old_suppress_callbacks: bool = False,
 ) -> WidgetStates | None:
-    """Coalesce an older WidgetStates into a newer one, and return a new
-    WidgetStates containing the result.
+    """Merge an older WidgetStates into a newer one, returning the result.
 
-    For most widget values, we just take the latest version.
-
-    However, any trigger_values (which are set by buttons) that are True in
-    `old_states` will be set to True in the coalesced result, so that button
-    presses don't go missing — unless the old request had
-    ``suppress_callbacks=True``, meaning those triggers' callbacks already ran
-    and preserving them would cause duplicate execution on the merged run.
+    For most widgets the newer value wins.  Button and chat-input triggers are
+    special: an active trigger in ``old_states`` carries forward so rapid clicks
+    aren't lost — unless ``old_suppress_callbacks`` is True, meaning those
+    triggers' callbacks already ran and re-preserving them would fire duplicates.
     """
     if not old_states and not new_states:
         return None

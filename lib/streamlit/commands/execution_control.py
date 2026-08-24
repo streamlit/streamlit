@@ -72,8 +72,9 @@ def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
         composes with the originating fragment's own rerun — both run).
 
     Note: for main-script keyed targets, callback-vote coalescing may still
-    escalate to a full-app rerun when a callback-less widget also changed;
-    that escalation happens in ``SessionState._call_callbacks``, not here.
+    escalate to a full-app rerun if another callback returns normally or calls
+    plain ``st.rerun()``; that escalation happens in
+    ``SessionState._call_callbacks``, not here.
     """
     if scope == "app":
         return False
@@ -255,12 +256,13 @@ def rerun(  # type: ignore[misc]
         )
 
         if ThreadState.get().run_location == RunLocation.CALLBACK:
-            # Raise directly so the callback halts immediately.
-            # _run_callback_and_record_rerun catches this to classify the
-            # rerun and record it on the interaction's votes.  The request is
-            # NOT queued here — _call_callbacks flushes votes.pending_reruns
-            # after the last callback returns, which prevents a sibling
-            # callback's yield point from picking up this request early.
+            # Halt the callback immediately — _run_callback_and_record_rerun
+            # catches this and records it on the interaction's votes.
+            #
+            # The request is NOT queued via request_rerun here; _call_callbacks
+            # flushes all pending reruns after the last callback returns.
+            # Queueing now would let a sibling callback's yield point pick up
+            # this request and abort prematurely.
             raise RerunException(rerun_data)
 
         # Body-level calls: queue the request and halt via a yield point so
