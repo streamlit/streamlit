@@ -11,7 +11,7 @@ Visual design works hand-in-hand with other references:
 
 ## Colors and theming
 
-Do not use custom CSS to polish an app unless the user explicitly asks for it. Set colors, fonts, and borders in `.streamlit/config.toml` instead—native theming applies consistently across every element and survives Streamlit upgrades, while CSS selectors target internal class names that can change.
+Do not use custom CSS to polish an app unless the user explicitly asks for it. Set colors, fonts, and borders in `.streamlit/config.toml` instead. Native theming applies consistently across every element and survives Streamlit upgrades; CSS selectors target internal class names that can change.
 
 ```python
 # BAD: Injected CSS for a brand color
@@ -24,7 +24,7 @@ st.html("<style>.stButton button { background: #0969da; }</style>")
 primaryColor = "#0969da"
 ```
 
-Read `theme.md` for the full option set, ready-made theme configs, and the narrow escape hatch to use if the user does explicitly ask for CSS.
+Read `theme.md` for the full option set, ready-made theme configs, and the narrow escape hatch for when the user explicitly asks for CSS.
 
 ## Page config
 
@@ -202,3 +202,4 @@ Other elements like `st.button` and `st.tabs` also support icons—worth conside
 - [st.space](https://docs.streamlit.io/develop/api-reference/layout/st.space)
 - [st.markdown](https://docs.streamlit.io/develop/api-reference/text/st.markdown)
 - [st.toast](https://docs.streamlit.io/develop/api-reference/status/st.toast)
+- [Theming](https://docs.streamlit.io/develop/concepts/configuration/theming)
