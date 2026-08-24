@@ -45,7 +45,10 @@ import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constant
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
-import { CalendarPopoverHeader } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
+import {
+  CalendarPopoverHeader,
+  DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
+} from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
 import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
 import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -303,8 +306,9 @@ function SingleDateTimeInput({
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
-      // Exclude the month/year picker popover so Escape closes it first, not the whole calendar.
-      excludeSelectors: [".stDateInputHeaderPickerPopover"],
+      // Exclude the month/year picker so clicks and Escape inside it do not
+      // dismiss the calendar.
+      excludeSelectors: [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
       excludeEscape: true,
     })
 

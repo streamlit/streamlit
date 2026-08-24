@@ -59,6 +59,9 @@ interface HeaderPickerItem {
   date?: { year: number; month: number; day: number }
 }
 
+export const DATE_INPUT_HEADER_PICKER_POPOVER_CLASS =
+  "stDateInputHeaderPickerPopover"
+
 // Item is untyped because styled(ListBox) erases RAC's generic.
 const renderPickerItem = (item: unknown): ReactElement => {
   const pickerItem = item as HeaderPickerItem
@@ -130,7 +133,7 @@ function HeaderPickerSelect({
         </StyledCalendarHeaderSelectChevron>
       </StyledCalendarHeaderSelectTrigger>
       <StyledDropdownPopover
-        className="stDateInputHeaderPickerPopover"
+        className={DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}
         ref={setFloatingRef}
         isNonModal
         data-testid="stDateInputHeaderPickerPopover"

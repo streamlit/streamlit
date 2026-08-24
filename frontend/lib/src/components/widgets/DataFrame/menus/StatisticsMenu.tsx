@@ -46,6 +46,8 @@ import {
   StyledSubMenuPanel,
 } from "./styled-components"
 
+export const STATISTICS_MENU_CLASS = "stDataFrameStatisticsMenu"
+
 export interface StatisticsMenuProps {
   /** The column to show statistics for. */
   column: BaseColumn
@@ -296,7 +298,7 @@ function StatisticsMenu({
               Allows keyboard users to navigate the parent column menu while
               viewing statistics. */}
           <StyledSubMenuPanel
-            className="stDataFrameStatisticsMenu"
+            className={STATISTICS_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameStatisticsMenu"

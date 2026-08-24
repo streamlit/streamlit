@@ -63,14 +63,11 @@ function ButtonActionMenu({
   })
 
   // panelRef is used by the scroll-close effect below to ignore scrolls inside the panel.
-  const { panelRef, setFloatingRef } = useOverlayDismissal({
+  const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: true,
     onClose: onCloseMenu,
     floatingSetFn: refs.setFloating,
-    // Defensive: the floating-ui reference sits outside the menu panel and is
-    // not passed as referenceSetFn. It is pointer-events:none today, so it
-    // should never receive a pointerdown.
-    excludeSelectors: [".stDataFrameButtonActionMenuTarget"],
+    referenceSetFn: refs.setReference,
   })
 
   // Close menu on any scroll in the document (fixed positioning would misalign
@@ -124,8 +121,7 @@ function ButtonActionMenu({
        * Its position (top/left from canvas coords) determines where the menu appears.
        */}
       <div
-        className="stDataFrameButtonActionMenuTarget"
-        ref={refs.setReference}
+        ref={setReferenceRef}
         data-testid="stDataFrameButtonActionMenuTarget"
         style={{
           position: "fixed",

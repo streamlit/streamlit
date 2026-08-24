@@ -53,7 +53,10 @@ import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
+import {
+  CalendarPopoverHeader,
+  DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
+} from "./CalendarPopoverHeader"
 import {
   datesEqual,
   getSafeLocale,
@@ -334,9 +337,9 @@ function SingleDateInput({
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
-      // Exclude the month/year picker popover so Escape closes it first,
-      // not the whole calendar.
-      excludeSelectors: [".stDateInputHeaderPickerPopover"],
+      // Exclude the month/year picker so clicks and Escape inside it do not
+      // dismiss the calendar.
+      excludeSelectors: [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
       excludeEscape: true,
     })
 

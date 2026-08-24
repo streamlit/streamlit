@@ -31,8 +31,8 @@ import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
-import FormattingMenu from "./FormattingMenu"
-import StatisticsMenu from "./StatisticsMenu"
+import FormattingMenu, { FORMATTING_MENU_CLASS } from "./FormattingMenu"
+import StatisticsMenu, { STATISTICS_MENU_CLASS } from "./StatisticsMenu"
 import { supportsStatistics } from "./statisticsUtils"
 import {
   COLUMN_MENU_OFFSET,
@@ -146,8 +146,8 @@ function ColumnMenu({
     // The statistics and formatting sub-menus render in a portal outside this
     // panel, so pointer events inside them must not count as outside clicks.
     excludeSelectors: [
-      ".stDataFrameColumnFormattingMenu",
-      ".stDataFrameStatisticsMenu",
+      `.${FORMATTING_MENU_CLASS}`,
+      `.${STATISTICS_MENU_CLASS}`,
     ],
   })
 
@@ -271,7 +271,7 @@ function ColumnMenu({
                       if (pointerDownRef.current) return
                       // Keep the sub-menu open when focus moves into its portal panel.
                       if (
-                        e.relatedTarget?.closest(".stDataFrameStatisticsMenu")
+                        e.relatedTarget?.closest(`.${STATISTICS_MENU_CLASS}`)
                       ) {
                         return
                       }
@@ -315,9 +315,7 @@ function ColumnMenu({
                     if (pointerDownRef.current) return
                     // Keep the sub-menu open when focus moves into its portal panel.
                     if (
-                      e.relatedTarget?.closest(
-                        ".stDataFrameColumnFormattingMenu"
-                      )
+                      e.relatedTarget?.closest(`.${FORMATTING_MENU_CLASS}`)
                     ) {
                       return
                     }

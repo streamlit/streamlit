@@ -58,7 +58,10 @@ import {
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 
-import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
+import {
+  CalendarPopoverHeader,
+  DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
+} from "./CalendarPopoverHeader"
 import {
   datesEqual,
   getQuickSelectPresets,
@@ -92,6 +95,8 @@ import {
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
+
+const QUICK_SELECT_POPOVER_CLASS = "stDateInputQuickSelectPopover"
 
 interface RangeDateInputProps {
   startValue: CalendarDate | null
@@ -416,11 +421,11 @@ function RangeDateInput({
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
-      // Exclude the month/year and quick-select popovers so Escape closes
-      // them first, not the whole calendar.
+      // Exclude the month/year and quick-select popovers so clicks and Escape
+      // inside them do not dismiss the calendar.
       excludeSelectors: [
-        ".stDateInputHeaderPickerPopover",
-        ".stDateInputQuickSelectPopover",
+        `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+        `.${QUICK_SELECT_POPOVER_CLASS}`,
       ],
       excludeEscape: true,
     })
@@ -953,7 +958,7 @@ function RangeDateInput({
                   </StyledCalendarHeaderSelectChevron>
                 </StyledQuickSelectTrigger>
                 <StyledDropdownPopover
-                  className="stDateInputQuickSelectPopover"
+                  className={QUICK_SELECT_POPOVER_CLASS}
                   ref={setQuickSelectFloatingRef}
                   triggerRef={quickSelectTriggerRef}
                   isOpen={isQuickSelectOpen}

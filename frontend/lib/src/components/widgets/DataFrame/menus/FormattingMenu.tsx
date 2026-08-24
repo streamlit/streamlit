@@ -83,6 +83,9 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     icon: ":material/finance_chip:",
   },
 ]
+
+export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
+
 /**
  * A mapping of column kinds to their available formats.
  * Each column kind has an array of objects, each representing a format
@@ -204,7 +207,7 @@ function FormattingMenu({
       {isOpen && (
         <DataFrameOverlayPortal>
           <StyledSubMenuPanel
-            className="stDataFrameColumnFormattingMenu"
+            className={FORMATTING_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameColumnFormattingMenu"
