@@ -154,8 +154,7 @@ class FileUploaderMixin:
     # Multiple overloads are defined on `file_uploader()` below to represent
     # the different return types of `file_uploader()`.
     # These return types differ according to the value of the `accept_multiple_files` argument.
-    # There must be 2x2=4 overloads to cover all the possible arguments,
-    # as these overloads must be mutually exclusive for mypy.
+    # A final fallback covers non-literal AcceptMultipleFiles values.
     # There are 3 associated variables, each with 2+ options.
     # 1. The `accept_multiple_files` argument is set as `True` or `"directory"`,
     #    or it is set as `False` or omitted, in which case the default value `False`.
@@ -246,6 +245,25 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None: ...
+
+    # Non-literal accept_multiple_files values return the union of both result types.
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        type: str | Sequence[str] | None = None,
+        accept_multiple_files: AcceptMultipleFiles = False,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,
+        max_upload_size: int | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+    ) -> UploadedFile | list[UploadedFile] | None: ...
 
     @gather_metrics("file_uploader")
     def file_uploader(

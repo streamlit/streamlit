@@ -51,3 +51,26 @@ if TYPE_CHECKING:
     assert_type(radio("foo", [1, 2, 3], bind="query-params"), int)
     assert_type(radio("foo", ["a", "b"], bind=None), str)
     assert_type(radio("foo", ["a", "b"], index=None, bind="query-params"), str | None)
+
+    def on_radio_change(prefix: str) -> None: ...
+
+    # All parameters combined
+    assert_type(
+        radio(
+            "foo",
+            [1, 2, 3],
+            format_func=lambda value: f"Option {value}",
+            key="choice",
+            help="Choose one",
+            on_change=on_radio_change,
+            args=("choice",),
+            kwargs={},
+            disabled=False,
+            horizontal=True,
+            captions=["First", "Second", "Third"],
+            label_visibility="visible",
+            width="stretch",
+            persist_state="session",
+        ),
+        int,
+    )

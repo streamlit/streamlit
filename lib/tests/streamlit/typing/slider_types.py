@@ -391,3 +391,22 @@ if TYPE_CHECKING:
     assert_type(slider("foo", on_change=lambda: None), int)
     assert_type(slider("foo", value=5.0, on_change="ignore"), float)
     assert_type(slider("foo", value=(1, 10), on_change="ignore"), tuple[int, int])
+
+    def on_slider_change(prefix: str) -> None: ...
+
+    # All parameters combined
+    assert_type(
+        slider(
+            "foo",
+            value=5,
+            key="threshold",
+            help="Choose a threshold",
+            on_change=on_slider_change,
+            args=("threshold",),
+            kwargs={},
+            disabled=False,
+            label_visibility="visible",
+            width=400,
+        ),
+        int,
+    )

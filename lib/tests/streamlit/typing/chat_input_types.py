@@ -65,6 +65,11 @@ if TYPE_CHECKING:
         ChatInputValue | None,
     )
 
+    # Non-literal bool values return the union of both result types.
+    accept: bool = True
+    assert_type(chat_input("Message", accept_file=accept), str | ChatInputValue | None)
+    assert_type(chat_input("Message", accept_audio=accept), str | ChatInputValue | None)
+
     chat_value = chat_input("Message", accept_file=True, accept_audio=True)
     if chat_value is not None:
         assert_type(chat_value.text, str)

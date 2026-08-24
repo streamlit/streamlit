@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import assert_type
 
@@ -84,10 +84,20 @@ if TYPE_CHECKING:
         int | None,  # Explicitly None default still returns V | None
     )
 
-    # Note: required=True with selection_mode="multi" is invalid and raises
-    # StreamlitAPIException at runtime. This combination cannot be caught at
-    # type-check time because the overload fallback accepts it. The validation
-    # is enforced in _internal_button_group() at runtime.
+    # A variable typed as the full Literal union returns both result types.
+    selection_mode: Literal["single", "multi"] = "single"
+    assert_type(
+        segmented_control("foo", options, selection_mode=selection_mode),
+        int | list[int] | None,
+    )
+    # Non-literal required still infers V | None in the default single-select mode.
+    required: bool = False
+    assert_type(segmented_control("foo", options, required=required), int | None)
+
+    # mypy rejects required=True with selection_mode="multi".
+    segmented_control(  # type: ignore[call-overload]
+        "foo", options, selection_mode="multi", required=True
+    )
 
     # Check wrap parameter
     assert_type(segmented_control("foo", options, wrap=True), int | None)

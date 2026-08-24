@@ -18,7 +18,9 @@ import math
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
+
+from typing_extensions import TypeVar
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
@@ -63,8 +65,10 @@ if TYPE_CHECKING:
 
 
 Number: TypeAlias = int | float
-IntOrNone = TypeVar("IntOrNone", int, None)
-FloatOrNone = TypeVar("FloatOrNone", float, None)
+# When value is omitted these TypeVars are unsolved. Without default=,
+# mypy uses the full constraint (int | None / float | None).
+IntOrNone = TypeVar("IntOrNone", int, None, default=int)
+FloatOrNone = TypeVar("FloatOrNone", float, None, default=float)
 
 
 @dataclass
