@@ -488,8 +488,13 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
         patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
         patch("pathlib.Path.cwd", return_value=project_dir),
-        # No ~/.claude, so only .agents/skills is targeted.
         patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        # Pin Claude Code as absent so .agents/skills is the only target, and the
+        # detail string below stays predictable. Stated explicitly rather than
+        # left to the temp $HOME having no ~/.claude: detection also consults
+        # PATH, so on a contributor's machine with the CLI installed the real
+        # helper would add .claude/skills and this would fail there but not in CI.
+        patch.object(skills, "_is_claude_code_present", return_value=False),
         patch.object(skills, "clear_installed_skills_cache"),
     ):
         response = asyncio.run(
