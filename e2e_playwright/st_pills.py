@@ -389,3 +389,80 @@ idf_child_val = st.pills(
     key="idf_child",
 )
 st.text(f"idf_child value: {idf_child_val}")
+
+# --- Wrap parameter ---
+
+st.header("Pills - wrap")
+
+_WRAP_OPTIONS = [
+    "Today",
+    "7 days",
+    "30 days",
+    "Quarter",
+    "Year",
+    "All time",
+    "Custom range",
+    "Last 90 days",
+    "Last 180 days",
+    "Year to date",
+    "Previous year",
+    "Lifetime",
+]
+
+st.pills(
+    "Wrap false scroll",
+    _WRAP_OPTIONS,
+    wrap=False,
+    width=280,
+    key="pills_wrap_false",
+)
+
+st.pills(
+    "Wrap true multi-row",
+    _WRAP_OPTIONS,
+    wrap=True,
+    width=280,
+    key="pills_wrap_true",
+)
+
+st.pills(
+    "Wrap auto vertical",
+    _WRAP_OPTIONS,
+    width=280,
+    key="pills_wrap_auto_vertical",
+)
+
+with st.container(horizontal=True, width=320, key="pills_wrap_auto_horizontal"):
+    st.pills(
+        "Wrap auto horizontal",
+        _WRAP_OPTIONS,
+        key="pills_wrap_auto_h",
+    )
+
+st.pills(
+    "Wrap false selected into view",
+    _WRAP_OPTIONS,
+    default="Lifetime",
+    wrap=False,
+    width=280,
+    key="pills_wrap_selected_into_view",
+)
+
+with st.container(width=280, key="pills_wrap_stretch_container"):
+    st.pills(
+        "Wrap false stretch",
+        _WRAP_OPTIONS,
+        wrap=False,
+        width="stretch",
+        key="pills_wrap_false_stretch",
+    )
+
+_wrap_toggle = st.toggle("Enable wrap", value=False, key="pills_wrap_toggle")
+_wrap_val = st.pills(
+    "Wrap toggle preserves selection",
+    ["Alpha", "Beta", "Gamma"],
+    default="Beta",
+    wrap=_wrap_toggle,
+    key="pills_wrap_preserve",
+)
+st.text(f"pills_wrap_preserve: {_wrap_val}")

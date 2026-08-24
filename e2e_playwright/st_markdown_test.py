@@ -347,6 +347,13 @@ def test_shimmer_directive(app: Page):
     normal_text = shimmer_container.get_by_text("Normal text before")
     expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
 
+    # :red[:shimmer[...]] — inherit the surrounding color rather than pinning
+    # fadedText60, so the mask peak can reach the parent color.
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
+
 
 def test_shimmer_directive_reduced_motion(
     themed_app: Page, assert_snapshot: ImageCompareFunction
@@ -368,9 +375,13 @@ def test_shimmer_directive_reduced_motion(
     shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
     expect(shimmer_element).to_be_visible()
 
-    # In reduced motion mode, the shimmer should have no animation
-    # and should display with the theme's fadedText60 color
+    # In reduced motion mode, the shimmer should have no animation.
+    # Color still inherits from the surrounding :red[] directive.
     expect(shimmer_element).to_have_css("animation-duration", "0s")
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
 
     # Take snapshot with reduced motion to verify visual appearance
     assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")

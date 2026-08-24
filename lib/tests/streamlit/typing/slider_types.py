@@ -383,3 +383,11 @@ if TYPE_CHECKING:
     assert_type(slider("foo", value=5.0, persist_state="session"), float)
     assert_type(slider("foo", persist_state=None), int)
     assert_type(slider("foo", value=(1, 10), persist_state="session"), tuple[int, int])
+
+    # Check on_change parameter modes
+    assert_type(slider("foo", on_change=None), int)
+    assert_type(slider("foo", on_change="rerun"), int)
+    assert_type(slider("foo", on_change="ignore"), int)
+    assert_type(slider("foo", on_change=lambda: None), int)
+    assert_type(slider("foo", value=5.0, on_change="ignore"), float)
+    assert_type(slider("foo", value=(1, 10), on_change="ignore"), tuple[int, int])

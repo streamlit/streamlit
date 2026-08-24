@@ -37,8 +37,10 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 
 Markdown is supported in most places where text is rendered. Streamlit has three levels of markdown support:
 
+The lists below are not exhaustive. Always use `streamlit docs st.<command>` to inspect the current docstring and confirm whether a specific parameter supports Markdown and which subset it accepts. See **Proactively Look Up API Details** in the main skill.
+
 **Full Markdown** — All syntax shown in the table above:
-- `st.markdown()`, `st.write()`, `st.caption()`, `st.info()`, `st.warning()`, `st.error()`, `st.success()`, `st.table` cells and headers, tooltips (`help` parameter)
+- `st.markdown()`, `st.write()`, `st.caption()`, `st.info()`, `st.warning()`, `st.error()`, `st.success()`, `st.table` cells, index labels, and headers, tooltips (`help` parameter)
 
 **Label subset** — Inline formatting only (see table above). Block elements (e.g. headings, lists, tables) are silently stripped:
 - Widget and element labels (`st.button`, `st.checkbox`, `st.radio`, `st.expander`, `st.page_link`, etc.), `st.radio` and `st.select_slider` options, `st.tabs` names, `st.metric` label/value/delta, `st.title`, `st.header`, `st.subheader`, `st.image` caption, `st.dialog` title, `st.progress`, `st.spinner`.
@@ -118,6 +120,8 @@ Note: `rainbow` is not supported for backgrounds or badges. Standalone badges al
 
 Use Google Material Symbols with `:material/icon_name:` syntax. Find icons at [fonts.google.com/icons](https://fonts.google.com/icons)
 
+Full list of icons available in Streamlit: [material_icon_names.py](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py)
+
 ```python
 st.markdown(":material/check_circle: Complete")
 ```
@@ -187,7 +191,7 @@ st.button("1\\. Not a list")
 
 ## Markdown in st.table
 
-`st.table()` renders Markdown in cells and headers.
+`st.table()` renders Markdown in cells, index labels, and headers.
 
 ```python
 st.table(
@@ -195,7 +199,8 @@ st.table(
         "**Name**": "Alice",
         "**Status**": ":green-badge[Active]",
         "**Role**": ":material/shield: Admin",
-    }
+    },
+    border="horizontal",
 )
 ```
 

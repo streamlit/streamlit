@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
+from typing import Any
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -663,6 +664,23 @@ def test_id_stability():
     assert s1.id == s2.id
 
 
+def test_slider_on_change_callback_is_invoked() -> None:
+    """Test that a callable on_change runs when the slider value changes."""
+
+    def script() -> None:
+        import streamlit as st
+
+        def on_change() -> None:
+            st.session_state["called"] = True
+
+        st.slider("slider", value=0, key="slider", on_change=on_change)
+
+    at = AppTest.from_function(script).run()
+    assert "called" not in at.session_state
+    at = at.slider[0].set_value(5).run()
+    assert at.session_state["called"] is True
+
+
 class SliderStableIdTest(DeltaGeneratorTestCase):
     def test_stable_id_with_key(self):
         """Test that the widget ID is stable when a stable key is provided, unless whitelisted kwargs change."""
@@ -833,6 +851,46 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.query_param_key == "my_key"
         assert list(c.default) == [25, 75]
+
+
+class SliderOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ):
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.slider("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self):
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.slider("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_unhashable_value_raises_exception(self):
+        """Test that unhashable on_change value raises StreamlitValueError."""
+        # Passing a list (unhashable) should raise StreamlitValueError,
+        # not TypeError from a membership test.
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.slider("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
 
 
 def _make_int_serde(

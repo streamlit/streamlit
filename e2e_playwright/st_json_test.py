@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    open_json_path_tooltip,
+)
 
 
 def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
@@ -75,12 +79,6 @@ def test_shows_json_path_tooltip_on_click(
     json_element = themed_app.get_by_test_id("stJson").nth(6)
     expect(json_element).to_be_visible()
 
-    # Click on a string value to trigger the tooltip
-    string_value = json_element.locator(".string-value").first
-    string_value.click()
-
-    # Wait for and verify the tooltip appears
-    tooltip = themed_app.get_by_test_id("stJsonPathTooltip")
-    expect(tooltip).to_be_visible()
+    tooltip = open_json_path_tooltip(themed_app, json_element)
 
     assert_snapshot(tooltip, name="st_json-path_tooltip")

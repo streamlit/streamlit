@@ -30,6 +30,7 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitDuplicateElementId,
     StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
@@ -600,6 +601,33 @@ class Multiselectbox(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.multiselect("the label", ("m", "f"), width=width)
+
+    def test_wrap_default_unset(self):
+        """By default wrap is left unset (auto) so the frontend resolves it
+        based on the layout."""
+        st.multiselect("the label", ("m", "f"))
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert not c.HasField("wrap")
+
+    @parameterized.expand([(True,), (False,)])
+    def test_wrap(self, wrap_value: bool):
+        """The wrap parameter is forwarded to the multiselect proto."""
+        st.multiselect("the label", ("m", "f"), wrap=wrap_value)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.wrap is wrap_value
+
+    def test_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the element id.
+
+        Two otherwise-identical multiselects that differ only in wrap collide on
+        the same auto-generated id, proving wrap is excluded from id computation
+        and so preserves widget state when toggled.
+        """
+        st.multiselect("same label", ("m", "f"))
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.multiselect("same label", ("m", "f"), wrap=False)
 
 
 def test_multiselect_enum_coercion():

@@ -250,12 +250,11 @@ describe("TextInput widget", () => {
       ).not.toBeInTheDocument()
       // Exactly one commit: the cleared empty value (never the pre-clear text).
       expect(setStringValueSpy).toHaveBeenCalledTimes(1)
-      expect(setStringValueSpy).toHaveBeenCalledWith(
-        props.element,
-        "",
-        { fromUi: true },
-        undefined
-      )
+      expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "", {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
     })
 
     it("does not show the clear button when disabled", async () => {
@@ -373,10 +372,9 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -386,10 +384,13 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -420,12 +421,9 @@ describe("TextInput widget", () => {
     await user.tab()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "testing",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -441,12 +439,9 @@ describe("TextInput widget", () => {
     await user.keyboard("testing{Enter}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "testing",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -464,12 +459,9 @@ describe("TextInput widget", () => {
     await user.keyboard("testing{Enter}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "testing",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
 
@@ -480,12 +472,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "testingmoreTesting",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(3)
 
@@ -547,14 +536,11 @@ describe("TextInput widget", () => {
       await screen.findByText("Press Enter to submit form")
     ).toBeInTheDocument()
 
-    expect(setStringValueSpy).toHaveBeenCalledWith(
-      props.element,
-      "TEST",
-      {
-        fromUi: true,
-      },
-      undefined
-    )
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "TEST", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
   })
 
   it("does not update widget value on text changes when outside of a form", async () => {
@@ -572,12 +558,9 @@ describe("TextInput widget", () => {
 
     // Check that the last call was in componentDidMount.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: false,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -602,12 +585,9 @@ describe("TextInput widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -822,10 +802,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "abc",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(
       screen.queryByTestId("stTextInputErrorIcon")
@@ -844,10 +823,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(
       screen.queryByTestId("stTextInputErrorIcon")
@@ -954,10 +932,9 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -972,10 +949,13 @@ describe("TextInput widget", () => {
     await user.click(document.body)
 
     expect(setStringValueSpy).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "123",
-      { fromUi: true },
-      undefined
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
     )
     expect(
       screen.queryByTestId("stTextInputErrorIcon")
@@ -1077,12 +1057,11 @@ describe("TextInput widget", () => {
       widgetMgr.submitForm("form", undefined)
     })
 
-    expect(setStringValueSpy).toHaveBeenCalledWith(
-      props.element,
-      "abcd",
-      { fromUi: true },
-      undefined
-    )
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "abcd", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
     expect(sendRerunBackMsg).toHaveBeenCalledWith(
       {
         widgets: [{ id: props.element.id, stringValue: "abcd" }],

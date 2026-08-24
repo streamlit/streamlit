@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-import { lightThemePrimitives } from "baseui"
-
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
-import { baseuiLightTheme } from "./baseui"
 import emotionBaseTheme from "./emotionBaseTheme"
 import {
   OptionalThemeColors,
@@ -113,11 +110,6 @@ export type ThemeConfig = {
   // Allows custom themes to still show as "Light", "Dark", or "Use System Setting"
   displayName?: string
   emotion: EmotionTheme
-  // For use with Baseweb's ThemeProvider. This is required in order for us to
-  // create separate themes for in the children. Currently required to accommodate
-  // sidebar theming.
-  basewebTheme: typeof baseuiLightTheme
-  primitives: typeof lightThemePrimitives
   themeInput?: Partial<CustomThemeConfig>
 }
 

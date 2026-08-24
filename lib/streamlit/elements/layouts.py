@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    EXPANDABLE_TYPE_TO_PROTO_MAPPING,
+    ExpandableType,
     Gap,
     Height,
     HorizontalAlignment,
@@ -448,6 +450,7 @@ class LayoutsMixin:
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -511,6 +514,14 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the column group matches the
               width of the parent container.
+
+        wrap : bool
+            Whether columns may stack vertically on narrow viewports. If this
+            is ``True`` (default), columns stack when the viewport is at most
+            ``640px`` wide. If this is ``False``, stacking is disabled and
+            columns stay in a single row. Columns shrink until a usable
+            minimum width, then the column group scrolls horizontally instead
+            of overflowing the page.
 
         Returns
         -------
@@ -616,6 +627,29 @@ class LayoutsMixin:
             https://doc-columns-borders.streamlit.app/
             height: 250px
 
+        **Example 6: Disable wrapping for a thumbnail row**
+
+        Use ``wrap=False`` to keep columns in one row and scroll horizontally
+        when they do not fit.
+
+        >>> import streamlit as st
+        >>>
+        >>> images = [
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ... ]
+        >>> thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
+        >>> for column, image in zip(thumbnail_columns, images):
+        ...     column.image(image)
+
+        .. output::
+            https://doc-columns-wrap-false.streamlit.app/
+            height: 250px
+
         """
         weights = spec
         if isinstance(weights, int):
@@ -626,6 +660,9 @@ class LayoutsMixin:
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise StreamlitInvalidColumnSpecError()
+
+        if not isinstance(wrap, bool):
+            raise StreamlitValueError("wrap", ["True", "False"])
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -658,7 +695,7 @@ class LayoutsMixin:
         block_proto.flex_container.direction = (
             BlockProto.FlexContainer.Direction.HORIZONTAL
         )
-        block_proto.flex_container.wrap = True
+        block_proto.flex_container.wrap = wrap
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
         block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH
@@ -1068,7 +1105,7 @@ class LayoutsMixin:
         *,
         key: Key | None = None,
         icon: str | None = None,
-        type: Literal["default", "compact"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1135,8 +1172,9 @@ class LayoutsMixin:
 
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), no icon is displayed, except with
+            ``type="step"``, which falls back to a faded circle placeholder. If
+            ``icon`` is a string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -1152,12 +1190,21 @@ class LayoutsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
-        type : "default" or "compact"
-            The visual style of the expander. If ``"default"`` (default), the
-            expander is displayed with a border and background. If ``"compact"``,
-            the expander is rendered as a minimal inline toggle, ideal for
-            displaying AI reasoning, thoughts, or collapsible metadata without
-            visual clutter.
+        type : "default", "compact", or "step"
+            The visual style of the expander. This can be one of the following:
+
+            - ``"default"`` (default): The expander is displayed with a border
+              and background.
+            - ``"compact"``: The expander is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning, thoughts, or
+              collapsible metadata without visual clutter.
+            - ``"step"``: The expander is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
 
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
@@ -1288,6 +1335,29 @@ class LayoutsMixin:
             https://doc-expander-callback.streamlit.app/
             height: 300px
 
+        **Example 4: Display a timeline of steps**
+
+        Use ``type="step"`` to turn consecutive expanders into a connected
+        timeline. The last step is empty, so it terminates the timeline.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            with st.expander("Understanding the question", type="step"):
+                st.write("Parsed: 'What is the weather in NYC?'")
+
+            with st.expander("Searching for information", type="step"):
+                st.json({"sources": ["weather.gov", "accuweather.com"]})
+
+            # A step with no content terminates the timeline.
+            st.expander("Generating response", type="step")
+
+        .. output::
+            https://doc-expander-step.streamlit.app/
+            height: 300px
+
         """
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
@@ -1297,8 +1367,10 @@ class LayoutsMixin:
                 "on_change", ["'rerun'", "'ignore'", "a callback function"]
             )
 
-        if type not in {"default", "compact"}:
-            raise StreamlitValueError("type", ["'default'", "'compact'"])
+        if type not in EXPANDABLE_TYPE_TO_PROTO_MAPPING:
+            raise StreamlitValueError(
+                "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
+            )
 
         key = to_key(key)
         is_stateful = on_change != "ignore"
@@ -1360,11 +1432,7 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
-        expandable_proto.type = (
-            BlockProto.Expandable.Type.COMPACT
-            if type == "compact"
-            else BlockProto.Expandable.Type.DEFAULT
-        )
+        expandable_proto.type = EXPANDABLE_TYPE_TO_PROTO_MAPPING[type]
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
@@ -1536,10 +1604,10 @@ class LayoutsMixin:
             This can be one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A
@@ -1799,7 +1867,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-        type: Literal["default", "compact"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
@@ -1856,12 +1924,22 @@ class LayoutsMixin:
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
 
-        type : "default" or "compact"
-            The visual style of the status container. If ``"default"`` (default),
-            the container is displayed with a border and background. If
-            ``"compact"``, the container is rendered as a minimal inline
-            toggle, ideal for displaying AI reasoning or task progress without
-            visual clutter.
+        type : "default", "compact", or "step"
+            The visual style of the status container. This can be one of the
+            following:
+
+            - ``"default"`` (default): The container is displayed with a border
+              and background.
+            - ``"compact"``: The container is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning or task progress
+              without visual clutter.
+            - ``"step"``: The container is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
@@ -1921,6 +1999,31 @@ class LayoutsMixin:
 
         .. output::
             https://doc-status-update.streamlit.app/
+            height: 300px
+
+        With ``type="step"``, consecutive status containers form a connected
+        timeline. The last step is empty, so it terminates the timeline:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import time
+
+            import streamlit as st
+
+            with st.status("Loading data", type="step"):
+                time.sleep(1)
+                st.write("Loaded 1,234 records.")
+
+            with st.status("Analyzing data", type="step"):
+                time.sleep(1)
+                st.write("Found 3 anomalies.")
+
+            # A step with no content terminates the timeline.
+            st.status("Report ready", state="complete", type="step")
+
+        .. output::
+            https://doc-status-step.streamlit.app/
             height: 300px
 
         """

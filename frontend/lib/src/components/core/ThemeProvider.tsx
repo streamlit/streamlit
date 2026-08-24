@@ -17,30 +17,16 @@
 import { ReactElement, ReactNode } from "react"
 
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
-import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 
-import { baseuiLightTheme } from "~lib/theme/baseui"
-import type { BaseUILightTheme } from "~lib/theme/baseui"
 import type { EmotionTheme } from "~lib/theme/types"
 
 interface ThemeProviderProps {
   theme: EmotionTheme
-  baseuiTheme?: BaseUILightTheme
   children: ReactNode
 }
 
-function ThemeProvider({
-  theme,
-  baseuiTheme,
-  children,
-}: ThemeProviderProps): ReactElement {
-  return (
-    // Type error coming from BaseUI "property children doesn't exist"
-    // @ts-expect-error
-    <BaseUIThemeProvider theme={baseuiTheme || baseuiLightTheme}>
-      <EmotionThemeProvider theme={theme}>{children}</EmotionThemeProvider>
-    </BaseUIThemeProvider>
-  )
+function ThemeProvider({ theme, children }: ThemeProviderProps): ReactElement {
+  return <EmotionThemeProvider theme={theme}>{children}</EmotionThemeProvider>
 }
 
 export default ThemeProvider

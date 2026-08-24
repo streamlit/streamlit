@@ -208,9 +208,8 @@ describe("Dialog container", () => {
       await user.click(closeButton)
 
       expect(mockWidgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        { id: "test-dialog-id", formId: "" },
-        { fromUi: true },
-        "test-fragment-id"
+        "test-dialog-id",
+        { formId: "", fragmentId: "test-fragment-id", fromUser: true }
       )
     })
 
@@ -242,9 +241,8 @@ describe("Dialog container", () => {
       await user.click(closeButton)
 
       expect(mockWidgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        { id: "test-dialog-id", formId: "" },
-        { fromUi: true },
-        undefined
+        "test-dialog-id",
+        { formId: "", fragmentId: undefined, fromUser: true }
       )
     })
 

@@ -274,12 +274,12 @@ function TimeInput({
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
         setDirty(false)
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         if (inForm) {
           updateWidgetMgrState(
             element,
             widgetMgr,
-            { value: newValue, fromUi: true },
+            { value: newValue, fromUser: true },
             fragmentId
           )
         }
@@ -316,7 +316,7 @@ function TimeInput({
       setValidationError(null)
       setDirty(false)
       if (displayValueRef.current === valueRef.current) return
-      setValueWithSource({ value: displayValueRef.current, fromUi: true })
+      setValueWithSource({ value: displayValueRef.current, fromUser: true })
       // Inside a form, write synchronously so that a Submit click in the same
       // event loop gets the just-committed value. setValueWithSource defers its
       // WidgetStateManager write to a useEffect which hasn't run yet.
@@ -324,7 +324,7 @@ function TimeInput({
         updateWidgetMgrState(
           element,
           widgetMgr,
-          { value: displayValueRef.current, fromUi: true },
+          { value: displayValueRef.current, fromUser: true },
           fragmentId
         )
       }
@@ -342,12 +342,12 @@ function TimeInput({
     setValidationError(null)
     setPasteOverride(null)
     if (valueRef.current === null) return
-    setValueWithSource({ value: null, fromUi: true })
+    setValueWithSource({ value: null, fromUser: true })
     if (inForm) {
       updateWidgetMgrState(
         element,
         widgetMgr,
-        { value: null, fromUi: true },
+        { value: null, fromUser: true },
         fragmentId
       )
     }
@@ -510,12 +510,15 @@ function TimeInput({
         setValidationError(null)
         setDirty(false)
         if (displayValueRef.current !== valueRef.current) {
-          setValueWithSource({ value: displayValueRef.current, fromUi: true })
+          setValueWithSource({
+            value: displayValueRef.current,
+            fromUser: true,
+          })
           if (inForm) {
             updateWidgetMgrState(
               element,
               widgetMgr,
-              { value: displayValueRef.current, fromUi: true },
+              { value: displayValueRef.current, fromUser: true },
               fragmentId
             )
           }
@@ -802,12 +805,11 @@ function updateWidgetMgrState(
   vws: ValueWithSource<string | null>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 export default memo(TimeInput)

@@ -90,6 +90,20 @@ _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
 _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
 
+def _date_to_proto_string(value: date) -> str:
+    """Serialize a date to ISO 8601 with a guaranteed four-digit year.
+
+    ``strftime("%Y-...")`` does not zero-pad years below 1000 on Linux/glibc,
+    but the frontend requires exactly four digits.
+    """
+    return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
+
+
+def _datetime_to_iso_string(value: datetime) -> str:
+    """Serialize a datetime to ISO 8601 with a guaranteed four-digit year."""
+    return f"{_date_to_proto_string(value)}T{value.hour:02d}:{value.minute:02d}"
+
+
 def _convert_timelike_to_time(value: TimeValue) -> time:
     if value == "now":
         # Preserve seconds but strip microseconds. Callers strip seconds
@@ -301,7 +315,8 @@ def _default_max_datetime(base_date: date) -> datetime:
 
 
 def _datetime_to_proto_string(value: datetime) -> str:
-    return _normalize_datetime_value(value).strftime(_DATETIME_ISO_FORMAT)
+    normalized = _normalize_datetime_value(value)
+    return _datetime_to_iso_string(normalized)
 
 
 @dataclass(frozen=True)
@@ -665,7 +680,7 @@ class DateInputSerde:
             return []
 
         to_serialize = list(v) if isinstance(v, Sequence) else [v]
-        return [date.strftime(d, "%Y-%m-%d") for d in to_serialize]  # ty: ignore[invalid-argument-type]
+        return [_date_to_proto_string(d) for d in to_serialize]  # ty: ignore[invalid-argument-type]
 
 
 class TimeWidgetsMixin:
@@ -1419,9 +1434,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_time_input",
             user_key=key,
-            # Format is whitelisted because of a bug in the BaseWeb date input component.
-            # Step is whitelisted because it invalidates the current selection.
-            # We might be able to unlock this as a follow-up.
+            # When a key is set, format and step stay in the widget identity,
+            # so a format change resets the widget and a new step invalidates
+            # the current selection.
             key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
@@ -1904,9 +1919,9 @@ class TimeWidgetsMixin:
                 # For ID purposes, no need to parse the input string.
                 return v
             if isinstance(v, datetime):
-                return date.strftime(v.date(), "%Y-%m-%d")
+                return _date_to_proto_string(v.date())
             if isinstance(v, date):
-                return date.strftime(v, "%Y-%m-%d")
+                return _date_to_proto_string(v)
 
             return None
 
@@ -1926,9 +1941,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            # Ensure stable ID when key is provided. Only format is whitelisted because
-            # there is a bug in baseweb where changing the format dynamically leads to
-            # a wrongly formatted date. min_value and max_value support dynamic changes.
+            # When a key is set, only format stays in the widget identity, so a
+            # format change resets the widget. min_value and max_value can
+            # change without remounting.
             key_as_main_identity={"format"},
             dg=self.dg,
             label=label,
@@ -1989,10 +2004,10 @@ class TimeWidgetsMixin:
             date_input_proto.default[:] = []
         else:
             date_input_proto.default[:] = [
-                date.strftime(v, "%Y-%m-%d") for v in parsed_values.value
+                _date_to_proto_string(v) for v in parsed_values.value
             ]
-        date_input_proto.min = date.strftime(parsed_values.min, "%Y-%m-%d")
-        date_input_proto.max = date.strftime(parsed_values.max, "%Y-%m-%d")
+        date_input_proto.min = _date_to_proto_string(parsed_values.min)
+        date_input_proto.max = _date_to_proto_string(parsed_values.max)
         date_input_proto.form_id = current_form_id(self.dg)
 
         if help is not None:

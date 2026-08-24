@@ -38,6 +38,7 @@ interface StyledStreamlitMarkdownProps {
   isLabel?: boolean
   isInHorizontalLayout?: boolean
   inheritFont?: boolean
+  inheritLineHeight?: boolean
   boldLabel?: boolean
   isToast?: boolean
   truncate?: boolean
@@ -201,6 +202,7 @@ export const StyledStreamlitMarkdown =
       isLabel,
       isInHorizontalLayout = false,
       inheritFont,
+      inheritLineHeight,
       boldLabel,
       isToast,
       truncate,
@@ -212,6 +214,7 @@ export const StyledStreamlitMarkdown =
       // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
       // and font-weight inherit from their parent container instead.
       const useSmallerFontSize = isLabel || isToast || isCaption
+      const shouldInheritLineHeight = inheritFont || inheritLineHeight
 
       return {
         fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
@@ -240,14 +243,14 @@ export const StyledStreamlitMarkdown =
 
         // Truncate text with ellipsis when it overflows the container.
         // This is useful for single-line text that should not wrap.
-        // When inheritFont is false, lineHeight: "normal" resets inherited line heights
-        // (e.g., when parent has a large line-height). When inheritFont is true,
-        // we preserve the parent's line height for consistent styling.
+        // By default, lineHeight: "normal" resets inherited line heights (e.g.,
+        // when a parent has a large line-height). Callers can preserve the
+        // parent's line height independently of the other font properties.
         ...(truncate && {
           overflow: "hidden",
           whiteSpace: "nowrap",
           textOverflow: "ellipsis",
-          lineHeight: inheritFont ? "inherit" : "normal",
+          lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
           // Allow the label to shrink below its content size within a flex
           // parent so the ellipsis can appear.
           minWidth: 0,
@@ -256,7 +259,7 @@ export const StyledStreamlitMarkdown =
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
-            lineHeight: inheritFont ? "inherit" : "normal",
+            lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
           },
         }),
 
@@ -386,29 +389,30 @@ export const StyledStreamlitMarkdown =
         },
 
         // Shimmer animation for loading/thinking text. Uses mask-image with an
-        // animated gradient to fade text opacity in and out. The shimmer uses
-        // fadedText60 as its base color. When nesting with color directives:
+        // animated gradient to fade text opacity in and out. The element's
+        // color is the brightest the mask can get, so inherit the surrounding
+        // text instead of pinning fadedText60 (which would make the whole
+        // sweep sit in a muted range). When nesting with color directives:
         // - :shimmer[:red[text]] - inner color wins (displays red)
-        // - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
+        // - :red[:shimmer[text]] - shimmer inherits the red
         "span.stMarkdownShimmer": {
-          // Use theme's secondary text color for shimmer text
-          color: theme.colors.fadedText60,
-          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          color: "inherit",
+          // Mask gradient: fades from 55% opacity to 100% at the shimmer peak and back
           maskImage: `linear-gradient(
             90deg,
-            rgba(0, 0, 0, 0.4) 0%,
-            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.55) 40%,
             rgba(0, 0, 0, 1) 50%,
-            rgba(0, 0, 0, 0.4) 60%,
-            rgba(0, 0, 0, 0.4) 100%
+            rgba(0, 0, 0, 0.55) 60%,
+            rgba(0, 0, 0, 0.55) 100%
           )`,
           WebkitMaskImage: `linear-gradient(
             90deg,
-            rgba(0, 0, 0, 0.4) 0%,
-            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.55) 40%,
             rgba(0, 0, 0, 1) 50%,
-            rgba(0, 0, 0, 0.4) 60%,
-            rgba(0, 0, 0, 0.4) 100%
+            rgba(0, 0, 0, 0.55) 60%,
+            rgba(0, 0, 0, 0.55) 100%
           )`,
           maskSize: "200% 100%",
           WebkitMaskSize: "200% 100%",

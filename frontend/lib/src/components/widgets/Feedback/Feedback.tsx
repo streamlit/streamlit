@@ -190,12 +190,11 @@ function updateWidgetMgrState(
 ): void {
   const stringValue =
     valueWithSource.value === null ? "" : String(valueWithSource.value)
-  widgetMgr.setStringValue(
-    element,
-    stringValue,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, stringValue, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 function Feedback(props: Readonly<Props>): ReactElement {
@@ -229,7 +228,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
     (optionValue: number): void => {
       // Toggle selection: if clicking on already selected option, deselect
       const newValue = value === optionValue ? null : optionValue
-      setValueWithSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUser: true })
     },
     [value, setValueWithSource]
   )

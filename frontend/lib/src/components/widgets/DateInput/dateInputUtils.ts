@@ -323,3 +323,16 @@ export function normalizeRangeOrder(isoValues: string[]): string[] {
   }
   return isoValues
 }
+
+/**
+ * Validates `locale` as a well-formed BCP-47 tag, falling back to `en-US`.
+ * `Intl.Locale`/`Intl.DateTimeFormat` throw a `RangeError` for malformed tags,
+ * so React Aria's `I18nProvider` must never receive an unvalidated string.
+ */
+export function getSafeLocale(locale: string): string {
+  try {
+    return new Intl.Locale(locale).toString()
+  } catch {
+    return "en-US"
+  }
+}
