@@ -29,6 +29,7 @@ from typing import Final, Literal
 import click
 
 import streamlit
+from streamlit import env_util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -274,24 +275,61 @@ def _find_project_root(start: Path | None = None) -> Path:
     return start_dir
 
 
+def _claude_cli_on_path() -> bool:
+    """Whether a ``claude`` executable is reachable on the user's ``PATH``."""
+    found = shutil.which("claude")
+    if found is None:
+        return False
+    if not env_util.IS_WINDOWS:
+        return True
+    # On Windows shutil.which() searches the current directory first whatever
+    # PATH says, so a checkout that happens to contain claude.exe/.bat/.cmd
+    # would otherwise decide where we write. Nothing is executed - the cost is a
+    # stray .claude/skills/ dir - but repo contents should not be an input here,
+    # so only trust a hit that lives in a real PATH entry. A user who put "."
+    # on PATH themselves still counts; that is their choice, not the repo's.
+    found_dir = os.path.normcase(os.path.dirname(os.path.abspath(found)))
+    path_dirs = {
+        os.path.normcase(os.path.abspath(entry))
+        for entry in os.environ.get("PATH", "").split(os.pathsep)
+        if entry
+    }
+    return found_dir in path_dirs
+
+
+# Cached because this sits on the nudge show-gate, which re-evaluates on every
+# script rerun, and shutil.which() walks the whole PATH (plus a PATHEXT sweep on
+# Windows) - the same reason _symlink_blocker is cached. The cost is that Claude
+# Code installed mid-session is not noticed until the server restarts, so an
+# install in that window writes .agents only. That is self-correcting rather than
+# a dead end: the next session sees a partial install and offers the repair.
+@lru_cache(maxsize=1)
 def _is_claude_code_present() -> bool:
-    """Best-effort check for whether Claude Code is installed.
+    """Whether the installer should also write a ``.claude`` skills target.
 
     Claude Code only reads skills from ``.claude/skills/``, never from
-    ``.agents/skills/``, so this decides whether the installer also writes a
-    ``.claude`` target. Getting it wrong in the negative direction silently
-    costs the user the whole skill, so this checks several signals rather than
-    just ``~/.claude``: that directory is created lazily and may not exist yet
-    on a fresh install, even though the CLI is on PATH.
+    ``.agents/skills/``, so a missed detection costs the user the entire skill
+    while a false positive costs a few unused symlinks. Detection is generous to
+    match that asymmetry: ``~/.claude`` is created lazily, so ``~/.claude.json``
+    or a ``claude`` on ``PATH`` counts as present too.
+
+    Deliberately broader than the ``claude`` entry in ``_HARNESSES``, which keys
+    on the home directory alone. That table answers "which harnesses exist" for
+    telemetry, where a stable definition matters more than catching a CLI
+    installed minutes ago; here a miss breaks the feature outright.
     """
     try:
         home = Path.home()
     except RuntimeError:
-        return False
+        # Path.home() raises when the home directory cannot be resolved. The
+        # marker checks are impossible then, but the CLI can still be on PATH -
+        # and a project-local .claude/skills/ install needs no home directory.
+        pass
+    else:
+        if (home / ".claude").exists() or (home / ".claude.json").exists():
+            return True
 
-    if (home / ".claude").exists() or (home / ".claude.json").exists():
-        return True
-    return shutil.which("claude") is not None
+    return _claude_cli_on_path()
 
 
 def _get_project_target_dirs(project_root: Path) -> list[Path]:
@@ -323,21 +361,42 @@ def _get_global_target_dirs() -> list[Path]:
     return targets
 
 
-def are_skills_installed() -> bool:
-    """Check whether Streamlit agent skills appear to be installed.
+# How completely the bundled skill is installed, judged only against the
+# directories `streamlit skills` itself writes. ``partial`` is the state this
+# vocabulary exists for: it is the wedge - the skill sitting in .agents/skills
+# with nothing in .claude/skills, because Claude Code was not detected the last
+# time the installer ran - which leaves the skill invisible to that agent.
+_InstallCompleteness = Literal[
+    "absent",  # No target dir in either scope has the skill.
+    "complete",  # Some scope has it in every target dir we could read.
+    "partial",  # Some scope has it in some target dirs, and neither is complete.
+]
 
-    Returns ``True`` if the bundled skill is present (as a symlink, copied
-    directory, or regular directory) in *every* target directory for the scope
-    the user installed into. A partial install counts as not installed, so the
-    nudge fires again and fills in the missing agent directory -- this matters
-    when an agent is installed after ``streamlit skills`` last ran. This is a
-    best-effort check used to decide whether to recommend installing skills; it
-    does not validate skill contents.
+
+def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
+    """How completely the bundled skill is installed, from the installer's view.
+
+    A scope counts as complete when every target dir we could read has the
+    skill, and the whole install counts as complete when *either* scope is - a
+    complete global install means every agent can load the skill, so a
+    half-finished project install must not downgrade it.
+
+    Best-effort: target dirs that cannot be resolved are skipped, and target
+    dirs that cannot be read count as unknown rather than missing, so a
+    permissions error never reports a correctly-installed user as partial.
+    Deliberately uncached, so repairing a partial install takes effect at once.
+
+    Parameters
+    ----------
+    app_dir
+        Directory of the running app's main script, used to resolve the project
+        root exactly as an install triggered from that app would. ``None`` falls
+        back to the current working directory.
     """
     project_dirs: list[Path] = []
     global_dirs: list[Path] = []
     try:
-        project_root = _find_project_root()
+        project_root = _find_project_root(Path(app_dir) if app_dir else None)
     except (OSError, RuntimeError):
         # RuntimeError can be raised by Path.home() when the home directory
         # cannot be determined. This is a best-effort check, so skip project dirs.
@@ -356,31 +415,43 @@ def are_skills_installed() -> bool:
         # them; still a best-effort check, so just skip the global dirs.
         pass
 
-    # Project scope first: a project-local install is the more specific choice.
-    scoped_dirs = (project_dirs, global_dirs)
-
-    for scope_dirs in scoped_dirs:
+    partial = False
+    # Project scope first only because a project-local install is the more
+    # specific choice; a complete scope wins wherever it is found, so the order
+    # does not change the answer.
+    for scope_dirs in (project_dirs, global_dirs):
         if not scope_dirs:
             continue
         # Directories we could not read are dropped rather than treated as
         # missing: an unreadable path means "unknown", and reporting the skill
-        # as uninstalled because of a permissions error would nudge users who
+        # as uninstalled because of a permissions error would pester users who
         # are in fact set up correctly.
         known = [
             present
             for present in (_skill_present_in(target_dir) for target_dir in scope_dirs)
             if present is not None
         ]
+        if known and all(known):
+            return "complete"
         if any(known):
-            # This scope has been installed into before, so it is the scope the
-            # user chose. Report installed only if *every* readable target dir for
-            # it has the skill. A partial install -- typically .agents/skills
-            # present but .claude/skills missing, because Claude Code was not
-            # detected the last time `streamlit skills` ran -- leaves the skill
-            # invisible to that agent. Returning True there would suppress the
-            # nudge permanently and strand the user with a skill nothing loads.
-            return all(known)
-    return False
+            partial = True
+    return "partial" if partial else "absent"
+
+
+def are_skills_installed() -> bool:
+    """Check whether Streamlit agent skills appear to be installed.
+
+    Returns ``True`` only when the bundled skill is present (as a symlink,
+    copied directory, or regular directory) in *every* target directory of at
+    least one install scope, so it is reachable from every agent ``streamlit
+    skills`` writes for. A partial install counts as not installed, so the
+    startup recommendation in ``bootstrap`` prints again and the re-run fills in
+    the missing agent directory - the case that matters when an agent is
+    installed after ``streamlit skills`` last ran.
+
+    Best-effort: it does not validate skill contents.
+    """
+    return _install_completeness() == "complete"
 
 
 def _skill_present_in(target_dir: Path) -> bool | None:
@@ -391,9 +462,20 @@ def _skill_present_in(target_dir: Path) -> bool | None:
     """
     skill_path = target_dir / _GLOBAL_SKILL_NAME
     try:
-        return skill_path.is_symlink() or skill_path.exists()
+        # lstat() rather than exists()/is_symlink(): those swallow OSError and
+        # so report an unreadable path as a missing one, which would collapse
+        # the "could not look" case this return type exists for. lstat() does
+        # not follow symlinks, so a dangling link still counts as present.
+        skill_path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        # Nothing there, or a parent component is a file - either way the skill
+        # is genuinely absent rather than unreadable.
+        return False
     except OSError:
+        # Permissions, a dead mount, a path over the OS length limit: we could
+        # not look, which is not the same as "not installed".
         return None
+    return True
 
 
 def _is_streamlit_owned_symlink(link_path: Path, bundled_skill_names: set[str]) -> bool:
@@ -1460,10 +1542,12 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
 
     The nudge is recommended only for interactive local development where an
     AI agent harness is present but the bundled Streamlit skills are not yet
-    installed, and the user has not permanently dismissed it. This mirrors the
-    gating of the CLI recommendation printed on app startup. It is also withheld
-    when a one-click install would conflict at every install target, so the user
-    is never nudged toward an install that can only fail.
+    installed - or are installed in only some of the agent directories the
+    installer targets - and the user has not permanently dismissed it. This
+    mirrors the gating of the CLI recommendation printed on app startup, which
+    uses the same completeness rule via :func:`are_skills_installed`. It is also
+    withheld when a one-click install would conflict at every install target, so
+    the user is never nudged toward an install that can only fail.
 
     Parameters
     ----------
@@ -1493,10 +1577,20 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         # installed yet.
         if not detect_installed_agents():
             return "no_agent"
-        # An agent is present; recommend installing only if our skills aren't.
-        if detect_installed_skills(app_dir):
+        # An agent is present; recommend installing only if our skills aren't. A
+        # marker found somewhere is not enough: it may sit in .agents/skills
+        # while Claude Code, which reads only .claude/skills, has nothing. Only
+        # "partial" - an install of ours that misses one of its own target dirs -
+        # keeps the nudge, since its one-click install is exactly the repair.
+        # "absent" still suppresses: the marker came from a harness we do not
+        # install for (a hand-placed .cursor/skills copy, say), and nudging that
+        # user would be noise.
+        if (
+            detect_installed_skills(app_dir)
+            and _install_completeness(app_dir) != "partial"
+        ):
             return "installed"
-        # No SKILL.md marker found. Withhold only on a deterministic conflict at
+        # No usable install found. Withhold only on a deterministic conflict at
         # every target; the other always-fail causes (missing bundled package, a
         # copy that errors on permissions/path-length) stay fail-open, since those
         # can resolve without the user removing anything.
