@@ -511,6 +511,14 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert result == ["frag_a", "frag_b"]
 
+    def test_resolve_target_deduplicates_overlapping_keys(self):
+        """resolve_target(['a', 'a']) returns each fragment id only once."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        result = self._storage.resolve_target(["charts", "charts"])
+
+        assert result == ["frag_a"]
+
     def test_resolve_target_unknown_name_raises(self):
         """Resolving a name with no registered fragment raises StreamlitAPIException."""
         with pytest.raises(StreamlitAPIException, match="No fragment found for target"):
@@ -2497,6 +2505,18 @@ def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:
     assert shared.register_fragment_user_key("multi_site", definition_id) is True
     # Second call site of the same fragment definition — must succeed (not a collision).
     assert shared.register_fragment_user_key("multi_site", definition_id) is True
+
+
+def test_shared_run_state_reset_clears_fragment_user_keys() -> None:
+    """reset() frees previously-claimed fragment user keys for the next run."""
+    shared = SharedRunState()
+
+    assert shared.register_fragment_user_key("my_key", "definition_a") is True
+    assert shared.register_fragment_user_key("my_key", "definition_b") is False
+
+    shared.reset()
+
+    assert shared.register_fragment_user_key("my_key", "definition_b") is True
 
 
 def test_fragment_different_definitions_same_key_collide() -> None:

@@ -124,21 +124,6 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx)
     )
 
 
-def test_st_rerun_key_scope_outside_callback_throws_error() -> None:
-    """A string scope other than 'app'/'fragment' (a fragment key) raises when
-    called from outside a widget callback (e.g. the main script body).
-    """
-    with patch(
-        "streamlit.commands.execution_control.get_script_run_ctx"
-    ) as mock_ctx_fn:
-        ctx = MagicMock()
-        mock_ctx_fn.return_value = ctx
-        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
-
-        with pytest.raises(StreamlitAPIException, match="widget callback"):
-            rerun(scope="foo")
-
-
 def test_st_rerun_scope_positional() -> None:
     """scope can be passed positionally, not just as a keyword argument."""
     with patch(
@@ -161,6 +146,17 @@ def test_st_rerun_empty_list_is_noop() -> None:
         ctx = MagicMock()
         mock_ctx_fn.return_value = ctx
         rerun([])
+        ctx.script_requests.request_rerun.assert_not_called()
+
+
+def test_st_rerun_empty_string_is_noop() -> None:
+    """st.rerun('') does not raise and does not request a rerun."""
+    with patch(
+        "streamlit.commands.execution_control.get_script_run_ctx"
+    ) as mock_ctx_fn:
+        ctx = MagicMock()
+        mock_ctx_fn.return_value = ctx
+        rerun("")
         ctx.script_requests.request_rerun.assert_not_called()
 
 
@@ -218,6 +214,7 @@ def test_list_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> N
     ctx.fragment_storage.resolve_target.assert_called_once_with(["charts", "table"])
     call = ctx.script_requests.request_rerun.call_args[0][0]
     assert call.fragment_id_queue == ["frag_1", "frag_2"]
+    assert call.is_fragment_scoped_rerun is True
 
 
 def test_key_scope_raises_outside_callback() -> None:

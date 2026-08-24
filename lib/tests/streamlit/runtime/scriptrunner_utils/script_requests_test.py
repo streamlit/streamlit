@@ -311,6 +311,7 @@ class ScriptRequestsTest(unittest.TestCase):
         rerun_data = RerunData(fragment_id_queue=["target-frag"])
         reqs.request_rerun(rerun_data)
 
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
         assert reqs.on_scriptrunner_yield() is None
         assert reqs._state == ScriptRequestType.RERUN
 

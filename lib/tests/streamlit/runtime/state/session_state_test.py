@@ -1166,6 +1166,7 @@ def test_suppress_callbacks_skips_dispatch_but_applies_values() -> None:
     ss.on_script_will_rerun(proto_states, suppress_callbacks=True)
 
     assert ss[trigger_wid] is True
+    assert ss._current_interaction_widget_states is None
 
 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
