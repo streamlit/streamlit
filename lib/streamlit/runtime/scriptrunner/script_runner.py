@@ -573,6 +573,12 @@ class ScriptRunner:
             # block (via set_event_loop(None)). Re-assert our persistent loop so
             # user code that reaches for the current loop keeps seeing it, both
             # later in this run and on subsequent reruns.
+            #
+            # Known gap: within a single run, asyncio.get_event_loop() will
+            # raise *after* a user asyncio.run() call and *before* the next
+            # run boundary re-assert. This is acceptable — the crashes this
+            # fixes (#744) come from get_event_loop() at import/construction
+            # time, not from code that first calls asyncio.run().
             if self._event_loop is not None:
                 asyncio.set_event_loop(self._event_loop)
 
