@@ -1,3 +1,14 @@
 {
-  "ignorePatterns": ["lib/src/vendor/**"]
+  "ignorePatterns": ["lib/src/vendor/**"],
+  "rules": {
+    "eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_"
+      }
+    ]
+  }
 }
