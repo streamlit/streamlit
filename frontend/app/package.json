@@ -39,7 +39,7 @@
     "color2k": "^2.0.2",
     "hoist-non-react-statics": "^3.3.2",
     "iframe-resizer": "4.3.11",
-    "immer": "^11.1.17",
+    "immer": "^11.1.18",
     "lodash-es": "^4.18.1",
     "loglevel": "^1.9.2",
     "rc-overflow": "^1.5.0",
@@ -51,7 +51,7 @@
     "react-transition-group": "^4.4.5",
     "typed-signals": "^3.0.0",
     "ua-parser-js": "^1.0.41",
-    "uuid": "^14.0.1"
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "@swc/plugin-emotion": "^15.0.0",
