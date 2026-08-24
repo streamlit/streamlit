@@ -468,25 +468,8 @@ def test_switch_page_with_query_params(app: Page):
     expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
 
 
-def test_switch_page_from_callback_by_path(app: Page):
-    """Test that a callback can navigate with a string path.
-
-    The two argument forms resolve the target differently, so each needs its own case:
-    Streamlit resolves a string path against the live page registry, which during a
-    callback still holds the previous run's pages.
-    """
-
-    click_button(app, "callback nav by path")
-
-    expect(page_heading(app)).to_contain_text("Page 5")
-
-
 def test_switch_page_from_callback_by_st_page(app: Page):
-    """Test that a callback can navigate with an st.Page object.
-
-    This form carries a script hash computed when the Page was constructed, so it never
-    consults the page registry that the string form depends on.
-    """
+    """Test that a callback can navigate with an st.Page object."""
 
     click_button(app, "callback nav by object")
 
@@ -520,12 +503,7 @@ def test_switch_page_from_fragment_callback(app: Page):
 
 
 def test_switch_page_from_callback_does_not_navigate_again(app: Page):
-    """Test that a callback's navigation is not replayed when the user navigates away.
-
-    The clicked button's trigger has to be consumed by the run that navigated. If it
-    survived, the next run would call the callback again and drag the user back, so
-    leaving page 5 would be impossible.
-    """
+    """Test that a callback's navigation is not replayed when the user navigates away."""
 
     click_button(app, "callback nav by path")
     expect(page_heading(app)).to_contain_text("Page 5")

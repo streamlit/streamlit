@@ -168,20 +168,8 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 
-def test_switch_page_from_callback(app: Page):
-    """Test that st.switch_page navigates when called from a widget callback."""
-
-    click_button(app, "callback nav to page 2")
-
-    expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
-
-
 def test_switch_page_from_callback_does_not_navigate_again(app: Page):
-    """Test that a callback's navigation is not replayed on the following run.
-
-    The clicked button's trigger has to be consumed by the run that navigated. If it
-    survived, returning to the main page would immediately bounce back to page 2.
-    """
+    """Test that a callback navigation is not replayed when the user navigates away."""
 
     click_button(app, "callback nav to page 2")
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
