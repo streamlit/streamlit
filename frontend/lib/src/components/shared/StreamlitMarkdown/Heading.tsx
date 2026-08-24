@@ -81,11 +81,12 @@ function Heading(props: HeadingProtoProps): ReactElement {
 
   return (
     <div className="stHeading" data-testid="stHeading">
+      {/* Truncation CSS lives on HeadingWithActionElements. Applying it here
+          would flatten the heading to display:inline and clip help icons. */}
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
         isInDialog={isInDialog}
         isInHorizontalLayout={flexContext?.isInHorizontalLayout}
-        truncate={truncate}
         data-testid="stMarkdownContainer"
       >
         <HeadingWithActionElements

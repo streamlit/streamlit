@@ -887,6 +887,21 @@ describe("StreamlitMarkdown", () => {
     expect(container).toHaveTextContent(/code block/)
   })
 
+  it("inlines leftover HTML block elements when truncating", () => {
+    render(
+      <StreamlitMarkdown
+        source="<section>One</section><dl><dt>Term</dt><dd>Def</dd></dl>"
+        allowHTML
+        truncate
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("section")).toHaveStyle("display: inline")
+    expect(container.querySelector("dl")).toHaveStyle("display: inline")
+    expect(container.querySelector("dt")).toHaveStyle("display: inline")
+    expect(container.querySelector("dd")).toHaveStyle("display: inline")
+  })
+
   it("doesn't render links when disableLinks is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
     const source = "[Link text](www.example.com)"

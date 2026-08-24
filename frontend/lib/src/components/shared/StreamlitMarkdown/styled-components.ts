@@ -48,6 +48,11 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
+// Leftover block boxes after label-mode unwrap. :where() keeps specificity
+// below heading flex styles so st.header wrap=False still ellipsizes.
+const TRUNCATE_BLOCK_SELECTOR =
+  "& :where(p, pre, ul, ol, li, blockquote, table, thead, tbody, tr, th, td, hr, div, section, article, aside, nav, header, footer, main, figure, figcaption, dl, dt, dd, address, details, summary)"
+
 function sharedMarkdownStyle(theme: Theme): Record<string, unknown> {
   return {
     a: {
@@ -257,18 +262,18 @@ export const StyledStreamlitMarkdown =
           // parent so the ellipsis can appear.
           minWidth: 0,
 
-          // Label mode unwraps block constructs; leftover siblings would
-          // still stack as block boxes. Keep them inline so wrap=False
-          // stays one ellipsized line.
-          "& p, & pre, & h1, & h2, & h3, & h4, & h5, & h6, & ul, & ol, & li, & blockquote, & table, & thead, & tbody, & tr, & th, & td, & hr, & div":
-            {
-              display: "inline",
-              margin: 0,
-              padding: 0,
-              border: "none",
-              whiteSpace: "nowrap",
-              verticalAlign: "bottom",
-            },
+          // Label mode unwraps most blocks; leftover siblings (including
+          // raw HTML) would still stack. Keep them inline so wrap=False
+          // stays one ellipsized line. Headings are omitted: st.header
+          // needs display:flex for truncation next to help/anchor icons.
+          [TRUNCATE_BLOCK_SELECTOR]: {
+            display: "inline",
+            margin: 0,
+            padding: 0,
+            border: "none",
+            whiteSpace: "nowrap",
+            verticalAlign: "bottom",
+          },
 
           "& p": {
             // overflow other than visible makes inline compute as
