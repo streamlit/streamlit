@@ -284,6 +284,24 @@ jobs:
             fi
           done
 
+      - name: Snapshot reviewed SHAs
+        run: |
+          # Copy SHAs out of the artifact tree before the consolidating agent
+          # runs. The agent has --force and could rewrite the originals.
+          mkdir -p "$RUNNER_TEMP/reviewed-shas"
+          count=0
+          for dir in reviews/review-output-*; do
+            [ -d "$dir" ] || continue
+            model_id=$(basename "$dir")
+            if [ -f "$dir/reviewed_sha.txt" ]; then
+              cp "$dir/reviewed_sha.txt" "$RUNNER_TEMP/reviewed-shas/${model_id}.txt"
+            else
+              : > "$RUNNER_TEMP/reviewed-shas/${model_id}.txt"
+            fi
+            count=$((count + 1))
+          done
+          echo "Snapshotted $count reviewed SHA file(s)"
+
       - name: Install Cursor CLI
         run: |
           curl https://cursor.com/install -fsS | bash
@@ -396,16 +414,37 @@ jobs:
 
       - name: Record reviewed SHA
         run: |
+          # Use the pre-agent snapshot so the consolidator cannot rewrite SHAs.
+          # Fail closed unless every included review reported the same SHA.
           : > reviewed_sha.txt
-          for f in reviews/review-output-*/reviewed_sha.txt; do
-            [ -f "$f" ] || continue
+          consensus=""
+          mismatch=0
+          found=0
+          shopt -s nullglob
+          for f in "$RUNNER_TEMP"/reviewed-shas/*.txt; do
+            found=$((found + 1))
             sha=$(tr -d '[:space:]' < "$f")
-            if [ -n "$sha" ]; then
-              printf '%s\n' "$sha" > reviewed_sha.txt
-              echo "Reviewed SHA: $sha"
-              break
+            if [ -z "$sha" ]; then
+              echo "Missing reviewed SHA in $(basename "$f")"
+              mismatch=1
+              continue
+            fi
+            echo "Reviewed SHA from $(basename "$f"): $sha"
+            if [ -z "$consensus" ]; then
+              consensus="$sha"
+            elif [ "$sha" != "$consensus" ]; then
+              echo "Reviewed SHA mismatch: $consensus vs $sha"
+              mismatch=1
             fi
           done
+          if [ "$found" -eq 0 ]; then
+            echo "No reviewed SHAs found; leaving reviewed_sha.txt empty"
+          elif [ "$mismatch" -ne 0 ]; then
+            echo "Reviewed SHAs do not agree; leaving reviewed_sha.txt empty"
+          else
+            printf '%s\n' "$consensus" > reviewed_sha.txt
+            echo "Reviewed SHA: $consensus"
+          fi
 
       - name: Upload consolidated artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -627,10 +666,12 @@ jobs:
       # - change:spec (always needs a human, regardless of impact)
       # - change:feature + impact:users (new user-facing features)
       # - more than 1000 changed lines (additions + deletions)
+      # - PR HEAD has moved since the agents reviewed it
+      # - PR touches files that steer the review (prompt assets, AGENTS.md,
+      #   agent rules, or GitHub workflows)
       # Bugfixes, chores, docs, and other impact:users PRs stay eligible:
       # they are lower-risk than new user-facing features and benefit most
-      # from the speedup. Skip if PR HEAD has moved since the agents reviewed
-      # it, so we never formally approve a commit no model looked at.
+      # from the speedup.
       # Requires the repository/organization Actions setting "Allow GitHub
       # Actions to create and approve pull requests" (Settings > Actions >
       # General > Workflow permissions).
@@ -642,6 +683,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
           if [ ! -f verdict.txt ]; then
             echo "Skipping auto-approve: verdict.txt not found"
@@ -670,7 +713,7 @@ jobs:
           fi
 
           CURRENT_SHA=$(echo "$PR_JSON" | jq -r '.head.sha')
-          LABELS=$(echo "$PR_JSON" | jq '[.labels[].name]')
+          LABELS=$(echo "$PR_JSON" | jq -c '[.labels[].name]')
           echo "PR labels: $LABELS"
           echo "Reviewed SHA: $REVIEWED_SHA"
           echo "Current HEAD: $CURRENT_SHA"
@@ -680,10 +723,19 @@ jobs:
             exit 0
           fi
 
-          if ! echo "$LABELS" | jq -e 'type == "array"' >/dev/null; then
-            echo "::warning::Could not parse PR labels, skipping auto-approve"
+          if ! CHANGED_FILES=$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/files" --jq '.[].filename'); then
+            echo "::warning::Failed to list PR files, skipping auto-approve"
             exit 0
           fi
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              scripts/assets/code-review-*.md|AGENTS.md|*/AGENTS.md|.cursor/rules/*|.claude/*|.github/workflows/*)
+                echo "Skipping auto-approve: PR touches review-steering file '$file'"
+                exit 0
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
 
           if echo "$LABELS" | jq -e 'index("change:spec") != null' >/dev/null; then
             echo "Skipping auto-approve: PR is labeled change:spec"
@@ -713,7 +765,7 @@ jobs:
           echo "Auto-approving PR #$PR_NUMBER_ENV at $REVIEWED_SHA based on AI final review verdict"
           if ! jq -n \
             --arg commit_id "$REVIEWED_SHA" \
-            --arg body "Auto-approved by AI final review." \
+            --arg body "Auto-approved by AI final review ([workflow run]($GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID))." \
             '{commit_id: $commit_id, event: "APPROVE", body: $body}' \
             | gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/reviews" -X POST --input -; then
             echo "::warning::Failed to auto-approve PR. Ensure the repository/organization Actions setting 'Allow GitHub Actions to create and approve pull requests' is enabled (Settings > Actions > General > Workflow permissions)."
