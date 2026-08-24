@@ -99,6 +99,14 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
+def _finished_run_ctx(*, has_script_started: bool) -> MagicMock:
+    """A ScriptRunContext stand-in for calling ``_on_script_finished`` directly."""
+    ctx = MagicMock()
+    ctx.has_script_started = has_script_started
+    ctx.shared.widget_ids_this_run.snapshot.return_value = frozenset()
+    return ctx
+
+
 class ScriptRunnerTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -288,10 +296,11 @@ class ScriptRunnerTest(unittest.TestCase):
         """Tests that we can run one fragment."""
         fragment = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["my_fragment"])
+        )
         scriptrunner._fragment_storage.register("my_fragment", fragment)
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -312,20 +321,20 @@ class ScriptRunnerTest(unittest.TestCase):
         """Tests that we can run fragments."""
         fragment = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.register("my_fragment1", fragment)
-        scriptrunner._fragment_storage.register("my_fragment2", fragment)
-        scriptrunner._fragment_storage.register("my_fragment3", fragment)
-
-        scriptrunner.request_rerun(
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
             RerunData(
                 fragment_id_queue=[
                     "my_fragment1",
                     "my_fragment2",
                     "my_fragment3",
                 ]
-            )
+            ),
         )
+        scriptrunner._fragment_storage.register("my_fragment1", fragment)
+        scriptrunner._fragment_storage.register("my_fragment2", fragment)
+        scriptrunner._fragment_storage.register("my_fragment3", fragment)
+
         scriptrunner.start()
         scriptrunner.join()
 
@@ -350,7 +359,6 @@ class ScriptRunnerTest(unittest.TestCase):
     def test_run_multiple_fragments_even_if_one_raised_an_exception(self):
         """Tests that fragments continue to run when previous fragment raised an error."""
         fragment = MagicMock()
-        scriptrunner = TestScriptRunner("good_script.py")
 
         raised_exception = {"called": False}
 
@@ -358,19 +366,20 @@ class ScriptRunnerTest(unittest.TestCase):
             raised_exception["called"] = True
             raise RuntimeError("this fragment errored out")
 
-        scriptrunner._fragment_storage.register("my_fragment1", raise_exception)
-        scriptrunner._fragment_storage.register("my_fragment2", fragment)
-        scriptrunner._fragment_storage.register("my_fragment3", fragment)
-
-        scriptrunner.request_rerun(
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
             RerunData(
                 fragment_id_queue=[
                     "my_fragment1",
                     "my_fragment2",
                     "my_fragment3",
                 ]
-            )
+            ),
         )
+        scriptrunner._fragment_storage.register("my_fragment1", raise_exception)
+        scriptrunner._fragment_storage.register("my_fragment2", fragment)
+        scriptrunner._fragment_storage.register("my_fragment3", fragment)
+
         scriptrunner.start()
         scriptrunner.join()
         self._assert_events(
@@ -402,13 +411,14 @@ class ScriptRunnerTest(unittest.TestCase):
         outer = MagicMock()
         inner = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=fragment_id_queue)
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=fragment_id_queue))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -423,13 +433,14 @@ class ScriptRunnerTest(unittest.TestCase):
         outer = MagicMock()
         inner = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["outer"])
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -445,10 +456,11 @@ class ScriptRunnerTest(unittest.TestCase):
         """A fragment rerun that evicts nothing must not enqueue a StopAutoRerun."""
         fragment = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["my_fragment"])
+        )
         scriptrunner._fragment_storage.register("my_fragment", fragment)
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -466,7 +478,9 @@ class ScriptRunnerTest(unittest.TestCase):
         inner_a = MagicMock(side_effect=lambda: execution_order.append("inner_a"))
         outer_b = MagicMock(side_effect=lambda: execution_order.append("outer_b"))
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner_a", "outer_b"])
+        )
         scriptrunner._fragment_storage.register(
             "outer_a", outer_a, parent_fragment_id=None
         )
@@ -477,7 +491,6 @@ class ScriptRunnerTest(unittest.TestCase):
             "outer_b", outer_b, parent_fragment_id=None
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner_a", "outer_b"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -488,7 +501,6 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_fragment_queue_child_first_keeps_reregistered_inner(self):
         """Parent reruns before a queued child and preserves its re-registration."""
-        scriptrunner = TestScriptRunner("good_script.py")
 
         def run_inner() -> None:
             ctx = get_script_run_ctx()
@@ -507,12 +519,15 @@ class ScriptRunnerTest(unittest.TestCase):
             inner()
 
         outer = MagicMock(side_effect=rerender_outer)
+
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -524,8 +539,6 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_fragment_queue_keeps_live_grandchild_for_later_queued_run(self):
         """A queued child rerun must not prune a live grandchild fragment."""
-        scriptrunner = TestScriptRunner("good_script.py")
-
         grandchild = MagicMock()
 
         def rerender_middle() -> None:
@@ -549,6 +562,11 @@ class ScriptRunnerTest(unittest.TestCase):
             middle()
 
         outer = MagicMock(side_effect=rerender_outer)
+
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(fragment_id_queue=["grandchild", "middle", "outer"]),
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "middle", middle, parent_fragment_id="outer"
@@ -557,9 +575,6 @@ class ScriptRunnerTest(unittest.TestCase):
             "grandchild", grandchild, parent_fragment_id="middle"
         )
 
-        scriptrunner.request_rerun(
-            RerunData(fragment_id_queue=["grandchild", "middle", "outer"])
-        )
         scriptrunner.start()
         scriptrunner.join()
 
@@ -579,7 +594,9 @@ class ScriptRunnerTest(unittest.TestCase):
         child as part of its own body, so also running the child from the queue
         registered its widgets twice and raised StreamlitDuplicateElementId.
         """
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
+        )
         inner_errors: list[Exception] = []
 
         def render_inner() -> None:
@@ -608,7 +625,6 @@ class ScriptRunnerTest(unittest.TestCase):
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -624,16 +640,17 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_fragment_queue_runs_descendant_when_ancestor_is_gone(self):
         """A queued descendant still runs if its queued ancestor never executed."""
-        scriptrunner = TestScriptRunner("good_script.py")
+        # "outer" is queued but absent from storage, so it is skipped without running
+        # and must not suppress its descendant's own queued rerun.
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
+        )
         inner = MagicMock()
 
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        # "outer" is queued but absent from storage, so it is skipped without running
-        # and must not suppress its descendant's own queued rerun.
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -654,7 +671,6 @@ class ScriptRunnerTest(unittest.TestCase):
         ``clear_stale_descendants`` prunes the descendant during cleanup and the
         lookup fails, which would make this pass for the wrong reason.
         """
-        scriptrunner = TestScriptRunner("good_script.py")
         inner = MagicMock()
 
         def register_child_then_explode() -> None:
@@ -667,12 +683,14 @@ class ScriptRunnerTest(unittest.TestCase):
             raise RuntimeError("kaboom")
 
         outer = MagicMock(side_effect=register_child_then_explode)
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -684,7 +702,6 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_fragment_scoped_rerun_child_first_does_not_rerun_parent(self):
         """A child-scoped rerun must not requeue an already-run parent."""
-        scriptrunner = TestScriptRunner("good_script.py")
 
         def rerun_inner() -> None:
             ctx = get_script_run_ctx()
@@ -706,12 +723,15 @@ class ScriptRunnerTest(unittest.TestCase):
             inner()
 
         outer = MagicMock(side_effect=rerender_outer)
+
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -721,7 +741,6 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_fragment_scoped_rerun_child_first_keeps_pending_child(self):
         """A parent-scoped rerun must preserve children that have not run yet."""
-        scriptrunner = TestScriptRunner("good_script.py")
         inner = MagicMock()
 
         def rerun_outer() -> None:
@@ -739,12 +758,15 @@ class ScriptRunnerTest(unittest.TestCase):
             inner()
 
         outer = MagicMock(side_effect=rerun_outer)
+
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -757,13 +779,14 @@ class ScriptRunnerTest(unittest.TestCase):
         outer = MagicMock()
         inner = MagicMock()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner"])
+        )
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.register(
             "inner", inner, parent_fragment_id="outer"
         )
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -796,10 +819,11 @@ class ScriptRunnerTest(unittest.TestCase):
             ThreadState.update(fragment_id="my_fragment_id")
             _fragment(non_optional_func)()
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["my_fragment"])
+        )
         scriptrunner._fragment_storage.register("my_fragment", fragment)
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -1272,6 +1296,44 @@ class ScriptRunnerTest(unittest.TestCase):
         with pytest.raises(KeyError):
             scriptrunner._session_state[widget_id]
 
+    def test_orphan_cleanup_skipped_when_body_never_ran(self):
+        """A run preempted before its body must not collect what it never re-registered.
+
+        Session refs are cleared at the start of every full-app run, on the assumption
+        that the body re-registers whatever is still in use. A callback-queued
+        ``st.rerun()`` skips the body, so collecting here would delete files the app is
+        still displaying — the media analog of the stale-widget hole.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance.media_file_mgr.remove_orphaned_files = MagicMock()
+
+        scriptrunner._on_script_finished(
+            _finished_run_ctx(has_script_started=False),
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            premature_stop=False,
+        )
+
+        Runtime._instance.media_file_mgr.remove_orphaned_files.assert_not_called()
+        Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_not_called()
+
+    def test_orphan_cleanup_runs_when_body_ran(self):
+        """The counterpart to the skip case above.
+
+        Without this, a gate stuck at False would leak every media file and lazy
+        dataframe source for the life of the session while the skip test kept passing.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance.media_file_mgr.remove_orphaned_files = MagicMock()
+
+        scriptrunner._on_script_finished(
+            _finished_run_ctx(has_script_started=True),
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            premature_stop=False,
+        )
+
+        Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
+        Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
+
     def test_dg_stack_preserved_for_fragment_rerun(self):
         """Tests that the dg_stack and cursor are preserved for a fragment rerun.
 
@@ -1280,7 +1342,11 @@ class ScriptRunnerTest(unittest.TestCase):
         was rendered inside of a dialog when two fragment-related reruns were handled
         in the same ScriptRunner thread.
         """
-        scriptrunner = TestScriptRunner("good_script.py")
+        # Pass a fragment_id_queue so the runner keeps fragment_storage instead of
+        # clearing it.
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["my_fragment1"])
+        )
 
         # set the dg_stack from the fragment to simulate a populated dg_stack of
         # a real app
@@ -1294,10 +1360,6 @@ class ScriptRunnerTest(unittest.TestCase):
             "my_fragment1",
             lambda: context_dg_stack.set(dg_stack_set_by_fragment),
         )
-
-        # trigger a run with fragment_id to avoid clearing the fragment_storage in the
-        # script runner
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
 
         # yielding a rerun request will raise a RerunException in the script runner
         # with the provided RerunData
@@ -1323,7 +1385,11 @@ class ScriptRunnerTest(unittest.TestCase):
     def test_dg_stack_reset_for_full_app_rerun(self):
         """Tests that the dg_stack and cursor are reset for a full app rerun."""
 
-        scriptrunner = TestScriptRunner("good_script.py")
+        # Pass a fragment_id_queue so the runner keeps fragment_storage instead of
+        # clearing it.
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["my_fragment1"])
+        )
         # simulate a dg_stack populated by the fragment
         dg_stack_set_by_fragment = (
             DeltaGenerator(),
@@ -1335,10 +1401,6 @@ class ScriptRunnerTest(unittest.TestCase):
             "my_fragment1",
             lambda: context_dg_stack.set(dg_stack_set_by_fragment),
         )
-
-        # trigger a run with fragment_id to avoid clearing the fragment_storage
-        # in the script runner
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
 
         # yielding a rerun request will raise a RerunException in the script runner
         # with the provided RerunData
@@ -1606,8 +1668,12 @@ class TestScriptRunner(ScriptRunner):
     # To prevent PytestCollectionWarning we set __test__ property to False
     __test__ = False
 
-    def __init__(self, script_name: str):
-        """Initializes the ScriptRunner for the given script_name"""
+    def __init__(self, script_name: str, initial_rerun_data: RerunData | None = None):
+        """Initialize the ScriptRunner for the given script_name.
+
+        ``initial_rerun_data`` defaults to a full-app rerun; pass a
+        ``fragment_id_queue`` to start the runner in a fragment run.
+        """
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
 
@@ -1622,7 +1688,9 @@ class TestScriptRunner(ScriptRunner):
             session_state=SessionState(),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=script_cache,
-            initial_rerun_data=RerunData(),
+            initial_rerun_data=initial_rerun_data
+            if initial_rerun_data is not None
+            else RerunData(),
             user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path, script_cache),
