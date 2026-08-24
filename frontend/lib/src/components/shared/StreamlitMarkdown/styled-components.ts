@@ -51,7 +51,7 @@ function convertRemToEm(s: string): string {
 // Leftover block boxes after label-mode unwrap. :where() keeps specificity
 // below heading flex styles so st.header wrap=False still ellipsizes.
 const TRUNCATE_BLOCK_SELECTOR =
-  "& :where(p, pre, ul, ol, li, blockquote, table, thead, tbody, tr, th, td, hr, div, section, article, aside, nav, header, footer, main, figure, figcaption, dl, dt, dd, address, details, summary)"
+  "& :where(p, pre, ul, ol, li, blockquote, table, thead, tbody, tr, th, td, hr, div, section, article, aside, nav, header, footer, main, figure, figcaption, dl, dt, dd, address, details, summary, form, fieldset, legend, menu, dialog)"
 
 function sharedMarkdownStyle(theme: Theme): Record<string, unknown> {
   return {
