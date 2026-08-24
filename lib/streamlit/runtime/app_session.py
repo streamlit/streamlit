@@ -90,15 +90,21 @@ _REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_faile
 def _close_script_thread_event_loop(loop: asyncio.AbstractEventLoop) -> None:
     """Best-effort teardown of the script-thread event loop at session end.
 
-    Cancels any outstanding tasks and shuts down async generators before
-    closing. All errors are swallowed so cleanup never blocks session shutdown.
+    Follows the same cleanup sequence as Python's own ``asyncio.run()``:
+    cancel tasks, await their cancellation, shut down async generators and the
+    default executor, then close. All errors are swallowed so cleanup never
+    blocks session shutdown.
     """
     if loop.is_closed():
         return
     try:
-        for task in asyncio.all_tasks(loop):
+        to_cancel = asyncio.all_tasks(loop)
+        for task in to_cancel:
             task.cancel()
+        if to_cancel:
+            loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
         loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.run_until_complete(loop.shutdown_default_executor())
     except Exception as ex:
         _LOGGER.debug("Error while tearing down script thread event loop", exc_info=ex)
     finally:
