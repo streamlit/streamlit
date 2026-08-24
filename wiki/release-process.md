@@ -199,11 +199,11 @@ is available:
 
    - For a regular `x.y.0` release, paste the generated changelog into the
      agent session and run the
-     [`update-docs-for-release`](https://github.com/streamlit/docs/blob/main/.cursor/skills/update-docs-for-release/SKILL.md)
+     [`updating-docs-for-release`](https://github.com/streamlit/docs/blob/main/.cursor/skills/updating-docs-for-release/SKILL.md)
      skill with the new release tag:
 
      ```text
-     /update-docs-for-release <new-version-tag>
+     /updating-docs-for-release <new-version-tag>
      ```
 
      The skill runs the relevant documentation updates and creates a PR in the
