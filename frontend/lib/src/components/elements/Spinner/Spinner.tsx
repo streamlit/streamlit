@@ -70,9 +70,17 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
       cache={cache}
     >
       <StyledSpinnerContainer>
+        {/* The icon is decorative and stays aria-hidden; the label below is
+            what assistive technology announces. */}
         <DynamicIcon size="lg" iconValue="spinner" />
         <StyledSpinnerText>
-          <StreamlitMarkdown source={element.text} allowHTML={false} />
+          {/* The live region is the label alone, deliberately excluding the
+              elapsed time: that text is rewritten every 100ms, and inside a
+              live region it would queue an announcement on every tick. Kept
+              outside, it is still reachable by a screen reader on demand. */}
+          <div role="status">
+            <StreamlitMarkdown source={element.text} allowHTML={false} />
+          </div>
           {showTime && (
             <StyledSpinnerTimeText>
               {formatTime(elapsedTime)}
