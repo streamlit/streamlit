@@ -1029,16 +1029,32 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
 
 
 def _raise_targeted_rerun() -> None:
-    """Raise what a targeted rerun at another fragment sends.
+    """Raise what a main-script-origin targeted rerun sends (preempts).
 
-    Stands in for ``st.rerun(scope="<key>")``, per
-    specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md.
+    Stands in for ``st.rerun(scope="<key>")`` from a main-script widget callback.
+    ``is_fragment_scoped_rerun=True`` causes the target to preempt the run in progress.
     """
     raise RerunException(
         RerunData(
             page_script_hash=_CURRENT_PAGE_HASH,
             fragment_id_queue=["other-frag"],
             is_fragment_scoped_rerun=True,
+        )
+    )
+
+
+def _raise_composing_targeted_rerun() -> None:
+    """Raise what a fragment-origin targeted rerun sends (composes).
+
+    Stands in for ``st.rerun(scope="<key>")`` from a fragment widget callback.
+    ``is_fragment_scoped_rerun=False`` lets the enclosing fragment finish first, then
+    the target runs.
+    """
+    raise RerunException(
+        RerunData(
+            page_script_hash=_CURRENT_PAGE_HASH,
+            fragment_id_queue=["other-frag"],
+            is_fragment_scoped_rerun=False,
         )
     )
 
@@ -1065,6 +1081,30 @@ def test_changed_widget_without_callback_forces_app_wide_rerun() -> None:
     assert not forced.is_fragment_scoped_rerun
 
 
+def test_composing_target_with_callback_less_vote_does_not_escalate() -> None:
+    """A composing targeted rerun (flag False) is not escalated by the vote.
+
+    When the keyed target has is_fragment_scoped_rerun=False (fragment-origin
+    interaction), the target does not preempt the body. The vote fires because a
+    callback-less field changed, but the flag stays False — there is no preemption to
+    escape, so the vote has no effect.
+    """
+    ss = _state_with_changed_widgets(
+        [("field", None), ("submit", _raise_composing_targeted_rerun)]
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    # The composing targeted re-queue plus the forced app-wide default.
+    assert len(requeue_calls) == 2
+    targeted = requeue_calls[0]
+    assert targeted.fragment_id_queue == ["other-frag"]
+    assert targeted.is_fragment_scoped_rerun is False
+    forced = requeue_calls[-1]
+    assert not forced.fragment_id_queue
+    assert forced.suppress_callbacks is True
+
+
 def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
     """The vote only breaks a tie; on its own it must not add a rerun.
 
@@ -1075,6 +1115,60 @@ def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
     ss = _state_with_changed_widgets([("field", None), ("other_field", None)])
 
     assert _call_callbacks_in_main_script(ss) == []
+
+
+def test_forced_full_app_rerun_carries_widget_states_with_suppress() -> None:
+    """_request_full_app_rerun forwards widget_states with suppress_callbacks=True.
+
+    The forced full-app rerun that escalates a targeted rerun carries the current
+    interaction's widget_states so the body sees submitted values (including triggers),
+    and suppress_callbacks=True so callbacks are not re-dispatched.
+    """
+    ss = _state_with_changed_widgets(
+        [("field", None), ("submit", _raise_targeted_rerun)]
+    )
+    # Simulate on_script_will_rerun stashing the proto.
+    proto_states = WidgetStatesProto()
+    for wid in ("field", "submit"):
+        ws = proto_states.widgets.add()
+        ws.id = wid
+        ws.int_value = 1
+    ss._current_interaction_widget_states = proto_states
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert not forced.fragment_id_queue
+    assert not forced.is_fragment_scoped_rerun
+    assert forced.suppress_callbacks is True
+    assert forced.widget_states is proto_states
+
+
+def test_suppress_callbacks_skips_dispatch_but_applies_values() -> None:
+    """on_script_will_rerun with suppress_callbacks applies values without callbacks.
+
+    The trigger value is set (so the body sees it) but no callback fires.
+    """
+    ss = SessionState()
+    trigger_wid = "submit_btn"
+    meta = WidgetMetadata(
+        id=trigger_wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="trigger_value",
+        callback=lambda: (_ for _ in ()).throw(AssertionError("should not fire")),
+    )
+    ss._set_widget_metadata(meta)
+
+    proto_states = WidgetStatesProto()
+    ws = proto_states.widgets.add()
+    ws.id = trigger_wid
+    ws.trigger_value = True
+
+    ss.on_script_will_rerun(proto_states, suppress_callbacks=True)
+
+    assert ss[trigger_wid] is True
 
 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:

@@ -175,6 +175,28 @@ def test_key_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> No
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_key_scope_from_fragment_callback_composes(
+    patched_get_script_run_ctx,
+) -> None:
+    """st.rerun('charts') from a fragment widget sets is_fragment_scoped_rerun=False.
+
+    A fragment-origin keyed target composes with the enclosing fragment: the fragment
+    finishes, then the target runs.
+    """
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK, fragment_id="enclosing")
+
+    rerun("charts")
+
+    call = ctx.script_requests.request_rerun.call_args[0][0]
+    assert call.fragment_id_queue == ["frag_id_1"]
+    assert call.is_fragment_scoped_rerun is False
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_list_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> None:
     """st.rerun(['charts', 'table']) passes the list to resolve_target."""
     ctx = MagicMock()

@@ -678,6 +678,12 @@ class SessionState:
         default_factory=PersistedWidgetTracker
     )
 
+    # The proto widget_states from the current interaction, stashed during
+    # on_script_will_rerun so _request_full_app_rerun can forward them.
+    _current_interaction_widget_states: WidgetStatesProto | None = field(
+        default=None, repr=False
+    )
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -880,16 +886,32 @@ class SessionState:
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
-    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+    def on_script_will_rerun(
+        self,
+        latest_widget_states: WidgetStatesProto,
+        *,
+        suppress_callbacks: bool = False,
+    ) -> None:
         """Called by ScriptRunner before its script re-runs.
 
         Update widget data and call callbacks on widgets whose value changed
         between the previous and current script runs.
+
+        Parameters
+        ----------
+        suppress_callbacks
+            When True, apply the widget values but skip callback dispatch.
+            Used by the forced full-app rerun that escalates a targeted rerun:
+            the callbacks already ran, and the body just needs to see the
+            submitted values (including form submit triggers).
         """
-        # Clear any triggers that weren't reset because the script was disconnected
         self._reset_triggers()
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
+        if suppress_callbacks:
+            self._current_interaction_widget_states = None
+            return
+        self._current_interaction_widget_states = latest_widget_states
         self._call_callbacks()
 
     def _call_callbacks(self) -> None:
@@ -1024,7 +1046,7 @@ class SessionState:
         the last callback has run (see the comment there for why it waits), and the
         callback's rerun scope is recorded as:
 
-        - a fragment-scoped rerun → ``requested_targeted``
+        - a targeted rerun (non-empty ``fragment_id_queue``) → ``requested_targeted``
         - a plain ``st.rerun()``, or a normal return → ``wants_interaction_default``
         """
         from streamlit.runtime.scriptrunner import RerunException
@@ -1033,7 +1055,7 @@ class SessionState:
             run()
         except RerunException as e:
             rerun_data = e.rerun_data
-            if rerun_data.is_fragment_scoped_rerun:
+            if rerun_data.fragment_id_queue:
                 votes.requested_targeted = True
             else:
                 votes.wants_interaction_default = True
@@ -1042,7 +1064,11 @@ class SessionState:
             votes.wants_interaction_default = True
 
     def _request_full_app_rerun(self) -> None:
-        """Queue a full-app rerun with no ``widget_states``, so callbacks are not re-fired."""
+        """Queue a full-app rerun that preserves widget values (including triggers).
+
+        Carries the interaction's ``widget_states`` with ``suppress_callbacks=True``
+        so the follow-up run applies the values without re-dispatching callbacks.
+        """
         from streamlit.runtime.scriptrunner import RerunData
 
         ctx = get_script_run_ctx()
@@ -1051,6 +1077,8 @@ class SessionState:
                 RerunData(
                     query_string=ctx.query_string,
                     page_script_hash=ctx.page_script_hash,
+                    widget_states=self._current_interaction_widget_states,
+                    suppress_callbacks=True,
                     cached_message_hashes=ctx.cached_message_hashes,
                     context_info=ctx.context_info,
                 )

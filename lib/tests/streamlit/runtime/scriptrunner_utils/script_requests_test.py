@@ -268,6 +268,22 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == []
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
+    def test_suppress_callbacks_preserved_during_coalescing(self):
+        """suppress_callbacks=True survives coalescing with a regular request."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(
+            RerunData(fragment_id_queue=["frag"], is_fragment_scoped_rerun=True)
+        )
+        reqs.request_rerun(RerunData(suppress_callbacks=True))
+        assert reqs._rerun_data.suppress_callbacks is True
+
+    def test_suppress_callbacks_false_when_neither_sets_it(self):
+        """Two non-suppressing requests coalesce to suppress_callbacks=False."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())
+        reqs.request_rerun(RerunData(query_string="new"))
+        assert reqs._rerun_data.suppress_callbacks is False
+
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()
@@ -284,6 +300,23 @@ class ScriptRequestsTest(unittest.TestCase):
         assert None is result
         assert reqs._state == ScriptRequestType.RERUN
         assert reqs._rerun_data == RerunData(fragment_id_queue=["my_fragment_id"])
+
+    def test_compose_fragment_rerun_lets_body_finish_then_serves_target(self):
+        """A non-scoped fragment rerun composes: body finishes, then target runs.
+
+        on_scriptrunner_yield returns None (body not preempted), and
+        on_scriptrunner_ready returns the pending fragment rerun afterwards.
+        """
+        reqs = ScriptRequests()
+        rerun_data = RerunData(fragment_id_queue=["target-frag"])
+        reqs.request_rerun(rerun_data)
+
+        assert reqs.on_scriptrunner_yield() is None
+        assert reqs._state == ScriptRequestType.RERUN
+
+        result = reqs.on_scriptrunner_ready()
+        assert result == ScriptRequest(ScriptRequestType.RERUN, rerun_data)
+        assert reqs._state == ScriptRequestType.CONTINUE
 
     def test_on_script_yield_with_is_fragment_scoped_rerun(self):
         """Return RERUN; transition to the CONTINUE state."""
