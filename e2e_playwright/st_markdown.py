@@ -333,6 +333,16 @@ st.badge("Stretch badge", width="stretch")
 with st.container(border=True, width=150, key="long_word"):
     st.markdown("A_LONG_WORD_THAT_SHOULD_BREAK_WORDS_IN_THE_CONTAINER")
 
+with st.container(border=True, width=150, key="long_word_in_list"):
+    st.markdown(
+        """
+- bucket1/awesome_zoom_background.jpg
+- short item
+
+1. bucket2/folder1/folder2/lenna.png
+"""
+    )
+
 # Text alignment tests
 st.header("Text Alignment Tests")
 
