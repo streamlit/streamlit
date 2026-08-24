@@ -60,7 +60,7 @@
     "@testing-library/react": "^16.3.2",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.8.1",
     "eslint-import-resolver-typescript": "^4.4.5",
@@ -79,7 +79,7 @@
     "react-aria": "^3.51.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^4.1.10",
+    "vitest": "^4.1.11",
     "vitest-canvas-mock": "^1.1.5"
   }
 }
