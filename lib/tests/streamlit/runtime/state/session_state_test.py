@@ -1251,56 +1251,6 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
     assert all(d.is_fragment_scoped_rerun for d in requeue_calls)
 
 
-def test_callbacks_queued_target_without_fragment_scope_counts_as_targeted() -> None:
-    """A queued fragment target counts as targeted even without ``scope="fragment"``.
-
-    ``st.rerun(scope="fragment")`` sets both ``fragment_id_queue`` and
-    ``is_fragment_scoped_rerun``, so either field alone would classify today's reruns
-    correctly. This pins the ``fragment_id_queue`` field on its own, which is what a
-    future targeted rerun that names fragments without scoping to them would send.
-    """
-
-    requeue_calls: list[RerunData] = []
-
-    def cb_queued_target() -> None:
-        raise RerunException(
-            RerunData(page_script_hash=_CURRENT_PAGE_HASH, fragment_id_queue=["frag-1"])
-        )
-
-    ss = SessionState()
-    for wid, cb in [("w1", cb_queued_target), ("w2", lambda: None)]:
-        meta = WidgetMetadata(
-            id=wid,
-            deserializer=lambda v: v,
-            serializer=lambda v: v,
-            value_type="int_value",
-            callback=cb,
-        )
-        ss._set_widget_metadata(meta)
-        ss._old_state[wid] = 0
-        ss._new_widget_state.set_from_value(wid, 1)
-
-    mock_ctx = MagicMock()
-    mock_ctx.fragment_ids_this_run = None
-    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
-    )
-    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
-
-    with patch(
-        "streamlit.runtime.state.session_state.get_script_run_ctx",
-        return_value=mock_ctx,
-    ):
-        ss._call_callbacks()
-
-    # Read as targeted, so the normally-returning callback's app-wide default is
-    # forced on top of it.
-    assert len(requeue_calls) == 2
-    assert requeue_calls[0].fragment_id_queue == ["frag-1"]
-    assert requeue_calls[-1].fragment_id_queue == []
-
-
 _TARGET_PAGE_HASH = "target-page-hash"
 _CURRENT_QUERY_STRING = "from=current"
 _TARGET_QUERY_STRING = "utm_source=nav"

@@ -1024,7 +1024,7 @@ class SessionState:
         the last callback has run (see the comment there for why it waits), and the
         callback's rerun scope is recorded as:
 
-        - a fragment-scoped or fragment-queued rerun → ``requested_targeted``
+        - a fragment-scoped rerun → ``requested_targeted``
         - a plain ``st.rerun()``, or a normal return → ``wants_interaction_default``
         """
         from streamlit.runtime.scriptrunner import RerunException
@@ -1033,7 +1033,7 @@ class SessionState:
             run()
         except RerunException as e:
             rerun_data = e.rerun_data
-            if rerun_data.fragment_id_queue or rerun_data.is_fragment_scoped_rerun:
+            if rerun_data.is_fragment_scoped_rerun:
                 votes.requested_targeted = True
             else:
                 votes.wants_interaction_default = True
