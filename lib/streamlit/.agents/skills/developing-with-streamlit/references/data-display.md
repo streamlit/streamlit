@@ -15,6 +15,20 @@ st.area_chart(df, x="date", y="value")
 
 Native charts support additional parameters: `color` for series grouping, `stack` for bar/area stacking, `size` for scatter point sizing, `horizontal` for horizontal bars. See the [chart API reference](https://docs.streamlit.io/develop/api-reference/charts) for full options.
 
+## Maps: `st.map` for geographic points
+
+For scatter points on a tiled geographic map (cities, stores, events by latitude/longitude), use `st.map` — the high-level native API. Reach for hand-rolled `pydeck` / `st.pydeck_chart` only when you need a layer type `st.map` can't express (arcs, hexbins, 3D columns); for plain point scatter, `st.map` is the right tool.
+
+```python
+# df has columns: lat, lon, population
+st.map(df, latitude="lat", longitude="lon", size="population", color="#ff4b4b")
+```
+
+- `size=` accepts a **column name** (radius scales with that column's values — e.g. bigger dots for larger cities) or a single fixed value. Sizes are **in meters**, not pixels, so markers keep their real-world footprint as the map zooms. This is how you make marker size reflect a quantity.
+- `color=` accepts a column name or a fixed color.
+- `st.map` auto-detects only these column names: `lat`/`latitude` and `lon`/`longitude`, plus their uppercase forms (`LAT`/`LATITUDE`, `LON`/`LONGITUDE`). Any other spelling — including `lng` — needs an explicit `latitude=`/`longitude=`.
+
+
 ## Human-readable labels
 
 Use clear labels—not column names or abbreviations. Skip `x_label`/`y_label` if the column names are already readable.
