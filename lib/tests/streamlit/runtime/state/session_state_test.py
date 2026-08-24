@@ -984,8 +984,8 @@ def _state_with_changed_widgets(
 ) -> SessionState:
     """Build a SessionState where every listed widget changed, with the given callbacks.
 
-    ``disabled`` applies to the callback-less widgets only, so a test can keep the
-    callback that competes with them enabled.
+    ``disabled`` applies to the callback-less widgets only, so a test can
+    verify that disabled widgets are filtered from processing.
     """
     ss = SessionState()
     for wid, cb in widgets:
@@ -1043,13 +1043,12 @@ def _raise_targeted_rerun() -> None:
     )
 
 
-def test_changed_widget_without_callback_forces_app_wide_rerun() -> None:
-    """A widget that changed without a callback still wants the default rerun.
+def test_changed_widget_without_callback_does_not_escalate() -> None:
+    """A callback-less widget change does not override a targeted rerun.
 
-    This is how forms behave: ``check_callback_rules`` forbids ``on_change`` on form
-    fields, so a field can only ever be callback-less and the submit button holds the
-    only callback. If the field cast no vote, a targeted rerun from that callback would
-    preempt the body and the submitted values would never be rendered.
+    The developer's intent is expressed by the callback (``st.rerun("<key>")``).
+    A passive value change on a callback-less widget (e.g. a form field) should
+    not escalate to a full-app rerun — the value is already in session state.
     """
 
     ss = _state_with_changed_widgets(
@@ -1058,18 +1057,16 @@ def test_changed_widget_without_callback_forces_app_wide_rerun() -> None:
 
     requeue_calls = _call_callbacks_in_main_script(ss)
 
-    # The targeted re-queue plus the forced app-wide default, which supersedes it.
-    assert len(requeue_calls) == 2
-    forced = requeue_calls[-1]
-    assert not forced.fragment_id_queue
-    assert not forced.is_fragment_scoped_rerun
+    # Only the targeted re-queue; no full-app escalation from the callback-less field.
+    assert len(requeue_calls) == 1
+    assert requeue_calls[0].fragment_id_queue == ["other-frag"]
 
 
 def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
-    """The vote only breaks a tie; on its own it must not add a rerun.
+    """Callback-less widget changes alone do not queue any extra rerun.
 
-    The interaction's own run is already underway, so a changed callback-less widget with
-    nothing competing against it needs no extra request.
+    The interaction's own run is already underway, so a changed callback-less widget
+    needs no extra request — its values are already in session state.
     """
 
     ss = _state_with_changed_widgets([("field", None), ("other_field", None)])
@@ -1078,9 +1075,9 @@ def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
 
 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
-    """A disabled widget's reported change is forged or stale, so it gets no vote.
+    """A disabled widget's reported change is forged or stale, so it is ignored.
 
-    Without the disabled check it would force an app-wide rerun and override the target.
+    The disabled check prevents stale or forged widget values from being processed.
     """
 
     ss = _state_with_changed_widgets(

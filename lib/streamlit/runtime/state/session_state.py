@@ -622,9 +622,8 @@ class _CallbackRerunVotes:
     # scope="fragment" does this today; the fragment_id_queue check also covers the
     # keyed targets in specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md.
     requested_targeted: bool = False
-    # Something still expects the interaction's default rerun: a callback returned
-    # normally or called plain st.rerun(), or a widget changed without firing any
-    # callback (every field of a form, for instance).
+    # A callback explicitly expects the interaction's default rerun: it returned
+    # normally or called plain st.rerun().
     wants_interaction_default: bool = False
     # Requests raised by st.rerun(), in call order, held until the last callback returns.
     pending_reruns: list[RerunData] = field(default_factory=list)
@@ -911,9 +910,6 @@ class SessionState:
 
         # Changed widgets, split by which dispatch path (if any) will handle them.
         changed_widget_ids_for_single_callback: list[str] = []
-        # Neither `callback` nor `callbacks`: no dispatch runs for these, so nothing
-        # downstream records what they need. The vote below speaks for them.
-        changed_widget_ids_without_callback: list[str] = []
 
         for wid in self._new_widget_state:
             if not self._widget_changed(wid):
@@ -923,10 +919,10 @@ class SessionState:
                 continue
             if metadata.callback is not None:
                 changed_widget_ids_for_single_callback.append(wid)
-            elif metadata.callbacks is None:
-                changed_widget_ids_without_callback.append(wid)
-            # A widget with `callbacks` set lands in neither list: Path 2 below decides
-            # per event whether anything fires, which we cannot tell from here.
+            # Widgets with neither `callback` nor `callbacks` (e.g. form fields)
+            # are skipped: their values are already in session state and they do
+            # not influence rerun scope.  Widgets with `callbacks` are handled by
+            # Path 2 below.
 
         # Path 1: single callback.
         for wid in changed_widget_ids_for_single_callback:
@@ -952,11 +948,6 @@ class SessionState:
             # 2) JSON value change dispatch
             if metadata.value_type == "json_value":
                 self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
-
-        if changed_widget_ids_without_callback:
-            # A changed widget with no callback still needs the body to run so its
-            # new value is rendered, so it wants the interaction's default rerun.
-            votes.wants_interaction_default = True
 
         ctx = get_script_run_ctx()
 
@@ -1042,7 +1033,11 @@ class SessionState:
             votes.wants_interaction_default = True
 
     def _request_full_app_rerun(self) -> None:
-        """Queue a full-app rerun with no ``widget_states``, so callbacks are not re-fired."""
+        """Queue a full-app rerun that replays widget values without re-firing callbacks.
+
+        Called when a normally-returning callback's default vote coexists with
+        a targeted rerun in a main-script interaction.
+        """
         from streamlit.runtime.scriptrunner import RerunData
 
         ctx = get_script_run_ctx()
