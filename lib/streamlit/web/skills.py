@@ -315,8 +315,15 @@ def _is_claude_code_present() -> bool:
 
     Deliberately broader than the ``claude`` entry in ``_HARNESSES``, which keys
     on the home directory alone. That table answers "which harnesses exist" for
-    telemetry, where a stable definition matters more than catching a CLI
-    installed minutes ago; here a miss breaks the feature outright.
+    telemetry, where a stable definition matters more than catching a
+    just-installed CLI; here a miss breaks the feature outright.
+
+    The two only disagree in a narrow window, which is why they are left to
+    differ: ``claude --version`` creates nothing, but the first command that
+    touches config creates both ``~/.claude`` and ``~/.claude.json``, before
+    login. So the gap is "installed, never really run" - and nobody is wedged
+    there, because being wedged means having used Claude Code and found the
+    skill missing. Verified against Claude Code 2.1.235.
     """
     try:
         home = Path.home()
