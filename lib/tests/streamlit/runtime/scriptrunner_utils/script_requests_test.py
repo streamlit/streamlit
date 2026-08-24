@@ -284,6 +284,57 @@ class ScriptRequestsTest(unittest.TestCase):
         reqs.request_rerun(RerunData(query_string="new"))
         assert reqs._rerun_data.suppress_callbacks is False
 
+    def test_suppressed_old_triggers_not_preserved_during_coalescing(self):
+        """Old triggers whose callbacks already ran are dropped during coalescing.
+
+        When the old request had suppress_callbacks=True (an escalated replay),
+        its button triggers should not carry forward into the merged request —
+        preserving them would cause duplicate callback execution.
+        """
+        reqs = ScriptRequests()
+
+        old_states = WidgetStates()
+        _create_widget("btn_a", old_states).trigger_value = True
+        _create_widget("slider", old_states).int_value = 50
+        reqs.request_rerun(RerunData(widget_states=old_states, suppress_callbacks=True))
+
+        new_states = WidgetStates()
+        _create_widget("btn_b", new_states).trigger_value = True
+        _create_widget("slider", new_states).int_value = 75
+        reqs.request_rerun(
+            RerunData(widget_states=new_states, suppress_callbacks=False)
+        )
+
+        result = reqs._rerun_data.widget_states
+        assert _get_widget("btn_a", result) is None
+        assert _get_widget("btn_b", result).trigger_value is True
+        assert _get_widget("slider", result).int_value == 75
+        assert reqs._rerun_data.suppress_callbacks is False
+
+    def test_normal_old_triggers_preserved_during_coalescing(self):
+        """Old triggers from a non-suppressed request are still preserved.
+
+        Rapid clicks where neither request has suppress_callbacks should
+        continue preserving both triggers (the existing behavior).
+        """
+        reqs = ScriptRequests()
+
+        old_states = WidgetStates()
+        _create_widget("btn_a", old_states).trigger_value = True
+        reqs.request_rerun(
+            RerunData(widget_states=old_states, suppress_callbacks=False)
+        )
+
+        new_states = WidgetStates()
+        _create_widget("btn_b", new_states).trigger_value = True
+        reqs.request_rerun(
+            RerunData(widget_states=new_states, suppress_callbacks=False)
+        )
+
+        result = reqs._rerun_data.widget_states
+        assert _get_widget("btn_a", result).trigger_value is True
+        assert _get_widget("btn_b", result).trigger_value is True
+
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()

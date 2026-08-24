@@ -111,7 +111,10 @@ def _fragment_run_should_not_preempt_script(
 
 
 def _coalesce_widget_states(
-    old_states: WidgetStates | None, new_states: WidgetStates | None
+    old_states: WidgetStates | None,
+    new_states: WidgetStates | None,
+    *,
+    old_suppress_callbacks: bool = False,
 ) -> WidgetStates | None:
     """Coalesce an older WidgetStates into a newer one, and return a new
     WidgetStates containing the result.
@@ -120,7 +123,9 @@ def _coalesce_widget_states(
 
     However, any trigger_values (which are set by buttons) that are True in
     `old_states` will be set to True in the coalesced result, so that button
-    presses don't go missing.
+    presses don't go missing — unless the old request had
+    ``suppress_callbacks=True``, meaning those triggers' callbacks already ran
+    and preserving them would cause duplicate execution on the merged run.
     """
     if not old_states and not new_states:
         return None
@@ -133,33 +138,37 @@ def _coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
-    trigger_value_types = [
-        ("trigger_value", False),
-        ("chat_input_value", ChatInputValueProto(data=None)),
-    ]
-    for old_state in old_states.widgets:
-        for trigger_value_type, unset_value in trigger_value_types:
-            if (
-                old_state.WhichOneof("value") == trigger_value_type
-                and getattr(old_state, trigger_value_type) != unset_value
-            ):
-                new_trigger_val = states_by_id.get(old_state.id)
-                # It should nearly always be the case that new_trigger_val is None
-                # here as trigger values are deleted from the client's WidgetStateManager
-                # as soon as a rerun_script BackMsg is sent to the server. Since it's
-                # impossible to test that the client sends us state in the expected
-                # format in a unit test, we test for this behavior in
-                # e2e_playwright/test_fragment_queue_test.py
-                if not new_trigger_val or (
-                    # Ensure the corresponding new_state is also a trigger;
-                    # otherwise, a widget that was previously a button/chat_input but no
-                    # longer is could get a bad value.
-                    new_trigger_val.WhichOneof("value") == trigger_value_type
-                    # We only want to take the value of old_state if new_trigger_val is
-                    # unset as the old value may be stale if a newer one was entered.
-                    and getattr(new_trigger_val, trigger_value_type) == unset_value
+    if not old_suppress_callbacks:
+        trigger_value_types = [
+            ("trigger_value", False),
+            ("chat_input_value", ChatInputValueProto(data=None)),
+        ]
+        for old_state in old_states.widgets:
+            for trigger_value_type, unset_value in trigger_value_types:
+                if (
+                    old_state.WhichOneof("value") == trigger_value_type
+                    and getattr(old_state, trigger_value_type) != unset_value
                 ):
-                    states_by_id[old_state.id] = old_state
+                    new_trigger_val = states_by_id.get(old_state.id)
+                    # It should nearly always be the case that new_trigger_val
+                    # is None here as trigger values are deleted from the
+                    # client's WidgetStateManager as soon as a rerun_script
+                    # BackMsg is sent to the server. Since it's impossible to
+                    # test that the client sends us state in the expected
+                    # format in a unit test, we test for this behavior in
+                    # e2e_playwright/test_fragment_queue_test.py
+                    if not new_trigger_val or (
+                        # Ensure the corresponding new_state is also a trigger;
+                        # otherwise, a widget that was previously a
+                        # button/chat_input but no longer is could get a bad
+                        # value.
+                        new_trigger_val.WhichOneof("value") == trigger_value_type
+                        # We only want to take the value of old_state if
+                        # new_trigger_val is unset as the old value may be
+                        # stale if a newer one was entered.
+                        and getattr(new_trigger_val, trigger_value_type) == unset_value
+                    ):
+                        states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
@@ -223,7 +232,9 @@ class ScriptRequests:
                 # rerun request into the existing one.
 
                 coalesced_states = _coalesce_widget_states(
-                    self._rerun_data.widget_states, new_data.widget_states
+                    self._rerun_data.widget_states,
+                    new_data.widget_states,
+                    old_suppress_callbacks=self._rerun_data.suppress_callbacks,
                 )
 
                 # Fold a bare fragment_id into fragment_id_queue so the coalescing
