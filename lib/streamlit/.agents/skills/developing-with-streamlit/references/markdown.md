@@ -235,17 +235,16 @@ st.markdown(
 
 ## Keep text on one line with wrap
 
-`st.markdown`, `st.caption`, `st.badge`, `st.title`, `st.header`,
+`st.markdown`, `st.caption`, `st.title`, `st.header`,
 `st.subheader`, and `st.text` accept `wrap`. The default is `True` (text
 wraps onto additional lines). Pass `wrap=False` to keep the text on one
 ellipsized line. Truncation needs a bounded width. `st.markdown` defaults
 to `width="auto"` (content-sized in a horizontal container) and `st.text`
-/ `st.badge` default to `width="content"`, so pass `width="stretch"` or a
-pixel width with `wrap=False`.
+defaults to `width="content"`, so pass `width="stretch"` or a pixel width
+with `wrap=False`.
 
 When `wrap=False`, `st.markdown` and `st.caption` use the same inline-only
 subset as widget labels (no headings, lists, tables, or block quotes).
-`st.badge` chips already stay on one line regardless of `wrap`.
 
 ```python
 metric, updated, region = st.columns(3, vertical_alignment="center")

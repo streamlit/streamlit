@@ -502,7 +502,6 @@ class MarkdownMixin:
         ] = "blue",
         width: Width = "content",
         help: str | None = None,
-        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display a colored badge with an icon and label.
 
@@ -578,20 +577,6 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        wrap : bool
-            Whether the badge stays on one line. This can be one of the
-            following:
-
-            - ``True`` (default): The badge chip stays on one line (existing
-              chip styles). Overflow ellipsizes only when the badge is
-              narrower than its label.
-            - ``False``: The badge stays on one line. Overflow is truncated
-              with an ellipsis. When ``help`` is set, the help icon stays
-              visible next to the truncated chip. Truncation only appears
-              when the badge is narrower than its label. The default
-              ``width="content"`` sizes to the label, so pass
-              ``width="stretch"`` or a pixel width.
-
         Examples
         --------
         Create standalone badges with ``st.badge`` (with or without icons). If
@@ -612,7 +597,6 @@ class MarkdownMixin:
             height: 220px
 
         """
-        validate_wrap(wrap)
         icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
@@ -621,7 +605,6 @@ class MarkdownMixin:
         badge_proto = MarkdownProto()
         badge_proto.body = f":{color}-badge[{icon_str}{escaped_label}]"
         badge_proto.element_type = MarkdownProto.Type.NATIVE
-        badge_proto.wrap = wrap
 
         if help is not None:
             badge_proto.help = help

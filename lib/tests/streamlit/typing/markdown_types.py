@@ -103,12 +103,13 @@ if TYPE_CHECKING:
     markdown("Text", wrap="yes")  # type: ignore[arg-type]
 
     # =====================================================================
-    # st.caption and st.badge wrap
+    # st.caption wrap
     # =====================================================================
 
     assert_type(caption("Note", wrap=True), DeltaGenerator)
     assert_type(caption("Note", wrap=False), DeltaGenerator)
-    assert_type(badge("New", wrap=True), DeltaGenerator)
-    assert_type(badge("New", wrap=False), DeltaGenerator)
     caption("Note", wrap="yes")  # type: ignore[arg-type]
-    badge("New", wrap="yes")  # type: ignore[arg-type]
+
+    # st.badge does not take wrap
+    assert_type(badge("New"), DeltaGenerator)
+    badge("New", wrap=False)  # type: ignore[call-arg]

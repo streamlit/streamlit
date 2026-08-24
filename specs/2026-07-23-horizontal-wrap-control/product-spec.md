@@ -30,7 +30,7 @@ containers and text commands keep their current defaults. The initial API covers
 `st.container`, `st.columns`, `st.multiselect`, `st.pills`, `st.segmented_control`,
 `st.button`, `st.download_button`, `st.link_button`, `st.form_submit_button`,
 `st.popover`, `st.menu_button`, `st.checkbox`, `st.toggle`, `st.markdown`, `st.title`,
-`st.header`, `st.subheader`, `st.badge`, `st.caption`, and `st.text`.
+`st.header`, `st.subheader`, `st.caption`, and `st.text`.
 
 ## Problem
 
@@ -118,7 +118,7 @@ standard buttons.
 - Keep overflow local to the element so an app does not gain a page-level horizontal
   scrollbar.
 - Let app authors keep buttons at their standard height without hiding the entire action.
-- Let app authors keep titles, captions, badges, and other text on one ellipsized line
+- Let app authors keep titles, captions, and other text on one ellipsized line
   in compact layouts.
 - Make the common compact-row case work without extra arguments via an adaptive default,
   while limiting the visual default change to horizontal containers and direct column
@@ -211,7 +211,7 @@ st.markdown(
 )
 
 # Add wrap: bool = True to:
-# st.title, st.header, st.subheader, st.badge, st.caption, and st.text.
+# st.title, st.header, st.subheader, st.caption, and st.text.
 ```
 
 | Value | Collections and multi-item controls | Single-label controls | Text |
@@ -257,7 +257,7 @@ only with an explicit `wrap=False`. Resolving a container's own default from whe
 happens to be nested in another horizontal container would be surprising and could
 silently change existing layouts.
 
-Text commands (`st.markdown`, `st.title`, `st.header`, `st.subheader`, `st.badge`,
+Text commands (`st.markdown`, `st.title`, `st.header`, `st.subheader`,
 `st.caption`, `st.text`) likewise use a plain `wrap: bool = True`. Truncating
 descriptive copy by default would hide content, and an auto default that ellipsizes
 titles inside columns would change existing apps. Opt into one-line text only with
@@ -284,7 +284,6 @@ in one row when `wrap=False`.
 | `st.toggle` | Label beside the switch | Ellipsize the label; keep the switch visible |
 | `st.markdown`, `st.caption` | Rendered markdown body | Ellipsize on one line; restrict markdown to the inline label subset |
 | `st.title`, `st.header`, `st.subheader` | Heading text | Ellipsize on one line; keep the anchor and help icon visible |
-| `st.badge` | Badge label | Ellipsize the label; keep the badge chrome visible |
 | `st.text` | Plain text body | Ellipsize on one line |
 
 Except for the explicitly listed single-label controls and text commands, the parameter
@@ -322,7 +321,7 @@ When `wrap=False` on a text command:
 
 - The element stays on one line at a deterministic height.
 - Overflow is truncated with an ellipsis using the existing markdown truncate styles.
-- Markdown commands (`st.markdown`, `st.caption`, `st.badge`) render in label mode so
+- Markdown commands (`st.markdown`, `st.caption`) render in label mode so
   only inline formatting is shown (no headings, lists, tables, block quotes, or
   horizontal rules). Font size and heading chrome are unchanged.
 - Heading commands (`st.title`, `st.header`, `st.subheader`) ellipsize the heading
@@ -359,7 +358,7 @@ this tooltip is a visual aid for pointer users and, like `help`, does not apply 
 It covers the button-like controls (`st.button`, `st.download_button`, `st.link_button`,
 `st.form_submit_button`, `st.popover`, `st.menu_button`), which skip `title` when `help`
 is set, and also applies to `st.checkbox`, `st.toggle`, and the text commands
-(`st.markdown`, `st.title`, `st.header`, `st.subheader`, `st.badge`, `st.caption`,
+(`st.markdown`, `st.title`, `st.header`, `st.subheader`, `st.caption`,
 `st.text`), which keep `title` alongside `help`.
 
 The native `title` is used instead of Streamlit's styled tooltip because it removes the
@@ -567,7 +566,7 @@ without hiding what state is being changed.
 
 #### Text commands
 
-`wrap=False` keeps a title, caption, badge, markdown line, or plain text on one
+`wrap=False` keeps a title, caption, markdown line, or plain text on one
 ellipsized row in compact dashboards:
 
 ```python
@@ -575,7 +574,7 @@ import streamlit as st
 
 with st.container(horizontal=True, wrap=False):
     st.markdown("Quarterly revenue vs. plan", wrap=False, width="stretch")
-    st.badge("Live", wrap=False)
+    st.badge("Live")
 ```
 
 - `wrap=True` (the default) keeps today's wrapping. Text commands do not use the
@@ -583,7 +582,7 @@ with st.container(horizontal=True, wrap=False):
 - Overflow is truncated with an ellipsis. Hovering reveals the full plain-text
   content in a native tooltip, including when `help` is set (see "Tooltip for
   the full label").
-- Markdown commands (`st.markdown`, `st.caption`, `st.badge`) use the existing
+- Markdown commands (`st.markdown`, `st.caption`) use the existing
   markdown truncate styles and label mode so only inline formatting is rendered
   (bold, italics, links, code, emoji, colored text, badges). Block constructs such
   as headings, lists, tables, and code blocks are unwrapped or omitted. Font size
@@ -595,10 +594,7 @@ with st.container(horizontal=True, wrap=False):
 - `st.text` ellipsizes as plain text. Newlines in the body are not shown as extra
   lines.
 - Help icons remain visible and are not clipped by the ellipsis.
-- `st.badge` chips already stay on one line via existing CSS. `wrap=False` still
-  ellipsizes in a bounded width. When `help` is set, the help icon is a sibling
-  of the chip so the chip can shrink and the icon stays visible. The default
-  (`wrap=True`) keeps today's hover-on-badge tooltip.
+- `st.badge` does not take `wrap`; chips already stay on one line via existing CSS.
 - `st.latex` and `st.divider` are unchanged and do not take `wrap`.
 
 This addresses #12583.
@@ -699,7 +695,7 @@ wrapping for every descendant of an `st.columns` column.
 Widget labels displayed above inputs such as `st.selectbox` can also change height at
 intermediate widths, as the audit shows. Checkbox and toggle labels are covered by this
 proposal, as are standalone text commands (`st.markdown`, `st.title`, `st.header`,
-`st.subheader`, `st.badge`, `st.caption`, `st.text`). Other widget labels need a
+`st.subheader`, `st.caption`, `st.text`). Other widget labels need a
 separate design because truncating descriptive input labels has different usability
 trade-offs from truncating a compact control label or an opted-in one-line text
 element.

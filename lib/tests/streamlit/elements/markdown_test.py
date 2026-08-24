@@ -424,21 +424,6 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
         assert el.markdown.body == ":blue-badge[Badge without help]"
         assert not getattr(el.markdown, "help", None)
 
-    def test_st_badge_wrap(self):
-        """Test that wrap is True by default and can be set to False."""
-        st.badge("Badge")
-        el = self.get_delta_from_queue().new_element
-        assert el.markdown.wrap is True
-
-        st.badge("Badge", wrap=False)
-        el = self.get_delta_from_queue().new_element
-        assert el.markdown.wrap is False
-
-    def test_st_badge_invalid_wrap(self):
-        """Test that a non-bool wrap value raises StreamlitValueError."""
-        with pytest.raises(StreamlitValueError):
-            st.badge("Badge", wrap="yes")  # type: ignore[arg-type]
-
 
 class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):
     """Test st.markdown text_alignment parameter."""

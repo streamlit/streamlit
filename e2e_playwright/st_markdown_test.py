@@ -805,11 +805,9 @@ def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
         "stMarkdown"
     )
     wraps = get_element_by_key(app, "wrap_true_markdown").get_by_test_id("stMarkdown")
-    badge = get_element_by_key(app, "wrap_false_badge").get_by_test_id("stMarkdown")
 
     expect(no_wrap).to_have_attribute("title", WRAP_TEXT)
     expect(wraps).not_to_have_attribute("title", WRAP_TEXT)
-    expect(badge).to_have_attribute("title", WRAP_TEXT)
     expect_label_truncated(no_wrap)
 
     horizontal = get_element_by_key(
@@ -825,17 +823,16 @@ def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
     assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
 
 
-def test_wrap_false_badge_with_help_stays_in_container(app: Page):
-    """wrap=False + help ellipsizes the badge chip and keeps the help icon
-    visible inside the parent instead of overflowing.
+def test_badge_with_help_stays_in_container(app: Page):
+    """A long badge with help ellipsizes the chip and stays inside the parent
+    instead of overflowing.
     """
-    container = get_element_by_key(app, "wrap_false_badge_help")
+    container = get_element_by_key(app, "badge_help")
     badge = container.get_by_test_id("stMarkdown")
 
-    expect(badge).to_have_attribute("title", WRAP_TEXT)
     expect_help_tooltip(app, badge, "wrap help text")
 
-    chip = badge.locator(".stMarkdownBadge")
+    chip = badge.locator(".stMarkdownBadge").first
     wait_until(
         app,
         lambda: chip.evaluate("el => el.scrollWidth > el.clientWidth"),
