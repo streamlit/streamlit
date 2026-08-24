@@ -276,12 +276,9 @@ export const StyledStreamlitMarkdown =
           },
 
           "& p": {
-            // overflow other than visible makes inline compute as
-            // inline-block; cap width so a single paragraph still
-            // ellipsizes inside a narrower parent.
-            maxWidth: "100%",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
+            // Ellipsis stays on the markdown container. overflow/maxWidth
+            // on an inlined <p> computes as inline-block and can clip
+            // content-width wrap=auto labels (menu/popover in columns).
             lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
           },
 
