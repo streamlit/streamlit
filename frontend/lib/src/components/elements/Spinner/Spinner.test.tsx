@@ -146,6 +146,27 @@ describe("Spinner component", () => {
     expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
   })
 
+  it("does not rewrite the live region as the timer ticks", async () => {
+    // The component re-renders every 100ms to update the elapsed time. If that
+    // rewrote the live region, a screen reader would re-announce the label on
+    // every tick, so assert the region's contents stay untouched.
+    render(<Spinner {...getProps({}, { showTime: true })} />)
+
+    const status = screen.getByRole("status")
+    const before = status.innerHTML
+
+    act(() => {
+      vi.advanceTimersByTime(2000)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/\([1-3]\.[0-9] seconds\)/)).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole("status")).toBe(status)
+    expect(status.innerHTML).toBe(before)
+  })
+
   it("hides the decorative spinner icon from assistive technology", () => {
     render(<Spinner {...getProps()} />)
 

@@ -67,11 +67,6 @@ export const StyledSpinnerIcon = styled("span", {
     // progress, so it is slowed rather than stopped when the user asks for
     // reduced motion. Stopping it parks the accent segment at its rest angle,
     // which reads as a hung app.
-    //
-    // 1800ms matches the rotation rate Fluent UI's spinner slows to (200°/s).
-    // Bootstrap's equivalent is 240°/s. Both libraries hold duration constant
-    // across every spinner size, so the rate — not a ratio scaled off our own
-    // 1000ms — is the comparable quantity.
     "@media (prefers-reduced-motion: reduce)": {
       animationDuration: "1800ms",
     },
