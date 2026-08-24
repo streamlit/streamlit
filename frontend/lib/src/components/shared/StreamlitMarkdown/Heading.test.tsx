@@ -76,7 +76,7 @@ describe("Heading", () => {
     expect(await screen.findByTitle("hello world")).toBeVisible()
   })
 
-  it("does not set a native title when wrap is false and help is set", () => {
+  it("sets a native title when wrap is false, including when help is set", async () => {
     const props = getHeadingProps({
       body: "hello world",
       wrap: false,
@@ -85,7 +85,7 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
-    expect(screen.queryByTitle("hello world")).not.toBeInTheDocument()
+    expect(await screen.findByTitle("hello world")).toBeVisible()
   })
 
   it.each([
@@ -114,7 +114,7 @@ describe("Heading", () => {
     ["dialog", IsDialogContext],
   ])(
     "keeps the help icon visible for truncated %s headings",
-    (_name, Context) => {
+    async (_name, Context) => {
       const props = getHeadingProps({
         body: "hello world",
         wrap: false,
@@ -130,7 +130,7 @@ describe("Heading", () => {
         screen.getByTestId("stHeadingWithActionElements")
       ).toBeInTheDocument()
       expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
-      expect(screen.queryByTitle("hello world")).not.toBeInTheDocument()
+      expect(await screen.findByTitle("hello world")).toBeVisible()
       expect(screen.getByRole("heading")).toHaveStyle({
         overflow: "hidden",
         display: "flex",

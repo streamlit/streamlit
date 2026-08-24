@@ -67,6 +67,14 @@ def test_singleline_text_with_escape_char(app: Page):
     expect(singleline_text).to_contain_text("\\n")
 
 
+def test_preserves_whitespace_sequences(app: Page):
+    """st.text keeps extra spaces and tabs instead of collapsing them like HTML."""
+    text_element = app.get_by_test_id("stText").nth(5)
+    expect(text_element.locator("span").first).to_have_css(
+        "white-space-collapse", "preserve"
+    )
+
+
 def test_no_scrollbar_for_long_text(app: Page):
     """Test that no scrollbar is shown for long text."""
     text_element = app.get_by_test_id("stText").nth(5)

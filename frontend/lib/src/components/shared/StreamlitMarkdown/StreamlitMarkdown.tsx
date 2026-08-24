@@ -403,7 +403,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
-  const addTitleTooltip = truncate && !help
+  const addTitleTooltip = truncate
   // Pass "" so the hook reads the rendered heading text from the DOM
   // (children are React nodes, not a string).
   const { titleRef, labelTextRef } = useLabelTitleTooltip(addTitleTooltip, "")

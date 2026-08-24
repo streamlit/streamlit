@@ -346,9 +346,10 @@ without changing the app. The rules:
   clipping without measurement, the tooltip is present for every `wrap=False` control, not
   only when the label is truncated. A short label that fits therefore also shows a tooltip
   with its own text on hover. This is an accepted trade-off for the simpler implementation.
-- **Only when `help` is unset.** If `help` is passed, its tooltip takes precedence and no
-  `title` is added, so the two never compete. `help` stays the way to add context beyond
-  the label.
+- **When `help` is set.** Button-like controls skip the native `title` so `help` takes
+  precedence. Checkbox, toggle, and text commands keep the native `title` when
+  `wrap=False` even if `help` is set: the help icon is a sibling of the truncated text,
+  so hovering the text shows the full copy and hovering the icon shows `help`.
 - **Plain text.** For Markdown labels the tooltip shows the plain-text label (the same
   text used as the accessible name); the native tooltip does not render inline Markdown or
   icons.
@@ -356,9 +357,10 @@ without changing the app. The rules:
 Screen-reader users already receive the full label as the control's accessible name, so
 this tooltip is a visual aid for pointer users and, like `help`, does not apply on touch.
 It covers the button-like controls (`st.button`, `st.download_button`, `st.link_button`,
-`st.form_submit_button`, `st.popover`, `st.menu_button`) and applies the same rule to
-`st.checkbox`, `st.toggle`, and the text commands (`st.markdown`, `st.title`,
-`st.header`, `st.subheader`, `st.badge`, `st.caption`, `st.text`).
+`st.form_submit_button`, `st.popover`, `st.menu_button`), which skip `title` when `help`
+is set, and also applies to `st.checkbox`, `st.toggle`, and the text commands
+(`st.markdown`, `st.title`, `st.header`, `st.subheader`, `st.badge`, `st.caption`,
+`st.text`), which keep `title` alongside `help`.
 
 The native `title` is used instead of Streamlit's styled tooltip because it removes the
 frontend truncation-measurement machinery entirely. The visible trade-offs are that the
@@ -548,8 +550,8 @@ with st.container(horizontal=True, wrap=False):
 
 - The checkbox indicator or toggle switch retains its size and never shrinks.
 - The label consumes the remaining width and ellipsizes when necessary.
-- When no `help` is set, hovering the control reveals the full label in a native tooltip
-  (see "Tooltip for the full label").
+- Hovering the label reveals the full label in a native tooltip, including when
+  `help` is set (see "Tooltip for the full label").
 - The optional help icon remains visible.
 - `width="content"` and `width="stretch"` continue to determine the control's available
   width. Ellipsis appears only when that width constrains the label.
@@ -578,8 +580,9 @@ with st.container(horizontal=True, wrap=False):
 
 - `wrap=True` (the default) keeps today's wrapping. Text commands do not use the
   adaptive auto resolution used by controls.
-- Overflow is truncated with an ellipsis. When no `help` is set, hovering reveals
-  the full plain-text content in a native tooltip (see "Tooltip for the full label").
+- Overflow is truncated with an ellipsis. Hovering reveals the full plain-text
+  content in a native tooltip, including when `help` is set (see "Tooltip for
+  the full label").
 - Markdown commands (`st.markdown`, `st.caption`, `st.badge`) use the existing
   markdown truncate styles and label mode so only inline formatting is rendered
   (bold, italics, links, code, emoji, colored text, badges). Block constructs such

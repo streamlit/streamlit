@@ -338,7 +338,7 @@ describe("Markdown wrap", () => {
     expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
   })
 
-  it("does not set a native title when wrap is false and help is set", () => {
+  it("sets a native title when wrap is false, including when help is set", async () => {
     const props = getProps({
       body: "Overflowing markdown",
       wrap: false,
@@ -347,10 +347,10 @@ describe("Markdown wrap", () => {
     render(<Markdown {...props} />)
 
     expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
-    expect(screen.queryByTitle("Overflowing markdown")).not.toBeInTheDocument()
+    expect(await screen.findByTitle("Overflowing markdown")).toBeVisible()
   })
 
-  it("keeps a sibling help icon for a truncated single badge", () => {
+  it("keeps a sibling help icon for a truncated single badge", async () => {
     const props = getProps({
       body: ":blue-badge[Overflowing badge]",
       wrap: false,
@@ -361,7 +361,7 @@ describe("Markdown wrap", () => {
 
     expect(screen.getByText("Overflowing badge")).toBeVisible()
     expect(screen.getByRole("button", { name: "Help" })).toBeVisible()
-    expect(screen.queryByTitle("Overflowing badge")).not.toBeInTheDocument()
+    expect(await screen.findByTitle("Overflowing badge")).toBeVisible()
   })
 })
 

@@ -59,7 +59,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     elementType === MarkdownProto.Type.NATIVE &&
     SINGLE_BADGE_REGEX.test(body.trim())
 
-  const addTitleTooltip = truncate && !help
+  const addTitleTooltip = truncate
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
     addTitleTooltip,
     body

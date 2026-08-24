@@ -832,7 +832,7 @@ def test_wrap_false_badge_with_help_stays_in_container(app: Page):
     container = get_element_by_key(app, "wrap_false_badge_help")
     badge = container.get_by_test_id("stMarkdown")
 
-    expect(badge).not_to_have_attribute("title", WRAP_TEXT)
+    expect(badge).to_have_attribute("title", WRAP_TEXT)
     expect_help_tooltip(app, badge, "wrap help text")
 
     chip = badge.locator(".stMarkdownBadge")

@@ -60,18 +60,26 @@ describe("TextElement element", () => {
     expect(screen.queryByTitle("some plain text")).not.toBeInTheDocument()
   })
 
+  it("preserves whitespace sequences by default", () => {
+    render(<TextElement {...getProps({ body: "Lorem    ipsum\tdolor" })} />)
+    const text = screen.getByTestId("stText").querySelector("span")
+    expect(text?.textContent).toBe("Lorem    ipsum\tdolor")
+    expect(text).toHaveStyle({ "white-space-collapse": "preserve" })
+  })
+
   it("truncates and exposes the full text via a native title when wrap is false", async () => {
     render(<TextElement {...getProps({ wrap: false })} />)
     expect(screen.getByText("some plain text")).toHaveStyle({
       "text-overflow": "ellipsis",
       "white-space": "nowrap",
+      "white-space-collapse": "preserve",
     })
     expect(await screen.findByTitle("some plain text")).toBeVisible()
   })
 
-  it("does not set a native title when wrap is false and help is set", () => {
+  it("sets a native title when wrap is false, including when help is set", async () => {
     render(<TextElement {...getProps({ wrap: false, help: "help text" })} />)
     expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
-    expect(screen.queryByTitle("some plain text")).not.toBeInTheDocument()
+    expect(await screen.findByTitle("some plain text")).toBeVisible()
   })
 })

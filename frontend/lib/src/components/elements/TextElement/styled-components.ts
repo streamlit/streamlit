@@ -25,12 +25,14 @@ export const StyledText = styled.span<StyledTextProps>(
   ({ theme, $truncate }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     color: theme.colors.bodyText,
-    whiteSpaceCollapse: "preserve",
     verticalAlign: "middle",
     width: "100%",
+    // `white-space` is a shorthand that resets collapse; set preserve after
+    // it so extra spaces and tabs stay visible (GH#10062).
     ...($truncate
       ? {
           whiteSpace: "nowrap",
+          whiteSpaceCollapse: "preserve",
           wordBreak: "normal",
           display: "flex",
           alignItems: "center",
@@ -39,22 +41,20 @@ export const StyledText = styled.span<StyledTextProps>(
         }
       : {
           whiteSpace: "pre-line",
+          whiteSpaceCollapse: "preserve",
           wordBreak: "break-word",
           display: "inline-block",
         }),
   })
 )
 
-export const StyledTextBody = styled.span<{ $truncate?: boolean }>(
-  ({ $truncate }) => ({
-    ...($truncate && {
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      minWidth: 0,
-    }),
-  })
-)
+export const StyledTextBody = styled.span({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  whiteSpaceCollapse: "preserve",
+  minWidth: 0,
+})
 
 // Inline help icon wrapper to keep it flowing with the text
 export const StyledInlineHelpIcon = styled.span(({ theme }) => ({

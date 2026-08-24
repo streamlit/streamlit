@@ -37,7 +37,7 @@ export interface TextProps {
  */
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
   const truncate = element.wrap === false
-  const addTitleTooltip = truncate && !element.help
+  const addTitleTooltip = truncate
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
     addTitleTooltip,
     element.body
@@ -50,9 +50,11 @@ function TextElement({ element }: Readonly<TextProps>): ReactElement {
       ref={titleRef}
     >
       <StyledText $truncate={truncate}>
-        <StyledTextBody ref={labelTextRef} $truncate={truncate}>
-          {element.body}
-        </StyledTextBody>
+        {truncate ? (
+          <StyledTextBody ref={labelTextRef}>{element.body}</StyledTextBody>
+        ) : (
+          element.body
+        )}
         {element.help && (
           <StyledInlineHelpIcon>
             <InlineTooltipIcon content={element.help} />

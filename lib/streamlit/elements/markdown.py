@@ -229,17 +229,11 @@ class MarkdownMixin:
             - ``True`` (default): If the text is too wide for the element, it
               wraps onto additional lines.
             - ``False``: The text stays on one line. Overflow is truncated
-              with an ellipsis.
-
-            When ``wrap`` is ``False``, Markdown is limited to inline
-            formatting (the same subset used in widget labels). When no
-            ``help`` is set, hovering reveals the full text.
-
-            .. note::
-                Truncation only appears when the element is narrower than
-                its text. In a horizontal container, the default
-                ``width="auto"`` sizes to the content, so pass
-                ``width="stretch"`` or a pixel width with ``wrap=False``.
+              with an ellipsis. Markdown is limited to inline formatting
+              (the same subset used in widget labels). Truncation only
+              appears when the element is narrower than its text. In a
+              horizontal container, the default ``width="auto"`` sizes to
+              the content, so pass ``width="stretch"`` or a pixel width.
 
         Examples
         --------
@@ -358,11 +352,8 @@ class MarkdownMixin:
             - ``True`` (default): If the caption is too wide for the element,
               it wraps onto additional lines.
             - ``False``: The caption stays on one line. Overflow is truncated
-              with an ellipsis.
-
-            When ``wrap`` is ``False``, Markdown is limited to inline
-            formatting (the same subset used in widget labels). When no
-            ``help`` is set, hovering reveals the full text.
+              with an ellipsis. Markdown is limited to inline formatting
+              (the same subset used in widget labels).
 
         Examples
         --------
@@ -596,15 +587,10 @@ class MarkdownMixin:
               narrower than its label.
             - ``False``: The badge stays on one line. Overflow is truncated
               with an ellipsis. When ``help`` is set, the help icon stays
-              visible next to the truncated chip.
-
-            When ``wrap`` is ``False`` and no ``help`` is set, hovering
-            reveals the full label.
-
-            .. note::
-                Truncation only appears when the badge is narrower than its
-                label. The default ``width="content"`` sizes to the label, so
-                pass ``width="stretch"`` or a pixel width with ``wrap=False``.
+              visible next to the truncated chip. Truncation only appears
+              when the badge is narrower than its label. The default
+              ``width="content"`` sizes to the label, so pass
+              ``width="stretch"`` or a pixel width.
 
         Examples
         --------

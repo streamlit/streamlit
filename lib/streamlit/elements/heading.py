@@ -125,9 +125,6 @@ class HeadingMixin:
               with an ellipsis. Additional body lines after the first newline
               are not shown. Anchor and help icons remain visible.
 
-            When ``wrap`` is ``False`` and no ``help`` is set, hovering
-            reveals the full header.
-
         Examples
         --------
         >>> import streamlit as st
@@ -249,9 +246,6 @@ class HeadingMixin:
               with an ellipsis. Additional body lines after the first newline
               are not shown. Anchor and help icons remain visible.
 
-            When ``wrap`` is ``False`` and no ``help`` is set, hovering
-            reveals the full subheader.
-
         Examples
         --------
         >>> import streamlit as st
@@ -366,9 +360,6 @@ class HeadingMixin:
             - ``False``: The title stays on one line. Overflow is truncated
               with an ellipsis. Additional body lines after the first newline
               are not shown. Anchor and help icons remain visible.
-
-            When ``wrap`` is ``False`` and no ``help`` is set, hovering
-            reveals the full title.
 
         Examples
         --------
