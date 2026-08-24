@@ -701,6 +701,10 @@ class ScriptRunner:
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states
                         )
+                        # Callbacks above may have queued an st.rerun(). Honor it before
+                        # on_script_start() below: leaving has_script_started False is
+                        # what tells on_script_finished to keep this run's widget values.
+                        self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
 
@@ -897,19 +901,25 @@ class ScriptRunner:
         # Tell session_state to update itself in response
         if not premature_stop:
             self._session_state.on_script_finished(
-                ctx.shared.widget_ids_this_run.snapshot()
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=ctx.has_script_started,
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Remove orphaned files now that the script has run and files in use
-        # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # Both cleanups below assume the body re-registered whatever is still in use, so
+        # a run that never reached its body would make everything look orphaned. The
+        # session refs were already cleared before this run, so deleting now would take
+        # files the app still displays with it. The next run that renders collects them.
+        if ctx.has_script_started:
+            # Remove orphaned files now that the script has run and files in use
+            # are marked as active.
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
-        # Prune lazy dataframe sources that were not re-registered this run.
-        runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
+            # Prune lazy dataframe sources that were not re-registered this run.
+            runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and
