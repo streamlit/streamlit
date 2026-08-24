@@ -44,15 +44,13 @@ message FilterBar {
   string form_id = 2;
   optional string label = 3;
   optional string help = 4;
-  optional string placeholder = 5;
-  bool expanded = 6;
-  bool disabled = 7;
-  repeated FilterColumnMeta columns = 8;
-  bool set_value = 9;
-  string value = 10;
-  string default = 11;
-  LabelVisibility label_visibility = 12;
-  optional uint32 width = 13;
+  bool disabled = 5;
+  repeated FilterColumnMeta columns = 6;
+  bool set_value = 7;
+  string value = 8;
+  string default = 9;
+  LabelVisibility label_visibility = 10;
+  optional uint32 width = 11;
 }
 
 message FilterColumnMeta {
@@ -63,10 +61,12 @@ message FilterColumnMeta {
   optional double min_value = 5;
   optional double max_value = 6;
   bool server_search = 7;
-  optional string custom_label = 8;
-  repeated string operators = 9;
-  bool disabled = 10;
-  repeated string display_options = 11;  // format_func-generated labels
+  optional uint32 total_options = 8;     // full distinct count when server_search
+  optional string custom_label = 9;
+  optional string help = 10;             // from ColumnConfig.help
+  repeated string operators = 11;
+  bool disabled = 12;
+  repeated string display_options = 13;  // format_func-generated labels
 }
 
 enum FilterType {
@@ -81,13 +81,20 @@ enum FilterType {
 }
 ```
 
-Key differences from the original design:
-- Per-column `disabled` lives on `FilterColumnMeta` (field 10) rather than a separate
+Notes on the shape:
+- Per-column `disabled` lives on `FilterColumnMeta` rather than a separate
   `repeated string disabled_columns` on the parent message
 - `set_value` / `value` / `default` pattern matches standard widget proto (like
   `st.text_input`) rather than a custom `default_state` field
 - `bind` and `persist_state` use the framework's existing infrastructure (not in proto —
   handled at `register_widget` level)
+- No `placeholder` or `expanded` fields — neither parameter exists (product spec, decision 5
+  and Out of Scope)
+- `total_options` carries the full distinct count so the frontend can render
+  "Showing 100 of 3,412 — type to search"; `help` carries `ColumnConfig.help` for per-pill
+  tooltips
+- Renumbering fields is safe here: `FilterBar.proto` has not shipped, so no wire
+  compatibility is owed
 
 Registration in `Element.proto` (next available field in the `type` oneof):
 
@@ -122,14 +129,6 @@ class FilterBarState(ReadOnlyAttributeDictionary):
         """Column names with active filter configurations."""
         return [k for k in self if not k.startswith("_")]
 
-    @property
-    def logic(self) -> str:
-        """Current filter logic mode: 'and' or 'or'."""
-        groups = self.get("_groups")
-        if isinstance(groups, list) and len(groups) > 0:
-            return groups[0].get("logic", "and")
-        return self.get("_logic", "and")
-
 class FilterBarSerde:
     def __init__(self, default: FilterState):
         self._default = default
@@ -147,13 +146,13 @@ class FilterBarSerde:
 ```
 
 `FilterBarState` is exported from `streamlit` as `st.FilterBarState` for type annotations.
-`FilterConfig` is also exported as `st.FilterConfig`.
+`FilterConfig` is exported as `st.column_config.FilterConfig` rather than at the top level
+(see [Column Config Derivation](#column-config-derivation)).
 
-**State shape** (groups-ready model):
+**State shape:**
 
 ```json
 {
-  "_groups": [{"logic": "and", "columns": ["status", "price"]}],
   "status": {"type": "multiselect", "operator": "is", "values": ["active"]},
   "price": {"type": "range", "operator": "between", "min": 10, "max": 500}
 }
@@ -161,9 +160,16 @@ class FilterBarSerde:
 
 | Key pattern | Purpose |
 |-------------|---------|
-| `_groups` | AND/OR logic configuration (single group in V1, extensible to multi-group) |
-| `_*` (any `_`-prefix) | Reserved metadata, preserved through state reconciliation |
 | Column names | Per-filter state: `{type, operator, ...type-specific values}` |
+| `_*` (any `_`-prefix) | Reserved for future metadata, preserved through state reconciliation |
+
+V1 writes no `_`-prefixed keys. The prefix is reserved so later additions need no migration —
+cross-field OR would add `_groups: [{logic, columns}]`, and a reader that finds no recorded
+logic treats it as AND. Keeping V1 state minimal also helps `bind="query-params"`, which falls
+back to session-only past 1,500 characters.
+
+There is no `.logic` property in V1, since it could only ever return `"and"`; it arrives with
+cross-field OR.
 
 Widget registration:
 
@@ -219,7 +225,7 @@ returns `dict[str, ColumnDataKind]`. A static mapping converts to filter types:
 
 ```python
 _FILTER_TYPE_MAPPING: Final[dict[ColumnDataKind, FilterType]] = {
-    ColumnDataKind.STRING: FilterType.MULTISELECT,  # or TEXT if high cardinality
+    ColumnDataKind.STRING: FilterType.MULTISELECT,  # TEXT only if the column reads as prose
     ColumnDataKind.BOOLEAN: FilterType.TOGGLE,
     ColumnDataKind.INTEGER: FilterType.RANGE,
     ColumnDataKind.FLOAT: FilterType.RANGE,
@@ -242,27 +248,57 @@ every rerun.
 mapping and filter metadata from that conversion (following `data_editor.py` line 1222).
 The Arrow schema is the canonical source for type classification.
 
+#### String Columns: Categorical or Prose
+
+A string column becomes a value picker unless it reads as prose. Cardinality alone cannot
+distinguish the two — 10,000 customer names are a set of values, 10,000 comments are not — so
+two sampled signals decide it:
+
+```python
+_PROSE_UNIQUENESS_RATIO: Final = 0.9  # nearly every row distinct
+_PROSE_MEAN_LENGTH: Final = 60        # characters
+
+def _reads_as_prose(col: pd.Series, distinct: int, sample: int = 1_000) -> bool:
+    values = col.dropna()
+    if values.empty:
+        return False
+    if values.head(sample).str.len().mean() > _PROSE_MEAN_LENGTH:
+        return True
+    return distinct / len(values) > _PROSE_UNIQUENESS_RATIO
+```
+
+Mean length is computed on a bounded sample; `distinct` is the `nunique()` result already
+needed for option loading, so this adds no extra pass over the data. Both inferences are
+overridable — `TextColumn` forces prose, `SelectboxColumn` forces a picker — which is what
+makes a heuristic acceptable here: a misfire costs one line of config, not a dead end.
+
 #### Option Loading Strategy
 
-V1 computes options eagerly for all eligible columns on each rerun. The implementation
-uses a cardinality threshold (`_TEXT_FILTER_CARDINALITY_THRESHOLD = 50`) to decide
-between multiselect and text filter:
+One constant governs option delivery:
 
-1. **Multiselect** (≤50 unique values): all unique values sent in `FilterColumnMeta.options`
-2. **Text filter** (>50 unique values): no options sent; uses free-text input with operators
-3. **Server search** (>1000 values with multiselect forced via `FilterConfig`):
-   `FilterColumnMeta.server_search = true`, first 1000 options sent
+```python
+_OPTION_RENDER_CAP: Final = 100  # provisional — see V1 Must-Fix: popover render cost
+```
 
-This eager approach is simpler than the lazy pattern originally proposed. Performance
-impact is acceptable because:
-- `determine_dataframe_schema()` is O(1) per well-typed column
-- `unique()` runs only for string columns below the cardinality threshold
-- Wide DataFrames are bounded by the number of filterable columns (not rows)
+One constant is enough because a categorical column gets a value picker at every cardinality —
+so the only question is how many options ship and render at once, not what kind of filter the
+column gets:
 
-**Future optimization:** If startup latency becomes a problem on very wide DataFrames,
-the architecture supports lazy loading (compute options only when user opens a filter's
-popover) using the same `BackendOperationRequest` mechanism as server-side search — no API
-changes required.
+| Condition | Proto payload | Where options come from |
+|---|---|---|
+| `nunique` ≤ cap | All unique values in `options` | Eager, inline with the element |
+| `nunique` > cap | No options; `server_search = true`, `total_options = nunique` | Fetched on first popover open, then searched — both via `BackendOperationRequest` |
+| Prose column | No options; `filter_type = TEXT` | n/a |
+
+`nunique()` runs eagerly for every string column — it is the cheap gate that decides the tier
+and populates `total_options`. The expensive `unique()` call is deferred for above-cap columns
+until the user actually opens that popover, which also removes the cold-start cost for columns
+nobody touches. Below-cap columns ship inline so their popovers open with no round trip.
+
+This makes [lazy option loading](#lazy-option-loading) load-bearing for above-cap columns
+rather than an optional optimization, and it is the reason `unique()` is no longer skipped
+outright for high-cardinality categorical columns: the full distinct set is needed once, then
+cached, to answer server-side searches.
 
 #### Filter Execution
 
@@ -271,26 +307,14 @@ def _apply_filters(data_df: pd.DataFrame, filter_state: FilterBarState) -> pd.Da
     if not filter_state:
         return data_df
 
-    logic = _get_filter_logic(filter_state)  # Groups-ready: reads _groups[0].logic
-    use_or = logic == "or"
-
-    if use_or:
-        combined_mask = pd.Series(False, index=data_df.index)
-    else:
-        combined_mask = pd.Series(True, index=data_df.index)
+    combined_mask = pd.Series(True, index=data_df.index)
 
     for col_name, filter_config in filter_state.items():
-        if col_name.startswith("_"):  # Skip metadata keys
+        if col_name.startswith("_"):  # Skip reserved metadata keys
             continue
         if col_name not in data_df.columns:
             continue
-
-        col_mask = _apply_single_filter(data_df, col_name, filter_config)
-
-        if use_or:
-            combined_mask |= col_mask
-        else:
-            combined_mask &= col_mask
+        combined_mask &= _apply_single_filter(data_df, col_name, filter_config)
 
     return data_df[combined_mask]
 ```
@@ -321,18 +345,14 @@ Per-filter-type mask functions use vectorized pandas/numpy operations:
 via pandas' default NA behavior. `is_null` / `is_not_null` operators use `col.isna()` /
 `col.notna()` and are checked first (before type-specific dispatch).
 
-**AND/OR logic**: The combined mask starts as `True` (AND) or `False` (OR). Per-column
-masks are combined with `&=` (AND) or `|=` (OR). The `_get_filter_logic()` helper reads
-from `_groups[0].logic` in the groups-ready state model, falling back to the legacy
-`_logic` key for backward compatibility:
+**AND-only composition**: every per-column mask is combined with `&=`. There is no OR path
+and no logic key in state (product spec, decision 2).
 
-```python
-def _get_filter_logic(filter_state: FilterBarState) -> str:
-    groups = filter_state.get("_groups")
-    if isinstance(groups, list) and len(groups) > 0:
-        return groups[0].get("logic", "and")
-    return filter_state.get("_logic", "and")
-```
+**Unconfigured filters**: a filter whose value is not yet set — an empty multiselect, an empty
+text query — returns an all-`True` mask, which reads correctly as "no constraint" under AND.
+This is also why cross-field OR is not a trivial addition later: an all-`True` mask inside an
+OR union makes every row match, so OR first requires defining "unconfigured" for each filter
+type and excluding those filters from composition entirely.
 
 **Mask composition**: O(N × M) for N filters on M rows. pandas/numpy boolean operations are
 vectorized and cache-efficient — 20 filters on 10M rows completes sub-second.
@@ -351,16 +371,79 @@ return convert_pandas_df_to_data_format(filtered_df, data_format)
 `convert_anything_to_pandas_df` runs on every rerun. For apps with expensive inputs,
 documentation recommends `@st.cache_data` wrapping the data load.
 
-#### `format_func` → `display_options` Computation
+#### Column Config Derivation
 
-When a column has `FilterConfig(format_func=...)`, the backend eagerly computes display
-labels during proto construction and ships them in `FilterColumnMeta.display_options`:
+`columns` accepts `Sequence[str] | Mapping[str, ColumnConfig | str | None] | None`. Mapping
+values reuse the `st.column_config.*` factories, whose return type is the `ColumnConfig`
+TypedDict (`elements/lib/column_types.py`), so derivation reads `type_config` to recover the
+declared column type:
 
 ```python
-if filter_config.format_func is not None:
-    meta.display_options[:] = [
-        str(filter_config.format_func(v)) for v in meta.options
-    ]
+_COLUMN_TYPE_TO_FILTER_TYPE: Final[dict[str, FilterType]] = {
+    "selectbox": FilterType.MULTISELECT,
+    "text": FilterType.TEXT,
+    "link": FilterType.TEXT,
+    "markdown": FilterType.TEXT,
+    "number": FilterType.RANGE,
+    "progress": FilterType.RANGE,
+    "checkbox": FilterType.TOGGLE,
+    "date": FilterType.DATE_RANGE,
+    "datetime": FilterType.DATETIME_RANGE,
+    "time": FilterType.TIME_RANGE,
+}
+
+_UNFILTERABLE_COLUMN_TYPES: Final = frozenset({
+    "multiselect", "list", "json", "image", "audio", "video",
+    "line_chart", "bar_chart", "area_chart", "button",
+})
+```
+
+A column type in `_UNFILTERABLE_COLUMN_TYPES` raises `StreamlitAPIException` naming both the
+type and the column; an unrecognized type falls back to dtype inference. `multiselect` and
+`list` hold several values per cell and need "has any of" mask semantics, so they are excluded
+until the list/tags filter ships.
+
+Fields consumed per column config:
+
+| `ColumnConfig` field | Use |
+|---|---|
+| `label` | `FilterColumnMeta.custom_label` |
+| `help` | `FilterColumnMeta.help` |
+| `type_config` | Filter type, plus `options` / `format_func` / `min_value` / `max_value` |
+| `filter` | `bool` or `FilterConfig` (below) |
+| `width`, `pinned`, `alignment`, `required`, `disabled`, `hidden`, `default` | Ignored |
+
+`disabled` and `hidden` are ignored deliberately, so each concept has exactly one mechanism:
+widget-level `disabled` locks filters, and a `None` mapping value (or `filter=False`) excludes a
+column. There is precedent for a shared config type meaning less in one element than in
+another — `st.dataframe` already ignores `required` and `disabled`.
+
+**`ColumnConfig.filter`** is a new optional field on a shared public type:
+
+```python
+class ColumnConfig(TypedDict, total=False):
+    ...
+    filter: bool | FilterConfig | None
+
+class FilterConfig(TypedDict, total=False):
+    type: FilterTypeLiteral | None      # override the type implied by the column class
+    operators: Sequence[str] | None     # restrict the operator list
+```
+
+`ColumnConfig` is a `TypedDict` with `total=False`, so this is purely additive. The field is
+expressible in `st.dataframe`/`st.data_editor` calls and inert there until the table
+integration ships — the same status `required` has in `st.dataframe` today. **This change needs
+review from the owners of `column_config`, not only this spec's reviewers.**
+
+#### `format_func` → `display_options` Computation
+
+When a column is configured with `SelectboxColumn(format_func=...)`, the backend eagerly
+computes display labels during proto construction and ships them in
+`FilterColumnMeta.display_options`:
+
+```python
+if format_func is not None:
+    meta.display_options[:] = [str(format_func(v)) for v in meta.options]
 ```
 
 `display_options` is index-aligned with `options` — the frontend renders
@@ -485,9 +568,6 @@ const debouncedCommit = useCallback((state: FilterState): void => {
 }, [commitState])
 ```
 
-**AND/OR logic** is read from `filterState._groups[0].logic` (groups-ready model) and
-toggled via a dedicated `handleLogicToggle` that updates `_groups[0].logic`.
-
 **Stale filter reconciliation**: a `useEffect` on `validColumnNames` prunes entries for
 columns no longer in the proto, preserving `_`-prefixed metadata keys.
 
@@ -497,7 +577,7 @@ Filter changes use two commit paths based on interaction type:
 
 | Commit path | Used by | Trigger |
 |-------------|---------|---------|
-| `commitState` (immediate) | Toggle, date picker, operator change, filter add/remove, logic toggle, clear all | Single-shot selection that produces a meaningful state transition |
+| `commitState` (immediate) | Toggle, date picker, operator change, filter add/remove, clear all | Single-shot selection that produces a meaningful state transition |
 | `debouncedCommit` (150ms) | Text input keystrokes, range number input typing | Rapid input where committing each character would waste reruns |
 
 The 150ms debounce is frontend-only (a `setTimeout` ref cleared on each keystroke).
@@ -529,9 +609,8 @@ The "N selected" pattern (rather than showing first 2 + "...") matches BI tool c
 #### Empty State
 
 When `activeCount === 0 && !disabled`, a `StyledEmptyMessage` renders inside the pill row:
-`Click "Add filter" to get started` (substituting the `element.placeholder` text if
-customized). This provides discoverability for first-time users without adding visual
-weight once filters are active.
+`Click "Add filter" to get started`. This provides discoverability for first-time users
+without adding visual weight once filters are active. The text is not customizable in V1.
 
 #### Shared Filter Utilities (`filter-utils.ts`)
 
@@ -662,19 +741,25 @@ Frontend mirrors this with a `useEffect` that prunes on `validColumnNames` chang
 
 #### Option Rendering
 
-Multiselect options are rendered as a plain DOM scrollable checkbox list with client-side
-search filtering. The cardinality threshold ensures lists stay under 50 items (above
-that, the column uses a text filter instead):
+Options render as a plain DOM scrollable checkbox list with a search input. At most
+`_OPTION_RENDER_CAP` rows are drawn at once, regardless of the column's cardinality:
 
-| Cardinality | Filter Type | Rendering |
-|-------------|-------------|-----------|
-| ≤50 unique | Multiselect | All values as checkboxes with client-side search |
-| >50 unique | Text search | Free-text input with operator (contains/equals/starts_with/ends_with) |
-| Forced multiselect >1000 | Multiselect (server_search) | Top 1000 shipped; further search deferred to V2 |
+| Cardinality | Rendering |
+|-------------|-----------|
+| ≤ cap | All values as checkboxes; search filters client-side |
+| > cap | First *cap* values fetched on popover open; search filters server-side; header reads "Showing 100 of 3,412 — type to search" |
+| Prose column | No checkbox list — free-text input with operators |
 
-Virtualization is omitted — modern browsers handle 50 checkbox items without jank.
-Performance testing confirmed that 100 options causes ~294ms popover latency; at 50
-the popover is responsive.
+Virtualization is unnecessary because the rendered row count is bounded by the cap rather than
+by cardinality. Tableau takes the same approach, capping its browser-based search dropdown at
+100 displayed results.
+
+**V1 must-fix: popover render cost.** Measurement showed ~294ms to open a popover containing
+100 checkbox rows — roughly 3ms per row, which is pathological for plain DOM checkboxes and
+points at unmemoized rows or Floating UI re-positioning per item. The cap is provisionally 100
+but cannot be finalized until that is diagnosed and fixed. If the per-row cost stays high the
+cap has to drop toward 50, which materially worsens the default for columns in the 50–200
+range (US states, countries). This is V1 scope, not a follow-up.
 
 #### Query Params Binding
 
@@ -809,7 +894,8 @@ Each script rerun executes the following for `st.filter_bar`:
 | `convert_anything_to_pandas_df(data)` | O(rows) for non-pandas; O(1) for pandas | Input size (cache with `@st.cache_data`) |
 | `determine_dataframe_schema(df, arrow_schema)` | O(1) per typed column; O(rows) for `object`-dtype fallback | Column count × dtype quality |
 | `_compute_filter_bar_signature(schema)` | O(columns) — string concat + hash | Column count (negligible) |
-| `column.nunique()` + `unique()` for multiselect | O(rows) per low-cardinality string column; cached after first run | Signature-keyed cache; `nunique()` gate skips `unique()` for high-cardinality |
+| `column.nunique()` per string column | O(rows); cached after first run | Signature-keyed cache |
+| `column.unique()` for below-cap columns | O(rows) each; cached after first run | Signature-keyed cache; above-cap columns defer this to popover open |
 | `_reconcile_state(state, valid_columns)` | O(active_filters) — dict comprehension | Active filter count (negligible) |
 | `_apply_filters(df, state)` | O(filters × rows) — vectorized boolean masks | Active filters × row count |
 | `convert_pandas_df_to_data_format(filtered, format)` | O(filtered_rows) for non-pandas output | Output size |
@@ -818,20 +904,19 @@ Each script rerun executes the following for `st.filter_bar`:
 by `unique()` calls) takes ~95ms and `_apply_filters()` takes ~70ms — together ~165ms
 per rerun. Two optimizations ship in V1 to keep this under 200ms:
 
-1. **`nunique()` gate** (Option A): Before calling `unique()` on a string column, call
-   the cheaper `nunique()`. If cardinality > threshold (50), the column becomes a text
-   filter and `unique()` is skipped entirely. This saves ~17ms per high-cardinality
-   column at 1M rows.
+1. **`nunique()` gate**: `nunique()` runs first on every string column. It decides the tier and
+   populates `total_options`, and for above-cap columns it lets `unique()` be deferred to
+   popover open — saving ~17ms per such column at 1M rows on first render, and skipping the work
+   entirely for columns the user never opens.
 
-2. **Signature-keyed cache** (Option D): `_determine_filter_columns()` results are
-   cached keyed by the schema signature (`_compute_filter_bar_signature`). On subsequent
-   reruns with unchanged schema, the entire unique()/min()/max() computation is skipped.
-   Schema changes (column add/remove/type change) invalidate automatically.
+2. **Signature-keyed cache**: `_determine_filter_columns()` results are cached keyed by the
+   schema signature (`_compute_filter_bar_signature`). On subsequent reruns with unchanged
+   schema, the entire unique()/min()/max() computation is skipped. Schema changes (column
+   add/remove/type change) invalidate automatically.
 
-After both optimizations: first render costs ~50-70ms (only low-cardinality columns run
-`unique()`); subsequent reruns cost ~0ms for column detection + ~70ms for filter
-application. Total per-interaction cost at 1M rows: ~70ms (well within the 200ms UX
-threshold).
+After both: first render costs ~50-70ms (only below-cap columns run `unique()`); subsequent
+reruns cost ~0ms for column detection plus ~70ms for filter application. Total per-interaction
+cost at 1M rows: ~70ms, well within the 200ms UX threshold.
 
 **Memory**: `df[boolean_mask]` creates a new DataFrame (not a view) — so peak memory is
 ~2× the filtered output size. For Polars inputs, there's an additional pandas
@@ -845,7 +930,7 @@ intermediary during filtering (~2× input size during the operation, released af
 | `React.memo()` on each filter component | Only re-renders when that filter's state changes | N filters don't re-render when 1 changes |
 | `useMemo` for `filteredOptions` | Recomputes only when search query or options change | Avoids O(n) filter on every render |
 | `useMemo` for `selectedSet` | `new Set(values)` recomputed only on value change | Checkbox `checked` lookups are O(1) not O(n) |
-| `Set` for membership in `isSelected` | `selectedSet.has(v)` vs `values.includes(v)` | O(1) vs O(n) per checkbox — critical for 50 options |
+| `Set` for membership in `isSelected` | `selectedSet.has(v)` vs `values.includes(v)` | O(1) vs O(n) per checkbox — matters at the render cap |
 | Stable callback refs via `useCallback` | Prevents child re-renders from ref identity changes | Pills don't re-render when unrelated state changes |
 | 150ms debounce on text/range | Batches keystrokes into single commit | 10 keystrokes = 1 rerun, not 10 |
 
@@ -863,7 +948,7 @@ remaining pills compare equal and skip. This matters when 10+ pills are visible.
 
 | Scenario | Bytes over WebSocket | Notes |
 |----------|---------------------|-------|
-| Initial render (10 multiselect columns × 50 options each) | ~5-10 KB | One-time; cached by forward_msg_cache after first send |
+| Initial render (10 below-cap multiselect columns) | ~5-10 KB | One-time; cached by forward_msg_cache after first send. Above-cap columns ship no options at all |
 | Subsequent rerun (no schema change) | ~100 bytes (ref_hash only) | Proto unchanged → dedup kicks in |
 | Filter state change (user adds filter) | ~200 bytes (WidgetState delta) | Only the JSON string_value travels in BackMsg |
 | Schema change (column added) | ~5-10 KB (full proto re-sent) | Rare; only on DataFrame structural change |
@@ -877,9 +962,9 @@ bounds) and filter state (compact JSON) are exchanged.
 | Dimension | Tested limit | Bottleneck | Mitigation |
 |-----------|-------------|-----------|-----------|
 | Row count | 1M+ rows | `_apply_filters` (vectorized, <100ms at 1M) | `@st.fragment` scopes reruns; `@st.cache_data` for input |
-| Column count | 50+ filterable columns | `unique()` per string column on first render | Signature-keyed cache skips on subsequent reruns; `nunique()` gate skips high-cardinality columns |
+| Column count | 50+ filterable columns | `unique()` per below-cap string column on first render | Signature-keyed cache skips on subsequent reruns; above-cap columns defer `unique()` to popover open |
 | Active filters | 20+ simultaneous | Mask composition O(N) merges (negligible) | No practical limit |
-| Multiselect options | Up to `MAX_SHIPPED_OPTIONS` per column | DOM rendering + wire overhead | Capped at 1,000; server-side search for remainder (see below) |
+| Multiselect options | Unbounded source cardinality | DOM rendering + wire overhead | Both bounded by `_OPTION_RENDER_CAP`; server-side search covers the remainder |
 | URL binding | ~1,500 char JSON | Browser URL length limits | Falls back to session-only and warns if exceeded |
 | Pill count (UI) | 20+ visible pills | Pill row wrap + roving tabindex | CSS flexbox wrap is performant; no virtualization needed |
 
@@ -907,97 +992,80 @@ interaction).
 mechanism (the same pattern used by lazy dataframe row-chunk loading and deferred file
 downloads) to avoid full script reruns for two operations:
 
-1. **Server-side search** — filtering options in high-cardinality multiselect columns
-2. **Lazy option loading** — deferring `unique()` computation until the user opens a popover
+1. **Option loading** — deferring `unique()` until the user opens an above-cap column's popover
+2. **Server-side search** — filtering options within an above-cap column
 
-These are frontend→backend round-trips that bypass the rerun cycle entirely.
+These are frontend→backend round-trips that bypass the rerun cycle entirely. Both are V1 and
+both are load-bearing: every categorical column with more distinct values than
+`_OPTION_RENDER_CAP` depends on them.
 
-##### Server-Side Search for High-Cardinality Multiselect
+##### Lazy Option Loading (above-cap columns)
 
-**Scope: V1.** Required for `FilterConfig(type="multiselect")` to work correctly on
-columns with >1,000 unique values. Without it, either all options are shipped (making the
-popover unusable — 294ms measured at just 100 options) or the user is silently capped at
-1,000 values with no way to access the rest.
+**Scope: V1, required.** `nunique()` runs eagerly for every string column — it is the cheap
+gate that decides the tier — but `unique()` is deferred for above-cap columns until the user
+opens that popover. First render stays independent of cardinality, and columns nobody touches
+cost nothing.
 
 **Protocol:**
 
-1. Backend computes all unique values but ships only the first `_SERVER_SEARCH_THRESHOLD`
-   (1,000) in the proto's `options` field. A `server_search: true` flag on
-   `FilterColumnMeta` signals the frontend that more options exist.
-2. Frontend renders the initial 1,000 options with a "Showing 1,000 of N — type to search"
-   indicator. When the user types in the search input, a debounced (150ms) request is sent
-   via `BackendOperationRequest` with a `FilterSearchRequestPayload`.
-3. Backend filters the cached unique-value list server-side (measured: 0.5ms at 10K values,
-   2ms at 100K values) and returns matching options (capped at `_SERVER_SEARCH_THRESHOLD`)
-   in a `BackendOperationResponse` with `FilterSearchResponsePayload`.
-4. Frontend replaces the displayed option list with the search results. No script rerun
-   occurs.
+1. Backend ships `FilterColumnMeta` with `server_search = true` and
+   `total_options = nunique`, but no `options`.
+2. On first popover open, the frontend requests the first *cap* options via
+   `BackendOperationRequest`.
+3. Backend computes `unique()` for that column once, caches it by schema signature, and returns
+   the first *cap* values.
+4. Frontend renders them under the "Showing 100 of 3,412 — type to search" header and caches
+   them for subsequent opens (invalidated on schema change).
+
+Below-cap columns skip all of this — their options ship inline with the element, so their
+popovers open with no round trip.
+
+**Cost:** one round trip on first open of an above-cap column (~13ms of `unique()` at 1M rows,
+plus network latency). In exchange, first render pays only `nunique()`.
+
+##### Server-Side Search
+
+**Scope: V1, required.** Typing in an above-cap column's search input sends a debounced (150ms)
+request; the backend filters the cached unique-value list (measured: 0.5ms at 10K values, 2ms
+at 100K) and returns matches capped at `_OPTION_RENDER_CAP`. No script rerun occurs.
 
 **Proto additions (BackMsg.proto / ForwardMsg.proto):**
 
 ```protobuf
 // In BackendOperationRequest.payload oneof:
-FilterSearchRequestPayload filter_search = 7;
+FilterOptionsRequestPayload filter_options = 7;
 
-message FilterSearchRequestPayload {
+message FilterOptionsRequestPayload {
   string widget_id = 1;       // widget element ID
-  string column_name = 2;     // column to search within
-  string query = 3;           // user's search text (case-insensitive contains)
-  uint32 limit = 4;           // max results to return (default: 1000)
+  string column_name = 2;     // column to load or search within
+  optional string query = 3;  // absent on first load; search text otherwise
+  uint32 limit = 4;           // max results to return (= _OPTION_RENDER_CAP)
 }
 
 // In BackendOperationResponse.payload oneof:
-FilterSearchResponsePayload filter_search = 7;
+FilterOptionsResponsePayload filter_options = 7;
 
-message FilterSearchResponsePayload {
+message FilterOptionsResponsePayload {
   string widget_id = 1;
   string column_name = 2;
-  repeated string options = 3;   // filtered matches
+  repeated string options = 3;   // matches, capped at limit
   uint32 total_matches = 4;      // total count (for "showing X of Y")
 }
 ```
 
+One payload pair covers both operations: an initial load is a request with no `query`, and a
+search is the same request with one. That is simpler than separate `FilterSearch*` and
+`FilterOptions*` message pairs, since the response shape is identical either way.
+
 **When it triggers:**
-- Auto-inferred multiselect: never (cardinality threshold ensures ≤50 options)
-- `FilterConfig(type="multiselect")` override on high-cardinality column: yes
-- Future: if the cardinality threshold is raised above 1,000
+- Any categorical column with more distinct values than the render cap, whether its type was
+  inferred or configured — the common path, not an edge case
+- Never for prose columns (no option list) or below-cap columns (options ship inline)
 
-**Performance validation:** Backend search on pre-computed unique values adds < 2ms even
-at 100K cardinality. The `unique()` computation itself (13ms at 1M rows) is cached by the
-signature-keyed cache and only runs once per schema.
-
-##### Lazy Option Loading
-
-**Scope: V1 (optional optimization).** Instead of computing `unique()` for all multiselect
-columns eagerly on first render, defer the computation to when the user actually opens that
-column's popover. Uses the same `BackendOperationRequest` mechanism.
-
-**Motivation:** For a 15-column DataFrame at 1M rows, eager option loading runs `unique()`
-on every string column with ≤50 values — costing ~195ms on cold cache. With lazy loading,
-first render ships only column names/types (cost: ~0ms), and each `unique()` call happens
-on-demand when the user opens that filter's popover (cost: ~13ms per column).
-
-**Protocol:**
-
-1. Backend ships `FilterColumnMeta` with filter type and operators but **no options** for
-   multiselect columns. A `lazy_options: true` flag signals the frontend to fetch on open.
-2. When user opens a filter popover for a lazy column, frontend sends a
-   `FilterOptionsRequestPayload` via `BackendOperationRequest`.
-3. Backend computes `unique()` for that single column, caches the result, and responds.
-4. Frontend populates the checkbox list. Subsequent opens use the cached options from the
-   first response (frontend-side cache, invalidated on schema change).
-
-**Trade-off:** Adds a brief loading state on first popover open (~13ms — likely
-imperceptible). Eliminates the 195ms+ cold-start penalty for wide DataFrames. Can be
-implemented incrementally — start with eager (current) and migrate to lazy if startup
-latency becomes a user complaint.
-
-**Why not virtualization:** Virtualizing a checkbox list (`react-window`) adds complexity
-for a case that is rare in V1 — the cardinality threshold gates most columns at ≤50
-options. The `_SERVER_SEARCH_THRESHOLD` cap is simpler: it bounds both DOM node count and
-wire payload regardless of source cardinality. If user feedback shows demand for browsing
-(not searching) very long option lists, virtualization can be added as a complementary
-optimization.
+**Why not virtualization:** virtualizing the checkbox list (`react-window`) is unnecessary
+because the rendered row count is bounded by the render cap rather than by cardinality, and the
+cap bounds wire payload at the same time. If users ask to *browse* rather than search very long
+lists, virtualization can be added later as a complementary optimization.
 
 #### Known Limitations (V2 Candidates)
 
@@ -1008,12 +1076,16 @@ These are non-blocking for V1 but worth addressing if user feedback surfaces iss
 | P1 | No native Polars filtering | Polars inputs are converted to pandas for filtering, creating ~2× memory peak | Could apply filter masks directly in Polars (`.filter()`) to avoid intermediary. Deferred because the conversion path is correct and `@st.cache_data` avoids repeated cost. |
 | P2 | `getPillRef(index)` creates new closure per render | Defeats `React.memo` on `FilterPill` — triggers re-render of all pills on any state change | Impact minimal for typical pill counts (<20). Can switch to a ref Map with stable callbacks. |
 | P3 | Initial `commitState` on mount | First render commits state immediately, potentially triggering an extra script rerun | Could skip if state matches proto `default`. Currently acceptable — the extra rerun is indistinguishable from initial load. |
-| P4 | AND/OR toggle has no debounce | Rapid toggling between AND/OR commits immediately on each click | Acceptable because users rarely toggle rapidly; each toggle is a deliberate action. If needed, could gate with a 100ms debounce. |
 
-None of these affect perceived performance for typical usage (≤20 filters, ≤1,000
-shipped options per multiselect). They become relevant if: (a) users add 50+
-simultaneous filters, (b) apps run on extremely constrained devices, or (c) Polars
-adoption grows and memory overhead becomes a concern.
+None of these affect perceived performance for typical usage (≤20 filters, ≤ cap shipped
+options per column). They become relevant if: (a) users add 50+ simultaneous filters, (b) apps
+run on extremely constrained devices, or (c) Polars adoption grows and memory overhead becomes
+a concern.
+
+Distinct from these, and **in V1 scope**, is the popover render cost described under
+[Option Rendering](#option-rendering): ~294ms for 100 checkbox rows has to be diagnosed and
+fixed, because the render cap — and therefore the quality of option-picking for columns in the
+50–200 range — depends on it.
 
 ### State Flow Diagrams
 
@@ -1033,48 +1105,38 @@ adoption grows and memory overhead becomes a concern.
   → Frontend: React.memo skips re-render if props unchanged
 ```
 
-**Server-side search (no rerun):**
+**Option load and search (no rerun):**
 
 ```
-[User types in multiselect search input (server_search=true column)]
-  → debounce 150ms
-  → BackMsg(BackendOperationRequest { FilterSearchRequestPayload { widget_id, column, query } })
-  → Backend: filter cached unique values by query (< 2ms)
-  → ForwardMsg(BackendOperationResponse { FilterSearchResponsePayload { options, total } })
-  → Frontend: replace option list in popover (no rerun, no state change)
-```
-  → Return filtered DataFrame to user's script
-```
-
-For AND/OR toggle:
-```
-[User clicks AND/OR toggle]
-  → handleLogicToggle()
-  → setFilterState({...state, _groups: [{logic: "or", columns: [...]}]})
-  → commitState(newState) [immediate, not debounced]
-  → Backend reads _groups[0].logic → applies OR mask composition
-  → Returns DataFrame filtered with OR logic
+[User opens popover for an above-cap column, or types in its search input]
+  → debounce 150ms (search only)
+  → BackMsg(BackendOperationRequest { FilterOptionsRequestPayload { widget_id, column, query? } })
+  → Backend: unique() once per column (cached), then filter by query (< 2ms)
+  → ForwardMsg(BackendOperationResponse { FilterOptionsResponsePayload { options, total } })
+  → Frontend: populate or replace option list in popover (no rerun, no state change)
 ```
 
 ## Behavior Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Eager vs lazy metadata | Eager for ≤50 threshold; server-side search for forced high-cardinality multiselect | Eager is simple for normal case; `BackendOperationRequest` handles the forced-multiselect path without rerun |
+| Per-column configuration | Reuse `st.column_config.*`; filter-only knobs in a new `ColumnConfig.filter` field | One vocabulary for the same domain facts; invalid combinations become unrepresentable; the mapping moves to `column_config=` unchanged when the table integration ships |
+| Option delivery | Inline for ≤ cap; fetch-on-open plus server-side search above cap | Cardinality changes only where options come from, never the filter type |
+| Categorical vs prose | Sampled uniqueness ratio and mean string length | Cardinality alone cannot separate 10K customer names from 10K comments; both inferences are overridable via `SelectboxColumn` / `TextColumn` |
+| Render cap | One constant bounding both rendered rows and the fetch boundary | Two thresholds (text fallback at 50, server search at 1,000) collapse into one number that is no longer API-visible |
 | State on schema change | Drop stale filters individually, preserve `_` metadata | Valid filters preserved; only orphaned column filters removed |
 | Widget state wire format | JSON string via `string_value` | Matches `st.data_editor` pattern; flexible during iteration |
-| Multiselect wire format | Simple include-only `values` array | Sufficient for ≤50 cardinality; include/exclude deferred |
-| AND/OR state model | Groups-ready (`_groups: [{logic, columns}]`) | V1 ships flat toggle; extends to multi-group in V2 without migration |
-| Expanded/collapsed state | Frontend-only, not in widget value | UI chrome; doesn't affect filtering logic or trigger `on_change` |
+| Multiselect wire format | Simple include-only `values` array | Adequate at any cardinality since selections are typically few; include/exclude deferred |
+| Filter logic | AND only; no logic key written to state | No comparable ships a global AND/OR toggle; adding one later needs no proto change or migration |
 | Element ID source | Schema signature (names + types) | Data changes don't reset state; only structural changes do |
 | Debounce strategy | 150ms frontend-side (text/range only) | Batches rapid typing; toggles and dates commit immediately |
 | Enter-to-close popover | `onKeyDown` on `StyledPopoverContainer`, guarded by `!e.defaultPrevented` | Keyboard "done" action; child inputs that handle Enter call `preventDefault()` so popover stays open |
 | Pill summary (multiselect) | 1 → name, 2 → "A, B", 3+ → "N selected" | Count badge is clearer than truncated list for BI dashboards; matches Notion/Attio pattern |
-| Empty state guidance | Rendered inside `StyledPillRow` when `activeCount === 0 && !disabled` | Uses `StyledEmptyMessage`; message references the placeholder text |
+| Empty state guidance | Rendered inside `StyledPillRow` when `activeCount === 0 && !disabled` | Uses `StyledEmptyMessage`; fixed text, not customizable in V1 |
 | Validation (impossible range) | No blocking validation; impossible constraints produce empty result set | Consistent with Streamlit's non-blocking philosophy; empty results are the feedback |
 | Column ordering | Follows `columns` param order (Sequence) or dict insertion order (Mapping); auto-detect uses DataFrame column order | Pill order = user's addition order within the available set |
 | Per-column disabled | `disabled` field on `FilterColumnMeta` proto | Simpler than separate `repeated string disabled_columns` on parent |
-| Typed state object | `FilterBarState(ReadOnlyAttributeDictionary)` | Matches `DataframeState` pattern; prevents accidental mutation; provides `.active_filters` and `.logic` helpers |
+| Typed state object | `FilterBarState(ReadOnlyAttributeDictionary)` | Matches `DataframeState` pattern; prevents accidental mutation; provides the `.active_filters` helper |
 | URL binding format | JSON-in-single-URL-param | Industry standard (Superset, nuqs); reuses existing `bind` infrastructure without modification; perfect round-trip fidelity |
 | Default param | `default: FilterState \| None` serialized to proto `default` field | Standard Streamlit pattern; serde falls back to default when no UI value present |
 | Multiselect search threshold | Show search when options > 5 | Appears for columns with 6+ options; balances discoverability with avoiding clutter for small lists |
@@ -1094,13 +1156,19 @@ For AND/OR toggle:
 - Null handling: nulls excluded by positive filters, included by `is null`
 - Schema change cleanup: stale column filters dropped, valid filters preserved
 - Type preservation: Polars in → filtered Polars out
-- High cardinality: >1000 unique values triggers `server_search=true`
+- Option delivery: ≤ cap ships options inline; above cap sets `server_search=true` and
+  `total_options` with no options
+- Categorical vs prose: labels stay pickers at high cardinality; long-text and
+  near-all-distinct columns become text filters; `SelectboxColumn` / `TextColumn` override both
+- Column config derivation: each filterable column type maps to the right filter type;
+  unfilterable types raise; `filter=False` and `None` both exclude; ignored fields stay ignored
+- `default` validation: unknown column name raises, unlike stale restored state
 - Edge cases: empty DataFrame, all-null column, single-value column
 
 **Frontend unit tests** (`FilterBar.test.tsx`, hook tests):
 - Debounce behavior: rapid state changes produce one `setStringValue` call
-- Include/exclude: picks smallest representation correctly
-- Option search: client-side filtering for ≤1000, state update for >1000
+- Option rendering: at most cap rows drawn; client-side search below cap, request dispatched
+  above cap
 - Chip rendering: correct label, operator, value display
 - Keyboard navigation: Tab/Enter/Escape/Delete behaviors
 - React.memo: no re-render when props unchanged
@@ -1109,7 +1177,8 @@ For AND/OR toggle:
 - Add/edit/remove filter flow (multiselect, range, date, text, toggle)
 - Multiple filters with AND logic
 - Wide DataFrame (20+ columns) — column picker works
-- High cardinality column — server-side search flow
+- Above-cap column — fetch-on-open then server-side search, with no script rerun in either
+- Configuration via `st.column_config.*`, including `filter=` overrides
 - URL binding round-trip (set filter → URL changes → reload → filter restored)
 - `@st.fragment` scoped rerun (filter change doesn't rerun full script)
 - Type preservation (Polars input → Polars output)
@@ -1129,24 +1198,21 @@ For AND/OR toggle:
 - Why not reuse `Dataframe`: filter_bar never displays data; sending Arrow bytes would be
   wasteful and architecturally misleading
 
-**2. Eager options + server-side search** ✅ Hybrid (CHOSEN for V1)
+**2. Option delivery: inline below the cap, fetch-on-open above it** ✅ Hybrid (CHOSEN for V1)
 
-- Chosen: Column metadata computed eagerly for columns below the cardinality threshold
-  (≤50 unique values), cached by schema signature. High-cardinality columns forced to
-  multiselect via `FilterConfig` use server-side search through `BackendOperationRequest`
-  (ships first 1,000 options, searches on demand without rerun).
-- Rationale: With the 50-value threshold, eagerly-shipped option lists are always small
-  (≤50 items). The `nunique()` gate skips `unique()` for high-cardinality columns (>50),
-  and the signature-keyed cache eliminates recomputation on subsequent reruns when the
-  schema hasn't changed. First render at 1M rows: ~35ms; subsequent reruns: ~0ms.
-  Server-side search is required for `FilterConfig(type="multiselect")` on high-cardinality
-  columns — without it, shipping thousands of options makes the popover unusable.
-- Trade-off: Cache invalidates on any schema change (column add/remove/type change),
-  forcing a full recomputation. This is correct behavior — schema changes should
-  re-evaluate filter types.
-- Optional enhancement: Lazy option loading (defer `unique()` to popover open) can be
-  added incrementally using the same `BackendOperationRequest` mechanism if wide-DataFrame
-  startup latency becomes a user complaint.
+- Chosen: `nunique()` eagerly for every string column; options shipped inline when the count is
+  at or below `_OPTION_RENDER_CAP`; above the cap, options are fetched when the popover opens
+  and searched server-side, both through `BackendOperationRequest`. Results cached by schema
+  signature.
+- Rejected — ship everything eagerly: at high cardinality this is wasteful on the wire and
+  useless in the DOM, since only *cap* rows can be rendered anyway.
+- Rejected — a low cardinality threshold with a text-filter fallback: it makes an
+  implementation constant decide the *kind* of filter a column gets, so a `country` column
+  becomes a text box. No comparable tool does this (Metabase switches a dropdown to a search
+  box above 1,000 distinct values; Tableau caps displayed results at 100 and keeps a picker).
+- Trade-off: one round trip on first open of an above-cap column, and `unique()` must be
+  computed in full for those columns to answer searches. The cache invalidates on any schema
+  change — correct, since schema changes should re-evaluate filter types.
 
 **3. Separate FilterBar.proto vs extending Dataframe.proto** ✅ Separate file (PREFERRED)
 
@@ -1169,10 +1235,10 @@ For AND/OR toggle:
 **5. Always-include vs include/exclude wire format** ✅ Always-include (CHOSEN for V1)
 
 - Chosen: Simple `values` array (include-only) for V1
-- Rationale: The 100-value cardinality threshold for multiselect means lists are never
-  large enough for include/exclude to matter. Simplicity wins.
-- Deferred: include/exclude optimization can be added later if/when we support
-  multiselect for higher-cardinality columns (e.g., forced via FilterConfig)
+- Rationale: users select a handful of values in practice, so an include list stays small even
+  on high-cardinality columns. Simplicity wins.
+- Deferred: an include/exclude representation would only pay off for "select all except two of
+  3,000", which the UI does not currently make easy anyway
 
 **6. Switch statement vs filter type registry map** ✅ Switch (CHOSEN for V1)
 
@@ -1184,3 +1250,19 @@ For AND/OR toggle:
   pattern would be the natural evolution. The switch is easily replaced at that point.
 - Reference: `st.data_editor` uses a `ColumnTypes` registry because it has 15+ column
   types and supports user-defined columns. filter_bar has a smaller, fixed set.
+
+**7. Configuration vocabulary: `column_config` vs a dedicated `FilterConfig`** ✅ `column_config` (CHOSEN)
+
+- Chosen: per-column configuration reuses `st.column_config.*`, with filter-only knobs in a new
+  additive `ColumnConfig.filter` field. See [Column Config Derivation](#column-config-derivation).
+- Rejected — a standalone top-level `FilterConfig(type=..., options=..., min_value=...)`: it
+  restates domain facts `column_config` already expresses (`options` on `SelectboxColumn`,
+  `min_value`/`max_value` on `NumberColumn`, `format_func` on `SelectboxColumn`, `label` and
+  `help` on every column config), which would leave two vocabularies for the same thing and,
+  once the table integration ships, force users to declare each fact twice.
+- Rejected — a class family (`st.filter_config.Multiselect`, `.Range`, …): this is what
+  `st.column_config` already is. Building a parallel family would duplicate 10+ public classes.
+- Trade-off accepted: `filter_bar` accepts a config type carrying table-only fields it ignores,
+  and must raise on column types with no filter meaning. Precedent exists — `st.dataframe`
+  already ignores `required` and `disabled`.
+- Cost: `ColumnConfig` is a shared public type, so this needs sign-off from its owners.

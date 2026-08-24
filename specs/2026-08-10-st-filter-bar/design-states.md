@@ -8,8 +8,8 @@ Complete inventory of every distinct UI state that needs a design spec. Organize
 
 | # | Filter Type | Trigger Condition | Operators |
 |---|-------------|-------------------|-----------|
-| 1 | **Multiselect** | String column, ≤50 unique values | `is`, `is_not`, `is_null`, `is_not_null` |
-| 2 | **Text** | String column, >50 unique values | `contains`, `not_contains`, `equals`, `not_equals`, `starts_with`, `ends_with`, `is_null`, `is_not_null` |
+| 1 | **Multiselect** | String column of categorical values, at any cardinality | `is`, `is_not`, `is_null`, `is_not_null` |
+| 2 | **Text** | String column that reads as prose (near-all-distinct, or long values) | `contains`, `not_contains`, `equals`, `not_equals`, `starts_with`, `ends_with`, `is_null`, `is_not_null` |
 | 3 | **Range** | Numeric column (int/float) | `between`, `not_between`, `equals`, `not_equals`, `greater_than`, `less_than`, `is_null`, `is_not_null` |
 | 4 | **Toggle** | Boolean column | `is_true`, `is_false`, `is_null` |
 | 5 | **Date/Datetime** | Date or datetime column | `between`, `not_between`, `before`, `after`, `equals`, `not_equals`, `is_relative_to_today`, `is_null`, `is_not_null` |
@@ -44,28 +44,30 @@ Complete inventory of every distinct UI state that needs a design spec. Organize
 
 ## A. Filter Bar Container
 
-The top-level component. 6 distinct visual states:
+The top-level component. 5 distinct visual states:
 
 | # | State | Description |
 |---|-------|-------------|
 | A1 | **Empty** | No filters active. Shows guidance text (`Click "Add filter" to get started`) and the "+ Add filter" button. Guidance text uses `StyledEmptyMessage` styling (subdued color, small font). |
 | A2 | **Single filter** | One pill + "+ Add filter" button. |
 | A3 | **Multiple filters** | 2+ pills + "Clear all" button + "+ Add filter" button. |
-| A4 | **Collapsed** | `expanded=False`. Label + filter icon (`:material/filter_list:`) + count badge + disclosure chevron always visible. Pill row hidden. Chevron rotates to indicate expand/collapse. Badge shows active filter count when collapsed. Filter icon provides visual identity of the widget even without label text. |
-| A5 | **Globally disabled** | `disabled=True`. All pills and buttons are dimmed/non-interactive. |
-| A6 | **Per-column disabled** | `disabled=["col1", "col2"]`. Some pills are locked (dimmed, no remove/edit), others remain interactive. Disabled columns hidden from "Add filter" picker. |
+| A4 | **Globally disabled** | `disabled=True`. All pills and buttons are dimmed/non-interactive. |
+| A5 | **Per-column disabled** | `disabled=["col1", "col2"]`. Some pills are locked (dimmed, no remove/edit), others remain interactive. Disabled columns hidden from "Add filter" picker. |
+
+The filter bar is always expanded — there is no collapsed state in V1. See the product spec's
+Out of Scope for the deferred collapsible variant.
 
 ### Container Configuration Variants
 
 | # | Variant | Description |
 |---|---------|-------------|
-| A7 | **Label visible** | `label_visibility="visible"` — label text displayed above pill row. |
-| A8 | **Label hidden** | `label_visibility="hidden"` — label hidden but vertical space preserved. |
-| A9 | **Label collapsed** | `label_visibility="collapsed"` — label hidden, no space reserved. |
-| A10 | **With help tooltip** | Label has a `?` icon that shows tooltip on hover. |
-| A11 | **Fixed width** | `width=400` — container has max-width constraint. |
-| A12 | **Stretch width** | Default — container fills available width. |
-| A13 | **Content width** | `width="content"` — container shrinks to fit content (pills + button). |
+| A6 | **Label visible** | `label_visibility="visible"` — label text displayed above pill row. |
+| A7 | **Label hidden** | `label_visibility="hidden"` — label hidden but vertical space preserved. |
+| A8 | **Label collapsed** | `label_visibility="collapsed"` — label hidden, no space reserved. |
+| A9 | **With help tooltip** | Label has a `?` icon that shows tooltip on hover. |
+| A10 | **Fixed width** | `width=400` — container has max-width constraint. |
+| A11 | **Stretch width** | Default — container fills available width. |
+| A12 | **Content width** | `width="content"` — container shrinks to fit content (pills + button). |
 
 ---
 
@@ -124,7 +126,9 @@ The menu shown when clicking "+ Add filter":
 
 ## D. Multiselect Filter Popover
 
-Shown for categorical string columns with ≤50 unique values.
+Shown for categorical string columns, at any cardinality. Above the render cap the option list
+is fetched when the popover opens and searched server-side, with a "Showing 100 of 3,412 — type
+to search" header; below it, all options are present and search filters locally.
 
 ### Layout
 
@@ -169,7 +173,8 @@ Shown for categorical string columns with ≤50 unique values.
 
 ## E. Text Filter Popover
 
-Shown for high-cardinality string columns (>50 unique values).
+Shown for string columns that read as prose — near-all-distinct values, or long text. Not
+merely high cardinality: a 3,000-value `city` column still gets the multiselect popover.
 
 ### Layout
 
@@ -441,55 +446,24 @@ Used inside every filter popover to switch between operators.
 | J5 | **No filterable columns** | DataFrame has no supported column types. Show informational message. |
 | J6 | **No matching options** | Search in multiselect/column picker returns zero results. Show "No results". |
 
-### Collapsed / Expanded (Disclosure Pattern)
-
-The filter bar uses a disclosure (expand/collapse) pattern — NOT a replacement pattern.
-The widget label, count badge, and disclosure chevron are always visible regardless of
-expanded state.
-
-| # | State | Description |
-|---|-------|-------------|
-| J7 | **Expanded (default)** | Label row with down-chevron (˅). Pill row visible below. Chevron acts as collapse toggle. |
-| J8 | **Collapsed** | Label row with right-chevron (›) + count badge (e.g., "3" in primary-colored circle). Pill row hidden. Clicking chevron expands. |
-| J9 | **Collapsed, no active filters** | Label row with right-chevron. No badge shown (0 active). |
-| J10 | **Collapsed, filters active** | Label row with right-chevron + count badge. Filters still apply to data even when UI is collapsed. |
-
-#### Visual Anatomy (Collapsed)
+### Visual Anatomy
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  My Filters  ≡ [3] ›                                     │
-│              ^^^ ^^^ ^                                   │
-│              filter badge chevron (rotated -90°)          │
-│              icon                                         │
-└──────────────────────────────────────────────────────────┘
-```
-
-The filter icon (`:material/filter_list:`) is always visible and provides visual identity.
-The count badge only appears when collapsed AND filters are active.
-
-#### Visual Anatomy (Expanded)
-
-```
-┌──────────────────────────────────────────────────────────┐
-│  My Filters  ≡ ˅                                         │
-│              ^^ ^                                        │
-│              filter chevron (0° rotation)                │
-│              icon                                         │
+│  My Filters  ≡                                           │
+│              ^^                                          │
+│              filter icon                                 │
 │                                                          │
-│  [AND] [Industry: Tech] [Stage: Lead] [Clear all] [+]   │
+│  [Industry: Tech] [Stage: Lead] [Clear all] [+ Add]      │
 └──────────────────────────────────────────────────────────┘
 ```
 
-#### Key Design Decisions
+The filter icon (`:material/filter_list:`) provides visual identity for the widget even
+without label text.
 
-- **Badge only when collapsed**: When expanded, you see the pills directly — badge would
-  be redundant.
-- **Filters still apply when collapsed**: Collapsing is purely visual. The filtered
-  DataFrame is still returned. This matches `st.expander` behavior (content inside exists
-  regardless of visual state).
-- **Programmatic control**: `expanded=False` sets the initial state. User interaction
-  (clicking the chevron) overrides.
+The bar is always expanded in V1 — there is no disclosure chevron, count badge, or collapsed
+state. See the product spec's Out of Scope for the deferred collapsible variant, which would
+add a chevron, a count badge, and four states here.
 
 ---
 
@@ -698,89 +672,19 @@ The list/tags filter is visually similar to multiselect but differs in:
 
 ---
 
-## M. AND/OR Filter Groups
+## M. Filter Logic (Deferred)
 
-By default, all active filters combine with **AND** logic (every filter must pass for a
-row to be included). A toggle allows switching to **OR** logic.
+All active filters combine with **AND**: every filter must pass for a row to be included. There
+is no AND/OR control in V1, so this section specifies no states.
 
-### V1: Flat AND/OR Toggle (Groups-Ready State)
+Within a single filter, OR is already available wherever the filter type provides it — a
+multiselect matches any selected value, and `between` covers two-sided numeric and date ranges.
 
-A single toggle button in the pill row applies the same logic to ALL filters. The state
-model uses a single-group structure that can extend to multi-group without migration.
-
-```
-AND mode:
-┌──────────────────────────────────────────────────────────────────┐
-│ Label  ≡ ˅                                                       │
-│                                                                  │
-│  [AND] [Industry: Tech] [Stage: Qualified] [Clear all] [+ Add]  │
-└──────────────────────────────────────────────────────────────────┘
-
-OR mode:
-┌──────────────────────────────────────────────────────────────────┐
-│ Label  ≡ ˅                                                       │
-│                                                                  │
-│  [OR] [Industry: Tech]  or  [Stage: Lead] [Clear all] [+ Add]   │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-- **AND button**: Subtle border, muted text. Indicates "Match all" (default).
-- **OR button**: Primary color border + background tint. Indicates "Match any".
-- **"or" separators**: Italic, muted text between pills when in OR mode.
-- Toggle only appears when 2+ filters are active.
-
-#### State Model (Groups-Ready)
-
-V1 uses a single-group model that V2 can extend to multiple groups without migration:
-
-```json
-{
-  "_groups": [{"logic": "and", "columns": ["Industry", "Stage", "Revenue"]}],
-  "Industry": {"type": "multiselect", "operator": "is", "values": ["Technology"]},
-  "Stage": {"type": "multiselect", "operator": "is", "values": ["Lead"]},
-  "Revenue": {"type": "range", "operator": "greater_than", "min": 100000}
-}
-```
-
-- `_groups[0].logic`: the flat toggle sets this to `"and"` or `"or"`
-- `_groups[0].columns`: ordered list of all active filter column names
-- Column entries: per-filter configuration (type, operator, values)
-- Keys prefixed with `_` are metadata (preserved through state reconciliation)
-
-### States
-
-| # | State | Description |
-|---|-------|-------------|
-| M1 | **AND mode (default)** | "AND" toggle button (muted). All filters must pass. No separators between pills. |
-| M2 | **OR mode** | "OR" toggle button (primary color). Italic "or" separators between each pill. Row passes if ANY filter matches. |
-| M3 | **Single filter** | Toggle hidden — AND/OR irrelevant with one filter. |
-
-### V2 Extension: Grouped AND/OR (Notion-style)
-
-The groups-ready state model enables multi-group support without migration:
-
-```json
-{
-  "_groups": [
-    {"logic": "or", "columns": ["Industry"]},
-    {"logic": "and", "columns": ["Stage", "Revenue"]}
-  ],
-  "_group_logic": "and",
-  "Industry": {"type": "multiselect", "operator": "is", "values": ["Tech", "Healthcare"]},
-  "Stage": {"type": "multiselect", "operator": "is", "values": ["Lead"]},
-  "Revenue": {"type": "range", "operator": "greater_than", "min": 100000}
-}
-```
-
-V2 adds: `_group_logic` (how groups combine), multiple entries in `_groups`, and UI for
-creating/managing groups (visual containers, drag-between, per-group toggles).
-
-| Aspect | V1 (single group) | V2 (multi-group) |
-|--------|-------------------|------------------|
-| State model | `_groups: [{logic, columns}]` (one entry) | `_groups: [{logic, columns}, ...]` + `_group_logic` |
-| UI | Single toggle button | Group containers, per-group toggles, inter-group logic |
-| Migration | — | None required (additive to state model) |
-| Use cases | Simple match-all / match-any | Complex: "(A OR B) AND (C AND D)" |
+If cross-field OR is built later, the shape would be Notion-style nested groups behind an
+explicit advanced affordance rather than a global toggle, and it would need design for the
+group container, per-group logic controls, moving filters between groups, and how inter-group
+logic is expressed. See the product spec's Out of Scope for its ordering against within-field
+multi-condition, which is the higher-priority gap.
 
 ---
 
@@ -850,7 +754,7 @@ to date/datetime ranges).
 
 | Component | States |
 |-----------|--------|
-| Container (A) | 13 |
+| Container (A) | 12 |
 | Pill (B) | 4 + content variants |
 | Column Picker (C) | 4 |
 | Multiselect Popover (D) | 9 |
@@ -859,9 +763,9 @@ to date/datetime ranges).
 | Toggle Popover (G) | 6 |
 | Date Popover (H) | 14 |
 | Operator Selector (I) | 4 |
-| Shared Patterns (J) | 10 |
+| Shared Patterns (J) | 6 |
 | Relative Date Selection (K) | 6 |
 | List/Tags Popover (L) | 9 (future) |
-| AND/OR Filter Groups (M) | 3 |
+| Filter Logic (M) | 0 (deferred) |
 | Time Range Popover (N) | 12 |
-| **Total unique states** | **~117** |
+| **Total unique states** | **~109** |

@@ -83,39 +83,90 @@ forces developers to manually handle dtype-specific filter logic that could be i
 
 ## Decisions for Review
 
-Key decisions that need PM alignment before implementation:
+Each decision below carries a recommendation and its reasoning. Reviewers should approve or
+push back per item.
 
-1. **API signature confirmation** — The proposed signature below has `data` as the only
-   positional arg with everything else keyword-only. Are we aligned on the full parameter
-   list? Anything to cut or add before shipping?
+**1. Configuration — reuse `column_config` rather than add a `FilterConfig`**
 
-2. **Initial release scope** — What ships in V1 vs. what is deferred?
-   - **Standalone widget only?** We ship `st.filter_bar` as a composable standalone widget.
-     `st.dataframe(filterable=True)` integration comes later as a separate feature.
-   - **AND/OR toggle?** Should V1 include the flat AND/OR toggle, or ship AND-only and add
-     OR in a fast follow? Tableau/Looker default to AND-only and hide OR behind advanced
-     mode. We currently show a flat toggle to all users.
-   - **Grouped AND/OR (Notion-style)?** This is designed as a V2 extension (state model is
-     ready). Confirm it is out of scope for initial release.
-   - **Cascading/dependent filters?** (e.g., Country=US narrows City options) Currently out
-     of scope — confirm this stays deferred.
+Per-column configuration uses the existing `st.column_config.*` classes, which already carry
+every domain field a filter needs. Filter-only knobs live in a new `filter` field on
+`ColumnConfig`. Details in [Column configuration](#column-configuration).
 
-3. **Live filtering vs. "Apply" button** — Every filter change triggers a rerun
-   immediately (standard Streamlit widget behavior). BI tools (Power BI, Looker) often
-   have "Apply filters" buttons to batch changes. We rely on `st.form` wrapping as the
-   batch-apply workaround. Is live-only the right default, or should we support an
-   explicit apply mode (e.g., `mode="live" | "batch"`)?
+One vocabulary instead of two for the same facts. `ColumnConfigMappingInput` already accepts
+`ColumnConfig | str | None`, so `{"col": None}` (exclude) and `{"col": "Label"}` (label
+shorthand) are existing idioms rather than new invention. Encoding filter type as a class
+makes invalid combinations unrepresentable — `NumberColumn(options=[...])` cannot be written,
+where `FilterConfig(type="range", options=[...])` could. Per-column `help` and the label
+shorthand come free. And when `st.dataframe(filterable=...)` ships, the same mapping moves
+from `columns=` to `column_config=` unchanged — a wager on that integration happening, with
+the consistency win standing on its own if it slips.
 
-4. **Cardinality threshold for multiselect → text fallback** — A string column with few
-   unique values gets a multiselect (checkbox list); above the threshold it falls back to
-   text search. Prototype testing shows 100 options causes ~294ms popover latency (DOM
-   rendering 100 checkboxes + Floating UI positioning). At 50 options the popover is
-   responsive. **Proposed: 50** as V1 default. Text search at 50+ is fast (~8ms at 100K
-   rows). Should the threshold be configurable via `FilterConfig`?
+Cost: adding `filter` to `ColumnConfig` changes a **shared public type**, so it needs a
+reviewer who owns `column_config`. Most of the 21 column types have no filter meaning and
+must raise clearly, and table-only fields (`width`, `pinned`, `alignment`) are ignored — with
+precedent, since `st.dataframe` already ignores `required` and `disabled`.
 
-5. **`placeholder` param semantics** — Currently overrides "Add filter" button text. Other
-   widgets use `placeholder` for input field placeholder text (e.g., `st.text_input`). Is
-   this naming confusing, or acceptable since the button IS the empty-state call-to-action?
+**2. Scope — standalone widget, AND-only logic**
+
+`st.filter_bar` ships standalone; `st.dataframe(filterable=True)` is separate later work.
+Filters combine with AND, implicitly, with no user-facing AND/OR toggle — no comparable ships
+one:
+
+| Tool | Across fields | Within one field | Cross-field OR |
+|---|---|---|---|
+| Excel AutoFilter | AND — "filters are additive" | And/Or radio in Custom Filter | Separate Advanced Filter with a criteria range |
+| Tableau | AND, no toggle between cards | Multi-value lists, Condition formula | Calculated field, set, or formula |
+| Power BI | AND across fields | Basic vs Advanced filtering per field | DAX measure |
+| Notion | Per-group AND/OR, nested 3 deep | Multi-select values | Behind "Add advanced filter" — explicitly no global toggle |
+
+A global toggle also gets *less* useful as filters multiply — with four filters, flipping all
+of them to OR is rarely the intent — and it is the shape we would want to replace with
+grouped logic later. Adding an affordance is additive; removing a shipped one is a
+regression, so the cheap-to-reverse direction is to cut. Within-field OR still ships, via
+multiselect ("status is Active OR Pending") and `between`.
+
+Also confirmed out of scope: grouped AND/OR, and cascading/dependent filters — the latter
+being the highest-priority follow-up, and notably Tableau's own recommendation for
+high-cardinality fields.
+
+**3. Live filtering only**
+
+Every filter change triggers a rerun, like any other widget. No `mode="live" | "batch"`
+parameter.
+
+Power BI applies filters immediately and its Apply button is opt-in, off by default, under
+options named "Query reduction"; Tableau's Apply button is a per-filter-card option. In both,
+live is the default and batching is an author-controlled opt-in motivated by query cost. In
+Streamlit the cost lever is `@st.fragment`, which scopes the rerun so expensive loading above
+the filter bar does not re-execute — a better fit than an apply button, since it removes the
+cost rather than deferring it.
+
+**4. Cardinality — a value picker at every size, governed by one render-cap constant**
+
+A categorical column always gets a value picker; cardinality changes only where its options
+come from, never what kind of filter it is. Free text is reserved for prose columns, and the
+render cap is not configurable. Details in [Filter type inference](#filter-type-inference).
+
+A simpler rule — text search above N unique values — would change the filter's *semantics* at
+a low boundary, which no comparable does. Metabase switches a dropdown to a search box
+above 1,000 distinct values and reserves a plain input box for text-heavy columns, and
+Tableau caps displayed search results at 100 while keeping a value picker. Our own
+measurement (100 options → ~294ms popover) is a rendering cost, so it should bound how many
+rows *render* rather than what kind of filter a column gets. That also settles
+configurability: the number no longer decides the filter type, so there is nothing for a user
+to configure.
+
+**5. No collapsing in V1** (needs design confirmation)
+
+The filter bar is always expanded. Both the `expanded` parameter and the runtime disclosure
+control are cut.
+
+Dropping the parameter alone would save no frontend surface, because the collapsed and
+expanded states come from the runtime control rather than from the parameter — so this is one
+decision, not two. Cutting both removes four design states plus the count badge and chevron
+work, and `expanded` is purely additive later. The case that argues for keeping it is a sidebar
+filter bar with six or more pills consuming vertical space; worth confirming against that in
+design review.
 
 ## Proposal
 
@@ -126,13 +177,11 @@ st.filter_bar(
     data: DataFrameLike,
     *,
     # Configuration
-    columns: Sequence[str] | Mapping[str, FilterConfig | None] | None = None,
+    columns: Sequence[str] | Mapping[str, ColumnConfig | str | None] | None = None,
     default: FilterState | None = None,
     # Display
     label: str | None = None,
     help: str | None = None,
-    placeholder: str | None = None,
-    expanded: bool = True,
     width: "stretch" | "content" | int = "stretch",
     label_visibility: LabelVisibility = "visible",
     # Interaction
@@ -152,12 +201,10 @@ st.filter_bar(
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `data` | `DataFrameLike` | required | The source DataFrame to filter. Accepts pandas, Polars, PyArrow, or any object convertible via Streamlit's data-frame protocol. |
-| `columns` | `Sequence[str] \| Mapping[str, FilterConfig \| None] \| None` | `None` | Controls which columns are filterable. `None`: auto-include all eligible columns. `Sequence[str]`: include only the named columns (filter type auto-inferred). `Mapping`: keys are column names, values are `FilterConfig` for explicit control or `None` to exclude. Column names not present in the input DataFrame raise `StreamlitAPIException`. |
-| `default` | `FilterState \| None` | `None` | Initial filter state applied on first render (before user interaction). A dict keyed by column name with filter descriptors (e.g., `{"status": {"type": "multiselect", "operator": "is", "values": ["active"]}}`). Once the user interacts, `default` is ignored (same semantics as `st.multiselect(default=...)`). |
+| `columns` | `Sequence[str] \| Mapping[str, ColumnConfig \| str \| None] \| None` | `None` | Controls which columns are filterable and how. `None`: auto-include all eligible columns. `Sequence[str]`: include only the named columns (filter type inferred). `Mapping`: keys are column names, values are `st.column_config.*` objects for explicit control, a string as a label shorthand, or `None` to exclude. Column names not present in the input DataFrame raise `StreamlitAPIException`. |
+| `default` | `FilterState \| None` | `None` | Initial filter state applied on first render (before user interaction). A dict keyed by column name with filter descriptors (e.g., `{"status": {"type": "multiselect", "operator": "is", "values": ["active"]}}`) — the same shape `st.session_state[key]` returns, so state can be captured and replayed. A column name not present in the DataFrame raises `StreamlitAPIException`; that differs from stale filters in restored user state, which are dropped silently. Once the user interacts, `default` is ignored (same semantics as `st.multiselect(default=...)`). |
 | `label` | `str \| None` | `None` | A short label displayed above the filter bar. Supports Markdown. If `None`, no label is displayed. |
 | `help` | `str \| None` | `None` | A tooltip displayed next to the widget label (only shown when `label_visibility="visible"`). |
-| `placeholder` | `str \| None` | `None` | Custom text for the "Add filter" button. Defaults to "Add filter". |
-| `expanded` | `bool` | `True` | If `True`, the filter bar is fully expanded. If `False`, collapses to a trigger showing active filter count (e.g., "Filters (3)"). Unlike `st.expander`, defaults to expanded because showing filter controls is the primary purpose. |
 | `width` | `"stretch" \| "content" \| int` | `"stretch"` | `"stretch"` fills container. `"content"` sizes to content. An `int` sets fixed pixel width. |
 | `label_visibility` | `"visible" \| "hidden" \| "collapsed"` | `"visible"` | `"hidden"` reserves spacer space; `"collapsed"` displays nothing. |
 | `disabled` | `bool \| Sequence[str]` | `False` | `True` disables the entire widget. A `Sequence[str]` of column names locks only those columns' filters (cannot be added, modified, or removed). |
@@ -177,9 +224,10 @@ st.filter_bar(
 **Type preservation:** The return type matches the input type. Polars in → Polars out.
 Pandas in → pandas out. Matches `st.data_editor` behavior.
 
-By default, filters combine with AND logic (all must match). A UI toggle may allow
-switching to OR logic (any filter must match) — see Decisions for Review #2. Within a
-single multiselect filter, OR logic always applies (e.g., "status is Active OR Pending").
+Filters combine with AND logic: one condition per column, and every condition must match.
+There is no user-facing AND/OR control (see Decisions for Review #2). Within a single filter,
+OR applies wherever the filter type provides it — a multiselect matches any selected value
+(e.g., "status is Active OR Pending").
 
 ### Examples
 
@@ -204,23 +252,34 @@ filtered = st.filter_bar(df, columns=["status", "region", "date"])
 
 ```python
 filtered = st.filter_bar(df, columns={
-    "status": FilterConfig(type="multiselect"),
-    "price": FilterConfig(type="range", min_value=0, max_value=500),
-    "created_at": FilterConfig(type="date_range"),
+    "status": st.column_config.SelectboxColumn(options=["active", "inactive"]),
+    "price": st.column_config.NumberColumn(min_value=0, max_value=500),
+    "created_at": st.column_config.DateColumn(label="Created"),
+    "region": "Sales region",  # string shorthand for the pill label
     "internal_id": None,  # hide this column from filters
 })
 ```
 
-**Collapsed by default (for sidebar usage):**
+**In the sidebar:**
 
 ```python
 with st.sidebar:
-    filtered = st.filter_bar(
-        df,
-        label="Filters",
-        expanded=False,
-        columns=["status", "region", "date"],
-    )
+    filtered = st.filter_bar(df, label="Filters", columns=["status", "region", "date"])
+```
+
+**Scoping reruns for expensive data:**
+
+```python
+@st.cache_data
+def load_data():
+    return expensive_query()
+
+@st.fragment
+def filter_section():
+    filtered = st.filter_bar(load_data(), key="filters")
+    st.dataframe(filtered)
+
+filter_section()
 ```
 
 **Driving multiple views:**
@@ -263,20 +322,20 @@ filtered = st.filter_bar(df, key="dashboard_filter", bind="query-params")
 ```python
 def on_filter_change():
     state = st.session_state.my_filter
-    st.toast(f"Active filters: {state.active_filters}, logic: {state.logic}")
+    st.toast(f"Active filters: {state.active_filters}")
 
 filtered = st.filter_bar(df, key="my_filter", on_change=on_filter_change)
 ```
 
 ### Filter Type Inference
 
-When no explicit `FilterConfig` is provided, the widget infers filter types from column
-dtypes using the same `ColumnDataKind` system that powers `st.dataframe`:
+When no explicit column config is provided, the widget infers filter types from column dtypes
+using the same `ColumnDataKind` system that powers `st.dataframe`:
 
 | Column Data Kind | Filter Type | UI |
 |---|---|---|
-| `STRING` (≤50 unique values) | Multiselect | Searchable checklist of values |
-| `STRING` (>50 unique values) | Text search | Text input with contains/equals operators |
+| `STRING` (categorical) | Multiselect | Searchable checklist of values |
+| `STRING` (prose) | Text search | Text input with contains/equals operators |
 | `BOOLEAN` | Toggle | True / False / All |
 | `INTEGER`, `FLOAT`, `DECIMAL` | Range | Min/max inputs |
 | `DATE` | Date range | Date picker with before/after/between |
@@ -284,9 +343,30 @@ dtypes using the same `ColumnDataKind` system that powers `st.dataframe`:
 | `TIME` | Time range | Time picker with before/after/between |
 | `LIST`, `DICT`, `BYTES`, `COMPLEX` | Excluded | Not filterable by default |
 
+**Categorical vs. prose.** For string columns the only inference decision is whether the
+values are a set to pick from or free text. Cardinality alone cannot separate those — 10,000
+customer names are a set, 10,000 comments are not — so two cheap sampled signals are used:
+the uniqueness ratio (`nunique / len`, near 1 meaning nearly every row is distinct) and mean
+string length (prose runs long, labels are short). A categorical column gets a picker no
+matter how many values it holds; only prose columns get the text filter. Either inference is
+overridable with `SelectboxColumn` or `TextColumn`.
+
+**Where options come from.** Cardinality never changes the *kind* of filter, only how options
+reach the browser. A single render cap governs both how many rows the popover draws and when
+option loading moves server-side:
+
+| Condition | Behavior |
+|---|---|
+| `nunique` ≤ render cap | All options shipped with the element; client-side search |
+| `nunique` > render cap | First *cap* options shipped; typing searches server-side with no rerun ("Showing 100 of 3,412 — type to search") |
+
+The cap is an implementation constant rather than a parameter — it no longer determines what
+kind of filter a column gets, so there is nothing for a user to configure. Its value is set by
+how many checkbox rows the popover can draw comfortably; see the tech spec.
+
 Additional rules:
-- Categorical columns — always multiselect regardless of cardinality
-- Columns with all null values — excluded from auto-inference (can be forced via `FilterConfig`)
+- Categorical dtype columns — always multiselect regardless of cardinality
+- Columns with all null values — excluded from auto-inference (can be forced via column config)
 - `TIMEDELTA`, `PERIOD`, `INTERVAL`, `EMPTY`, `UNKNOWN` — excluded
 
 ### Operators Per Filter Type
@@ -302,31 +382,100 @@ additionally support `is null` and `is not null`.
 | Range | between, not between, equals, not equals, greater than, less than, is null, is not null |
 | Date/time range | between, not between, equals, not equals, before, after, is relative to today (direction × unit: this/past/next × day/week/month/year), is null, is not null |
 
-### FilterConfig
+### Column configuration
 
-For explicit control over individual columns:
+Explicit control uses the existing `st.column_config.*` classes — the same objects
+`st.dataframe` and `st.data_editor` accept:
 
 ```python
-from streamlit import FilterConfig
-
 st.filter_bar(df, columns={
-    "status": FilterConfig(type="multiselect", options=["active", "inactive"]),
-    "price": FilterConfig(type="range", min_value=0, max_value=1000),
-    "created_at": FilterConfig(type="date_range"),
+    "status": st.column_config.SelectboxColumn(options=["active", "inactive"]),
+    "price": st.column_config.NumberColumn(min_value=0, max_value=1000),
+    "created_at": st.column_config.DateColumn(label="Created", help="Order date"),
+    "region": "Sales region",  # string shorthand for label
     "internal_id": None,  # excluded
+})
+```
+
+The column class determines the filter type, and the domain fields it already carries are
+reused:
+
+| Column config type | Filter type | Fields used |
+|---|---|---|
+| `SelectboxColumn` | Multiselect | `options`, `format_func` |
+| `TextColumn`, `LinkColumn`, `MarkdownColumn` | Text search | — |
+| `NumberColumn`, `ProgressColumn` | Range | `min_value`, `max_value` |
+| `CheckboxColumn` | Toggle | — |
+| `DateColumn`, `DatetimeColumn`, `TimeColumn` | Date / datetime / time range | — |
+| `MultiselectColumn`, `ListColumn`, `JsonColumn`, `ImageColumn`, `AudioColumn`, `VideoColumn`, `LineChartColumn`, `BarChartColumn`, `AreaChartColumn`, `ButtonColumn` | Not filterable — raises `StreamlitAPIException` | — |
+
+`label` and `help` apply to the filter pill in every case. Table-only fields (`width`,
+`pinned`, `alignment`, `required`) are ignored, as are `disabled` and `hidden` — `filter_bar`
+uses its own `disabled` parameter and `None` for exclusion, so there is one mechanism for each
+rather than two. `MultiselectColumn` and `ListColumn` hold multiple values per cell and need
+"has any of" mask semantics; they are deferred with the list/tags filter.
+
+**Filter-only options** live in a new `filter` field on any column config, accepting
+`bool | FilterConfig`:
+
+```python
+st.filter_bar(df, columns={
+    # Restrict which operators the user can choose
+    "price": st.column_config.NumberColumn(
+        min_value=0,
+        filter=st.column_config.FilterConfig(operators=["between", "greater_than"]),
+    ),
+    # Keep the column honestly typed, but filter it as a checklist
+    "store_id": st.column_config.NumberColumn(
+        filter=st.column_config.FilterConfig(type="multiselect"),
+    ),
 })
 ```
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `type` | `Literal["multiselect", "text", "range", "date_range", "datetime_range", "time_range", "toggle"] \| None` | `None` | Override auto-inferred filter type. |
-| `label` | `str \| None` | `None` | Custom display label for the filter chip. Defaults to column name. |
-| `options` | `Sequence[Any] \| None` | `None` | Explicit values for multiselect. If `None`, derived from data. |
-| `min_value` / `max_value` | `int \| float \| None` | `None` | Bounds for range filters. If `None`, derived from data. |
-| `operators` | `Sequence[str] \| None` | `None` | Restrict operators to a subset. |
-| `format_func` | `Callable[[Any], str] \| None` | `None` | Display formatter for multiselect labels. Values unchanged; only labels affected. |
+| `type` | `Literal["multiselect", "text", "range", "date_range", "datetime_range", "time_range", "toggle"] \| None` | `None` | Override the filter type implied by the column class. For columns whose display type and natural filter differ — integer codes filtered as a checklist. |
+| `operators` | `Sequence[str] \| None` | `None` | Restrict the operators offered to a subset of the defaults for that filter type. |
 
-All fields are optional. An empty `FilterConfig()` is equivalent to auto-inference.
+`filter=False` marks a column non-filterable while leaving the rest of its configuration
+intact. In `st.filter_bar`, that is equivalent to `None`; the distinction matters in a table
+context, where `None` means "hide the column entirely".
+
+### Integration path
+
+Reusing `column_config` is a deliberate bet that filtering will eventually be available on
+`st.dataframe`. The intended shape:
+
+```python
+st.dataframe(
+    df,
+    filterable=True,
+    column_config={
+        "status": st.column_config.SelectboxColumn(options=["active", "inactive"]),
+        "price": st.column_config.NumberColumn(min_value=0, max_value=1000),
+    },
+)
+```
+
+Filter types and domains come from the `column_config` the developer already wrote, so nothing
+is declared twice. Three properties of the V1 design keep that path open:
+
+1. **`filter` is the hook.** It accepts `bool | FilterConfig` on any column config, so a table
+   can disable filtering per column (`filter=False`) and override the filter type wherever
+   display type and filter type diverge — an integer column shown as a `ProgressColumn` but
+   filtered as a range.
+2. **Domain fields are overrides, not declarations.** `options`, `min_value`/`max_value`,
+   `label`, and `format_func` override what would otherwise be inferred from the data. In a
+   table context they are inferred from `column_config` instead — same semantics, no API
+   change.
+3. **Exclusion differs by context, and both forms are accepted.** `None` excludes a column
+   from filtering in `st.filter_bar`; `filter=False` expresses "displayed but not filterable"
+   for the table case.
+
+`st.data_editor` is a harder case, and blocked rather than deferred: mapping edits back to
+source rows through a filtered view needs stable row identity — the same dependency the
+[dataframe lazy-load spec](../2026-05-07-dataframe-lazy-load/product-spec.md) raises for
+`on_select`.
 
 ### FilterBarState
 
@@ -339,7 +488,6 @@ state.Industry             # → {"type": "multiselect", "operator": "is", "valu
 state["Industry"]["values"]  # → ["Tech"]
 
 state.active_filters  # → ["Industry", "Stage"] (columns with active filters)
-state.logic           # → "and" or "or"
 ```
 
 `FilterBarState` is exported as `st.FilterBarState` for type annotations. It is read-only
@@ -347,7 +495,7 @@ state.logic           # → "and" or "or"
 
 ### Behavior
 
-**Visual layout — expanded (default):**
+**Visual layout:**
 
 ```
 Filter results ⓘ                              (label + help tooltip)
@@ -358,15 +506,8 @@ Filter results ⓘ
 [ Status: Active, Pending ˅]  [ Price: < $30 ˅]  [Clear all]  [ + Add filter ]
 ```
 
-**Visual layout — collapsed (`expanded=False`):**
-
-```
-Filter results ⓘ  ≡ [2] ›                     (disclosure pattern)
-```
-
-The label, filter icon, count badge, and chevron are always visible. The pill row is
-hidden when collapsed. The `expanded` parameter controls only the initial state; users
-toggle at runtime.
+The filter bar is always expanded. Collapsing is deferred — see
+[Out of Scope](#out-of-scope-future-work).
 
 **Chip behavior:**
 
@@ -390,8 +531,8 @@ toggle at runtime.
 3. User selects a column → popover appears with appropriate filter UI
 4. User configures the filter → becomes an active chip
 
-**Empty state:** When expanded with no active filters, a subtle guidance message displays:
-`Click "Add filter" to get started` (uses `placeholder` text if set).
+**Empty state:** With no active filters, a subtle guidance message displays:
+`Click "Add filter" to get started`.
 
 **Removing filters:**
 
@@ -414,8 +555,14 @@ toggle at runtime.
 
 - Active filters persist across reruns (standard widget statefulness)
 - If the input DataFrame schema changes, stale filters for removed columns are dropped
-- Proposed: changes apply live as the user interacts (see Decisions for Review #3)
-- `on_change` fires when the filter set changes (not on expand/collapse)
+- Changes apply live — every filter change triggers a rerun, like any other widget
+- `on_change` fires when the filter set changes
+
+**Reducing reruns:** `@st.fragment` scopes a filter interaction to the fragment, so expensive
+data loading above the filter bar does not re-execute. This is the recommended pattern for
+large data. Placing the filter bar inside `st.form` also works — pills update locally and the
+returned DataFrame changes only on submit — but it defers the cost rather than removing it, so
+it is not the recommended pattern.
 
 **Null handling:**
 
@@ -533,39 +680,69 @@ Cons: Breaks the `st.filter_bar(df)` one-liner; the filter bar is data-centric l
 **High priority (expected BI demand):**
 
 - **Cascading / dependent filters**: Selecting "Country=US" narrows "City" options to US
-  cities. The current API cannot express inter-column dependencies; a future `depends_on`
-  field in `FilterConfig` could enable this.
+  cities. Tableau's own recommendation for high-cardinality fields is sequential filters with
+  "Only Relevant Values", which makes this the most-requested shape. The likely design is
+  deriving a column's options from the already-filtered frame with an opt-out, rather than a
+  `depends_on` field — it needs a design pass for options vanishing mid-interaction and for
+  widening a filter after narrowing.
+- **Within-field multi-condition**: a condition builder on one column — text "contains A or
+  contains B", or disjoint numeric ranges like "< 10 or > 100". This is what Excel's Custom
+  Filter And/Or radio and Power BI's Advanced filtering offer in their normal flow, which
+  ranks it above cross-field OR. The remaining gap is narrow: multiselect already covers
+  within-field OR for categorical columns, and `between` covers two-sided numeric and date
+  ranges.
 
 **Medium priority:**
 
-- **Grouped AND/OR (Notion-style)**: The state model supports multi-group logic without
-  migration. A flat AND/OR toggle may ship in V1 (see Decisions for Review #2).
 - **`st.dataframe` integration**: Embedded filter bar via `filterable=True`. Addresses
   [#6272](https://github.com/streamlit/streamlit/issues/6272) (63 upvotes),
-  [#1879](https://github.com/streamlit/streamlit/issues/1879) (33 upvotes).
+  [#1879](https://github.com/streamlit/streamlit/issues/1879) (33 upvotes). See
+  [Integration path](#integration-path).
+- **Cross-field OR**: no comparable exposes this as a flat toggle; if built, the shape is
+  Notion-style nested groups behind an explicit advanced affordance. Cheap to add — the widget
+  state is a JSON string, so no proto change and no state migration are needed, and the reader
+  defaults to AND when no logic is recorded. The real work is defining "unconfigured filter"
+  per filter type: an unset filter currently matches every row, which is correct as "no
+  constraint" under AND but would make an OR union match everything.
 - **Server-side / SQL pass-through filtering**: For lazy-loaded data where filtering
   should happen at the query layer. Likely integrates with the
   [dataframe lazy-load](../2026-05-07-dataframe-lazy-load/product-spec.md) adapter system.
-- **`st.form` batch-apply mode**: Filter_bar inside `st.form` batches changes until
-  submit. The `@st.fragment` pattern is preferred for reducing reruns in V1.
+- **List / tags filters**: `MultiselectColumn` and `ListColumn` hold multiple values per cell
+  and need "has any of" / "has all of" mask semantics.
 
 **Lower priority:**
 
 - **Saved filter presets**: Named filter combinations with a dropdown switcher.
+- **Collapsible filter bar**: an `expanded` parameter plus the runtime disclosure control.
+- **`placeholder`**: custom empty-state text.
 - **Custom filter types**: User-defined filter UIs (component v2 integration).
 - **Per-filter row count badge**: "142 of 1000 rows" per pill — performance concern.
 - **Cross-widget filtering**: Chart click → add filter (requires event-scoped fragments).
 - **Select inverse for multiselect**: Quick "Invert" action.
-- **Per-column help tooltips**: `help` field on `FilterConfig`.
 - **Drag-to-reorder pills**: `dnd-kit` integration.
-- **String shorthand**: `{"col": "Label"}` as `FilterConfig(label="Label")`.
+- **`st.data_editor` integration**: blocked, not merely deferred — mapping edits back to source
+  rows through a filtered view needs stable row identity.
+
+## Prototype status
+
+A working prototype exists on this branch and produced the performance numbers cited above. It
+differs from this spec in four ways, all implementation follow-ups rather than open questions:
+
+- Configuration uses a standalone `FilterConfig` rather than `st.column_config.*`
+- A flat AND/OR toggle is rendered in the pill row
+- `placeholder` and `expanded` parameters exist
+- String columns above 50 unique values fall back to a text filter instead of a
+  server-searched value picker
+
+The measured results are unaffected by these differences: they concern how filters are
+declared and composed, not how they execute.
 
 ## Checklist
 
 | Item                       | ✅ or comment                                    |
 |----------------------------|--------------------------------------------------|
 | Works on SiS, Cloud, etc?  | ✅ Yes — pure widget, no platform dependencies   |
-| No breaking API changes    | ✅ Yes — new widget, additive change             |
+| No breaking API changes    | ✅ Additive — new widget, plus a new optional `filter` field on `ColumnConfig` (needs review by `column_config` owners) |
 | No new dependencies        | ✅ Yes — reuses existing dtype inference          |
 | Metrics collected          | ✅ Yes — new `filter_bar` command metric          |
 | Any security/legal impact? | ✅ None                                           |
