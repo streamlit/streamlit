@@ -41,6 +41,12 @@ def test_spinner_time(app: Page):
     updated_text = app.get_by_test_id("stSpinner").text_content()
     assert initial_text != updated_text
 
+    # The label sits in a live region; the elapsed time deliberately does not,
+    # since it is rewritten every 100ms.
+    status = app.get_by_test_id("stSpinner").get_by_role("status")
+    expect(status).to_have_text("Loading...")
+    expect(status).not_to_contain_text("seconds")
+
 
 def test_spinner_slows_but_keeps_animating_under_reduced_motion(app: Page):
     """The spinner slows down rather than stopping when reduced motion is set.
@@ -56,15 +62,6 @@ def test_spinner_slows_but_keeps_animating_under_reduced_motion(app: Page):
     expect(spinner_icon).to_have_css("animation-duration", "1.8s")
     expect(spinner_icon).to_have_css("animation-iteration-count", "infinite")
     expect(spinner_icon).not_to_have_css("animation-name", "none")
-
-
-def test_spinner_label_is_announced(app: Page):
-    """The label sits in a live region; the elapsed time deliberately does not."""
-    get_button(app, "Run spinner with time").click()
-
-    status = app.get_by_test_id("stSpinner").get_by_role("status")
-    expect(status).to_have_text("Loading...")
-    expect(status).not_to_contain_text("seconds")
 
 
 def test_double_spinner(app: Page):

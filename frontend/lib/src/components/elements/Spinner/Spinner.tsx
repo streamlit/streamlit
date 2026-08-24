@@ -70,14 +70,19 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
       cache={cache}
     >
       <StyledSpinnerContainer>
-        {/* The icon is decorative and stays aria-hidden; the label below is
-            what assistive technology announces. */}
+        {/* `DynamicIcon` marks the spinner icon aria-hidden; the label below
+            carries the accessible name. */}
         <DynamicIcon size="lg" iconValue="spinner" />
         <StyledSpinnerText>
-          {/* The live region is the label alone, deliberately excluding the
-              elapsed time: that text is rewritten every 100ms, and inside a
-              live region it would queue an announcement on every tick. Kept
-              outside, it is still reachable by a screen reader on demand. */}
+          {/* Scope the live region to the label. `role="status"` implies
+              `aria-atomic="true"`, and the elapsed time is rewritten every
+              100ms, so a region spanning both would re-read the label on every
+              tick. Outside the region, the time is still reachable on demand.
+
+              This region mounts already populated, which many screen readers
+              do not announce — the same trade-off as `SkillsInstallCallout`.
+              Accepted here: the label is in the accessibility tree, where
+              previously nothing was exposed. */}
           <div role="status">
             <StreamlitMarkdown source={element.text} allowHTML={false} />
           </div>

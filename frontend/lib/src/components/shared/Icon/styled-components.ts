@@ -63,10 +63,8 @@ export const StyledSpinnerIcon = styled("span", {
     borderWidth: theme.sizes.spinnerThickness,
     flexGrow: 0,
     flexShrink: 0,
-    // The rotation is the only thing that tells the user work is still in
-    // progress, so it is slowed rather than stopped when the user asks for
-    // reduced motion. Stopping it parks the accent segment at its rest angle,
-    // which reads as a hung app.
+    // Slow the spin rather than stopping it: the rotation is the only cue that
+    // work is still in progress, and a parked ring reads as a hung app.
     "@media (prefers-reduced-motion: reduce)": {
       animationDuration: "1800ms",
     },
