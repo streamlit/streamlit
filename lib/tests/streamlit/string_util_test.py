@@ -46,6 +46,18 @@ class StringUtilTest(unittest.TestCase):
         """Test streamlit.string_util.is_emoji."""
         assert string_util.is_emoji(text) == expected
 
+    def test_to_str(self):
+        """``to_str`` leaves strings unchanged and stringifies other values."""
+        assert string_util.to_str("already") == "already"
+        assert string_util.to_str(123) == "123"
+        assert string_util.to_str(None) == "None"
+
+    def test_to_help_str(self):
+        """``to_help_str`` stringifies and dedents help text."""
+        assert string_util.to_help_str("already") == "already"
+        assert string_util.to_help_str(123) == "123"
+        assert string_util.to_help_str("    indented") == "indented"
+
     @parameterized.expand(
         [
             ("", ("", "")),

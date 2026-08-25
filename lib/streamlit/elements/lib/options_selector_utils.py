@@ -20,7 +20,11 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDefaultNotInOptionsError,
+    StreamlitValueError,
+)
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
@@ -119,10 +123,7 @@ def check_and_convert_to_indices(
 
     for value in default_values:
         if value not in opt:
-            raise StreamlitAPIException(
-                f"The default value '{value}' is not part of the options. "
-                "Please make sure that every default values also exists in the options."
-            )
+            raise StreamlitDefaultNotInOptionsError(value)
 
     return [opt.index(value) for value in default_values]
 

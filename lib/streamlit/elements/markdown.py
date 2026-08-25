@@ -24,7 +24,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_icon_or_emoji
+from streamlit.string_util import clean_text, to_help_str, validate_icon_or_emoji
 from streamlit.type_util import SupportsStr, is_sympy_expression
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ class MarkdownMixin:
         markdown_proto.unterminated_parsing = unterminated_parsing
         markdown_proto.hide_anchors = not anchors
         if help:
-            markdown_proto.help = help
+            markdown_proto.help = to_help_str(help)
 
         if width != "auto":
             layout_config = create_layout_config(
@@ -338,7 +338,7 @@ class MarkdownMixin:
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         if help:
-            caption_proto.help = help
+            caption_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(
             width=width, text_alignment=text_alignment, allow_content_width=True
@@ -409,7 +409,7 @@ class MarkdownMixin:
         latex_proto.body = f"$$\n{clean_text(body)}\n$$"
         latex_proto.element_type = MarkdownProto.Type.LATEX
         if help:
-            latex_proto.help = help
+            latex_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
@@ -575,7 +575,7 @@ class MarkdownMixin:
         badge_proto.element_type = MarkdownProto.Type.NATIVE
 
         if help is not None:
-            badge_proto.help = help
+            badge_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
