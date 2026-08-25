@@ -164,6 +164,12 @@ def test_st_rerun_list_with_fragment_raises() -> None:
         rerun(["fragment"])
 
 
+def test_st_rerun_list_with_non_string_raises() -> None:
+    """st.rerun([1, 2]) raises StreamlitAPIException for non-string items."""
+    with pytest.raises(StreamlitAPIException, match="strings"):
+        rerun([1, 2])
+
+
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_key_scope_resolves_target_without_queueing(patched_get_script_run_ctx) -> None:
     """st.rerun('charts') resolves the key via fragment_storage but does not

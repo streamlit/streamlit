@@ -262,6 +262,10 @@ def rerun(  # type: ignore[misc]
         )
     if isinstance(scope, Sequence) and not isinstance(scope, str):
         for name in scope:
+            if not isinstance(name, str):
+                raise StreamlitAPIException(
+                    f"Fragment keys must be strings, not `{type(name).__name__}`."
+                )
             if name in {"app", "fragment"}:
                 raise StreamlitAPIException(
                     f"'{name}' is a reserved scope name and cannot be used inside a list. "
