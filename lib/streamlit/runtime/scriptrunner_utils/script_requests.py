@@ -58,8 +58,8 @@ class RerunData:
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
     # When True, apply widget_states but skip callback dispatch.
-    # Set by _request_full_app_rerun when a callback-less widget vote adds a
-    # full-app rerun after callbacks have already run in this interaction.
+    # Set by _request_full_app_rerun when a normally returning callback
+    # requests the interaction default after callbacks have already run.
     suppress_callbacks: bool = False
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)

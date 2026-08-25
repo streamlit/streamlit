@@ -911,10 +911,12 @@ class SessionState:
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
         if suppress_callbacks:
-            self._current_interaction_widget_states = None
             return
         self._current_interaction_widget_states = latest_widget_states
-        self._call_callbacks()
+        try:
+            self._call_callbacks()
+        finally:
+            self._current_interaction_widget_states = None
 
     def _call_callbacks(self) -> None:
         """Call callbacks for widgets whose value changed or whose trigger fired,
@@ -1064,6 +1066,13 @@ class SessionState:
         a targeted rerun in a main-script interaction. Forwards the current
         interaction's ``widget_states`` with ``suppress_callbacks=True`` so the
         body sees submitted values (including form triggers) in the follow-up run.
+
+        This differs from a plain ``st.rerun()`` in a callback, which starts a
+        *new* script run with ``widget_states=None`` — the interaction's values
+        are already in session state, and triggers were consumed during this run.
+        The escalated run is a *continuation* of the same interaction: the body
+        hasn't executed yet, so triggers must be re-applied to produce the
+        output the un-escalated interaction would have shown.
         """
         from streamlit.runtime.scriptrunner import RerunData
 

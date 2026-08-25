@@ -125,8 +125,8 @@ def _new_fragment_id_queue(
         ts = ThreadState.get()
         if ts.run_location not in _KEYED_RERUN_ALLOWED_LOCATIONS:
             raise StreamlitAPIException(
-                "Passing a fragment key to ``st.rerun()`` is only allowed from a "
-                "widget callback (e.g. ``on_change`` / ``on_click``). Calling it "
+                "Passing a fragment key to `st.rerun()` is only allowed from a "
+                "widget callback (e.g. `on_change` / `on_click`). Calling it "
                 "from the main script body or a fragment body would abort the "
                 "current run."
             )
@@ -225,6 +225,29 @@ def rerun(  # type: ignore[misc]
           ``@st.fragment(key=...)``. This form is only valid from a widget
           callback (``on_change`` / ``on_click``); calling it from the main
           script body or a fragment body raises ``StreamlitAPIException``.
+
+    Examples
+    --------
+    Rerun a named fragment from a widget callback:
+
+    >>> import streamlit as st
+    >>>
+    >>> @st.fragment(key="charts")
+    >>> def charts():
+    >>>     st.line_chart({"data": [1, 2, 3]})
+    >>>
+    >>> charts()
+    >>> st.button(
+    >>>     "Refresh charts",
+    >>>     on_click=lambda: st.rerun("charts"),
+    >>> )
+
+    Rerun multiple fragments at once:
+
+    >>> st.button(
+    >>>     "Refresh all",
+    >>>     on_click=lambda: st.rerun(["charts", "table"]),
+    >>> )
 
     """
     if isinstance(scope, str) and scope == "":

@@ -264,7 +264,8 @@ class MemoryFragmentStorage(FragmentStorage):
         self._registration_sequence = 0
         self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
         # User-facing fragment name -> registered fragment ids (one per call site).
-        self._ids_by_target_key: dict[str, list[str]] = {}
+        # Uses dict[str, None] for O(1) membership checks with stable insertion order.
+        self._ids_by_target_key: dict[str, dict[str, None]] = {}
         self._target_key_by_id: dict[str, str] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
@@ -294,9 +295,7 @@ class MemoryFragmentStorage(FragmentStorage):
             self._unindex_target_key(fragment_id)
         if target_key is not None:
             self._target_key_by_id[fragment_id] = target_key
-            ids = self._ids_by_target_key.setdefault(target_key, [])
-            if fragment_id not in ids:
-                ids.append(fragment_id)
+            self._ids_by_target_key.setdefault(target_key, {})[fragment_id] = None
 
     def _unindex_target_key(self, fragment_id: str) -> None:
         """Remove fragment_id from the key-to-id index."""
@@ -304,8 +303,8 @@ class MemoryFragmentStorage(FragmentStorage):
         if target_key is None:
             return
         ids = self._ids_by_target_key.get(target_key)
-        if ids and fragment_id in ids:
-            ids.remove(fragment_id)
+        if ids is not None and fragment_id in ids:
+            del ids[fragment_id]
             if not ids:
                 del self._ids_by_target_key[target_key]
 
@@ -354,8 +353,13 @@ class MemoryFragmentStorage(FragmentStorage):
     def resolve_target(self, target: str | Sequence[str]) -> list[str]:
         """Resolve one or more ``@st.fragment(key=...)`` names to fragment ids."""
         names = [target] if isinstance(target, str) else list(target)
+        if not names:
+            raise StreamlitAPIException(
+                "st.rerun() was called with an empty scope. "
+                "Pass a fragment key, a list of keys, 'app', or 'fragment'."
+            )
         with self._lock:
-            resolved: list[str] = []
+            resolved: dict[str, None] = {}
             for name in names:
                 ids = self._ids_by_target_key.get(name)
                 if not ids:
@@ -365,9 +369,8 @@ class MemoryFragmentStorage(FragmentStorage):
                         f"that fragment has rendered at least once."
                     )
                 for fragment_id in ids:
-                    if fragment_id not in resolved:
-                        resolved.append(fragment_id)
-            return resolved
+                    resolved[fragment_id] = None
+            return list(resolved)
 
     def clear_stale_descendants(
         self,
@@ -550,6 +553,9 @@ def _fragment(
     under-the-hood, so that fragment metrics are not tracked for those elements
     (note that the @gather_metrics annotation is only on the publicly exposed function)
     """
+
+    if key is not None:
+        require_valid_user_key(key)
 
     if key in _RESERVED_FRAGMENT_KEYS:
         raise StreamlitAPIException(
@@ -861,11 +867,9 @@ def fragment(
 
     key : str or None
         An optional name for the fragment. When set,
-        ``st.rerun(scope="<key>")`` re-runs this fragment from a widget
-        callback (``on_change`` / ``on_click``). If the fragment function is called from multiple
-        sites, every call site re-runs together. If this is ``None``
-        (default), the fragment can only be re-run from within itself via
-        ``st.rerun(scope="fragment")``.
+        ``st.rerun("<key>")`` re-runs this fragment from a widget
+        callback (``on_change`` / ``on_click``). If the fragment function
+        is called from multiple sites, every call site re-runs together.
 
         A fragment key must be unique among the fragments that render in a
         single run, just like a widget ``key``. The names ``"app"`` and

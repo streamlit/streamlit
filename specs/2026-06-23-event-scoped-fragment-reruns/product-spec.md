@@ -117,8 +117,8 @@ st.selectbox(
 )
 ```
 
-`scope` therefore accepts `"app"`, `"fragment"`, a **single fragment key**, or a **list of keys**
-(`Literal["app", "fragment"] | Key | list[Key]`); passing a list reruns all of them in one ordered
+`scope` therefore accepts `"app"`, `"fragment"`, a **single fragment key**, or a **sequence of keys**
+(`Literal["app", "fragment"] | Key | Sequence[Key]`); passing a sequence reruns all of them in one ordered
 pass. `"app"` and `"fragment"` remain reserved level names — any other value is read as a fragment
 key. Every key must match a fragment that has rendered at least once — an unknown key (a single
 `scope` or anywhere in a list) raises a `StreamlitAPIException`, so a typo or stale key fails loudly

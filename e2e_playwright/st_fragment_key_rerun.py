@@ -76,9 +76,39 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 3: Unknown key raises a visible exception.
+# Scenario 3: Compose — widget inside fragment A targets fragment B.
+# Both fragments should rerun; nothing outside should change.
 # ------------------------------------------------------------------ #
-st.header("Scenario 3: unknown key raises")
+st.header("Scenario 3: compose (fragment-to-fragment)")
+
+
+@st.fragment(key="source_frag")
+def source_fragment() -> None:
+    with st.container(key="source_uuid"):
+        st.write(f"Source uuid: {uuid4()}")
+    st.button(
+        "Rerun target from source",
+        key="rerun_target_btn",
+        on_click=lambda: st.rerun("target_frag"),
+    )
+
+
+@st.fragment(key="target_frag")
+def target_fragment() -> None:
+    with st.container(key="target_uuid"):
+        st.write(f"Target uuid: {uuid4()}")
+
+
+source_fragment()
+target_fragment()
+
+with st.container(key="compose_stable_text"):
+    st.write(f"Compose stable text: {st.session_state.outside_counter}")
+
+# ------------------------------------------------------------------ #
+# Scenario 4: Unknown key raises a visible exception.
+# ------------------------------------------------------------------ #
+st.header("Scenario 4: unknown key raises")
 
 st.button(
     "Rerun unknown fragment",

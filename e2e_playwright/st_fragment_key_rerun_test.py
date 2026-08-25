@@ -68,6 +68,25 @@ def test_multi_key_rerun_updates_both_fragments_not_outside(app: Page) -> None:
     expect_no_exception(app)
 
 
+def test_compose_fragment_to_fragment_reruns_both(app: Page) -> None:
+    """A button inside fragment A calling st.rerun('target_frag') reruns both
+    the source fragment (enclosing) and the target fragment; outside text is stable.
+    """
+    initial_source = _text(app, "source_uuid")
+    initial_target = _text(app, "target_uuid")
+    initial_stable = _text(app, "compose_stable_text")
+
+    click_button(app, "Rerun target from source")
+
+    # Both fragments must have rerun (new UUIDs).
+    expect(get_element_by_key(app, "source_uuid")).not_to_have_text(initial_source)
+    expect(get_element_by_key(app, "target_uuid")).not_to_have_text(initial_target)
+    # Outside text must not change — no full-app rerun occurred.
+    expect(get_element_by_key(app, "compose_stable_text")).to_have_text(initial_stable)
+
+    expect_no_exception(app)
+
+
 def test_unknown_key_raises_visible_exception(app: Page) -> None:
     """st.rerun('nonexistent_key') raises StreamlitAPIException shown as an app error."""
     click_button(app, "Rerun unknown fragment")
