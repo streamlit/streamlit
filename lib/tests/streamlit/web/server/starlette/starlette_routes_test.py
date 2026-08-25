@@ -62,6 +62,25 @@ def _client_for(routes: list[BaseRoute]) -> TestClient:
     return TestClient(Starlette(routes=routes))
 
 
+def _content_disposition_for(filename: str) -> str:
+    """Return the Content-Disposition the media endpoint emits for a download name."""
+    storage = MemoryMediaFileStorage("/media")
+    file_id = storage.load_and_get_id(
+        b"payload", "text/plain", MediaFileKind.DOWNLOADABLE, filename
+    )
+    response = _client_for(create_media_routes(storage, "")).get(f"/media/{file_id}")
+
+    assert response.status_code == 200
+    return response.headers["content-disposition"]
+
+
+def _filename_from_header(header: str) -> str | None:
+    """Recover the filename a conforming client would read from the header."""
+    message = EmailMessage()
+    message["Content-Disposition"] = header
+    return message.get_filename()
+
+
 def _endpoint_for(routes: list[BaseRoute], method: str) -> Callable[..., Any]:
     """Return the handler of the first route that accepts the given HTTP method."""
     for route in routes:
@@ -612,61 +631,6 @@ def test_media_endpoint_downloadable_without_filename_uses_default() -> None:
 
     assert response.status_code == 200
     assert "streamlit_download" in response.headers["content-disposition"]
-
-
-def test_media_endpoint_downloadable_non_latin1_filename_uses_utf8() -> None:
-    """A filename that cannot be latin-1 encoded uses the RFC 5987 utf-8 form."""
-    storage = MemoryMediaFileStorage("/media")
-    file_id = storage.load_and_get_id(
-        b"payload", "text/plain", MediaFileKind.DOWNLOADABLE, "\u6587\u4ef6.txt"
-    )
-    routes = create_media_routes(storage, "")
-
-    response = _client_for(routes).get(f"/media/{file_id}")
-
-    assert response.status_code == 200
-    assert "filename*=utf-8''" in response.headers["content-disposition"]
-
-
-def _content_disposition_for(filename: str) -> str:
-    """Return the Content-Disposition the media endpoint emits for a download name.
-
-    Parameters
-    ----------
-    filename
-        The name the app set on the downloadable media file.
-
-    Returns
-    -------
-    str
-        The raw header value served for that file.
-    """
-    storage = MemoryMediaFileStorage("/media")
-    file_id = storage.load_and_get_id(
-        b"payload", "text/plain", MediaFileKind.DOWNLOADABLE, filename
-    )
-    response = _client_for(create_media_routes(storage, "")).get(f"/media/{file_id}")
-
-    assert response.status_code == 200
-    return response.headers["content-disposition"]
-
-
-def _filename_from_header(header: str) -> str | None:
-    """Recover the filename a conforming client would read from the header.
-
-    Parameters
-    ----------
-    header
-        A Content-Disposition header value.
-
-    Returns
-    -------
-    str or None
-        The decoded filename parameter, handling the RFC 5987 ``filename*`` form.
-    """
-    message = EmailMessage()
-    message["Content-Disposition"] = header
-    return message.get_filename()
 
 
 @pytest.mark.parametrize(
