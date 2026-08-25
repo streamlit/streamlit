@@ -38,6 +38,19 @@ def clean_text(text: SupportsStr) -> str:
     return textwrap.dedent(str(text)).strip()
 
 
+def to_str(value: object) -> str:
+    """Coerce ``value`` to ``str`` for protobuf string fields.
+
+    Existing strings are returned unchanged so we do not allocate a copy.
+    """
+    return value if isinstance(value, str) else str(value)
+
+
+def to_help_str(help: object) -> str:
+    """Coerce ``help`` to ``str`` and dedent it for protobuf assignment."""
+    return textwrap.dedent(to_str(help))
+
+
 def _contains_special_chars(text: str) -> bool:
     """Check if a string contains any special chars.
 

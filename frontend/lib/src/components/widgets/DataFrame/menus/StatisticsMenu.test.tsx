@@ -122,6 +122,9 @@ describe("StatisticsMenu", () => {
     )
 
     await waitFor(() => {
+      expect(screen.getByTestId("stDataFrameStatisticsMenu")).toHaveClass(
+        "stDataFrameStatisticsMenu"
+      )
       expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
     })
   })

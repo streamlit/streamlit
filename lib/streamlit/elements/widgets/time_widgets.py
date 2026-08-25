@@ -17,7 +17,6 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -44,7 +43,11 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -59,6 +62,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
+from streamlit.string_util import to_help_str
 from streamlit.time_util import adjust_years
 
 if TYPE_CHECKING:
@@ -78,7 +82,6 @@ DateValue: TypeAlias = NullableScalarDateValue | Sequence[NullableScalarDateValu
 # The return value of st.date_input.
 DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
 DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
-
 
 DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
@@ -126,8 +129,10 @@ def _convert_timelike_to_time(value: TimeValue) -> time:
     if isinstance(value, time):
         return value
 
-    raise StreamlitAPIException(
-        "The type of value should be one of datetime, time, ISO string or None"
+    raise StreamlitInvalidParameterTypeError(
+        "value",
+        type(value).__name__,
+        ["datetime", "time", "ISO string"],
     )
 
 
@@ -153,8 +158,10 @@ def _convert_datelike_to_date(
                 # We throw an error below.
                 pass
 
-    raise StreamlitAPIException(
-        'Date value should either be an date/datetime or an ISO string or "today"'
+    raise StreamlitInvalidParameterTypeError(
+        "value",
+        type(value).__name__,
+        ["date", "datetime", "ISO string", '"today"'],
     )
 
 
@@ -172,9 +179,10 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
         value_tuple = [cast("NullableScalarDateValue", value)]
 
     if len(value_tuple) not in {0, 1, 2}:
-        raise StreamlitAPIException(
-            "DateInput value should either be an date/datetime or a list/tuple of "
-            "0 - 2 date/datetime values"
+        raise StreamlitInvalidParameterTypeError(
+            "value",
+            type(value).__name__,
+            ["date", "datetime", "sequence of 0 to 2 date or datetime values"],
         )
 
     parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]
@@ -195,8 +203,10 @@ def _parse_min_date(
         else:
             parsed_min_date = adjust_years(date.today(), years=-10)
     else:
-        raise StreamlitAPIException(
-            "DateInput min should either be a date/datetime or None"
+        raise StreamlitInvalidParameterTypeError(
+            "min_value",
+            type(min_value).__name__,
+            ["date", "datetime", "ISO string", "None"],
         )
     return parsed_min_date
 
@@ -214,8 +224,10 @@ def _parse_max_date(
         else:
             parsed_max_date = adjust_years(date.today(), years=10)
     else:
-        raise StreamlitAPIException(
-            "DateInput max should either be a date/datetime or None"
+        raise StreamlitInvalidParameterTypeError(
+            "max_value",
+            type(max_value).__name__,
+            ["date", "datetime", "ISO string", "None"],
         )
     return parsed_max_date
 
@@ -297,8 +309,10 @@ def _convert_datetimelike_to_datetime(
         except ValueError:
             pass
 
-    raise StreamlitAPIException(
-        "The type of value should be one of datetime, date, time, ISO string, or 'now'."
+    raise StreamlitInvalidParameterTypeError(
+        "value",
+        type(value).__name__,
+        ["datetime", "date", "time", "ISO string", '"now"'],
     )
 
 
@@ -995,7 +1009,7 @@ class TimeWidgetsMixin:
             on_change,
             default_value=value if value != "now" else None,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         parsed_time: time | None
         parsed_time = None if value is None else _convert_timelike_to_time(value)
@@ -1037,8 +1051,10 @@ class TimeWidgetsMixin:
         time_input_proto.id = element_id
         time_input_proto.label = label
         if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
-            raise StreamlitAPIException(
-                f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
+            raise StreamlitInvalidParameterTypeError(
+                "step",
+                type(step).__name__,
+                ["int", "timedelta"],
             )
         if isinstance(step, timedelta):
             step = int(step.total_seconds())
@@ -1058,7 +1074,7 @@ class TimeWidgetsMixin:
         )
 
         if help is not None:
-            time_input_proto.help = dedent(help)
+            time_input_proto.help = to_help_str(help)
 
         if bind == "query-params" and key is not None:
             time_input_proto.query_param_key = str(key)
@@ -1410,7 +1426,7 @@ class TimeWidgetsMixin:
             on_change,
             default_value=value if value != "now" else None,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         datetime_values = _DateTimeInputValues.from_raw_values(
             value=value,
@@ -1459,9 +1475,11 @@ class TimeWidgetsMixin:
                 "and can also use a period (.) or hyphen (-) as separators."
             )
 
-        if not isinstance(step, (int, timedelta)):
-            raise StreamlitAPIException(
-                f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
+        if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
+            raise StreamlitInvalidParameterTypeError(
+                "step",
+                type(step).__name__,
+                ["int", "timedelta"],
             )
         step_seconds = (
             int(step.total_seconds()) if isinstance(step, timedelta) else step
@@ -1495,7 +1513,7 @@ class TimeWidgetsMixin:
         date_time_input_proto.is_range = False
 
         if help is not None:
-            date_time_input_proto.help = dedent(help)
+            date_time_input_proto.help = to_help_str(help)
 
         if bind == "query-params" and key is not None:
             date_time_input_proto.query_param_key = str(key)
@@ -1909,7 +1927,7 @@ class TimeWidgetsMixin:
             on_change,
             default_value=value if value != "today" else None,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic_for_id(v: NullableScalarDateValue) -> str | None:
             if v == "today":
@@ -2011,7 +2029,7 @@ class TimeWidgetsMixin:
         date_input_proto.form_id = current_form_id(self.dg)
 
         if help is not None:
-            date_input_proto.help = dedent(help)
+            date_input_proto.help = to_help_str(help)
 
         if bind == "query-params" and key is not None:
             date_input_proto.query_param_key = str(key)
