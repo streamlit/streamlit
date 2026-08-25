@@ -702,11 +702,13 @@ class ScriptRunner:
                             rerun_data.widget_states,
                             suppress_callbacks=rerun_data.suppress_callbacks,
                         )
-                        if not rerun_data.suppress_callbacks:
-                            # A callback may have queued an st.rerun(). Check now
-                            # — while has_script_started is still False — so
-                            # on_script_finished preserves this run's widget values.
-                            self._maybe_handle_execution_control_request()
+                        # Check for pending rerun/stop requests while
+                        # has_script_started is still False so on_script_finished
+                        # preserves this run's widget values.  On the normal path a
+                        # callback may have queued st.rerun(); on the suppressed path
+                        # an external request (e.g. new client interaction) may have
+                        # arrived during state application.
+                        self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
 
