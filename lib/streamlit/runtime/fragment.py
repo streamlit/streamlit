@@ -555,6 +555,8 @@ def _fragment(
     """
 
     if key is not None:
+        from streamlit.runtime.state.common import require_valid_user_key
+
         require_valid_user_key(key)
 
     if key in _RESERVED_FRAGMENT_KEYS:
