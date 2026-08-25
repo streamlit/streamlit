@@ -119,7 +119,7 @@ describe("Modal component", () => {
     // shouldCloseOnInteractOutside logic rather than React Aria's built-in
     // top-layer short-circuit.
     layerHost.setAttribute("data-st-overlay-root", "true")
-    layerButton.textContent = "BaseWeb layer option"
+    layerButton.textContent = "Overlay option"
     layerHost.appendChild(layerButton)
     document.body.appendChild(layerHost)
 

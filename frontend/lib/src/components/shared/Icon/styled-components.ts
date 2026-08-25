@@ -63,8 +63,10 @@ export const StyledSpinnerIcon = styled("span", {
     borderWidth: theme.sizes.spinnerThickness,
     flexGrow: 0,
     flexShrink: 0,
+    // Slow the spin rather than stopping it: the rotation is the only cue that
+    // work is still in progress, and a parked ring reads as a hung app.
     "@media (prefers-reduced-motion: reduce)": {
-      animation: "none",
+      animationDuration: "1800ms",
     },
   }
 })

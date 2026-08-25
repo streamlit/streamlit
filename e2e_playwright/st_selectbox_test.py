@@ -248,8 +248,7 @@ def test_escape_clears_typed_query_and_restores_committed_value(app: Page):
     """Regression test for https://github.com/streamlit/streamlit/issues/16004.
 
     While the user is actively filtering, pressing Escape must discard the
-    typed query and restore the committed label (matching pre-1.59 BaseWeb
-    behavior). The committed value must not change.
+    typed query and restore the committed label. The committed value must not change.
     """
     selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
     expect(selectbox_input).to_have_value("male")

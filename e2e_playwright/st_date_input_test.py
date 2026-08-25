@@ -219,10 +219,8 @@ def test_empty_date_input_behaves_correctly(
         image_threshold=0.035,
     )
 
-    # Click the clear button to clear the value. (React Aria's segmented
-    # DateField doesn't support BaseWeb's "Escape clears the whole value"
-    # shortcut on a focused input, so we use the explicit clear button
-    # instead, which achieves the same outcome.)
+    # Click the clear button because the segmented DateField does not clear the
+    # entire value when Escape is pressed on a focused input.
     empty_date_element.get_by_test_id("stDateInputClearButton").click()
     wait_for_app_run(app)
 
@@ -364,10 +362,8 @@ def test_single_value_reverts_to_committed_if_calendar_closed_empty(app: Page):
 
     expect_markdown(app, "Value 1: 1970-01-02")
 
-    # Clear every segment via the keyboard (mirrors clearing BaseWeb's
-    # free-text input) without selecting a new date. Note: the clear button
-    # isn't used here since this widget isn't clearable (it has a non-empty
-    # default), so it has no rendered clear button.
+    # Clear every segment via the keyboard without selecting a new date. The clear
+    # button isn't used because a widget with a non-empty default isn't clearable.
     for segment in date_field.get_by_role("spinbutton").all():
         segment.click()
         # A handful of extra presses is a harmless no-op once the segment is

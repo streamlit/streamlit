@@ -150,9 +150,8 @@ def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
     wait_for_app_run(app)
 
     expect_markdown(app, "Value B: 17500")
-    # React Aria moves the nearest thumb on click; at the exact midpoint of a range
-    # slider both thumbs are equidistant, so RA moves the right thumb rather than
-    # the left (BaseUI's tie-breaking went the other way).
+    # React Aria moves the nearest thumb on click. At the exact midpoint of a range
+    # slider, both thumbs are equidistant, so it moves the right thumb.
     expect_prefixed_markdown(app, "Range Value B:", "(10000, 17500)")
 
     assert_snapshot(first_slider_in_expander, name="st_slider-in_expander_regular")
@@ -597,7 +596,7 @@ def test_slider_query_param_datetime_updates_url_with_iso(app: Page):
     """Test that interacting with a datetime slider updates the URL with ISO format.
 
     The default (2023-06-15 14:30) is between step boundaries (step=1day from
-    midnight). BaseWeb quantizes to the nearest boundary on interaction, so
+    midnight). Interaction quantizes to the nearest boundary, so
     ArrowRight produces 2023-06-17 00:00 rather than 2023-06-16 14:30.
     """
     slider = get_element_by_key(app, "bound_datetime")

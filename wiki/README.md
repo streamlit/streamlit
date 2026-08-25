@@ -19,6 +19,7 @@ Development guides for different parts of the Streamlit codebase. While written 
 - [TypeScript](../frontend/AGENTS.md)
 - [Python](../lib/AGENTS.md)
 - [Streamlit Library (Python)](../lib/streamlit/AGENTS.md)
+- [Embedded Agent Skills](../lib/streamlit/.agents/skills/AGENTS.md)
 - [Python Unit Tests](../lib/tests/AGENTS.md)
 - [Protobuf](../proto/streamlit/proto/AGENTS.md)
 - [E2E Tests](../e2e_playwright/AGENTS.md)

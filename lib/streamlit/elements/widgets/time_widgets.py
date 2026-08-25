@@ -1434,9 +1434,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_time_input",
             user_key=key,
-            # Format is whitelisted because of a bug in the BaseWeb date input component.
-            # Step is whitelisted because it invalidates the current selection.
-            # We might be able to unlock this as a follow-up.
+            # When a key is set, format and step stay in the widget identity,
+            # so a format change resets the widget and a new step invalidates
+            # the current selection.
             key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
@@ -1941,9 +1941,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            # Ensure stable ID when key is provided. Only format is whitelisted because
-            # there is a bug in baseweb where changing the format dynamically leads to
-            # a wrongly formatted date. min_value and max_value support dynamic changes.
+            # When a key is set, only format stays in the widget identity, so a
+            # format change resets the widget. min_value and max_value can
+            # change without remounting.
             key_as_main_identity={"format"},
             dg=self.dg,
             label=label,
