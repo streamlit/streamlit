@@ -66,10 +66,13 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-# Characters that a download filename cannot carry unescaped inside the quoted-string
-# form of a Content-Disposition ``filename`` parameter. A double quote closes the value
-# early and a backslash begins an escape sequence, so either one changes the name the
-# client reads; control characters are not legal in a header value at all.
+# Characters that a download filename should not carry unescaped inside the
+# quoted-string form of a Content-Disposition ``filename`` parameter. A double quote
+# closes the value early and a backslash begins an escape sequence, so either one
+# changes the name the client reads. Control characters are swept in deliberately
+# rather than out of necessity: CR and LF must never reach a header value, and the rest
+# are encoded conservatively because they have no place in a filename -- note that
+# RFC 7230 ``qdtext`` does in fact permit HTAB, which this class also encodes.
 _QUOTED_FILENAME_UNSAFE: Final = re.compile(r'["\\\x00-\x1f\x7f]')
 
 # TTL for the cached cache_memory_bytes result. Short enough that scrapers
