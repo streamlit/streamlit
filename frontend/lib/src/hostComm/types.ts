@@ -270,17 +270,10 @@ export type VersionedMessage<Message> = {
 } & Message
 
 /**
- * Guest→host postMessage envelope, including the optional same-window echo
- * marker used when Streamlit is embedded (`window !== window.parent`).
- *
- * Streamlit always posts the untagged payload to `window.parent`. When
- * embedded, it also posts a copy to the app window with
- * `isGuestToHostEcho: true` so an in-iframe host can observe it. Hosts that
- * listen on both this window and `window.parent` should ignore copies whose
- * own `isGuestToHostEcho` is boolean `true` to avoid double-counting. The
- * guest drops a tagged copy only when it is a genuine same-window self-post
- * (`event.source === window`); a parent cannot suppress a host command by
- * setting this field.
+ * Guest→host postMessage envelope. `isGuestToHostEcho` is set only on the
+ * same-window copy Streamlit posts when embedded; hosts that observe both this
+ * window and `window.parent` should ignore tagged copies to avoid
+ * double-counting. See `HostCommunicationManager.postMessageToParentAndEcho`.
  */
 export type GuestToHostEnvelope = VersionedMessage<IGuestToHostMessage> & {
   isGuestToHostEcho?: boolean

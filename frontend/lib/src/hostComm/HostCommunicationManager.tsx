@@ -39,8 +39,8 @@ export const HOST_COMM_VERSION = 1
 /**
  * Marks a same-window copy of a guest→host message so the guest does not
  * handle it as a host command. Some types (notably `UPDATE_HASH`) are valid
- * in both directions. Host platforms can import this from `@streamlit/lib`
- * to filter echoes without hardcoding the string.
+ * in both directions. Workspace consumers of this package can import
+ * the constant instead of hardcoding the string.
  */
 export const IS_GUEST_TO_HOST_ECHO = "isGuestToHostEcho"
 
@@ -218,8 +218,9 @@ export default class HostCommunicationManager {
    * to this window so an in-iframe host can observe guest messages even if
    * the parent is a third-party page. The copy sets `isGuestToHostEcho: true`
    * so `receiveHostMessage` can ignore it. Posting to `window` already limits
-   * delivery to this window's listeners; `window.location.origin` refuses the
-   * dispatch if this window has navigated to another origin.
+   * delivery to this window's listeners. The echo uses `"/"` (same origin as
+   * the sender) so `postMessage` does not throw when `location.origin` is the
+   * literal `"null"` in an opaque-origin document.
    *
    * Do not echo at top level: `isSelfPost` is false when
    * `window === window.parent`, so an unignored top-level echo could run as a
@@ -236,7 +237,7 @@ export default class HostCommunicationManager {
         ...versionedMessage,
         [IS_GUEST_TO_HOST_ECHO]: true,
       }
-      window.postMessage(echo, window.location.origin)
+      window.postMessage(echo, "/")
     }
   }
 

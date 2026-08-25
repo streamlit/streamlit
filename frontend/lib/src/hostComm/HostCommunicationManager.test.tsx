@@ -222,7 +222,7 @@ describe("HostCommunicationManager messaging", () => {
           guestReadyAt: expect.any(Number),
           [IS_GUEST_TO_HOST_ECHO]: true,
         }),
-        window.location.origin
+        "/"
       )
     })
 
@@ -236,7 +236,7 @@ describe("HostCommunicationManager messaging", () => {
       })
 
       const selfDispatchCalls = postMessageSpy.mock.calls.filter(
-        ([, targetOrigin]) => targetOrigin === window.location.origin
+        ([, targetOrigin]) => targetOrigin === "/"
       )
       expect(selfDispatchCalls).toHaveLength(0)
     })
@@ -277,7 +277,7 @@ describe("HostCommunicationManager messaging", () => {
           type: "GUEST_READY",
           [IS_GUEST_TO_HOST_ECHO]: true,
         }),
-        window.location.origin
+        "/"
       )
     })
   })
@@ -346,7 +346,7 @@ describe("HostCommunicationManager messaging", () => {
             title: "Embedded title",
             [IS_GUEST_TO_HOST_ECHO]: true,
           },
-          window.location.origin
+          "/"
         )
       })
     })
@@ -359,10 +359,10 @@ describe("HostCommunicationManager messaging", () => {
         title: "Top-level title",
       })
 
-      const originTargetedCalls = postMessageSpy.mock.calls.filter(
-        ([, targetOrigin]) => targetOrigin === window.location.origin
+      const sameWindowEchoCalls = postMessageSpy.mock.calls.filter(
+        ([, targetOrigin]) => targetOrigin === "/"
       )
-      expect(originTargetedCalls).toHaveLength(0)
+      expect(sameWindowEchoCalls).toHaveLength(0)
       expect(postMessageSpy).toHaveBeenCalledWith(
         {
           stCommVersion: HOST_COMM_VERSION,
@@ -416,7 +416,7 @@ describe("HostCommunicationManager messaging", () => {
             url: "https://example.com/next",
             [IS_GUEST_TO_HOST_ECHO]: true,
           },
-          window.location.origin
+          "/"
         )
       })
     })
@@ -1285,7 +1285,7 @@ describe("HostCommunicationManager messaging", () => {
       .mockImplementation(() => {})
 
     try {
-      // A dropped same-window self-post that is NOT the app's own GUEST_READY
+      // A dropped same-window self-post that is not a tagged guest-to-host echo
       // (here a SET_AUTH_TOKEN from a disallowed origin) must still be logged so
       // an in-iframe embed preamble's delivery problems remain diagnosable.
       await withEmbeddedWindow(() => {
