@@ -164,7 +164,8 @@ rather than from a shell.
 
 Before generating and publishing the documentation, confirm the new package is
 installable from PyPI (steps 1–3). Then generate the website changelog, open
-the docs PR, and merge the follow-up sitemap PR (steps 4–9).
+the docs PR, deploy any new Community Cloud examples, and merge the follow-up
+sitemap PR (steps 4–10).
 
 1. Confirm the new version appears in the
    [Streamlit PyPI history](https://pypi.org/project/streamlit/#history) and
@@ -205,20 +206,23 @@ the docs PR, and merge the follow-up sitemap PR (steps 4–9).
    ```text
    /updating-docs-for-release <new-version-tag>
 
+   Generated changelog:
    <paste the generated website changelog>
    ```
 
    The skill runs the relevant documentation updates and creates a PR in the
-   docs repository. Plan for two manual inputs it will pause on: API
-   illustration images for brand-new commands
-   (`public/images/api/<name>.jpg`, often needing a designer) and Community
-   Cloud deployment of any new `<Cloud name="...">` example apps.
+   docs repository. Plan for manual input if brand-new commands need API
+   illustration images (`public/images/api/<name>.jpg`, often needing a
+   designer). If any new example apps need to be deployed to Community Cloud,
+   the skill adds their deployment details to the docs PR description.
 
 6. Wait for Netlify to create a preview deployment and post its link in a
    comment on the docs PR.
 7. Verify the documentation changes using the Netlify preview.
 8. Merge the docs PR. Merging updates the main documentation site.
-9. Wait for the [Automated sitemap update](https://github.com/streamlit/docs/pulls?q=is%3Apr+%22Automated+sitemap+update%22)
+9. If the docs PR description lists new example apps, deploy them to Community
+   Cloud after the docs PR has merged.
+10. Wait for the [Automated sitemap update](https://github.com/streamlit/docs/pulls?q=is%3Apr+%22Automated+sitemap+update%22)
    PR in `streamlit/docs` (opened after the docs PR merges to `main`) and merge
    it as well.
 
