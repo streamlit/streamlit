@@ -15,10 +15,10 @@
     "jsx-a11y/lang": "off",
     "jsx-a11y/no-aria-hidden-on-focusable": "error",
     "jsx-a11y/no-autofocus": ["error", { "ignoreNonDOM": true }],
-    "jsx-a11y/no-noninteractive-element-interactions": "warn",
-    "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "error",
+    "jsx-a11y/no-noninteractive-element-to-interactive-role": "error",
     "jsx-a11y/no-noninteractive-tabindex": "error",
-    "jsx-a11y/no-static-element-interactions": "warn",
+    "jsx-a11y/no-static-element-interactions": "error",
     "jsx-a11y/prefer-tag-over-role": "off"
   }
 }
