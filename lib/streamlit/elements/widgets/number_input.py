@@ -65,9 +65,10 @@ if TYPE_CHECKING:
 
 
 Number: TypeAlias = int | float
-# Omitted value infers int/float, not int | None / float | None.
-# default= makes that explicit for checkers that leave an unsolved TypeVar
-# as Unknown (pyright). This repo's mypy already infers that without default=.
+# Omitting `value` returns int/float, never int | None / float | None.
+# `default=` states that for checkers that leave an unsolved TypeVar as Unknown
+# (e.g. pyright); mypy already infers it, so CI cannot catch a regression here.
+# PEP 696 leaves function-scoped defaults unspecified, so behavior is per-checker.
 IntOrNone = TypeVar("IntOrNone", int, None, default=int)
 FloatOrNone = TypeVar("FloatOrNone", float, None, default=float)
 

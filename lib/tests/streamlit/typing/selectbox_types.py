@@ -48,7 +48,10 @@ if TYPE_CHECKING:
     assert_type(selectbox("foo", Alfred, index=None), Alfred | None)
     assert_type(selectbox("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
 
-    # Non-literal index uses the int | None overloads.
+    # Non-literal index: int | None. mypy expands the union, so these
+    # assertions pass even without the dedicated overload in selectbox.py;
+    # that overload exists for checkers that do not expand (e.g. pyrefly).
+    # CI (mypy) cannot catch a regression if that overload is deleted.
     dynamic_index: int | None = None
     assert_type(selectbox("foo", [1, 2, 3], index=dynamic_index), int | None)
     assert_type(
