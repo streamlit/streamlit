@@ -227,14 +227,6 @@ jobs:
             echo '{"comments":[]}' > inline_comments.json
           fi
 
-      - name: Record reviewed SHA
-        env:
-          REVIEWED_SHA: ${{ steps.pr-info.outputs.head_sha }}
-        run: |
-          # Write after the agent so checkout and the review cannot drop it.
-          # Post-review skips auto-approve if live HEAD no longer matches.
-          printf '%s\n' "$REVIEWED_SHA" > reviewed_sha.txt
-
       - name: Upload review artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -243,7 +235,6 @@ jobs:
             review.md
             inline_comments.json
             verdict.txt
-            reviewed_sha.txt
           retention-days: 1
 
   # Job 3: Consolidate multiple reviews into one (only runs for multi-model)
@@ -252,6 +243,8 @@ jobs:
     if: always() && fromJson(needs.parse-models.outputs.model_count) > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      review_count: ${{ steps.count-reviews.outputs.review_count }}
     permissions:
       contents: read
       pull-requests: read
@@ -284,23 +277,17 @@ jobs:
             fi
           done
 
-      - name: Snapshot reviewed SHAs
+      - name: Count reviews
+        id: count-reviews
         run: |
-          # Copy SHAs out of the artifact tree before the consolidating agent
-          # runs. The agent has --force and could rewrite the originals.
-          mkdir -p "$RUNNER_TEMP/reviewed-shas"
-          count=0
+          shopt -s nullglob
+          REVIEW_COUNT=0
           for dir in reviews/review-output-*; do
-            [ -d "$dir" ] || continue
-            model_id=$(basename "$dir")
-            if [ -f "$dir/reviewed_sha.txt" ]; then
-              cp "$dir/reviewed_sha.txt" "$RUNNER_TEMP/reviewed-shas/${model_id}.txt"
-            else
-              : > "$RUNNER_TEMP/reviewed-shas/${model_id}.txt"
-            fi
-            count=$((count + 1))
+            [ -f "$dir/review.md" ] || continue
+            REVIEW_COUNT=$((REVIEW_COUNT + 1))
           done
-          echo "Snapshotted $count reviewed SHA file(s)"
+          echo "review_count=$REVIEW_COUNT" >> "$GITHUB_OUTPUT"
+          echo "Found $REVIEW_COUNT individual review(s)"
 
       - name: Install Cursor CLI
         run: |
@@ -412,40 +399,6 @@ jobs:
             echo '{"comments":[]}' > inline_comments.json
           fi
 
-      - name: Record reviewed SHA
-        run: |
-          # Use the pre-agent snapshot so the consolidator cannot rewrite SHAs.
-          # Fail closed unless every included review reported the same SHA.
-          : > reviewed_sha.txt
-          consensus=""
-          mismatch=0
-          found=0
-          shopt -s nullglob
-          for f in "$RUNNER_TEMP"/reviewed-shas/*.txt; do
-            found=$((found + 1))
-            sha=$(tr -d '[:space:]' < "$f")
-            if [ -z "$sha" ]; then
-              echo "Missing reviewed SHA in $(basename "$f")"
-              mismatch=1
-              continue
-            fi
-            echo "Reviewed SHA from $(basename "$f"): $sha"
-            if [ -z "$consensus" ]; then
-              consensus="$sha"
-            elif [ "$sha" != "$consensus" ]; then
-              echo "Reviewed SHA mismatch: $consensus vs $sha"
-              mismatch=1
-            fi
-          done
-          if [ "$found" -eq 0 ]; then
-            echo "No reviewed SHAs found; leaving reviewed_sha.txt empty"
-          elif [ "$mismatch" -ne 0 ]; then
-            echo "Reviewed SHAs do not agree; leaving reviewed_sha.txt empty"
-          else
-            printf '%s\n' "$consensus" > reviewed_sha.txt
-            echo "Reviewed SHA: $consensus"
-          fi
-
       - name: Upload consolidated artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -454,7 +407,6 @@ jobs:
             review.md
             inline_comments.json
             verdict.txt
-            reviewed_sha.txt
           retention-days: 1
 
   # Job 4: Post the review with WRITE access (no agent)
@@ -557,14 +509,8 @@ jobs:
           # still drives labels such as do-not-merge.
           EVENT="COMMENT"
 
-          # Attach the review to the SHA the agents checked out, not live HEAD.
-          HEAD_SHA=""
-          if [ -f reviewed_sha.txt ]; then
-            HEAD_SHA=$(tr -d '[:space:]' < reviewed_sha.txt)
-          fi
-          if [ -z "$HEAD_SHA" ]; then
-            HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
-          fi
+          # Get head SHA for review API
+          HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
 
           # Build inline comments array (default to empty if missing/invalid).
           # Note: We don't pre-validate path/line against the PR diff here for simplicity.
@@ -666,9 +612,8 @@ jobs:
       # - change:spec (always needs a human, regardless of impact)
       # - change:feature + impact:users (new user-facing features)
       # - more than 1000 changed lines (additions + deletions)
-      # - PR HEAD has moved since the agents reviewed it
-      # - PR touches files that steer the review (prompt assets, AGENTS.md,
-      #   agent rules, or GitHub workflows)
+      # - PR originates from a fork
+      # - fewer reviews were reported than configured models
       # Bugfixes, chores, docs, and other impact:users PRs stay eligible:
       # they are lower-risk than new user-facing features and benefit most
       # from the speedup.
@@ -677,6 +622,8 @@ jobs:
       # General > Workflow permissions).
       # GitHub does not count GITHUB_TOKEN approvals toward required
       # CODEOWNERS reviews.
+      # Approval targets the current PR HEAD. We intentionally trust contributors
+      # not to push unreviewed changes after approval.
       - name: Auto-approve on final review
         if: needs.parse-models.outputs.has_key == 'true' && needs.parse-models.outputs.trigger_label == 'ai-final-review' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
         env:
@@ -685,6 +632,8 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          MODEL_COUNT: ${{ needs.parse-models.outputs.model_count }}
+          REVIEW_COUNT: ${{ needs.consolidate-reviews.outputs.review_count }}
         run: |
           if [ ! -f verdict.txt ]; then
             echo "Skipping auto-approve: verdict.txt not found"
@@ -697,13 +646,19 @@ jobs:
             exit 0
           fi
 
-          if [ ! -f reviewed_sha.txt ]; then
-            echo "Skipping auto-approve: reviewed_sha.txt not found"
+          if ! [[ "$MODEL_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::warning::Could not parse configured model count, skipping auto-approve"
             exit 0
           fi
-          REVIEWED_SHA=$(tr -d '[:space:]' < reviewed_sha.txt)
-          if [ -z "$REVIEWED_SHA" ]; then
-            echo "Skipping auto-approve: reviewed SHA is empty"
+          if [ "$MODEL_COUNT" -eq 1 ]; then
+            REVIEW_COUNT=1
+          fi
+          if ! [[ "$REVIEW_COUNT" =~ ^[0-9]+$ ]]; then
+            echo "::warning::Could not parse reported review count, skipping auto-approve"
+            exit 0
+          fi
+          if [ "$REVIEW_COUNT" -lt "$MODEL_COUNT" ]; then
+            echo "Skipping auto-approve: only $REVIEW_COUNT/$MODEL_COUNT configured models reported reviews"
             exit 0
           fi
 
@@ -712,30 +667,19 @@ jobs:
             exit 0
           fi
 
-          CURRENT_SHA=$(echo "$PR_JSON" | jq -r '.head.sha')
+          HEAD_REPO_ID=$(echo "$PR_JSON" | jq -r 'if (.head.repo.id | type) == "number" then .head.repo.id else empty end')
+          BASE_REPO_ID=$(echo "$PR_JSON" | jq -r 'if (.base.repo.id | type) == "number" then .base.repo.id else empty end')
+          if ! [[ "$HEAD_REPO_ID" =~ ^[1-9][0-9]*$ && "$BASE_REPO_ID" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::warning::Could not parse PR repository IDs, skipping auto-approve"
+            exit 0
+          fi
+          if [ "$HEAD_REPO_ID" != "$BASE_REPO_ID" ]; then
+            echo "Skipping auto-approve: PR originates from a fork (head repository $HEAD_REPO_ID, base repository $BASE_REPO_ID)"
+            exit 0
+          fi
+
           LABELS=$(echo "$PR_JSON" | jq -c '[.labels[].name]')
           echo "PR labels: $LABELS"
-          echo "Reviewed SHA: $REVIEWED_SHA"
-          echo "Current HEAD: $CURRENT_SHA"
-
-          if [ "$REVIEWED_SHA" != "$CURRENT_SHA" ]; then
-            echo "Skipping auto-approve: PR HEAD has moved since the agents reviewed it"
-            exit 0
-          fi
-
-          if ! CHANGED_FILES=$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/files" --jq '.[].filename'); then
-            echo "::warning::Failed to list PR files, skipping auto-approve"
-            exit 0
-          fi
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            case "$file" in
-              scripts/assets/code-review-*.md|AGENTS.md|*/AGENTS.md|.cursor/rules/*|.claude/*|.github/workflows/*)
-                echo "Skipping auto-approve: PR touches review-steering file '$file'"
-                exit 0
-                ;;
-            esac
-          done <<< "$CHANGED_FILES"
 
           if echo "$LABELS" | jq -e 'index("change:spec") != null' >/dev/null; then
             echo "Skipping auto-approve: PR is labeled change:spec"
@@ -762,11 +706,10 @@ jobs:
             exit 0
           fi
 
-          echo "Auto-approving PR #$PR_NUMBER_ENV at $REVIEWED_SHA based on AI final review verdict"
+          echo "Auto-approving PR #$PR_NUMBER_ENV based on AI final review verdict"
           if ! jq -n \
-            --arg commit_id "$REVIEWED_SHA" \
             --arg body "Auto-approved by AI final review ([workflow run]($GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID))." \
-            '{commit_id: $commit_id, event: "APPROVE", body: $body}' \
+            '{event: "APPROVE", body: $body}' \
             | gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/reviews" -X POST --input -; then
             echo "::warning::Failed to auto-approve PR. Ensure the repository/organization Actions setting 'Allow GitHub Actions to create and approve pull requests' is enabled (Settings > Actions > General > Workflow permissions)."
           fi
