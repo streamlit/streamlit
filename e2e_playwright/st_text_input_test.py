@@ -765,16 +765,13 @@ def test_text_input_on_change_ignore(app: Page):
     # Fill without committing - URL should not update until Enter.
     text_input_field.fill("world")
     expect(text_input_field).to_have_value("world")
-    # Typing alone must not touch the bound query param.
     wait_for_app_run(app)
     expect(app).not_to_have_url(re.compile(r"[?&]ignore_text="))
 
     # Commit with Enter - should NOT trigger a rerun, but should update the URL
     text_input_field.press("Enter")
 
-    # Wait for any potential rerun to complete. If on_change="ignore" is working
-    # correctly, no rerun will occur, but this ensures that if a bug causes
-    # a rerun, we wait for it before checking.
+    # Give a spurious rerun a chance to land before asserting the counter.
     wait_for_app_run(app)
 
     # Verify no rerun occurred (run count should still be 1)

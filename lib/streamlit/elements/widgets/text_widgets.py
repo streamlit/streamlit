@@ -516,10 +516,11 @@ class TextWidgetsMixin:
             query parameter (e.g., ``?my_key=``) clears the widget.
 
             When ``on_change="ignore"``, the URL is updated as soon as the
-            value is committed (Enter, blur, or search-clear) — the same as
-            widgets inside a form. Typing alone does not update it. Python
-            receives the new value on the next rerun, so a page load or
-            share uses the updated URL value.
+            value is committed (Enter, blur, or search-clear); typing alone
+            does not update it. As with widgets inside a form, the URL can
+            show a value that Python hasn't received yet. Python receives
+            the new value on the next rerun, so a page load or share uses
+            the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.

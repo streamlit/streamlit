@@ -787,10 +787,8 @@ class TextInputOnChangeModeTest(DeltaGeneratorTestCase):
         assert "'ignore'" in str(exc_info.value)
         assert "a callback function" in str(exc_info.value)
 
-    def test_on_change_unhashable_value_raises_exception(self):
-        """Test that unhashable on_change value raises StreamlitValueError."""
-        # Passing a list (unhashable) should raise StreamlitValueError,
-        # not TypeError from a membership test.
+    def test_on_change_non_string_value_raises_exception(self):
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
         with pytest.raises(st.errors.StreamlitValueError) as exc_info:
             st.text_input("the label", on_change=[])  # type: ignore[arg-type]
 
