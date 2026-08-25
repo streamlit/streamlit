@@ -1076,13 +1076,6 @@ class SessionState:
         states are forwarded — non-trigger values already live in session state
         from callback execution. Replaying the full proto would overwrite any
         mutations callbacks made via ``st.session_state["key"] = new_value``.
-
-        This differs from a plain ``st.rerun()`` in a callback, which starts a
-        *new* script run with ``widget_states=None`` — the interaction's values
-        are already in session state, and triggers were consumed during this run.
-        The escalated run is a *continuation* of the same interaction: the body
-        hasn't executed yet, so triggers must be re-applied to produce the
-        output the un-escalated interaction would have shown.
         """
         from streamlit.runtime.scriptrunner import RerunData
 
