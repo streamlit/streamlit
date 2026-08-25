@@ -146,7 +146,7 @@ def test_page_not_found_without_pages_directory() -> None:
 
 def test_page_not_found_during_construction() -> None:
     """st.Page file-not-found uses a construction-specific message."""
-    exc = errors.StreamlitPageNotFoundError("nonexistent.py", during_construction=True)
+    exc = errors.StreamlitPageNotFoundError("nonexistent.py")
     assert (
         str(exc)
         == "Unable to create Page. The file `nonexistent.py` could not be found."

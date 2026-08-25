@@ -454,12 +454,10 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
     def __init__(
         self,
         page: str,
-        main_script_directory: str = "",
+        main_script_directory: str | None = None,
         uses_pages_directory: bool = False,
-        *,
-        during_construction: bool = False,
     ) -> None:
-        if during_construction:
+        if main_script_directory is None:
             super().__init__(
                 "Unable to create Page. The file `{page}` could not be found.",
                 page=page,

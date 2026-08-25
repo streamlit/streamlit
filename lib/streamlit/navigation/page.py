@@ -327,7 +327,7 @@ class Page:
             page = (main_path / page).resolve()
 
             if not page.is_file():
-                raise StreamlitPageNotFoundError(page.name, during_construction=True)
+                raise StreamlitPageNotFoundError(page.name)
 
         inferred_name = ""
         inferred_icon = ""
