@@ -230,6 +230,11 @@ def rerun(  # type: ignore[misc]
 
     Rerun multiple fragments at once:
 
+    >>> @st.fragment(key="table")
+    >>> def table():
+    >>>     st.dataframe({"col": [1, 2, 3]})
+    >>>
+    >>> table()
     >>> st.button(
     >>>     "Refresh all",
     >>>     on_click=lambda: st.rerun(["charts", "table"]),

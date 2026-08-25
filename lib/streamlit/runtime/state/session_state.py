@@ -683,7 +683,7 @@ class SessionState:
     # on_script_will_rerun stashes this so _request_full_app_rerun can forward
     # the values (including triggers) in its follow-up rerun.  Without the
     # stash the proto would be a local variable unreachable by the time the
-    # callback-less vote fires.  Cleared after callbacks finish or when
+    # escalation fires.  Cleared after callbacks finish or when
     # suppress_callbacks skips dispatch.
     _current_interaction_widget_states: WidgetStatesProto | None = field(
         default=None, repr=False

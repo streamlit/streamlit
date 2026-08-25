@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Type tests for st.rerun.
+
+``st.rerun()`` returns ``NoReturn``, so mypy marks all code after the first
+call unreachable.  Import the unwrapped function directly so the signature
+isn't erased by ``@gather_metrics``, and keep a single positive assertion.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, NoReturn
@@ -19,28 +26,7 @@ from typing import TYPE_CHECKING, NoReturn
 from typing_extensions import assert_type
 
 if TYPE_CHECKING:
-    import streamlit as st
+    from streamlit.commands.execution_control import rerun
 
-    # =====================================================================
-    # st.rerun return type tests
-    # =====================================================================
-
-    # Default scope ("app") - returns NoReturn
-    assert_type(st.rerun(), NoReturn)
-
-    # Explicit scope literals
-    assert_type(st.rerun(scope="app"), NoReturn)
-    assert_type(st.rerun(scope="fragment"), NoReturn)
-
-    # Positional scope (str key)
-    assert_type(st.rerun("app"), NoReturn)
-    assert_type(st.rerun("fragment"), NoReturn)
-    assert_type(st.rerun("charts"), NoReturn)
-
-    # Keyed scope - single key
-    assert_type(st.rerun(scope="charts"), NoReturn)
-    assert_type(st.rerun(scope="sidebar-filters"), NoReturn)
-
-    # Keyed scope - list of keys
-    assert_type(st.rerun(scope=["charts", "summary"]), NoReturn)
-    assert_type(st.rerun(scope=["charts"]), NoReturn)
+    # st.rerun() returns NoReturn for all scope variants.
+    assert_type(rerun(), NoReturn)
