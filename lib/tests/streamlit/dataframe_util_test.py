@@ -22,7 +22,7 @@ from collections.abc import Iterator, Mapping
 from datetime import date
 from decimal import Decimal
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -111,6 +111,29 @@ class DataframeUtilTest(unittest.TestCase):
 
         table = dataframe_util.convert_pandas_df_to_arrow_table(df)
         assert isinstance(table, pa.Table)
+
+    def test_convert_pandas_df_to_arrow_table_retry_failure_raises(self):
+        """A second from_pandas failure raises StreamlitDataframeConversionError."""
+        df = pd.DataFrame({"col": [1, 2, 3]})
+        arrow_error = pa.ArrowInvalid("still incompatible")
+        fake_pa = MagicMock()
+        fake_pa.ArrowTypeError = pa.ArrowTypeError
+        fake_pa.ArrowInvalid = pa.ArrowInvalid
+        fake_pa.ArrowNotImplementedError = pa.ArrowNotImplementedError
+        fake_pa.Table.from_pandas.side_effect = arrow_error
+
+        with (
+            # pa.Table is a C-extension type, so from_pandas cannot be patched
+            # on the class. Replace the local ``import pyarrow`` instead.
+            patch.dict("sys.modules", {"pyarrow": fake_pa}),
+            pytest.raises(
+                StreamlitDataframeConversionError,
+                match="Unable to convert dataframe to Arrow table",
+            ) as exc_info,
+        ):
+            dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        assert exc_info.value.__cause__ is arrow_error
 
     def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
         """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""

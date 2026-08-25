@@ -698,6 +698,20 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         assert button_group_1.id != button_group_2.id
 
+    def test_omitted_label_leaves_proto_label_unset(self) -> None:
+        """Omitted labels stay unset so the frontend collapses them."""
+        ButtonGroupMixin._internal_button_group(st._main, ["a", "b", "c"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == ""
+        assert not delta.HasField("label_visibility")
+
+    def test_non_string_label_is_coerced(self) -> None:
+        """Non-string labels are coerced without collapsing the proto label."""
+        st.pills(123, ["a", "b", "c"])  # type: ignore[arg-type]
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == "123"
+        assert delta.HasField("label_visibility")
+
     @parameterized.expand(
         get_command_matrix(
             [

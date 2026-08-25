@@ -677,7 +677,7 @@ class StreamlitDefaultNotInOptionsError(LocalizableStreamlitException):
     def __init__(self, value: Any) -> None:
         super().__init__(
             "The default value '{value}' is not part of the options. "
-            "Please make sure that every default values also exists in the options.",
+            "Please make sure that every default value also exists in the options.",
             value=value,
         )
 

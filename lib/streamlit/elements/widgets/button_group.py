@@ -1083,7 +1083,15 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
-        label = maybe_raise_label_warnings(label, label_visibility)
+        # Keep omitted labels as None so _build_proto can leave proto.label
+        # unset; the frontend treats that as collapsed. Coercing None to ""
+        # would write an empty visible label and change the element id.
+        if label is not None:
+            label = maybe_raise_label_warnings(label, label_visibility)
+        elif label_visibility not in {"visible", "hidden", "collapsed"}:
+            raise StreamlitValueError(
+                "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
+            )
 
         # Validate required with multi-select
         if required and selection_mode == "multi":

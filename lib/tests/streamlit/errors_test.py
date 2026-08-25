@@ -172,6 +172,7 @@ def test_default_not_in_options_error_message() -> None:
     """Default-not-in-options names the missing value."""
     exc = errors.StreamlitDefaultNotInOptionsError("c")
     assert "The default value 'c' is not part of the options." in str(exc)
+    assert "every default value also exists in the options." in str(exc)
 
 
 # StreamlitSelectionCountExceedsMaxError tests
