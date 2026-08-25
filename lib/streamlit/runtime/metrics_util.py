@@ -256,6 +256,45 @@ _CANNOT_IMPORT_FROM_RE: Final = re.compile(r"cannot import name '[^']+' from '([
 _STREAMLIT_ATTRIBUTE_RE: Final = re.compile(
     r"module 'streamlit' has no attribute '([^']+)'"
 )
+# Import namespaces used by Streamlit itself or by its optional features. Only
+# these names are appended to telemetry to avoid recording private app modules.
+_STREAMLIT_IMPORT_MODULE_PREFIXES: Final = frozenset(
+    {
+        "altair",
+        "anyio",
+        "authlib",
+        "click",
+        "google.protobuf",
+        "graphviz",
+        "httptools",
+        "httpx",
+        "itsdangerous",
+        "matplotlib",
+        "multipart",
+        "numpy",
+        "orjson",
+        "packaging",
+        "pandas",
+        "PIL",
+        "plotly",
+        "pyarrow",
+        "pydeck",
+        "python_multipart",
+        "requests",
+        "rich",
+        "snowflake",
+        "sqlalchemy",
+        "starlette",
+        "streamlit",
+        "streamlit_pdf",
+        "toml",
+        "typing_extensions",
+        "uvicorn",
+        "uvloop",
+        "watchdog",
+        "websockets",
+    }
+)
 
 
 def _get_machine_id_v3() -> str:
@@ -497,6 +536,14 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+def _is_streamlit_import_module(module: str) -> bool:
+    """Return whether an import namespace is relevant to Streamlit internals."""
+    return any(
+        module == prefix or module.startswith(f"{prefix}.")
+        for prefix in _STREAMLIT_IMPORT_MODULE_PREFIXES
+    )
+
+
 def format_uncaught_exception(exc: BaseException) -> str:
     """Return a page-profile label for an uncaught exception.
 
@@ -505,7 +552,8 @@ def format_uncaught_exception(exc: BaseException) -> str:
 
     - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
     - missing required argument ``TypeError`` → ``"TypeError:missing:<param>"``
-    - ``ImportError`` / ``ModuleNotFoundError`` → ``"<Type>:<module>"``
+    - allowlisted ``ImportError`` / ``ModuleNotFoundError``
+      → ``"<Type>:<module>"``
     - missing top-level ``streamlit`` attributes → ``"AttributeError:<attribute>"``
     - ``LocalizableStreamlitException`` with a ``parameter`` kwarg
       → ``"<Type>:<parameter>"``
@@ -530,7 +578,11 @@ def format_uncaught_exception(exc: BaseException) -> str:
                 msg = str(exc)
                 match = _NO_MODULE_RE.search(msg) or _CANNOT_IMPORT_FROM_RE.search(msg)
                 module = match.group(1) if match else None
-            if isinstance(module, str) and module:
+            if (
+                isinstance(module, str)
+                and module
+                and _is_streamlit_import_module(module)
+            ):
                 return f"{name}:{module}"
         elif isinstance(exc, AttributeError):
             attribute = getattr(exc, "name", None)

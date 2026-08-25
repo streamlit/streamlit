@@ -887,19 +887,27 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         ),
         (
             ModuleNotFoundError("No module named 'custom_pkg'"),
-            "ModuleNotFoundError:custom_pkg",
+            "ModuleNotFoundError",
         ),
         (
             ModuleNotFoundError(
-                "No module named 'custom_pkg.submodule'", name="custom_pkg.submodule"
+                "No module named 'streamlit.runtime.missing'",
+                name="streamlit.runtime.missing",
             ),
-            "ModuleNotFoundError:custom_pkg.submodule",
+            "ModuleNotFoundError:streamlit.runtime.missing",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Engine' from 'sqlalchemy.engine'",
+                name="sqlalchemy.engine",
+            ),
+            "ImportError:sqlalchemy.engine",
         ),
         (
             ImportError(
                 "cannot import name 'Widget' from 'custom_pkg'", name="custom_pkg"
             ),
-            "ImportError:custom_pkg",
+            "ImportError",
         ),
         (
             AttributeError(
@@ -937,9 +945,10 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "invalid-context-no-command-suffix",
         "modulenotfound-message-fallback",
         "import-error-message-fallback",
-        "modulenotfound-custom",
-        "modulenotfound-structured-name",
-        "import-error-structured-name",
+        "modulenotfound-private-module",
+        "modulenotfound-streamlit-module",
+        "import-error-feature-dependency",
+        "import-error-private-module",
         "streamlit-attribute-structured",
         "streamlit-attribute-message-fallback",
         "non-streamlit-attribute",
