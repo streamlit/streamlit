@@ -853,23 +853,15 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         ),
         (
             TypeError("button() takes 2 positional arguments but 3 were given"),
-            "TypeError:positional",
-        ),
-        (
-            TypeError("button() takes 0 positional arguments but 1 was given"),
-            "TypeError:positional",
+            "TypeError",
         ),
         (
             TypeError("bad argument type for built-in operation"),
-            "TypeError:proto",
-        ),
-        (
-            TypeError("has type int, but expected one of: bytes, unicode"),
-            "TypeError:proto",
+            "TypeError",
         ),
         (
             TypeError("a bytes-like object is required, not 'Figure'"),
-            "TypeError:byteslike",
+            "TypeError",
         ),
         (
             StreamlitValueError("width", ["stretch", "content"]),
@@ -894,12 +886,38 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "ImportError:pyarrow",
         ),
         (
-            ModuleNotFoundError("No module named 'not_allowlisted_pkg'"),
-            "ModuleNotFoundError",
+            ModuleNotFoundError("No module named 'custom_pkg'"),
+            "ModuleNotFoundError:custom_pkg",
+        ),
+        (
+            ModuleNotFoundError(
+                "No module named 'custom_pkg.submodule'", name="custom_pkg.submodule"
+            ),
+            "ModuleNotFoundError:custom_pkg.submodule",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Widget' from 'custom_pkg'", name="custom_pkg"
+            ),
+            "ImportError:custom_pkg",
+        ),
+        (
+            AttributeError(
+                "module 'streamlit' has no attribute 'foo'", name="foo", obj=st
+            ),
+            "AttributeError:foo",
+        ),
+        (
+            AttributeError("module 'streamlit' has no attribute 'bar'"),
+            "AttributeError:bar",
+        ),
+        (
+            AttributeError("Widget has no attribute 'foo'", name="foo", obj=object()),
+            "AttributeError",
         ),
         (
             MediaFileStorageError("Error opening 'foo.png'"),
-            "MediaFileStorageError:open",
+            "MediaFileStorageError",
         ),
         (
             MediaFileStorageError("Callable execution failed"),
@@ -911,18 +929,21 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     ids=[
         "unexpected-kwarg",
         "missing-positional",
-        "too-many-positional",
-        "too-many-positional-was-given",
-        "proto-type",
-        "proto-type-has-type",
-        "byteslike",
+        "unsupported-too-many-positional",
+        "unsupported-proto-type",
+        "unsupported-byteslike",
         "streamlit-value-error",
         "invalid-parameter-type",
         "invalid-context-no-command-suffix",
-        "modulenotfound-allowlisted",
-        "import-error-allowlisted",
-        "modulenotfound-other",
-        "media-file-open",
+        "modulenotfound-message-fallback",
+        "import-error-message-fallback",
+        "modulenotfound-custom",
+        "modulenotfound-structured-name",
+        "import-error-structured-name",
+        "streamlit-attribute-structured",
+        "streamlit-attribute-message-fallback",
+        "non-streamlit-attribute",
+        "media-file-storage",
         "media-file-other",
         "plain-value-error",
         "other-type-error",
@@ -931,16 +952,6 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
 def test_format_uncaught_exception(exc: BaseException, expected: str) -> None:
     """Return ``ExceptionType:<param>`` for known parameter failures; otherwise the bare type name."""
     assert metrics_util.format_uncaught_exception(exc) == expected
-
-
-def test_format_uncaught_exception_media_file_open_uses_isinstance() -> None:
-    """``:open`` applies only to the real ``MediaFileStorageError``, not a name lookalike."""
-
-    class MediaFileStorageError(Exception):
-        pass
-
-    lookalike = MediaFileStorageError("Error opening 'foo.png'")
-    assert metrics_util.format_uncaught_exception(lookalike) == "MediaFileStorageError"
 
 
 def test_format_uncaught_exception_swallows_enrichment_errors() -> None:

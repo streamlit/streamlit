@@ -251,37 +251,10 @@ _UNEXPECTED_KWARG_RE: Final = re.compile(
 _MISSING_ARG_RE: Final = re.compile(
     r"missing \d+ required (?:positional |keyword-only )?arguments?: '(\w+)'"
 )
-# ``foo() takes 2 positional arguments but 3 were given``
-# ``foo() takes 0 positional arguments but 1 was given``
-_TOO_MANY_POS_RE: Final = re.compile(
-    r"takes(?: from \d+ to)? \d+ positional arguments? but \d+ (?:was|were) given"
-)
-_BYTESLIKE_RE: Final = re.compile(r"a bytes-like object is required, not '")
-_PROTO_TYPE_RE: Final = re.compile(
-    r"bad argument type for built-in operation"
-    r"|expected str(?:, but got|, got)"
-    r"|: expected a string"
-    r"|has type \w+, but expected one of:"
-)
 _NO_MODULE_RE: Final = re.compile(r"No module named ['\"]([^'\"]+)['\"]")
 _CANNOT_IMPORT_FROM_RE: Final = re.compile(r"cannot import name '[^']+' from '([^']+)'")
-# First path component of ImportError module names we record. Keep this tight
-# so telemetry cardinality stays bounded.
-_IMPORT_ERROR_MODULE_ALLOWLIST: Final = frozenset(
-    {
-        "altair",
-        "graphviz",
-        "matplotlib",
-        "numpy",
-        "orjson",
-        "pandas",
-        "PIL",
-        "plotly",
-        "polars",
-        "pyarrow",
-        "pydeck",
-        "watchdog",
-    }
+_STREAMLIT_ATTRIBUTE_RE: Final = re.compile(
+    r"module 'streamlit' has no attribute '([^']+)'"
 )
 
 
@@ -532,15 +505,12 @@ def format_uncaught_exception(exc: BaseException) -> str:
 
     - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
     - missing required argument ``TypeError`` → ``"TypeError:missing:<param>"``
-    - too many positional arguments → ``"TypeError:positional"``
-    - protobuf string-field type errors → ``"TypeError:proto"``
-    - bytes-like-object ``TypeError`` → ``"TypeError:byteslike"``
-    - allowlisted ``ImportError`` / ``ModuleNotFoundError`` → ``"<Type>:<module>"``
-    - ``MediaFileStorageError`` opening a file → ``"MediaFileStorageError:open"``
+    - ``ImportError`` / ``ModuleNotFoundError`` → ``"<Type>:<module>"``
+    - missing top-level ``streamlit`` attributes → ``"AttributeError:<attribute>"``
     - ``LocalizableStreamlitException`` with a ``parameter`` kwarg
       → ``"<Type>:<parameter>"``
 
-    Does not append user values (widget keys, file paths) or command names.
+    Does not append user values such as widget keys or file paths.
     Enrichment failures are swallowed so telemetry cannot interrupt script
     execution or drop the page-profile payload.
     """
@@ -554,31 +524,31 @@ def format_uncaught_exception(exc: BaseException) -> str:
             match = _MISSING_ARG_RE.search(msg)
             if match:
                 return f"{name}:missing:{match.group(1)}"
-            if _TOO_MANY_POS_RE.search(msg):
-                return f"{name}:positional"
-            if _BYTESLIKE_RE.search(msg):
-                return f"{name}:byteslike"
-            if _PROTO_TYPE_RE.search(msg):
-                return f"{name}:proto"
         elif isinstance(exc, ImportError):
-            msg = str(exc)
-            match = _NO_MODULE_RE.search(msg) or _CANNOT_IMPORT_FROM_RE.search(msg)
-            if match:
-                module = match.group(1).split(".", 1)[0]
-                if module in _IMPORT_ERROR_MODULE_ALLOWLIST:
-                    return f"{name}:{module}"
+            module = getattr(exc, "name", None)
+            if not isinstance(module, str) or not module:
+                msg = str(exc)
+                match = _NO_MODULE_RE.search(msg) or _CANNOT_IMPORT_FROM_RE.search(msg)
+                module = match.group(1) if match else None
+            if isinstance(module, str) and module:
+                return f"{name}:{module}"
+        elif isinstance(exc, AttributeError):
+            attribute = getattr(exc, "name", None)
+            obj = getattr(exc, "obj", None)
+            if (
+                obj is sys.modules.get("streamlit")
+                and isinstance(attribute, str)
+                and attribute
+            ):
+                return f"{name}:{attribute}"
+            if obj is None and attribute is None:
+                match = _STREAMLIT_ATTRIBUTE_RE.fullmatch(str(exc))
+                if match:
+                    return f"{name}:{match.group(1)}"
         elif isinstance(exc, LocalizableStreamlitException):
             parameter = exc.exec_kwargs.get("parameter")
             if isinstance(parameter, str) and parameter:
                 return f"{name}:{parameter}"
-        else:
-            # Function-local import avoids a module-level cycle with media storage.
-            from streamlit.runtime.media_file_storage import MediaFileStorageError
-
-            if isinstance(exc, MediaFileStorageError) and str(exc).startswith(
-                "Error opening"
-            ):
-                return f"{name}:open"
     return name
 
 
