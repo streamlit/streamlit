@@ -171,6 +171,9 @@ if TYPE_CHECKING:
         str,
     )
     assert_type(text_input("Enter text", on_change=None), str)
+    assert_type(text_input("Enter text", on_change="rerun"), str)
+    assert_type(text_input("Enter text", on_change="ignore"), str)
+    assert_type(text_input("Enter text", value=None, on_change="ignore"), str | None)
     assert_type(text_input("Enter text", value=None, on_change=my_callback), str | None)
     assert_type(
         text_input(
