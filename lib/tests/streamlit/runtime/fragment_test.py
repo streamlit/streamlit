@@ -2494,17 +2494,23 @@ def test_fragment_duplicate_key_different_definitions_raises() -> None:
 
 
 def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:
-    """The same fragment definition called from multiple sites (e.g. in a loop)
-    does not raise a duplicate-key error: register_fragment_user_key returns True
-    for the same definition_id even if called multiple times with the same key.
-    """
-    shared = SharedRunState()
+    """Calling the same keyed fragment from two call sites does not raise."""
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
 
-    definition_id = "mymodule.my_fragment"
+    ThreadState.initialize()
 
-    assert shared.register_fragment_user_key("multi_site", definition_id) is True
-    # Second call site of the same fragment definition — must succeed (not a collision).
-    assert shared.register_fragment_user_key("multi_site", definition_id) is True
+    @fragment(key="multi_site")
+    def my_fragment() -> None:
+        pass
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        my_fragment()
+        # Second call site of the same definition — must not raise.
+        my_fragment()
 
 
 def test_shared_run_state_reset_clears_fragment_user_keys() -> None:
