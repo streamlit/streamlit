@@ -170,20 +170,7 @@ $ brew install ripgrep
 **Installing Node JS and yarn**
 
 We recommend that you [manage your nodejs installation with nvm](https://github.com/nvm-sh/nvm#install--update-script).
-After following the instructions linked above to install `nvm`, install the Node version from `.nvmrc`:
-
-```bash
-# Install the Node version from .nvmrc
-nvm install
-```
-
-**Note:** Node has added Corepack which is a manager of package managers 🥳. It supports yarn! You can enable it by running the following:
-
-```bash
-corepack enable
-```
-
-You may need to `brew install corepack` depending on how you installed node.
+Install `nvm` now. After you clone the repo in step 2, run `nvm install` from the repo root so Node comes from `.nvmrc`.
 
 #### Ubuntu
 
@@ -195,8 +182,6 @@ $ sudo apt-get install -y sudo make build-essential curl git rsync unzip protobu
 # Set frontend dependencies:
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -217,8 +202,6 @@ $ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
 # Set frontend dependencies:
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -250,6 +233,15 @@ git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
 git checkout -b ${BRANCH_NAME}
 ```
+
+From the cloned repo root, install the Node version pinned in `.nvmrc` and enable Corepack (Yarn):
+
+```bash
+nvm install
+corepack enable
+```
+
+You may need to `brew install corepack` depending on how you installed Node.
 
 ### 3. Create a new Python environment
 

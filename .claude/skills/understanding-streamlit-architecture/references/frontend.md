@@ -130,7 +130,11 @@ Manages all widget state on the frontend.
 3. Trigger widget batching (coalesces updates via `setTimeout(0)`)
 4. Query parameter bindings
 
-**Methods**: Provides getter/setter pairs for each value type (`setTriggerValue`/`getTriggerValue`, `setStringValue`/`getStringValue`, `setBoolValue`/`getBoolValue`, etc.). Setters take a `WidgetUpdate` that names `fromUser`, optional `triggerRerun`, `formId`, and `fragmentId`. `fromUser` is provenance (form pending-change batching and URL-sync). `triggerRerun` defaults to `fromUser` and decides whether to schedule a rerun; widgets with `on_change="ignore"` pass `triggerRerun: false` to buffer the value without rerunning.
+**Methods**: Provides getter/setter pairs for each value type (`setTriggerValue`/`getTriggerValue`, `setStringValue`/`getStringValue`, `setBoolValue`/`getBoolValue`, etc.). Setters take a `WidgetUpdate` describing the write:
+
+- `fromUser`: whether the user made the change (drives form pending-change batching and URL sync).
+- `triggerRerun`: whether to schedule a rerun; defaults to `fromUser`. Widgets with `on_change="ignore"` pass `false` to buffer the value without rerunning. A form ignores this flag, because it commits on submit.
+- `formId` / `fragmentId`: the widget's form and the scope of the resulting rerun.
 
 **Trigger batching**: Multiple trigger calls in same macrotask are batched to prevent race conditions.
 

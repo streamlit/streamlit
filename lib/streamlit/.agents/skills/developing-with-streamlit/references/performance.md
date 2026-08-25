@@ -244,7 +244,7 @@ with st.form("search", border=False):
 
 **When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
 
-For a single slider that should not trigger a rerun by itself, pass `on_change="ignore"` instead of wrapping it in a form. The slider still updates in the UI; Python sees the new value on the next rerun triggered by something else. Ignored changes are held in the browser and are lost if the page is refreshed before that rerun.
+For a single slider that should not trigger a rerun by itself, pass `on_change="ignore"` instead of wrapping it in a form. The slider still updates in the UI; Python sees the new value on the next rerun triggered by something else. Ignored changes are held in the browser and are lost if the page is refreshed before that rerun, unless `bind="query-params"` is set — a bound slider updates the URL immediately, so the value survives a refresh.
 
 ## Conditional rendering
 

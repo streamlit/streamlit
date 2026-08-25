@@ -148,7 +148,7 @@ register_widget(
 ```
 
 **Lifecycle hooks**:
-- `on_script_will_rerun()`: Process widget states from browser, run callbacks. `st.rerun()` and `st.switch_page()` from a callback interrupt that callback; remaining callbacks still run, then the queued request is applied. Widget values from the interaction survive.
+- `on_script_will_rerun()`: Process widget states from browser, run callbacks. `st.rerun()` and `st.switch_page()` from a callback interrupt that callback; `_call_callbacks` still runs the remaining callbacks, then queues their requests. The interaction's widget values are already in session state, so the queued rerun sees them.
 - `on_script_finished()`: Clean up stale widgets not seen this run
 
 **Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
