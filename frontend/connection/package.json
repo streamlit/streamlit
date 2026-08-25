@@ -38,7 +38,7 @@
   "devDependencies": {
     "axios-mock-adapter": "^2.1.0",
     "typesync": "^0.14.3",
-    "vite": "^8.2.1",
+    "vite": "^8.2.2",
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.11",
     "vitest-websocket-mock": "^0.7.0"
