@@ -82,6 +82,17 @@ st.button("Add 5", on_click=increment, args=(5,))
 
 Access a widget's value in its own callback via `st.session_state.key`, not the return variable.
 
+`st.rerun()` and `st.switch_page()` work inside callbacks. `st.rerun()` stops that callback immediately; later statements in it do not run. Other callbacks for the same interaction still run, then Streamlit applies the queued rerun or page switch. Widget values from the interaction survive.
+
+```python
+def reset_filters():
+    st.session_state.pop("region", None)
+    st.rerun()
+
+
+st.button("Reset filters", on_click=reset_filters)
+```
+
 ## Initialization patterns
 
 Initialize all state at the top of your app for clarity:

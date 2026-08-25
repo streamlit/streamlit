@@ -170,11 +170,11 @@ $ brew install ripgrep
 **Installing Node JS and yarn**
 
 We recommend that you [manage your nodejs installation with nvm](https://github.com/nvm-sh/nvm#install--update-script).
-After following the instructions linked above to install `nvm`, use the following command to install the latest supported node version
+After following the instructions linked above to install `nvm`, install the Node version from `.nvmrc`:
 
 ```bash
-# Install node
-nvm install node
+# Install the Node version from .nvmrc
+nvm install
 ```
 
 **Note:** Node has added Corepack which is a manager of package managers 🥳. It supports yarn! You can enable it by running the following:
@@ -195,7 +195,7 @@ $ sudo apt-get install -y sudo make build-essential curl git rsync unzip protobu
 # Set frontend dependencies:
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
+$ nvm install
 $ corepack enable
 
 # Install uv for Python
@@ -217,7 +217,7 @@ $ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
 # Set frontend dependencies:
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
+$ nvm install
 $ corepack enable
 
 # Install uv for Python

@@ -79,7 +79,7 @@ Streamlit's execution model differs from traditional web frameworks:
 
 **Execution order nuances**:
 - Scripts execute **top-to-bottom** on every rerun
-- **Callbacks first**: `on_change`/`on_click` handlers run *before* the main script body
+- **Callbacks first**: `on_change`/`on_click` handlers run *before* the main script body. `st.rerun()` and `st.switch_page()` inside a callback take effect after remaining callbacks for that interaction finish.
 - **Fragments typically isolate reruns**: Widget interactions inside `@st.fragment` usually rerun only that fragment
 - **Control flow exceptions**: `st.stop()`, `st.rerun()`, `st.switch_page()` raise exceptions to halt/redirect execution
 
