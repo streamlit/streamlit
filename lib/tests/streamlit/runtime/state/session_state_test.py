@@ -1109,7 +1109,7 @@ def test_fragment_origin_target_with_callback_less_change_does_not_escalate() ->
     assert len(requeue_calls) == 1
     targeted = requeue_calls[0]
     assert targeted.fragment_id_queue == ["other-frag"]
-    assert targeted.is_fragment_scoped_rerun is False
+    assert targeted.is_fragment_scoped_rerun is True
 
 
 def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
