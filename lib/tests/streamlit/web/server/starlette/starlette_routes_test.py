@@ -658,6 +658,10 @@ def test_media_endpoint_downloadable_filename_survives_round_trip(
     header = _content_disposition_for(filename)
 
     assert _filename_from_header(header) == filename
+    # Pin the branch too. The round-trip alone does not: a quoted
+    # `filename="café.pdf"` also recovers `café.pdf` from this parser, so without
+    # this the latin-1 non-ASCII case could pass while staying on the quoted path.
+    assert "filename*=utf-8''" in header
 
 
 @pytest.mark.parametrize(
