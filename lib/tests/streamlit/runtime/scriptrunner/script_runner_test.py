@@ -1766,8 +1766,8 @@ class TestScriptRunner(ScriptRunner):
     def __init__(
         self,
         script_name: str,
-        event_loop: asyncio.AbstractEventLoop | None = None,
         initial_rerun_data: RerunData | None = None,
+        event_loop: asyncio.AbstractEventLoop | None = None,
     ):
         """Initializes the ScriptRunner for the given script_name."""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
