@@ -59,6 +59,7 @@ interface HeaderPickerItem {
   date?: { year: number; month: number; day: number }
 }
 
+/** Marks the month/year picker popover so the calendar ignores nested clicks and Escape. */
 export const DATE_INPUT_HEADER_PICKER_POPOVER_CLASS =
   "stDateInputHeaderPickerPopover"
 

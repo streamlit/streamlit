@@ -96,7 +96,8 @@ import {
   StyledVisuallyHidden,
 } from "./styled-components"
 
-const QUICK_SELECT_POPOVER_CLASS = "stDateInputQuickSelectPopover"
+/** Marks the quick-select popover so the calendar ignores nested clicks and Escape. */
+const DATE_INPUT_QUICK_SELECT_POPOVER_CLASS = "stDateInputQuickSelectPopover"
 
 interface RangeDateInputProps {
   startValue: CalendarDate | null
@@ -425,7 +426,7 @@ function RangeDateInput({
       // inside them do not dismiss the calendar.
       excludeSelectors: [
         `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
-        `.${QUICK_SELECT_POPOVER_CLASS}`,
+        `.${DATE_INPUT_QUICK_SELECT_POPOVER_CLASS}`,
       ],
       excludeEscape: true,
     })
@@ -958,7 +959,7 @@ function RangeDateInput({
                   </StyledCalendarHeaderSelectChevron>
                 </StyledQuickSelectTrigger>
                 <StyledDropdownPopover
-                  className={QUICK_SELECT_POPOVER_CLASS}
+                  className={DATE_INPUT_QUICK_SELECT_POPOVER_CLASS}
                   ref={setQuickSelectFloatingRef}
                   triggerRef={quickSelectTriggerRef}
                   isOpen={isQuickSelectOpen}

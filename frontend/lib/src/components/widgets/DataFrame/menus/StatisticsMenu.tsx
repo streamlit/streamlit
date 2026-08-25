@@ -46,6 +46,7 @@ import {
   StyledSubMenuPanel,
 } from "./styled-components"
 
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
 export const STATISTICS_MENU_CLASS = "stDataFrameStatisticsMenu"
 
 export interface StatisticsMenuProps {

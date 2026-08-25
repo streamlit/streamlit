@@ -27,6 +27,9 @@ import {
   StyledSubMenuPanel,
 } from "./styled-components"
 
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
+
 /**
  * A list of formats available for number columns (number & progress).
  * Each format has a label, icon, and format ID.
@@ -83,8 +86,6 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     icon: ":material/finance_chip:",
   },
 ]
-
-export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
 
 /**
  * A mapping of column kinds to their available formats.

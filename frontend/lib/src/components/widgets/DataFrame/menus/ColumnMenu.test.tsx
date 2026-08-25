@@ -29,6 +29,8 @@ import { render } from "~lib/test_util"
 import { sizes } from "~lib/theme/primitives/sizes"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
+import { FORMATTING_MENU_CLASS } from "./FormattingMenu"
+import { STATISTICS_MENU_CLASS } from "./StatisticsMenu"
 
 describe("DataFrame ColumnMenu", () => {
   const mockWriteText = vi.fn()
@@ -479,7 +481,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
-      insideSubMenu.className = "stDataFrameStatisticsMenu"
+      insideSubMenu.className = STATISTICS_MENU_CLASS
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
 
@@ -519,7 +521,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
-      insideSubMenu.className = "stDataFrameColumnFormattingMenu"
+      insideSubMenu.className = FORMATTING_MENU_CLASS
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
 
@@ -553,7 +555,7 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("click-outside sub-menu guard", () => {
-    it.each(["stDataFrameStatisticsMenu", "stDataFrameColumnFormattingMenu"])(
+    it.each([STATISTICS_MENU_CLASS, FORMATTING_MENU_CLASS])(
       "does not close the menu on pointer down inside a %s sub-menu",
       async className => {
         const user = userEvent.setup()
