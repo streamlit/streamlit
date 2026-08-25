@@ -163,8 +163,8 @@ agent session that supports repository skills, such as Cursor or Claude Code,
 rather than from a shell.
 
 Before generating and publishing the documentation, confirm the new package is
-installable from PyPI (steps 1–3). Then generate the website changelog and
-open the docs PR (steps 4–8).
+installable from PyPI (steps 1–3). Then generate the website changelog, open
+the docs PR, and merge the follow-up sitemap PR (steps 4–9).
 
 1. Confirm the new version appears in the
    [Streamlit PyPI history](https://pypi.org/project/streamlit/#history) and
@@ -197,34 +197,30 @@ open the docs PR (steps 4–8).
 
    Review the generated changelog before continuing.
 
-5. In the `streamlit/docs` repository, update the release documentation:
+5. In the `streamlit/docs` repository, run the
+   [`updating-docs-for-release`](https://github.com/streamlit/docs/blob/main/.claude/skills/updating-docs-for-release/SKILL.md)
+   skill with the new release tag and paste the generated website changelog
+   into the same message:
 
-   - For a regular `x.y.0` release, paste the generated website changelog into
-     the agent session and run the
-     [`updating-docs-for-release`](https://github.com/streamlit/docs/blob/main/.claude/skills/updating-docs-for-release/SKILL.md)
-     skill with the new release tag:
+   ```text
+   /updating-docs-for-release <new-version-tag>
 
-     ```text
-     /updating-docs-for-release <new-version-tag>
-     ```
+   <paste the generated website changelog>
+   ```
 
-     The skill runs the relevant documentation updates and creates a PR in the
-     docs repository. Plan for two manual inputs it will pause on: API
-     illustration images for brand-new commands
-     (`public/images/api/<name>.jpg`, often needing a designer) and Community
-     Cloud deployment of any new `<Cloud name="...">` example apps.
-
-   - For a patch release, do not run the full skill. Follow only its
-     [Release notes](https://github.com/streamlit/docs/blob/main/.claude/skills/updating-docs-for-release/SKILL.md#2-release-notes)
-     step: replace the current `(latest)` section (keep `(latest)` on the new
-     version) and prepend the same section to the current year's file, then
-     open a docs PR. Do not regenerate docstrings, API tiles, or API pages;
-     those updates target `x.y.0` releases.
+   The skill runs the relevant documentation updates and creates a PR in the
+   docs repository. Plan for two manual inputs it will pause on: API
+   illustration images for brand-new commands
+   (`public/images/api/<name>.jpg`, often needing a designer) and Community
+   Cloud deployment of any new `<Cloud name="...">` example apps.
 
 6. Wait for Netlify to create a preview deployment and post its link in a
    comment on the docs PR.
 7. Verify the documentation changes using the Netlify preview.
 8. Merge the docs PR. Merging updates the main documentation site.
+9. Wait for the [Automated sitemap update](https://github.com/streamlit/docs/pulls?q=is%3Apr+%22Automated+sitemap+update%22)
+   PR in `streamlit/docs` (opened after the docs PR merges to `main`) and merge
+   it as well.
 
 ### 8. Verify and close out
 
@@ -299,9 +295,7 @@ Use the same steps as a regular release:
 1. [Create the tag and merge-back PR](#4-create-the-tag-and-merge-back-pr).
 2. [Deploy static assets for SiS](#5-deploy-static-assets-for-sis-streamlit-in-snowflake).
 3. [Build and publish](#6-build-and-publish) from the patch tag.
-4. [Update the documentation](#7-update-the-documentation), using the
-   patch-release path in that section (release notes only; skip docstring
-   generation and API tiles/pages).
+4. [Update the documentation](#7-update-the-documentation).
 5. [Verify and close out](#8-verify-and-close-out).
 
 Also respond to the people who reported the issue. For a significant incident
