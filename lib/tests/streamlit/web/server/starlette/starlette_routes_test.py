@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import string
+from email.message import EmailMessage
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
@@ -625,6 +626,100 @@ def test_media_endpoint_downloadable_non_latin1_filename_uses_utf8() -> None:
 
     assert response.status_code == 200
     assert "filename*=utf-8''" in response.headers["content-disposition"]
+
+
+def _content_disposition_for(filename: str) -> str:
+    """Return the Content-Disposition the media endpoint emits for a download name.
+
+    Parameters
+    ----------
+    filename
+        The name the app set on the downloadable media file.
+
+    Returns
+    -------
+    str
+        The raw header value served for that file.
+    """
+    storage = MemoryMediaFileStorage("/media")
+    file_id = storage.load_and_get_id(
+        b"payload", "text/plain", MediaFileKind.DOWNLOADABLE, filename
+    )
+    response = _client_for(create_media_routes(storage, "")).get(f"/media/{file_id}")
+
+    assert response.status_code == 200
+    return response.headers["content-disposition"]
+
+
+def _filename_from_header(header: str) -> str | None:
+    """Recover the filename a conforming client would read from the header.
+
+    Parameters
+    ----------
+    header
+        A Content-Disposition header value.
+
+    Returns
+    -------
+    str or None
+        The decoded filename parameter, handling the RFC 5987 ``filename*`` form.
+    """
+    message = EmailMessage()
+    message["Content-Disposition"] = header
+    return message.get_filename()
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        # A double quote closes the quoted parameter early, so everything after it
+        # becomes stray tokens. Inch marks in a name are enough to hit this.
+        '5" x 7" print.jpg',
+        # A backslash is the quoted-string escape character, so it silently drops.
+        "a\\b.txt",
+        # Latin-1 encodable but not ASCII: served raw, the bytes are not valid UTF-8.
+        "café.pdf",
+        # Not latin-1 encodable, which already took the percent-encoded path.
+        "文件.txt",
+        # A slash is not an RFC 5987 attr-char, so leaving it raw in the encoded form
+        # truncates the name at the slash.
+        "café/x.pdf",
+    ],
+)
+def test_media_endpoint_downloadable_filename_survives_round_trip(
+    filename: str,
+) -> None:
+    """A name needing escapes is carried faithfully to a conforming client."""
+    header = _content_disposition_for(filename)
+
+    assert _filename_from_header(header) == filename
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "report.pdf",
+        # A space is legal inside a quoted string, so it must not force encoding.
+        "quarterly report.pdf",
+        # So is a semicolon: the parameter delimiter only applies outside the quotes.
+        "a;b.txt",
+    ],
+)
+def test_media_endpoint_downloadable_safe_filename_stays_quoted(
+    filename: str,
+) -> None:
+    """A name that needs no escaping keeps the readable quoted form."""
+    header = _content_disposition_for(filename)
+
+    assert header == f'attachment; filename="{filename}"'
+
+
+def test_media_endpoint_downloadable_filename_cannot_inject_headers() -> None:
+    """A CR or LF in the name is encoded rather than emitted into the header."""
+    header = _content_disposition_for("a\r\nX-Evil: 1.txt")
+
+    assert "\r" not in header
+    assert "\n" not in header
 
 
 def test_media_options_returns_no_content() -> None:

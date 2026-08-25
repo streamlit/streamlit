@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import time
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
@@ -64,6 +65,12 @@ if TYPE_CHECKING:
     from streamlit.runtime.stats import Stat, StatsManager
 
 _LOGGER: Final = get_logger(__name__)
+
+# Characters that a download filename cannot carry unescaped inside the quoted-string
+# form of a Content-Disposition ``filename`` parameter. A double quote closes the value
+# early and a backslash begins an escape sequence, so either one changes the name the
+# client reads; control characters are not legal in a header value at all.
+_QUOTED_FILENAME_UNSAFE: Final = re.compile(r'["\\\x00-\x1f\x7f]')
 
 # TTL for the cached cache_memory_bytes result. Short enough that scrapers
 # (Prometheus default interval is 15 s) still see fresh data; long enough to
@@ -691,11 +698,20 @@ def create_media_routes(
                     f"streamlit_download"
                     f"{get_extension_for_mimetype(media_file.mimetype)}"
                 )
-            try:
-                filename.encode("latin1")
+            # Use the readable quoted form only when the name is safe unescaped inside
+            # it. Everything else takes the RFC 5987 form, which percent-encodes and so
+            # cannot break out of the parameter: names needing an escape, and names that
+            # are not ASCII, whose raw bytes a client cannot decode from a header
+            # reliably. A space or a semicolon needs neither, since the parameter
+            # delimiter does not apply within the quotes.
+            #
+            # `safe=""` is required: `quote` leaves `/` alone by default, but it is not
+            # an RFC 5987 attr-char, and a raw one truncates the name a client reads
+            # (`café/x.pdf` arrives as `café`).
+            if filename.isascii() and not _QUOTED_FILENAME_UNSAFE.search(filename):
                 disposition = f'filename="{filename}"'
-            except UnicodeEncodeError:
-                disposition = f"filename*=utf-8''{quote(filename)}"
+            else:
+                disposition = f"filename*=utf-8''{quote(filename, safe='')}"
             headers["Content-Disposition"] = f"attachment; {disposition}"
 
         # Ensure support for range requests (e.g. for video files)
