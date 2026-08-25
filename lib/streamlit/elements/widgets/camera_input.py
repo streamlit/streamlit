@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
@@ -46,6 +45,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -284,7 +284,7 @@ class CameraInputMixin:
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "camera_input",
@@ -310,7 +310,7 @@ class CameraInputMixin:
             camera_input_proto.resolution_height = _RESOLUTION_TO_HEIGHT[resolution]
 
         if help is not None:
-            camera_input_proto.help = dedent(help)
+            camera_input_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width)
 

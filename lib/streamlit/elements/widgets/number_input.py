@@ -17,7 +17,6 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from typing_extensions import TypeVar
@@ -58,11 +57,10 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 Number: TypeAlias = int | float
 # Omitting `value` returns int/float, never int | None / float | None.
@@ -529,7 +527,7 @@ class NumberInputMixin:
             on_change,
             default_value=value if value != "min" else None,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "number_input",
@@ -686,7 +684,7 @@ class NumberInputMixin:
         )
 
         if help is not None:
-            number_input_proto.help = dedent(help)
+            number_input_proto.help = to_help_str(help)
 
         # min_value/max_value are guaranteed to be non-None here (unset bounds
         # were backfilled with JS sentinels above). We always send them as the

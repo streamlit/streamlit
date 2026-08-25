@@ -800,12 +800,12 @@ def convert_anything_to_pandas_df(
     # compatible with the pandas.DataFrame constructor.
     try:
         return _fix_column_naming(pd.DataFrame(data))
-    except ValueError as ex:
+    except (ValueError, TypeError) as ex:
         if isinstance(data, dict):
-            with contextlib.suppress(ValueError):
+            with contextlib.suppress(ValueError, TypeError):
                 # Try to use index orient as back-up to support key-value dicts
                 return _dict_to_pandas_df(data)
-        raise errors.StreamlitAPIException(
+        raise errors.StreamlitDataframeConversionError(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
 Offending object:
@@ -938,9 +938,14 @@ def convert_pandas_df_to_arrow_table(
     """
     import pyarrow as pa
 
+    arrow_conversion_errors = (
+        pa.ArrowTypeError,
+        pa.ArrowInvalid,
+        pa.ArrowNotImplementedError,
+    )
     try:
         return pa.Table.from_pandas(df, preserve_index=preserve_index)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+    except arrow_conversion_errors as ex:
         _LOGGER.info(
             "Serialization of dataframe to Arrow table was unsuccessful. "
             "Applying automatic fixes for column types to make the dataframe "
@@ -948,7 +953,12 @@ def convert_pandas_df_to_arrow_table(
             exc_info=ex,
         )
         fixed_df = fix_arrow_incompatible_column_types(df)
-        return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
+        try:
+            return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
+        except arrow_conversion_errors as retry_ex:
+            raise errors.StreamlitDataframeConversionError(
+                f"Unable to convert dataframe to Arrow table.\n{retry_ex}"
+            ) from retry_ex
 
 
 def convert_pandas_df_to_arrow_bytes(

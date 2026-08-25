@@ -19,7 +19,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from numbers import Integral, Real
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -47,6 +46,8 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
 )
@@ -64,6 +65,7 @@ from streamlit.runtime.state import (
     register_widget,
     validate_on_change_mode,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -888,7 +890,7 @@ class SliderMixin:
             on_change_callback,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "slider",
@@ -933,9 +935,18 @@ class SliderMixin:
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
         range_value = isinstance(value, (list, tuple)) and len(value) in {0, 1, 2}
         if not single_value and not range_value:
-            raise StreamlitAPIException(
-                "Slider value should either be an int/float/datetime or a list/tuple of "
-                "0 to 2 ints/floats/datetimes"
+            # A list/tuple of the wrong length is a value constraint, not a
+            # type mismatch — listing list/tuple as expected types would
+            # contradict the provided type.
+            if isinstance(value, (list, tuple)):
+                raise StreamlitAPIException(
+                    "Slider value should either be an int/float/datetime or a "
+                    "list/tuple of 0 to 2 ints/floats/datetimes"
+                )
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                type(value).__name__,
+                ["int", "float", "date", "time", "datetime", "list", "tuple"],
             )
 
         # Simplify future logic by always making value a list
@@ -952,9 +963,10 @@ class SliderMixin:
             return len(set(map(value_to_generic_type, items))) < 2
 
         if not all_same_type(prepared_value):
-            raise StreamlitAPIException(
-                "Slider tuple/list components must be of the same type.\n"
-                f"But were: {list(map(type, prepared_value))}"
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                ", ".join(type(item).__name__ for item in prepared_value),
+                ["list or tuple containing values of the same type"],
             )
 
         data_type = (
@@ -1045,13 +1057,12 @@ class SliderMixin:
         )
 
         if not int_args and not float_args and not timelike_args:
-            msg = (
-                "Slider value arguments must be of matching types."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                f"min_value={type(min_value).__name__}, "
+                f"max_value={type(max_value).__name__}, step={type(step).__name__}",
+                ["matching numeric types", "matching date/time types"],
             )
-            raise StreamlitAPIException(msg)
 
         # Ensure that the value matches arguments' types.
         all_ints = data_type == SliderProto.INT and int_args
@@ -1059,13 +1070,13 @@ class SliderMixin:
         all_timelikes = data_type in TIMELIKE_TYPES and timelike_args
 
         if not all_ints and not all_floats and not all_timelikes:
-            msg = (
-                "Both value and arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                f"value={type(value).__name__}, "
+                f"min_value={type(min_value).__name__}, "
+                f"max_value={type(max_value).__name__}",
+                ["value and arguments with matching types"],
             )
-            raise StreamlitAPIException(msg)
 
         # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
         min_value = min(min_value, max_value)
@@ -1099,7 +1110,7 @@ class SliderMixin:
                 JSNumber.validate_float_bounds(cast("float", min_value), "`min_value`")
                 JSNumber.validate_float_bounds(cast("float", max_value), "`max_value`")
         except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
+            raise StreamlitJSNumberBoundsError(str(e))
 
         orig_tz = None
         # Convert dates or times into datetimes
@@ -1189,7 +1200,7 @@ class SliderMixin:
         )
 
         if help is not None:
-            slider_proto.help = dedent(help)
+            slider_proto.help = to_help_str(help)
 
         if bind and key:
             slider_proto.query_param_key = str(key)
@@ -1232,7 +1243,12 @@ class SliderMixin:
             if not isinstance(slider_min, (int, float)) or not isinstance(
                 slider_max, (int, float)
             ):
-                raise StreamlitAPIException("Slider bounds must be numeric.")
+                raise StreamlitInvalidParameterTypeError(
+                    "min_value",
+                    f"min_value={type(slider_min).__name__}, "
+                    f"max_value={type(slider_max).__name__}",
+                    ["int", "float"],
+                )
             for serialized_value in serialized_values:
                 # Use the deserialized values for more readable error messages for dates/times
                 deserialized_value = serde.deserialize_single_value(serialized_value)

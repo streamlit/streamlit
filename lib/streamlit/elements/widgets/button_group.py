@@ -43,6 +43,7 @@ from streamlit.elements.lib.options_selector_utils import (
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
+    validate_label_visibility,
 )
 from streamlit.elements.lib.utils import (
     Key,
@@ -62,7 +63,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.string_util import extract_leading_icon
+from streamlit.string_util import extract_leading_icon, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -304,7 +305,7 @@ def _build_proto(
             label_visibility
         )
         if help is not None:
-            proto.help = help
+            proto.help = to_help_str(help)
 
     # wrap is layout-only and intentionally excluded from the element id
     # (it is not passed to compute_and_register_element_id), so toggling it
@@ -1091,7 +1092,13 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
-        maybe_raise_label_warnings(label, label_visibility)
+        # Keep omitted labels as None so _build_proto can leave proto.label
+        # unset; the frontend treats that as collapsed. Coercing None to ""
+        # would write an empty visible label and change the element id.
+        if label is not None:
+            label = maybe_raise_label_warnings(label, label_visibility)
+        else:
+            validate_label_visibility(label_visibility)
 
         # Validate required with multi-select
         if required and selection_mode == "multi":
