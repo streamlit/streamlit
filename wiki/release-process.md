@@ -158,6 +158,9 @@ should verify:
 
 ### 7. Update the documentation
 
+This step applies only to regular `x.y.0` releases. Patch releases do not
+require documentation updates.
+
 Slash commands in this section are coding-agent skills. Invoke them from an
 agent session that supports repository skills, such as Cursor or Claude Code,
 rather than from a shell.
@@ -299,8 +302,7 @@ Use the same steps as a regular release:
 1. [Create the tag and merge-back PR](#4-create-the-tag-and-merge-back-pr).
 2. [Deploy static assets for SiS](#5-deploy-static-assets-for-sis-streamlit-in-snowflake).
 3. [Build and publish](#6-build-and-publish) from the patch tag.
-4. [Update the documentation](#7-update-the-documentation).
-5. [Verify and close out](#8-verify-and-close-out).
+4. [Verify and close out](#8-verify-and-close-out).
 
 Also respond to the people who reported the issue. For a significant incident
 or a failed emergency release, create a postmortem and schedule a review
