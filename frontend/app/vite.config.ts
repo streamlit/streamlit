@@ -18,7 +18,7 @@
 import { defineConfig } from "vite"
 import { analyzer } from "vite-bundle-analyzer"
 import terminal from "vite-plugin-terminal"
-import { version } from "./package.json"
+import { version } from "./package.json" with { type: "json" }
 
 import react from "@vitejs/plugin-react-swc"
 

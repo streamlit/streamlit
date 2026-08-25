@@ -30,7 +30,7 @@ const KIND_STYLES: Record<
   [Kind.SUCCESS]: { bg: "greenBackgroundColor", text: "greenTextColor" },
 }
 
-interface StyledAlertContainerProps {
+export interface StyledAlertContainerProps {
   $kind: Kind
   $width?: number
 }

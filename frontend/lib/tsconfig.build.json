@@ -13,5 +13,6 @@
       "@streamlit/lib/testing": ["./src/testing.ts"]
     }
   },
-  "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"]
+  "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"],
+  "exclude": ["src/**/*.test.*", "**/proto.js"]
 }

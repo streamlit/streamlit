@@ -65,9 +65,5 @@
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.11"
   },
-  "resolutions": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0"
-  },
   "packageManager": "yarn@4.13.0"
 }
