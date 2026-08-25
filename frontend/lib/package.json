@@ -162,7 +162,7 @@
     "@vitejs/plugin-react-swc": "^4.3.3",
     "timezone-mock": "^1.4.3",
     "typesync": "^0.14.3",
-    "vite": "^8.2.1",
+    "vite": "^8.2.2",
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.11",
     "vitest-fetch-mock": "^0.4.5"
