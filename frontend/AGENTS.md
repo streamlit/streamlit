@@ -59,6 +59,8 @@ Changes to these high-fan-out internals can affect every message, delta, element
 
 ## Accessibility (a11y) Guidelines (must-follow)
 
+- **Suppress a11y findings with Oxlint syntax**: JSX accessibility rules run in Oxlint, so use `oxlint-disable-next-line jsx-a11y/<rule>`. `eslint-disable-next-line jsx-a11y/<rule>` fails because ESLint no longer knows these rules.
+- **Preserve the migrated a11y policy**: Enabling Oxlint's `jsx-a11y` plugin activates its recommended correctness rules. Keep `lang` and `prefer-tag-over-role` disabled because the previous ESLint recommended config did not enable them.
 - **Prefer semantic HTML for interaction**: Use `<button>` for clicks and `<a href>` for navigation. Avoid `onClick` on non-interactive elements.
 - **Focusable controls must have an accessible name**:
   - Icon-only buttons/links must have `aria-label` (and decorative SVGs should use `aria-hidden="true"`).

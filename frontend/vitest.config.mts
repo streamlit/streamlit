@@ -23,7 +23,7 @@ import {
 export default defineConfig({
   test: {
     globals: true,
-    // Include all workspaces that have a Vite config
+    // Include all workspaces that have a vite.config.ts file
     projects: ["*/vite.config.ts"],
 
     // Global coverage configuration
