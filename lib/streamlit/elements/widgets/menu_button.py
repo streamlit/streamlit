@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast
 
 from streamlit import runtime
@@ -29,7 +28,11 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidContextError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import StringTriggerValue
 from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -40,7 +43,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
@@ -342,7 +345,7 @@ class MenuButtonMixin:
         )
 
         if runtime.exists() and is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidContextError(
                 f"`st.menu_button()` can't be used in an `st.form()`.{_FORM_DOCS_INFO}"
             )
 
@@ -397,7 +400,7 @@ class MenuButtonMixin:
             menu_button_proto.wrap = wrap
 
         if help is not None:
-            menu_button_proto.help = dedent(help)
+            menu_button_proto.help = to_help_str(help)
 
         if icon is not None:
             menu_button_proto.icon = validate_icon_or_emoji(icon)

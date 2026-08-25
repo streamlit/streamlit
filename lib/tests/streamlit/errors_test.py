@@ -144,6 +144,36 @@ def test_page_not_found_without_pages_directory() -> None:
     assert "st.navigation" in msg
 
 
+def test_page_not_found_during_construction() -> None:
+    """st.Page file-not-found uses a construction-specific message."""
+    exc = errors.StreamlitPageNotFoundError("nonexistent.py", during_construction=True)
+    assert (
+        str(exc)
+        == "Unable to create Page. The file `nonexistent.py` could not be found."
+    )
+
+
+def test_invalid_parameter_type_error_preserves_message() -> None:
+    """Message text is used literally, including braces; parameter is for telemetry."""
+    message = "Expected one of {int, float}, not str"
+    exc = errors.StreamlitInvalidParameterTypeError("index", message)
+    assert str(exc) == message
+    assert exc.exec_kwargs["parameter"] == "index"
+
+
+def test_widget_already_instantiated_error_message() -> None:
+    """Session-state assignment after widget creation names the key."""
+    exc = errors.StreamlitWidgetAlreadyInstantiatedError("my_key")
+    assert "`st.session_state.my_key`" in str(exc)
+    assert "instantiated" in str(exc)
+
+
+def test_default_not_in_options_error_message() -> None:
+    """Default-not-in-options names the missing value."""
+    exc = errors.StreamlitDefaultNotInOptionsError("c")
+    assert "The default value 'c' is not part of the options." in str(exc)
+
+
 # StreamlitSelectionCountExceedsMaxError tests
 
 

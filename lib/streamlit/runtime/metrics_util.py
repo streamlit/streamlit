@@ -27,7 +27,7 @@ from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import LocalizableStreamlitException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -246,6 +246,42 @@ _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 # Matches CPython's ``got an unexpected keyword argument 'name'`` TypeError.
 _UNEXPECTED_KWARG_RE: Final = re.compile(
     r"got an unexpected keyword argument '([^']+)'"
+)
+# ``foo() missing 1 required positional argument: 'bar'`` (also keyword-only).
+_MISSING_ARG_RE: Final = re.compile(
+    r"missing \d+ required (?:positional |keyword-only )?arguments?: '(\w+)'"
+)
+# ``foo() takes 2 positional arguments but 3 were given``
+# ``foo() takes 0 positional arguments but 1 was given``
+_TOO_MANY_POS_RE: Final = re.compile(
+    r"takes(?: from \d+ to)? \d+ positional arguments? but \d+ (?:was|were) given"
+)
+_BYTESLIKE_RE: Final = re.compile(r"a bytes-like object is required, not '")
+_PROTO_TYPE_RE: Final = re.compile(
+    r"bad argument type for built-in operation"
+    r"|expected str(?:, but got|, got)"
+    r"|: expected a string"
+    r"|has type \w+, but expected one of:"
+)
+_NO_MODULE_RE: Final = re.compile(r"No module named ['\"]([^'\"]+)['\"]")
+_CANNOT_IMPORT_FROM_RE: Final = re.compile(r"cannot import name '[^']+' from '([^']+)'")
+# First path component of ImportError module names we record. Keep this tight
+# so telemetry cardinality stays bounded.
+_IMPORT_ERROR_MODULE_ALLOWLIST: Final = frozenset(
+    {
+        "altair",
+        "graphviz",
+        "matplotlib",
+        "numpy",
+        "orjson",
+        "pandas",
+        "PIL",
+        "plotly",
+        "polars",
+        "pyarrow",
+        "pydeck",
+        "watchdog",
+    }
 )
 
 
@@ -491,22 +527,50 @@ def to_microseconds(seconds: float) -> int:
 def format_uncaught_exception(exc: BaseException) -> str:
     """Return a page-profile label for an uncaught exception.
 
-    Uses the exception type name, appending ``:<param>`` when the failing
-    parameter is known:
+    Uses the exception type name, appending a short suffix when a stable
+    category is known:
 
     - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
-    - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+    - missing required argument ``TypeError`` → ``"TypeError:missing:<param>"``
+    - too many positional arguments → ``"TypeError:positional"``
+    - protobuf string-field type errors → ``"TypeError:proto"``
+    - bytes-like-object ``TypeError`` → ``"TypeError:byteslike"``
+    - allowlisted ``ImportError`` / ``ModuleNotFoundError`` → ``"<Type>:<module>"``
+    - ``MediaFileStorageError`` opening a file → ``"MediaFileStorageError:open"``
+    - ``LocalizableStreamlitException`` with a ``parameter`` kwarg
+      → ``"<Type>:<parameter>"``
 
+    Does not append user values (widget keys, file paths) or command names.
     Enrichment failures are swallowed so telemetry cannot interrupt script
     execution or drop the page-profile payload.
     """
     name = type(exc).__name__
     with contextlib.suppress(Exception):
         if isinstance(exc, TypeError):
-            match = _UNEXPECTED_KWARG_RE.search(str(exc))
+            msg = str(exc)
+            match = _UNEXPECTED_KWARG_RE.search(msg)
             if match:
                 return f"{name}:{match.group(1)}"
-        elif isinstance(exc, StreamlitValueError):
+            match = _MISSING_ARG_RE.search(msg)
+            if match:
+                return f"{name}:missing:{match.group(1)}"
+            if _TOO_MANY_POS_RE.search(msg):
+                return f"{name}:positional"
+            if _BYTESLIKE_RE.search(msg):
+                return f"{name}:byteslike"
+            if _PROTO_TYPE_RE.search(msg):
+                return f"{name}:proto"
+        elif isinstance(exc, ImportError):
+            msg = str(exc)
+            match = _NO_MODULE_RE.search(msg) or _CANNOT_IMPORT_FROM_RE.search(msg)
+            if match:
+                module = match.group(1).split(".", 1)[0]
+                if module in _IMPORT_ERROR_MODULE_ALLOWLIST:
+                    return f"{name}:{module}"
+        elif name == "MediaFileStorageError" and str(exc).startswith("Error opening"):
+            # Type name avoids importing MediaFileStorageError into this module.
+            return f"{name}:open"
+        elif isinstance(exc, LocalizableStreamlitException):
             parameter = exc.exec_kwargs.get("parameter")
             if isinstance(parameter, str) and parameter:
                 return f"{name}:{parameter}"

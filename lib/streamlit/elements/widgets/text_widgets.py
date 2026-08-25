@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -49,7 +48,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -597,7 +596,7 @@ class TextWidgetsMixin:
             on_change,
             default_value=None if value == "" else value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
@@ -687,7 +686,7 @@ class TextWidgetsMixin:
         )
 
         if help is not None:
-            text_input_proto.help = dedent(help)
+            text_input_proto.help = to_help_str(help)
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
@@ -1038,7 +1037,7 @@ class TextWidgetsMixin:
             on_change,
             default_value=None if value == "" else value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         value = str(value) if value is not None else None
 
@@ -1074,7 +1073,7 @@ class TextWidgetsMixin:
         )
 
         if help is not None:
-            text_area_proto.help = dedent(help)
+            text_area_proto.help = to_help_str(help)
 
         if max_chars is not None:
             text_area_proto.max_chars = max_chars

@@ -32,7 +32,7 @@ import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitWidgetAlreadyInstantiatedError,
     UnserializableSessionStateError,
 )
 from streamlit.proto.Common_pb2 import (
@@ -1874,7 +1874,7 @@ class SessionStateMethodTests(unittest.TestCase):
             "streamlit.runtime.state.session_state.get_script_run_ctx",
             return_value=mock_ctx,
         ):
-            with pytest.raises(StreamlitAPIException) as e:
+            with pytest.raises(StreamlitWidgetAlreadyInstantiatedError) as e:
                 self.session_state._key_id_mapper.set_key_id_mapping(
                     {"widget_id": "widget_id"}
                 )
@@ -1890,7 +1890,7 @@ class SessionStateMethodTests(unittest.TestCase):
             "streamlit.runtime.state.session_state.get_script_run_ctx",
             return_value=mock_ctx,
         ):
-            with pytest.raises(StreamlitAPIException) as e:
+            with pytest.raises(StreamlitWidgetAlreadyInstantiatedError) as e:
                 self.session_state["form_id"] = "blah"
             assert "`st.session_state.form_id` cannot be modified" in str(e.value)
 

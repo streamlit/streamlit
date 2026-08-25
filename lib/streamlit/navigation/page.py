@@ -20,7 +20,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from streamlit import env_util
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -323,9 +327,7 @@ class Page:
             page = (main_path / page).resolve()
 
             if not page.is_file():
-                raise StreamlitAPIException(
-                    f"Unable to create Page. The file `{page.name}` could not be found."
-                )
+                raise StreamlitPageNotFoundError(page.name, during_construction=True)
 
         inferred_name = ""
         inferred_icon = ""

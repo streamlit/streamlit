@@ -37,7 +37,10 @@ from typing import (
 )
 
 from streamlit import config, util
-from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
+from streamlit.errors import (
+    StreamlitWidgetAlreadyInstantiatedError,
+    UnserializableSessionStateError,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -831,7 +834,8 @@ class SessionState:
         """Set the value of the session_state entry with the given user_key.
 
         If the key corresponds to a widget or form that's been instantiated
-        during the current script run, raise a StreamlitAPIException instead.
+        during the current script run, raise a StreamlitWidgetAlreadyInstantiatedError
+        instead.
         """
         ctx = get_script_run_ctx()
 
@@ -841,10 +845,7 @@ class SessionState:
             form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
-                raise StreamlitAPIException(
-                    f"`st.session_state.{user_key}` cannot be modified after the widget"
-                    f" with key `{user_key}` is instantiated."
-                )
+                raise StreamlitWidgetAlreadyInstantiatedError(user_key)
 
         self._new_session_state[user_key] = value
 

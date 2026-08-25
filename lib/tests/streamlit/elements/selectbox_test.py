@@ -27,6 +27,7 @@ from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -185,7 +186,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):

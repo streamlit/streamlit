@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from numbers import Integral
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
@@ -43,6 +44,7 @@ from streamlit.elements.lib.utils import Key, compute_and_register_element_id, t
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidColumnSpecError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitValueError,
 )
@@ -651,14 +653,30 @@ class LayoutsMixin:
             height: 250px
 
         """
-        weights = spec
-        if isinstance(weights, int):
+        # Check `int` before `Integral` so ty can narrow `SpecType` (`int` is not
+        # treated as `numbers.Integral`). numpy integers (e.g. np.int64) are
+        # Integral but not int.
+        if isinstance(spec, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. (1,) * 3 => (1, 1, 1)
             # NOTE: A negative/zero spec will expand into an empty tuple.
-            weights = (1,) * weights
+            weights: Sequence[int | float] = (1,) * spec
+        elif isinstance(spec, Integral):
+            weights = (1,) * int(spec)
+        else:
+            weights = spec
 
-        if len(weights) == 0 or any(weight <= 0 for weight in weights):
+        try:
+            invalid_spec = len(weights) == 0 or any(weight <= 0 for weight in weights)
+        except TypeError as ex:
+            raise StreamlitInvalidParameterTypeError(
+                "spec",
+                "The `spec` argument to `st.columns` must be either a "
+                "positive integer (number of columns) or a list of positive numbers "
+                "(width ratios of the columns).",
+            ) from ex
+
+        if invalid_spec:
             raise StreamlitInvalidColumnSpecError()
 
         if not isinstance(wrap, bool):

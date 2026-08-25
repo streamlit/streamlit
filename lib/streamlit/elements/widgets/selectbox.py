@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -51,7 +50,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -64,9 +63,8 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.type_util import (
-    check_python_comparable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -97,7 +95,6 @@ class SelectboxSerde(Generic[T]):
         We do not store an option_to_formatted_option mapping because the generic
         options might not be hashable, which would raise a RuntimeError. So we do
         two lookups: option -> index -> formatted_option[index].
-
 
         Parameters
         ----------
@@ -624,14 +621,15 @@ class SelectboxMixin:
             on_change,
             default_value=None if index == 0 else index,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if not isinstance(index, int) and index is not None:
-            raise StreamlitAPIException(
-                f"Selectbox Value has invalid type: {type(index).__name__}"
+            raise StreamlitInvalidParameterTypeError(
+                "index",
+                f"Selectbox Value has invalid type: {type(index).__name__}",
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
@@ -695,7 +693,7 @@ class SelectboxMixin:
         selectbox_proto.filter_mode = proto_filter_mode
 
         if help is not None:
-            selectbox_proto.help = dedent(help)
+            selectbox_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

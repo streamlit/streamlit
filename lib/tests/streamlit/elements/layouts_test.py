@@ -15,6 +15,7 @@
 from typing import Literal
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -27,6 +28,7 @@ from streamlit.errors import (
     StreamlitInvalidColumnGapError,
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitValueError,
 )
@@ -69,6 +71,17 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[0].add_block.column.weight == 1.0 / 3
         assert columns_blocks[1].add_block.column.weight == 1.0 / 3
         assert columns_blocks[2].add_block.column.weight == 1.0 / 3
+
+    def test_numpy_integer_spec(self):
+        """numpy integer specs are treated as a column count, like Python ints."""
+        columns = st.columns(np.int64(3))
+        assert len(columns) == 3
+
+    def test_float_spec_raises_invalid_parameter_type(self):
+        """A non-integer scalar spec is a type error, not a crash on ``len()``."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
+            st.columns(6.28)
+        assert exc.value.exec_kwargs["parameter"] == "spec"
 
     @parameterized.expand(
         [

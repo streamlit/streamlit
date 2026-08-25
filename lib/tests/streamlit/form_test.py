@@ -22,7 +22,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidContextError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
@@ -246,11 +251,15 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_multiple_forms_same_key(self):
         """Multiple forms with the same key are not allowed."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitDuplicateElementKey) as ctx:
             st.form(key="foo")
             st.form(key="foo")
 
-        assert "There are multiple identical forms with `key='foo'`" in str(ctx.value)
+        assert str(ctx.value) == (
+            "There are multiple elements with the same `key='foo'`. "
+            "To fix this, please make sure that the `key` argument is unique for "
+            "each element you create."
+        )
 
     def test_multiple_forms_same_labels_different_keys(self):
         """Multiple forms with different keys are allowed."""
@@ -265,7 +274,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_form_in_form(self):
         """Test that forms cannot be nested in other forms."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidContextError) as ctx:
             with st.form("foo"):
                 with st.form("bar"):
                     pass
@@ -275,7 +284,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_button_in_form(self):
         """Test that buttons are not allowed in forms."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidContextError) as ctx:
             with st.form("foo"):
                 st.button("foo")
 
@@ -306,7 +315,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidContextError) as ctx:
             st.form_submit_button()
 
         assert "`st.form_submit_button()` must be used inside an `st.form()`" in str(

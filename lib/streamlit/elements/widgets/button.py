@@ -20,7 +20,6 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     BinaryIO,
@@ -45,6 +44,7 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidContextError,
     StreamlitMissingPageLabelError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
@@ -69,7 +69,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.query_params import process_query_params
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.url_util import is_url
 from streamlit.util import in_sidebar
 
@@ -1384,6 +1384,7 @@ class ButtonMixin:
         wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
 
         on_click_callback: WidgetCallback | None = (
             None
@@ -1420,7 +1421,7 @@ class ButtonMixin:
         )
 
         if is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidContextError(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
 
@@ -1437,7 +1438,7 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
 
         if help is not None:
-            download_button_proto.help = dedent(help)
+            download_button_proto.help = to_help_str(help)
 
         if icon is not None:
             download_button_proto.icon = validate_icon_or_emoji(icon)
@@ -1536,7 +1537,7 @@ class ButtonMixin:
                 shortcut=normalized_shortcut,
             )
 
-        link_button_proto.label = label
+        link_button_proto.label = "" if label is None else to_str(label)
         link_button_proto.url = url
         link_button_proto.type = type
         link_button_proto.disabled = disabled
@@ -1545,7 +1546,7 @@ class ButtonMixin:
             link_button_proto.wrap = wrap
 
         if help is not None:
-            link_button_proto.help = dedent(help)
+            link_button_proto.help = to_help_str(help)
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
@@ -1608,13 +1609,13 @@ class ButtonMixin:
         page_link_proto.disabled = disabled
 
         if label is not None:
-            page_link_proto.label = label
+            page_link_proto.label = to_str(label)
 
         if icon is not None:
             page_link_proto.icon = validate_icon_or_emoji(icon)
 
         if help is not None:
-            page_link_proto.help = dedent(help)
+            page_link_proto.help = to_help_str(help)
 
         if isinstance(page, Page):
             if label is None:
@@ -1663,12 +1664,16 @@ class ButtonMixin:
             for page_data in all_app_pages.values():
                 full_path = page_data["script_path"]
                 page_name = page_data["page_name"]
-                url_pathname = page_data["url_pathname"]
+                # Default pages payload omits url_pathname until st.navigation
+                # registers pages.
+                url_pathname = page_data.get("url_pathname")
                 if requested_page == full_path:
                     if label is None:
                         page_link_proto.label = page_name
                     page_link_proto.page_script_hash = page_data["page_script_hash"]
-                    page_link_proto.page = url_pathname
+                    # Click navigation uses page_script_hash. Do not fall back
+                    # to page_name (a display title) as the href.
+                    page_link_proto.page = url_pathname or ""
                     break
 
             if page_link_proto.page_script_hash == "":
@@ -1702,6 +1707,7 @@ class ButtonMixin:
         wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
 
         normalized_shortcut: str | None = None
         if shortcut is not None:
@@ -1740,13 +1746,13 @@ class ButtonMixin:
         # they will have no script_run_ctx.
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
-                raise StreamlitAPIException(
+                raise StreamlitInvalidContextError(
                     "`st.button()` can't be used in an `st.form()`. Use "
                     "`st.form_submit_button()` instead to submit the form."
                     f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
-                raise StreamlitAPIException(
+                raise StreamlitInvalidContextError(
                     f"`st.form_submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
                 )
 
@@ -1762,7 +1768,7 @@ class ButtonMixin:
             button_proto.wrap = wrap
 
         if help is not None:
-            button_proto.help = dedent(help)
+            button_proto.help = to_help_str(help)
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)

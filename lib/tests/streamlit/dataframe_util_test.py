@@ -32,7 +32,7 @@ from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
 from streamlit import dataframe_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitDataframeConversionError
 from streamlit.type_util import get_fqn_type
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
@@ -368,7 +368,6 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that ArrowInvalid from __arrow_c_stream__ causes fallback to
         later conversion methods (interchange protocol or pandas constructor).
         """
-        from streamlit.errors import StreamlitAPIException
 
         class PyCapsuleOnlyObject:
             """Object with only __arrow_c_stream__ (no to_pandas or __dataframe__).
@@ -389,7 +388,9 @@ class DataframeUtilTest(unittest.TestCase):
         obj = PyCapsuleOnlyObject()
 
         # Should raise because there's no fallback after PyCapsule fails
-        with pytest.raises(StreamlitAPIException, match="Unable to convert"):
+        with pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert"
+        ):
             dataframe_util.convert_anything_to_pandas_df(obj)
 
         # Verify the PyCapsule path was attempted
@@ -1160,11 +1161,13 @@ def test_fix_arrow_incompatible_column_types_stringifies_mixed_index_only() -> N
     assert infer_dtype(fixed.index) == "string"
 
 
-def test_convert_dict_fallback_failure_raises_streamlit_api_exception() -> None:
+def test_convert_dict_fallback_failure_raises_dataframe_conversion_error() -> None:
     """If both the default and key-value dict conversions fail, raise a clear error."""
     bad: dict[int, list[int]] = {0: [1], 1: [2, 3]}
     with (
-        pytest.raises(StreamlitAPIException, match="Unable to convert object"),
+        pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert object"
+        ),
         patch.object(
             dataframe_util,
             "_dict_to_pandas_df",

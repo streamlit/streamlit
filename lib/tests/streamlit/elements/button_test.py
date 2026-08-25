@@ -665,6 +665,31 @@ class ButtonTest(DeltaGeneratorTestCase):
                     assert c.page_script_hash == "hash123"
                     assert c.label == "Page 1"
 
+    def test_page_link_missing_url_pathname_does_not_raise_keyerror(self):
+        """Pages without ``url_pathname`` (default registry payload) still resolve."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page1": {
+                "script_path": "/app/pages/page1.py",
+                "page_name": "Page 1",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/page1.py"):
+                    st.page_link("pages/page1.py")
+                    c = self.get_delta_from_queue().new_element.page_link
+                    assert c.page == ""
+                    assert c.page_script_hash == "hash123"
+                    assert c.label == "Page 1"
+
     def test_page_link_page_not_found(self):
         """Test page_link with non-existent page."""
         ctx = MagicMock()

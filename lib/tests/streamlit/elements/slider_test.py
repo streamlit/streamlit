@@ -34,7 +34,9 @@ from streamlit.elements.widgets.slider import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
+    StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
     StreamlitValueError,
@@ -135,7 +137,7 @@ class SliderTest(DeltaGeneratorTestCase):
     )
     def test_invalid_types(self, value):
         """Test that it rejects invalid types, specifically things that are *almost* numbers"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.slider("the label", value=value)
 
     @parameterized.expand(
@@ -227,13 +229,13 @@ class SliderTest(DeltaGeneratorTestCase):
 
     def test_value_out_of_bounds(self):
         # Max int
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             max_value = JSNumber.MAX_SAFE_INTEGER + 1
             st.slider("Label", max_value=max_value)
         assert f"`max_value` ({max_value}) must be <= (1 << 53) - 1" == str(exc.value)
 
         # Min int
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             min_value = JSNumber.MIN_SAFE_INTEGER - 1
             st.slider("Label", min_value=min_value)
         assert f"`min_value` ({min_value}) must be >= -((1 << 53) - 1)" == str(
@@ -241,13 +243,13 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         # Max float
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             max_value = 2e308
             st.slider("Label", value=0.5, max_value=max_value)
         assert f"`max_value` ({max_value}) must be <= 1.797e+308" == str(exc.value)
 
         # Min float
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             min_value = -2e308
             st.slider("Label", value=0.5, min_value=min_value)
         assert f"`min_value` ({min_value}) must be >= -1.797e+308" == str(exc.value)
@@ -1002,22 +1004,25 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     """Tests for slider parameter validation edge cases."""
 
     def test_mixed_types_in_value_raises(self):
-        """A list with mixed numeric types raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match="must be of the same type"):
+        """A list with mixed numeric types raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match="must be of the same type"
+        ):
             st.slider("the label", value=[1, 2.5])
 
     def test_mismatched_arg_types_raises(self):
-        """Mismatched min/max/step types raise StreamlitAPIException."""
+        """Mismatched min/max/step types raise StreamlitInvalidParameterTypeError."""
         with pytest.raises(
-            StreamlitAPIException, match="arguments must be of matching types"
+            StreamlitInvalidParameterTypeError,
+            match="arguments must be of matching types",
         ):
             # min/max are float but step is int, so the args-type-mismatch error fires.
             st.slider("label", min_value=0.0, max_value=10.0, value=5.0, step=1)
 
     def test_value_type_mismatch_with_args(self):
-        """Value type that doesn't match arg types raises StreamlitAPIException."""
+        """Value type that doesn't match arg types raises StreamlitInvalidParameterTypeError."""
         with pytest.raises(
-            StreamlitAPIException,
+            StreamlitInvalidParameterTypeError,
             match="value and arguments must be of the same type",
         ):
             # min/max/step are float but value is int, so data_type is INT and
