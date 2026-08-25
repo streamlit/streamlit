@@ -154,8 +154,6 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
-  - `StreamlitDataframeConversionError` (value cannot be converted to a
-    DataFrame or Arrow table)
 
 Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
 type (missing required args, incompatible option combinations, serialization
