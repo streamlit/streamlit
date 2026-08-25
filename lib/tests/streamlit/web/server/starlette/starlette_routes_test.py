@@ -716,8 +716,13 @@ def test_media_endpoint_downloadable_safe_filename_stays_quoted(
 
 def test_media_endpoint_downloadable_filename_cannot_inject_headers() -> None:
     """A CR or LF in the name is encoded rather than emitted into the header."""
-    header = _content_disposition_for("a\r\nX-Evil: 1.txt")
+    filename = "a\r\nX-Evil: 1.txt"
 
+    header = _content_disposition_for(filename)
+
+    # The name still has to arrive intact; a header that merely looks clean because a
+    # client stack split or dropped the injected line would satisfy the checks below.
+    assert _filename_from_header(header) == filename
     assert "\r" not in header
     assert "\n" not in header
 
