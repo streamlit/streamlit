@@ -35,7 +35,7 @@ from streamlit.elements.widgets.button import (
 )
 from streamlit.errors import (
     StreamlitDuplicateElementKey,
-    StreamlitInvalidContextError,
+    StreamlitInvalidLayoutContextError,
     StreamlitValueError,
 )
 from streamlit.proto import Block_pb2
@@ -190,7 +190,9 @@ class FormMixin:
 
         """
         if is_in_form(self.dg):
-            raise StreamlitInvalidContextError("Forms cannot be nested in other forms.")
+            raise StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            )
 
         check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)

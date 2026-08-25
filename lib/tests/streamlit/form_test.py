@@ -25,7 +25,7 @@ import streamlit as st
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementKey,
-    StreamlitInvalidContextError,
+    StreamlitInvalidLayoutContextError,
     StreamlitValueError,
 )
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
@@ -274,7 +274,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_form_in_form(self):
         """Test that forms cannot be nested in other forms."""
 
-        with pytest.raises(StreamlitInvalidContextError) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             with st.form("foo"):
                 with st.form("bar"):
                     pass
@@ -284,7 +284,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_button_in_form(self):
         """Test that buttons are not allowed in forms."""
 
-        with pytest.raises(StreamlitInvalidContextError) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             with st.form("foo"):
                 st.button("foo")
 
@@ -315,7 +315,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
 
-        with pytest.raises(StreamlitInvalidContextError) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             st.form_submit_button()
 
         assert "`st.form_submit_button()` must be used inside an `st.form()`" in str(

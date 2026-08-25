@@ -551,8 +551,8 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidContextError(StreamlitAPIException):
-    """Raised when a command is used in a disallowed layout or form context."""
+class StreamlitInvalidLayoutContextError(StreamlitAPIException):
+    """Raised when a command is used in a disallowed layout context."""
 
 
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
@@ -660,15 +660,18 @@ class StreamlitValueError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidParameterTypeError(LocalizableStreamlitException):
-    """Raised when a parameter has an unsupported type.
+    """Raised when a parameter has an unsupported type."""
 
-    ``parameter`` is appended in uncaught-exception telemetry. Pass ``message``
-    as the user-facing text; it is substituted rather than used as a format
-    string, so braces in the text stay literal.
-    """
-
-    def __init__(self, parameter: str, message: str) -> None:
-        super().__init__("{user_message}", user_message=message, parameter=parameter)
+    def __init__(
+        self, parameter: str, provided_type: str, expected_types: list[str]
+    ) -> None:
+        super().__init__(
+            "Invalid `{parameter}` type. Expected one of: {expected_types}. "
+            "Provided type: {provided_type}.",
+            parameter=parameter,
+            expected_types=", ".join(expected_types),
+            provided_type=provided_type,
+        )
 
 
 class StreamlitDefaultNotInOptionsError(LocalizableStreamlitException):

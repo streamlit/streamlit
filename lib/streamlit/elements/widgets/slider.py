@@ -937,8 +937,8 @@ class SliderMixin:
         if not single_value and not range_value:
             raise StreamlitInvalidParameterTypeError(
                 "value",
-                "Slider value should either be an int/float/datetime or a list/tuple of "
-                "0 to 2 ints/floats/datetimes",
+                type(value).__name__,
+                ["int", "float", "date", "time", "datetime", "list", "tuple"],
             )
 
         # Simplify future logic by always making value a list
@@ -957,8 +957,8 @@ class SliderMixin:
         if not all_same_type(prepared_value):
             raise StreamlitInvalidParameterTypeError(
                 "value",
-                "Slider tuple/list components must be of the same type.\n"
-                f"But were: {list(map(type, prepared_value))}",
+                ", ".join(type(item).__name__ for item in prepared_value),
+                ["list or tuple containing values of the same type"],
             )
 
         data_type = (
@@ -1049,13 +1049,12 @@ class SliderMixin:
         )
 
         if not int_args and not float_args and not timelike_args:
-            msg = (
-                "Slider value arguments must be of matching types."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                f"min_value={type(min_value).__name__}, "
+                f"max_value={type(max_value).__name__}, step={type(step).__name__}",
+                ["matching numeric types", "matching date/time types"],
             )
-            raise StreamlitInvalidParameterTypeError("value", msg)
 
         # Ensure that the value matches arguments' types.
         all_ints = data_type == SliderProto.INT and int_args
@@ -1063,13 +1062,13 @@ class SliderMixin:
         all_timelikes = data_type in TIMELIKE_TYPES and timelike_args
 
         if not all_ints and not all_floats and not all_timelikes:
-            msg = (
-                "Both value and arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                f"value={type(value).__name__}, "
+                f"min_value={type(min_value).__name__}, "
+                f"max_value={type(max_value).__name__}",
+                ["value and arguments with matching types"],
             )
-            raise StreamlitInvalidParameterTypeError("value", msg)
 
         # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
         min_value = min(min_value, max_value)
@@ -1237,7 +1236,10 @@ class SliderMixin:
                 slider_max, (int, float)
             ):
                 raise StreamlitInvalidParameterTypeError(
-                    "min_value", "Slider bounds must be numeric."
+                    "min_value",
+                    f"min_value={type(slider_min).__name__}, "
+                    f"max_value={type(slider_max).__name__}",
+                    ["int", "float"],
                 )
             for serialized_value in serialized_values:
                 # Use the deserialized values for more readable error messages for dates/times

@@ -129,10 +129,11 @@ generic `StreamlitAPIException` with a one-off message.
 - `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
   an invalid value from a known finite set (Literal / enum-like options). Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
-- `StreamlitInvalidParameterTypeError(parameter, message)`: use when a parameter
-  has an unsupported type. `parameter` is appended in uncaught-exception
-  telemetry (`StreamlitInvalidParameterTypeError:<parameter>`). Pass `message`
-  as literal user-facing text; braces are not treated as format fields.
+- `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
+  use when a parameter has an unsupported type. `parameter` is appended in
+  uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
+  Pass concise type names as strings; for example,
+  `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
   - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
@@ -145,8 +146,8 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
-  - `StreamlitInvalidContextError` (command used in a disallowed form/layout
-    context)
+  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout
+    or form context)
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)

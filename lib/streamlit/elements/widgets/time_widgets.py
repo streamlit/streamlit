@@ -131,7 +131,8 @@ def _convert_timelike_to_time(value: TimeValue) -> time:
 
     raise StreamlitInvalidParameterTypeError(
         "value",
-        "The type of value should be one of datetime, time, ISO string or None",
+        type(value).__name__,
+        ["datetime", "time", "ISO string"],
     )
 
 
@@ -159,7 +160,8 @@ def _convert_datelike_to_date(
 
     raise StreamlitInvalidParameterTypeError(
         "value",
-        'Date value should either be an date/datetime or an ISO string or "today"',
+        type(value).__name__,
+        ["date", "datetime", "ISO string", '"today"'],
     )
 
 
@@ -179,8 +181,8 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
     if len(value_tuple) not in {0, 1, 2}:
         raise StreamlitInvalidParameterTypeError(
             "value",
-            "DateInput value should either be an date/datetime or a list/tuple of "
-            "0 - 2 date/datetime values",
+            type(value).__name__,
+            ["date", "datetime", "sequence of 0 to 2 date or datetime values"],
         )
 
     parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]
@@ -203,7 +205,8 @@ def _parse_min_date(
     else:
         raise StreamlitInvalidParameterTypeError(
             "min_value",
-            "DateInput min should either be a date/datetime or None",
+            type(min_value).__name__,
+            ["date", "datetime", "ISO string", "None"],
         )
     return parsed_min_date
 
@@ -223,7 +226,8 @@ def _parse_max_date(
     else:
         raise StreamlitInvalidParameterTypeError(
             "max_value",
-            "DateInput max should either be a date/datetime or None",
+            type(max_value).__name__,
+            ["date", "datetime", "ISO string", "None"],
         )
     return parsed_max_date
 
@@ -307,7 +311,8 @@ def _convert_datetimelike_to_datetime(
 
     raise StreamlitInvalidParameterTypeError(
         "value",
-        "The type of value should be one of datetime, date, time, ISO string, or 'now'.",
+        type(value).__name__,
+        ["datetime", "date", "time", "ISO string", '"now"'],
     )
 
 
@@ -1048,7 +1053,8 @@ class TimeWidgetsMixin:
         if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
             raise StreamlitInvalidParameterTypeError(
                 "step",
-                f"`step` can only be `int` or `timedelta` but {type(step)} is provided.",
+                type(step).__name__,
+                ["int", "timedelta"],
             )
         if isinstance(step, timedelta):
             step = int(step.total_seconds())
@@ -1472,7 +1478,8 @@ class TimeWidgetsMixin:
         if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
             raise StreamlitInvalidParameterTypeError(
                 "step",
-                f"`step` can only be `int` or `timedelta` but {type(step)} is provided.",
+                type(step).__name__,
+                ["int", "timedelta"],
             )
         step_seconds = (
             int(step.total_seconds()) if isinstance(step, timedelta) else step

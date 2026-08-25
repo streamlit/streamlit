@@ -186,7 +186,10 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitInvalidParameterTypeError):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: int, None\. Provided type: str\.",
+        ):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):

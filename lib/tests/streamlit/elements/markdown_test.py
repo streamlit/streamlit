@@ -91,7 +91,7 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         assert el.markdown.allow_html
 
         # test the help keyword
-        st.markdown("    some markdown  ", help="help text")
+        st.markdown("    some markdown  ", help="    help text")
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "some markdown"
         assert el.markdown.help == "help text"

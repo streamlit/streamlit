@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, cast
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, to_str
+from streamlit.string_util import clean_text, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -100,7 +100,7 @@ class TextMixin:
         text_proto = TextProto()
         text_proto.body = clean_text(body)
         if help:
-            text_proto.help = to_str(help)
+            text_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(
             width=width,

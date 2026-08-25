@@ -1006,7 +1006,8 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     def test_mixed_types_in_value_raises(self):
         """A list with mixed numeric types raises StreamlitInvalidParameterTypeError."""
         with pytest.raises(
-            StreamlitInvalidParameterTypeError, match="must be of the same type"
+            StreamlitInvalidParameterTypeError,
+            match="list or tuple containing values of the same type",
         ):
             st.slider("the label", value=[1, 2.5])
 
@@ -1014,7 +1015,7 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
         """Mismatched min/max/step types raise StreamlitInvalidParameterTypeError."""
         with pytest.raises(
             StreamlitInvalidParameterTypeError,
-            match="arguments must be of matching types",
+            match="matching numeric types",
         ):
             # min/max are float but step is int, so the args-type-mismatch error fires.
             st.slider("label", min_value=0.0, max_value=10.0, value=5.0, step=1)
@@ -1023,7 +1024,7 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
         """Value type that doesn't match arg types raises StreamlitInvalidParameterTypeError."""
         with pytest.raises(
             StreamlitInvalidParameterTypeError,
-            match="value and arguments must be of the same type",
+            match="value and arguments with matching types",
         ):
             # min/max/step are float but value is int, so data_type is INT and
             # the value-vs-args matching-type check fails.

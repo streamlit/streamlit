@@ -34,7 +34,7 @@ from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
-    StreamlitInvalidContextError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
 )
@@ -876,12 +876,14 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitValueError:width",
         ),
         (
-            StreamlitInvalidParameterTypeError("spec", "bad spec type"),
+            StreamlitInvalidParameterTypeError("spec", "str", ["int", "list"]),
             "StreamlitInvalidParameterTypeError:spec",
         ),
         (
-            StreamlitInvalidContextError("Forms cannot be nested in other forms."),
-            "StreamlitInvalidContextError",
+            StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            ),
+            "StreamlitInvalidLayoutContextError",
         ),
         (
             ModuleNotFoundError("No module named 'pyarrow'"),

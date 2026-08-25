@@ -153,12 +153,18 @@ def test_page_not_found_during_construction() -> None:
     )
 
 
-def test_invalid_parameter_type_error_preserves_message() -> None:
-    """Message text is used literally, including braces; parameter is for telemetry."""
-    message = "Expected one of {int, float}, not str"
-    exc = errors.StreamlitInvalidParameterTypeError("index", message)
-    assert str(exc) == message
-    assert exc.exec_kwargs["parameter"] == "index"
+def test_invalid_parameter_type_error_message() -> None:
+    """The parameter, expected types, and provided type form one stable message."""
+    exc = errors.StreamlitInvalidParameterTypeError("index", "str", ["int", "None"])
+    assert (
+        str(exc)
+        == "Invalid `index` type. Expected one of: int, None. Provided type: str."
+    )
+    assert exc.exec_kwargs == {
+        "parameter": "index",
+        "expected_types": "int, None",
+        "provided_type": "str",
+    }
 
 
 def test_widget_already_instantiated_error_message() -> None:

@@ -44,7 +44,7 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidContextError,
+    StreamlitInvalidLayoutContextError,
     StreamlitMissingPageLabelError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
@@ -1421,7 +1421,7 @@ class ButtonMixin:
         )
 
         if is_in_form(self.dg):
-            raise StreamlitInvalidContextError(
+            raise StreamlitInvalidLayoutContextError(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
 
@@ -1747,13 +1747,13 @@ class ButtonMixin:
         # they will have no script_run_ctx.
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
-                raise StreamlitInvalidContextError(
+                raise StreamlitInvalidLayoutContextError(
                     "`st.button()` can't be used in an `st.form()`. Use "
                     "`st.form_submit_button()` instead to submit the form."
                     f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
-                raise StreamlitInvalidContextError(
+                raise StreamlitInvalidLayoutContextError(
                     f"`st.form_submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
                 )
 

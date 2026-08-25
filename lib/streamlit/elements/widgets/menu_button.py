@@ -30,7 +30,7 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidContextError,
+    StreamlitInvalidLayoutContextError,
     StreamlitValueError,
 )
 from streamlit.proto.Common_pb2 import StringTriggerValue
@@ -346,7 +346,7 @@ class MenuButtonMixin:
         )
 
         if runtime.exists() and is_in_form(self.dg):
-            raise StreamlitInvalidContextError(
+            raise StreamlitInvalidLayoutContextError(
                 f"`st.menu_button()` can't be used in an `st.form()`.{_FORM_DOCS_INFO}"
             )
 

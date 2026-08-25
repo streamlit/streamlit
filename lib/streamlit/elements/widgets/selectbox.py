@@ -629,7 +629,8 @@ class SelectboxMixin:
         if not isinstance(index, int) and index is not None:
             raise StreamlitInvalidParameterTypeError(
                 "index",
-                f"Selectbox Value has invalid type: {type(index).__name__}",
+                type(index).__name__,
+                ["int", "None"],
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):

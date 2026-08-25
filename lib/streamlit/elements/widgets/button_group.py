@@ -63,7 +63,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.string_util import extract_leading_icon, to_str
+from streamlit.string_util import extract_leading_icon, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -305,7 +305,7 @@ def _build_proto(
             label_visibility
         )
         if help is not None:
-            proto.help = to_str(help)
+            proto.help = to_help_str(help)
 
     # wrap is layout-only and intentionally excluded from the element id
     # (it is not passed to compute_and_register_element_id), so toggling it

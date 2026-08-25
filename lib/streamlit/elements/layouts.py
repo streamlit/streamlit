@@ -671,9 +671,8 @@ class LayoutsMixin:
         except TypeError as ex:
             raise StreamlitInvalidParameterTypeError(
                 "spec",
-                "The `spec` argument to `st.columns` must be either a "
-                "positive integer (number of columns) or a list of positive numbers "
-                "(width ratios of the columns).",
+                type(spec).__name__,
+                ["int", "sequence of numbers"],
             ) from ex
 
         if invalid_spec:

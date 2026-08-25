@@ -33,7 +33,7 @@ class StTextAPITest(DeltaGeneratorTestCase):
 
     def test_st_text_with_help(self):
         """Test st.text with help."""
-        st.text("some text", help="help text")
+        st.text("some text", help="    help text")
         el = self.get_delta_from_queue().new_element
         assert el.text.body == "some text"
         assert el.text.help == "help text"

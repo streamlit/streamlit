@@ -540,7 +540,7 @@ def test_parse_date_value_none_is_not_range() -> None:
 
 def test_parse_date_value_too_many_dates_raises() -> None:
     """A range of more than 2 dates raises StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="0 - 2 date"):
+    with pytest.raises(StreamlitAPIException, match="0 to 2 date"):
         _parse_date_value([date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)])
 
 

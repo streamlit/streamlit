@@ -572,7 +572,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             (
                 st.pills,
                 ("label", ["a", "b", "c"]),
-                {"help": "Test help param"},
+                {"help": "    Test help param"},
                 ["a", "b", "c"],
                 "content",
                 ButtonGroupProto.Style.PILLS,
@@ -617,6 +617,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         if test_label:
             assert delta.label == command_args[0]
+            assert delta.help == "Test help param"
         assert (
             delta.label_visibility.value
             is LabelVisibility.LabelVisibilityOptions.VISIBLE

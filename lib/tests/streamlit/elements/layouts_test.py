@@ -82,6 +82,8 @@ class ColumnsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.columns(6.28)
         assert exc.value.exec_kwargs["parameter"] == "spec"
+        assert "Expected one of: int, sequence of numbers" in str(exc.value)
+        assert "Provided type: float" in str(exc.value)
 
     @parameterized.expand(
         [
