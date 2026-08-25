@@ -1169,3 +1169,124 @@ describe("TextInput query param binding", () => {
     )
   })
 })
+
+describe("on_change='ignore' mode", () => {
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "testing{Enter}")
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "testing",
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: false })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "testing{Enter}")
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "testing",
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+  })
+
+  it("forwards triggerRerun: false inside a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      ignoreRerun: true,
+      formId: "testForm",
+    })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "a")
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "a", {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: true })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "hello")
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when search clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        type: TextInputProto.Type.SEARCH,
+      },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
+    await user.type(searchbox, "laptops")
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId("stTextInputClearButton"))
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+})
