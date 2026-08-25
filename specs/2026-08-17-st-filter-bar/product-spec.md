@@ -21,8 +21,8 @@ filtered_df = st.filter_bar(df, label="Filter results", help="Narrow down the da
 ```
 
 V1 filters frames held in memory. Unevaluated sources such as Snowpark tables and Polars
-LazyFrames are materialized only when they are small enough that `st.dataframe` would materialize
-them too; larger ones raise. Filtering at the query layer is deferred. See [Warehouse-scale data](#warehouse-scale-data).
+LazyFrames raise, deliberately diverging from `st.dataframe`. Filtering at the query layer is
+deferred. See [Warehouse-scale data](#warehouse-scale-data).
 
 **Nine decisions want input before implementation.** Seven are ready to approve as written; one
 needs the `column_config` owners and one needs design. They are summarized in one table, each with
@@ -110,7 +110,7 @@ st.filter_bar(
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `data` | `DataFrameLike` | required | The source DataFrame to filter. Accepts pandas, Polars, PyArrow, or any object convertible via Streamlit's data-frame protocol. Unevaluated sources (Snowpark, Polars `LazyFrame`) follow `st.dataframe`'s thresholds — see [Warehouse-scale data](#warehouse-scale-data). |
+| `data` | `DataFrameLike` | required | The source DataFrame to filter. Accepts pandas, Polars, PyArrow, or any object convertible via Streamlit's data-frame protocol. Unevaluated sources (Snowpark, Polars `LazyFrame`) raise `StreamlitAPIException`, asking the caller to evaluate the source explicitly — see [Warehouse-scale data](#warehouse-scale-data). |
 | `columns` | `Sequence[str] \| Mapping[str, ColumnConfig \| str \| None] \| None` | `None` | Controls which columns are filterable and how. `None`: auto-include all eligible columns. `Sequence[str]`: include only the named columns (filter type inferred). `Mapping`: keys are column names, values are `st.column_config.*` objects for explicit control, a string as a label shorthand, or `None` to exclude. Column names not present in the input DataFrame raise `StreamlitAPIException`. |
 | `default` | `FilterState \| None` | `None` | Initial filter state applied on first render (before user interaction). A dict keyed by column name with filter descriptors (e.g., `{"status": {"type": "select", "operator": "is", "values": ["active"]}}`). The nested form `{"filters": {...}}` that `st.session_state[key]` returns is also accepted, so state can be captured and replayed unchanged. A column name not present in the DataFrame raises `StreamlitAPIException`; that differs from stale filters in restored user state, which are dropped silently. Once the user interacts, `default` no longer applies (same semantics as `st.multiselect(default=...)`) — assigning to `st.session_state[key]` is how an app returns to a known filter set. |
 | `label` | `str \| None` | `None` | A short label displayed above the filter bar. Supports Markdown. If `None`, no label is displayed. |
@@ -350,7 +350,7 @@ state.filtered_columns  # → ["Industry", "Stage"]
 state.matched_rows  # → 142
 state.total_rows  # → 8431
 
-# Assigning new state programmatically (drill-down, presets, reset to default):
+# Assign before the widget renders or from a callback, never after it in the same run:
 st.session_state["my_filter"] = {
     "filters": {"Industry": {"type": "select", "values": ["Tech"]}}
 }
@@ -359,7 +359,11 @@ st.session_state["my_filter"] = {
 Importable as `streamlit.typing.FilterBarState` for type annotations, alongside `DataEditorState`
 and `DataframeState`. Reading is read-only, so in-place mutation raises `TypeError`. Assigning a new
 value to the Session State key is supported and replaces the filter set, the same pattern
-`st.dataframe` uses for programmatic selection. That is what makes saved presets,
+`st.dataframe` uses for programmatic selection. Streamlit's usual ordering rule applies: assigning
+after the widget has rendered in the same run raises "`st.session_state.<key>` cannot be modified
+after the widget with key `<key>` is instantiated". In practice the assignment happens in a
+callback, such as a Reset button's `on_click` or a chart's selection handler, which runs before
+widgets instantiate on the following rerun. That is what makes saved presets,
 chart-click-to-filter, and a "Reset to defaults" button buildable in app code before any of them
 ship as features.
 
@@ -471,7 +475,9 @@ viewport above the fold.
   only the fragment, and use `@st.cache_data` for the data load above it. At 10M rows, where
   filtering itself costs several hundred milliseconds, this becomes necessary, not advisory
 - `st.form` also works, with pills updating locally and the returned DataFrame changing only on
-  submit. It defers the cost instead of removing it, and is not the recommended pattern
+  submit. It defers the cost instead of removing it, and is not the recommended pattern. Inside a
+  form, `on_change` is unavailable: Streamlit allows callbacks only on `st.form_submit_button`,
+  raising `StreamlitInvalidFormCallbackError` otherwise
 
 ### Examples
 
@@ -567,19 +573,19 @@ filtered = st.filter_bar(df, key="my_filter", on_change=on_filter_change)
 ### Warehouse-scale data
 
 Filtering happens in the Streamlit process, so `data` must be a frame that fits in memory.
-Unevaluated sources follow the same thresholds `st.dataframe` already uses for them, so the two
-elements agree on what is safe to pull into the process:
+Unevaluated sources raise `StreamlitAPIException`, and the message asks the caller to evaluate the
+source first (`.to_pandas()`, `.collect()`) so the cost of that query stays visible in their code.
 
-| Source | Behavior |
-|---|---|
-| Row count known, at or below 10,000 | Materialized and filtered normally, as `st.dataframe` does |
-| Row count known, above 10,000 | Raises, naming the pattern below |
-| Row count unknown | Raises, since nothing establishes that materializing is safe |
+**This deliberately diverges from `st.dataframe`, which caps instead of raising.** Passing it a
+Polars `LazyFrame` collects the first 10,000 rows and warns "Showing only 10k rows. Call
+`collect()` on the dataframe to show more" (`dataframe_util.py`). Capping is a reasonable
+compromise for display, because a truncated preview is still an honest preview. It is not
+reasonable for filtering: a mask applied to the first 10,000 rows of an 80M-row table returns rows
+that look like an answer and are not one. Lazy `st.dataframe` reaches the same conclusion for
+search, which it disables rather than running over only the loaded chunks.
 
-Raising beats materializing at scale because pulling an 80M-row Snowpark table to return 4,000 rows
-presents as a hang with no explanation. Lazy `st.dataframe` resolves the same dilemma the same way:
-it disables search instead of filtering only the loaded chunks, since a mask over a subset returns
-silently wrong rows.
+The cost of the divergence is that `st.dataframe(lazy_df)` renders while `st.filter_bar(lazy_df)`
+raises. That is decision 9, and it is the one place these two elements deliberately disagree.
 
 Until filtering can push down to the query layer, warehouse-backed apps drive the UI from cheap
 distinct values and translate the state themselves:
@@ -736,7 +742,7 @@ and anything it needs beyond this review.
 | 6 | Conditions per column | One condition per column, with the text filter accepting several terms | Excel and Power BI both offer a two-condition builder in their normal flow, but the gap here is narrower than it appears: `not between` already expresses disjoint numeric and date ranges, and multiselect already gives categorical OR. What remains is multi-term text matching, and letting `contains` take several terms closes it without an and/or selector or a second condition row in five popovers | — |
 | 7 | Relative date ranges | Two dropdowns, `this`/`last`/`next`/`past` and day/week/month/quarter/year, with a count that appears only for `past`. The direction word decides calendar versus trailing: "last month" is July, "past 30 days" is the trailing window | Notion ships this grid with no count. Power BI adds a count but separates calendar units (`Months` versus `Months (Calendar)`), which needs nine unit entries and has to suppress nonsense combinations. Putting the distinction in the direction word reads the way the phrases already read. This shape is ours rather than borrowed, which makes it the most novel thing in the spec and the most worth a second opinion | — |
 | 8 | Filter state contract | Column filters nested under `filters`, with `meta` alongside. Assignment to `st.session_state[key]` is supported and validated. Exported from `streamlit.typing` | Nesting stops user column names colliding with helpers or reserved keys, so `_id` and `_source` columns filter normally. Assignment is what makes presets, chart-click-to-filter, and a reset button buildable in app code before any of them ship. Apps that read this shape freeze it, so it is costly to change later | — |
-| 9 | Unevaluated sources | Follow `st.dataframe`'s thresholds: materialize at or below 10,000 known rows, raise above that or when the count is unknown | Filtering a subset returns silently wrong rows, and materializing an 80M-row table to return 4,000 presents as a hang. Matching `st.dataframe`'s line keeps sibling elements consistent instead of making `filter_bar` arbitrarily stricter | — |
+| 9 | Unevaluated sources | Raise, asking the caller to evaluate the source first. Stricter than `st.dataframe`, which caps at 10,000 rows and warns | A truncated preview is still an honest preview, so capping suits display. A mask over the first 10,000 rows of an 80M-row table returns rows that look like an answer and are not one, so capping does not suit filtering. The cost is that these sibling elements accept different inputs, so the divergence is worth confirming | — |
 
 Evidence for decision 2 — how comparable tools combine filters:
 
