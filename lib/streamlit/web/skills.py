@@ -1562,6 +1562,24 @@ _NudgeSuppressionReason = Literal[
 ]
 
 
+def agent_harness_present() -> bool:
+    """Whether an AI agent harness that would consume the skills is installed.
+
+    Either detector counts. :func:`detect_installed_agents` keys on home-dir
+    markers and defines the ``installed_agents`` telemetry vocabulary for all
+    eight harnesses; :func:`_is_claude_code_present` is the broader signal that
+    decides whether ``.claude/skills`` is an install target at all. Anyone the
+    broad one covers has a target the installer writes to, so something would
+    consume the skills - which is the question both the nudge's display gate and
+    the in-app install handler's action gate are really asking.
+
+    Shared by those two on purpose: gating the display broadly and the action
+    narrowly would offer a button that refuses, and the reverse withholds the
+    one repair from users the startup recommendation nags on every run.
+    """
+    return bool(detect_installed_agents()) or _is_claude_code_present()
+
+
 def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     """Return whether the in-app "install skills" nudge should be shown.
 
@@ -1610,15 +1628,9 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         if _nudge_dismissed_marker_path().exists():
             return "dismissed"
         # An agent must be present, and our skills must not be installed yet.
-        # Either detector satisfies the first half, on purpose. Whoever
-        # _is_claude_code_present() covers has a .claude/skills target, so an
-        # .agents-only tree reports partial and the startup recommendation
-        # prints for them every run; gating on the narrower harness list alone
-        # withheld the one-click repair from exactly those users - nagged by the
-        # surface that cannot fix it, hidden from the one that can. Real
-        # population: a `claude` on PATH with no ~/.claude (shared toolchain
-        # image, leftover binary, CLAUDE_CONFIG_DIR).
-        if not detect_installed_agents() and not _is_claude_code_present():
+        # Either detector counts - see agent_harness_present(), which the in-app
+        # install handler's action gate shares so the two cannot drift.
+        if not agent_harness_present():
             return "no_agent"
         # An agent is present; recommend installing only if our skills aren't. A
         # marker found somewhere is not enough: it may sit in .agents/skills

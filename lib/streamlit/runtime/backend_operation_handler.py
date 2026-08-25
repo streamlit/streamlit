@@ -220,7 +220,9 @@ class InstallSkillsHandler(BackendOperationHandler):
         #   - headless mode (deployments / CI / SiS): the nudge is never shown
         #     there, so the request is a replayed/spoofed BackMsg; refuse the
         #     filesystem writes.
-        #   - no agent harness present: nothing would consume the skills.
+        #   - no agent harness present: nothing would consume the skills. Uses
+        #     the same predicate as the nudge's display gate, so a nudge we show
+        #     can never lead to a button that refuses.
         #   - the browser is not on a direct-loopback connection: the same
         #     conservative eligibility rule the nudge display uses, so a
         #     shared/deployed-ish topology (Docker/VM/reverse-proxy/SSH-tunnel)
@@ -233,11 +235,11 @@ class InstallSkillsHandler(BackendOperationHandler):
         # logging it as a failed install. Idempotent retry is the correct path.
         #
         # Check the conditions in order; the first that trips names the telemetry
-        # reason. This short-circuits, so e.g. detect_installed_agents() (which
+        # reason. This short-circuits, so e.g. agent_harness_present() (which
         # touches the filesystem) isn't called in headless mode.
         if config.get_option("server.headless"):
             gate_reason = "headless"
-        elif not skills.detect_installed_agents():
+        elif not skills.agent_harness_present():
             gate_reason = "no_agent"
         elif connection_locality(session_id) != "loopback":
             gate_reason = "non_loopback"
