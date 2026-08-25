@@ -183,7 +183,7 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
-  describe("self-dispatch GUEST_READY", () => {
+  describe("GUEST_READY echo on open", () => {
     let postMessageSpy: MockInstance
     const originalParent = window.parent
 
@@ -423,6 +423,7 @@ describe("HostCommunicationManager messaging", () => {
 
     it("does not execute an echoed UPDATE_HASH as a host command", async () => {
       await withEmbeddedWindow(() => {
+        window.location.hash = "#unchanged"
         dispatchEvent(
           "message",
           newHostMessageEvent({
@@ -437,7 +438,7 @@ describe("HostCommunicationManager messaging", () => {
           })
         )
 
-        expect(window.location.hash).toEqual("")
+        expect(window.location.hash).toEqual("#unchanged")
       })
     })
 
@@ -496,6 +497,30 @@ describe("HostCommunicationManager messaging", () => {
         )
 
         expect(window.location.hash).toEqual("#truthy-flag")
+      })
+    })
+
+    it("executes a self-post when the echo marker is only inherited", async () => {
+      await withEmbeddedWindow(() => {
+        const data = Object.create({ [IS_GUEST_TO_HOST_ECHO]: true }) as {
+          stCommVersion: number
+          type: string
+          hash: string
+        }
+        data.stCommVersion = HOST_COMM_VERSION
+        data.type = "UPDATE_HASH"
+        data.hash = "#inherited-flag"
+
+        dispatchEvent(
+          "message",
+          newHostMessageEvent({
+            data,
+            origin: "https://devel.streamlit.test",
+            source: window,
+          })
+        )
+
+        expect(window.location.hash).toEqual("#inherited-flag")
       })
     })
 
@@ -1254,7 +1279,7 @@ describe("HostCommunicationManager messaging", () => {
     }
   })
 
-  it("logs a debug message for a dropped non-GUEST_READY self-post", async () => {
+  it("logs a debug message for a dropped untagged self-post", async () => {
     const debugSpy = vi
       .spyOn(getLogger("HostCommunicationManager"), "debug")
       .mockImplementation(() => {})

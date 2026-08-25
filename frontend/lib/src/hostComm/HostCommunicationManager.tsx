@@ -24,6 +24,7 @@ import { isValidOrigin } from "~lib/util/UriUtil"
 import {
   AppConfig,
   DeployedAppMetadata,
+  GuestToHostEnvelope,
   IGuestToHostMessage,
   IHostToGuestMessage,
   IMenuItem,
@@ -38,16 +39,25 @@ export const HOST_COMM_VERSION = 1
 /**
  * Marks a same-window copy of a guest→host message so the guest does not
  * handle it as a host command. Some types (notably `UPDATE_HASH`) are valid
- * in both directions.
+ * in both directions. Host platforms can import this from `@streamlit/lib`
+ * to filter echoes without hardcoding the string.
  */
 export const IS_GUEST_TO_HOST_ECHO = "isGuestToHostEcho"
 
-/** True only when the payload's own echo marker is boolean `true`. */
+/**
+ * True when this payload is our same-window guest→host echo, not an inbound
+ * host command. Requires an own property whose value is boolean `true`, so
+ * inherited or truthy values cannot suppress host commands.
+ *
+ * Uses `Object.prototype.hasOwnProperty` rather than `Object.hasOwn` so this
+ * message-routing path does not throw in browsers that lack that ES2022
+ * built-in (it is not in `frontend/utils/src/polyfills`).
+ */
 function isGuestToHostEchoPayload(data: unknown): boolean {
   return (
     typeof data === "object" &&
     data !== null &&
-    Object.hasOwn(data, IS_GUEST_TO_HOST_ECHO) &&
+    Object.prototype.hasOwnProperty.call(data, IS_GUEST_TO_HOST_ECHO) &&
     (data as Record<string, unknown>)[IS_GUEST_TO_HOST_ECHO] === true
   )
 }
@@ -176,6 +186,8 @@ export default class HostCommunicationManager {
 
   /**
    * Deliver a message to a host that is on the same origin as the guest.
+   * When the app is embedded, also posts a tagged copy to this window so an
+   * in-iframe host can observe it.
    */
   public sendMessageToSameOriginHost = (
     message: IGuestToHostMessage
@@ -185,6 +197,8 @@ export default class HostCommunicationManager {
 
   /**
    * Deliver a message to the host.
+   * When the app is embedded, also posts a tagged copy to this window so an
+   * in-iframe host can observe it.
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
     this.postMessageToParentAndEcho(message, "*")
@@ -203,8 +217,9 @@ export default class HostCommunicationManager {
    * Post `message` to `window.parent`. When embedded, also post a tagged copy
    * to this window so an in-iframe host can observe guest messages even if
    * the parent is a third-party page. The copy sets `isGuestToHostEcho: true`
-   * so `receiveHostMessage` can ignore it. It uses `window.location.origin`
-   * so only same-origin listeners on this window receive it.
+   * so `receiveHostMessage` can ignore it. Posting to `window` already limits
+   * delivery to this window's listeners; `window.location.origin` refuses the
+   * dispatch if this window has navigated to another origin.
    *
    * Do not echo at top level: `isSelfPost` is false when
    * `window === window.parent`, so an unignored top-level echo could run as a
@@ -217,10 +232,11 @@ export default class HostCommunicationManager {
     const versionedMessage = this.buildVersionedMessage(message)
     window.parent.postMessage(versionedMessage, parentTargetOrigin)
     if (window !== window.parent) {
-      window.postMessage(
-        { ...versionedMessage, [IS_GUEST_TO_HOST_ECHO]: true },
-        window.location.origin
-      )
+      const echo: GuestToHostEnvelope = {
+        ...versionedMessage,
+        [IS_GUEST_TO_HOST_ECHO]: true,
+      }
+      window.postMessage(echo, window.location.origin)
     }
   }
 
