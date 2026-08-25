@@ -587,27 +587,6 @@ class ChatMixin:
         key: Key | None = None,
         max_chars: int | None = None,
         max_upload_size: int | None = None,
-        accept_file: Literal[False] = False,
-        file_type: str | Sequence[str] | None = None,
-        accept_audio: Literal[True],
-        audio_sample_rate: int | None = 16000,
-        disabled: bool = False,
-        submit_mode: Literal["submit", "disable", "stop"] = "submit",
-        on_submit: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        width: WidthWithoutContent = "stretch",
-        height: Height = "content",
-    ) -> ChatInputValue | None: ...
-
-    @overload
-    def chat_input(
-        self,
-        placeholder: str = "Your message",
-        *,
-        key: Key | None = None,
-        max_chars: int | None = None,
-        max_upload_size: int | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -621,11 +600,11 @@ class ChatMixin:
         height: Height = "content",
     ) -> ChatInputValue | None: ...
 
-    # Mixed: accept_audio=True with a non-literal accept_file infers
-    # ChatInputValue | None. Includes audio_sample_rate so that combination
-    # matches. accept_audio=<bool> with audio_sample_rate still matches no
-    # overload, which keeps audio_sample_rate without accept_audio=True a
-    # type error.
+    # accept_audio=True with any accept_file (literal False, non-literal
+    # bool, or "multiple"/"directory") infers ChatInputValue | None.
+    # Includes audio_sample_rate so that combination matches.
+    # accept_audio=<bool> with audio_sample_rate still matches no overload,
+    # which keeps audio_sample_rate without accept_audio=True a type error.
     @overload
     def chat_input(
         self,

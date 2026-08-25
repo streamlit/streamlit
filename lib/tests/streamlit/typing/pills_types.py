@@ -99,6 +99,11 @@ if TYPE_CHECKING:
     pills(  # type: ignore[call-overload]
         "foo", options, selection_mode="multi", required=True
     )
+    # Inherent limitation of the Literal[False] discriminator: a required: bool
+    # variable matches no multi-select overload, even when it is False.
+    pills(  # type: ignore[call-overload]
+        "foo", options, selection_mode="multi", required=required
+    )
 
     # Check wrap parameter
     assert_type(pills("foo", options, wrap=True), int | None)

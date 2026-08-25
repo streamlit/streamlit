@@ -99,6 +99,11 @@ if TYPE_CHECKING:
     segmented_control(  # type: ignore[call-overload]
         "foo", options, selection_mode="multi", required=True
     )
+    # Inherent limitation of the Literal[False] discriminator: a required: bool
+    # variable matches no multi-select overload, even when it is False.
+    segmented_control(  # type: ignore[call-overload]
+        "foo", options, selection_mode="multi", required=required
+    )
 
     # Check wrap parameter
     assert_type(segmented_control("foo", options, wrap=True), int | None)

@@ -117,6 +117,13 @@ if TYPE_CHECKING:
 
     def on_multiselect_change(prefix: str) -> None: ...
 
+    # Non-literal accept_new_options returns the union of both result types.
+    accept_new_options: bool = True
+    assert_type(
+        multiselect("foo", [1, 2, 3], accept_new_options=accept_new_options),
+        list[int] | list[int | str],
+    )
+
     # Common parameters combined
     assert_type(
         multiselect(
