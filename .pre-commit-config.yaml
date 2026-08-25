@@ -53,7 +53,7 @@ repos:
       - id: oxfmt-frontend
         name: Oxfmt Frontend
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxfmt --config ./.oxfmtrc.json
-        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
+        files: ^frontend/(app|component-lib|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: system
         pass_filenames: true

@@ -19,6 +19,7 @@
 - **Omit trivially inferred types**: Do not add type annotations when TypeScript can trivially infer them (e.g., `const count = 0` not `const count: number = 0`). Add explicit types only when they improve clarity or are required.
 - **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
 - **Prefer JSDoc over regular comments**: When documenting functions, types, interfaces, classes, or their members, use JSDoc (`/** ... */`) instead of regular comments (`//` or `/* */`). JSDoc enables IDE tooltips, auto-completion hints, and better documentation generation.
+- **Preserve `@streamlit/lib`'s dependency classifications**: `lodash`, `marked`, `d3-selection`, `@luma.gl/engine`, and `@luma.gl/shadertools` are production peer/type providers needed for isolated declaration emit and complete NOTICES generation; do not move them to `devDependencies`. Keep React and ReactDOM as peer-only dependencies because adding them to `devDependencies` makes Yarn's production-recursive traversal omit runtime licenses. Import from `lodash-es`, never `lodash`.
 - **No barrel files**: Do not create `index.ts`/`index.tsx` barrel files that only re-export from sibling modules. Import directly from the source file instead (e.g., `import Foo from "./Foo/Foo"` not `import Foo from "./Foo"`). The only exceptions are package entry points (`app/src/index.tsx`, `lib/src/index.ts`, `connection/src/index.ts`, `utils/src/index.ts`) and `component-v2-lib/src/index.ts` (shipped as an npm library). Files named `index.ts` that contain actual logic (e.g., `DataFrame/columns/index.ts`, `WindowDimensions/index.ts`, emotion theme files) are fine — the rule applies only to files whose sole purpose is re-exporting.
 
 ## Key Frontend Principles
@@ -60,7 +61,7 @@ Changes to these high-fan-out internals can affect every message, delta, element
 ## Accessibility (a11y) Guidelines (must-follow)
 
 - **Suppress a11y findings with Oxlint syntax**: JSX accessibility rules run in Oxlint, so use `oxlint-disable-next-line jsx-a11y/<rule>`. `eslint-disable-next-line jsx-a11y/<rule>` fails because ESLint no longer knows these rules.
-- **Preserve the migrated a11y policy**: Enabling Oxlint's `jsx-a11y` plugin activates its recommended correctness rules. Keep `lang` and `prefer-tag-over-role` disabled because the previous ESLint recommended config did not enable them.
+- **Preserve the migrated a11y policy**: Enabling Oxlint's `jsx-a11y` plugin activates its recommended correctness rules. Keep `lang` and `prefer-tag-over-role` disabled because the previous ESLint recommended config did not enable them, and preserve the explicit per-rule options in `.oxlintrc.json` that match the previous preset.
 - **Prefer semantic HTML for interaction**: Use `<button>` for clicks and `<a href>` for navigation. Avoid `onClick` on non-interactive elements.
 - **Focusable controls must have an accessible name**:
   - Icon-only buttons/links must have `aria-label` (and decorative SVGs should use `aria-hidden="true"`).

@@ -72,6 +72,7 @@ export const getNoRestrictedImports = (
       message: "Please use the `AbortController` API instead of `CancelToken`",
     },
     {
+      // lodash only provides downstream peer/types; runtime imports use lodash-es.
       name: "lodash",
       message: "Please import from `lodash-es` for tree-shaking.",
     },
