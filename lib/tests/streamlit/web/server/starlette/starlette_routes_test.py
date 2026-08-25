@@ -641,9 +641,10 @@ def test_media_endpoint_downloadable_without_filename_uses_default() -> None:
         '5" x 7" print.jpg',
         # A backslash is the quoted-string escape character, so it silently drops.
         "a\\b.txt",
-        # Latin-1 encodable but not ASCII: served raw, the bytes are not valid UTF-8.
+        # Latin-1 encodable but not ASCII, so it must be percent-encoded to be
+        # decoded reliably.
         "café.pdf",
-        # Not latin-1 encodable, which already took the percent-encoded path.
+        # Not encodable as latin-1, so the header must carry it percent-encoded.
         "文件.txt",
         # A slash is not an RFC 5987 attr-char, so leaving it raw in the encoded form
         # truncates the name at the slash.
@@ -653,7 +654,7 @@ def test_media_endpoint_downloadable_without_filename_uses_default() -> None:
 def test_media_endpoint_downloadable_filename_survives_round_trip(
     filename: str,
 ) -> None:
-    """A name needing escapes is carried faithfully to a conforming client."""
+    """A name unsafe in the quoted form reaches the client intact."""
     header = _content_disposition_for(filename)
 
     assert _filename_from_header(header) == filename

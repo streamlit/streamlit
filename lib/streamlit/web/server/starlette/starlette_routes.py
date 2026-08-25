@@ -698,12 +698,13 @@ def create_media_routes(
                     f"streamlit_download"
                     f"{get_extension_for_mimetype(media_file.mimetype)}"
                 )
-            # Use the readable quoted form only when the name is safe unescaped inside
-            # it. Everything else takes the RFC 5987 form, which percent-encodes and so
-            # cannot break out of the parameter: names needing an escape, and names that
-            # are not ASCII, whose raw bytes a client cannot decode from a header
-            # reliably. A space or a semicolon needs neither, since the parameter
-            # delimiter does not apply within the quotes.
+            # Keep the readable quoted form only when the name is safe unescaped
+            # inside it. Use the RFC 5987 `filename*` form, which percent-encodes and
+            # so cannot break out of the parameter, for:
+            #   - names containing `"`, `\`, or a control character
+            #   - non-ASCII names, whose raw bytes a client cannot decode reliably
+            # Spaces and semicolons stay quoted: the parameter delimiter does not
+            # apply inside the quotes.
             #
             # `safe=""` is required: `quote` leaves `/` alone by default, but it is not
             # an RFC 5987 attr-char, and a raw one truncates the name a client reads
