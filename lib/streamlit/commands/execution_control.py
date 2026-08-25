@@ -206,11 +206,15 @@ def rerun(  # type: ignore[misc]
           command is called. Only valid inside a fragment during a fragment
           rerun. Raises ``StreamlitAPIException`` during a full-app rerun or
           outside of a fragment.
-        - A fragment key (str) or list of fragment keys: reruns the named
-          fragment(s). The key must match the ``key`` argument passed to
-          ``@st.fragment(key=...)``. This form is only valid from a widget
-          callback (``on_change`` / ``on_click``); calling it from the main
-          script body or a fragment body raises ``StreamlitAPIException``.
+        - A fragment key (str) or list of fragment keys: reruns only the named
+          fragment(s), replacing the interaction's default rerun. The key must
+          match the ``key`` argument passed to ``@st.fragment(key=...)``.
+          An unknown key raises ``StreamlitAPIException``. This form is only
+          valid from a widget callback (``on_change`` / ``on_click``);
+          calling it from the main script body or a fragment body raises
+          ``StreamlitAPIException``. If a sibling callback in the same
+          interaction returns normally or calls ``st.rerun()``, the result
+          escalates to a full-app rerun.
 
     Examples
     --------
@@ -241,6 +245,11 @@ def rerun(  # type: ignore[misc]
     >>> )
 
     """
+    if not isinstance(scope, (str, Sequence)):
+        raise StreamlitAPIException(
+            f"`scope` must be a string or a list of strings, "
+            f"not `{type(scope).__name__}`."
+        )
     if isinstance(scope, str) and scope == "":
         raise StreamlitAPIException(
             "st.rerun() was called with an empty string scope. "

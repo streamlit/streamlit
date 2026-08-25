@@ -555,6 +555,10 @@ def _fragment(
     """
 
     if key is not None:
+        if not isinstance(key, str):
+            raise StreamlitAPIException(
+                f"The fragment `key` must be a string, not `{type(key).__name__}`."
+            )
         from streamlit.runtime.state.common import require_valid_user_key
 
         require_valid_user_key(key)
@@ -868,10 +872,12 @@ def fragment(
             unless you coordinate access explicitly.
 
     key : str or None
-        An optional name for the fragment. When set,
-        ``st.rerun("<key>")`` re-runs this fragment from a widget
-        callback (``on_change`` / ``on_click``). If the fragment function
-        is called from multiple sites, every call site re-runs together.
+        An optional name for the fragment. If this is ``None`` (default),
+        the fragment cannot be targeted by ``st.rerun``. When set, a widget
+        callback can rerun this fragment with ``st.rerun("<key>")``.
+        Each fragment function rendered in a run must use a unique key;
+        multiple call sites of the same function share that key and rerun
+        together.
 
         A fragment key must be unique among the fragments that render in a
         single run, just like a widget ``key``. The names ``"app"`` and
