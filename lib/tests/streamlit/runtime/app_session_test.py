@@ -427,13 +427,61 @@ class AppSessionTest(unittest.TestCase):
         expected_loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_event_loop_closed_on_shutdown(self, mock_stop: MagicMock):
-        """AppSession closes the script-thread event loop on shutdown."""
+    def test_script_event_loop_closed_on_shutdown_no_runner(
+        self, mock_stop: MagicMock
+    ):
+        """AppSession closes the script-thread event loop immediately on shutdown
+        when no ScriptRunner is active (no runner to wait for)."""
         session = _create_test_session()
         loop = session._script_event_loop
         assert not loop.is_closed()
 
         session.shutdown()
+
+        assert loop.is_closed()
+
+    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
+    def test_script_event_loop_not_closed_during_shutdown_with_runner(
+        self, mock_stop: MagicMock
+    ):
+        """When a ScriptRunner is active, shutdown() must not close the loop;
+        closure is deferred to the SHUTDOWN event so we don't race with the
+        script thread."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        loop = session._script_event_loop
+
+        session.shutdown()
+
+        assert not loop.is_closed()
+        loop.close()
+
+    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
+    def test_script_event_loop_closed_on_shutdown_event(
+        self, mock_stop: MagicMock
+    ):
+        """The script-thread event loop is closed when the SHUTDOWN event fires
+        and the session state is SHUTDOWN_REQUESTED."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        loop = session._script_event_loop
+
+        # Simulate a full shutdown: shutdown() sets state but defers loop close.
+        session.shutdown()
+        assert not loop.is_closed(), "Loop must still be open before SHUTDOWN event"
+
+        # Now the ScriptRunner fires its SHUTDOWN event (script thread has exited).
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=ClientState(),
+            )
 
         assert loop.is_closed()
 

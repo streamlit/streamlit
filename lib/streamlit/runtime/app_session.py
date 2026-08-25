@@ -380,9 +380,12 @@ class AppSession:
             # Clear any session caches. This ensures shutdown hooks are called.
             self.clear_session_caches()
 
-            # Close the script-thread event loop now that the session is truly
-            # done. On our non-running loop this is effectively unconditional.
-            _close_script_event_loop(self._script_event_loop)
+            # Close the script-thread event loop only when there is no active
+            # ScriptRunner to wait for. When a runner exists, its SHUTDOWN event
+            # fires after the script thread has exited (loop guaranteed idle), so
+            # we defer the close there to avoid a race with in-flight user code.
+            if self._scriptrunner is None:
+                _close_script_event_loop(self._script_event_loop)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -840,6 +843,10 @@ class AppSession:
                     self.id
                 )
                 self.clear_session_caches()
+                # The script thread has exited by the time SHUTDOWN fires, so the
+                # loop is guaranteed to be idle. Close it here rather than in
+                # shutdown() to avoid a race with in-flight user code.
+                _close_script_event_loop(self._script_event_loop)
 
             self._client_state = client_state
             self._scriptrunner = None
