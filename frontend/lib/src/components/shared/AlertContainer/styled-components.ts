@@ -30,6 +30,7 @@ const KIND_STYLES: Record<
   [Kind.SUCCESS]: { bg: "greenBackgroundColor", text: "greenTextColor" },
 }
 
+// Exported so declaration emit can name StyledAlertContainer's props type.
 export interface StyledAlertContainerProps {
   $kind: Kind
   $width?: number

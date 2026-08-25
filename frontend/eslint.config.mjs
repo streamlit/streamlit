@@ -72,6 +72,10 @@ export const getNoRestrictedImports = (
       message: "Please use the `AbortController` API instead of `CancelToken`",
     },
     {
+      name: "lodash",
+      message: "Please import from `lodash-es` for tree-shaking.",
+    },
+    {
       name: "react",
       importNames: ["default"],
       message:
