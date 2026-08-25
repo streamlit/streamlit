@@ -90,6 +90,15 @@ SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
 )
 
+_TRIGGER_PROTO_FIELDS: Final = frozenset(
+    {
+        "trigger_value",
+        "string_trigger_value",
+        "chat_input_value",
+        "json_trigger_value",
+    }
+)
+
 
 def _sanitize_url_array(
     parsed: list[str],
@@ -1060,12 +1069,13 @@ class SessionState:
             votes.wants_interaction_default = True
 
     def _request_full_app_rerun(self) -> None:
-        """Queue a full-app rerun that replays widget values without re-firing callbacks.
+        """Queue a full-app rerun that replays trigger values without re-firing callbacks.
 
         Called when a normally-returning callback's default vote coexists with
-        a targeted rerun in a main-script interaction. Forwards the current
-        interaction's ``widget_states`` with ``suppress_callbacks=True`` so the
-        body sees submitted values (including form triggers) in the follow-up run.
+        a targeted rerun in a main-script interaction. Only trigger widget
+        states are forwarded — non-trigger values already live in session state
+        from callback execution. Replaying the full proto would overwrite any
+        mutations callbacks made via ``st.session_state["key"] = new_value``.
 
         This differs from a plain ``st.rerun()`` in a callback, which starts a
         *new* script run with ``widget_states=None`` — the interaction's values
@@ -1078,16 +1088,38 @@ class SessionState:
 
         ctx = get_script_run_ctx()
         if ctx and ctx.script_requests:
+            trigger_only_states = self._filter_trigger_widget_states(
+                self._current_interaction_widget_states
+            )
             ctx.script_requests.request_rerun(
                 RerunData(
                     query_string=ctx.query_string,
                     page_script_hash=ctx.page_script_hash,
-                    widget_states=self._current_interaction_widget_states,
+                    widget_states=trigger_only_states,
                     suppress_callbacks=True,
                     cached_message_hashes=ctx.cached_message_hashes,
                     context_info=ctx.context_info,
                 )
             )
+
+    def _filter_trigger_widget_states(
+        self, widget_states: WidgetStatesProto | None
+    ) -> WidgetStatesProto | None:
+        """Return a new WidgetStatesProto containing only trigger-type entries.
+
+        Trigger widgets have ephemeral values that reset after each run, so
+        they must be replayed for the script body to observe them. Non-trigger
+        values persist in session state and replaying them would overwrite
+        any callback mutations.
+        """
+        if widget_states is None:
+            return None
+
+        filtered = WidgetStatesProto()
+        for widget in widget_states.widgets:
+            if widget.WhichOneof("value") in _TRIGGER_PROTO_FIELDS:
+                filtered.widgets.append(widget)
+        return filtered if filtered.widgets else None
 
     def _dispatch_trigger_callbacks(
         self,

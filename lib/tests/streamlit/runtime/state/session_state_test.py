@@ -1124,12 +1124,13 @@ def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
     assert _call_callbacks_in_main_script(ss) == []
 
 
-def test_forced_full_app_rerun_carries_widget_states_with_suppress() -> None:
-    """_request_full_app_rerun forwards widget_states with suppress_callbacks=True.
+def test_forced_full_app_rerun_carries_only_trigger_states_with_suppress() -> None:
+    """_request_full_app_rerun forwards only trigger widget_states with suppress_callbacks.
 
-    The forced full-app rerun that escalates a targeted rerun carries the current
-    interaction's widget_states so the body sees submitted values (including triggers),
-    and suppress_callbacks=True so callbacks are not re-dispatched.
+    The forced full-app rerun that escalates a targeted rerun carries only trigger-type
+    widget states (whose values are ephemeral and must be replayed for the body). Non-
+    trigger values already live in session state from callback execution; replaying them
+    would overwrite callback mutations.
 
     Escalation requires a callback that explicitly wants the default (returns normally)
     alongside a targeted rerun.
@@ -1138,28 +1139,39 @@ def test_forced_full_app_rerun_carries_widget_states_with_suppress() -> None:
     requeue_calls: list[RerunData] = []
 
     ss = SessionState()
-    for wid, cb in [
-        ("targeted_btn", _raise_targeted_rerun),
-        ("normal_btn", lambda: None),
-    ]:
-        ss._set_widget_metadata(
-            WidgetMetadata(
-                id=wid,
-                deserializer=lambda v: v,
-                serializer=lambda v: v,
-                value_type="int_value",
-                callback=cb,
-            )
+    # targeted_btn uses trigger_value (a button); normal_btn uses int_value (non-trigger)
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="targeted_btn",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=_raise_targeted_rerun,
         )
-        ss._old_state[wid] = 0
-        ss._new_widget_state.set_from_value(wid, 1)
+    )
+    ss._old_state["targeted_btn"] = False
+    ss._new_widget_state.set_from_value("targeted_btn", True)
+
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="normal_btn",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=lambda: None,
+        )
+    )
+    ss._old_state["normal_btn"] = 0
+    ss._new_widget_state.set_from_value("normal_btn", 1)
 
     # Simulate on_script_will_rerun stashing the proto.
     proto_states = WidgetStatesProto()
-    for wid in ("targeted_btn", "normal_btn"):
-        ws = proto_states.widgets.add()
-        ws.id = wid
-        ws.int_value = 1
+    trigger_ws = proto_states.widgets.add()
+    trigger_ws.id = "targeted_btn"
+    trigger_ws.trigger_value = True
+    nontrigger_ws = proto_states.widgets.add()
+    nontrigger_ws.id = "normal_btn"
+    nontrigger_ws.int_value = 1
     ss._current_interaction_widget_states = proto_states
 
     mock_ctx = MagicMock()
@@ -1181,7 +1193,89 @@ def test_forced_full_app_rerun_carries_widget_states_with_suppress() -> None:
     assert not forced.fragment_id_queue
     assert not forced.is_fragment_scoped_rerun
     assert forced.suppress_callbacks is True
-    assert forced.widget_states is proto_states
+    # Only the trigger widget should be forwarded; non-trigger filtered out.
+    assert forced.widget_states is not None
+    assert len(forced.widget_states.widgets) == 1
+    assert forced.widget_states.widgets[0].id == "targeted_btn"
+    assert forced.widget_states.widgets[0].trigger_value is True
+
+
+def test_callback_session_state_mutation_survives_escalation_replay() -> None:
+    """Callback writes to st.session_state are not overwritten by the escalated rerun.
+
+    Scenario: A form has a text_input (on_change strips whitespace via
+    st.session_state["name"] = stripped) and a submit button (on_click targets a
+    fragment). The escalated full-app rerun must NOT replay the original un-stripped
+    value from the proto — only trigger values should be replayed.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    ss = SessionState()
+
+    # text_input widget: callback mutates session state
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="text_input_wid",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="string_value",
+            callback=lambda: ss.__setitem__("name", "stripped"),
+        )
+    )
+    ss._old_state["text_input_wid"] = "old"
+    ss._new_widget_state.set_from_value("text_input_wid", "  not stripped  ")
+
+    # submit button: targets a fragment
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="submit_btn_wid",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=_raise_targeted_rerun,
+        )
+    )
+    ss._old_state["submit_btn_wid"] = False
+    ss._new_widget_state.set_from_value("submit_btn_wid", True)
+
+    # Proto that the frontend sent (before callbacks ran)
+    proto_states = WidgetStatesProto()
+    ws_text = proto_states.widgets.add()
+    ws_text.id = "text_input_wid"
+    ws_text.string_value = "  not stripped  "
+    ws_submit = proto_states.widgets.add()
+    ws_submit.id = "submit_btn_wid"
+    ws_submit.trigger_value = True
+    ss._current_interaction_widget_states = proto_states
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.query_string = ""
+    mock_ctx.cached_message_hashes = frozenset()
+    mock_ctx.context_info = None
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # The escalated rerun must NOT include the text_input's string_value.
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert forced.suppress_callbacks is True
+    forwarded_ids = [w.id for w in forced.widget_states.widgets]
+    assert "submit_btn_wid" in forwarded_ids
+    assert "text_input_wid" not in forwarded_ids
+
+    # Verify the callback's mutation is in session state.
+    assert ss["name"] == "stripped"
 
 
 def test_suppress_callbacks_skips_dispatch_but_applies_values() -> None:

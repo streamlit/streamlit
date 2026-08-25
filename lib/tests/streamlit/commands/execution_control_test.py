@@ -152,6 +152,18 @@ def test_st_rerun_empty_list_raises() -> None:
         rerun([])
 
 
+def test_st_rerun_list_with_app_raises() -> None:
+    """st.rerun(['app']) raises StreamlitAPIException for reserved name."""
+    with pytest.raises(StreamlitAPIException, match="reserved"):
+        rerun(["app"])
+
+
+def test_st_rerun_list_with_fragment_raises() -> None:
+    """st.rerun(['fragment']) raises StreamlitAPIException for reserved name."""
+    with pytest.raises(StreamlitAPIException, match="reserved"):
+        rerun(["fragment"])
+
+
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_key_scope_resolves_target_without_queueing(patched_get_script_run_ctx) -> None:
     """st.rerun('charts') resolves the key via fragment_storage but does not
