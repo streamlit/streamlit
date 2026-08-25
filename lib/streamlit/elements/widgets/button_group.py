@@ -396,10 +396,10 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
-    # required is Literal[False] so required=True is a type error (it raises
-    # StreamlitAPIException at runtime). A required: bool variable therefore
-    # also matches no overload, even when the value is False; do not widen
-    # this back to bool.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def pills(
         self,
@@ -766,10 +766,10 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
-    # required is Literal[False] so required=True is a type error (it raises
-    # StreamlitAPIException at runtime). A required: bool variable therefore
-    # also matches no overload, even when the value is False; do not widen
-    # this back to bool.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def segmented_control(
         self,

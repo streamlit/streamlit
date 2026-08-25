@@ -283,8 +283,11 @@ class SelectboxMixin:
         persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
-    # Dynamic index: int | None must not use the accept_new_options=bool
-    # catch-all, which would add a spurious | str to the return type.
+    # A dynamic index: int | None with default accept_new_options=False
+    # returns T | None. This sits before the bool catch-all so checkers
+    # that do not expand int | None (e.g. pyrefly) do not pick up a
+    # spurious | str. mypy expands the union, so CI cannot catch deleting
+    # this overload. See #16630.
     @overload
     def selectbox(
         self,

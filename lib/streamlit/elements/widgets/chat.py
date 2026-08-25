@@ -600,11 +600,11 @@ class ChatMixin:
         height: Height = "content",
     ) -> ChatInputValue | None: ...
 
-    # accept_audio=True with any accept_file (literal False, non-literal
-    # bool, or "multiple"/"directory") infers ChatInputValue | None.
+    # accept_audio=True with omitted accept_file, literal False, or a
+    # non-literal bool infers ChatInputValue | None.
     # Includes audio_sample_rate so that combination matches.
-    # accept_audio=<bool> with audio_sample_rate still matches no overload,
-    # which keeps audio_sample_rate without accept_audio=True a type error.
+    # When accept_file is False or non-literal, audio_sample_rate without
+    # accept_audio=True matches no overload, which keeps it a type error.
     @overload
     def chat_input(
         self,
