@@ -1683,7 +1683,7 @@ class ScriptRunnerTest(unittest.TestCase):
 
             # Start a second runner with the same loop (simulates a fastRerun
             # or reconnect where AppSession creates a new ScriptRunner but
-            # passes the same _script_thread_event_loop).
+            # passes the same _script_event_loop).
             second = TestScriptRunner("asyncio_event_loop.py", event_loop=shared_loop)
             second._session_state = first._session_state
             second._session_state["captured_loops"] = []

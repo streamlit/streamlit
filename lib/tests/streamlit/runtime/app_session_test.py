@@ -380,7 +380,7 @@ class AppSessionTest(unittest.TestCase):
             pages_manager=session._pages_manager,
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
-            event_loop=session._script_thread_event_loop,
+            event_loop=session._script_event_loop,
         )
 
         assert session._scriptrunner is not None
@@ -392,10 +392,10 @@ class AppSessionTest(unittest.TestCase):
         )
         scriptrunner.start.assert_called_once()
 
-    def test_script_thread_event_loop_created_on_init(self):
+    def test_script_event_loop_created_on_init(self):
         """AppSession creates a non-running event loop for the script thread."""
         session = _create_test_session()
-        loop = session._script_thread_event_loop
+        loop = session._script_event_loop
         assert isinstance(loop, asyncio.AbstractEventLoop)
         assert not loop.is_running()
         assert not loop.is_closed()
@@ -407,7 +407,7 @@ class AppSessionTest(unittest.TestCase):
     ):
         """Every ScriptRunner created by the session receives the same loop."""
         session = _create_test_session()
-        expected_loop = session._script_thread_event_loop
+        expected_loop = session._script_event_loop
 
         session._create_scriptrunner(initial_rerun_data=RerunData())
 
@@ -423,10 +423,10 @@ class AppSessionTest(unittest.TestCase):
         expected_loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_thread_event_loop_closed_on_shutdown(self, mock_stop: MagicMock):
+    def test_script_event_loop_closed_on_shutdown(self, mock_stop: MagicMock):
         """AppSession closes the script-thread event loop on shutdown."""
         session = _create_test_session()
-        loop = session._script_thread_event_loop
+        loop = session._script_event_loop
         assert not loop.is_closed()
 
         session.shutdown()
@@ -434,12 +434,10 @@ class AppSessionTest(unittest.TestCase):
         assert loop.is_closed()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_thread_event_loop_not_closed_before_shutdown(
-        self, mock_stop: MagicMock
-    ):
+    def test_script_event_loop_not_closed_before_shutdown(self, mock_stop: MagicMock):
         """request_script_stop (reconnect path) must not close the loop."""
         session = _create_test_session()
-        loop = session._script_thread_event_loop
+        loop = session._script_event_loop
 
         session.request_script_stop()
 
