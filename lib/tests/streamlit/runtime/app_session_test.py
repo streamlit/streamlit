@@ -40,7 +40,7 @@ from streamlit.proto.NewSession_pb2 import (
     FontSource,
 )
 from streamlit.runtime import Runtime, app_session, caching
-from streamlit.runtime.app_session import AppSession, AppSessionState
+from streamlit.runtime.app_session import AppSession, AppSessionState, _close_script_event_loop
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -3181,3 +3181,25 @@ def test_create_file_change_message_marks_script_changed() -> None:
     msg = session._create_file_change_message()
 
     assert msg.session_event.script_changed_on_disk is True
+
+
+async def _run_close_from_running_loop(loop: asyncio.AbstractEventLoop) -> bool:
+    """Helper that calls _close_script_event_loop from within a running loop."""
+    _close_script_event_loop(loop)
+    return loop.is_closed()
+
+
+def test_close_script_event_loop_from_within_running_loop() -> None:
+    """_close_script_event_loop closes the loop even when called from within
+    a running asyncio event loop, without raising RuntimeError."""
+    script_loop = asyncio.new_event_loop()
+
+    runtime_loop = asyncio.new_event_loop()
+    try:
+        closed = runtime_loop.run_until_complete(
+            _run_close_from_running_loop(script_loop)
+        )
+    finally:
+        runtime_loop.close()
+
+    assert closed, "script_loop must be closed after _close_script_event_loop"

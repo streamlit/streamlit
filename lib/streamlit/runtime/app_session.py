@@ -93,18 +93,29 @@ def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
     Follows the same cleanup sequence as Python's own ``asyncio.run()``:
     cancel tasks, await their cancellation, shut down async generators and the
     default executor, then close. For our non-running loop this is typically a
-    no-op (no tasks, generators, or executor). Callers are responsible for
-    swallowing any unexpected errors.
+    no-op (no tasks, generators, or executor).
+
+    When called from within a running event loop (e.g. from the runtime's
+    asyncio loop during session teardown), ``run_until_complete`` is
+    unavailable and would raise ``RuntimeError``.  In that case we cancel
+    tasks synchronously and skip the async teardown; the script-thread loop
+    is never run, so abandoning pending tasks there is safe.
     """
     if loop.is_closed():
         return
     to_cancel = asyncio.all_tasks(loop)
     for task in to_cancel:
         task.cancel()
-    if to_cancel:
-        loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
-    loop.run_until_complete(loop.shutdown_asyncgens())
-    loop.run_until_complete(loop.shutdown_default_executor())
+    try:
+        running_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        running_loop = None
+    if running_loop is None:
+        # No other loop is running on this thread; safe to drive the loop.
+        if to_cancel:
+            loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.run_until_complete(loop.shutdown_default_executor())
     loop.close()
 
 
