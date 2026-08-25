@@ -40,7 +40,11 @@ from streamlit.proto.NewSession_pb2 import (
     FontSource,
 )
 from streamlit.runtime import Runtime, app_session, caching
-from streamlit.runtime.app_session import AppSession, AppSessionState, _close_script_event_loop
+from streamlit.runtime.app_session import (
+    AppSession,
+    AppSessionState,
+    _close_script_event_loop,
+)
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
