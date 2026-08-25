@@ -283,7 +283,7 @@ jobs:
           shopt -s nullglob
           REVIEW_COUNT=0
           for dir in reviews/review-output-*; do
-            [ -f "$dir/review.md" ] || continue
+            [ -s "$dir/review.md" ] || continue
             REVIEW_COUNT=$((REVIEW_COUNT + 1))
           done
           echo "review_count=$REVIEW_COUNT" >> "$GITHUB_OUTPUT"
@@ -634,6 +634,7 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           MODEL_COUNT: ${{ needs.parse-models.outputs.model_count }}
           REVIEW_COUNT: ${{ needs.consolidate-reviews.outputs.review_count }}
+          CONSOLIDATED_REVIEW_OUTCOME: ${{ steps.download-consolidated.outcome }}
         run: |
           if [ ! -f verdict.txt ]; then
             echo "Skipping auto-approve: verdict.txt not found"
@@ -648,6 +649,10 @@ jobs:
 
           if ! [[ "$MODEL_COUNT" =~ ^[1-9][0-9]*$ ]]; then
             echo "::warning::Could not parse configured model count, skipping auto-approve"
+            exit 0
+          fi
+          if [ "$MODEL_COUNT" -gt 1 ] && [ "$CONSOLIDATED_REVIEW_OUTCOME" != "success" ]; then
+            echo "Skipping auto-approve: multi-model reviews were not successfully consolidated"
             exit 0
           fi
           if [ "$MODEL_COUNT" -eq 1 ]; then
