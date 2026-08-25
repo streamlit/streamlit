@@ -935,6 +935,14 @@ class SliderMixin:
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
         range_value = isinstance(value, (list, tuple)) and len(value) in {0, 1, 2}
         if not single_value and not range_value:
+            # A list/tuple of the wrong length is a value constraint, not a
+            # type mismatch — listing list/tuple as expected types would
+            # contradict the provided type.
+            if isinstance(value, (list, tuple)):
+                raise StreamlitAPIException(
+                    "Slider value should either be an int/float/datetime or a "
+                    "list/tuple of 0 to 2 ints/floats/datetimes"
+                )
             raise StreamlitInvalidParameterTypeError(
                 "value",
                 type(value).__name__,

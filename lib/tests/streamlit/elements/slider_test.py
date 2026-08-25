@@ -1003,6 +1003,14 @@ def test_slider_serde_deserialize_passes_through_in_range_value() -> None:
 class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     """Tests for slider parameter validation edge cases."""
 
+    def test_overlong_value_sequence_raises(self):
+        """A list or tuple longer than 2 items raises StreamlitAPIException."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match="list/tuple of 0 to 2",
+        ):
+            st.slider("the label", value=[1, 2, 3])
+
     def test_mixed_types_in_value_raises(self):
         """A list with mixed numeric types raises StreamlitInvalidParameterTypeError."""
         with pytest.raises(
