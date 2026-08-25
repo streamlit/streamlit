@@ -1113,6 +1113,9 @@ describe("DateInput", () => {
         })
         await user.click(quickSelect)
         expect(
+          screen.getByTestId("stDateInputQuickSelectPopover")
+        ).toHaveClass("stDateInputQuickSelectPopover")
+        expect(
           screen.getByRole("listbox", { name: /quick select/i })
         ).toBeInTheDocument()
 
@@ -2896,9 +2899,9 @@ describe("DateInput month/year picker escape handling", () => {
     await user.click(monthTrigger)
 
     // Month picker popover should be open
-    expect(
-      screen.getByTestId("stDateInputHeaderPickerPopover")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
+      "stDateInputHeaderPickerPopover"
+    )
 
     // Press Escape — should close the picker, NOT the calendar
     await user.keyboard("{Escape}")
@@ -2935,9 +2938,9 @@ describe("DateInput month/year picker escape handling", () => {
     })
     await user.click(monthTrigger)
 
-    expect(
-      screen.getByTestId("stDateInputHeaderPickerPopover")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
+      "stDateInputHeaderPickerPopover"
+    )
 
     await user.keyboard("{Escape}")
 

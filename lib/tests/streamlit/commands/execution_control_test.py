@@ -26,6 +26,7 @@ from streamlit.commands.execution_control import (
 from streamlit.errors import (
     NoSessionContext,
     StreamlitAPIException,
+    StreamlitPageNotFoundError,
     StreamlitValueError,
 )
 from streamlit.navigation.page import Page
@@ -404,12 +405,12 @@ def test_st_switch_page_string_path_unknown_page_raises(
     _patched_get_main_script_directory,
     patched_normalize_path_join,
 ):
-    """``switch_page`` raises ``StreamlitAPIException`` if the resolved path is unknown."""
+    """``switch_page`` raises ``StreamlitPageNotFoundError`` if the resolved path is unknown."""
     patched_normalize_path_join.return_value = "/some/path/missing.py"
     ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
     patched_get_script_run_ctx.return_value = ctx
 
-    with pytest.raises(StreamlitAPIException, match=r"Could not find page"):
+    with pytest.raises(StreamlitPageNotFoundError, match=r"Could not find page"):
         switch_page("missing.py")
 
     ctx.script_requests.request_rerun.assert_not_called()

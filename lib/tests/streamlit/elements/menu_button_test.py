@@ -49,6 +49,18 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         assert c.help == ""
         assert c.icon == ""
 
+    def test_non_string_label_is_coerced(self) -> None:
+        """Non-string labels are coerced to strings for protobuf assignment."""
+        st.menu_button(123, ["Option A"])  # type: ignore[arg-type]
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert c.label == "123"
+
+    def test_none_label_is_coerced_to_empty(self) -> None:
+        """None labels become an empty string instead of raising TypeError."""
+        st.menu_button(None, ["Option A"])  # type: ignore[arg-type]
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert c.label == ""
+
     def test_disabled(self):
         """Test that disabled param is set correctly."""
         st.menu_button("the label", ["Option A", "Option B"], disabled=True)

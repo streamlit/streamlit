@@ -36,7 +36,10 @@ from streamlit.elements.lib.options_selector_utils import (
     validate_and_sync_value_with_options,
     validate_select_widget_filter_mode,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitDefaultNotInOptionsError,
+    StreamlitValueError,
+)
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
@@ -71,7 +74,7 @@ class TestCheckAndConvertToIndices:
         assert res == [1]
 
     def test_check_and_convert_to_indices_default_not_in_opts(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitDefaultNotInOptionsError):
             check_and_convert_to_indices(["a", "b"], "c")
 
 

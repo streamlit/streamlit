@@ -26,6 +26,7 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateTimeInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -142,9 +143,9 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
 
     def test_step_validation(self):
         """Test invalid step values."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.datetime_input("The label", step=True)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.datetime_input("The label", step=(1, 0))
         with pytest.raises(StreamlitAPIException):
             st.datetime_input("The label", step=30)

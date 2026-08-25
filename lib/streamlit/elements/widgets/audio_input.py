@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
@@ -46,6 +45,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -288,7 +288,7 @@ class AudioInputMixin:
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "audio_input",
@@ -316,7 +316,7 @@ class AudioInputMixin:
             audio_input_proto.sample_rate = sample_rate
 
         if label and help is not None:
-            audio_input_proto.help = dedent(help)
+            audio_input_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width)
 
