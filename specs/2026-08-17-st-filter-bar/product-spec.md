@@ -24,9 +24,9 @@ V1 filters frames held in memory. Unevaluated sources such as Snowpark tables an
 LazyFrames are materialized only when they are small enough that `st.dataframe` would materialize
 them too; larger ones raise. Filtering at the query layer is deferred. See [Warehouse-scale data](#warehouse-scale-data).
 
-**Six decisions need sign-off before implementation.** Four are ready to approve as written; two
-need the `column_config` owners and design respectively. They are summarized in one table with the
-required approver per row: [Decisions for Review](#decisions-for-review).
+**Nine decisions want input before implementation.** Seven are ready to approve as written; one
+needs the `column_config` owners and one needs design. They are summarized in one table, each with
+whatever it needs beyond this review: [Decisions for Review](#decisions-for-review).
 
 ## Problem
 
@@ -721,8 +721,10 @@ Cons: Duplicates ten-plus public classes that already exist as `st.column_config
 
 ## Decisions for Review
 
-Each decision below carries a recommendation and its reasoning. Reviewers should approve or
-push back per item.
+These are the choices we want input on: the ones a reviewer might reasonably land differently, or
+that get expensive to change once apps depend on them. Other design decisions are documented inline
+in the sections above alongside their reasoning. Each row carries the recommendation, the reasoning,
+and anything it needs beyond this review.
 
 | # | Decision | Recommendation | Why | Needs |
 |---|---|---|---|---|
@@ -732,6 +734,9 @@ push back per item.
 | 4 | Cardinality | A value picker at every size. Free text only for prose columns; how many options render is internal, not a parameter | A threshold that flips a column to text search changes the filter's *semantics* at a low boundary, which no comparable does — Metabase and Tableau both keep a picker at high cardinality and change only how options are fetched. The cost that motivates such a rule is rendering, so it bounds rendered rows instead | — approvable as written. The cap's value is set during implementation, once the popover's per-row render cost is profiled |
 | 5 | Collapsing | None in V1 — neither an `expanded` parameter nor a runtime disclosure control | The collapsed states come from the runtime control rather than the parameter, so this is one decision and not two. Narrow containers are handled by pill overflow instead, at two design states rather than four | **Design confirmation** |
 | 6 | Conditions per column | One condition per column, with the text filter accepting several terms | Excel and Power BI both offer a two-condition builder in their normal flow, but the gap here is narrower than it appears: `not between` already expresses disjoint numeric and date ranges, and multiselect already gives categorical OR. What remains is multi-term text matching, and letting `contains` take several terms closes it without an and/or selector or a second condition row in five popovers | — |
+| 7 | Relative date ranges | Two dropdowns, `this`/`last`/`next`/`past` and day/week/month/quarter/year, with a count that appears only for `past`. The direction word decides calendar versus trailing: "last month" is July, "past 30 days" is the trailing window | Notion ships this grid with no count. Power BI adds a count but separates calendar units (`Months` versus `Months (Calendar)`), which needs nine unit entries and has to suppress nonsense combinations. Putting the distinction in the direction word reads the way the phrases already read. This shape is ours rather than borrowed, which makes it the most novel thing in the spec and the most worth a second opinion | — |
+| 8 | Filter state contract | Column filters nested under `filters`, with `meta` alongside. Assignment to `st.session_state[key]` is supported and validated. Exported from `streamlit.typing` | Nesting stops user column names colliding with helpers or reserved keys, so `_id` and `_source` columns filter normally. Assignment is what makes presets, chart-click-to-filter, and a reset button buildable in app code before any of them ship. Apps that read this shape freeze it, so it is costly to change later | — |
+| 9 | Unevaluated sources | Follow `st.dataframe`'s thresholds: materialize at or below 10,000 known rows, raise above that or when the count is unknown | Filtering a subset returns silently wrong rows, and materializing an 80M-row table to return 4,000 presents as a hang. Matching `st.dataframe`'s line keeps sibling elements consistent instead of making `filter_bar` arbitrarily stricter | — |
 
 Evidence for decision 2 — how comparable tools combine filters:
 
