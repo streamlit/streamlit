@@ -35,6 +35,23 @@ const LOG = getLogger("HostCommunicationManager")
 
 export const HOST_COMM_VERSION = 1
 
+/**
+ * Marks a same-window copy of a guest→host message so the guest does not
+ * handle it as a host command. Some types (notably `UPDATE_HASH`) are valid
+ * in both directions.
+ */
+export const IS_GUEST_TO_HOST_ECHO = "isGuestToHostEcho"
+
+/** True only when the payload's own echo marker is boolean `true`. */
+function isGuestToHostEchoPayload(data: unknown): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    Object.hasOwn(data, IS_GUEST_TO_HOST_ECHO) &&
+    (data as Record<string, unknown>)[IS_GUEST_TO_HOST_ECHO] === true
+  )
+}
+
 interface HostCommunicationProps {
   readonly streamlitExecutionStartedAt: number
   readonly sendRerunBackMsg: (
@@ -110,15 +127,6 @@ export default class HostCommunicationManager {
       guestReadyAt: Date.now(),
     }
     this.sendMessageToHost(guestReadyMessage)
-    // Also dispatch on own window so in-iframe embed code can detect readiness
-    // without monkey-patching or retry loops. Only when actually embedded
-    // (window !== window.parent) to avoid duplicate delivery at top level.
-    if (window !== window.parent) {
-      window.postMessage(
-        this.buildVersionedMessage(guestReadyMessage),
-        window.location.origin
-      )
-    }
   }
 
   /**
@@ -167,23 +175,19 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Register a function to deliver a message to the Host
-   * that is on the same origin as the Guest
+   * Deliver a message to a host that is on the same origin as the guest.
    */
   public sendMessageToSameOriginHost = (
     message: IGuestToHostMessage
   ): void => {
-    window.parent.postMessage(
-      this.buildVersionedMessage(message),
-      window.location.origin
-    )
+    this.postMessageToParentAndEcho(message, window.location.origin)
   }
 
   /**
-   * Register a function to deliver a message to the Host
+   * Deliver a message to the host.
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
-    window.parent.postMessage(this.buildVersionedMessage(message), "*")
+    this.postMessageToParentAndEcho(message, "*")
   }
 
   private buildVersionedMessage(
@@ -192,6 +196,31 @@ export default class HostCommunicationManager {
     return {
       stCommVersion: HOST_COMM_VERSION,
       ...message,
+    }
+  }
+
+  /**
+   * Post `message` to `window.parent`. When embedded, also post a tagged copy
+   * to this window so an in-iframe host can observe guest messages even if
+   * the parent is a third-party page. The copy sets `isGuestToHostEcho: true`
+   * so `receiveHostMessage` can ignore it. It uses `window.location.origin`
+   * so only same-origin listeners on this window receive it.
+   *
+   * Do not echo at top level: `isSelfPost` is false when
+   * `window === window.parent`, so an unignored top-level echo could run as a
+   * host command (e.g. UPDATE_HASH).
+   */
+  private postMessageToParentAndEcho(
+    message: IGuestToHostMessage,
+    parentTargetOrigin: string
+  ): void {
+    const versionedMessage = this.buildVersionedMessage(message)
+    window.parent.postMessage(versionedMessage, parentTargetOrigin)
+    if (window !== window.parent) {
+      window.postMessage(
+        { ...versionedMessage, [IS_GUEST_TO_HOST_ECHO]: true },
+        window.location.origin
+      )
     }
   }
 
@@ -217,6 +246,12 @@ export default class HostCommunicationManager {
     // would be the child's window). Trusting it grants no extra privilege
     // since any script in this same window already has full same-origin access.
     const isSelfPost = event.source === window && window !== window.parent
+    // Ignore our own guest→host echo so bidirectional types (e.g. UPDATE_HASH)
+    // are not executed as host commands. Require isSelfPost so a parent cannot
+    // drop a host command by forging the marker.
+    if (isSelfPost && isGuestToHostEchoPayload(event.data)) {
+      return
+    }
     // Reject script-dispatched (synthetic) events, and only accept messages
     // from the direct parent frame or a genuine same-window self-post.
     const isTrustedMessage = event.isTrusted && (isFromParent || isSelfPost)
@@ -229,19 +264,13 @@ export default class HostCommunicationManager {
       this.allowedOrigins.some(allowed => isValidOrigin(allowed, event.origin))
 
     if (!isTrustedMessage || !isHostMessage || !isAllowedOrigin) {
-      // The app posts a GUEST_READY message to its own window on load (see
-      // openHostCommunication). That self-post is expected to be dropped here
-      // (it uses window.location.origin, which need not be allow-listed), so we
-      // skip logging it to avoid per-load noise.
-      const isSelfPostGuestReady =
-        isSelfPost && (message?.type as string) === "GUEST_READY"
       // Only log when the payload looks like a genuine host message so we don't
       // spam logs for the many unrelated postMessages this global handler
       // receives. This helps diagnose cases where a legitimate host's messages
       // are unexpectedly dropped -- including a dropped same-window self-post
       // from an in-iframe embed preamble (e.g. a SET_AUTH_TOKEN whose origin is
       // not allow-listed), which the earlier blanket self-post skip hid.
-      if (isHostMessage && !isSelfPostGuestReady) {
+      if (isHostMessage) {
         LOG.debug(
           "Ignoring host message: isTrusted=%s, sourceIsParent=%s, selfPost=%s, allowedOrigin=%s, origin=%s",
           event.isTrusted,
