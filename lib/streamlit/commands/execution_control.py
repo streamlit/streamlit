@@ -58,31 +58,17 @@ _KEYED_RERUN_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset(
 
 
 def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
-    """Whether this rerun should preempt the current run or compose with it.
+    """Whether this rerun is fragment-scoped (preempts the pending run body).
 
-    Returns ``True`` (preempt) or ``False`` (compose), stored as
-    ``RerunData.is_fragment_scoped_rerun``.
+    Returns ``True`` for any scope other than ``"app"`` — fragment self-reruns
+    and keyed targets both replace the interaction's default rerun regardless of
+    where the triggering widget lives.
 
-    - ``"app"`` → ``False`` — full-app rerun, not fragment-scoped.
-    - ``"fragment"`` → ``True`` — the current fragment reruns itself.
-    - Keyed target → origin-dependent:
-      - ``True`` when the widget lives in the main script (the keyed target
-        replaces the default full-app rerun).
-      - ``False`` when the widget lives inside a fragment (the keyed target
-        composes with the originating fragment's own rerun — both run).
-
-    Note: for main-script keyed targets, callback-vote coalescing may still
-    escalate to a full-app rerun if another callback returns normally or calls
-    plain ``st.rerun()``; that escalation happens in
-    ``SessionState._call_callbacks``, not here.
+    Note: callback-vote coalescing may still escalate to a full-app rerun if
+    another callback returns normally or calls plain ``st.rerun()``; that
+    escalation happens in ``SessionState._call_callbacks``, not here.
     """
-    if scope == "app":
-        return False
-    if scope == "fragment":
-        return True
-    # Keyed target: origin-dependent.
-    ts = ThreadState.get()
-    return ts.fragment_id is None
+    return scope != "app"
 
 
 @gather_metrics("stop")

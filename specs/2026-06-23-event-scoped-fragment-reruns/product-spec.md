@@ -164,13 +164,11 @@ any app that relied on that no-op.)
 This is a deliberate starting point we may relax later. For now the restriction buys four things:
 
 - **Execution stays easy to reason about.** Callbacks run as a distinct phase *before* the run body,
-  so a targeted rerun is applied at that clean boundary. For a main-script interaction, the
-  targeted rerun preempts the full-app body — only the targeted fragments re-execute. Escalation
-  to a full-app rerun happens only when another callback explicitly expects the default (returns
-  normally or calls plain `st.rerun()`). For a fragment interaction, the enclosing fragment finishes
-  and then the target runs — both fragments execute. Allowing the call mid-body would instead
-  abandon a partially-executed script or fragment and jump elsewhere — a "goto" style of control
-  flow that is hard to follow and at odds with the deterministic, top-to-bottom model.
+  so a targeted rerun is applied at that clean boundary: the callback phase finishes and then — before
+  the pending run's body executes — Streamlit preempts the run and executes only the target(s), with
+  no partially-rendered output. Allowing the call mid-body would instead abandon a partially-executed
+  script or fragment and jump elsewhere — a "goto" style of control flow that is hard to follow and at
+  odds with the deterministic, top-to-bottom model.
 - **It covers the use cases people actually ask for.** The requests behind this feature — dashboard
   filters, cross-filtering, fragment-to-fragment updates — are all "when the user does X, update
   region Y," which is exactly what a widget callback expresses.
@@ -332,20 +330,15 @@ reasons:
 
 ### Rerun handling: skipping the default rerun, coalescing, and precedence
 
-**How a targeted rerun interacts with the default depends on where the interaction originates:**
-
-- **Main-script interaction (widget outside any fragment).** The default rerun is a full-app rerun.
-  A targeted rerun alone **replaces** that default (preempt): the full-app body is skipped and only
-  the targeted fragment(s) run. Callback-less widget changes (e.g. form fields) do not override
-  this — their values are already in session state and will render on the next full rerun.
-  Escalation to a full-app rerun happens only when another callback explicitly expects the default
-  (returns normally or calls plain `st.rerun()`); the escalated run replays widget values with
-  callbacks suppressed to avoid re-firing. The coalescing rules below collapse this to one run.
-- **Fragment interaction (widget inside a fragment).** The default rerun covers only the enclosing
-  fragment. A targeted rerun from the callback **composes**: the enclosing fragment finishes its
-  current run, and then the target runs afterwards. Both fragments execute, because the target's
-  scope does not subsume the enclosing fragment — the justification for skipping ("would just redo
-  those fragments") does not apply when the default is fragment-scoped rather than app-wide.
+**A targeted rerun replaces the interaction's default rerun.** A widget interaction normally schedules
+a full-app rerun once its callbacks have run (or a fragment-scoped rerun, if the triggering widget
+already lives inside a fragment). When a callback issues a targeted rerun, that default rerun is
+**skipped** — Streamlit runs only the targeted fragment(s), not the whole app or enclosing fragment;
+running the default in addition would just redo those fragments and erase the partial-update benefit.
+Callback-less widget changes (e.g. form fields) do not override this — their values are already in
+session state and will render on the next full rerun. Escalation to a full-app rerun happens only when
+another callback explicitly expects the default (returns normally or calls plain `st.rerun()`); the
+escalated run replays widget values with callbacks suppressed to avoid re-firing.
 
 Beyond replacing that default rerun, targeted reruns make it normal for a **single interaction to
 produce several rerun requests at once** — a list of keys, multiple `st.rerun` calls, or reruns from

@@ -1043,17 +1043,17 @@ def _raise_targeted_rerun() -> None:
     )
 
 
-def _raise_composing_targeted_rerun() -> None:
+def _raise_fragment_origin_targeted_rerun() -> None:
     """Simulate ``st.rerun("<key>")`` from a fragment widget callback.
 
-    ``is_fragment_scoped_rerun=False`` lets the enclosing fragment finish before
-    the targeted fragment runs (composing, not preempting).
+    ``is_fragment_scoped_rerun=True`` — keyed targets always preempt the
+    interaction's default rerun, regardless of where the widget lives.
     """
     raise RerunException(
         RerunData(
             page_script_hash=_CURRENT_PAGE_HASH,
             fragment_id_queue=["other-frag"],
-            is_fragment_scoped_rerun=False,
+            is_fragment_scoped_rerun=True,
         )
     )
 
@@ -1077,19 +1077,18 @@ def test_changed_widget_without_callback_does_not_escalate() -> None:
     assert requeue_calls[0].fragment_id_queue == ["other-frag"]
 
 
-def test_composing_target_with_callback_less_change_does_not_escalate() -> None:
-    """A callback-less widget change does not escalate a composing targeted rerun.
+def test_fragment_origin_target_with_callback_less_change_does_not_escalate() -> None:
+    """A callback-less widget change does not escalate a fragment-origin targeted rerun.
 
-    When the interaction originates inside a fragment, the default rerun
-    covers only that fragment — not the full app.  A composing targeted
-    rerun (``is_fragment_scoped_rerun=False``) plus a callback-less widget
-    change should NOT trigger ``_request_full_app_rerun``.
+    When the interaction originates inside a fragment, a keyed targeted
+    rerun replaces the default fragment-scoped rerun.  A callback-less
+    widget change should NOT trigger ``_request_full_app_rerun``.
     """
 
     requeue_calls: list[RerunData] = []
 
     ss = _state_with_changed_widgets(
-        [("field", None), ("submit", _raise_composing_targeted_rerun)]
+        [("field", None), ("submit", _raise_fragment_origin_targeted_rerun)]
     )
 
     mock_ctx = MagicMock()

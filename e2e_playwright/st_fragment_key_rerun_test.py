@@ -68,9 +68,9 @@ def test_multi_key_rerun_updates_both_fragments_not_outside(app: Page) -> None:
     expect_no_exception(app)
 
 
-def test_compose_fragment_to_fragment_reruns_both(app: Page) -> None:
-    """A button inside fragment A calling st.rerun('target_frag') reruns both
-    the source fragment (enclosing) and the target fragment; outside text is stable.
+def test_fragment_to_fragment_reruns_only_target(app: Page) -> None:
+    """A button inside fragment A calling st.rerun('target_frag') reruns only
+    the target fragment; the source fragment and outside text stay stable.
     """
     initial_source = _text(app, "source_uuid")
     initial_target = _text(app, "target_uuid")
@@ -78,9 +78,10 @@ def test_compose_fragment_to_fragment_reruns_both(app: Page) -> None:
 
     click_button(app, "Rerun target from source")
 
-    # Both fragments must have rerun (new UUIDs).
-    expect(get_element_by_key(app, "source_uuid")).not_to_have_text(initial_source)
+    # Only the target fragment must have rerun (new UUID).
     expect(get_element_by_key(app, "target_uuid")).not_to_have_text(initial_target)
+    # Source fragment must NOT have rerun — targeted rerun replaces the default.
+    expect(get_element_by_key(app, "source_uuid")).to_have_text(initial_source)
     # Outside text must not change — no full-app rerun occurred.
     expect(get_element_by_key(app, "compose_stable_text")).to_have_text(initial_stable)
 

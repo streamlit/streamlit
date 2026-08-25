@@ -76,10 +76,10 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 3: Compose — widget inside fragment A targets fragment B.
-# Both fragments should rerun; nothing outside should change.
+# Scenario 3: Fragment-to-fragment — widget inside fragment A targets B.
+# Only the target fragment should rerun; source and outside stay stable.
 # ------------------------------------------------------------------ #
-st.header("Scenario 3: compose (fragment-to-fragment)")
+st.header("Scenario 3: fragment-to-fragment targeting")
 
 
 @st.fragment(key="source_frag")

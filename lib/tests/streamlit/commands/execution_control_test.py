@@ -173,13 +173,13 @@ def test_key_scope_resolves_target_without_queueing(patched_get_script_run_ctx) 
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
-def test_key_scope_from_fragment_callback_composes(
+def test_key_scope_from_fragment_callback_preempts(
     patched_get_script_run_ctx,
 ) -> None:
-    """st.rerun('charts') from a fragment widget sets is_fragment_scoped_rerun=False.
+    """st.rerun('charts') from a fragment widget sets is_fragment_scoped_rerun=True.
 
-    A fragment-origin keyed target composes with the enclosing fragment: the fragment
-    finishes, then the target runs.
+    A keyed target always replaces the interaction's default rerun, regardless of
+    whether the triggering widget lives in the main script or inside a fragment.
     """
     ctx = MagicMock()
     ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
@@ -193,7 +193,7 @@ def test_key_scope_from_fragment_callback_composes(
     ctx.script_requests.request_rerun.assert_not_called()
     data = exc_info.value.rerun_data
     assert data.fragment_id_queue == ["frag_id_1"]
-    assert data.is_fragment_scoped_rerun is False
+    assert data.is_fragment_scoped_rerun is True
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
