@@ -2128,6 +2128,7 @@ def _evaluate_nudge(
     headless: bool = False,
     hide_welcome: bool = False,
     agents: tuple[str, ...] = ("claude",),
+    claude_on_path: bool = False,
     installed_skills: tuple[str, ...] = (),
     completeness: str = "absent",
     marker_exists: bool = False,
@@ -2139,6 +2140,7 @@ def _evaluate_nudge(
         headless=headless,
         hide_welcome=hide_welcome,
         agents=agents,
+        claude_on_path=claude_on_path,
         installed_skills=installed_skills,
         completeness=completeness,
         marker_exists=marker_exists,
@@ -2152,12 +2154,17 @@ def _evaluate_nudge_reason(
     headless: bool = False,
     hide_welcome: bool = False,
     agents: tuple[str, ...] = ("claude",),
+    claude_on_path: bool = False,
     installed_skills: tuple[str, ...] = (),
     completeness: str = "absent",
     marker_exists: bool = False,
     would_be_refused: bool = False,
 ) -> str:
     """Run ``nudge_suppression_reason`` with the given conditions patched in.
+
+    ``agents`` is the harness list ``detect_installed_agents()`` reports;
+    ``claude_on_path`` is the broader Claude signal. The agent gate consults
+    both, so they vary independently here.
 
     ``completeness`` defaults to ``absent`` to match ``installed_skills=()``, so
     the default world is a machine with nothing installed. Pass it whenever
@@ -2178,6 +2185,7 @@ def _evaluate_nudge_reason(
             "streamlit.web.skills.detect_installed_agents",
             return_value=list(agents),
         ),
+        patch.object(skills, "_is_claude_code_present", return_value=claude_on_path),
         patch(
             "streamlit.web.skills.detect_installed_skills",
             return_value=list(installed_skills),
@@ -2206,7 +2214,12 @@ def _evaluate_nudge_reason(
         ({"headless": True}, "headless"),
         ({"hide_welcome": True}, "welcome_hidden"),
         ({"marker_exists": True}, "dismissed"),
-        ({"agents": ()}, "no_agent"),
+        ({"agents": (), "claude_on_path": False}, "no_agent"),
+        # The broad Claude signal alone is enough: that user gets a
+        # .claude/skills target and so a "partial" install, which means the
+        # startup recommendation prints for them. Withholding the one-click
+        # repair here is what left them nagged with nothing to click.
+        ({"agents": (), "claude_on_path": True, "completeness": "partial"}, ""),
         (
             {
                 "installed_skills": ("home:claude:developing-with-streamlit",),
@@ -2279,7 +2292,30 @@ def test_should_show_skills_nudge_hidden_when_marker_exists(tmp_path: Path) -> N
 
 def test_should_show_skills_nudge_hidden_when_no_agent(tmp_path: Path) -> None:
     """No nudge when no agent harness is detected on the system."""
-    assert _evaluate_nudge(tmp_path, agents=()) is False
+    assert _evaluate_nudge(tmp_path, agents=(), claude_on_path=False) is False
+
+
+def test_nudge_is_shown_when_only_the_broad_claude_signal_fires(
+    tmp_path: Path,
+) -> None:
+    """A `claude` on PATH with no ~/.claude still gets the one-click repair.
+
+    ``detect_installed_agents()`` keys on ~/.claude, so gating on it alone hid
+    the nudge from exactly the users the broader signal had already decided to
+    give a .claude/skills target - and who therefore see the startup
+    recommendation on every run. Nagged by the surface that cannot fix it,
+    hidden from the one that can.
+    """
+    assert (
+        _evaluate_nudge(
+            tmp_path,
+            agents=(),
+            claude_on_path=True,
+            installed_skills=("app:agents:developing-with-streamlit",),
+            completeness="partial",
+        )
+        is True
+    )
 
 
 def test_should_show_skills_nudge_hidden_when_skills_installed(tmp_path: Path) -> None:

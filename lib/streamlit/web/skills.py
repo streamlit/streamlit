@@ -280,21 +280,24 @@ def _claude_cli_on_path() -> bool:
     found = shutil.which("claude")
     if found is None:
         return False
-    if not env_util.IS_WINDOWS:
-        return True
-    # On Windows shutil.which() searches the current directory first whatever
-    # PATH says, so a checkout that happens to contain claude.exe/.bat/.cmd
-    # would otherwise decide where we write. Nothing is executed - the cost is a
-    # stray .claude/skills/ dir - but repo contents should not be an input here,
-    # so only trust a hit that lives in a real PATH entry. A user who put "."
-    # on PATH themselves still counts; that is their choice, not the repo's.
-    found_dir = os.path.normcase(os.path.dirname(os.path.abspath(found)))
-    path_dirs = {
+    # Windows only: shutil.which() searches the current directory before PATH
+    # there, so without this a checkout shipping claude.exe/.bat/.cmd would
+    # decide where we write. Repo contents must not be an input to that.
+    return not env_util.IS_WINDOWS or _lives_in_a_path_entry(found)
+
+
+def _lives_in_a_path_entry(executable: str) -> bool:
+    """Whether ``executable`` sits in a directory ``PATH`` actually names.
+
+    A user who put "." on ``PATH`` themselves still counts - that is their
+    choice, not the repo's.
+    """
+    found_dir = os.path.normcase(os.path.dirname(os.path.abspath(executable)))
+    return found_dir in {
         os.path.normcase(os.path.abspath(entry))
         for entry in os.environ.get("PATH", "").split(os.pathsep)
         if entry
     }
-    return found_dir in path_dirs
 
 
 # Cached because this sits on the nudge show-gate, which re-evaluates on every
@@ -1572,14 +1575,15 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
     """Return why the in-app "install skills" nudge is being withheld, or ``""``
     when it should be shown.
 
-    The nudge is recommended only for interactive local development where an
-    AI agent harness is present but the bundled Streamlit skills are not yet
-    installed - or are installed in only some of the agent directories the
-    installer targets - and the user has not permanently dismissed it. This
-    mirrors the gating of the CLI recommendation printed on app startup, which
-    uses the same completeness rule via :func:`are_skills_installed`. It is also
-    withheld when a one-click install would conflict at every install target, so
-    the user is never nudged toward an install that can only fail.
+    The nudge is recommended only for interactive local development where an AI
+    agent harness is present - by either detector, see the gate below - but the
+    bundled Streamlit skills are not yet installed, or are installed in only
+    some of the agent directories the installer targets, and the user has not
+    permanently dismissed it. This mirrors the gating of the CLI recommendation
+    printed on app startup, which uses the same completeness rule via
+    :func:`are_skills_installed`. It is also withheld when a one-click install
+    would conflict at every install target, so the user is never nudged toward
+    an install that can only fail.
 
     Parameters
     ----------
@@ -1605,10 +1609,16 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
             return "welcome_hidden"
         if _nudge_dismissed_marker_path().exists():
             return "dismissed"
-        # Gate on the same detection the page-profile telemetry uses (both now
-        # defined here): an agent must be present, and our skills must not be
-        # installed yet.
-        if not detect_installed_agents():
+        # An agent must be present, and our skills must not be installed yet.
+        # Either detector satisfies the first half, on purpose. Whoever
+        # _is_claude_code_present() covers has a .claude/skills target, so an
+        # .agents-only tree reports partial and the startup recommendation
+        # prints for them every run; gating on the narrower harness list alone
+        # withheld the one-click repair from exactly those users - nagged by the
+        # surface that cannot fix it, hidden from the one that can. Real
+        # population: a `claude` on PATH with no ~/.claude (shared toolchain
+        # image, leftover binary, CLAUDE_CONFIG_DIR).
+        if not detect_installed_agents() and not _is_claude_code_present():
             return "no_agent"
         # An agent is present; recommend installing only if our skills aren't. A
         # marker found somewhere is not enough: it may sit in .agents/skills
