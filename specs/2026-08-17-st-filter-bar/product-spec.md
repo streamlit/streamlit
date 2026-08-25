@@ -121,7 +121,7 @@ st.filter_bar(
 | `key` | `str \| int \| None` | `None` | Unique widget key. Filter state stored in `st.session_state[key]`. |
 | `on_change` | `Callable \| None` | `None` | Callback invoked when filters change. |
 | `args` / `kwargs` | | `None` | Positional/keyword args for the callback. |
-| `bind` | `Literal["query-params"] \| None` | `None` | Persists filter state in the URL query string, so a filtered view can be shared as a link. The value is a compressed, opaque blob rather than readable keys, so links round-trip what the widget wrote but cannot be hand-authored. Takes precedence over `persist_state`. |
+| `bind` | `Literal["query-params"] \| None` | `None` | Syncs filter state with a URL query parameter, so a filtered view can be shared as a link. Requires `key` to be set; the key is used as the query parameter name. The value is a compressed, opaque blob rather than readable keys, so links round-trip what the widget wrote but cannot be hand-authored. Takes precedence over `persist_state`. |
 | `persist_state` | `Literal["page", "session"] \| None` | `None` | `"page"` persists across page navigations; `"session"` persists across browser session. |
 
 ### Return Value
@@ -184,8 +184,15 @@ additionally support `is null` and `is not null`.
 
 Time columns get no relative option. "Past 7 days" is meaningless for a time of day.
 
-In the UI, `is null` and `is not null` are labelled "is empty" and "is not empty", matching how
-Notion and Excel present them.
+Names passed to `operators` are the snake_case forms of the labels above: `is`, `is_not`,
+`contains`, `not_contains`, `equals`, `not_equals`, `starts_with`, `ends_with`, `is_true`,
+`is_false`, `between`, `not_between`, `greater_than`, `greater_than_or_equal`, `less_than`,
+`less_than_or_equal`, `before`, `on_or_before`, `after`, `on_or_after`, `is_relative_to_today`,
+`is_null`, `is_not_null`. An unrecognized name raises `StreamlitAPIException` instead of being
+ignored.
+
+In the UI, `is null` and `is not null` read "is empty" and "is not empty". Null is developer
+vocabulary; empty is what the person filtering a spreadsheet expects.
 
 `contains` and `not contains` accept **several terms**, matching a row if any of them match:
 `message contains "timeout" or "connection refused"`. This is the same within-field OR that a
@@ -208,8 +215,8 @@ word carries the distinction because that is how the phrases already read: "last
 while "past 30 days" means the trailing window. `last day` and `next day` give yesterday and
 tomorrow.
 
-Prior art: Excel's date presets are exactly This/Last/Next by week, month, quarter, and year, and
-Power BI, Tableau, and Metabase all use a count for trailing windows. Power BI reaches the same
+Prior art: named calendar periods (this, last, next by week, month, quarter, year) are the common
+spreadsheet idiom, while Power BI, Tableau, and Metabase all take a count for trailing windows. Power BI reaches the same
 capability by listing `Months` and `Months (Calendar)` as separate units, which needs nine unit
 entries and has to suppress combinations like "this month (calendar)".
 
@@ -298,7 +305,7 @@ counts back from changes.
 Type names are data-facing, not widget-facing: `select` instead of `multiselect`, and one `range`
 instead of four. These values travel in filter state, and later into `st.dataframe`'s column headers
 and translated SQL predicates. They should not carry a Streamlit widget name.
-Sigma calls this "list values", Tableau "multiple values list", Excel a checklist.
+BI tools describe this as picking from a list of values, not as a multiselect widget.
 
 `filter=False` marks a column non-filterable while leaving the rest of its configuration
 intact. In `st.filter_bar`, that is equivalent to `None`; the distinction matters in a table
@@ -330,8 +337,9 @@ what would otherwise be inferred from the data; in a table context they are simp
 
 The two are intended as siblings, not stages. A filter bar drives several elements at once,
 returning rows the app uses downstream. In-table filtering explores a single table in place and
-would expose state instead of returning rows, the way selection does. Both jobs are real and Sigma
-ships both. The standalone widget is not a waypoint that in-table filtering later replaces.
+would expose state instead of returning rows, the way selection does. Both jobs are real, and BI
+tools generally offer both a page-level control and in-table filtering. The standalone widget is not
+a waypoint that in-table filtering later replaces.
 
 `st.data_editor` is a harder case, and blocked rather than deferred: mapping edits back to
 source rows through a filtered view needs stable row identity — the same dependency the
@@ -355,6 +363,19 @@ st.session_state["my_filter"] = {
     "filters": {"Industry": {"type": "select", "values": ["Tech"]}}
 }
 ```
+
+Each descriptor is `{"type", "operator", ...value keys}`, where the value keys depend on the type:
+
+| Type | Value keys |
+|---|---|
+| `select` | `values` — the selected values |
+| `text` | `terms` — one or more search terms; a row matches if any term matches |
+| `range` | `min` and/or `max`, depending on the operator: `between` uses both, `greater_than` only `min`, `less_than` only `max`. Dates and datetimes use the same keys as ISO 8601 strings |
+| `toggle` | none; `is_true` and `is_false` carry the value themselves |
+
+Two operators override that: `is_null` and `is_not_null` take no value keys for any type, and
+`is_relative_to_today` replaces them with `direction` (`this`, `last`, `next`, `past`), `unit`
+(`day`, `week`, `month`, `quarter`, `year`), and `count` when the direction is `past`.
 
 Importable as `streamlit.typing.FilterBarState` for type annotations, alongside `DataEditorState`
 and `DataframeState`. Reading is read-only, so in-place mutation raises `TypeError`. Assigning a new
@@ -556,7 +577,7 @@ filtered = st.filter_bar(
 
 ```python
 filtered = st.filter_bar(df, key="dashboard_filter", bind="query-params")
-# URL: ?st_dashboard_filter=<JSON-encoded filter state>
+# URL: ?dashboard_filter=<compressed, base64-encoded filter state>
 ```
 
 **With callback:**
@@ -786,8 +807,8 @@ Notes:
   `targets[targets.region.isin(filtered.region.unique())]` covers it; a first-class
   `state.apply(other_df)` would remove the hand-rolling. Deferred because Streamlit apps
   normally reshape data in `@st.cache_data` before filtering, so this pressure is lower here than in
-  Tableau or Sigma. No widget-state object carries methods today either, so it would set a new
-  pattern. Additive whenever we want it.
+  BI tools, where controls bind to data sources because the data cannot be reshaped in code. No
+  widget-state object carries methods today either, so it would set a new pattern. Additive whenever we want it.
 - **Sub-day relative ranges and regex text matching**: "past 15 minutes" and case-sensitive or
   regex `contains`, both needed for live incident triage.
 - **Viewer-selectable anchor dates**: letting a viewer pick the date a relative range counts back
