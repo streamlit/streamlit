@@ -899,6 +899,10 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             MediaFileStorageError("Error opening 'foo.png'"),
             "MediaFileStorageError:open",
         ),
+        (
+            MediaFileStorageError("Callable execution failed"),
+            "MediaFileStorageError",
+        ),
         (ValueError("boom"), "ValueError"),
         (TypeError("other"), "TypeError"),
     ],
@@ -917,6 +921,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "import-error-allowlisted",
         "modulenotfound-other",
         "media-file-open",
+        "media-file-other",
         "plain-value-error",
         "other-type-error",
     ],
@@ -924,6 +929,16 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
 def test_format_uncaught_exception(exc: BaseException, expected: str) -> None:
     """Return ``ExceptionType:<param>`` for known parameter failures; otherwise the bare type name."""
     assert metrics_util.format_uncaught_exception(exc) == expected
+
+
+def test_format_uncaught_exception_media_file_open_uses_isinstance() -> None:
+    """``:open`` applies only to the real ``MediaFileStorageError``, not a name lookalike."""
+
+    class MediaFileStorageError(Exception):
+        pass
+
+    lookalike = MediaFileStorageError("Error opening 'foo.png'")
+    assert metrics_util.format_uncaught_exception(lookalike) == "MediaFileStorageError"
 
 
 def test_format_uncaught_exception_swallows_enrichment_errors() -> None:

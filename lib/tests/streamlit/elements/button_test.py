@@ -119,6 +119,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert not c.is_form_submitter
         assert not c.disabled
 
+    @parameterized.expand(get_button_command_matrix([123]))
+    def test_non_string_label_is_coerced(
+        self, name: str, command: Callable[..., Any], label: int
+    ) -> None:
+        """Non-string labels are coerced to strings for protobuf assignment."""
+        command(label=label)
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.label == "123"
+
     @parameterized.expand(
         [
             (name, command, type_)

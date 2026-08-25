@@ -1495,6 +1495,7 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> bool | DeltaGenerator:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
         ignore_rerun = on_click == "ignore"
         is_rerun_mode = not ignore_rerun
         on_click_callback: WidgetCallback | None = (
@@ -1537,7 +1538,7 @@ class ButtonMixin:
                 shortcut=normalized_shortcut,
             )
 
-        link_button_proto.label = "" if label is None else to_str(label)
+        link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
         link_button_proto.disabled = disabled

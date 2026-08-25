@@ -146,6 +146,14 @@ def check_widget_policies(
     )
 
 
+def validate_label_visibility(label_visibility: str | None) -> None:
+    """Raise if ``label_visibility`` is not a supported value."""
+    if label_visibility not in {"visible", "hidden", "collapsed"}:
+        raise errors.StreamlitValueError(
+            "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
+        )
+
+
 def maybe_raise_label_warnings(
     label: object | None, label_visibility: str | None
 ) -> str:
@@ -163,8 +171,5 @@ def maybe_raise_label_warnings(
             "if needed.",
             stack_info=True,
         )
-    if label_visibility not in {"visible", "hidden", "collapsed"}:
-        raise errors.StreamlitValueError(
-            "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
-        )
+    validate_label_visibility(label_visibility)
     return coerced

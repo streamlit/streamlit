@@ -43,7 +43,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.string_util import to_help_str, validate_icon_or_emoji
+from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
@@ -335,6 +335,7 @@ class MenuButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | None:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
 
         check_widget_policies(
             self.dg,

@@ -567,13 +567,18 @@ def format_uncaught_exception(exc: BaseException) -> str:
                 module = match.group(1).split(".", 1)[0]
                 if module in _IMPORT_ERROR_MODULE_ALLOWLIST:
                     return f"{name}:{module}"
-        elif name == "MediaFileStorageError" and str(exc).startswith("Error opening"):
-            # Type name avoids importing MediaFileStorageError into this module.
-            return f"{name}:open"
         elif isinstance(exc, LocalizableStreamlitException):
             parameter = exc.exec_kwargs.get("parameter")
             if isinstance(parameter, str) and parameter:
                 return f"{name}:{parameter}"
+        else:
+            # Function-local import avoids a module-level cycle with media storage.
+            from streamlit.runtime.media_file_storage import MediaFileStorageError
+
+            if isinstance(exc, MediaFileStorageError) and str(exc).startswith(
+                "Error opening"
+            ):
+                return f"{name}:open"
     return name
 
 

@@ -449,7 +449,7 @@ class StreamlitQueryParamDictValueError(LocalizableStreamlitException):
 
 
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
-    """Exception raised the linked page can not be found."""
+    """Raised when the linked page cannot be found."""
 
     def __init__(
         self,

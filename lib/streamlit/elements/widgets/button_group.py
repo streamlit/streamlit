@@ -43,6 +43,7 @@ from streamlit.elements.lib.options_selector_utils import (
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
+    validate_label_visibility,
 )
 from streamlit.elements.lib.utils import (
     Key,
@@ -1088,10 +1089,8 @@ class ButtonGroupMixin:
         # would write an empty visible label and change the element id.
         if label is not None:
             label = maybe_raise_label_warnings(label, label_visibility)
-        elif label_visibility not in {"visible", "hidden", "collapsed"}:
-            raise StreamlitValueError(
-                "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
-            )
+        else:
+            validate_label_visibility(label_visibility)
 
         # Validate required with multi-select
         if required and selection_mode == "multi":

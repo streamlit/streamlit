@@ -705,6 +705,17 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.label == ""
         assert not delta.HasField("label_visibility")
 
+    def test_omitted_label_invalid_visibility_raises(self) -> None:
+        """Omitted labels still validate ``label_visibility``."""
+        with pytest.raises(
+            StreamlitValueError, match=r"Invalid `label_visibility` value"
+        ):
+            ButtonGroupMixin._internal_button_group(
+                st._main,
+                ["a", "b"],
+                label_visibility="wrong_value",  # type: ignore[arg-type]
+            )
+
     def test_non_string_label_is_coerced(self) -> None:
         """Non-string labels are coerced without collapsing the proto label."""
         st.pills(123, ["a", "b", "c"])  # type: ignore[arg-type]
