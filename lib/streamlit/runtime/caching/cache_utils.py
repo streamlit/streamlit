@@ -140,7 +140,8 @@ def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
 
     if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
         raise StreamlitIncompatibleParametersError(
-            {"refresh_mode": "background", "ttl": ttl_seconds},
+            "refresh_mode='background'",
+            f"ttl={ttl_seconds}",
             explanation=(
                 "Background refresh only makes sense when cache entries can expire."
             ),

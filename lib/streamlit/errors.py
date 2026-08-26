@@ -17,9 +17,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping, Sequence
-from itertools import starmap
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from streamlit import util
 
@@ -59,7 +57,7 @@ class FragmentHandledException(Exception):  # noqa: N818  # pragma: no cover - t
 
 
 class NoSessionContext(Error):  # noqa: N818  # pragma: no cover - trivial subclass
-    pass
+    """Raised when a Streamlit command runs outside an active script session."""
 
 
 class MarkdownFormattedException(Error):  # noqa: N818  # pragma: no cover - trivial subclass
@@ -97,11 +95,11 @@ class StreamlitDataframeConversionError(StreamlitAPIException):
 
 
 class DuplicateWidgetID(StreamlitAPIException):  # pragma: no cover - trivial subclass
-    pass
+    """Legacy base class for duplicate element ID and key errors, kept for compatibility."""
 
 
 class StreamlitAuthError(StreamlitAPIException):  # pragma: no cover - trivial subclass
-    pass
+    """Raised when Streamlit authentication fails."""
 
 
 class StreamlitMissingAuthlibError(StreamlitAuthError):
@@ -148,7 +146,7 @@ class StreamlitDuplicateElementKey(
 class UnserializableSessionStateError(
     StreamlitAPIException
 ):  # pragma: no cover - trivial subclass
-    pass
+    """Raised when a session state value cannot be pickled."""
 
 
 class StreamlitAPIWarning(StreamlitAPIException, Warning):
@@ -171,6 +169,13 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
 
 
 class LocalizableStreamlitException(StreamlitAPIException):
+    """API exception with a format-string message and kwargs for localization.
+
+    Users can localize the message from ``exec_kwargs``, for example in an
+    ``on_script_error`` handler on ``st.App``. Kwargs are used for telemetry
+    only in a few specific cases (for example ``parameter``).
+    """
+
     def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__((message).format(**kwargs))
         self._exec_kwargs = kwargs
@@ -201,21 +206,6 @@ class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
             "positive integer (number of columns) or a list of positive numbers (width ratios of the columns). "
             "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
             "for more information."
-        )
-
-
-class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for gap."""
-
-    def __init__(self, gap: object, element_type: str) -> None:
-        super().__init__(
-            'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
-            '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
-            '`"xxlarge"`, `None`, or a non-negative integer specifying '
-            "the gap in pixels. \n"
-            "The argument passed was {gap}.",
-            gap=gap,
-            element_type=element_type,
         )
 
 
@@ -379,83 +369,15 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
         )
 
 
-_MAX_INCOMPATIBLE_PARAMETER_VALUE_LEN: Final = 32
-
-
-def _format_incompatible_parameter_use(name: str, value: object) -> str:
-    """Format a parameter use for messages and telemetry.
-
-    Low-cardinality values are included so telemetry can distinguish
-    ``wrap=False`` from ``wrap=True``. Complex or user-supplied values are
-    omitted, leaving just the parameter name.
-    """
-    # bool is an int subclass; f-strings still render True/False.
-    if value is None or isinstance(value, int):
-        return f"{name}={value}"
-    if isinstance(value, float):
-        formatted = int(value) if value.is_integer() else value
-        return f"{name}={formatted}"
-    if (
-        isinstance(value, str)
-        and len(value) <= _MAX_INCOMPATIBLE_PARAMETER_VALUE_LEN
-        and "\n" not in value
-        and "\r" not in value
-    ):
-        return f"{name}={value!r}"
-    return name
-
-
-def _join_incompatible_parameter_uses_for_message(uses: Sequence[str]) -> str:
-    """Join uses as ``A and B`` or ``A, B, and C``. Caller must pass at least two uses."""
-    quoted = [f"`{use}`" for use in uses]
-    if len(quoted) == 2:
-        return " and ".join(quoted)
-    return f"{', '.join(quoted[:-1])}, and {quoted[-1]}"
-
-
-def _normalize_incompatible_parameter_uses(
-    parameters: Mapping[str, object] | Sequence[str],
-) -> list[str]:
-    """Return formatted uses for the message and telemetry suffix.
-
-    A mapping becomes ``name=value`` strings (or just ``name`` when the value
-    is omitted). A sequence of strings is used as-is. A single ``str`` is
-    rejected so it is not treated as a sequence of characters.
-    """
-    if isinstance(parameters, Mapping):
-        return list(starmap(_format_incompatible_parameter_use, parameters.items()))
-    # str is a Sequence, but a single string is not a list of uses.
-    if isinstance(parameters, str) or not isinstance(parameters, Sequence):
-        raise TypeError(
-            "parameters must be a mapping of name to value or a sequence of uses."
-        )
-    return [str(use) for use in parameters]
-
-
 class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
     """Raised when two or more parameter uses cannot be combined.
 
-    Pass a mapping of name to value so the message and telemetry record the
-    specific uses (for example ``wrap=False``, not just ``wrap``).
-    Pass a sequence of names only when values are not meaningful (for example
-    ``on_change`` vs ``callbacks``).
-    Uncaught-exception telemetry appends the joined uses, for example
-    ``StreamlitIncompatibleParametersError:wrap=False+horizontal=False``.
+    Pass formatted uses so the message records the specific combination
+    (for example ``wrap=False``, not just ``wrap``).
     """
 
-    def __init__(
-        self,
-        parameters: Mapping[str, object] | Sequence[str],
-        *,
-        explanation: str | None = None,
-    ) -> None:
-        uses = _normalize_incompatible_parameter_uses(parameters)
-        if len(uses) < 2:
-            raise ValueError(
-                "StreamlitIncompatibleParametersError requires at least two "
-                "parameter uses."
-            )
-        uses_text = _join_incompatible_parameter_uses_for_message(uses)
+    def __init__(self, *uses: str, explanation: str | None = None) -> None:
+        uses_text = " and ".join(f"`{use}`" for use in uses)
         message = "{uses_text} cannot be used together."
         if explanation:
             message += " {explanation}"
@@ -463,7 +385,6 @@ class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
             message,
             uses_text=uses_text,
             explanation=explanation,
-            parameter="+".join(uses),
         )
 
 
@@ -605,6 +526,8 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidColorError(LocalizableStreamlitException):
+    """Raised when a color is not a valid hex string or RGB(A) sequence."""
+
     def __init__(
         self, color: str | Collection[Any] | tuple[int, int, int, int]
     ) -> None:
@@ -662,17 +585,6 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
             "Invalid height value: {height}. Height must be either {valid_values}.",
             height=repr(height),
             valid_values=valid_values,
-        )
-
-
-class StreamlitInvalidSizeError(LocalizableStreamlitException):
-    """Exception raised when an invalid size value is provided."""
-
-    def __init__(self, size: Any) -> None:
-        super().__init__(
-            "Invalid size value: {size}. Size must be either a positive integer (pixels), "
-            "'stretch', 'small', 'medium', or 'large'.",
-            size=repr(size),
         )
 
 
@@ -738,36 +650,3 @@ class StreamlitInvalidThemeSectionError(StreamlitInvalidThemeError):
             option_name=option_name,
             file_path_or_url=file_path_or_url,
         )
-
-
-# Deprecated aliases kept only for backward compatibility.
-StreamlitInvalidPageLayoutError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidTextAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidSidebarStateError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidMenuItemKeyError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidVerticalAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidHorizontalAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.
-    StreamlitMissingRequiredParameterError
-)
-StreamlitModuleNotFoundError = (  # Replaced: StreamlitAPIWarning.
-    StreamlitAPIWarning
-)

@@ -33,9 +33,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_width,
 )
 from streamlit.errors import (
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidSizeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -216,7 +214,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_get_gap_config_string(self, gap: str | None, expected: GapSize.ValueType):
         """get_gap_config sets gap_size for string / None inputs."""
 
-        config = get_gap_config(gap, "st.columns")
+        config = get_gap_config(gap)
         assert config.WhichOneof("gap_spec") == "gap_size"
         assert config.gap_size == expected
 
@@ -231,28 +229,28 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_get_gap_config_int(self, gap: int):
         """get_gap_config sets pixel_gap for non-negative integer inputs."""
 
-        config = get_gap_config(gap, "st.columns")
+        config = get_gap_config(gap)
         assert config.WhichOneof("gap_spec") == "pixel_gap"
         assert config.pixel_gap == gap
 
     def test_get_gap_config_negative_int_raises(self):
         """get_gap_config raises for negative integer inputs."""
 
-        with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_config(-1, "st.columns")
+        with pytest.raises(StreamlitValueError):
+            get_gap_config(-1)
 
     @parameterized.expand([(True,), (False,)])
     def test_get_gap_config_bool_raises(self, gap: bool):
         """get_gap_config rejects boolean inputs even though ``bool`` is a subclass of ``int``."""
 
-        with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_config(gap, "st.columns")  # type: ignore[arg-type]
+        with pytest.raises(StreamlitValueError):
+            get_gap_config(gap)  # type: ignore[arg-type]
 
     def test_get_gap_config_invalid_string_raises(self):
         """get_gap_config raises for unknown gap strings."""
 
-        with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_config("tiny", "st.columns")  # type: ignore[arg-type]
+        with pytest.raises(StreamlitValueError):
+            get_gap_config("tiny")  # type: ignore[arg-type]
 
     @parameterized.expand(
         [
@@ -354,7 +352,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_size_invalid(self, size: any):
         """validate_size raises for invalid size values."""
 
-        with pytest.raises(StreamlitInvalidSizeError):
+        with pytest.raises(StreamlitValueError):
             validate_space_size(size)  # type: ignore[arg-type]
 
     @parameterized.expand(

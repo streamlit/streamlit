@@ -17,9 +17,7 @@ from dataclasses import dataclass
 from typing import Final, Literal, TypeAlias, cast
 
 from streamlit.errors import (
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidSizeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -58,6 +56,11 @@ SIZE_TO_REM_MAPPING = {
     "xlarge": 6,  # Aligns with gap "xlarge" (96px)
     "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
 }
+_VALID_SPACE_SIZE_STRINGS: Final = ("stretch", *SIZE_TO_REM_MAPPING)
+_VALID_SPACE_SIZE_VALUES: Final = [
+    *[f"'{size}'" for size in _VALID_SPACE_SIZE_STRINGS],
+    "a positive integer",
+]
 
 # Shared by st.expander and st.status, which render through the same proto.
 ExpandableType: TypeAlias = Literal["default", "compact", "step"]
@@ -243,27 +246,17 @@ def validate_space_size(size: SpaceSize) -> None:
 
     Raises
     ------
-    StreamlitInvalidSizeError
+    StreamlitValueError
         If the size value is invalid.
     """
     if not isinstance(size, (int, str)):
-        raise StreamlitInvalidSizeError(size)
+        raise StreamlitValueError("size", _VALID_SPACE_SIZE_VALUES)
 
     if isinstance(size, str):
-        valid_strings = [
-            "stretch",
-            "xxsmall",
-            "xsmall",
-            "small",
-            "medium",
-            "large",
-            "xlarge",
-            "xxlarge",
-        ]
-        if size not in valid_strings:
-            raise StreamlitInvalidSizeError(size)
+        if size not in _VALID_SPACE_SIZE_STRINGS:
+            raise StreamlitValueError("size", _VALID_SPACE_SIZE_VALUES)
     elif isinstance(size, int) and size <= 0:
-        raise StreamlitInvalidSizeError(size)
+        raise StreamlitValueError("size", _VALID_SPACE_SIZE_VALUES)
 
 
 def get_width_config(width: Width | SpaceSize) -> WidthConfig:
@@ -301,9 +294,14 @@ _GAP_STRING_MAPPING: dict[str, GapSize.ValueType] = {
     "xlarge": GapSize.XLARGE,
     "xxlarge": GapSize.XXLARGE,
 }
+_VALID_GAP_VALUES: Final = [
+    *[f"'{size}'" for size in _GAP_STRING_MAPPING],
+    "None",
+    "a non-negative integer",
+]
 
 
-def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
+def get_gap_config(gap: Gap | None) -> GapConfig:
     """Convert a gap value to a ``GapConfig`` proto.
 
     ``gap`` may be one of the string enum values (``"xxsmall"``, ``"xsmall"``,
@@ -314,12 +312,10 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
     ----------
     gap : Gap or None
         The gap value to convert.
-    element_type : str
-        The element type used in error messages.
 
     Raises
     ------
-    StreamlitInvalidColumnGapError
+    StreamlitValueError
         If ``gap`` is not a valid gap value.
     """
     gap_config = GapConfig()
@@ -338,7 +334,7 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
         gap_config.gap_size = _GAP_STRING_MAPPING[gap.lower()]
         return gap_config
 
-    raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+    raise StreamlitValueError("gap", _VALID_GAP_VALUES)
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:

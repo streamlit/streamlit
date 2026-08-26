@@ -382,16 +382,12 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.CopyFrom(
-            get_gap_config(gap, "st.container")
-        )
+        block_proto.flex_container.gap_config.CopyFrom(get_gap_config(gap))
 
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
         if wrap is False and not horizontal:
-            raise StreamlitIncompatibleParametersError(
-                {"wrap": False, "horizontal": False}
-            )
+            raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")
         if horizontal:
             # `wrap=True` (default) keeps the default horizontal behavior of
             # wrapping onto additional rows. `wrap=False` keeps the elements in
@@ -693,7 +689,7 @@ class LayoutsMixin:
                 [f"'{alignment}'" for alignment in vertical_alignment_mapping],
             )
 
-        gap_config = get_gap_config(gap, "st.columns")
+        gap_config = get_gap_config(gap)
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()

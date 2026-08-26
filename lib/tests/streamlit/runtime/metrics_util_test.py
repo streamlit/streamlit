@@ -879,9 +879,9 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         ),
         (
             StreamlitIncompatibleParametersError(
-                {"wrap": False, "unsafe_allow_html": True}
+                "wrap=False", "unsafe_allow_html=True"
             ),
-            "StreamlitIncompatibleParametersError:wrap=False+unsafe_allow_html=True",
+            "StreamlitIncompatibleParametersError",
         ),
         (
             StreamlitInvalidLayoutContextError(

@@ -156,7 +156,7 @@ def register_widget(
         to be used in a non-streamlit setting.
     """
     if on_change_handler is not None and callbacks is not None:
-        raise StreamlitIncompatibleParametersError(["on_change", "callbacks"])
+        raise StreamlitIncompatibleParametersError("on_change", "callbacks")
 
     # Validate bind parameter value
     if bind is not None and bind != "query-params":

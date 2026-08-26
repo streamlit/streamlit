@@ -1099,7 +1099,7 @@ class ButtonGroupMixin:
         # Validate required with multi-select
         if required and selection_mode == "multi":
             raise StreamlitIncompatibleParametersError(
-                {"required": True, "selection_mode": "multi"}
+                "required=True", "selection_mode='multi'"
             )
 
         # Use str as default format_func

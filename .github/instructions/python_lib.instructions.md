@@ -140,12 +140,12 @@ generic `StreamlitAPIException` with a one-off message.
   empty sequence. `parameter` is appended in uncaught-exception telemetry
   (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
   `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
-- `StreamlitIncompatibleParametersError(parameters, *, explanation=None)`: use
-  when two or more parameter uses cannot be combined. Pass a mapping of name
-  to value so the message and telemetry record the specific uses (for example
-  `wrap=False`, not just `wrap`). Optional `explanation` is appended when the
-  generic "cannot be used together" message needs more context. Example:
-  `raise StreamlitIncompatibleParametersError({"wrap": False, "horizontal": False})`.
+- `StreamlitIncompatibleParametersError(*uses, *, explanation=None)`: use
+  when two or more parameter uses cannot be combined. Pass formatted uses
+  (for example `wrap=False`, not just `wrap`) so the message records the
+  specific combination. Optional `explanation` is appended when the generic
+  "cannot be used together" message needs more context. Example:
+  `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
   uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
@@ -153,8 +153,8 @@ generic `StreamlitAPIException` with a one-off message.
   `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
-  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
-    `StreamlitInvalidSizeError` (layout sizing helpers)
+  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError`
+    (layout sizing helpers)
   - `StreamlitInvalidColorError`
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
@@ -167,10 +167,10 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
-- Do not raise the deprecated aliases.
 
-Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
-type (serialization failures and similar).
+Reserve bare `StreamlitAPIException` for one-off cases that no shared type
+covers and that users are expected to hit uncommonly (serialization failures
+and similar).
 
 ## Theming and Layout
 

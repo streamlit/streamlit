@@ -16,7 +16,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitInvalidSizeError
+from streamlit.errors import StreamlitValueError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -87,5 +87,5 @@ class SpaceTest(DeltaGeneratorTestCase):
     )
     def test_space_invalid_sizes(self, invalid_size):
         """Test that invalid size values raise an exception."""
-        with pytest.raises(StreamlitInvalidSizeError):
+        with pytest.raises(StreamlitValueError):
             st.space(invalid_size)

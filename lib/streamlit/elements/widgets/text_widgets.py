@@ -750,7 +750,8 @@ class TextWidgetsMixin:
         # Prevent binding password inputs to query params (exposes secrets in URL)
         if bind == "query-params" and type == "password":
             raise StreamlitIncompatibleParametersError(
-                {"bind": "query-params", "type": "password"},
+                "bind='query-params'",
+                "type='password'",
                 explanation="Password values must not appear in URLs.",
             )
 

@@ -27,7 +27,6 @@ from streamlit.errors import (
     StreamlitDefaultNotInOptionsError,
     StreamlitDuplicateElementId,
     StreamlitIncompatibleParametersError,
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
@@ -324,7 +323,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
         """Test that it throws an error on invalid gap argument"""
-        with pytest.raises(StreamlitInvalidColumnGapError):
+        with pytest.raises(StreamlitValueError):
             st.columns(3, gap=invalid_gap)
 
     def test_columns_with_border(self):
@@ -977,7 +976,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     @parameterized.expand([("invalid",), (-1,), (True,)])
     def test_container_invalid_gap(self, invalid_gap) -> None:
         """Test that st.container raises on invalid gap values."""
-        with pytest.raises(StreamlitInvalidColumnGapError):
+        with pytest.raises(StreamlitValueError):
             st.container(gap=invalid_gap)
 
     @parameterized.expand(

@@ -719,7 +719,8 @@ class CacheDataAPI:
 
         if refresh_mode == "background" and persist_string is not None:
             raise StreamlitIncompatibleParametersError(
-                {"refresh_mode": "background", "persist": persist},
+                "refresh_mode='background'",
+                f"persist={persist!r}",
                 explanation=(
                     "Persisted (disk) caches do not support TTL-based expiration, "
                     "which background refresh requires."
