@@ -490,7 +490,7 @@ frontend-tests:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: frontend-knip
-# Run Knip with default reporter.
+# Run Knip unused-export and unused-dependency analysis.
 frontend-knip:
 	cd frontend/ ; yarn knip
 

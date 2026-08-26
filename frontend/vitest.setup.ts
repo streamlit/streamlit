@@ -82,18 +82,6 @@ const messageIncludes = (message: unknown, ...substrings: string[]): boolean =>
 const originalConsoleWarn = console.warn
 console.warn = (...args) => {
   const message = args[0]
-  // Suppress baseui's LayersManager warning
-  if (/`LayersManager` was not found./.test(message)) {
-    return
-  }
-  // Suppress baseui's popper.js modifier order warning
-  if (messageIncludes(message, "preventOverflow", "modifier")) {
-    return
-  }
-  // Suppress React validateDOMNesting warnings from baseui Tooltip/Popover
-  if (messageIncludes(message, "validateDOMNesting", "cannot appear")) {
-    return
-  }
   // Suppress sprintf errors from NumberInput format string validation tests
   if (messageIncludes(message, "Error in sprintf")) {
     return
@@ -120,24 +108,9 @@ console.warn = (...args) => {
 const originalConsoleError = console.error
 console.error = (...args) => {
   const message = args[0]
-  // Suppress React defaultProps deprecation warnings from third-party libraries (baseui)
-  if (messageIncludes(message, "Support for defaultProps will be removed")) {
-    return
-  }
-  // Handle act() warnings: suppress known third-party issues, fail tests for our own code.
+  // Handle act() warnings: fail tests for our own code.
   // This ensures we catch missing act() wrappers in our components during development.
   if (messageIncludes(message, "inside a test was not wrapped in act")) {
-    // Check if the warning originates from third-party code by inspecting the stack trace.
-    // BaseUI's Popover uses Popper.js which schedules async updates via requestAnimationFrame
-    // that can fire after test cleanup, causing spurious act() warnings.
-    const stack = new Error().stack || ""
-    const isFromBaseUIPopover =
-      stack.includes("baseui/popover") || stack.includes("popper.js")
-    if (isFromBaseUIPopover) {
-      // Suppress act() warnings from BaseUI Popover's async Popper.js updates
-      return
-    }
-    // Fail tests for act() warnings in our own code
     throw new Error(
       `act() warning detected - wrap state updates in act():\n${message}`
     )

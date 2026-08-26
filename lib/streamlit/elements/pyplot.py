@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -25,6 +25,7 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.image_utils import marshall_images
 from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -34,19 +35,65 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import LayoutConfig, Width
 
+# Sensible Matplotlib savefig defaults for Streamlit display.
+# - bbox_inches="tight": Crop excess whitespace (most common savefig override).
+# - dpi=200: Sharper than Matplotlib's figure default (~100) on high-DPI screens.
+# - format="png": Stable raster output for st.image marshalling.
+_DEFAULT_SAVEFIG_OPTIONS: Final[dict[str, Any]] = {
+    "bbox_inches": "tight",
+    "dpi": 200,
+    "format": "png",
+}
+
+_SAVEFIG_KWARGS_DEPRECATION: Final[str] = """
+Passing Matplotlib `savefig` keyword arguments to `st.pyplot` is
+deprecated and will be removed in a future version.
+
+`st.pyplot` already uses `bbox_inches="tight"` and `dpi=200` by
+default. For other `savefig` options (for example `transparent=True`
+or a custom `dpi`), save the figure yourself and display it with
+`st.image`:
+
+```python
+import io
+
+buf = io.BytesIO()
+fig.savefig(buf, format="png", transparent=True, dpi=300)
+st.image(buf)
+```
+"""
+
+_FIG_REQUIRED: Final[str] = """
+`st.pyplot` requires a Matplotlib figure. Passing `None` is not supported
+because Matplotlib's global figure object is not thread-safe.
+
+Pass a figure explicitly:
+
+```python
+fig, ax = plt.subplots()
+ax.scatter([1, 2, 3], [1, 2, 3])
+# other plotting actions...
+st.pyplot(fig)
+```
+"""
+
 
 class PyplotMixin:
     @gather_metrics("pyplot")
     def pyplot(
         self,
-        fig: Figure | None = None,
-        clear_figure: bool | None = None,
+        fig: Figure,
+        clear_figure: bool = False,
         *,
         width: Width = "stretch",
         use_container_width: bool | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
         """Display a matplotlib.pyplot figure.
+
+        Streamlit renders the figure by calling Matplotlib's ``savefig`` with
+        ``bbox_inches="tight"`` and ``dpi=200`` so charts look sharp and cropped
+        by default.
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
@@ -63,20 +110,10 @@ class PyplotMixin:
             The Matplotlib ``Figure`` object to render. See
             https://matplotlib.org/stable/gallery/index.html for examples.
 
-            .. note::
-                When this argument isn't specified, this function will render the global
-                Matplotlib figure object. However, this feature is deprecated and
-                will be removed in a later version.
-
         clear_figure : bool
-            If True, the figure will be cleared after being rendered.
-            If False, the figure will not be cleared after being rendered.
-            If left unspecified, we pick a default based on the value of ``fig``.
-
-            - If ``fig`` is set, defaults to ``False``.
-
-            - If ``fig`` is not set, defaults to ``True``. This simulates Jupyter's
-              approach to matplotlib rendering.
+            Whether to clear the figure after rendering it. If this is
+            ``False`` (default), the figure is left as-is. If ``True``,
+            Streamlit calls ``fig.clf()`` after the figure is displayed.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -107,7 +144,14 @@ class PyplotMixin:
                 ``width="content"``.
 
         **kwargs : any
-            Arguments to pass to Matplotlib's savefig function.
+            Arguments to pass to Matplotlib's ``savefig`` function.
+
+            .. deprecated::
+                Passing ``savefig`` keyword arguments to ``st.pyplot`` is
+                deprecated and will be removed in a future version.
+                ``st.pyplot`` already uses ``bbox_inches="tight"`` and
+                ``dpi=200`` by default. For other ``savefig`` options, save the
+                figure yourself and display it with ``st.image``.
 
         Examples
         --------
@@ -134,6 +178,9 @@ class PyplotMixin:
 
         """
 
+        if fig is None:
+            raise StreamlitAPIException(_FIG_REQUIRED)
+
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(
@@ -149,24 +196,11 @@ class PyplotMixin:
 
             width = "stretch" if use_container_width else "content"
 
-        if not fig:
-            show_deprecation_warning("""
-Calling `st.pyplot()` without providing a figure argument has been deprecated
-and will be removed in a later version as it requires the use of Matplotlib's
-global figure object, which is not thread-safe.
-
-To future-proof this code, you should pass in a figure as shown below:
-
-```python
-fig, ax = plt.subplots()
-ax.scatter([1, 2, 3], [1, 2, 3])
-# other plotting actions...
-st.pyplot(fig)
-```
-
-If you have a specific use case that requires this functionality, please let us
-know via [issue on Github](https://github.com/streamlit/streamlit/issues).
-""")
+        if kwargs:
+            show_deprecation_warning(
+                _SAVEFIG_KWARGS_DEPRECATION,
+                show_in_browser=True,
+            )
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
@@ -191,8 +225,8 @@ def marshall(
     coordinates: str,
     image_list_proto: ImageListProto,
     layout_config: LayoutConfig,
-    fig: Figure | None = None,
-    clear_figure: bool | None = True,
+    fig: Figure,
+    clear_figure: bool = False,
     **kwargs: Any,
 ) -> None:
     try:
@@ -202,30 +236,32 @@ def marshall(
     except ImportError:  # pragma: no cover - optional dep
         raise ImportError("pyplot() command requires matplotlib")
 
-    # You can call .savefig() on a Figure object or directly on the pyplot
-    # module, in which case you're doing it to the latest Figure.
-    if not fig:
-        if clear_figure is None:
-            clear_figure = True
-
-        fig = cast("Figure", plt)
-
-    # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
-    # So here we pick double of that to make things look good in a high
-    # DPI display.
-    options = {"bbox_inches": "tight", "dpi": 200, "format": "png"}
-
-    # If some options are passed in from kwargs then replace the values in
-    # options with the ones from kwargs
-    options = {a: kwargs.get(a, b) for a, b in options.items()}
-    # Merge options back into kwargs.
-    kwargs.update(options)
+    # Apply Streamlit defaults, then let deprecated kwargs override them.
+    savefig_kwargs = {**_DEFAULT_SAVEFIG_OPTIONS, **kwargs}
 
     image = io.BytesIO()
-    fig.savefig(image, **kwargs)
+    fig.savefig(image, **savefig_kwargs)
+
+    # SVG is text, not raster bytes, so decode it to a string and let
+    # image_to_url take its SVG path instead of the PNG/PIL path, which cannot
+    # parse SVG and crashes.
+    #
+    # Sniff the buffer rather than reading kwargs["format"]: Matplotlib resolves
+    # the format itself, so format=None with rcParams["savefig.format"] = "svg"
+    # still produces SVG. No raster format collides with these prefixes (PNG
+    # starts with b"\x89PNG", JPEG with b"\xff\xd8"). An `<?xml` prolog alone is
+    # not enough because image_to_url also requires a `<svg` tag, and the search
+    # is bounded since Matplotlib emits `<svg` within the first few hundred bytes.
+    payload = image.getvalue()
+    stripped = payload.lstrip()
+    is_svg = stripped.startswith(b"<svg") or (
+        stripped.startswith(b"<?xml") and b"<svg" in stripped[:2048]
+    )
+    image_for_proto: str | io.BytesIO = payload.decode("utf-8") if is_svg else image
+
     marshall_images(
         coordinates=coordinates,
-        image=image,
+        image=image_for_proto,
         caption=None,
         layout_config=layout_config,
         proto_imgs=image_list_proto,
@@ -234,7 +270,6 @@ def marshall(
         output_format="PNG",
     )
 
-    # Clear the figure after rendering it. This means that subsequent
-    # plt calls will be starting fresh.
+    # Clear the figure after rendering so later draws on this figure start empty.
     if clear_figure:
         fig.clf()

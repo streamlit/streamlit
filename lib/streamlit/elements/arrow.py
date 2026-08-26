@@ -54,7 +54,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Dataframe_pb2 import (
     Dataframe as DataframeProto,
 )
@@ -246,6 +246,8 @@ class DataframeState(ReadOnlyAttributeDictionary):
     """
     The schema for the dataframe event state.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states can be programmatically set
     through session state by assigning a dictionary with the same schema to the
@@ -380,9 +382,9 @@ def _normalize_selection_mode(
         raw_selection_mode_set = set(selection_mode)
 
     if not raw_selection_mode_set <= _SELECTION_MODES:
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
     # Intersection preserves the SelectionMode literal type for ty/mypy.
@@ -708,9 +710,12 @@ class ArrowMixin:
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values, colors, and font weights. It does not support some of the
             more exotic styling options, like bar charts, hovering, and
-            captions. For these styling options, use column configuration
-            instead. Text and number formatting from ``column_config`` always
-            takes precedence over text and number formatting from ``pandas.Styler``.
+            captions. For these options, use column configuration where an
+            equivalent exists (for example, ``BarChartColumn`` or
+            ``ProgressColumn`` instead of Styler bars), or use ``st.table``
+            for small, static tables that need fuller Pandas Styler support.
+            Text and number formatting from ``column_config`` always takes
+            precedence over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -923,12 +928,13 @@ class ArrowMixin:
 
         Returns
         -------
-        element or dict
+        element or DataframeState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element. Otherwise, this
-            command returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``DataframeState`` class.
+            command returns a ``DataframeState`` object. This object is
+            dictionary-like and supports both key and attribute notation. To
+            use this type in an annotation, import it from
+            ``streamlit.typing``.
 
         Examples
         --------
@@ -1046,9 +1052,8 @@ class ArrowMixin:
         import pyarrow as pa
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         key = to_key(key)
@@ -1066,7 +1071,9 @@ class ArrowMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,

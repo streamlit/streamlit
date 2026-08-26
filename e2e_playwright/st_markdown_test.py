@@ -21,6 +21,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expand_sidebar,
+    expect_font,
     expect_help_tooltip,
     get_caption,
     get_element_by_key,
@@ -347,6 +348,13 @@ def test_shimmer_directive(app: Page):
     normal_text = shimmer_container.get_by_text("Normal text before")
     expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
 
+    # :red[:shimmer[...]] — inherit the surrounding color rather than pinning
+    # fadedText60, so the mask peak can reach the parent color.
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
+
 
 def test_shimmer_directive_reduced_motion(
     themed_app: Page, assert_snapshot: ImageCompareFunction
@@ -368,9 +376,13 @@ def test_shimmer_directive_reduced_motion(
     shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
     expect(shimmer_element).to_be_visible()
 
-    # In reduced motion mode, the shimmer should have no animation
-    # and should display with the theme's fadedText60 color
+    # In reduced motion mode, the shimmer should have no animation.
+    # Color still inherits from the surrounding :red[] directive.
     expect(shimmer_element).to_have_css("animation-duration", "0s")
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
 
     # Take snapshot with reduced motion to verify visual appearance
     assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")
@@ -547,6 +559,64 @@ def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction
     container = get_element_by_key(app, "long_word")
     expect(container).to_be_visible()
     assert_snapshot(container, name="st_markdown-long_word_in_container")
+
+
+def test_long_word_in_list_does_not_overflow_container(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Regression test for gh-16618: a list item wider than its container wraps
+    instead of spilling out of it.
+
+    Element screenshots clip to the container, so the overflow is cropped out of
+    the snapshot. The geometry assertions catch the overflow; the snapshot guards
+    the wrapped rendering.
+    """
+    container = get_element_by_key(app, "long_word_in_list")
+    expect(container).to_be_visible()
+
+    # Text measurements need the real body font. Gate on the font, not on the
+    # wrapping itself, so a genuine regression fails an assertion instead of
+    # timing out.
+    expect_font(app, "Source Sans")
+
+    # The single-line item is the reference height for "did not wrap".
+    short_box = (
+        container.get_by_role("listitem").filter(has_text="short item").bounding_box()
+    )
+    assert short_box is not None
+
+    # These two need CSS selectors to tell the unordered and ordered lists apart.
+    for long_item in (
+        container.locator("ul li").filter(has_text="bucket1/"),
+        container.locator("ol li").filter(has_text="bucket2/"),
+    ):
+        long_box = long_item.bounding_box()
+        assert long_box is not None
+        # 1.5x the single-line height means at least two lines, with slack for
+        # line-height rounding.
+        assert long_box["height"] > short_box["height"] * 1.5, (
+            "Long list item did not wrap onto a second line"
+        )
+
+    markdown_box = container.get_by_test_id("stMarkdownContainer").bounding_box()
+    assert markdown_box is not None
+    right_edge = markdown_box["x"] + markdown_box["width"]
+
+    for list_locator in (container.locator("ul"), container.locator("ol")):
+        list_box = list_locator.bounding_box()
+        assert list_box is not None
+        # Checked by hand rather than with `is_child_bounding_box_inside_parent`,
+        # which has no tolerance for the fractional layout widths involved here.
+        assert list_box["x"] + list_box["width"] <= right_edge + 1, (
+            "List overflows the right edge of its markdown container"
+        )
+
+    # Must NOT happen: any descendant, not just the list, escaping the container.
+    assert container.evaluate("el => el.scrollWidth <= el.clientWidth + 1"), (
+        "Content overflows the container horizontally (scrollWidth exceeds clientWidth)"
+    )
+
+    assert_snapshot(container, name="st_markdown-long_word_in_list")
 
 
 @pytest.mark.parametrize(

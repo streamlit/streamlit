@@ -28,6 +28,7 @@ import {
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 import { getLogger } from "loglevel"
 import { TextField } from "react-aria-components"
 
@@ -56,6 +57,7 @@ import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledClearButton,
   StyledEndEnhancers,
   StyledErrorEnhancer,
   StyledInputElement,
@@ -158,6 +160,11 @@ function TextInput({
   const inForm = isInForm({ formId })
 
   const isPassword = element.type === TextInputProto.Type.PASSWORD
+  const isSearch = element.type === TextInputProto.Type.SEARCH
+  // Show a Streamlit-styled clear (×) button for search inputs holding a value,
+  // replacing the browser's native (and visually inconsistent) search-clear
+  // control, which we hide via CSS.
+  const showClearButton = isSearch && !disabled && Boolean(uiValue)
 
   const compiledValidationResult = useMemo(
     () => compileTextInputValidationRegex(element.validateRegex),
@@ -188,7 +195,7 @@ function TextInput({
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
+    setValueWithSource({ value: uiValue, fromUser: true })
   }, [uiValue, setValueWithSource])
 
   const clearUserValidationError = useCallback((): void => {
@@ -246,7 +253,11 @@ function TextInput({
     }
 
     if (dirty) {
-      widgetMgr.setStringValue(element, uiValue, { fromUi: true }, fragmentId)
+      widgetMgr.setStringValue(element.id, uiValue, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
       setDirty(false)
     }
 
@@ -296,6 +307,15 @@ function TextInput({
   const handleToggleShowPassword = useCallback((): void => {
     setShowPassword(prev => !prev)
   }, [])
+
+  // Clear the search input and commit the empty value so results update
+  // immediately (empty values bypass validation).
+  const handleClear = useCallback((): void => {
+    setDirty(false)
+    setUiValue("")
+    setHasUserError(false)
+    setValueWithSource({ value: "", fromUser: true })
+  }, [setValueWithSource])
 
   const onChange = useOnInputChange({
     formId,
@@ -391,7 +411,14 @@ function TextInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <TextField isDisabled={disabled}>
+      {/*
+       * Keep React Aria out of native constraint validation so a native
+       * `type="email"`/`"url"` `typeMismatch` does not create a second invalid
+       * state alongside our regex `validate` tooltip. TextInput already owns
+       * `aria-invalid` and the error UI, so we also deliberately do NOT set
+       * `isInvalid` here.
+       */}
+      <TextField isDisabled={disabled} validationBehavior="aria">
         <StyledInputRoot
           data-testid="stTextInputRootElement"
           $isFocused={focused}
@@ -416,6 +443,14 @@ function TextInput({
             value={uiValue ?? ""}
             placeholder={placeholder}
             type={showPassword ? "text" : getTypeString(element)}
+            // Label the mobile keyboard's return key for search inputs. This is
+            // the one type-aligned keyboard hint we set; other types rely on
+            // the native input `type` alone.
+            enterKeyHint={
+              element.type === TextInputProto.Type.SEARCH
+                ? "search"
+                : undefined
+            }
             autoComplete={element.autocomplete}
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -433,6 +468,21 @@ function TextInput({
                   <Icon content={ErrorOutline} size="base" />
                 </Tooltip>
               </StyledErrorEnhancer>
+            )}
+            {showClearButton && (
+              <StyledClearButton
+                type="button"
+                data-testid="stTextInputClearButton"
+                aria-label="Clear entry"
+                tabIndex={-1}
+                // Prevent mousedown from moving focus off the input before the
+                // click fires, which would otherwise commit the dirty value via
+                // handleBlur and cause a spurious extra rerun.
+                onMouseDown={preventFocusLoss}
+                onClick={handleClear}
+              >
+                <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+              </StyledClearButton>
             )}
             {isPassword && (
               <StyledPasswordToggle
@@ -467,6 +517,7 @@ function TextInput({
       {shouldShowInstructions && (
         <StyledInputInstructionsContainer
           $hasErrorIcon={Boolean(displayedError)}
+          $hasClearButton={showClearButton}
           $hasPasswordToggle={isPassword}
         >
           <InputInstructions
@@ -503,16 +554,32 @@ function updateWidgetMgrState(
   vws: ValueWithSource<string | null>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
+}
+
+/**
+ * Maps each `TextInputProto.Type` enum value to its native DOM `<input type>`.
+ * `PHONE` is the only entry whose DOM type (`"tel"`) differs from its name.
+ */
+const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
+  [TextInputProto.Type.DEFAULT]: "text",
+  [TextInputProto.Type.PASSWORD]: "password",
+  [TextInputProto.Type.EMAIL]: "email",
+  [TextInputProto.Type.URL]: "url",
+  [TextInputProto.Type.PHONE]: "tel",
+  [TextInputProto.Type.SEARCH]: "search",
 }
 
 function getTypeString(element: TextInputProto): string {
-  return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
+  return DOM_INPUT_TYPE_BY_PROTO[element.type] ?? "text"
 }
 
 // Prevents the toggle button from stealing focus from the input on mousedown,

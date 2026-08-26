@@ -23,8 +23,8 @@ from typing_extensions import assert_type
 # - accept_file=False and accept_audio=False (default) -> returns str | None
 # - accept_file=True/multiple/directory OR accept_audio=True -> returns ChatInputValue | None
 if TYPE_CHECKING:
-    from streamlit.elements.widgets.chat import ChatInputValue, ChatMixin
-    from streamlit.runtime.uploaded_file_manager import UploadedFile
+    from streamlit.elements.widgets.chat import ChatMixin
+    from streamlit.typing import ChatInputValue, UploadedFile
 
     chat_input = ChatMixin().chat_input
 

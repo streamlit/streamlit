@@ -144,6 +144,43 @@ def test_page_not_found_without_pages_directory() -> None:
     assert "st.navigation" in msg
 
 
+def test_page_not_found_during_construction() -> None:
+    """st.Page file-not-found uses a construction-specific message."""
+    exc = errors.StreamlitPageNotFoundError("nonexistent.py")
+    assert (
+        str(exc)
+        == "Unable to create Page. The file `nonexistent.py` could not be found."
+    )
+
+
+def test_invalid_parameter_type_error_message() -> None:
+    """The parameter, expected types, and provided type form one stable message."""
+    exc = errors.StreamlitInvalidParameterTypeError("index", "str", ["int", "None"])
+    assert (
+        str(exc)
+        == "Invalid `index` type. Expected one of: int, None. Provided type: str."
+    )
+    assert exc.exec_kwargs == {
+        "parameter": "index",
+        "expected_types": "int, None",
+        "provided_type": "str",
+    }
+
+
+def test_widget_already_instantiated_error_message() -> None:
+    """Session-state assignment after widget creation names the key."""
+    exc = errors.StreamlitWidgetAlreadyInstantiatedError("my_key")
+    assert "`st.session_state.my_key`" in str(exc)
+    assert "instantiated" in str(exc)
+
+
+def test_default_not_in_options_error_message() -> None:
+    """Default-not-in-options names the missing value."""
+    exc = errors.StreamlitDefaultNotInOptionsError("c")
+    assert "The default value 'c' is not part of the options." in str(exc)
+    assert "every default value also exists in the options." in str(exc)
+
+
 # StreamlitSelectionCountExceedsMaxError tests
 
 
@@ -195,6 +232,54 @@ def test_invalid_max_error_with_corrective_action() -> None:
     )
     msg = str(exc)
     assert "Set it to None" in msg
+
+
+# StreamlitMissingRequiredParameterError tests
+
+
+def test_missing_required_parameter_error_message() -> None:
+    """Default message includes command and parameter."""
+    exc = errors.StreamlitMissingRequiredParameterError("st.expander", "label")
+    assert str(exc) == "The `label` parameter is required for `st.expander`."
+
+
+def test_missing_required_parameter_error_with_detail() -> None:
+    """Optional detail is appended to the default message."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "st.toast",
+        "body",
+        detail="It cannot be blank.",
+    )
+    assert str(exc) == (
+        "The `body` parameter is required for `st.toast`. It cannot be blank."
+    )
+
+
+def test_missing_required_parameter_error_detail_with_braces() -> None:
+    """Detail text with braces does not break message formatting."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "st.dialog",
+        "title",
+        detail="Example: use {value}.",
+    )
+    assert str(exc) == (
+        "The `title` parameter is required for `st.dialog`. Example: use {value}."
+    )
+
+
+@pytest.mark.parametrize(
+    ("alias", "shared"),
+    [
+        ("StreamlitInvalidPageLayoutError", "StreamlitValueError"),
+        ("StreamlitInvalidTextAlignmentError", "StreamlitValueError"),
+        ("StreamlitInvalidBindValueError", "StreamlitValueError"),
+        ("StreamlitInvalidPersistStateError", "StreamlitValueError"),
+        ("StreamlitMissingPageLabelError", "StreamlitMissingRequiredParameterError"),
+    ],
+)
+def test_deprecated_exception_aliases(alias: str, shared: str) -> None:
+    """Deprecated exception names remain aliases of the shared types."""
+    assert getattr(errors, alias) is getattr(errors, shared)
 
 
 # StreamlitModuleNotFoundError tests

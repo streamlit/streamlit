@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import unittest
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -46,7 +47,7 @@ from streamlit.elements.vega_charts import (
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -69,6 +70,26 @@ def test_vega_lite_serde_returns_typed_state() -> None:
     # Nested selection must be a stable stored instance (not a per-access copy).
     assert result["selection"] is result["selection"]
     assert result.selection is result["selection"]
+
+
+def test_vega_lite_state_is_read_only() -> None:
+    """The Vega-Lite event state is read-only at the top and nested levels.
+
+    It also keeps its typed class through deepcopy, since Session State
+    deep-copies the initial widget value.
+    """
+    result = VegaLiteStateSerde(["brush"]).deserialize(None)
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"] = {}
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection = {}  # type: ignore[misc]
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"]["brush"] = {"x": 1}
+
+    # Read access still works, and deepcopy preserves the concrete type.
+    assert result.selection.brush == {}
+    assert isinstance(copy.deepcopy(result), VegaLiteState)
 
 
 def merge_dicts(x, y):
@@ -175,7 +196,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.altair_chart(chart, theme="bad_theme")
 
     def test_works_with_element_replay(self):
@@ -275,7 +296,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.altair_chart(chart, on_select=on_select)
 
     @unittest.skipIf(
@@ -1547,7 +1568,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert el.vega_lite_chart.theme == proto_value
 
     def test_bad_theme(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.vega_lite_chart(df1, theme="bad_theme")
 
     def test_width_inside_spec(self):
@@ -1621,7 +1642,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         ]
     )
     def test_vega_lite_on_select_invalid(self, on_select: Any):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.vega_lite_chart(
                 df1,
                 {

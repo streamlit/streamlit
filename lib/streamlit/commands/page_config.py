@@ -24,9 +24,9 @@ from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
     StreamlitInvalidMenuItemKeyError,
-    StreamlitInvalidPageLayoutError,
     StreamlitInvalidSidebarStateError,
     StreamlitInvalidURLError,
+    StreamlitValueError,
 )
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
@@ -253,7 +253,7 @@ def set_page_config(
         pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidPageLayoutError(layout=layout)
+        raise StreamlitValueError("layout", ["'centered'", "'wide'"])
 
     msg.page_config_changed.layout = pb_layout
 
@@ -308,14 +308,16 @@ def set_menu_items_proto(
     lowercase_menu_items: MenuItems, menu_items_proto: PageConfigProto.MenuItems
 ) -> None:
     if GET_HELP_KEY in lowercase_menu_items:
-        if lowercase_menu_items[GET_HELP_KEY] is not None:
-            menu_items_proto.get_help_url = lowercase_menu_items[GET_HELP_KEY]
+        get_help_url = lowercase_menu_items[GET_HELP_KEY]
+        if get_help_url is not None:
+            menu_items_proto.get_help_url = get_help_url
         else:
             menu_items_proto.hide_get_help = True
 
     if REPORT_A_BUG_KEY in lowercase_menu_items:
-        if lowercase_menu_items[REPORT_A_BUG_KEY] is not None:
-            menu_items_proto.report_a_bug_url = lowercase_menu_items[REPORT_A_BUG_KEY]
+        report_a_bug_url = lowercase_menu_items[REPORT_A_BUG_KEY]
+        if report_a_bug_url is not None:
+            menu_items_proto.report_a_bug_url = report_a_bug_url
         else:
             menu_items_proto.hide_report_a_bug = True
 

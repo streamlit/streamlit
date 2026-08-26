@@ -9,9 +9,10 @@ Streamlit uses code auto-formatters and linters on pre-commit. Most of the style
 
 - **Write tests!** It is very rare that any contribution will be accepted without tests.
 - **After tests, the most important thing is _readability_!** Name functions and variables in such a way that you don't need comments to explain the code.
+- Comments must describe current behavior or why the code exists. Do not describe a previous state of the code or rely on change history.
 - **Avoid inheritance (prefer composition)**
 - **Avoid methods (prefer non-class functions, or static).**
-- **Ask before introducing new dependencies!**
+- **Ask before introducing new dependencies!** Add a dependency only when it provides meaningful value that cannot easily be replicated in-house. Each dependency increases supply-chain, version, and user-environment conflict risk.
 - **Consider splitting up your pull request.** Sometimes our pull requests get really big.
 
 ## Python
@@ -45,16 +46,16 @@ This means you should always have logs, warnings, errors, and notices end up in
 
 ## Styling Components - CSS-in-JS
 
-- We have removed almost all of the CSS/SCSS in our code, so please do not create new files/(S)CSS styles.
+- We have removed almost all of the CSS in our code, so please do not create new files/CSS styles.
 - When editing or creating a new component that needs styling, add those styles in the form of [styled components](https://emotion.sh/docs/styled) in an accompanying `styled-components.ts` file.
   - We use [Emotion](https://emotion.sh/docs/introduction) to style our components
   - All styled components begin with the word `Styled` to indicate it's a styled component.
   - We use [Object Styles](https://emotion.sh/docs/object-styles) where possible to leverage TypeScript's benefits.
   - Utilize props in styled components to display elements that may have some interactivity.
+  - Never use `data-testid` attributes as CSS selectors in production code. Test IDs are exclusively for unit and E2E testing.
   - Where possible, avoid the need to [target other components](https://emotion.sh/docs/styled#targeting-another-emotion-component). Sometimes, targeting outside components is necessary, but we want to try to avoid the interconnectedness between these components where possible.
   - Use the theme everywhere. Each styled component has a function input with a `theme` parameter (in addition to any props). The theme argument will be equivalent in structure to the main theme. Use the proper values that match the color/spacing/sizing/font style you are looking for.
   - Sometimes, the theme won't provide a valid value. That is fine, hard-code the value if needed in either the Theme (if it can be generalized) or in the styled component (if it is a special case)
-- When using [BaseWeb](https://baseweb.design), our design system library, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 
 ## Assets
 

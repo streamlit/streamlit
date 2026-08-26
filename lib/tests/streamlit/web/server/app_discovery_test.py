@@ -474,3 +474,47 @@ class TestAppDiscoveryResult:
         assert result.is_asgi_app is False
         assert result.app_name is None
         assert result.import_string is None
+
+
+def test_get_call_name_parts_returns_none_for_non_name_chain() -> None:
+    """Return ``None`` when the call target is not a simple name/attribute chain.
+
+    A call on a subscript (e.g. ``obj[0]()``) has a ``Subscript`` as its
+    ``func``, which is neither a ``Name`` nor an ``Attribute``, so no name
+    parts can be extracted.
+    """
+    import ast
+
+    tree = ast.parse("obj[0]()")
+    call = tree.body[0].value  # type: ignore
+    assert _get_call_name_parts(call) is None
+
+
+def test_resolve_call_to_module_path_returns_none_for_empty_parts() -> None:
+    """Return ``None`` when there are no name parts to resolve."""
+    assert _resolve_call_to_module_path((), {}) is None
+
+
+def test_is_asgi_app_call_returns_false_for_non_name_chain() -> None:
+    """Return ``False`` when the call target has no extractable name parts.
+
+    A subscript call such as ``obj[0]()`` makes ``_get_call_name_parts`` return
+    ``None``, so it cannot be a known ASGI app constructor.
+    """
+    import ast
+
+    tree = ast.parse("obj[0]()")
+    call = tree.body[0].value  # type: ignore
+    assert _is_asgi_app_call(call, {}) is False
+
+
+def test_get_module_string_from_path_uses_parent_for_init_file(
+    tmp_path: Path,
+) -> None:
+    """Return the package directory's stem for an ``__init__.py`` entry point."""
+    package_dir = tmp_path / "mypackage"
+    package_dir.mkdir()
+    init_file = package_dir / "__init__.py"
+    init_file.touch()
+
+    assert _get_module_string_from_path(init_file) == "mypackage"

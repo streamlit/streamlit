@@ -67,7 +67,7 @@ const ModalButton: FunctionComponent<
 /**
  * Prevents the dialog from closing when the user interacts with an overlay that
  * is rendered outside the dialog's DOM subtree but conceptually belongs to it,
- * e.g. BaseWeb dropdowns/popovers/calendars and the dataframe portal (menus,
+ * such as dropdowns, popovers, calendars, and the dataframe portal (menus and
  * cell editors). These overlay roots are tagged with `data-st-overlay-root`.
  *
  * Those same hosts also carry `data-react-aria-top-layer`, which React Aria's

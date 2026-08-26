@@ -19,6 +19,8 @@ import inspect
 import json
 import os
 import sys
+import threading
+import time
 from contextlib import asynccontextmanager
 from functools import partial
 from http import HTTPStatus
@@ -32,6 +34,7 @@ from starlette.middleware import Middleware
 from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
@@ -52,9 +55,11 @@ from streamlit.web.server.starlette.starlette_app import (
 )
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
     SelectiveGZipMiddleware,
-    _should_bypass_static_gzip,
 )
-from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
+from streamlit.web.server.starlette.starlette_routes import (
+    _ExpensiveStatsCache,
+    _stats_to_proto,
+)
 from streamlit.web.server.starlette.starlette_server_config import (
     ANYIO_STATIC_FILE_THREAD_TOKENS,
 )
@@ -124,6 +129,9 @@ class _DummyStatsManager:
             ],
         }
 
+    def registered_families(self) -> list[str]:
+        return list(self._stats.keys())
+
     def get_stats(
         self, family_names: list[str] | None = None
     ) -> dict[str, list[CacheStat | CounterStat | GaugeStat]]:
@@ -169,6 +177,7 @@ class _DummyRuntime:
         self._active_sessions: set[str] = {"session123"}
         self.stopped = False
         self.last_backmsg = None
+        self.deserialization_exceptions: list[BaseException] = []
         self.last_user_info: dict[str, str | bool | None] | None = None
         self.last_existing_session_id: str | None = None
         self.script_health = (True, "ok")
@@ -234,7 +243,7 @@ class _DummyRuntime:
         exc: BaseException,
         client: object | None = None,
     ) -> None:
-        self.last_backmsg = (session_id, exc)
+        self.deserialization_exceptions.append(exc)
 
     async def start(self) -> None:  # pragma: no cover - lifecycle stub
         return None
@@ -281,35 +290,25 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     assert response.text == "ok"
 
 
-@pytest.mark.parametrize(
-    ("path", "expected"),
-    [
-        ("/", True),
-        ("/static/app.123.js", True),
-        ("/app/static/logo.svg", False),
-        ("/assets/theme.css", False),
-        ("/_stcore/metrics", False),
-        ("/media/file", False),
-    ],
-    ids=[
-        "root",
-        "static-bundle",
-        "app-static",
-        "hashed-style",
-        "api-route",
-        "media-route",
-    ],
-)
-def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
-    """Only root and `/static/...` paths should bypass the gzip middleware."""
-    assert _should_bypass_static_gzip(path) is expected
-
-
 def test_create_streamlit_middleware_uses_selective_gzip() -> None:
     """The Streamlit middleware stack should use the selective gzip wrapper."""
     middleware_list = create_streamlit_middleware()
 
     assert middleware_list[2].cls is SelectiveGZipMiddleware
+
+
+def test_create_streamlit_middleware_forwards_base_url() -> None:
+    """The gzip middleware receives server.baseUrlPath so its path bypass works.
+
+    Guards against a refactor silently dropping ``base_url``, which would break
+    the static/media bypass whenever a base URL path is configured.
+    """
+    with patch_config_options({"server.baseUrlPath": "my-app"}):
+        middleware_list = create_streamlit_middleware()
+
+    gzip_middleware = middleware_list[2]
+    assert gzip_middleware.cls is SelectiveGZipMiddleware
+    assert gzip_middleware.kwargs["base_url"] == "my-app"
 
 
 def test_selective_gzip_skips_static_like_paths() -> None:
@@ -525,6 +524,193 @@ def test_metrics_endpoint_protobuf_uses_canonical_family_name(
 
     assert "session_duration_seconds" in family_names
     assert "session_duration_seconds_total" not in family_names
+
+
+class _InstrumentedStatsManager:
+    """A stats manager stub that records call counts and thread identities."""
+
+    def __init__(
+        self,
+        *,
+        delay: float = 0.0,
+        active_sessions_value: int = 3,
+    ) -> None:
+        self._delay = delay
+        self._active_sessions_value = active_sessions_value
+        self.expensive_call_count = 0
+        self.expensive_thread_ids: list[int] = []
+
+    def registered_families(self) -> list[str]:
+        return [
+            "cache_memory_bytes",
+            "active_sessions",
+        ]
+
+    def get_stats(
+        self, family_names: list[str] | None = None
+    ) -> dict[str, list[CacheStat | GaugeStat]]:
+        result: dict[str, list[CacheStat | GaugeStat]] = {}
+        families = (
+            family_names if family_names is not None else self.registered_families()
+        )
+        for family in families:
+            if family == "cache_memory_bytes":
+                self.expensive_call_count += 1
+                self.expensive_thread_ids.append(threading.get_ident())
+                if self._delay:
+                    time.sleep(self._delay)
+                result["cache_memory_bytes"] = [CacheStat("test_cache", "", 42)]
+            elif family == "active_sessions":
+                result["active_sessions"] = [
+                    GaugeStat(
+                        family_name="active_sessions",
+                        value=self._active_sessions_value,
+                        help="Current number of active sessions.",
+                    )
+                ]
+        return result
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_single_flight() -> None:
+    """Two concurrent awaits on _ExpensiveStatsCache trigger exactly one get_stats call.
+
+    The cache must coalesce concurrent requests onto the same in-flight task so
+    that a burst of requests does not fan out into multiple expensive computations.
+    """
+    mgr = _InstrumentedStatsManager(delay=0.05)
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    results = await asyncio.gather(cache.get(), cache.get())
+
+    assert mgr.expensive_call_count == 1, (
+        f"Expected 1 get_stats call (single-flight), got {mgr.expensive_call_count}"
+    )
+    assert "cache_memory_bytes" in results[0]
+    assert "cache_memory_bytes" in results[1]
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_survives_waiter_cancellation() -> None:
+    """Cancelling one waiter must not cancel the shared computation or other waiters.
+
+    Bare ``await`` of a shared task propagates cancellation to that task and every
+    other waiter. The cache must shield the shared task so a client disconnect or
+    scraper timeout cannot collapse single-flight protection under a flood.
+    """
+    mgr = _InstrumentedStatsManager(delay=0.1)
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    first = asyncio.create_task(cache.get())
+    # Yield so first starts the shared computation before the second joins.
+    await asyncio.sleep(0)
+    second = asyncio.create_task(cache.get())
+    await asyncio.sleep(0)
+    first.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    result = await second
+
+    assert "cache_memory_bytes" in result
+    assert mgr.expensive_call_count == 1, (
+        f"Expected 1 get_stats call after waiter cancel, got {mgr.expensive_call_count}"
+    )
+    # The shared result must still be cached for subsequent callers.
+    await cache.get()
+    assert mgr.expensive_call_count == 1, (
+        f"Expected cached result after cancel, got {mgr.expensive_call_count} calls"
+    )
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_runs_off_event_loop() -> None:
+    """Assert the expensive get_stats call runs on a worker thread, not the event loop."""
+    event_loop_thread = threading.get_ident()
+    mgr = _InstrumentedStatsManager()
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    await cache.get()
+
+    assert mgr.expensive_thread_ids, "get_stats was never called"
+    assert mgr.expensive_thread_ids[0] != event_loop_thread, (
+        "get_stats ran on the event-loop thread instead of a worker thread"
+    )
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_ttl_hit() -> None:
+    """A second request within the TTL window returns the cached result without recomputing."""
+    mgr = _InstrumentedStatsManager()
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    await cache.get()
+    await cache.get()
+
+    assert mgr.expensive_call_count == 1, (
+        f"Expected 1 get_stats call within TTL, got {mgr.expensive_call_count}"
+    )
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_ttl_expiry() -> None:
+    """After the TTL elapses the expensive family is recomputed on the next request."""
+    mgr = _InstrumentedStatsManager()
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    await cache.get()
+    # Expire the cache by rewinding the stored expiry timestamp.
+    cache._expiry = time.monotonic() - 1.0
+    await cache.get()
+
+    assert mgr.expensive_call_count == 2, (
+        f"Expected 2 get_stats calls after TTL expiry, got {mgr.expensive_call_count}"
+    )
+
+
+def test_metrics_cheap_families_stay_live(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Assert cheap families stay live and are not served from the expensive-family cache."""
+    client, runtime = starlette_client
+
+    response = client.get("/_stcore/metrics?families=active_sessions")
+    assert "active_sessions 3" in response.text
+
+    runtime.stats_mgr._stats["active_sessions"] = [
+        GaugeStat(
+            family_name="active_sessions",
+            value=99,
+            help="Current number of active sessions.",
+        )
+    ]
+
+    response2 = client.get("/_stcore/metrics?families=active_sessions")
+    assert "active_sessions 99" in response2.text
+    assert "active_sessions 3" not in response2.text
+
+
+def test_metrics_endpoint_default_returns_all_families(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """No families param returns all registered families including the expensive one."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics")
+    assert response.status_code == 200
+    assert "cache_memory_bytes" in response.text
+    assert "session_events_total" in response.text
+    assert "active_sessions" in response.text
+
+
+def test_metrics_endpoint_unknown_only_families_returns_empty(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Requesting only bogus family names returns an empty (EOF-only) response."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=no_such_family")
+    assert response.status_code == 200
+    assert response.text.strip() == "# EOF"
+    assert "cache_memory_bytes" not in response.text
 
 
 def test_media_endpoint_serves_file(
@@ -1376,6 +1562,38 @@ def test_websocket_allows_debug_shutdown_in_dev_mode(tmp_path: Path) -> None:
 
     # Runtime should be stopped
     assert runtime.stopped is True
+
+
+def test_websocket_closes_on_malformed_backmsg(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that a frame that fails to parse as a BackMsg closes the connection
+    with a protocol error. The server does not report the frame into the session.
+    """
+    client, runtime = starlette_client
+
+    with client.websocket_connect("/_stcore/stream") as websocket:
+        # Send a valid frame first. It shows that only the malformed frame closes
+        # the connection.
+        back_msg = BackMsg()
+        back_msg.rerun_script.query_string = ""
+        websocket.send_bytes(back_msg.SerializeToString())
+
+        websocket.send_bytes(b"\xff")
+
+        # The client waits for a ForwardMsg and gets a disconnect instead.
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            websocket.receive_bytes()
+
+    assert excinfo.value.code == 1002  # 1002 = Protocol Error
+
+    # The valid frame reaches the runtime. The server never routes the malformed
+    # frame into the session, so the session creates no Exception ForwardMsg for
+    # it.
+    assert runtime.last_backmsg is not None
+    _session_id, msg = runtime.last_backmsg
+    assert msg.WhichOneof("type") == "rerun_script"
+    assert runtime.deserialization_exceptions == []
 
 
 # ---------------------------------------------------------------------------

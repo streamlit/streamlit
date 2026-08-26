@@ -45,6 +45,7 @@ import {
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -57,6 +58,7 @@ import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
 } from "~lib/hooks/useFloatingOverlay"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import {
   CREATABLE_ID,
   type MultiselectOption,
@@ -124,12 +126,11 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<MultiselectValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 /**
@@ -211,6 +212,7 @@ const Multiselect: FC<Props> = props => {
   const tagsContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
+  const scrollLeftRef = useRef(0)
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
 
@@ -304,11 +306,28 @@ const Multiselect: FC<Props> = props => {
 
   const disabled = props.disabled || placeholderDisable
 
-  // Max height: cut through 5th tag row
+  // Resolve the tri-state wrap proto field: true = chips wrap onto multiple
+  // rows (grows vertically), false = chips stay in a single, horizontally
+  // scrollable row.
+  const wrap = useResolvedWrap(element.wrap)
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: tagsContainerRef,
+    enabled: !wrap,
+    layoutKey: value,
+  })
+
+  // Max height. When wrapping, cut through the 5th tag row so the control can
+  // grow and scroll vertically. When not wrapping, pin the control to a single
+  // row height so it stays aligned regardless of the selection count.
   const maxHeight = useMemo(() => {
+    if (!wrap) {
+      return theme.sizes.minElementHeight
+    }
     const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
     return `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
   }, [
+    wrap,
+    theme.sizes.minElementHeight,
     theme.sizes.elementHighlightHeight,
     theme.sizes.tagMarginInsideBorder,
     theme.sizes.borderWidth,
@@ -331,23 +350,49 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  // Preserve scroll position when tags are removed via UI interaction.
+  // Tracks the previous selection count to distinguish additions from removals.
+  const prevValueLengthRef = useRef(value.length)
+
+  // Preserve scroll position when tags are removed via UI interaction, and
+  // reveal the newest chip + input when a tag is added in single-row mode.
   useLayoutEffect(() => {
-    if (!scrollLockRef.current) return
-    const savedScroll = scrollTopRef.current
-    scrollLockRef.current = false
+    const prevLength = prevValueLengthRef.current
+    prevValueLengthRef.current = value.length
     const container = tagsContainerRef.current
     if (!container) return
-    requestAnimationFrame(() => {
-      container.scrollTop = savedScroll
-      scrollTopRef.current = savedScroll
-    })
-  }, [value])
+
+    if (scrollLockRef.current) {
+      const savedTop = scrollTopRef.current
+      const savedLeft = scrollLeftRef.current
+      scrollLockRef.current = false
+      requestAnimationFrame(() => {
+        container.scrollTop = savedTop
+        container.scrollLeft = savedLeft
+        scrollTopRef.current = savedTop
+        scrollLeftRef.current = savedLeft
+      })
+      return
+    }
+
+    // A selection was added while chips are in a single row: scroll to the end
+    // so the newest chip and the input stay visible.
+    if (!wrap && value.length > prevLength) {
+      requestAnimationFrame(() => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        container.scrollLeft = container.scrollWidth
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
+      })
+    }
+  }, [value, wrap])
 
   const handleTagsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (scrollLockRef.current) return
+    const target = e.currentTarget
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-    scrollTopRef.current = e.currentTarget.scrollTop
+    scrollTopRef.current = target.scrollTop
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+    scrollLeftRef.current = target.scrollLeft
   }, [])
 
   const handleChange = useCallback(
@@ -376,7 +421,7 @@ const Multiselect: FC<Props> = props => {
           newValue = [...value, ...optionsToAdd]
         }
 
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         setInputValue("")
         return
       }
@@ -394,7 +439,7 @@ const Multiselect: FC<Props> = props => {
           return
         }
         const newValue = [...value, inputValueRef.current]
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         setInputValue("")
         return
       }
@@ -425,7 +470,7 @@ const Multiselect: FC<Props> = props => {
         return
       }
 
-      setValueWithSource({ value: finalValue, fromUi: true })
+      setValueWithSource({ value: finalValue, fromUser: true })
       setInputValue("")
     },
     [element.maxSelections, setValueWithSource, value]
@@ -455,14 +500,17 @@ const Multiselect: FC<Props> = props => {
   const handleTagGroupRemove = useCallback(
     (keys: Set<Key>): void => {
       scrollLockRef.current = true
-      if (tagsContainerRef.current) {
+      const container = tagsContainerRef.current
+      if (container) {
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-        scrollTopRef.current = tagsContainerRef.current.scrollTop
+        scrollTopRef.current = container.scrollTop
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
       }
       const keysToRemove = new Set([...keys].map(String))
       const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
       valueRef.current = newValue
-      setValueWithSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUser: true })
     },
     [setValueWithSource]
   )
@@ -560,7 +608,7 @@ const Multiselect: FC<Props> = props => {
   )
 
   const handleClearAll = useCallback((): void => {
-    setValueWithSource({ value: [], fromUi: true })
+    setValueWithSource({ value: [], fromUser: true })
   }, [setValueWithSource])
 
   const handleContainerClick = useCallback(
@@ -646,7 +694,7 @@ const Multiselect: FC<Props> = props => {
               e.preventDefault()
               e.stopPropagation()
               const newValue = [...value, currentInput]
-              setValueWithSource({ value: newValue, fromUi: true })
+              setValueWithSource({ value: newValue, fromUser: true })
               setInputValue("")
               return
             }
@@ -662,13 +710,16 @@ const Multiselect: FC<Props> = props => {
       ) {
         e.preventDefault()
         scrollLockRef.current = true
-        if (tagsContainerRef.current) {
+        const container = tagsContainerRef.current
+        if (container) {
           // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-          scrollTopRef.current = tagsContainerRef.current.scrollTop
+          scrollTopRef.current = container.scrollTop
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+          scrollLeftRef.current = container.scrollLeft
         }
         const newValue = valueRef.current.slice(0, -1)
         valueRef.current = newValue
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
       }
     },
     [
@@ -756,6 +807,9 @@ const Multiselect: FC<Props> = props => {
               ref={tagsContainerRef}
               onScroll={handleTagsScroll}
               data-testid="stMultiSelectTagsContainer"
+              $wrap={wrap}
+              data-can-scroll-start={canScrollLeft ? "" : undefined}
+              data-can-scroll-end={canScrollRight ? "" : undefined}
             >
               {value.length > 0 && (
                 <StyledTagGroup role="group" aria-label="Selected values">
@@ -765,6 +819,7 @@ const Multiselect: FC<Props> = props => {
                       tabIndex={!disabled && idx === clampedTagIndex ? 0 : -1}
                       aria-label={v}
                       $disabled={disabled}
+                      $wrap={wrap}
                       data-tag=""
                       data-tag-index={idx}
                       onKeyDown={disabled ? undefined : handleTagKeyDown}

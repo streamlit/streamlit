@@ -102,6 +102,10 @@ class StreamlitAPIException(MarkdownFormattedException):
         return util.repr_(self)
 
 
+class StreamlitDataframeConversionError(StreamlitAPIException):
+    """Raised when a value cannot be converted to a DataFrame or Arrow table."""
+
+
 class DuplicateWidgetID(StreamlitAPIException):  # pragma: no cover - trivial subclass
     pass
 
@@ -198,16 +202,6 @@ class LocalizableStreamlitException(StreamlitAPIException):
         return self._exec_kwargs
 
 
-class StreamlitInvalidPageLayoutError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for layout."""
-
-    def __init__(self, layout: str) -> None:
-        super().__init__(
-            '`layout` must be `"centered"` or `"wide"` (got `"{layout}"`)',
-            layout=layout,
-        )
-
-
 class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for `initial_sidebar_state`."""
 
@@ -291,39 +285,6 @@ class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
             "The argument passed was {horizontal_alignment}.",
             horizontal_alignment=horizontal_alignment,
             element_type=element_type,
-        )
-
-
-class StreamlitInvalidTextAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid text_alignment value is provided."""
-
-    def __init__(self, text_alignment: Any) -> None:
-        super().__init__(
-            'Invalid text_alignment value: "{text_alignment}". '
-            'Valid values are: `"left"`, `"center"`, `"right"`, or `"justify"`.',
-            text_alignment=text_alignment,
-        )
-
-
-class StreamlitInvalidBindValueError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for the bind parameter."""
-
-    def __init__(self, bind_value: Any) -> None:
-        super().__init__(
-            'Invalid `bind` value: "{bind_value}". '
-            'Supported values are: `"query-params"` or `None`.',
-            bind_value=bind_value,
-        )
-
-
-class StreamlitInvalidPersistStateError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for the persist_state parameter."""
-
-    def __init__(self, persist_state_value: Any) -> None:
-        super().__init__(
-            'Invalid `persist_state` value: "{persist_state_value}". '
-            'Supported values are: `"page"`, `"session"`, or `None`.',
-            persist_state_value=persist_state_value,
         )
 
 
@@ -466,13 +427,20 @@ class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
         )
 
 
-# st.page_link
-class StreamlitMissingPageLabelError(LocalizableStreamlitException):
-    """Exception raised when a page_link is created without a label."""
+class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
+    """Raised when a required parameter is missing, ``None``, or empty."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, command: str, parameter: str, *, detail: str | None = None
+    ) -> None:
+        message = "The `{parameter}` parameter is required for `{command}`."
+        if detail:
+            message += " {detail}"
         super().__init__(
-            "The `label` param is required for external links used with `st.page_link` - please provide a `label`."
+            message,
+            command=command,
+            parameter=parameter,
+            detail=detail,
         )
 
 
@@ -488,11 +456,21 @@ class StreamlitQueryParamDictValueError(LocalizableStreamlitException):
 
 
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
-    """Exception raised the linked page can not be found."""
+    """Raised when the linked page cannot be found."""
 
     def __init__(
-        self, page: str, main_script_directory: str, uses_pages_directory: bool
+        self,
+        page: str,
+        main_script_directory: str | None = None,
+        uses_pages_directory: bool = False,
     ) -> None:
+        if main_script_directory is None:
+            super().__init__(
+                "Unable to create Page. The file `{page}` could not be found.",
+                page=page,
+            )
+            return
+
         directory = os.path.basename(main_script_directory)
 
         message = (
@@ -578,12 +556,27 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidLayoutContextError(StreamlitAPIException):
+    """Raised when a command is used in a disallowed layout context."""
+
+
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
     """Exception raised when trying to set values where writes are not allowed."""
 
     def __init__(self, key: str) -> None:
         super().__init__(
             "Values for the widget with `key` '{key}' cannot be set using `st.session_state`.",
+            key=key,
+        )
+
+
+class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
+    """Raised when session state is assigned after the widget is created."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            "`st.session_state.{key}` cannot be modified after the widget"
+            " with key `{key}` is instantiated.",
             key=key,
         )
 
@@ -661,13 +654,39 @@ class StreamlitInvalidSizeError(LocalizableStreamlitException):
 
 
 class StreamlitValueError(LocalizableStreamlitException):
-    """Exception raised when a value is not valid for a parameter."""
+    """Raised when a parameter receives a value outside a known finite set."""
 
     def __init__(self, parameter: str, valid_values: list[str]) -> None:
         super().__init__(
             "Invalid `{parameter}` value. Supported values: {valid_values}.",
             parameter=parameter,
             valid_values=", ".join(valid_values),
+        )
+
+
+class StreamlitInvalidParameterTypeError(LocalizableStreamlitException):
+    """Raised when a parameter has an unsupported type."""
+
+    def __init__(
+        self, parameter: str, provided_type: str, expected_types: list[str]
+    ) -> None:
+        super().__init__(
+            "Invalid `{parameter}` type. Expected one of: {expected_types}. "
+            "Provided type: {provided_type}.",
+            parameter=parameter,
+            expected_types=", ".join(expected_types),
+            provided_type=provided_type,
+        )
+
+
+class StreamlitDefaultNotInOptionsError(LocalizableStreamlitException):
+    """Raised when a default value is not among the provided options."""
+
+    def __init__(self, value: Any) -> None:
+        super().__init__(
+            "The default value '{value}' is not part of the options. "
+            "Please make sure that every default value also exists in the options.",
+            value=value,
         )
 
 
@@ -701,3 +720,21 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
             option_name=option_name,
             file_path_or_url=file_path_or_url,
         )
+
+
+# Deprecated aliases kept only for backward compatibility.
+StreamlitInvalidPageLayoutError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidTextAlignmentError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.
+    StreamlitMissingRequiredParameterError
+)

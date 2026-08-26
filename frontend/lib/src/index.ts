@@ -50,6 +50,8 @@ export {
 export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
 export { SidebarConfigContext } from "./components/core/SidebarConfigContext"
 export type { SidebarConfigContextProps } from "./components/core/SidebarConfigContext"
+export { SkillsInstallContext } from "./components/core/SkillsInstallContext"
+export type { SkillsInstallContextProps } from "./components/core/SkillsInstallContext"
 export { ThemeContext } from "./components/core/ThemeContext"
 export type { ThemeContextProps } from "./components/core/ThemeContext"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"

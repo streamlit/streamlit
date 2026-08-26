@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
@@ -33,7 +32,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -46,6 +45,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -209,9 +209,10 @@ class CameraInputMixin:
         Returns
         -------
         None or UploadedFile
-            The UploadedFile class is a subclass of BytesIO, and therefore is
-            "file-like". This means you can pass an instance of it anywhere a
-            file is expected.
+            The ``UploadedFile`` class is a subclass of ``BytesIO``, and
+            therefore is "file-like". This means you can pass an instance of it
+            anywhere a file is expected. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -240,9 +241,8 @@ class CameraInputMixin:
 
         """
         if resolution is not None and resolution not in _RESOLUTION_TO_HEIGHT:
-            raise StreamlitAPIException(
-                f"Invalid resolution: {resolution!r}. "
-                f"Must be one of {list(_RESOLUTION_TO_HEIGHT)}, or None."
+            raise StreamlitValueError(
+                "resolution", ["'480p'", "'720p'", "'1080p'", "None"]
             )
 
         ctx = get_script_run_ctx()
@@ -284,7 +284,7 @@ class CameraInputMixin:
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "camera_input",
@@ -310,7 +310,7 @@ class CameraInputMixin:
             camera_input_proto.resolution_height = _RESOLUTION_TO_HEIGHT[resolution]
 
         if help is not None:
-            camera_input_proto.help = dedent(help)
+            camera_input_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width)
 

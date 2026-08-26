@@ -228,20 +228,18 @@ export function updateWidgetMgrState(
 ): void {
   switch (element.dataType) {
     case NumberInputProto.DataType.INT:
-      widgetMgr.setIntValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
+      widgetMgr.setIntValue(element.id, vws.value, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: vws.fromUser,
+      })
       break
     case NumberInputProto.DataType.FLOAT:
-      widgetMgr.setDoubleValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
+      widgetMgr.setDoubleValue(element.id, vws.value, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: vws.fromUser,
+      })
       break
     default:
       throw new Error("Invalid data type")

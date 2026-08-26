@@ -145,7 +145,7 @@ export function createIframeMessageHandler(
           handleSetComponentValue(
             tryGetValue(data, "value"),
             (data as ComponentValueMessage).dataType,
-            { fromUi: true },
+            { fromUser: true },
             element,
             widgetMgr,
             fragmentId
@@ -302,18 +302,25 @@ function handleSetComponentValue(
 
   switch (dataType) {
     case "dataframe":
-      widgetMgr.setArrowValue(
-        element,
-        value as IArrowTable,
-        source,
-        fragmentId
-      )
+      widgetMgr.setArrowValue(element.id, value as IArrowTable, {
+        ...source,
+        formId: element.formId,
+        fragmentId,
+      })
       break
     case "bytes":
-      widgetMgr.setBytesValue(element, value as Uint8Array, source, fragmentId)
+      widgetMgr.setBytesValue(element.id, value as Uint8Array, {
+        ...source,
+        formId: element.formId,
+        fragmentId,
+      })
       break
     default:
-      widgetMgr.setJsonValue(element, value, source, fragmentId)
+      widgetMgr.setJsonValue(element.id, value, {
+        ...source,
+        formId: element.formId,
+        fragmentId,
+      })
   }
 }
 

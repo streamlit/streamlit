@@ -30,11 +30,8 @@ if TYPE_CHECKING:
     from plotly.basedatatypes import BaseFigure
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.plotly_chart import (
-        PlotlyMixin,
-        PlotlySelectionState,
-        PlotlyState,
-    )
+    from streamlit.elements.plotly_chart import PlotlyMixin, PlotlySelectionState
+    from streamlit.typing import PlotlyState
 
     plotly_chart = PlotlyMixin().plotly_chart
 

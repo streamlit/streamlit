@@ -384,7 +384,7 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
             st.columns(-1337)
 
     def test_bad_columns_single_float(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(StreamlitAPIException):
             st.columns(6.28)
 
     def test_bad_columns_list_negative_value(self):

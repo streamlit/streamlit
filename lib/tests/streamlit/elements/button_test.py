@@ -29,7 +29,12 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.button import marshall_file
-from streamlit.errors import StreamlitAPIException, StreamlitPageNotFoundError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -114,6 +119,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert not c.is_form_submitter
         assert not c.disabled
 
+    @parameterized.expand(get_button_command_matrix([123]))
+    def test_non_string_label_is_coerced(
+        self, name: str, command: Callable[..., Any], label: int
+    ) -> None:
+        """Non-string labels are coerced to strings for protobuf assignment."""
+        command(label=label)
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.label == "123"
+
     @parameterized.expand(
         [
             (name, command, type_)
@@ -148,7 +162,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         self, name: str, command: Callable[..., Any]
     ) -> None:
         """Test that invalid icon_position values raise an error."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
             command(icon_position="center")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -524,11 +538,57 @@ class ButtonTest(DeltaGeneratorTestCase):
             if name != "page_link"
         ]
     )
+    def test_button_wrap_default(self, name: str, command: Callable[..., Any]):
+        """By default wrap is left unset (auto) so the frontend can resolve it
+        based on the layout."""
+        command()
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert not el.HasField("wrap")
+
+    @parameterized.expand(
+        [
+            (name, command, wrap_value)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+            for wrap_value in (True, False)
+        ]
+    )
+    def test_button_wrap(
+        self, name: str, command: Callable[..., Any], wrap_value: bool
+    ):
+        """The wrap parameter is forwarded to the button proto."""
+        command(wrap=wrap_value)
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert el.wrap is wrap_value
+
+    def test_button_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the element id.
+
+        Two otherwise-identical buttons that differ only in wrap collide on the
+        same auto-generated id, proving wrap is excluded from id computation and
+        so preserves widget state when toggled.
+        """
+        st.button("same label")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.button("same label", wrap=False)
+
+    def test_page_link_does_not_support_wrap(self):
+        """st.page_link is intentionally excluded from the wrap parameter."""
+        with pytest.raises(TypeError):
+            st.page_link("https://example.com", label="Example", wrap=False)
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+        ]
+    )
     def test_invalid_type(self, name: str, command: Callable[..., Any]):
         """Test with invalid type parameter."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             command(type="invalid")
-        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
+        assert "Invalid `type` value" in str(exc_info.value)
 
     @parameterized.expand(
         [
@@ -611,6 +671,31 @@ class ButtonTest(DeltaGeneratorTestCase):
                     st.page_link(Path("pages/page1.py"))
                     c = self.get_delta_from_queue().new_element.page_link
                     assert c.page == "page1"
+                    assert c.page_script_hash == "hash123"
+                    assert c.label == "Page 1"
+
+    def test_page_link_missing_url_pathname_does_not_raise_keyerror(self):
+        """Pages without ``url_pathname`` (default registry payload) still resolve."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page1": {
+                "script_path": "/app/pages/page1.py",
+                "page_name": "Page 1",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/page1.py"):
+                    st.page_link("pages/page1.py")
+                    c = self.get_delta_from_queue().new_element.page_link
+                    assert c.page == ""
                     assert c.page_script_hash == "hash123"
                     assert c.label == "Page 1"
 

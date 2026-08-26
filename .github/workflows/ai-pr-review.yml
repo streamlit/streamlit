@@ -20,8 +20,8 @@ on:
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
   MODEL_INPUT: ${{ github.event.inputs.model || '' }}
-  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.3-codex-high,cursor-grok-4.5-high,claude-4.6-opus-high-thinking' }}
-  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.4-xhigh,cursor-grok-4.5-high,claude-opus-4-8-thinking-xhigh"
+  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.6-terra-xhigh,claude-opus-5-thinking-high,cursor-grok-4.6-xhigh' }}
+  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-sol-xhigh,claude-opus-5-thinking-xhigh,cursor-grok-4.6-xhigh"
 
 jobs:
   # Job 1: Parse model list and check for API key
@@ -103,7 +103,7 @@ jobs:
     needs: parse-models
     if: needs.parse-models.outputs.has_key == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: read
@@ -242,7 +242,9 @@ jobs:
     needs: [parse-models, ai-pr-review]
     if: always() && fromJson(needs.parse-models.outputs.model_count) > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    outputs:
+      review_count: ${{ steps.count-reviews.outputs.review_count }}
     permissions:
       contents: read
       pull-requests: read
@@ -274,6 +276,18 @@ jobs:
               ls -la "$dir"
             fi
           done
+
+      - name: Count reviews
+        id: count-reviews
+        run: |
+          shopt -s nullglob
+          REVIEW_COUNT=0
+          for dir in reviews/review-output-*; do
+            [ -s "$dir/review.md" ] || continue
+            REVIEW_COUNT=$((REVIEW_COUNT + 1))
+          done
+          echo "review_count=$REVIEW_COUNT" >> "$GITHUB_OUTPUT"
+          echo "Found $REVIEW_COUNT individual review(s)"
 
       - name: Install Cursor CLI
         run: |
@@ -348,7 +362,7 @@ jobs:
           4. **Track missing reviews** - if any expected models are missing from the reviews above, note them as 'failed to complete review'
           5. **Determine final verdict**:
              - APPROVED: If the majority of available reviews approve AND there are no critical/merge-blocking issues raised by any reviewer. Minor suggestions or optional improvements should not block approval — those can be addressed in follow-up PRs.
-             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/merge-blocking issues (bugs, security vulnerabilities, breaking changes, missing required tests, or clear material violations of documented Streamlit product/API principles and patterns). Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES_REQUESTED.
+             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/merge-blocking issues (bugs, security vulnerabilities, material performance regressions, breaking changes, missing required tests, or clear material violations of documented Streamlit product/API principles and patterns). Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES_REQUESTED.
 
           __CONSOLIDATION_INSTRUCTIONS__
 
@@ -490,9 +504,9 @@ jobs:
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           echo "" >> review.md
           echo "<!-- streamlit-ai-review run_id=\"$RUN_ID\" timestamp=\"$TIMESTAMP\" -->" >> review.md
-          # Always post as COMMENT — the bot should never formally approve or request
-          # changes on a PR. The verdict is still written to verdict.txt and used for
-          # labeling (e.g. do-not-merge), but the GitHub review event is always COMMENT.
+          # Always post the review body as COMMENT. A later step posts a formal
+          # APPROVE for ai-final-review only (never REQUEST_CHANGES). verdict.txt
+          # still drives labels such as do-not-merge.
           EVENT="COMMENT"
 
           # Get head SHA for review API
@@ -585,11 +599,122 @@ jobs:
             exit 0
           fi
 
-          VERDICT=$(cat verdict.txt | tr -d '[:space:]')
+          VERDICT=$(tr -d '[:space:]' < verdict.txt)
           if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
             echo "Adding 'do-not-merge' label"
             gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
           elif [ "$VERDICT" = "APPROVED" ]; then
             echo "Removing 'do-not-merge' label if present"
             gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
+          fi
+
+      # Auto-approve ai-final-review PRs with an APPROVED verdict, except:
+      # - change:spec (always needs a human, regardless of impact)
+      # - change:feature + impact:users (new user-facing features)
+      # - more than 1000 changed lines (additions + deletions)
+      # - PR originates from a fork
+      # - fewer reviews were reported than configured models
+      # Bugfixes, chores, docs, and other impact:users PRs stay eligible:
+      # they are lower-risk than new user-facing features and benefit most
+      # from the speedup.
+      # Requires the repository/organization Actions setting "Allow GitHub
+      # Actions to create and approve pull requests" (Settings > Actions >
+      # General > Workflow permissions).
+      # GitHub does not count GITHUB_TOKEN approvals toward required
+      # CODEOWNERS reviews.
+      # Approval targets the current PR HEAD. We intentionally trust contributors
+      # not to push unreviewed changes after approval.
+      - name: Auto-approve on final review
+        if: needs.parse-models.outputs.has_key == 'true' && needs.parse-models.outputs.trigger_label == 'ai-final-review' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          MODEL_COUNT: ${{ needs.parse-models.outputs.model_count }}
+          REVIEW_COUNT: ${{ needs.consolidate-reviews.outputs.review_count }}
+          CONSOLIDATED_REVIEW_OUTCOME: ${{ steps.download-consolidated.outcome }}
+        run: |
+          if [ ! -f verdict.txt ]; then
+            echo "Skipping auto-approve: verdict.txt not found"
+            exit 0
+          fi
+
+          VERDICT=$(tr -d '[:space:]' < verdict.txt)
+          if [ "$VERDICT" != "APPROVED" ]; then
+            echo "Skipping auto-approve: verdict is '$VERDICT' (expected APPROVED)"
+            exit 0
+          fi
+
+          if ! [[ "$MODEL_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::warning::Could not parse configured model count, skipping auto-approve"
+            exit 0
+          fi
+          if [ "$MODEL_COUNT" -gt 1 ] && [ "$CONSOLIDATED_REVIEW_OUTCOME" != "success" ]; then
+            echo "Skipping auto-approve: multi-model reviews were not successfully consolidated"
+            exit 0
+          fi
+          if [ "$MODEL_COUNT" -eq 1 ]; then
+            REVIEW_COUNT=1
+          fi
+          if ! [[ "$REVIEW_COUNT" =~ ^[0-9]+$ ]]; then
+            echo "::warning::Could not parse reported review count, skipping auto-approve"
+            exit 0
+          fi
+          if [ "$REVIEW_COUNT" -lt "$MODEL_COUNT" ]; then
+            echo "Skipping auto-approve: only $REVIEW_COUNT/$MODEL_COUNT configured models reported reviews"
+            exit 0
+          fi
+
+          if ! PR_JSON=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV"); then
+            echo "::warning::Failed to fetch PR, skipping auto-approve"
+            exit 0
+          fi
+
+          HEAD_REPO_ID=$(echo "$PR_JSON" | jq -r 'if (.head.repo.id | type) == "number" then .head.repo.id else empty end')
+          BASE_REPO_ID=$(echo "$PR_JSON" | jq -r 'if (.base.repo.id | type) == "number" then .base.repo.id else empty end')
+          if ! [[ "$HEAD_REPO_ID" =~ ^[1-9][0-9]*$ && "$BASE_REPO_ID" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::warning::Could not parse PR repository IDs, skipping auto-approve"
+            exit 0
+          fi
+          if [ "$HEAD_REPO_ID" != "$BASE_REPO_ID" ]; then
+            echo "Skipping auto-approve: PR originates from a fork (head repository $HEAD_REPO_ID, base repository $BASE_REPO_ID)"
+            exit 0
+          fi
+
+          LABELS=$(echo "$PR_JSON" | jq -c '[.labels[].name]')
+          echo "PR labels: $LABELS"
+
+          if echo "$LABELS" | jq -e 'index("change:spec") != null' >/dev/null; then
+            echo "Skipping auto-approve: PR is labeled change:spec"
+            exit 0
+          fi
+
+          HAS_FEATURE=$(echo "$LABELS" | jq 'index("change:feature") != null')
+          HAS_USERS=$(echo "$LABELS" | jq 'index("impact:users") != null')
+          if [ "$HAS_FEATURE" = "true" ] && [ "$HAS_USERS" = "true" ]; then
+            echo "Skipping auto-approve: PR is labeled change:feature and impact:users"
+            exit 0
+          fi
+
+          ADDITIONS=$(echo "$PR_JSON" | jq -r '.additions')
+          DELETIONS=$(echo "$PR_JSON" | jq -r '.deletions')
+          if ! [[ "$ADDITIONS" =~ ^[0-9]+$ && "$DELETIONS" =~ ^[0-9]+$ ]]; then
+            echo "::warning::Could not parse PR line counts, skipping auto-approve"
+            exit 0
+          fi
+          CHANGED_LINES=$((ADDITIONS + DELETIONS))
+          echo "PR changed lines: $CHANGED_LINES (additions=$ADDITIONS, deletions=$DELETIONS)"
+          if [ "$CHANGED_LINES" -gt 1000 ]; then
+            echo "Skipping auto-approve: PR has $CHANGED_LINES changed lines (limit 1000)"
+            exit 0
+          fi
+
+          echo "Auto-approving PR #$PR_NUMBER_ENV based on AI final review verdict"
+          if ! jq -n \
+            --arg body "Auto-approved by AI final review ([workflow run]($GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID))." \
+            '{event: "APPROVE", body: $body}' \
+            | gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/reviews" -X POST --input -; then
+            echo "::warning::Failed to auto-approve PR. Ensure the repository/organization Actions setting 'Allow GitHub Actions to create and approve pull requests' is enabled (Settings > Actions > General > Workflow permissions)."
           fi

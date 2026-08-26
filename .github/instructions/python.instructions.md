@@ -55,6 +55,7 @@ applyTo: "**/*.py"
 
 ## Dependencies
 
+- Add a dependency only when it provides meaningful value that cannot easily be replicated with an in-house implementation. Each dependency increases the risk of supply-chain attacks, breakage from incompatible new versions, and conflicts with other dependencies in users' environments.
 - Runtime dependencies of the published Streamlit library in `lib/pyproject.toml` must include a lower bound and an upper bound pinned to the next unreleased major version, for example `package>=1.2.3,<2`. These ranges are the published package's contract with users and feed the min-version CI job, so they minimize potential breaks from new major versions. Exemptions are allowed, but must include a clear comment explaining why the dependency should not be capped.
 - This bounded-range rule does NOT apply to the dev/CI-only `[dependency-groups]` in the root `pyproject.toml`. Those use bare package names because `uv.lock` owns the exact versions; add a constraint only when functionally required (an exact `==` pin for a deliberately held-back tool, or an upper cap `<` for a known-broken version, mirrored by an `ignore` entry in `.github/dependabot.yml`; a single-release `!=` exclusion needs no `ignore` entry), and do not add lower-bound floors.
 
@@ -63,6 +64,12 @@ applyTo: "**/*.py"
 - Add typing annotations to every new function, method or class member.
 - Use `typing_extensions` for back-porting newer typing features.
 - Use future annotations via `from __future__ import annotations`.
+- `make python-types` runs both `ty` and `mypy`. `ty` resolves first-party
+  `streamlit.*` imports (config in root `pyproject.toml`); prefer real
+  narrowing/annotation fixes over suppressions. When a checker-specific
+  suppression is needed, use a rule-specific comment such as
+  `# ty: ignore[redundant-cast]` (and keep `# type: ignore[...]` for mypy when
+  both apply).
 
 ## Relevant `make` commands
 

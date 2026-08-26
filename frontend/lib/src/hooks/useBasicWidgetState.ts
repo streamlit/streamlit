@@ -115,7 +115,7 @@ export function useBasicWidgetClientState<
   const [nextValueWithSource, setNextValueWithSource] =
     useState<ValueWithSource<T> | null>({
       value: currentValue,
-      fromUi: false,
+      fromUser: false,
     })
 
   // When someone calls setNextValueWithSource, update internal state and tell
@@ -142,7 +142,7 @@ export function useBasicWidgetClientState<
   const handleFormCleared = useCallback((): void => {
     setNextValueWithSource({
       value: getDefaultState(widgetMgr, element),
-      fromUi: true,
+      fromUser: true,
     })
     onFormCleared?.()
   }, [
@@ -354,7 +354,7 @@ export function useBasicWidgetState<
 
     setNextValueWithSource({
       value: getCurrStateFromProto(element),
-      fromUi: false,
+      fromUser: false,
     })
   }, [element, getCurrStateFromProto, setNextValueWithSource])
 

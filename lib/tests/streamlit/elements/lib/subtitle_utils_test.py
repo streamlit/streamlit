@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import io
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
@@ -20,6 +22,7 @@ from parameterized import parameterized
 from streamlit.elements.lib.subtitle_utils import (
     _handle_bytes_data,
     _handle_stream_data,
+    _handle_string_or_path_data,
     _is_srt,
     _srt_to_vtt,
     process_subtitle_data,
@@ -186,3 +189,61 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
             process_subtitle_data("[0, 0]", 12345, "Test")  # type: ignore[arg-type]
 
         assert "Invalid binary data format for subtitle" in str(exc.value)
+
+
+def test_is_srt_with_invalid_utf8_bytes_returns_false() -> None:
+    """`_is_srt` returns False when the stream cannot be decoded as UTF-8.
+
+    Non-UTF-8 bytes trigger the ``UnicodeDecodeError`` guard, which treats the
+    stream as not being a valid SRT file.
+    """
+    assert _is_srt(b"\xff\xfe\x00\x01\x02\x03") is False
+
+
+def test_handle_string_or_path_data_with_disallowed_extension_raises(
+    tmp_path: Path,
+) -> None:
+    """`_handle_string_or_path_data` rejects on-disk files with unsupported extensions.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Pytest fixture providing a temporary directory for the fake subtitle file.
+    """
+    bad_file = tmp_path / "subtitles.txt"
+    bad_file.write_text("some subtitle content", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Incorrect subtitle format"):
+        _handle_string_or_path_data(str(bad_file))
+
+
+def test_handle_string_or_path_data_with_missing_path_raises(tmp_path: Path) -> None:
+    """`_handle_string_or_path_data` raises when given a Path to a nonexistent file.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Pytest fixture used to construct a path that is guaranteed not to exist.
+    """
+    missing_path = tmp_path / "does_not_exist.vtt"
+
+    with pytest.raises(ValueError, match="does not exist"):
+        _handle_string_or_path_data(missing_path)
+
+
+def test_process_subtitle_data_without_runtime_returns_empty_string() -> None:
+    """`process_subtitle_data` returns an empty string when no runtime exists.
+
+    In "raw mode" the ``MediaFileManager`` is unavailable, so the function must
+    short-circuit and return an empty string.
+    """
+    valid_vtt = b"WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello World"
+
+    with patch(
+        "streamlit.elements.lib.subtitle_utils.runtime.exists", return_value=False
+    ):
+        result = process_subtitle_data(
+            coordinates="[0, 0]", data=valid_vtt, label="lbl"
+        )
+
+    assert result == ""

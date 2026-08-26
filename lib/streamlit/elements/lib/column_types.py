@@ -25,7 +25,10 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict, overload
 from typing_extensions import NotRequired
 
 from streamlit.elements.lib.color_util import is_css_color_like
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
@@ -3371,13 +3374,14 @@ def ButtonColumn(
     key : str or None
         A session state key for the click trigger value. When a button is
         clicked, the click information is stored under this key in Session
-        State as a dictionary-like object with ``row`` (int) and ``label``
-        (str) entries that support both key and attribute notation. For
-        example, if ``key="my_click"``, you can access the clicked row with
+        State as a ``ButtonColumnClickState`` object with ``row`` (int) and
+        ``label`` (str) entries that support both key and attribute notation.
+        For example, if ``key="my_click"``, you can access the clicked row with
         ``st.session_state.my_click.row`` or
         ``st.session_state["my_click"]["row"]``. The value is only present
         during the rerun triggered by the click; it resets to ``None`` on
-        subsequent reruns.
+        subsequent reruns. To use ``ButtonColumnClickState`` in an annotation,
+        import it from ``streamlit.typing``.
 
         ``key`` is required to enable button clicks and callbacks.
 
@@ -3470,10 +3474,13 @@ def ButtonColumn(
 
     # Raise an error if callbacks are provided without a key
     if on_click is not None or args is not None or kwargs is not None:
-        raise StreamlitAPIException(
-            "The `key` parameter is required when using `on_click`, `args`, or `kwargs` "
-            "with `ButtonColumn`. Please provide a unique `key` for the button column "
-            "to enable callback functionality."
+        raise StreamlitMissingRequiredParameterError(
+            "st.column_config.ButtonColumn",
+            "key",
+            detail=(
+                "Callbacks passed via `on_click`, `args`, or `kwargs` need a unique "
+                "key to be registered."
+            ),
         )
 
     return config

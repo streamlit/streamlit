@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -60,9 +59,8 @@ from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import BindOption, PersistStateOption, register_widget
-from streamlit.type_util import (
-    is_iterable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import is_iterable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -98,7 +96,6 @@ class MultiSelectSerde(Generic[T]):
         We do not store an option_to_formatted_option mapping because the generic
         options might not be hashable, which would raise a RuntimeError. So we do
         two lookups: option -> index -> formatted_option[index].
-
 
         Parameters
         ----------
@@ -210,6 +207,7 @@ class MultiSelectMixin:
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T]: ...
@@ -234,6 +232,7 @@ class MultiSelectMixin:
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T | str]: ...
@@ -258,6 +257,7 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -282,6 +282,7 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]:
@@ -430,6 +431,22 @@ class MultiSelectMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the selected-value chips can wrap onto multiple rows. This
+            can be one of the following:
+
+            - ``None`` (default): Streamlit chooses the wrapping behavior based
+              on the layout. Inside a horizontal container or when directly
+              placed in a column (not nested in another container), the chips
+              stay in a single row and the chip
+              area scrolls horizontally; in other layouts, the chips wrap onto
+              additional rows.
+            - ``True``: If the selected chips are too wide for the widget, they
+              wrap onto additional rows and the widget grows taller.
+            - ``False``: The selected chips stay in a single row at a fixed
+              height. If they don't fit, the chip area scrolls horizontally
+              while the clear and dropdown controls stay pinned.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -544,6 +561,7 @@ class MultiSelectMixin:
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
             width=width,
+            wrap=wrap,
             bind=bind,
             persist_state=persist_state,
             ctx=ctx,
@@ -568,6 +586,7 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
@@ -581,7 +600,7 @@ class MultiSelectMixin:
             on_change,
             default_value=default,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         if max_selections is not None and max_selections < 1:
             raise StreamlitInvalidMaxError(
@@ -646,9 +665,14 @@ class MultiSelectMixin:
         )
         proto.options[:] = formatted_options
         if help is not None:
-            proto.help = dedent(help)
+            proto.help = to_help_str(help)
         proto.accept_new_options = accept_new_options
         proto.filter_mode = proto_filter_mode
+        # wrap is layout-only and intentionally excluded from the element id
+        # (see compute_and_register_element_id above), so toggling it never
+        # resets the widget's value.
+        if wrap is not None:
+            proto.wrap = wrap
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

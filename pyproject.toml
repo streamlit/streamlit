@@ -88,12 +88,12 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.63",
+  "ty==0.0.73",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.16.1",
+  "ruff==0.16.4",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.3.0",
+  "mypy==2.3.1",
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10.
   "numpy<2.5",
@@ -155,7 +155,7 @@ test = [
   "httpx2",
   # Playwright and E2E test dependencies:
   # We pin playwright to an exact version to avoid new browser versions breaking our CI.
-  "playwright==1.61.0",
+  "playwright==1.62.0",
   "pytest-playwright",
   "pixelmatch",
   "pytest-xdist",
@@ -345,6 +345,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
   "RUF069",  # Allow float equality checks in test assertions.
   "S",       # Ignore bandit security rules (test code doesn't need security hardening).
+  "TID251",  # Allow direct hash constructors in test fixtures and FIPS policy probes.
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
@@ -357,6 +358,13 @@ extend-safe-fixes = ["TC002", "TC003"]
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"hashlib.md5".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.sha1".msg = "Use an approved constructor or streamlit.util.create_fast_hasher; only use SHA-1 directly when a protocol requires it."
+"hashlib.blake2b".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.blake2s".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.new".msg = "Use a named approved constructor or streamlit.util.create_fast_hasher."
 
 [tool.ruff.lint.isort]
 known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
@@ -475,8 +483,13 @@ ignore_missing_imports = true
 # ty Configuration
 # =============================================================================
 
+# Point the module-resolution root at ./lib (the real parent of the `streamlit`
+# package) rather than ./lib/streamlit. This ensures files resolve under their
+# true dotted paths (e.g. `streamlit.typing`), which is required so that
+# `lib/streamlit/typing.py` does NOT shadow the standard-library `typing` module
+# (a first-party top-level `typing` corrupts stdlib type resolution and panics ty).
 [tool.ty.environment]
-root = ["./lib/streamlit"]
+root = ["./lib"]
 
 [tool.ty.src]
 include = ["lib/streamlit", "e2e_playwright", "scripts"]
@@ -484,6 +497,12 @@ exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",
 ]
+
+[tool.ty.analysis]
+# Altair mark_* methods annotate return type as Self. ty currently resolves
+# those as T@__call__, which falsely flags .encode/.add_params/etc. Treat
+# Altair as Any until ty correctly binds Self on Altair's MarkMethodMixin.
+replace-imports-with-any = ["altair.**"]
 
 [tool.ty.rules]
 unresolved-import = "ignore"

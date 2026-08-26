@@ -25,10 +25,11 @@ from streamlit.elements.widgets.time_widgets import (
     TimeInputSerde,
     _convert_datetimelike_to_datetime,
     _DateInputValues,
+    _DateTimeInputValues,
     _parse_max_date,
     _parse_min_date,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -36,8 +37,8 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize("parse_fn", [_parse_min_date, _parse_max_date])
 def test_parse_date_bound_rejects_invalid_type(parse_fn: Callable[..., date]) -> None:
-    """Test that a non-date/datetime/None bound raises a StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException):
+    """Test that a non-date/datetime/None bound raises StreamlitInvalidParameterTypeError."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         parse_fn(123, None)
 
 
@@ -83,6 +84,40 @@ def test_date_input_values_rejects_min_after_max() -> None:
             min=date(2022, 1, 1),
             max=date(2020, 1, 1),
         )
+
+
+@pytest.mark.parametrize(
+    ("parse_fn", "parsed_dates", "expected"),
+    [
+        (_parse_max_date, [date.max], date.max),
+        (_parse_max_date, [date.today(), datetime.max.date()], date.max),
+        (_parse_min_date, [date.min], date.min),
+        (_parse_min_date, [date.min, date.today()], date.min),
+    ],
+)
+def test_parse_date_bound_clamps_at_year_limits(
+    parse_fn: Callable[..., date], parsed_dates: list[date], expected: date
+) -> None:
+    """Test that default bounds clamp instead of overflowing the year range (GH#7427)."""
+    assert parse_fn(None, parsed_dates) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_min", "expected_max"),
+    [
+        (datetime.max, datetime(9989, 12, 31, 0, 0), datetime(9999, 12, 31, 23, 59)),
+        (datetime.min, datetime(1, 1, 1, 0, 0), datetime(11, 1, 1, 23, 59)),
+    ],
+)
+def test_datetime_input_bounds_clamp_at_year_limits(
+    value: datetime, expected_min: datetime, expected_max: datetime
+) -> None:
+    """Test that default datetime bounds clamp instead of overflowing (GH#7427)."""
+    values = _DateTimeInputValues.from_raw_values(
+        value=value, min_value=None, max_value=None
+    )
+    assert values.min == expected_min
+    assert values.max == expected_max
 
 
 @pytest.mark.parametrize(

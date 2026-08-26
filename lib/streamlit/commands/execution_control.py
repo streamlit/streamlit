@@ -22,11 +22,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
 
 import streamlit as st
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import Page, _validate_registered_page
 from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
@@ -166,9 +172,7 @@ def rerun(  # type: ignore[misc]
     """
 
     if scope not in {"app", "fragment"}:
-        raise StreamlitAPIException(
-            f"'{scope}'is not a valid rerun scope. Valid scopes are 'app' and 'fragment'."
-        )
+        raise StreamlitValueError("scope", ["'app'", "'fragment'"])
 
     ctx = get_script_run_ctx()
 
@@ -318,10 +322,10 @@ def switch_page(  # type: ignore[misc]
         matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
 
         if len(matched_pages) == 0:
-            raise StreamlitAPIException(
-                f"Could not find page: `{page}`. Must be the file path relative to the main script, "
-                f"from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file "
-                "and files in the `pages/` directory are supported."
+            raise StreamlitPageNotFoundError(
+                page=page,
+                main_script_directory=main_script_directory,
+                uses_pages_directory=bool(PagesManager.uses_pages_directory),
             )
 
         page_script_hash = matched_pages[0]["page_script_hash"]
