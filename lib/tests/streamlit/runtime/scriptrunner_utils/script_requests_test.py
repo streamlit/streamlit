@@ -208,6 +208,66 @@ class ScriptRequestsTest(unittest.TestCase):
         reqs.request_rerun(RerunData(fragment_id_queue=[]))
         assert reqs._rerun_data.fragment_id_queue == []
 
+    def test_request_rerun_merges_fragment_id_queues(self):
+        """Two targeted requests union with dedup and preserved order, staying unscoped."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_a", "frag_b"]))
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_b", "frag_c"]))
+        assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b", "frag_c"]
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
+    def test_pending_full_app_rerun_not_downgraded_by_targeted_rerun(self):
+        """A pending full-app rerun is not downgraded when a targeted rerun arrives."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())  # full-app: empty queue, not fragment-scoped
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_x"]))  # targeted
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
+    def test_pending_full_app_rerun_not_downgraded_by_bare_fragment_id(self):
+        """A pending full-app rerun survives a target sent as a bare fragment_id."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())  # full-app first
+        reqs.request_rerun(RerunData(fragment_id="frag_x"))  # bare fragment_id
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
+    def test_targeted_then_full_collapses_to_full_app_rerun(self):
+        """A targeted rerun followed by a full-app rerun collapses to full-app."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_x"]))  # targeted first
+        reqs.request_rerun(RerunData())  # full-app arrives second
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
+    def test_bare_fragment_id_then_full_collapses_to_full_app_rerun(self):
+        """Bare fragment_id then full-app collapses: the id is folded in before comparing."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id="frag_x"))  # bare fragment_id first
+        reqs.request_rerun(RerunData())  # full-app arrives second
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
+    def test_union_keeps_fragment_scope_when_either_rerun_is_scoped(self):
+        """Unioning targeted reruns stays fragment-scoped if either request was."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag_a"]))
+        reqs.request_rerun(
+            RerunData(fragment_id_queue=["frag_b"], is_fragment_scoped_rerun=True)
+        )
+        assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
+        assert reqs._rerun_data.is_fragment_scoped_rerun is True
+
+    def test_full_app_clears_pending_fragment_scoped_rerun(self):
+        """A full-app rerun drops a pending fragment-scoped rerun's scope and queue."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(
+            RerunData(fragment_id_queue=["frag_x"], is_fragment_scoped_rerun=True)
+        )
+        reqs.request_rerun(RerunData())  # full-app arrives second
+        assert reqs._rerun_data.fragment_id_queue == []
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()

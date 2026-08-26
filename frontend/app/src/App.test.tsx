@@ -17,6 +17,7 @@
 import { act } from "react"
 
 import {
+  fireEvent,
   render,
   RenderResult,
   screen,
@@ -4202,6 +4203,57 @@ describe("App", () => {
       } finally {
         vi.useRealTimers()
       }
+    })
+
+    it("does not clear caches when the copy modifier is released first", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+      })
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      getMockConnectionManager(true)
+
+      // Hold Cmd+C, then release Cmd before C.
+      await user.keyboard("[MetaLeft>][KeyC>][/MetaLeft][/KeyC]")
+
+      expect(
+        screen.queryByTestId("stClearCacheDialog")
+      ).not.toBeInTheDocument()
+    })
+
+    it("stops screencast recording when Escape is released", async () => {
+      const props = getProps()
+      renderApp(props)
+
+      // hotkeys-js matches Escape via keyCode 27; userEvent does not set it.
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.keyDown(document, {
+        key: "Escape",
+        code: "Escape",
+        keyCode: 27,
+        which: 27,
+      })
+      fireEvent.keyUp(document, {
+        key: "Escape",
+        code: "Escape",
+        keyCode: 27,
+        which: 27,
+      })
+      /* eslint-enable testing-library/prefer-user-event */
+
+      // react-hot-keys delivers onKeyUp from a document keyup listener on a
+      // 0ms timeout so hotkeys-js can drop the key from its pressed set.
+      await waitFor(() => {
+        expect(props.screenCast.stopRecording).toHaveBeenCalled()
+      })
     })
   })
 

@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -60,6 +59,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.string_util import to_help_str
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
@@ -457,7 +457,7 @@ class SelectSliderMixin:
             on_change,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
@@ -518,7 +518,7 @@ class SelectSliderMixin:
             label_visibility
         )
         if help is not None:
-            slider_proto.help = dedent(help)
+            slider_proto.help = to_help_str(help)
 
         if bind and key:
             slider_proto.query_param_key = str(key)

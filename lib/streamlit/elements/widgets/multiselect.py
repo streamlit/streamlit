@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -60,9 +59,8 @@ from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import BindOption, PersistStateOption, register_widget
-from streamlit.type_util import (
-    is_iterable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import is_iterable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -98,7 +96,6 @@ class MultiSelectSerde(Generic[T]):
         We do not store an option_to_formatted_option mapping because the generic
         options might not be hashable, which would raise a RuntimeError. So we do
         two lookups: option -> index -> formatted_option[index].
-
 
         Parameters
         ----------
@@ -603,7 +600,7 @@ class MultiSelectMixin:
             on_change,
             default_value=default,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         if max_selections is not None and max_selections < 1:
             raise StreamlitInvalidMaxError(
@@ -668,7 +665,7 @@ class MultiSelectMixin:
         )
         proto.options[:] = formatted_options
         if help is not None:
-            proto.help = dedent(help)
+            proto.help = to_help_str(help)
         proto.accept_new_options = accept_new_options
         proto.filter_mode = proto_filter_mode
         # wrap is layout-only and intentionally excluded from the element id

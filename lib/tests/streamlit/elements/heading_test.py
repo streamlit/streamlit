@@ -63,7 +63,7 @@ class StHeaderTest(DeltaGeneratorTestCase):
 
     def test_st_header_with_help(self):
         """Test st.header with help."""
-        st.header("some header", help="help text")
+        st.header("some header", help="    help text")
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some header"
         assert el.heading.tag == "h2"

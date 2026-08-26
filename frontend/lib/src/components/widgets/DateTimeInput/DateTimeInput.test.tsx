@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -137,6 +137,28 @@ describe("DateTimeInput widget", () => {
     await user.click(segments[0])
 
     expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+  })
+
+  it("Escape closes the month picker without closing the calendar", async () => {
+    const user = userEvent.setup()
+    render(<DateTimeInput {...getProps()} />)
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    const calendar = screen.getByTestId("stDateTimeInputCalendar")
+    await user.click(within(calendar).getByRole("button", { name: "month" }))
+
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
+      "stDateInputHeaderPickerPopover"
+    )
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendar).toBeVisible()
   })
 
   it("calendar selection stays open and commits on close", async () => {

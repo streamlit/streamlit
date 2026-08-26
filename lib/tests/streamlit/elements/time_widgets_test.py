@@ -29,7 +29,7 @@ from streamlit.elements.widgets.time_widgets import (
     _parse_max_date,
     _parse_min_date,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -37,8 +37,8 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize("parse_fn", [_parse_min_date, _parse_max_date])
 def test_parse_date_bound_rejects_invalid_type(parse_fn: Callable[..., date]) -> None:
-    """Test that a non-date/datetime/None bound raises a StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException):
+    """Test that a non-date/datetime/None bound raises StreamlitInvalidParameterTypeError."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         parse_fn(123, None)
 
 

@@ -255,3 +255,16 @@ st.text_input(
 st.write(f"Text input counter: {st.session_state.setvalue_counter}")
 
 st.button("Trigger text input rerun")
+
+# --- on_change="ignore" text input ---
+ignore_text = st.text_input(
+    "Ignore change text input",
+    value="hello",
+    key="ignore_text",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore text value:", ignore_text)
+
+if st.button("Apply ignore text", key="apply_ignore_text"):
+    st.write("Applied ignore text value:", ignore_text)

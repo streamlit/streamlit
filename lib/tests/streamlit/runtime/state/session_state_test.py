@@ -21,7 +21,7 @@ import unittest
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,7 +32,7 @@ import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitWidgetAlreadyInstantiatedError,
     UnserializableSessionStateError,
 )
 from streamlit.proto.Common_pb2 import (
@@ -51,7 +51,11 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime import runtime_util
 from streamlit.runtime.runtime_util import WidgetStateSizeError
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_requests import (
+    ScriptRequests,
+    ScriptRequestType,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
@@ -78,6 +82,9 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRe
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def identity(x):
@@ -134,9 +141,11 @@ def _create_persist_state_metadata(
 
 class WStateTests(unittest.TestCase):
     def setUp(self):
-        ThreadState.initialize()
         wstates = WStates()
         self.wstates = wstates
+        # WStates.call_callback uses ThreadState.scoped, which requires ThreadState to
+        # be initialized on the current thread.
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
         widget_state = WidgetStateProto()
         widget_state.id = "widget_id_1"
@@ -534,48 +543,273 @@ class SessionStateTest(DeltaGeneratorTestCase):
         assert ctx.session_state["color"] is not color
 
 
-def test_callbacks_with_rerun():
-    """Calling 'rerun' from within a widget callback
-    is disallowed and results in a warning.
+def test_callback_rerun_runs_the_script_body_once():
+    """st.rerun() in a widget callback interrupts that callback and reruns the script once.
+
+    Product behavior for the interaction:
+    1. Callbacks run (``st.rerun()`` stops the callback it is in — later statements
+       in that callback do not run).
+    2. The widget-driven run's script body is preempted.
+    3. The re-queued ``st.rerun()`` performs one main-script body execution.
+
+    Without post-callback preemption, the stale widget-driven body would also run,
+    so ``body_runs`` would be 3 after the interaction sequence below.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.session_state["body_runs"] = st.session_state.get("body_runs", 0) + 1
+
+        def callback():
+            st.session_state["message"] = "ran callback"
+            st.rerun()
+            # Unreachable: st.rerun() interrupts this callback immediately.
+            st.session_state["after_rerun"] = True
+
+        st.checkbox("cb", on_change=callback)
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state["body_runs"] == 1
+
+    at.checkbox[0].check().run()
+    assert at.session_state["message"] == "ran callback"
+    assert "after_rerun" not in at.session_state
+    assert len(at.warning) == 0
+    # Initial body + one body from st.rerun() — not an extra stale widget-driven body.
+    assert at.session_state["body_runs"] == 2
+
+
+def test_callback_rerun_keeps_widget_values() -> None:
+    """A callback-queued st.rerun() must not discard the interaction's widget values.
+
+    The preempted run never executes its body, so no widget re-registers. Stale-widget
+    cleanup would therefore treat every widget as unseen and drop the values that
+    ``set_widgets_from_proto`` just applied — including widgets the user never touched.
     """
 
     def script():
         import streamlit as st
 
         def callback():
-            st.session_state["message"] = "ran callback"
             st.rerun()
 
-        st.checkbox("cb", on_change=callback)
+        st.text_input("touched", key="touched", on_change=callback)
+        st.text_input("untouched", key="untouched")
+        st.checkbox("box", key="box")
 
     at = AppTest.from_function(script).run()
-    at.checkbox[0].check().run()
-    assert at.session_state["message"] == "ran callback"
-    warning = at.warning[0]
-    assert "no-op" in warning.value
+    at.text_input(key="untouched").input("keep me").run()
+    at.checkbox(key="box").check().run()
+
+    at.text_input(key="touched").input("hello").run()
+
+    assert at.text_input(key="touched").value == "hello"
+    assert at.session_state["touched"] == "hello"
+    # An unrelated widget's value must survive the rerun too.
+    assert at.session_state["untouched"] == "keep me"
+    # A dropped bool reverts to its falsy default instead of raising, which is how
+    # this bug was originally reported.
+    assert at.session_state["box"] is True
+    assert at.checkbox(key="box").value is True
 
 
-def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
-    """Ensure fragment callback context flag is cleared on RerunException.
+def test_callback_rerun_resets_triggers() -> None:
+    """A trigger fires its callback once and is not replayed to the rerun's body.
 
-    This guards against leaving ``ThreadState.get().in_fragment_callback`` stuck
-    to True if a callback raises, which could contaminate subsequent runs.
+    ``st.rerun()`` counts as a script completion so triggers reset (see
+    ``exec_func_with_error_handling``). The click is delivered to the callback; the
+    body of the resulting rerun belongs to a new interaction and must see False.
     """
-    from streamlit.runtime.scriptrunner import RerunException
+
+    def script():
+        import streamlit as st
+
+        def on_click():
+            st.session_state["clicks"] = st.session_state.get("clicks", 0) + 1
+            st.rerun()
+
+        st.session_state["body_saw_click"] = st.button("go", on_click=on_click)
+
+    at = AppTest.from_function(script).run()
+
+    at.button[0].click().run()
+    assert at.session_state["clicks"] == 1
+    assert at.session_state["body_saw_click"] is False
+
+    # The trigger is not stuck: a second click still fires the callback.
+    at.button[0].click().run()
+    assert at.session_state["clicks"] == 2
+
+
+def test_callback_rerun_does_not_abort_other_callbacks() -> None:
+    """One callback's st.rerun() must not silently kill the others in the interaction.
+
+    The requests are queued only after the last callback returns. Queued mid-dispatch,
+    the next callback's first ``st.*`` call would pick the pending request up at a yield
+    point and raise — indistinguishable from its own ``st.rerun()``, so it was swallowed
+    just as silently and the callback's ``session_state`` writes were lost.
+
+    Both callbacks rerun, so the test does not depend on which one is dispatched first.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.session_state["body_runs"] = st.session_state.get("body_runs", 0) + 1
+
+        def cb_a():
+            st.empty()  # a yield point: enqueuing an element checks for a pending rerun
+            st.session_state["a_done"] = True
+            st.rerun()
+
+        def cb_b():
+            st.empty()
+            st.session_state["b_done"] = True
+            st.rerun()
+
+        st.text_input("a", key="a", on_change=cb_a)
+        st.text_input("b", key="b", on_change=cb_b)
+
+    at = AppTest.from_function(script).run()
+
+    # Both widgets change in one interaction, so both callbacks are dispatched.
+    at.text_input(key="a").input("x")
+    at.text_input(key="b").input("y")
+    at.run()
+
+    assert at.session_state["a_done"] is True
+    assert at.session_state["b_done"] is True
+    assert len(at.exception) == 0
+    # The two reruns coalesce into one, so the body runs once more than the initial run.
+    assert at.session_state["body_runs"] == 2
+
+
+def test_callback_switch_page_wins_over_a_competing_callback_rerun() -> None:
+    """A callback st.switch_page() navigates even when another callback reruns.
+
+    Both requests are parked until the last callback returns, and coalescing them takes
+    the page and query params from whichever is queued last. Queueing the plain
+    ``st.rerun()`` last therefore pointed the rerun back at the page the user asked to
+    leave — a silent no-op with no error and no log line.
+    """
+
+    def script():
+        import streamlit as st
+
+        def other():
+            st.text("other page")
+
+        def home():
+            def go():
+                st.switch_page(
+                    st.Page(other, title="Other", url_path="other"),
+                    query_params={"utm_source": "home"},
+                )
+
+            def just_rerun():
+                st.rerun()
+
+            st.text_input("nav", key="nav", on_change=go)
+            st.text_input("plain", key="plain", on_change=just_rerun)
+
+        st.navigation(
+            [
+                st.Page(home, title="Home", url_path="home", default=True),
+                st.Page(other, title="Other", url_path="other"),
+            ]
+        ).run()
+
+    at = AppTest.from_function(script).run()
+
+    # Both widgets change in one interaction, so both callbacks are dispatched.
+    at.text_input(key="nav").input("x")
+    at.text_input(key="plain").input("y")
+    at.run()
+
+    assert len(at.exception) == 0
+    assert [text.value for text in at.text] == ["other page"]
+    assert at.query_params == {"utm_source": ["home"]}
+
+
+def _state_with_unregistered_widgets() -> SessionState:
+    """Build state holding one value widget and one fired trigger, neither registered.
+
+    Mimics the end of a run that rendered nothing: the values sit in
+    ``_new_widget_state``, but no widget id was collected, so cleanup sees them
+    all as stale.
+    """
+    ss = SessionState()
+    for wid, value_type, value in [
+        ("w-val", "int_value", 5),
+        ("w-trig", "trigger_value", True),
+    ]:
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type=value_type,
+            )
+        )
+        ss._new_widget_state.set_from_value(wid, value)
+    return ss
+
+
+def test_on_script_finished_keeps_widget_values_when_stale_removal_skipped() -> None:
+    """``remove_stale_widgets=False`` resets triggers but keeps unseen widget values."""
+    ss = _state_with_unregistered_widgets()
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    ):
+        ss.on_script_finished(frozenset(), remove_stale_widgets=False)
+
+    assert ss["w-val"] == 5
+    assert ss["w-trig"] is False
+
+
+def test_on_script_finished_removes_stale_widgets_by_default() -> None:
+    """A run that rendered still drops widget state that no widget re-registered.
+
+    The counterpart to the skip case above. ``has_script_started`` picks between the two,
+    so without this test a gate stuck at False would leak stale widget state after
+    every run while the skip test kept passing.
+    """
+    ss = _state_with_unregistered_widgets()
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    ):
+        ss.on_script_finished(frozenset())
+
+    with pytest.raises(KeyError):
+        ss["w-val"]
+    with pytest.raises(KeyError):
+        ss["w-trig"]
+
+
+def test_rerun_exception_requeues_and_restores_run_location() -> None:
+    """ThreadState leaves CALLBACK after a callback raises RerunException.
+
+    ``ThreadState.scoped`` must restore the prior ``run_location`` so a raised
+    rerun cannot leave later code stuck in callback context.
+    """
 
     ss = SessionState()
     wid = "w-frag"
 
-    # A callback that raises RerunException
     def cb() -> None:
-        raise RerunException(None)
+        raise RerunException(RerunData())
 
     meta = WidgetMetadata(
         id=wid,
         deserializer=lambda v: v,
         serializer=lambda v: v,
         value_type="int_value",
-        callbacks={"change": cb},
+        callback=cb,  # The single-callback path, not the `callbacks` event dict.
         fragment_id="frag-1",
     )
 
@@ -592,10 +826,660 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        # Callbacks internally catch RerunException and log a warning.
         ss._call_callbacks()
 
     assert ThreadState.get().in_fragment_callback is False
+    # Rerun is re-queued rather than swallowed.
+    mock_ctx.script_requests.request_rerun.assert_called_once()
+
+
+def test_on_change_callback_rerun_is_requeued() -> None:
+    """st.rerun() in a single-callback widget re-queues the rerun."""
+
+    requeue_calls: list[RerunData] = []
+
+    def cb() -> None:
+        raise RerunException(RerunData())
+
+    ss = SessionState()
+    wid = "w1"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callback=cb,
+    )
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 0
+    ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    assert len(requeue_calls) == 1
+
+
+def test_normal_callback_return_queues_no_rerun() -> None:
+    """A callback returning normally does not itself queue a rerun request."""
+    ss = SessionState()
+    wid = "w1"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callback=lambda: None,
+    )
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 0
+    ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    mock_ctx.script_requests.request_rerun.assert_not_called()
+
+
+def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
+    """One plain st.rerun() and one normal return produce a single re-queued rerun.
+
+    Neither callback asked for a targeted fragment rerun, so no extra full-app
+    rerun is forced.
+    """
+
+    ss = SessionState()
+    wid1, wid2 = "w1", "w2"
+
+    def cb_rerun() -> None:
+        raise RerunException(RerunData())
+
+    for wid, cb in [(wid1, cb_rerun), (wid2, lambda: None)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the re-queued rerun from the explicit st.rerun() call. No extra forced
+    # rerun because neither callback requested a targeted rerun — no conflict.
+    assert mock_ctx.script_requests.request_rerun.call_count == 1
+
+
+def test_fragment_widget_callback_rerun_is_requeued() -> None:
+    """A fragment widget callback calling st.rerun() re-queues the rerun."""
+
+    requeue_calls: list[RerunData] = []
+
+    def cb() -> None:
+        raise RerunException(RerunData())
+
+    ss = SessionState()
+    wid = "w-frag"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callback=cb,
+        fragment_id="frag-1",
+    )
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 0
+    ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    assert len(requeue_calls) == 1
+
+
+# The page the interaction is running on. A mocked ctx has to pin it and every
+# non-navigating request has to carry it: a bare MagicMock attribute never equals a
+# RerunData's page_script_hash, so an unpinned ctx makes every request look like an
+# st.switch_page() to somewhere else.
+_CURRENT_PAGE_HASH = "current-page-hash"
+
+
+def _state_with_changed_widgets(
+    widgets: list[tuple[str, Callable[[], None] | None]], *, disabled: bool = False
+) -> SessionState:
+    """Build a SessionState where every listed widget changed, with the given callbacks.
+
+    ``disabled`` applies to the callback-less widgets only, so a test can
+    verify that disabled widgets are filtered from processing.
+    """
+    ss = SessionState()
+    for wid, cb in widgets:
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=cb,
+                disabled=disabled and cb is None,
+            )
+        )
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+    return ss
+
+
+def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
+    """Run ss._call_callbacks() as a main-script interaction, returning queued requests."""
+    requeue_calls: list[RerunData] = []
+
+    mock_ctx = MagicMock()
+    # No fragment is running, so the interaction's default rerun is the full app. Pin
+    # this explicitly: a bare MagicMock attribute is truthy and would read as a
+    # fragment interaction.
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    return requeue_calls
+
+
+def _raise_targeted_rerun() -> None:
+    """Raise what a targeted rerun at another fragment sends.
+
+    Stands in for ``st.rerun(scope="<key>")``, per
+    specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md.
+    """
+    raise RerunException(
+        RerunData(
+            page_script_hash=_CURRENT_PAGE_HASH,
+            fragment_id_queue=["other-frag"],
+            is_fragment_scoped_rerun=True,
+        )
+    )
+
+
+def test_changed_widget_without_callback_does_not_escalate() -> None:
+    """A callback-less widget change does not override a targeted rerun.
+
+    The developer's intent is expressed by the callback (``st.rerun("<key>")``).
+    A passive value change on a callback-less widget (e.g. a form field) should
+    not escalate to a full-app rerun — the value is already in session state.
+    """
+
+    ss = _state_with_changed_widgets(
+        [("field", None), ("submit", _raise_targeted_rerun)]
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    # Only the targeted re-queue; no full-app escalation from the callback-less field.
+    assert len(requeue_calls) == 1
+    assert requeue_calls[0].fragment_id_queue == ["other-frag"]
+
+
+def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
+    """Callback-less widget changes alone do not queue any extra rerun.
+
+    The interaction's own run is already underway, so a changed callback-less widget
+    needs no extra request — its values are already in session state.
+    """
+
+    ss = _state_with_changed_widgets([("field", None), ("other_field", None)])
+
+    assert _call_callbacks_in_main_script(ss) == []
+
+
+def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
+    """A disabled widget's reported change is forged or stale, so it is ignored.
+
+    The disabled check prevents stale or forged widget values from being processed.
+    """
+
+    ss = _state_with_changed_widgets(
+        [("field", None), ("submit", _raise_targeted_rerun)], disabled=True
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    assert len(requeue_calls) == 1
+    assert requeue_calls[0].fragment_id_queue == ["other-frag"]
+
+
+def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
+    """A main-script interaction's default is app-wide, so it trumps the targets.
+
+    - One callback requests a fragment-scoped rerun; another returns normally.
+    - After both run: the targeted re-queue plus one forced full-app request.
+    - The forced request has no fragment scope and no widget_states.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    def cb_targeted() -> None:
+        raise RerunException(
+            RerunData(
+                page_script_hash=_CURRENT_PAGE_HASH,
+                fragment_id_queue=["frag-1"],
+                is_fragment_scoped_rerun=True,
+            )
+        )
+
+    ss = SessionState()
+    wid1, wid2 = "w1", "w2"
+    for wid, cb in [(wid1, cb_targeted), (wid2, lambda: None)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    # Main-script interaction; see _call_callbacks_in_main_script for why this is pinned.
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # The targeted re-queue plus one forced full-app rerun.
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert forced.fragment_id_queue == []
+    assert forced.is_fragment_scoped_rerun is False
+    assert forced.widget_states is None
+
+
+def test_fragment_interaction_does_not_escalate_targeted_rerun() -> None:
+    """A fragment interaction is not widened to the whole app by a normal return.
+
+    The interacting widget lives inside a fragment, so the rerun a normally-returning
+    callback leaves in place covers only that fragment. The targeted rerun replaces it,
+    per specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md ("A targeted rerun
+    replaces the interaction's default rerun") — forcing a full-app rerun here would
+    discard the partial update instead.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    def cb_targeted() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["frag-1"], is_fragment_scoped_rerun=True)
+        )
+
+    ss = SessionState()
+    for wid, cb in [("w1", cb_targeted), ("w2", lambda: None)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+            fragment_id="frag-1",
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["frag-1"]
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the targeted re-queue: the fragment-scoped default was not escalated.
+    assert len(requeue_calls) == 1
+    assert requeue_calls[0].fragment_id_queue == ["frag-1"]
+
+
+def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
+    """All-targeted callbacks only re-queue; no extra full-app rerun is forced.
+
+    When every callback requests a fragment-scoped rerun, there is no conflicting
+    default to satisfy, so the code only re-queues each request.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    def cb_frag_1() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["frag-1"], is_fragment_scoped_rerun=True)
+        )
+
+    def cb_frag_2() -> None:
+        raise RerunException(
+            RerunData(fragment_id_queue=["frag-2"], is_fragment_scoped_rerun=True)
+        )
+
+    ss = SessionState()
+    for wid, cb in [("w1", cb_frag_1), ("w2", cb_frag_2)]:
+        meta = WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=cb,
+        )
+        ss._set_widget_metadata(meta)
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    mock_ctx = MagicMock()
+    # Pin a main-script interaction, whose default rerun is the full app: the "no
+    # force" result then comes from no callback voting for the default, not from the
+    # fragment gate suppressing it.
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
+        d
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the two targeted re-queues; no forced full-app rerun was added.
+    assert len(requeue_calls) == 2
+    assert all(d.is_fragment_scoped_rerun for d in requeue_calls)
+
+
+_TARGET_PAGE_HASH = "target-page-hash"
+_CURRENT_QUERY_STRING = "from=current"
+_TARGET_QUERY_STRING = "utm_source=nav"
+
+
+def _raise_switch_page() -> None:
+    """Raise what ``st.switch_page()`` sends: a full-app rerun of another page.
+
+    It carries its own ``query_string`` because ``st.switch_page`` rewrites the query
+    params before requesting the rerun.
+    """
+    raise RerunException(
+        RerunData(
+            query_string=_TARGET_QUERY_STRING,
+            page_script_hash=_TARGET_PAGE_HASH,
+        )
+    )
+
+
+def _raise_plain_rerun() -> None:
+    """Raise what a plain ``st.rerun()`` sends: a full-app rerun of the current page."""
+    raise RerunException(
+        RerunData(
+            query_string=_CURRENT_QUERY_STRING,
+            page_script_hash=_CURRENT_PAGE_HASH,
+        )
+    )
+
+
+def _raise_fragment_scoped_rerun() -> None:
+    """Raise what ``st.rerun(scope="fragment")`` sends: this page, one fragment."""
+    raise RerunException(
+        RerunData(
+            query_string=_CURRENT_QUERY_STRING,
+            page_script_hash=_CURRENT_PAGE_HASH,
+            fragment_id_queue=["frag-1"],
+            is_fragment_scoped_rerun=True,
+        )
+    )
+
+
+def _coalesce_callback_requests(
+    callbacks: list[Callable[[], None]],
+    *,
+    fragment_ids_this_run: list[str] | None = None,
+) -> RerunData:
+    """Run an interaction's callbacks against a real ``ScriptRequests``.
+
+    Returns the single request the ScriptRunner would then pick up, so a test sees what
+    coalescing actually produced rather than what ``_call_callbacks`` passed in.
+    ``callbacks`` are dispatched in the order given: dispatch order within an
+    interaction is not guaranteed, so each shape has to hold for either order.
+    """
+    ss = SessionState()
+    for index, callback in enumerate(callbacks):
+        wid = f"w{index}"
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=callback,
+            )
+        )
+        ss._old_state[wid] = 0
+        ss._new_widget_state.set_from_value(wid, 1)
+
+    script_requests = ScriptRequests()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = fragment_ids_this_run
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.query_string = _CURRENT_QUERY_STRING
+    mock_ctx.cached_message_hashes = frozenset()
+    mock_ctx.context_info = None
+    mock_ctx.script_requests = script_requests
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    request = script_requests.on_scriptrunner_ready()
+    assert request.type is ScriptRequestType.RERUN
+    return request.rerun_data
+
+
+def test_callback_switch_page_keeps_its_target_page() -> None:
+    """A lone st.switch_page() in a callback navigates.
+
+    The ordinary case, and the baseline the two-callback tests below must match:
+    the coalesced request names the target page and carries the query params
+    ``st.switch_page`` set.
+    """
+    rerun_data = _coalesce_callback_requests([_raise_switch_page])
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+
+
+@pytest.mark.parametrize("switch_page_first", [True, False])
+def test_callback_switch_page_survives_a_second_plain_rerun(
+    switch_page_first: bool,
+) -> None:
+    """st.switch_page() and st.rerun() in one interaction still navigate.
+
+    Both requests are parked until the last callback returns and then replayed into
+    ``ScriptRequests``, where coalescing takes ``page_script_hash`` and ``query_string``
+    from whichever request came last. Replaying the plain st.rerun() last therefore
+    silently redirected the app back to the page the user asked to leave, dropping the
+    navigation and its query params with no error anywhere.
+    """
+    callbacks = [_raise_switch_page, _raise_plain_rerun]
+    if not switch_page_first:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(callbacks)
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+
+
+@pytest.mark.parametrize("switch_page_first", [True, False])
+def test_callback_switch_page_survives_a_fragment_scoped_rerun(
+    switch_page_first: bool,
+) -> None:
+    """st.switch_page() beats a fragment-scoped rerun from the same interaction.
+
+    Navigating reruns the whole app, so the fragment target is dropped either way —
+    but the target page and its query params must survive. Runs as a fragment
+    interaction because that is the only way ``st.rerun(scope="fragment")`` is reachable.
+    """
+    callbacks = [_raise_switch_page, _raise_fragment_scoped_rerun]
+    if not switch_page_first:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(
+        callbacks, fragment_ids_this_run=["frag-1"]
+    )
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+    assert rerun_data.fragment_id_queue == []
+    assert rerun_data.is_fragment_scoped_rerun is False
+
+
+@pytest.mark.parametrize("switch_page_first", [True, False])
+def test_pending_navigation_suppresses_forced_full_app_rerun(
+    switch_page_first: bool,
+) -> None:
+    """A pending navigation stands in for the forced full-app rerun.
+
+    The forced request exists to guarantee an app-wide rerun when a targeted one would
+    otherwise preempt the body, but it always names the *current* page. Navigating is
+    already app-wide, so queueing it on top would only undo the navigation.
+    """
+    callbacks = [_raise_switch_page, _raise_targeted_rerun]
+    if not switch_page_first:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(callbacks)
+
+    assert rerun_data.page_script_hash == _TARGET_PAGE_HASH
+    assert rerun_data.query_string == _TARGET_QUERY_STRING
+    assert rerun_data.fragment_id_queue == []
+
+
+def test_targeted_rerun_without_navigation_still_forces_full_app_rerun() -> None:
+    """Without a navigation the forced full-app rerun still fires.
+
+    The counterpart to the suppression test above: the guard keys on a pending
+    navigation only, so a targeted rerun competing with a normal return must still get
+    the app-wide request queued on top of it, on the page already running.
+    """
+    ss = _state_with_changed_widgets(
+        [("w1", _raise_targeted_rerun), ("w2", lambda: None)]
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert forced.page_script_hash == _CURRENT_PAGE_HASH
+    assert forced.fragment_id_queue == []
+
+
+def test_reruns_without_navigation_keep_their_dispatch_order() -> None:
+    """Reordering is a no-op when nothing navigates.
+
+    Every request names the current page, so the sort that moves a navigating request
+    last must leave the queue exactly as the callbacks produced it.
+    """
+    ss = _state_with_changed_widgets(
+        [("w1", _raise_fragment_scoped_rerun), ("w2", _raise_plain_rerun)]
+    )
+
+    requeue_calls = _call_callbacks_in_main_script(ss)
+
+    # The two callback requests in dispatch order, then the forced app-wide default.
+    assert [data.fragment_id_queue for data in requeue_calls] == [["frag-1"], [], []]
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_two_fragment_targets_from_two_callbacks_both_run(reverse: bool) -> None:
+    """Two targeted callbacks still contribute both fragments to the coalesced queue.
+
+    Reordering only moves navigating requests, and there are none here, so the union
+    ``ScriptRequests`` builds must keep both targets in dispatch order.
+    """
+
+    def cb_frag_2() -> None:
+        raise RerunException(
+            RerunData(
+                page_script_hash=_CURRENT_PAGE_HASH,
+                fragment_id_queue=["frag-2"],
+                is_fragment_scoped_rerun=True,
+            )
+        )
+
+    callbacks = [_raise_fragment_scoped_rerun, cb_frag_2]
+    if reverse:
+        callbacks.reverse()
+
+    rerun_data = _coalesce_callback_requests(
+        callbacks, fragment_ids_this_run=["frag-1", "frag-2"]
+    )
+
+    expected = ["frag-2", "frag-1"] if reverse else ["frag-1", "frag-2"]
+    assert rerun_data.fragment_id_queue == expected
+    assert rerun_data.page_script_hash == _CURRENT_PAGE_HASH
 
 
 def test_updates():
@@ -990,7 +1874,7 @@ class SessionStateMethodTests(unittest.TestCase):
             "streamlit.runtime.state.session_state.get_script_run_ctx",
             return_value=mock_ctx,
         ):
-            with pytest.raises(StreamlitAPIException) as e:
+            with pytest.raises(StreamlitWidgetAlreadyInstantiatedError) as e:
                 self.session_state._key_id_mapper.set_key_id_mapping(
                     {"widget_id": "widget_id"}
                 )
@@ -1006,7 +1890,7 @@ class SessionStateMethodTests(unittest.TestCase):
             "streamlit.runtime.state.session_state.get_script_run_ctx",
             return_value=mock_ctx,
         ):
-            with pytest.raises(StreamlitAPIException) as e:
+            with pytest.raises(StreamlitWidgetAlreadyInstantiatedError) as e:
                 self.session_state["form_id"] = "blah"
             assert "`st.session_state.form_id` cannot be modified" in str(e.value)
 

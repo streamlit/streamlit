@@ -21,7 +21,7 @@ from streamlit.elements.lib.layout_utils import create_layout_config, validate_w
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
+from streamlit.string_util import clean_text, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -457,6 +457,6 @@ class HeadingMixin:
                 )
 
         if help:
-            proto.help = help
+            proto.help = to_help_str(help)
 
         return proto
