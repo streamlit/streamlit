@@ -243,7 +243,7 @@ describe("Multiselect widget", () => {
     expect(match).toHaveTextContent("a")
   })
 
-  it("selects typed filter text with Ctrl/Cmd+A so Backspace can delete it", async () => {
+  it("selects typed filter text with Ctrl+A so Backspace can delete it", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: [],
