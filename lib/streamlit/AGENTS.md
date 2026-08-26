@@ -157,11 +157,7 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
-- Do not raise the deprecated aliases kept for compatibility
-  (`StreamlitMissingPageLabelError`, `StreamlitInvalidPageLayoutError`,
-  `StreamlitInvalidTextAlignmentError`, `StreamlitInvalidBindValueError`,
-  `StreamlitInvalidPersistStateError`); raise
-  `StreamlitMissingRequiredParameterError` or `StreamlitValueError` instead.
+- Do not raise the deprecated aliases.
 
 Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
 type (incompatible option combinations, nesting rules, serialization failures,

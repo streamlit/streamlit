@@ -722,11 +722,19 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
         )
 
 
-# Deprecated aliases of the shared types so imports and isinstance/except checks
-# keep working. except OldName matches any instance of the shared type. Do not
-# construct these names; raise the shared types instead.
-StreamlitInvalidPageLayoutError = StreamlitValueError
-StreamlitInvalidTextAlignmentError = StreamlitValueError
-StreamlitInvalidBindValueError = StreamlitValueError
-StreamlitInvalidPersistStateError = StreamlitValueError
-StreamlitMissingPageLabelError = StreamlitMissingRequiredParameterError
+# Deprecated aliases kept only for backward compatibility.
+StreamlitInvalidPageLayoutError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidTextAlignmentError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.
+    StreamlitMissingRequiredParameterError
+)
