@@ -611,7 +611,7 @@ jobs:
       # Auto-approve ai-final-review PRs with an APPROVED verdict, except:
       # - change:spec (always needs a human, regardless of impact)
       # - change:feature + impact:users (new user-facing features)
-      # - more than 1000 changed lines (additions + deletions)
+      # - more than 1500 changed lines (additions + deletions)
       # - PR originates from a fork
       # - fewer reviews were reported than configured models
       # Bugfixes, chores, docs, and other impact:users PRs stay eligible:
@@ -706,8 +706,8 @@ jobs:
           fi
           CHANGED_LINES=$((ADDITIONS + DELETIONS))
           echo "PR changed lines: $CHANGED_LINES (additions=$ADDITIONS, deletions=$DELETIONS)"
-          if [ "$CHANGED_LINES" -gt 1000 ]; then
-            echo "Skipping auto-approve: PR has $CHANGED_LINES changed lines (limit 1000)"
+          if [ "$CHANGED_LINES" -gt 1500 ]; then
+            echo "Skipping auto-approve: PR has $CHANGED_LINES changed lines (limit 1500)"
             exit 0
           fi
 
