@@ -7,7 +7,7 @@ created: 2026-05-22
 
 ## Summary
 
-Add a keyword-only `select_all` parameter to `st.multiselect` that allows users to control the "Select all" and "Select X matches" dropdown options. The parameter accepts `True` (always show), `False` (never show), or an integer threshold (show only when the number of selectable options is at or below the threshold).
+Add a keyword-only `select_all` parameter to `st.multiselect` that allows users to control the "Select all" and "Select X matches" dropdown options. The parameter accepts `True` (always show), `False` (never show), or an integer threshold (show only when the number of currently selectable options is at or below the threshold). Integer thresholds use that selectable count — unselected option entries, narrowed by search when a query is active — not the total unfiltered `len(options)`.
 
 ## Problem
 
@@ -78,6 +78,12 @@ st.multiselect(
 
 - **Type:** `bool | int`
 - **Default:** `1000`
+
+**Selectable options** are the count used by integer thresholds. They are unselected **option entries** from `options`, matched by value — not total `len(options)`, and not `len(options) - len(selected)`. Custom chips from `accept_new_options=True` appear in `selected` but are not in `options`, so they must not change the threshold:
+
+- No search: option entries whose value is not in the selected set
+- Search active: those option entries that also match the query (the same count used to label "Select X matches")
+
 - **Values:**
 
 | Value | Behavior |
@@ -85,14 +91,9 @@ st.multiselect(
 | `True` | Always show "Select all" (subject to the 2+ selectable options minimum) |
 | `False` | Never show "Select all" |
 | `0` | Never show "Select all" (same as `False`) |
-| Integer > 0 | Show "Select all" only when there are 2 or more selectable options AND the count is at or below the threshold (`<=`). Hide when the selectable count is **above** the threshold. |
+| Integer > 0 | Show "Select all" only when there are 2 or more selectable options AND that selectable count is at or below the threshold (`<=`). Hide when the selectable count is **above** the threshold. |
 
 > **Note:** The 2+ selectable options requirement is an underlying constraint that applies to all modes, including `select_all=True`. A "Select all" option with only one selectable item provides no value over simply clicking that item. A threshold of `1` therefore never shows the bulk action (same as `False` / `0`); `2` is the smallest meaningful threshold.
-
-**Selectable options** are unselected **option entries** from `options`, matched by value — not `len(options) - len(selected)`. Custom chips from `accept_new_options=True` appear in `selected` but are not in `options`, so they must not change the threshold. Count:
-
-- No search: option entries whose value is not in the selected set
-- Search active: those option entries that also match the query (the same count used to label "Select X matches")
 
 ### Examples
 
