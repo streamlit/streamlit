@@ -62,9 +62,7 @@ from datetime import date, datetime
 from typing import Literal, TypeAlias
 
 DatePresetValue: TypeAlias = date | datetime | str
-QuickSelectPresetValue: TypeAlias = (
-    DatePresetValue | Sequence[DatePresetValue]
-)
+QuickSelectPresetValue: TypeAlias = DatePresetValue | Sequence[DatePresetValue]
 
 
 def date_input(
