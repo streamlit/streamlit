@@ -632,12 +632,11 @@ const Multiselect: FC<Props> = props => {
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (disabled) return
 
-      // Let Ctrl/Cmd+A select the typed filter text, which RAC would otherwise
-      // treat as select-all options while the menu is open. With an empty
-      // filter there is no text to select, so RAC's select-all stays in place.
-      // stopPropagation without preventDefault keeps native select-all.
+      // RAC binds Mod+A to "select all options" while the menu is open and
+      // calls preventDefault(), which would keep the user from selecting the
+      // typed filter text. stopPropagation (without preventDefault) keeps the
+      // input's native select-all.
       if (
-        e.currentTarget.value &&
         e.key.toLowerCase() === "a" &&
         (e.ctrlKey || e.metaKey) &&
         !e.altKey &&
