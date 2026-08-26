@@ -41,7 +41,7 @@ Add two keyword-only parameters after `format`:
 
 ```python
 DateLike = date | datetime | str
-DateFilter = Sequence[DateLike] | DateLike
+DateFilter = Collection[DateLike] | DateLike
 
 
 def date_input(
@@ -61,8 +61,8 @@ def date_input(
 
 A bare `date`, `datetime`, ISO string, `"today"`, or weekday name is a one-element collection.
 `str` is handled as a scalar first so `enabled_dates="monday"` is not iterated as characters.
-Materialize the collection once before identity, protobuf, and validation reads; do not accept a
-generator that can be consumed twice.
+Accept lists, tuples, sets, and pandas `Series`. Materialize once before identity, protobuf, and
+validation reads. Reject generators, which can be consumed twice.
 
 Each entry accepts:
 
@@ -98,9 +98,10 @@ Additional rules:
   empty range value) when an app temporarily has no available dates. An empty `disabled_dates`
   collection disables nothing.
 - The literal `"today"` (default or explicit) matches existing min/max handling: resolve it to a
-  selectable date in the min/max window. Prefer the next selectable date, then the previous. If no
-  selectable date exists, use `None` for a single-date widget or an empty range so the return type
-  does not become `date | None` depending on the day of week. Any other non-empty explicit value
+  selectable date in the min/max window. Keep today if it is selectable; otherwise prefer the next
+  selectable date, then the previous. If no selectable date exists, use `None` for a single-date
+  widget or an empty range so the return type does not become `date | None` depending on the day of
+  week. Any other non-empty explicit value
   must already be selectable, including both endpoints of a complete range and the start of a
   partial range. Raise at the `st.date_input` call if it is not.
 - Widget identity matches `min_value` / `max_value`: include the canonical availability config in
@@ -146,7 +147,7 @@ must provide an equivalent accessible signal.
 
 ### Examples
 
-Disable weekends (default `"today"` resolves to the nearest weekday):
+Disable weekends (default `"today"` stays today on weekdays, or the next weekday):
 
 ```python
 import streamlit as st
