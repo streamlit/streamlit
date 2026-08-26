@@ -227,6 +227,28 @@ describe("StatusWidget element", () => {
 
     expect(rerunScript).toHaveBeenCalledWith(true)
   })
+
+  it("calls always rerun when the a shortcut is pressed", async () => {
+    const user = userEvent.setup()
+    const rerunScript = vi.fn()
+
+    render(
+      <StatusWidget
+        {...getProps({
+          rerunScript,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
+        })}
+      />
+    )
+
+    expect(await screen.findByText("Always rerun")).toBeVisible()
+
+    await user.keyboard("a")
+
+    expect(rerunScript).toHaveBeenCalledWith(true)
+    expect(rerunScript).not.toHaveBeenCalledWith(false)
+  })
 })
 
 describe("Running Icon", () => {

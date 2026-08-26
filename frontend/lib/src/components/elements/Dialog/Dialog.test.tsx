@@ -313,8 +313,8 @@ describe("Dialog container", () => {
           </Dialog>
         )
 
-        // react-hot-keys fires its handler on both keydown and keyup, so both
-        // must be suppressed for non-dismissible dialogs.
+        // Capture-phase listeners suppress R so the app-level shortcut cannot
+        // rerun (and close) a non-dismissible dialog.
         const event = new KeyboardEvent(eventType, {
           key: "r",
           bubbles: true,

@@ -16,14 +16,13 @@
 
 import { createRef, PureComponent, ReactNode } from "react"
 
-import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
-import Hotkeys from "react-hot-keys"
 
 import AppView from "@streamlit/app/src/components/AppView/AppView"
 import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
+import { GlobalHotkeys } from "@streamlit/app/src/components/GlobalHotkeys/GlobalHotkeys"
 import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
 import {
   isSkillsNudgeDismissed,
@@ -2688,13 +2687,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
-    // Ignore keyup events so a modified shortcut cannot become a bare-key
-    // shortcut when the user releases the modifier first (for example, Cmd+C).
-    // react-hot-keys binds keydown and keyup to the same onKeyDown handler.
-    if (keyboardEvent?.type === "keyup") {
-      return
-    }
-
     // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
     // We never fire global single-letter shortcuts while the user is typing.
     if (
@@ -2805,14 +2797,14 @@ export class App extends PureComponent<Props, State> {
       this.state.toolbarMode
     )
 
-    const outerDivClass = classNames(
+    const outerDivClass = [
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
-      {
-        "streamlit-embedded": isEmbed(),
-        "streamlit-wide": userSettings.wideMode,
-      }
-    )
+      isEmbed() && "streamlit-embedded",
+      userSettings.wideMode && "streamlit-wide",
+    ]
+      .filter(Boolean)
+      .join(" ")
 
     const renderedDialog: React.ReactNode = dialog
       ? StreamlitDialog({
@@ -2889,7 +2881,7 @@ export class App extends PureComponent<Props, State> {
         onInstallSkills={this.handleErrorCalloutInstall}
         onSkillsCalloutShown={this.handleErrorCalloutShown}
       >
-        <Hotkeys
+        <GlobalHotkeys
           keyName="r,c,esc"
           onKeyDown={this.handleKeyDown}
           onKeyUp={this.handleKeyUp}
@@ -2988,7 +2980,7 @@ export class App extends PureComponent<Props, State> {
             />
             {renderedDialog}
           </StyledApp>
-        </Hotkeys>
+        </GlobalHotkeys>
       </StreamlitContextProvider>
     )
   }

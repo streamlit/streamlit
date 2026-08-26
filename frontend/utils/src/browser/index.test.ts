@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { getCookie, localStorageAvailable } from "."
+import {
+  generateUuid,
+  getCookie,
+  localStorageAvailable,
+  parseUserAgent,
+} from "."
 
 describe("browser", () => {
   describe("localStorageAvailable", () => {
@@ -90,6 +95,57 @@ describe("browser", () => {
       document.cookie = "flavor=chocolatechip;"
       const cookie = getCookie("flavor")
       expect(cookie).toEqual("chocolatechip")
+    })
+  })
+
+  describe("generateUuid", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    it("uses crypto.randomUUID when available", () => {
+      const uuid = "123e4567-e89b-42d3-a456-426614174000"
+      vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(uuid)
+
+      expect(generateUuid()).toBe(uuid)
+    })
+
+    it("generates a version 4 UUID with getRandomValues as a fallback", () => {
+      vi.stubGlobal("crypto", {
+        getRandomValues: (bytes: Uint8Array) => {
+          bytes.fill(0xff)
+          return bytes
+        },
+      })
+
+      expect(generateUuid()).toBe("ffffffff-ffff-4fff-bfff-ffffffffffff")
+    })
+  })
+
+  describe("parseUserAgent", () => {
+    it.each([
+      [
+        "Android phone",
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36",
+        "mobile",
+      ],
+      [
+        "Android tablet",
+        "Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
+        "tablet",
+      ],
+    ])("classifies an %s as %s", (_label, userAgent, deviceType) => {
+      expect(parseUserAgent(userAgent).deviceType).toBe(deviceType)
+    })
+
+    it("returns empty fields for an unknown user agent", () => {
+      expect(parseUserAgent("custom-client")).toEqual({
+        browserName: undefined,
+        browserVersion: undefined,
+        deviceType: undefined,
+        os: undefined,
+      })
     })
   })
 })

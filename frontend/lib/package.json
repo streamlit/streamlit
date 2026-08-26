@@ -70,10 +70,8 @@
     "@streamlit/utils": "workspace:^",
     "apache-arrow": "^21.2.0",
     "axios": "^1.19.0",
-    "classnames": "^2.3.2",
     "color2k": "^2.0.2",
     "d3-graphviz": "^5.6.0",
-    "decamelize": "^6.0.1",
     "dompurify": "^3.4.14",
     "hoist-non-react-statics": "^3.3.2",
     "hotkeys-js": "^4.0.5",
@@ -116,11 +114,9 @@
     "remark-math": "^6.0.0",
     "remend": "^1.2.2",
     "typed-signals": "^3.0.0",
-    "ua-parser-js": "^1.0.41",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
     "urlpattern-polyfill": "^10.1.0",
-    "uuid": "^14.0.2",
     "vega": "^6.4.0",
     "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.3.2",
@@ -157,7 +153,6 @@
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^18.2.0",
     "@types/react-syntax-highlighter": "^15.5.5",
-    "@types/ua-parser-js": "^0.7.39",
     "@types/xxhashjs": "^0.2.2",
     "@vitejs/plugin-react-swc": "^4.3.3",
     "timezone-mock": "^1.4.3",
@@ -175,12 +170,8 @@
       "react-aria",
       "react-plotly.js",
       "react-stately",
-      "uuid",
       "vfile",
       "wavesurfer.js"
     ]
-  },
-  "resolutions": {
-    "ua-parser-js": "^1.0.40"
   }
 }
