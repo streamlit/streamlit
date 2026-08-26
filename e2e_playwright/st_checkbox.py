@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,6 +75,29 @@ st.checkbox("checkbox with content width", width="content")
 st.checkbox("checkbox with stretch width", width="stretch")
 st.checkbox("checkbox with 200px width", width=200)
 
+# wrap=False keeps the checkbox on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title on the label (help lives on a
+# separate icon, so both coexist). A narrow fixed width forces the long label to
+# overflow, so the auto default (wrap=None) in a vertical layout wraps and grows
+# taller while wrap=False stays single-row.
+_WRAP_LABEL = "Include archived projects from the last several quarters"
+with st.container(key="wrap_checkboxes"):
+    st.checkbox(_WRAP_LABEL, width=200, wrap=False, key="wrap_false_checkbox")
+    st.checkbox(_WRAP_LABEL, width=200, key="wrap_auto_vertical_checkbox")
+    st.checkbox(
+        _WRAP_LABEL,
+        width=200,
+        wrap=False,
+        help="wrap help text",
+        key="wrap_help_checkbox",
+    )
+
+# Default (auto) wrap: inside a horizontal container the label does not wrap; it
+# ellipsizes and exposes the full label via a native title. A fixed container
+# width narrower than the label forces the overflow.
+with st.container(horizontal=True, width=250, key="wrap_auto_horizontal_checkbox"):
+    st.checkbox(_WRAP_LABEL, key="wrap_auto_checkbox")
+
 st.markdown("Dynamic checkbox:")
 
 if st.toggle("Update checkbox props"):
@@ -105,3 +128,35 @@ else:
         kwargs={"param": "initial kwarg param"},
     )
     st.write("Initial checkbox state:", state)
+
+# Query param binding checkboxes
+st.markdown("Query param binding:")
+bound_cb = st.checkbox(
+    "Bound checkbox (default False)",
+    key="bound_checkbox",
+    bind="query-params",
+)
+st.write("bound checkbox value:", bound_cb)
+
+bound_cb_true = st.checkbox(
+    "Bound checkbox (default True)",
+    value=True,
+    key="bound_true",
+    bind="query-params",
+)
+st.write("bound checkbox true value:", bound_cb_true)
+
+# Unbind test: checkbox whose bind="query-params" can be removed at runtime
+st.markdown("Unbind test:")
+if st.button("Remove binding"):
+    st.session_state.use_bind = False
+
+use_bind = st.session_state.get("use_bind", True)
+if use_bind:
+    unbind_val = st.checkbox(
+        "Unbindable checkbox", key="unbindable", bind="query-params"
+    )
+else:
+    unbind_val = st.checkbox("Unbindable checkbox", key="unbindable")
+st.write("unbindable value:", unbind_val)
+st.write("bind active:", use_bind)

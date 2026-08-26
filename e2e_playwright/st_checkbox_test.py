@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,20 +15,29 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
     expect_help_tooltip,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_checkbox,
     get_element_by_key,
     get_expander,
+    reset_hovering,
 )
 
-CHECKBOX_ELEMENTS = 17
+CHECKBOX_ELEMENTS = 24
+
+WRAP_LABEL = "Include archived projects from the last several quarters"
 
 
 def test_checkbox_widget_display(
@@ -155,6 +164,55 @@ def test_grouped_checkboxes_height(app: Page, assert_snapshot: ImageCompareFunct
     )
 
 
+def test_wrap_false_single_row_and_auto_resolution(app: Page):
+    """wrap=False keeps the checkbox on one row and exposes the full label via a
+    native title, while the auto default (wrap=None) wraps and grows taller in a
+    vertical layout but ellipsizes with a title inside a horizontal container.
+    """
+    wrap_false = get_element_by_key(app, "wrap_false_checkbox")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_checkbox")
+
+    # wrap=False: label ellipsized and full label exposed via a native title.
+    # The checkbox indicator itself must remain visible (not clipped by truncation).
+    expect_label_truncated(wrap_false)
+    expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(wrap_false.get_by_role("checkbox")).to_be_visible()
+
+    # Auto default in a vertical layout wraps onto another line and adds no title.
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    false_box = wrap_false.get_by_test_id("stCheckbox").bounding_box()
+    auto_box = wrap_auto_vertical.get_by_test_id("stCheckbox").bounding_box()
+    assert false_box is not None
+    assert auto_box is not None
+    # The 4px margin absorbs sub-pixel rounding so the wrapped (two-line) checkbox
+    # is clearly taller than the single-row one, not just larger by rounding.
+    assert auto_box["height"] > false_box["height"] + 4
+
+    # Auto default inside a horizontal container keeps one row with a title.
+    wrap_auto_horizontal = get_element_by_key(app, "wrap_auto_checkbox")
+    expect_label_truncated(wrap_auto_horizontal)
+    expect(wrap_auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_wrap_false_title_and_help_coexist(app: Page):
+    """With help set, the full-label title stays on the label (the help tooltip
+    lives on a separate icon), so both coexist.
+    """
+    container = get_element_by_key(app, "wrap_help_checkbox")
+    # The label is still ellipsized and exposes the full label via a native title.
+    # The checkbox indicator and help icon must remain visible (not clipped when
+    # the help icon shares the truncated row).
+    expect_label_truncated(container)
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(container.get_by_role("checkbox")).to_be_visible()
+    expect(container.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
+
+    # Hovering the separate help icon still shows the help tooltip.
+    reset_hovering(app)
+    expect_help_tooltip(app, container, "wrap help text")
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stCheckbox")
@@ -206,3 +264,79 @@ def test_dynamic_checkbox_props(app: Page, assert_snapshot: ImageCompareFunction
     # Click the checkbox
     click_checkbox(app, "Updated dynamic checkbox")
     expect_prefixed_markdown(app, "Updated checkbox state:", "False")
+
+
+def test_checkbox_query_param_seeding(page: Page, app_base_url: str):
+    """Test that checkbox value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_checkbox": "true"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound checkbox value:", "True")
+
+
+def test_checkbox_query_param_updates_url(app: Page):
+    """Test that clicking a bound checkbox updates the URL."""
+    # Initially default False, no query param in URL
+    expect_prefixed_markdown(app, "bound checkbox value:", "False")
+    expect(app).not_to_have_url(re.compile(r"bound_checkbox"))
+
+    # Click the checkbox -> True
+    click_checkbox(app, "Bound checkbox (default False)")
+    expect_prefixed_markdown(app, "bound checkbox value:", "True")
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_checkbox=true"))
+
+    # Click again -> back to default False
+    click_checkbox(app, "Bound checkbox (default False)")
+    expect_prefixed_markdown(app, "bound checkbox value:", "False")
+
+    # Query param should be removed since value is back to default
+    expect(app).not_to_have_url(re.compile(r"bound_checkbox"))
+
+
+def test_checkbox_query_param_default_true(page: Page, app_base_url: str):
+    """Test checkbox with default True: seeding and param removal."""
+    # Load app with query param overriding the True default
+    page.goto(build_app_url(app_base_url, query={"bound_true": "false"}))
+    wait_for_app_loaded(page)
+
+    # Checkbox should be unchecked (overriding True default)
+    expect_prefixed_markdown(page, "bound checkbox true value:", "False")
+
+    # Click to re-check (back to default True)
+    click_checkbox(page, "Bound checkbox (default True)")
+    expect_prefixed_markdown(page, "bound checkbox true value:", "True")
+
+    # Query param should be removed since value is back to default (True)
+    expect(page).not_to_have_url(re.compile(r"bound_true"))
+
+
+def test_checkbox_query_param_invalid_value(page: Page, app_base_url: str):
+    """Test that invalid URL values are cleared and widget uses default."""
+    page.goto(build_app_url(app_base_url, query={"bound_checkbox": "invalid"}))
+    wait_for_app_loaded(page)
+
+    # Checkbox should use default (False), and invalid param should be cleared
+    expect_prefixed_markdown(page, "bound checkbox value:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_checkbox"))
+
+
+def test_checkbox_unbind_clears_url_param(page: Page, app_base_url: str):
+    """Test that removing bind='query-params' clears the URL param."""
+    page.goto(build_app_url(app_base_url, query={"unbindable": "true"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "unbindable value:", "True")
+    expect_prefixed_markdown(page, "bind active:", "True")
+    expect(page).to_have_url(re.compile(r"unbindable=true"))
+
+    # Remove the binding by clicking the button
+    page.get_by_role("button", name="Remove binding").click()
+    wait_for_app_run(page)
+
+    # URL should no longer contain the query param
+    expect(page).not_to_have_url(re.compile(r"unbindable"))
+    # Widget value should still be True (preserved in session state)
+    expect_prefixed_markdown(page, "unbindable value:", "True")
+    expect_prefixed_markdown(page, "bind active:", "False")

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ from streamlit import config, config_util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidThemeError,
     StreamlitInvalidThemeOptionError,
     StreamlitInvalidThemeSectionError,
 )
@@ -81,6 +82,41 @@ class ConfigUtilTest(unittest.TestCase):
     def test_clean_paragraphs_empty_string(self):
         result = config_util._clean_paragraphs("")
         assert result == [""]
+
+    def test_format_config_file_label_scopes(self) -> None:
+        assert (
+            config_util._format_config_file_label(
+                "/global.toml", ["/global.toml", "/project.toml", "/script.toml"]
+            )
+            == "config.toml (global): /global.toml"
+        )
+        assert (
+            config_util._format_config_file_label(
+                "/project.toml", ["/global.toml", "/project.toml", "/script.toml"]
+            )
+            == "config.toml (project): /project.toml"
+        )
+        assert (
+            config_util._format_config_file_label(
+                "/script.toml", ["/global.toml", "/project.toml", "/script.toml"]
+            )
+            == "config.toml (script): /script.toml"
+        )
+
+    def test_format_config_file_label_out_of_range(self) -> None:
+        assert (
+            config_util._format_config_file_label(
+                "/extra.toml",
+                ["/global.toml", "/project.toml", "/script.toml", "/extra.toml"],
+            )
+            == "config.toml: /extra.toml"
+        )
+        assert (
+            config_util._format_config_file_label(
+                "/missing.toml", ["/global.toml", "/project.toml"]
+            )
+            is None
+        )
 
     @patch("click.secho")
     def test_default_config_options_commented_out(self, patched_echo):
@@ -664,10 +700,15 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight",
             "fontFaces",
             "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
         }
         assert main_only_options.isdisjoint(section_options)
+
+        # Chart colors are allowed in all theme sections, including sidebar
+        assert {
+            "chartCategoricalColors",
+            "chartSequentialColors",
+            "chartDivergingColors",
+        }.issubset(section_options)
 
         # Test that we get the expected number of theme.sidebar options
         expected_count = self._get_expected_theme_options_count(section="theme.sidebar")
@@ -872,8 +913,6 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight": "bold",
             "fontFaces": "Arial, sans-serif",
             "showSidebarBorder": True,
-            "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
-            "chartSequentialColors": ["#ff0000", "#00ff00", "#0000ff"],
         }
 
         for main_only_option, option_value in main_only_options.items():
@@ -907,6 +946,34 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             # Verify valid main option was preserved
             assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
 
+    def test_validate_theme_file_content_allows_chart_colors_in_sidebar(self):
+        """Chart color options are valid in theme.sidebar sections."""
+        theme_content = {
+            "theme": {
+                "primaryColor": "#ff0000",
+                "sidebar": {
+                    "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
+                    "chartSequentialColors": [f"#{i:02x}0000" for i in range(10)],
+                    "chartDivergingColors": [f"#00{i:02x}00" for i in range(10)],
+                },
+            }
+        }
+
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            filtered_theme = config_util._validate_theme_file_content(
+                theme_content, "test_theme.toml", self.config_template
+            )
+            mock_logger.warning.assert_not_called()
+
+        assert filtered_theme["theme"]["sidebar"]["chartCategoricalColors"] == [
+            "#ff0000",
+            "#00ff00",
+            "#0000ff",
+        ]
+        assert len(filtered_theme["theme"]["sidebar"]["chartSequentialColors"]) == 10
+        assert len(filtered_theme["theme"]["sidebar"]["chartDivergingColors"]) == 10
+
     def test_load_theme_file_missing_toml(self):
         """Test _load_theme_file when toml module is missing."""
 
@@ -926,7 +993,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         backgroundColor = "#ffffff"
         """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(theme_toml)
             temp_path = f.name
 
@@ -996,7 +1065,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         port = 8501
         """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(content_toml)
             temp_path = f.name
 
@@ -1016,7 +1087,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         primaryColor = "#ff0000"
         """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(invalid_toml)
             temp_path = f.name
 
@@ -1040,7 +1113,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             + "A" * (config_util._MAX_THEME_FILE_SIZE_BYTES + 1000)
         )
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(large_content)
             temp_path = f.name
 
@@ -1163,7 +1238,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         primary_option = ConfigOption(
             "theme.primaryColor", description="", default_val=None
         )
-        primary_option.set_value("#override", "config.toml")
+        primary_option.set_value("#override", "/project.toml")
 
         config_options = {
             "theme.base": base_option,
@@ -1185,20 +1260,43 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             set_option_calls.append((key, value, source))
 
         config_util.process_theme_inheritance(
-            config_options, self.config_template, mock_set_option
+            config_options,
+            self.config_template,
+            mock_set_option,
+            ["/global.toml", "/project.toml"],
         )
 
         # Verify that theme options were set correctly
         set_calls_dict = {call[0]: call[1] for call in set_option_calls}
+        set_calls_source = {call[0]: call[2] for call in set_option_calls}
 
         # Base should be set from theme file
         assert set_calls_dict.get("theme.base") == "dark"
+        assert (
+            set_calls_source.get("theme.base") == "base theme file: custom_theme.toml"
+        )
 
         # Background should come from theme file
         assert set_calls_dict.get("theme.backgroundColor") == "#from_theme_file"
+        assert (
+            set_calls_source.get("theme.backgroundColor")
+            == "base theme file: custom_theme.toml"
+        )
+        assert (
+            set_calls_source.get("theme.backgroundColor")
+            != "config.toml (project): /project.toml"
+        )
 
         # Primary color should be the merged result (config override wins)
         assert set_calls_dict.get("theme.primaryColor") == "#override"
+        assert (
+            set_calls_source.get("theme.primaryColor")
+            == "config.toml (project): /project.toml"
+        )
+        assert (
+            set_calls_source.get("theme.primaryColor")
+            != "base theme file: custom_theme.toml"
+        )
 
     @patch("streamlit.config_util._load_theme_file")
     def test_process_theme_inheritance_successful_complex_merge(self, mock_load_theme):
@@ -1209,21 +1307,21 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         primary_option = ConfigOption(
             "theme.primaryColor", description="", default_val=None
         )
-        primary_option.set_value("#override", "config.toml")
+        primary_option.set_value("#override", "/project.toml")
 
         light_option = ConfigOption(
             "theme.light.linkColor", description="", default_val=None
         )
-        light_option.set_value("#light_link_override", "config.toml")
+        light_option.set_value("#light_link_override", "/project.toml")
 
         sidebar_option = ConfigOption(
             "theme.sidebar.primaryColor", description="", default_val=None
         )
-        sidebar_option.set_value("#sidebar_override", "config.toml")
+        sidebar_option.set_value("#sidebar_override", "/project.toml")
         sidebar_light_option = ConfigOption(
             "theme.light.sidebar.borderColor", description="", default_val=None
         )
-        sidebar_light_option.set_value("#sidebar_light_override", "config.toml")
+        sidebar_light_option.set_value("#sidebar_light_override", "/project.toml")
 
         config_options = {
             "theme.base": base_option,
@@ -1265,21 +1363,40 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             set_option_calls.append((key, value, source))
 
         config_util.process_theme_inheritance(
-            config_options, self.config_template, mock_set_option
+            config_options,
+            self.config_template,
+            mock_set_option,
+            ["/global.toml", "/project.toml"],
         )
 
         # Verify that theme options were set correctly
         set_calls_dict = {call[0]: call[1] for call in set_option_calls}
+        set_calls_source = {call[0]: call[2] for call in set_option_calls}
 
         # Base should be set from theme file
         assert set_calls_dict.get("theme.base") == "dark"
+        assert (
+            set_calls_source.get("theme.base") == "base theme file: custom_theme.toml"
+        )
 
         # Theme and sidebar primary colors should be the merged result (config override wins)
         assert set_calls_dict.get("theme.primaryColor") == "#override"
         assert set_calls_dict.get("theme.sidebar.primaryColor") == "#sidebar_override"
+        assert (
+            set_calls_source.get("theme.primaryColor")
+            == "config.toml (project): /project.toml"
+        )
+        assert (
+            set_calls_source.get("theme.sidebar.primaryColor")
+            == "config.toml (project): /project.toml"
+        )
 
         # Background color should come from base theme file
         assert set_calls_dict.get("theme.backgroundColor") == "#from_theme_file"
+        assert (
+            set_calls_source.get("theme.backgroundColor")
+            == "base theme file: custom_theme.toml"
+        )
 
         # Config options should include the new section/subsections
         assert set_calls_dict.get("theme.light.primaryColor") == "#light_primary_color"
@@ -1290,6 +1407,10 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             # override from config.toml should apply in subsubsection
             set_calls_dict.get("theme.light.sidebar.borderColor")
             == "#sidebar_light_override"
+        )
+        assert (
+            set_calls_source.get("theme.light.sidebar.borderColor")
+            == "config.toml (project): /project.toml"
         )
         assert (
             set_calls_dict.get("theme.dark.sidebar.borderColor")
@@ -1389,3 +1510,53 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             )
 
         assert "cannot reference another theme file" in str(cm.value)
+
+    def test_process_theme_inheritance_none_options_short_circuits(self) -> None:
+        """``None`` config options short-circuits so early bootstrap does not crash."""
+        set_option_mock = MagicMock()
+
+        config_util.process_theme_inheritance(
+            None, self.config_template, set_option_mock
+        )
+
+        set_option_mock.assert_not_called()
+
+    @patch("streamlit.config_util._load_theme_file")
+    def test_process_theme_inheritance_wraps_unexpected_errors(
+        self, mock_load_theme: MagicMock
+    ) -> None:
+        """Unexpected exceptions during processing are wrapped in
+        ``StreamlitInvalidThemeError`` so users see a clear, actionable error."""
+        base_option = ConfigOption("theme.base", description="", default_val=None)
+        base_option.set_value("custom_theme.toml", "test")
+        mock_load_theme.side_effect = RuntimeError("disk on fire")
+
+        with pytest.raises(StreamlitInvalidThemeError, match="disk on fire"):
+            config_util.process_theme_inheritance(
+                {"theme.base": base_option}, self.config_template, MagicMock()
+            )
+
+
+@patch("click.secho")
+def test_show_config_includes_deprecation_block(patched_echo: MagicMock) -> None:
+    """``show_config`` renders the deprecation banner, message, and expiration date."""
+    config_options = {
+        "server.legacyOption": ConfigOption(
+            key="server.legacyOption",
+            description="A legacy option used in unit tests.",
+            default_val="legacy",
+            type_=str,
+            deprecated=True,
+            deprecation_text="Use server.newOption instead.",
+            expiration_date="2030-01-01",
+        )
+    }
+
+    config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+    output = "\n".join(
+        re.sub(r"\x1b[^m]*m", "", c.args[0]) for c in patched_echo.call_args_list
+    )
+    assert "THIS IS DEPRECATED." in output
+    assert "Use server.newOption instead." in output
+    assert "This option will be removed on or after 2030-01-01" in output

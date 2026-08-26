@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,3 +79,31 @@ if st.button("#8599 - Bug"):
 
     del st.session_state["foo"]
     st.rerun()
+
+
+# A callback-queued st.rerun() preempts this run before the body registers any
+# widget, so the values below have to survive a run that rendered nothing.
+if "callback_count" not in st.session_state:
+    st.session_state.callback_count = 0
+
+
+def rerun_from_callback():
+    st.session_state.callback_count += 1
+    st.rerun()
+    # Must stay dead: st.rerun() interrupts the callback instead of returning.
+    st.session_state.resumed_after_rerun = True  # type: ignore[unreachable]
+
+
+callback_text = st.text_input(
+    "rerun from callback", key="callback_text", on_change=rerun_from_callback
+)
+untouched_text = st.text_input("untouched by callbacks", key="untouched_text")
+button_value_in_body = st.button(
+    "rerun from button callback", on_click=rerun_from_callback
+)
+
+st.write(f"callback text: {callback_text}")
+st.write(f"untouched text: {untouched_text}")
+st.write(f"callback count: {st.session_state.callback_count}")
+st.write(f"button in body: {button_value_in_body}")
+st.write(f"resumed after rerun: {'resumed_after_rerun' in st.session_state}")

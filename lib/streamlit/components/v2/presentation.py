@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,8 +69,8 @@ def make_bidi_component_presenter(
             if ctx is not None and component_id is not None:
                 user_key = session_state._key_id_mapper.get_key_from_id(component_id)
                 if (
-                    component_id in ctx.widget_ids_this_run
-                    or user_key in ctx.form_ids_this_run
+                    component_id in ctx.shared.widget_ids_this_run
+                    or user_key in ctx.shared.form_ids_this_run
                 ):
                     raise StreamlitAPIException(
                         f"`st.session_state.{user_key}.{k}` cannot be modified after the component"
@@ -127,7 +127,7 @@ def make_bidi_component_presenter(
                 # st.session_state[component_user_key][name] = value. Using a
                 # dict subclass ensures pretty-printing and JSON serialization
                 # behave as expected for st.write and logs.
-                class _WriteThrough(dict[str, object]):
+                class _WriteThrough(dict[str, object]):  # noqa: FURB189
                     def __init__(self, data: dict[str, object]) -> None:
                         super().__init__(data)
 

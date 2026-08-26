@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,7 @@ const CSV_SPECIAL_CHARS_REGEX = new RegExp(
 )
 const LOG = getLogger("useDataExporter")
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toCsvRow(rowValues: any[]): string {
+export function toCsvRow(rowValues: unknown[]): string {
   return (
     rowValues.map(cell => escapeValue(cell)).join(CSV_DELIMITER) +
     CSV_ROW_DELIMITER
@@ -55,8 +54,7 @@ export function toCsvRow(rowValues: any[]): string {
  *
  * Makes sure that the value is a string, and special characters are escaped correctly.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function escapeValue(value: any): string {
+function escapeValue(value: unknown): string {
   if (isNullOrUndefined(value)) {
     return ""
   }
@@ -104,14 +102,19 @@ async function writeCsv(
   // Write UTF-8 BOM for excel compatibility:
   await writable.write(textEncoder.encode(CSV_UTF8_BOM))
 
-  // Write headers:
-  const headers: string[] = columns.map(column => column.name)
+  // Write headers (skip button columns as they are not exportable):
+  const headers: string[] = columns
+    .filter(column => column.kind !== "button")
+    .map(column => column.name)
   await writable.write(textEncoder.encode(toCsvRow(headers)))
 
   for (let row = 0; row < numRows; row++) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const rowData: any[] = []
-    columns.forEach((column: BaseColumn, col: number, _map) => {
+    const rowData: unknown[] = []
+    // Button columns are skipped because they are not exportable, but we still
+    // iterate the full columns array so the loop index stays aligned with the
+    // positions getCellContent expects.
+    columns.forEach((column: BaseColumn, col: number) => {
+      if (column.kind === "button") return
       rowData.push(column.getCellValue(getCellContent([col, row])))
     })
     // Write row to CSV:
@@ -144,9 +147,8 @@ function useDataExporter(
       // in all of the common browser, but might cause some trouble in
       // less common browsers. To not crash the whole app, we just lazy import
       // this here.
-      const nativeFileSystemAdapter = await import(
-        "native-file-system-adapter"
-      )
+      const nativeFileSystemAdapter =
+        await import("native-file-system-adapter")
       const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
         suggestedName,
         types: [{ accept: { "text/csv": [".csv"] } }],

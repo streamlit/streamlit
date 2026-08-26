@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,23 @@ How these classes work together
   callbacks if so.
 
 This module is lazy-loaded and used only if watchdog is installed.
+
+Windows-specific considerations
+-------------------------------
+On Windows, the watchdog library uses the ReadDirectoryChangesW API which can
+emit spurious filesystem events caused by:
+
+- Windows Defender real-time scanning
+- Windows Search Indexer
+- OneDrive sync
+- Other background file access
+
+To mitigate false positives from these spurious events, this module:
+1. Checks modification time before calculating hash (fast rejection)
+2. Compares content hash to detect actual changes
+3. Re-verifies content stability after detecting a change (double-check)
+
+See: https://github.com/streamlit/streamlit/issues/13954
 """
 
 from __future__ import annotations
@@ -41,13 +58,14 @@ import os
 import threading
 from typing import TYPE_CHECKING, Final, cast
 
-from blinker import ANY, Signal
 from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
+from streamlit import env_util
 from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
+from streamlit.signal_util import Signal
 from streamlit.util import repr_
 from streamlit.watcher import util
 
@@ -57,6 +75,11 @@ if TYPE_CHECKING:
     from watchdog.observers.api import ObservedWatch
 
 _LOGGER: Final = get_logger(__name__)
+
+# Delay in seconds for the Windows stability check. On Windows, background
+# processes can trigger spurious file change events. This delay allows transient
+# file operations to complete before we verify if the change is real.
+_WINDOWS_STABILITY_DELAY_SECS: Final = 0.05
 
 
 def _get_abs_folder_path(path: str) -> str:
@@ -69,7 +92,20 @@ def _get_abs_folder_path(path: str) -> str:
 
 
 class EventBasedPathWatcher:
-    """Watches a single path on disk using watchdog."""
+    """Watches a single path on disk using watchdog.
+
+    Behavior differs based on whether watching a file or directory:
+
+    **File watching:** Detects content changes via content hash comparison. The
+    callback receives the file path and is invoked when content changes. With
+    allow_nonexistent=True, also detects file creation.
+
+    **Directory watching:** Detects any file activity within the directory
+    (creation, deletion, modification). The callback receives the actual
+    changed file path (not the directory). Note that glob_pattern only affects
+    the initial state hash, not which events trigger callbacks - all file
+    events in the directory invoke the callback.
+    """
 
     @staticmethod
     def close_all() -> None:
@@ -91,17 +127,22 @@ class EventBasedPathWatcher:
         Parameters
         ----------
         path : str
-            The path to watch.
+            The path to watch (file or directory).
         on_changed : Callable[[str], None]
-            Callback to call when the path changes.
+            Callback invoked when changes are detected. For files, receives
+            the file path. For directories, receives the path of the actual
+            changed file within the directory.
         glob_pattern : str or None
-            A glob pattern to filter the files in a directory that should be
-            watched. Only relevant when creating an EventBasedPathWatcher on a
-            directory.
+            A glob pattern for initial state detection when watching a
+            directory (e.g., "*.py"). Note: This does NOT filter which file
+            events trigger the callback - all file events in the directory
+            will invoke the callback regardless of this pattern.
         allow_nonexistent : bool
             If True, the watcher will not raise an exception if the path does
             not exist. This can be used to watch for the creation of a file or
-            directory at a given path.
+            directory at a given path. Note: The parent directory of the path
+            must exist for watching to work. If the parent doesn't exist, the
+            watcher is silently skipped.
         """
         self._path = os.path.realpath(path)
         self._on_changed = on_changed
@@ -189,6 +230,18 @@ class _MultiPathWatcher:
                         folder_handler, folder_path, recursive=True
                     )
                     self._folder_handlers[folder_path] = folder_handler
+                except FileNotFoundError:
+                    # This happens when watching a non-existent file whose parent
+                    # directory also doesn't exist (e.g., .streamlit/config.toml
+                    # when .streamlit/ hasn't been created yet). This is expected
+                    # and not an error - we just can't watch until the directory
+                    # is created.
+                    _LOGGER.debug(
+                        "Cannot watch path %s: directory %s does not exist",
+                        path,
+                        folder_path,
+                    )
+                    return
                 except Exception as ex:
                     _LOGGER.warning(
                         "Failed to schedule watch observer for path %s",
@@ -251,13 +304,13 @@ class WatchedPath:
 
     def __init__(
         self,
-        md5: str,
+        content_hash: str,
         modification_time: float,
         *,  # keyword-only arguments:
         glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
-        self.md5 = md5
+        self.content_hash = content_hash
         self.modification_time = modification_time
 
         self.glob_pattern = glob_pattern
@@ -303,7 +356,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             watched_path = self._watched_paths.get(path, None)
             if watched_path is None:
                 try:
-                    md5 = util.calc_md5_with_blocking_retries(
+                    content_hash = util.calc_hash_with_blocking_retries(
                         path,
                         glob_pattern=glob_pattern,
                         allow_nonexistent=allow_nonexistent,
@@ -312,7 +365,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                         path, allow_nonexistent
                     )
                     watched_path = WatchedPath(
-                        md5=md5,
+                        content_hash=content_hash,
                         modification_time=modification_time,
                         glob_pattern=glob_pattern,
                         allow_nonexistent=allow_nonexistent,
@@ -320,7 +373,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                     self._watched_paths[path] = watched_path
                 except StreamlitMaxRetriesError as ex:
                     _LOGGER.debug(
-                        "Failed to calculate MD5 for path %s",
+                        "Failed to calculate hash for path %s",
                         path,
                         exc_info=ex,
                     )
@@ -338,7 +391,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 return
 
             watched_path.on_changed.disconnect(callback)
-            if not watched_path.on_changed.has_receivers_for(ANY):
+            if not watched_path.on_changed.has_receivers():
                 del self._watched_paths[path]
 
     def is_watching_paths(self) -> bool:
@@ -391,6 +444,17 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # First check if the exact path is being watched
             changed_path_info = self._watched_paths.get(abs_changed_path, None)
 
+            # Windows can report the same path with an extended-length prefix
+            # (``\\?\``), which does not compare equal to the standard spelling.
+            # On other platforms path comparison is exact, so the dict lookup
+            # above already covers every equivalent spelling and this fallback
+            # scan can be skipped.
+            if changed_path_info is None and env_util.IS_WINDOWS:
+                for path, info in self._watched_paths.items():
+                    if util.paths_are_same(path, abs_changed_path):
+                        changed_path_info = info
+                        break
+
             # If the exact path isn't found, check if it's inside any watched
             # directories. This is necessary for the folder watching feature to
             # detect changes to files within watched directories, not just the
@@ -399,21 +463,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 for path, info in self._watched_paths.items():
                     if not os.path.isdir(path):
                         continue
-                    try:
-                        if os.path.commonpath([path, abs_changed_path]) == path:
-                            changed_path_info = info
-                            break
-                    except ValueError as ex:
-                        # On Windows, os.path.commonpath raises ValueError when paths
-                        # are on different drives. In that case, the changed path
-                        # cannot be inside the watched directory.
-                        _LOGGER.debug(
-                            "Ignoring changed path %s.\nWatched_paths: %s",
-                            abs_changed_path,
-                            self._watched_paths,
-                            exc_info=ex,
-                        )
-                        continue
+                    if util.path_is_in_directory(abs_changed_path, path):
+                        changed_path_info = info
+                        break
 
         # If we still haven't found a matching path, ignore this event
         if changed_path_info is None:
@@ -429,31 +481,73 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 abs_changed_path, changed_path_info.allow_nonexistent
             )
 
-            # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-            # modification_time is always 0.0 because of file system limitations.
+            # We add the modification_time > 0.0 check since on some file systems
+            # (s3fs/fuse), modification_time is always 0.0 because of file system
+            # limitations.
             if (
-                modification_time != 0.0
+                modification_time > 0.0
                 and modification_time == changed_path_info.modification_time
             ):
                 _LOGGER.debug("File/dir timestamp did not change: %s", abs_changed_path)
                 return
 
             changed_path_info.modification_time = modification_time
-            new_md5 = util.calc_md5_with_blocking_retries(
+            new_hash = util.calc_hash_with_blocking_retries(
                 abs_changed_path,
                 glob_pattern=changed_path_info.glob_pattern,
                 allow_nonexistent=changed_path_info.allow_nonexistent,
             )
-            if new_md5 == changed_path_info.md5:
-                _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
+            if new_hash == changed_path_info.content_hash:
+                _LOGGER.debug("File/dir hash did not change: %s", abs_changed_path)
                 return
 
-            _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
-            changed_path_info.md5 = new_md5
+            # On Windows, background processes (Windows Defender, Search Indexer,
+            # OneDrive) can trigger spurious file change events. These processes
+            # may temporarily modify file state during their operations, causing
+            # a transient hash difference.
+            #
+            # To mitigate false positives, we perform a stability check: wait
+            # briefly and re-read the file. If the hash reverts to the original
+            # value, this was likely a spurious event and we should ignore it.
+            # See: https://github.com/streamlit/streamlit/issues/13954
+            if env_util.IS_WINDOWS:
+                import time
+
+                # Brief delay to let transient file operations complete
+                time.sleep(_WINDOWS_STABILITY_DELAY_SECS)
+                try:
+                    verification_hash = util.calc_hash_with_blocking_retries(
+                        abs_changed_path,
+                        glob_pattern=changed_path_info.glob_pattern,
+                        allow_nonexistent=changed_path_info.allow_nonexistent,
+                    )
+                except StreamlitMaxRetriesError as verification_error:
+                    # If the stability re-check fails (e.g., due to a transient
+                    # file lock), proceed with the initially computed new_hash
+                    # instead of dropping the change event entirely.
+                    _LOGGER.debug(
+                        "Failed to calculate verification hash for path %s; "
+                        "proceeding with initial hash.",
+                        abs_changed_path,
+                        exc_info=verification_error,
+                    )
+                else:
+                    if verification_hash == changed_path_info.content_hash:
+                        _LOGGER.debug(
+                            "File/dir hash reverted after stability check "
+                            "(likely spurious event): %s",
+                            abs_changed_path,
+                        )
+                        return
+                    # Use the verified hash as the new value
+                    new_hash = verification_hash
+
+            _LOGGER.debug("File/dir hash changed: %s", abs_changed_path)
+            changed_path_info.content_hash = new_hash
             changed_path_info.on_changed.send(abs_changed_path)
         except StreamlitMaxRetriesError as ex:
             _LOGGER.debug(
-                "Ignoring file change. Failed to calculate MD5 for path %s",
+                "Ignoring file change. Failed to calculate hash for path %s",
                 abs_changed_path,
                 exc_info=ex,
             )

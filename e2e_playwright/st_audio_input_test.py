@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     expect_prefixed_markdown,
     get_element_by_key,
+    reset_hovering,
 )
 
 NUM_AUDIO_INPUTS = 13
@@ -240,7 +241,8 @@ def test_help_tooltip(app: Page):
     # Help icon should be visible
     expect(help_button).to_be_visible()
 
-    # Hover over help icon
+    # Prime the interaction modality to 'pointer' before hovering.
+    reset_hovering(app)
     help_button.hover()
 
     # Tooltip should appear with the help text
@@ -250,6 +252,7 @@ def test_help_tooltip(app: Page):
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+@pytest.mark.flaky(reruns=3)  # Firefox occasionally crashes during media API usage
 def test_recording_lifecycle(app: Page):
     """Test complete recording lifecycle: record, stop, clear, re-record."""
     grant_microphone_permissions(app)
@@ -393,6 +396,9 @@ def test_download_file(app: Page):
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+@pytest.mark.flaky(
+    reruns=3
+)  # Firefox blob downloads in sandboxed iframes are unreliable
 def test_download_in_iframe(iframed_app: IframedPage):
     """Test that the audio file can be downloaded within an iframe."""
     page = iframed_app.page
@@ -408,8 +414,14 @@ def test_download_in_iframe(iframed_app: IframedPage):
     audio_input.get_by_role("button", name="Stop recording", exact=True).click()
     wait_for_app_run(frame)
 
+    # Wait for the download button to appear, which indicates the blob URL
+    # is set and the recording pipeline has fully completed. Without this,
+    # there's a race where expect_download can time out in Firefox iframes.
+    download_button = audio_input.get_by_role("button", name="Download as WAV")
+    expect(download_button).to_be_visible()
+
     with page.expect_download() as download_info:
-        audio_input.get_by_role("button", name="Download as WAV").click()
+        download_button.click()
 
     download = download_info.value
     assert download.suggested_filename == "recording.wav"

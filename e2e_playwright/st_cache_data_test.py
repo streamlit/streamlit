@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,15 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    rerun_app,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import click_button, click_checkbox, get_image
+
+_BACKGROUND_REFRESH_STALE_WAIT_MS = 9000
 
 
 def test_that_caching_shows_cached_widget_warning(app: Page):
@@ -113,3 +120,37 @@ def test_cached_code_replay(app: Page, assert_snapshot: ImageCompareFunction):
     click_checkbox(app, "Show code")
     expect(code_element).to_be_visible()
     assert_snapshot(code_element, name="st_cache_data-st_code_after_caching")
+
+
+def test_background_refresh_stale_while_revalidate(app: Page):
+    click_button(app, "Run cache_data background refresh test")
+    wait_for_app_run(app)
+
+    # Initial miss computes the value, renders display output live, and warns that
+    # display commands aren't replayed from a background-mode cache.
+    expect(app.get_by_text("Background refresh value: 1")).to_be_visible()
+    expect(app.get_by_text("Inside background cache_data function")).to_be_visible()
+    expect(app.get_by_test_id("stException")).to_contain_text(
+        "CachedStFunctionInBackgroundModeWarning"
+    )
+
+    # A fresh hit keeps the value and doesn't replay display output or the warning.
+    rerun_app(app)
+    expect(app.get_by_text("Background refresh value: 1")).to_be_visible()
+    expect(app.get_by_text("Inside background cache_data function")).to_have_count(0)
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    # Enter the stale grace window ([ttl, 2 * ttl)), then verify that the stale value
+    # is served without a spinner while the refresh runs in the background.
+    app.wait_for_timeout(_BACKGROUND_REFRESH_STALE_WAIT_MS)
+    rerun_app(app)
+    expect(app.get_by_text("Background refresh value: 1")).to_be_visible()
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+
+    def value_refreshed() -> bool:
+        rerun_app(app)
+        return app.get_by_text("Background refresh value: 2").count() > 0
+
+    wait_until(app, value_refreshed)
+    expect(app.get_by_text("Background refresh value: 2")).to_be_visible()
+    expect(app.get_by_text("Inside background cache_data function")).to_have_count(0)

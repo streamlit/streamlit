@@ -1,12 +1,12 @@
 # TypeScript Development Guide
 
-- TypeScript: v5
-- Linter: eslint v9
-- Formatter: prettier v3
+- TypeScript: v7 for type-checking (native `tsc`, run via the `typescript-v7` alias); v6 stays for `.d.ts` emit (vite-plugin-dts) and typed linting (typescript-eslint), which need the v6 compiler API
+- Linters: oxlint v1 + eslint v10
+- Formatter: oxfmt v0.x
 - Framework: React v18
 - Styling: @emotion/styled v11
-- Build tool: vite v7
-- Testing: vitest v3 & react testing library v16
+- Build tool: vite v8
+- Testing: vitest v4 & react testing library v16
 - Package manager: yarn v4 with workspaces
 
 ## Key TypeScript Principles
@@ -16,22 +16,79 @@
 - Use descriptive variable names with auxiliary verbs (e.g., isLoading).
 - Use the Receive an Object, Return an Object (RORO) pattern.
 - Ensure functions have explicit return types.
+- **Omit trivially inferred types**: Do not add type annotations when TypeScript can trivially infer them (e.g., `const count = 0` not `const count: number = 0`). Add explicit types only when they improve clarity or are required.
 - **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
+- **Prefer JSDoc over regular comments**: When documenting functions, types, interfaces, classes, or their members, use JSDoc (`/** ... */`) instead of regular comments (`//` or `/* */`). JSDoc enables IDE tooltips, auto-completion hints, and better documentation generation.
+- **No barrel files**: Do not create `index.ts`/`index.tsx` barrel files that only re-export from sibling modules. Import directly from the source file instead (e.g., `import Foo from "./Foo/Foo"` not `import Foo from "./Foo"`). The only exceptions are package entry points (`app/src/index.tsx`, `lib/src/index.ts`, `connection/src/index.ts`, `utils/src/index.ts`) and `component-v2-lib/src/index.ts` (shipped as an npm library). Files named `index.ts` that contain actual logic (e.g., `DataFrame/columns/index.ts`, `WindowDimensions/index.ts`, emotion theme files) are fine — the rule applies only to files whose sole purpose is re-exporting.
 
 ## Key Frontend Principles
 
 - Leverage all of best practices of React 18.
+- Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
 - Ensure referential stability by leveraging React Hooks.
+- Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`. This is enforced by eslint.
+  - ✅ `const inputRef = useRef<HTMLInputElement>(null)`
+  - ❌ `const input = useRef<HTMLInputElement>(null)`
+- **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
-- Favor leveraging @emotion/styled instead of inline styles.
+
+## Streamlit Frontend Performance Hot Paths
+
+Changes to these high-fan-out internals can affect every message, delta, element, or rerun. Keep work in them minimal, and benchmark changes with representative stress-test apps:
+
+- **WebSocket and protobuf handling** (`connection/src/WebsocketConnection.tsx`, `ForwardMessageCache.ts`): Avoid extra payload copies, decoding passes, synchronous dispatch work, and unbounded cache scans or retention.
+- **Delta tree updates** (`lib/src/render-tree/`): Preserve immutable-update short circuits, payload reuse, and staleness-cleanup efficiency. Avoid additional full-tree traversals or work proportional to all siblings for each delta.
+- **React reconciliation and element identity** (`RenderNodeVisitor`, `Block`, `ElementNodeRenderer`): Keep keys, element IDs, hashes, props, and callbacks stable so elements do not rerender or remount unnecessarily.
+- **Shared renderers, especially `StreamlitMarkdown`**: Markdown appears in many elements and widget labels. Preserve memoization and conditional plugin loading; streaming updates can repeatedly parse a growing Markdown payload.
+- **Widget state and rerun messages** (`WidgetStateManager`, `App.tsx`): Avoid duplicate reruns, unbatched updates, extra state serialization, and repeated scans over all widgets or cached-message hashes.
+- **Large-data and layout paths** (dataframes, Arrow/Quiver, charts, resize observers): Avoid repeated parsing, per-cell work, dataframe copies, forced layout reads, and unstable dependencies that reinitialize heavy renderers.
+
+## Theming and Styling
+
+- **Use theme properties**: Always strongly prefer theme properties from `useEmotionTheme()` instead of hardcoded values so components respond correctly to Streamlit's configurable theme options: `theme.colors`, `theme.spacing`, `theme.sizes`, `theme.radii`, `theme.fontSizes`, `theme.fontWeights`, `theme.fonts`, `theme.lineHeights`, `theme.shadows`, `theme.iconSizes`, `theme.breakpoints`, `theme.zIndices`. See `frontend/lib/src/theme/` to find out more about theming.
+- **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Leverage object style notation in Emotion.
+- **Avoid complex/deeply nested CSS selectors**: Prefer flat, simple selectors in styled components. Deeply nested selectors (e.g., `& > div > span > button`) are fragile, hard to maintain, and often indicate a need to refactor into smaller styled components.
 - All styled components begin with the word `Styled` to indicate it's a styled component.
 - Utilize props in styled components to display elements that may have some interactivity.
-  - Avoid the need to target other components.
-- When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
+- Avoid the need to target other components.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
+- **Never use `data-testid` attributes as CSS selectors in production code**: Test IDs are exclusively for unit and E2E testing. Use styled components, props, semantic selectors, or dedicated CSS classes for production styling.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
+
+## Accessibility (a11y) Guidelines (must-follow)
+
+- **Prefer semantic HTML for interaction**: Use `<button>` for clicks and `<a href>` for navigation. Avoid `onClick` on non-interactive elements.
+- **Focusable controls must have an accessible name**:
+  - Icon-only buttons/links must have `aria-label` (and decorative SVGs should use `aria-hidden="true"`).
+  - For reusable components that render a focusable trigger by default, prefer TypeScript prop unions to make unlabeled triggers impossible (example: `TooltipIcon`).
+- **Don’t hide interactive content from assistive tech**:
+  - Never set `aria-hidden` on a wrapper that contains focusable descendants (it hides them from screen readers).
+  - If you need to avoid duplicate announcements, apply `aria-hidden` only to the _visual label text node_ (e.g. wrap the label text in `<span aria-hidden="true">…</span>`), not the entire label container.
+- **Avoid duplicate tab stops**:
+  - Be careful with libraries that spread props onto wrappers (e.g. `react-dropzone` `getRootProps()` adds `tabIndex=0` by default).
+  - If there’s an inner "real" control (like a `<button>`), set the wrapper `tabIndex={-1}` so keyboard users don’t hit the same control twice.
+- **Focus styling must be keyboard-friendly**:
+  - We **assume the browser supports `:focus-visible`**. Do not implement `:focus-visible` fallbacks (e.g. `:focus` + `:focus:not(:focus-visible)` patterns).
+  - Don't remove focus outlines without replacing them. Prefer `:focus-visible` styles and use `theme.shadows` values for consistent rings.
+- **Keyboard dismissal shouldn’t steal focus**: Popovers/tooltips/dialogs should support Escape to dismiss while keeping focus on the trigger unless there’s a strong reason to move it.
+
+## Floating Portals
+
+- **Always pass an `id` to `<FloatingPortal>`**: A bare `<FloatingPortal>` appends a new `<div>` directly to `document.body`. React Aria’s `ModalOverlay` (used by `st.dialog` and other modal contexts) marks every other child of `document.body` as `inert`, which blocks interaction, prevents focus, and hides the content from assistive technology. Default to `id={FLOATING_OVERLAY_PORTAL_ID}` (from `~lib/components/core/Portal/constants`) so the portal renders inside the shared host that carries `data-react-aria-top-layer`.
+  - Exception: dataframe overlays use `DataFrameOverlayPortal` (`DATAFRAME_PORTAL_ID`), which glide-data-grid requires by name.
+  - Exception: app-chrome menus (`MainMenu`, `TopNavSection`) use a bare `<FloatingPortal>` because they are never opened from inside a dialog.
+
+## Logging
+
+- Use `loglevel`'s `getLogger` for logging (e.g. warnings / errors). Create a module-level `LOG` constant with a descriptive name:
+
+```tsx
+import { getLogger } from "loglevel"
+
+const LOG = getLogger("MyComponent")
+```
 
 ## Static Data Structures
 
@@ -40,6 +97,7 @@
 - Exception: Keep inside function only if data depends on parameters, props, or state
 
 <good-example>
+
 ```tsx
 // ✅ Module-level - created once
 const ALIGNMENT_MAP: Record<Alignment, CSSProperties["textAlign"]> = {
@@ -51,15 +109,18 @@ const ALIGNMENT_MAP: Record<Alignment, CSSProperties["textAlign"]> = {
 function getAlignment(config: AlignmentConfig) {
   return ALIGNMENT_MAP[config.alignment]
 }
-
 ```
+
 </good-example>
 
 <bad-example>
+
 ```tsx
 // ❌ Recreated every call
 function getAlignment(config: AlignmentConfig) {
-  const alignmentMap = { /* same data */ }
+  const alignmentMap = {
+    /* same data */
+  }
   return alignmentMap[config.alignment]
 }
 ```
@@ -71,23 +132,26 @@ function getAlignment(config: AlignmentConfig) {
 - Project Structure: Monorepo managed with Yarn Workspaces.
 - Packages:
   - `app` - Main application UI.
+  - `component-lib` - Library for building Streamlit custom components v1.
+  - `component-v2-lib` - Support library for Streamlit Components v2.
   - `connection` - WebSocket handling
+  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
   - `lib` - Shared UI components.
-  - `utils` - Shared TypeScript utilities.
   - `protobuf` - Generated Protocol definitions.
   - `typescript-config` - Configuration for TypeScript.
-  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
+  - `utils` - Shared TypeScript utilities.
 - Package-specific scripts are executed within their respective directories.
 
 ## Relevant `make` commands
 
-Run from the repo root:
+Run from the repo root (requires Node major version from `.nvmrc`):
 
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).
-- `make frontend-lint`: Lint and check formatting of frontend files (eslint).
+- `make frontend-lint`: Lint and check formatting of frontend files (oxlint + eslint).
+- `make frontend-knip`: Run Knip unused-export and unused-dependency analysis.
 - `make frontend-types`: Run the TypeScript type checker (tsc).
-- `make frontend-format`: Format frontend files (eslint).
+- `make frontend-format`: Format frontend files (oxfmt).
 - `make frontend-tests`: Run all frontend unit tests (vitest).
 
 ## TypeScript Test Guide
@@ -101,6 +165,9 @@ Run from the repo root:
 - Robustness: Test edge cases and error handling scenarios.
 - Accessibility: Validate component accessibility compliance.
 - Parameterized Tests: Use `it.each` for repeated tests with varying inputs.
+- Positive + negative assertions (anti-regression): When you assert that something appears/changes, also add at least one complementary assertion when practical that something else does **not** appear/change (inverse state, error message that must not show, callback that must not fire, etc.).
+  - Presence: `getBy*` / `findBy*` + `toBeVisible()`
+  - Absence: `queryBy*` + `not.toBeInTheDocument()` or `not.toBeVisible()`
 - Framework Exclusivity: Only use Vitest syntax; do not use Jest.
 
 ### Running Tests
@@ -279,6 +346,7 @@ const initialTab = props.defaultTab ?? "overview"
 - Prefer render-time computation; add `useMemo` only for provably expensive pure work.
 - Avoid creating new objects/arrays inline in JSX props each render; memoize when it affects memoized children.
 - Keep dependency arrays minimal but complete. Split Effects if different concerns require different deps.
+- Prevent unnecessary re-renders, e.g. consider using `React.memo`, `useCallback`, or `useMemo`.
 
 ### Testing guidance (see [TypeScript Test Guide](#typescript-test-guide))
 
@@ -288,4 +356,4 @@ const initialTab = props.defaultTab ?? "overview"
 
 ### References
 
-- React docs: You Might Not Need an Effect — https://react.dev/learn/you-might-not-need-an-effect
+- React docs: [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)

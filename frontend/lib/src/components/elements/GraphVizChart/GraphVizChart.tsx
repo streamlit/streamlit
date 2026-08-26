@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect } from "react"
+import { memo, ReactElement, useEffect } from "react"
 
 import { Engine, graphviz } from "d3-graphviz"
 import { getLogger } from "loglevel"
@@ -29,12 +29,12 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, {
-  StyledToolbarElementContainer,
-} from "~lib/components/shared/Toolbar"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
+import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import { StyledGraphVizChart } from "./styled-components"
 
@@ -45,6 +45,43 @@ export interface GraphVizChartProps {
   heightConfig?: streamlit.IHeightConfig | null
 }
 export const LOG = getLogger("GraphVizChart")
+
+const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink"
+
+function sanitizeLinkAttribute(element: Element, attributeName: string): void {
+  const attributeValue = element.getAttribute(attributeName)
+
+  if (attributeValue !== null && isDangerousLinkUri(attributeValue)) {
+    element.setAttribute(attributeName, BLOCKED_LINK_URI)
+  }
+}
+
+function sanitizeNamespacedXlinkHref(element: Element): void {
+  const attributeValue = element.getAttributeNS(XLINK_NAMESPACE, "href")
+
+  if (attributeValue !== null && isDangerousLinkUri(attributeValue)) {
+    element.setAttributeNS(XLINK_NAMESPACE, "xlink:href", BLOCKED_LINK_URI)
+  }
+}
+
+/**
+ * Neutralizes dangerous link URIs in the rendered Graphviz SVG.
+ *
+ * Graphviz emits link targets as either `href` or `xlink:href`, and depending
+ * on how the SVG was parsed the latter may be reachable by qualified name
+ * (`getAttribute("xlink:href")`) and/or by namespace
+ * (`getAttributeNS(...)`). We handle all three to sanitize the value
+ * regardless of environment (e.g. jsdom vs. a real browser SVG DOM).
+ */
+export function sanitizeGraphVizLinkUris(container: Element): void {
+  // Graphviz link targets are exclusively on SVG `<a>` elements, so we only
+  // need to inspect those rather than walking every node in the SVG subtree.
+  container.querySelectorAll("a").forEach(element => {
+    sanitizeLinkAttribute(element, "href")
+    sanitizeLinkAttribute(element, "xlink:href")
+    sanitizeNamespacedXlinkHref(element)
+  })
+}
 
 function GraphVizChart({
   element,
@@ -68,9 +105,8 @@ function GraphVizChart({
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  // Determine if we should use container width based on layout config or legacy prop
-  const shouldUseContainerWidth =
-    shouldWidthStretch(widthConfig) || element.useContainerWidth
+  // Determine if we should use container width based on layout config
+  const shouldUseContainerWidth = shouldWidthStretch(widthConfig)
 
   const shouldUseContainerHeight = shouldHeightStretch(heightConfig)
 
@@ -91,7 +127,16 @@ function GraphVizChart({
         .fit(true)
         .scale(1)
         .engine(element.engine as Engine)
-        .renderDot(element.spec)
+        // Sanitize links once rendering completes. Graphviz inserts the SVG
+        // synchronously here, so there is only a negligible window (before this
+        // callback runs) where an unsanitized link could exist in the DOM.
+        .renderDot(element.spec, () => {
+          const chartElement = document.getElementById(chartId)
+
+          if (chartElement) {
+            sanitizeGraphVizLinkUris(chartElement)
+          }
+        })
     } catch (error) {
       LOG.error(error)
     }

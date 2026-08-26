@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Collection
-from typing import Any, TypeAlias, cast
+from typing import Any, Final, TypeAlias, cast
 
 from streamlit.errors import StreamlitInvalidColorError
+
+# Built-in color names that map to Streamlit theme colors.
+# These are resolved to actual color values on the frontend.
+BUILTIN_COLOR_NAMES: Final[frozenset[str]] = frozenset(
+    {"red", "orange", "yellow", "green", "blue", "violet", "gray", "grey", "primary"}
+)
 
 # components go from 0.0 to 1.0
 # Supported by Pillow and pretty common.
@@ -80,7 +86,7 @@ def to_css_color(color: MaybeColor) -> Color:
     raise StreamlitInvalidColorError(color)
 
 
-def is_css_color_like(color: MaybeColor) -> bool:
+def is_css_color_like(color: object) -> bool:
     """Check whether the input looks like something Vega can use.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -92,7 +98,7 @@ def is_css_color_like(color: MaybeColor) -> bool:
     return is_hex_color_like(color) or _is_cssrgb_color_like(color)
 
 
-def is_hex_color_like(color: MaybeColor) -> bool:
+def is_hex_color_like(color: object) -> bool:
     """Check whether the input looks like a hex color.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -106,7 +112,7 @@ def is_hex_color_like(color: MaybeColor) -> bool:
     )
 
 
-def _is_cssrgb_color_like(color: MaybeColor) -> bool:
+def _is_cssrgb_color_like(color: object) -> bool:
     """Check whether the input looks like a CSS rgb() or rgba() color string.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -118,7 +124,7 @@ def _is_cssrgb_color_like(color: MaybeColor) -> bool:
     return isinstance(color, str) and color.startswith(("rgb(", "rgba("))
 
 
-def is_color_tuple_like(color: MaybeColor) -> bool:
+def is_color_tuple_like(color: object) -> bool:
     """Check whether the input looks like a tuple color.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
@@ -131,11 +137,24 @@ def is_color_tuple_like(color: MaybeColor) -> bool:
     )
 
 
-def is_color_like(color: MaybeColor) -> bool:
+def is_builtin_color_name(color: object) -> bool:
+    """Check whether the input is a built-in Streamlit color name.
+
+    Built-in color names (red, orange, yellow, green, blue, violet, gray/grey, primary)
+    are resolved to theme colors on the frontend.
+    """
+    return isinstance(color, str) and color.lower() in BUILTIN_COLOR_NAMES
+
+
+def is_color_like(color: object) -> bool:
     """A fairly lightweight check of whether the input is a color.
 
     This isn't meant to be a definitive answer. The definitive solution is to
     try to convert and see if an error is thrown.
+
+    NOTE: This does NOT include built-in color names (red, blue, etc.) because
+    those require special handling and cannot be converted via to_css_color().
+    Use is_builtin_color_name() separately when validating color parameter arguments.
     """
     return is_css_color_like(color) or is_color_tuple_like(color)
 
@@ -219,7 +238,7 @@ def _normalize_tuple(
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)
-        alpha = alpha_formatter(color_4tuple[3], color_4tuple)  # ty: ignore[index-out-of-bounds]
+        alpha = alpha_formatter(color_4tuple[3], color_4tuple)
         return r, g, b, alpha
 
     raise StreamlitInvalidColorError(color)
@@ -245,7 +264,7 @@ def _float_formatter(component: float, color: MaybeColor) -> float:
     Anything too small will become 0.0, and anything too large will become 1.0.
     """
     if isinstance(component, int):
-        component = component / 255.0
+        component /= 255.0
 
     if isinstance(component, float):
         return min(1.0, max(component, 0.0))

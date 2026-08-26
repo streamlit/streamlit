@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,53 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { Field, Int64 } from "apache-arrow"
+import { Field, Int64, Utf8 } from "apache-arrow"
 
-import { NumberColumn } from "~lib/components/widgets/DataFrame/columns"
+import {
+  NumberColumn,
+  TextColumn,
+} from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
+import { sizes } from "~lib/theme/primitives/sizes"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
+import { FORMATTING_MENU_CLASS } from "./FormattingMenu"
+import { STATISTICS_MENU_CLASS } from "./StatisticsMenu"
 
 describe("DataFrame ColumnMenu", () => {
-  // Mock navigator.clipboard
-  Object.assign(navigator, {
-    clipboard: {
-      writeText: vi.fn(),
-    },
+  const mockWriteText = vi.fn()
+
+  // Capture the original clipboard descriptor (if any) so the mock installed
+  // below can be fully restored in afterEach and does not leak across tests.
+  const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  )
+
+  beforeEach(() => {
+    mockWriteText.mockReset()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: mockWriteText },
+    })
+  })
+
+  afterEach(() => {
+    if (originalClipboardDescriptor) {
+      Object.defineProperty(
+        navigator,
+        "clipboard",
+        originalClipboardDescriptor
+      )
+    } else {
+      // jsdom has no native clipboard, so remove the mock we installed.
+      Reflect.deleteProperty(navigator, "clipboard")
+    }
   })
 
   const defaultProps: ColumnMenuProps = {
@@ -72,7 +101,7 @@ describe("DataFrame ColumnMenu", () => {
     vi.clearAllMocks()
   })
 
-  test("renders the column menu at the correct position", () => {
+  it("renders the column menu at the correct position", () => {
     render(<ColumnMenu {...defaultProps} />)
 
     const menu = screen.getByTestId("stDataFrameColumnMenu")
@@ -85,21 +114,36 @@ describe("DataFrame ColumnMenu", () => {
     expect(menuTarget).toHaveStyle("left: 100px")
   })
 
-  test("renders the column menu with the correct column name", () => {
+  it("renders the column menu with the correct column name", () => {
     render(<ColumnMenu {...defaultProps} />)
 
     const columnName = screen.getByText("testColumn")
     expect(columnName).toBeVisible()
   })
 
-  test("renders sort options", () => {
+  it("renders sort options", () => {
     render(<ColumnMenu {...defaultProps} />)
 
     expect(screen.getByText("Sort ascending")).toBeInTheDocument()
     expect(screen.getByText("Sort descending")).toBeInTheDocument()
   })
 
-  test("calls sortColumn with 'asc' when clicking sort ascending", async () => {
+  it("renders menu options without wrapping", () => {
+    render(<ColumnMenu {...defaultProps} />)
+
+    const sortDescendingMenuItem = screen.getByRole("menuitem", {
+      name: /Sort descending/,
+    })
+
+    // The menu keeps its compact default width (no forced minWidth) but can
+    // grow up to maxWidth so longer labels stay on a single line.
+    expect(screen.getByRole("menu")).toHaveStyle(
+      `max-width: calc(${sizes.minMenuWidth} * 2)`
+    )
+    expect(sortDescendingMenuItem).toHaveStyle("white-space: nowrap")
+  })
+
+  it("calls sortColumn with 'asc' when clicking sort ascending", async () => {
     render(<ColumnMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByText("Sort ascending"))
@@ -107,7 +151,7 @@ describe("DataFrame ColumnMenu", () => {
     expect(defaultProps.onCloseMenu).toHaveBeenCalled()
   })
 
-  test("calls sortColumn with 'desc' when clicking sort descending", async () => {
+  it("calls sortColumn with 'desc' when clicking sort descending", async () => {
     render(<ColumnMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByText("Sort descending"))
@@ -132,21 +176,21 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("pin/unpin functionality", () => {
-    test("renders 'Pin column' when column is not pinned", () => {
+    it("renders 'Pin column' when column is not pinned", () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={false} />)
 
       expect(screen.getByText("Pin column")).toBeInTheDocument()
       expect(screen.queryByText("Unpin column")).not.toBeInTheDocument()
     })
 
-    test("renders 'Unpin column' when column is pinned", () => {
+    it("renders 'Unpin column' when column is pinned", () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={true} />)
 
       expect(screen.getByText("Unpin column")).toBeInTheDocument()
       expect(screen.queryByText("Pin column")).not.toBeInTheDocument()
     })
 
-    test("calls pinColumn when clicking 'Pin column'", async () => {
+    it("calls pinColumn when clicking 'Pin column'", async () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={false} />)
 
       await userEvent.click(screen.getByText("Pin column"))
@@ -154,7 +198,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(defaultProps.onCloseMenu).toHaveBeenCalled()
     })
 
-    test("calls unpinColumn when clicking 'Unpin column'", async () => {
+    it("calls unpinColumn when clicking 'Unpin column'", async () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={true} />)
 
       await userEvent.click(screen.getByText("Unpin column"))
@@ -164,33 +208,100 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("format menu functionality", () => {
-    test("renders format option when onChangeFormat is provided", () => {
+    it("renders format option when onChangeFormat is provided", () => {
       render(<ColumnMenu {...defaultProps} onChangeFormat={() => {}} />)
 
       expect(screen.getByText("Format")).toBeInTheDocument()
     })
 
-    test("does not render format option when onChangeFormat is undefined", () => {
+    it("does not render format option when onChangeFormat is undefined", () => {
       render(<ColumnMenu {...defaultProps} onChangeFormat={undefined} />)
 
       expect(screen.queryByText("Format")).not.toBeInTheDocument()
     })
+
+    it("does not close format sub-menu on blur while pointer is down", async () => {
+      const user = userEvent.setup()
+      render(<ColumnMenu {...defaultProps} />)
+
+      const formatMenuItem = screen.getByRole("menuitem", {
+        name: /Format/,
+      })
+
+      // Click the Format item to open the sub-menu
+      await user.click(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // Dispatch pointerdown on document to set the pointerDownRef flag.
+      await user.pointer({ target: document.body, keys: "[MouseLeft>]" })
+
+      // Blur the Format item while pointer is still down
+      formatMenuItem.blur()
+
+      // Sub-menu should remain open because pointer is down
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      await user.pointer({ keys: "[/MouseLeft]" })
+    })
+
+    it("closes format sub-menu on keyboard-driven blur", async () => {
+      const user = userEvent.setup()
+      render(<ColumnMenu {...defaultProps} />)
+
+      const formatMenuItem = screen.getByRole("menuitem", {
+        name: /Format/,
+      })
+
+      // Click to open
+      await user.click(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // Blur without pointer down (simulates Tab away)
+      await user.tab()
+
+      // Sub-menu should close
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "false")
+    })
+  })
+
+  describe("dismiss behavior", () => {
+    it("calls onCloseMenu when Escape is pressed", async () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      await userEvent.keyboard("{Escape}")
+      expect(defaultProps.onCloseMenu).toHaveBeenCalled()
+    })
+
+    it("calls onCloseMenu when clicking outside the menu", async () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      await userEvent.click(document.body)
+      expect(defaultProps.onCloseMenu).toHaveBeenCalled()
+    })
+
+    it("does not call onCloseMenu when clicking inside the menu", async () => {
+      render(<ColumnMenu {...defaultProps} />)
+
+      const menu = screen.getByTestId("stDataFrameColumnMenu")
+      await userEvent.click(menu)
+      expect(defaultProps.onCloseMenu).not.toHaveBeenCalled()
+    })
   })
 
   describe("autosize functionality", () => {
-    test("renders 'Autosize' when onAutosize is defined", () => {
+    it("renders 'Autosize' when onAutosize is defined", () => {
       render(<ColumnMenu {...defaultProps} />)
 
       expect(screen.getByText("Autosize")).toBeInTheDocument()
     })
 
-    test("does not render 'Autosize' when onAutosize is undefined", () => {
+    it("does not render 'Autosize' when onAutosize is undefined", () => {
       render(<ColumnMenu {...defaultProps} onAutosize={undefined} />)
 
       expect(screen.queryByText("Autosize")).not.toBeInTheDocument()
     })
 
-    test("calls onAutosize when clicking 'Autosize'", async () => {
+    it("calls onAutosize when clicking 'Autosize'", async () => {
       render(<ColumnMenu {...defaultProps} />)
 
       await userEvent.click(screen.getByText("Autosize"))
@@ -200,19 +311,19 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("hide column functionality", () => {
-    test("renders 'Hide column' when onHideColumn is provided", () => {
+    it("renders 'Hide column' when onHideColumn is provided", () => {
       render(<ColumnMenu {...defaultProps} onHideColumn={() => {}} />)
 
       expect(screen.getByText("Hide column")).toBeInTheDocument()
     })
 
-    test("does not render 'Hide column' when onHideColumn is undefined", () => {
+    it("does not render 'Hide column' when onHideColumn is undefined", () => {
       render(<ColumnMenu {...defaultProps} onHideColumn={undefined} />)
 
       expect(screen.queryByText("Hide column")).not.toBeInTheDocument()
     })
 
-    test("calls onHideColumn when clicking 'Hide column'", async () => {
+    it("calls onHideColumn when clicking 'Hide column'", async () => {
       const onHideColumn = vi.fn()
       render(<ColumnMenu {...defaultProps} onHideColumn={onHideColumn} />)
 
@@ -223,11 +334,8 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("copy column name functionality (isCopied state)", () => {
-    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
-    const mockWriteText = vi.mocked(navigator.clipboard.writeText)
-
-    test("shows copy icon initially and switches to check icon after copy", async () => {
-      mockWriteText.mockResolvedValue()
+    it("shows copy icon initially and switches to check icon after copy", async () => {
+      mockWriteText.mockResolvedValue(undefined)
 
       render(<ColumnMenu {...defaultProps} />)
 
@@ -251,5 +359,222 @@ describe("DataFrame ColumnMenu", () => {
         ).toHaveTextContent("check")
       })
     })
+  })
+
+  describe("statistics menu functionality", () => {
+    const mockQuiver = new Quiver({ data: TEN_BY_TEN })
+
+    it("renders 'Statistics' when data is provided and column kind supports statistics", () => {
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      expect(screen.getByText("Statistics")).toBeVisible()
+    })
+
+    it("does not render 'Statistics' when data is not provided", () => {
+      render(<ColumnMenu {...defaultProps} data={undefined} />)
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
+    })
+
+    it("does not render 'Statistics' for unsupported column kinds", () => {
+      // Create a column with an unsupported kind (e.g., "image")
+      const imageColumn = {
+        ...defaultProps.column,
+        kind: "image",
+      }
+
+      render(
+        <ColumnMenu {...defaultProps} column={imageColumn} data={mockQuiver} />
+      )
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
+    })
+
+    it("renders 'Statistics' for text column kind", () => {
+      const textColumn = TextColumn({
+        title: "textColumn",
+        id: "col-text",
+        indexNumber: 0,
+        isEditable: false,
+        name: "textColumn",
+        arrowType: {
+          type: DataFrameCellType.DATA,
+          arrowField: new Field("text_column", new Utf8(), true),
+          pandasType: {
+            field_name: "text_column",
+            name: "text_column",
+            pandas_type: "unicode",
+            numpy_type: "object",
+            metadata: null,
+          },
+        },
+        isHidden: false,
+        isIndex: false,
+        isPinned: false,
+        isStretched: false,
+      })
+
+      render(
+        <ColumnMenu {...defaultProps} column={textColumn} data={mockQuiver} />
+      )
+
+      expect(screen.getByText("Statistics")).toBeVisible()
+    })
+
+    it("does not render 'Statistics' when column statistics are disabled", () => {
+      render(
+        <ColumnMenu
+          {...defaultProps}
+          data={mockQuiver}
+          canShowColumnStatistics={false}
+        />
+      )
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
+    })
+
+    it("opens the statistics sub-menu on click and closes the format sub-menu", async () => {
+      const user = userEvent.setup()
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      const formatMenuItem = screen.getByRole("menuitem", { name: /Format/ })
+
+      // Open the format sub-menu first...
+      await user.click(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      // ...then clicking statistics should open it and close the format one.
+      await user.click(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("keeps the statistics sub-menu open on blur while the pointer is down", async () => {
+      const user = userEvent.setup()
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      await user.click(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      await user.pointer({ target: document.body, keys: "[MouseLeft>]" })
+      statsMenuItem.blur()
+
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      await user.pointer({ keys: "[/MouseLeft]" })
+    })
+
+    it("keeps the statistics sub-menu open when blur moves focus into the sub-menu", async () => {
+      const user = userEvent.setup()
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      await user.click(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      const insideSubMenu = document.createElement("div")
+      insideSubMenu.className = STATISTICS_MENU_CLASS
+      insideSubMenu.tabIndex = -1
+      document.body.appendChild(insideSubMenu)
+
+      try {
+        insideSubMenu.focus()
+
+        expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+      } finally {
+        // Always detach the synthetic node so a failed assertion cannot leak
+        // it into later tests.
+        insideSubMenu.remove()
+      }
+    })
+
+    it("closes the statistics sub-menu on keyboard-driven blur", async () => {
+      const user = userEvent.setup()
+      render(<ColumnMenu {...defaultProps} data={mockQuiver} />)
+
+      const statsMenuItem = screen.getByRole("menuitem", {
+        name: /Statistics/,
+      })
+      await user.click(statsMenuItem)
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      await user.tab()
+      expect(statsMenuItem).toHaveAttribute("aria-expanded", "false")
+    })
+  })
+
+  describe("format sub-menu blur into portal", () => {
+    it("keeps the format sub-menu open when blur moves focus into the sub-menu", async () => {
+      const user = userEvent.setup()
+      render(<ColumnMenu {...defaultProps} />)
+
+      const formatMenuItem = screen.getByRole("menuitem", { name: /Format/ })
+      await user.click(formatMenuItem)
+      expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+
+      const insideSubMenu = document.createElement("div")
+      insideSubMenu.className = FORMATTING_MENU_CLASS
+      insideSubMenu.tabIndex = -1
+      document.body.appendChild(insideSubMenu)
+
+      try {
+        insideSubMenu.focus()
+
+        expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
+      } finally {
+        // Always detach the synthetic node so a failed assertion cannot leak
+        // it into later tests.
+        insideSubMenu.remove()
+      }
+    })
+  })
+
+  describe("scroll locking", () => {
+    it.each(["wheel", "touchmove"])(
+      "prevents the default %s behavior while the menu is open",
+      eventType => {
+        render(<ColumnMenu {...defaultProps} />)
+
+        const event = new Event(eventType, {
+          cancelable: true,
+          bubbles: true,
+        })
+        document.dispatchEvent(event)
+
+        expect(event.defaultPrevented).toBe(true)
+      }
+    )
+  })
+
+  describe("click-outside sub-menu guard", () => {
+    it.each([STATISTICS_MENU_CLASS, FORMATTING_MENU_CLASS])(
+      "does not close the menu on pointer down inside a %s sub-menu",
+      async className => {
+        const user = userEvent.setup()
+        render(<ColumnMenu {...defaultProps} />)
+
+        const subMenuNode = document.createElement("div")
+        subMenuNode.className = className
+        document.body.appendChild(subMenuNode)
+
+        try {
+          await user.pointer({ target: subMenuNode, keys: "[MouseLeft]" })
+
+          expect(defaultProps.onCloseMenu).not.toHaveBeenCalled()
+        } finally {
+          // Always detach the synthetic node so a failed assertion cannot leak
+          // it into later tests.
+          subMenuNode.remove()
+        }
+      }
+    )
   })
 })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ def run_theme_tester_app():
             st.dataframe(
                 pd.DataFrame({"A": [1, 2], "B": ["streamlit.io", "snowflake.com"]}),
                 column_config={"B": st.column_config.LinkColumn()},
-                use_container_width=True,
+                width="stretch",
             )
             # Test dataframeBorderColor config also applies to tables
             # incl. st.table and markdown tables

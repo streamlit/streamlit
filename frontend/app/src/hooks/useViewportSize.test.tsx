@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { act, renderHook } from "@testing-library/react"
 
@@ -50,7 +48,12 @@ const wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => (
 )
 
 describe("useViewportSize", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -95,6 +98,8 @@ describe("useViewportSize", () => {
     act(() => {
       innerWidthSpy.mockReturnValue(700)
       window.dispatchEvent(new Event("resize"))
+      // Advance timer to flush throttle (100ms)
+      vi.advanceTimersByTime(100)
     })
 
     expect(result.current.isMobile).toBe(true)
@@ -103,6 +108,8 @@ describe("useViewportSize", () => {
     act(() => {
       innerWidthSpy.mockReturnValue(1024)
       window.dispatchEvent(new Event("resize"))
+      // Advance timer to flush throttle (100ms)
+      vi.advanceTimersByTime(100)
     })
 
     expect(result.current.isMobile).toBe(false)

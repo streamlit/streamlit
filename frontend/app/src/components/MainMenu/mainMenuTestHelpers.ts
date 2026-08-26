@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
-import { fireEvent, RenderResult, Screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-export function openMenu(screen: Screen): void {
-  fireEvent.click(screen.getByRole("button"))
-  // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
-  vi.runOnlyPendingTimers()
-  const menu = screen.getAllByRole("listbox")
-  expect(menu).toBeDefined()
+/**
+ * Opens the main menu by clicking the menu button and waits for the popover
+ * to appear. The menu mounts synchronously via conditional render, so waitFor
+ * typically resolves on the first check.
+ */
+export async function openMenu(): Promise<void> {
+  const user = userEvent.setup()
+  await user.click(screen.getByRole("button", { name: "Main menu" }))
+  await waitFor(() => {
+    expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+  })
 }
 
-export function getMenuStructure(
-  renderResult: RenderResult
-): ({ type: "separator" } | { type: "option"; label: string })[][] {
+/**
+ * Returns the labels of all action menu items currently visible.
+ * Useful for verifying menu structure in tests.
+ */
+export function getMenuLabels(): string[] {
+  const container = screen.getByRole("menu", { name: "Main menu" })
+
   return Array.from(
-    renderResult.baseElement.querySelectorAll('[role="listbox"]')
-  ).map(listBoxElement => {
-    return Array.from(
-      listBoxElement.querySelectorAll(
-        '[role=option] span:first-of-type, [data-testid="stMainMenuDivider"]'
-      )
-    ).map(d =>
-      d.getAttribute("data-testid") == "stMainMenuDivider"
-        ? { type: "separator" }
-        : { type: "option", label: d.textContent }
-    )
-  })
+    container.querySelectorAll('[data-testid="stMainMenuItemLabel"]')
+  ).map(el => el.textContent || "")
 }

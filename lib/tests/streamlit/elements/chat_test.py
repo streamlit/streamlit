@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,14 +20,34 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.widgets.chat import ChatInputValue
+from streamlit import config
+from streamlit.elements.widgets.chat import (
+    ChatInputSerde,
+    ChatInputValue,
+    _pop_audio_file,
+    _pop_upload_files,
+)
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput
-from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
+from streamlit.proto.Common_pb2 import (
+    ChatInputValue as ChatInputValueProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileURLs as FileURLsProto,
+)
+from streamlit.proto.Common_pb2 import (
+    UploadedFileInfo as UploadedFileInfoProto,
+)
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFile,
@@ -35,7 +55,10 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.type_util import is_custom_dict
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 class ChatTest(DeltaGeneratorTestCase):
@@ -199,12 +222,21 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.value == "Foo"
         assert c.set_value is True
 
+    def test_rejects_non_str_programmatic_value_assignment(self):
+        """Non-str session-state values must not trigger set_value."""
+        st.session_state.my_key = ChatInputValue(text="Foo", files=[])
+        st.chat_input(key="my_key")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.set_value is False
+        assert c.value == ""
+
     def test_chat_input_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.chat_input("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -221,12 +253,12 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.accept_file == expected
 
     def test_chat_input_invalid_accept_file(self):
-        with pytest.raises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitValueError) as ex:
             st.chat_input(accept_file="invalid")
 
         assert (
             str(ex.value)
-            == "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
         )
 
     def test_file_type(self):
@@ -250,7 +282,7 @@ class ChatTest(DeltaGeneratorTestCase):
         ]
 
         deserialize_patch.return_value = ChatInputValue(
-            text="placeholder", files=uploaded_files
+            text="placeholder", files=uploaded_files, _include_files=True
         )
 
         return_val = st.chat_input(accept_file="multiple")
@@ -281,7 +313,7 @@ class ChatTest(DeltaGeneratorTestCase):
         ]
 
         deserialize_patch.return_value = ChatInputValue(
-            text="placeholder", files=uploaded_files
+            text="placeholder", files=uploaded_files, _include_files=True
         )
 
         # These file_uploaders have different labels so that we don't cause
@@ -424,6 +456,41 @@ class ChatTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidWidthError):
             st.chat_input("Placeholder", width=width)
 
+    def test_chat_input_height_config_default(self):
+        """Test that default height is 'content' (use_content: true)."""
+        st.chat_input("Placeholder")
+        c = self.get_delta_from_queue().new_element
+        assert c.height_config.use_content is True
+
+    @parameterized.expand(
+        [
+            (200, HeightConfigFields.PIXEL_HEIGHT.value, "pixel_height", 200),
+            ("stretch", HeightConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", HeightConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+    )
+    def test_chat_input_height_config(
+        self, height, expected_spec: str, expected_field: str, expected_value
+    ):
+        """Test that height parameter sets the correct height_config."""
+        st.chat_input("Placeholder", height=height)
+        c = self.get_delta_from_queue().new_element
+        assert c.height_config.WhichOneof("height_spec") == expected_spec
+        assert getattr(c.height_config, expected_field) == expected_value
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+        ]
+    )
+    def test_chat_input_invalid_height(self, height):
+        """Test that invalid height values raise exceptions for chat_input."""
+        with pytest.raises(StreamlitInvalidHeightError):
+            st.chat_input("Placeholder", height=height)
+
     @parameterized.expand(
         [
             (
@@ -438,6 +505,11 @@ class ChatTest(DeltaGeneratorTestCase):
             ),
             (
                 "max_chars",
+                100,
+                200,
+            ),
+            (
+                "max_upload_size",
                 100,
                 200,
             ),
@@ -537,6 +609,36 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.placeholder == "the label"
         assert c.max_chars == 10
 
+    def test_max_upload_size_default(self):
+        """Test that chat_input uses the configuration value by default for max upload size."""
+        st.chat_input("the label")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.max_upload_size_mb == config.get_option("server.maxUploadSize")
+
+    def test_max_upload_size_override(self):
+        """Test that a per-widget max_upload_size overrides the configuration value for chat_input."""
+        st.chat_input("the label", max_upload_size=321, accept_file="multiple")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.max_upload_size_mb == 321
+
+    @parameterized.expand(
+        [
+            ("zero", 0),
+            ("negative", -1),
+            ("float", 1.5),
+            ("string", "10"),
+        ]
+    )
+    def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
+        """Test that invalid max_upload_size values raise an exception for chat_input."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.chat_input("the label", max_upload_size=max_upload_size)
+        assert "The `max_upload_size` parameter must be a positive integer" in str(
+            exc.value
+        )
+
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""
         st.chat_input("the label", accept_file=True, file_type=["txt", "csv"])
@@ -599,13 +701,10 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_accept_file_invalid_value(self):
         """Test that invalid accept_file values raise an error."""
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitValueError) as cm:
             st.chat_input("the label", accept_file="invalid")
 
-        assert (
-            "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
-            in str(cm.value)
-        )
+        assert "Invalid `accept_file` value" in str(cm.value)
 
     def test_directory_upload_with_callback(self):
         """Test directory upload with on_submit callback."""
@@ -643,10 +742,14 @@ class ChatTest(DeltaGeneratorTestCase):
         )
 
         deserialize_patch.return_value = ChatInputValue(
-            text="", files=[], audio=audio_file
+            text="",
+            files=[],
+            audio=audio_file,
+            _include_files=True,
+            _include_audio=True,
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
 
         assert return_val.audio == audio_file
         assert return_val.audio.name == "recording.wav"
@@ -657,10 +760,10 @@ class ChatTest(DeltaGeneratorTestCase):
     def test_audio_file_none(self, deserialize_patch):
         """Test that ChatInputValue handles None audio file correctly."""
         deserialize_patch.return_value = ChatInputValue(
-            text="hello", files=[], audio=None
+            text="hello", files=[], audio=None, _include_files=True, _include_audio=True
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
 
         assert return_val.audio is None
         assert return_val.text == "hello"
@@ -674,10 +777,14 @@ class ChatTest(DeltaGeneratorTestCase):
         )
 
         deserialize_patch.return_value = ChatInputValue(
-            text="test", files=[], audio=audio_file
+            text="test",
+            files=[],
+            audio=audio_file,
+            _include_files=True,
+            _include_audio=True,
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
 
         # Test dict-like access
         assert return_val["audio"] == audio_file
@@ -702,3 +809,480 @@ class ChatTest(DeltaGeneratorTestCase):
         st.chat_input(accept_audio=True)
         c = self.get_delta_from_queue().new_element.chat_input
         assert c.accept_audio is True
+
+    def test_chat_input_audio_sample_rate_default(self):
+        """Test that audio_sample_rate defaults to 16000."""
+        st.chat_input(accept_audio=True)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.audio_sample_rate == 16000
+
+    @parameterized.expand(
+        [
+            (8000,),
+            (16000,),
+            (48000,),
+        ]
+    )
+    def test_chat_input_audio_sample_rate_valid(self, sample_rate: int):
+        """Test that valid audio_sample_rate values are set correctly."""
+        st.chat_input(accept_audio=True, audio_sample_rate=sample_rate)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.audio_sample_rate == sample_rate
+
+    def test_chat_input_audio_sample_rate_none(self):
+        """Test that audio_sample_rate=None is handled correctly."""
+        st.chat_input(accept_audio=True, audio_sample_rate=None)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.HasField("audio_sample_rate") is False
+
+    def test_chat_input_audio_sample_rate_invalid(self):
+        """Test that invalid audio_sample_rate raises an error."""
+        with pytest.raises(StreamlitValueError) as exc:
+            st.chat_input(accept_audio=True, audio_sample_rate=12345)
+        assert "Invalid `audio_sample_rate` value" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            (False, False, False, False, {"text"}),
+            ("multiple", False, True, False, {"text", "files"}),
+            (False, True, False, True, {"text", "audio"}),
+            ("multiple", True, True, True, {"text", "files", "audio"}),
+        ]
+    )
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_conditional_keys(
+        self,
+        accept_file,
+        accept_audio,
+        include_files,
+        include_audio,
+        expected_keys,
+        deserialize_patch,
+    ):
+        """Test that ChatInputValue only includes keys based on accept_file/accept_audio."""
+        deserialize_patch.return_value = ChatInputValue(
+            text="test",
+            files=[],
+            audio=None,
+            _include_files=include_files,
+            _include_audio=include_audio,
+        )
+
+        return_val = st.chat_input(accept_file=accept_file, accept_audio=accept_audio)
+
+        # Verify expected keys are present
+        assert set(return_val.keys()) == expected_keys
+
+        # Verify text is always accessible
+        assert "text" in return_val
+        assert return_val["text"] == "test"
+        assert return_val.text == "test"
+
+        # Verify files key behavior
+        if "files" in expected_keys:
+            assert "files" in return_val
+            assert return_val["files"] == []
+            assert return_val.files == []
+        else:
+            assert "files" not in return_val
+            with pytest.raises(KeyError):
+                _ = return_val["files"]
+            with pytest.raises(AttributeError):
+                _ = return_val.files
+
+        # Verify audio key behavior
+        if "audio" in expected_keys:
+            assert "audio" in return_val
+            assert return_val["audio"] is None
+            assert return_val.audio is None
+        else:
+            assert "audio" not in return_val
+            with pytest.raises(KeyError):
+                _ = return_val["audio"]
+            with pytest.raises(AttributeError):
+                _ = return_val.audio
+
+        # Verify to_dict matches expected keys
+        as_dict = return_val.to_dict()
+        assert set(as_dict.keys()) == expected_keys
+
+
+class ChatInputValueDictTest(DeltaGeneratorTestCase):
+    """Test ChatInputValue dict-like interface methods."""
+
+    def test_chat_input_value_setitem(self):
+        """Test __setitem__ sets value in ChatInputValue."""
+        value = ChatInputValue(
+            text="original",
+            files=[],
+            audio=None,
+            _include_files=True,
+            _include_audio=True,
+        )
+        value["text"] = "modified"
+        assert value.text == "modified"
+
+    def test_chat_input_value_setitem_invalid_key(self):
+        """Test __setitem__ raises KeyError for invalid keys."""
+        value = ChatInputValue(text="test", files=[], _include_files=False)
+        with pytest.raises(KeyError):
+            value["files"] = []
+
+    def test_chat_input_value_delitem(self):
+        """Test __delitem__ removes attribute from ChatInputValue."""
+        value = ChatInputValue(
+            text="test", files=[], audio=None, _include_files=True, _include_audio=True
+        )
+        del value["text"]
+        with pytest.raises(AttributeError):
+            _ = value.text
+
+    def test_chat_input_value_delitem_invalid_key(self):
+        """Test __delitem__ raises KeyError for invalid keys."""
+        value = ChatInputValue(text="test", files=[], _include_files=False)
+        with pytest.raises(KeyError):
+            del value["files"]
+
+    def test_chat_input_value_delitem_nonexistent_attr(self):
+        """Test __delitem__ raises KeyError when attribute doesn't exist."""
+        value = ChatInputValue(
+            text="test", files=[], audio=None, _include_files=True, _include_audio=True
+        )
+        # First delete the text attribute
+        del value["text"]
+        # Trying to delete it again should raise KeyError
+        with pytest.raises(KeyError):
+            del value["text"]
+
+
+class ChatInputSerdeTest(DeltaGeneratorTestCase):
+    """Test ChatInputSerde serialization."""
+
+    def test_serialize_returns_proto_with_data(self):
+        """Test serialize creates ChatInputValueProto with data."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        result = serde.serialize("test message")
+
+        assert isinstance(result, ChatInputValueProto)
+        assert result.data == "test message"
+
+    def test_serialize_chat_input_value_uses_text(self):
+        """Test serialize extracts .text from a ChatInputValue."""
+        serde = ChatInputSerde(accept_files=True, accept_audio=False)
+        value = ChatInputValue(
+            text="structured message",
+            files=[],
+            _include_files=True,
+            _include_audio=False,
+        )
+        result = serde.serialize(value)
+
+        assert isinstance(result, ChatInputValueProto)
+        assert result.data == "structured message"
+
+    def test_serialize_with_none(self):
+        """Test serialize handles None value - field is not set."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        result = serde.serialize(None)
+
+        # When None is passed, the data field should not be set in the proto
+        assert not result.HasField("data")
+
+    def test_deserialize_returns_none_for_no_data(self):
+        """Test deserialize returns None when no data field."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        result = serde.deserialize(None)
+
+        assert result is None
+
+    def test_deserialize_returns_string_when_no_files_or_audio(self):
+        """Test deserialize returns string when accept_files and accept_audio are False."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        proto = ChatInputValueProto()
+        proto.data = "test message"
+
+        result = serde.deserialize(proto)
+
+        assert result == "test message"
+
+
+class PopUploadFilesTest(DeltaGeneratorTestCase):
+    """Test _pop_upload_files and _pop_audio_file functions."""
+
+    def test_pop_upload_files_returns_empty_list_for_none(self):
+        """Test _pop_upload_files returns empty list when files_value is None."""
+        result = _pop_upload_files(None)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    def test_pop_upload_files_returns_empty_list_no_ctx(self):
+        """Test _pop_upload_files returns empty list when no script context."""
+        proto = FileUploaderStateProto()
+
+        with patch(
+            "streamlit.elements.widgets.chat.get_script_run_ctx", return_value=None
+        ):
+            result = _pop_upload_files(proto)
+            assert len(result) == 0
+
+    def test_pop_upload_files_returns_empty_list_for_empty_info(self) -> None:
+        """Test _pop_upload_files returns empty list when proto has no file info."""
+        # An empty FileUploaderStateProto exits before touching the manager.
+        proto = FileUploaderStateProto()
+        result = _pop_upload_files(proto)
+        assert result == []
+
+    def test_pop_upload_files_returns_files_and_removes_from_manager(self) -> None:
+        """Test _pop_upload_files returns UploadedFile objects and pops from manager."""
+        rec = UploadedFileRec("file42", "name42", "type", b"hello")
+        self.script_run_ctx.uploaded_file_mgr.add_file(
+            session_id=self.script_run_ctx.session_id, file=rec
+        )
+
+        proto = FileUploaderStateProto()
+        info = proto.uploaded_file_info.add()
+        info.file_id = "file42"
+        info.file_urls.file_id = "file42"
+        info.file_urls.upload_url = "u"
+        info.file_urls.delete_url = "d"
+
+        result = _pop_upload_files(proto)
+
+        assert len(result) == 1
+        assert result[0].file_id == "file42"
+        assert result[0].name == "name42"
+        assert result[0].getvalue() == b"hello"
+
+        # Anti-regression: the file should have been removed from the manager.
+        remaining = self.script_run_ctx.uploaded_file_mgr.get_files(
+            session_id=self.script_run_ctx.session_id, file_ids=["file42"]
+        )
+        assert remaining == []
+
+    def test_pop_upload_files_skips_missing_records(self) -> None:
+        """Test _pop_upload_files skips file infos with no matching record."""
+        proto = FileUploaderStateProto()
+        info = proto.uploaded_file_info.add()
+        info.file_id = "missing"
+        info.file_urls.file_id = "missing"
+
+        # No file is registered for "missing" so it should be filtered out.
+        result = _pop_upload_files(proto)
+        assert result == []
+
+    def test_pop_audio_file_returns_none_for_none(self):
+        """Test _pop_audio_file returns None when audio_file_info is None."""
+        result = _pop_audio_file(None)
+        assert result is None
+
+    def test_pop_audio_file_returns_none_no_ctx(self):
+        """Test _pop_audio_file returns None when no script context."""
+        proto = UploadedFileInfoProto()
+        proto.file_id = "audio123"
+
+        with patch(
+            "streamlit.elements.widgets.chat.get_script_run_ctx", return_value=None
+        ):
+            result = _pop_audio_file(proto)
+            assert result is None
+
+    def test_pop_audio_file_returns_none_when_record_missing(self) -> None:
+        """Test _pop_audio_file returns None when no matching record exists."""
+        proto = UploadedFileInfoProto()
+        proto.file_id = "audio_missing"
+        result = _pop_audio_file(proto)
+        assert result is None
+
+    def test_pop_audio_file_returns_file_and_pops(self) -> None:
+        """Test _pop_audio_file returns the WAV file and removes it from the manager."""
+        rec = UploadedFileRec("audio1", "recording.wav", "audio/wav", b"wavdata")
+        self.script_run_ctx.uploaded_file_mgr.add_file(
+            session_id=self.script_run_ctx.session_id, file=rec
+        )
+
+        proto = UploadedFileInfoProto()
+        proto.file_id = "audio1"
+        proto.file_urls.file_id = "audio1"
+
+        result = _pop_audio_file(proto)
+
+        assert result is not None
+        assert result.name == "recording.wav"
+        assert result.getvalue() == b"wavdata"
+
+        # Anti-regression: ensure manager no longer has the file.
+        remaining = self.script_run_ctx.uploaded_file_mgr.get_files(
+            session_id=self.script_run_ctx.session_id, file_ids=["audio1"]
+        )
+        assert remaining == []
+
+    @parameterized.expand(
+        [
+            ("bad_extension", "recording.mp3", "audio/wav", "Invalid file extension"),
+            ("bad_mime_type", "recording.wav", "audio/mpeg", "Invalid MIME type"),
+        ]
+    )
+    def test_pop_audio_file_rejects_invalid_audio(
+        self, _case: str, filename: str, mime_type: str, match: str
+    ) -> None:
+        """Test _pop_audio_file raises on unsupported extension or MIME type."""
+        file_id = f"audio_{_case}"
+        self.script_run_ctx.uploaded_file_mgr.add_file(
+            session_id=self.script_run_ctx.session_id,
+            file=UploadedFileRec(file_id, filename, mime_type, b"x"),
+        )
+
+        proto = UploadedFileInfoProto()
+        proto.file_id = file_id
+
+        with pytest.raises(StreamlitAPIException, match=match):
+            _pop_audio_file(proto)
+
+
+class ChatInputSerdeFilesAudioTest(DeltaGeneratorTestCase):
+    """Test ChatInputSerde.deserialize when files and audio are accepted."""
+
+    def test_deserialize_returns_chat_input_value_with_files(self) -> None:
+        """Test deserialize returns ChatInputValue with collected files."""
+        rec = UploadedFileRec("file1", "doc.txt", "text/plain", b"abc")
+        self.script_run_ctx.uploaded_file_mgr.add_file(
+            session_id=self.script_run_ctx.session_id, file=rec
+        )
+
+        proto = ChatInputValueProto()
+        proto.data = "msg"
+        info = proto.file_uploader_state.uploaded_file_info.add()
+        info.file_id = "file1"
+
+        serde = ChatInputSerde(accept_files=True, accept_audio=False)
+        result = serde.deserialize(proto)
+
+        assert isinstance(result, ChatInputValue)
+        assert result.text == "msg"
+        assert len(result.files) == 1
+        assert result.files[0].name == "doc.txt"
+        # Anti-regression: when accept_audio is False, audio access raises.
+        with pytest.raises(AttributeError):
+            _ = result.audio
+
+    def test_deserialize_returns_chat_input_value_with_audio(self) -> None:
+        """Test deserialize collects audio file when accept_audio is True."""
+        audio_rec = UploadedFileRec("audio1", "rec.wav", "audio/wav", b"wav")
+        self.script_run_ctx.uploaded_file_mgr.add_file(
+            session_id=self.script_run_ctx.session_id, file=audio_rec
+        )
+
+        proto = ChatInputValueProto()
+        proto.data = "hello"
+        proto.audio_file_info.file_id = "audio1"
+
+        serde = ChatInputSerde(accept_files=False, accept_audio=True)
+        result = serde.deserialize(proto)
+
+        assert isinstance(result, ChatInputValue)
+        assert result.text == "hello"
+        assert result.audio is not None
+        assert result.audio.name == "rec.wav"
+
+    def test_deserialize_enforces_filename_restriction(self) -> None:
+        """Test deserialize enforces allowed_types restriction on uploaded files."""
+        rec = UploadedFileRec("file2", "doc.exe", "application/octet-stream", b"")
+        self.script_run_ctx.uploaded_file_mgr.add_file(
+            session_id=self.script_run_ctx.session_id, file=rec
+        )
+
+        proto = ChatInputValueProto()
+        proto.data = ""
+        info = proto.file_uploader_state.uploaded_file_info.add()
+        info.file_id = "file2"
+
+        serde = ChatInputSerde(
+            accept_files=True, accept_audio=False, allowed_types=[".txt"]
+        )
+
+        # An .exe file should not be allowed when only .txt is permitted.
+        with pytest.raises(StreamlitAPIException):
+            serde.deserialize(proto)
+
+
+class ChatInputValueExtraTest(DeltaGeneratorTestCase):
+    """Extra coverage for ChatInputValue dict-like protocol edge cases."""
+
+    def test_contains_with_non_string_key_returns_false(self) -> None:
+        """Test __contains__ returns False when the key is not a string."""
+        value = ChatInputValue(text="hi")
+        assert (42 in value) is False
+        # Anti-regression: a valid string key should still report membership.
+        assert "text" in value
+
+
+class AvatarProcessingTest(DeltaGeneratorTestCase):
+    """Cover _process_avatar_input branches for missing avatars and material icons."""
+
+    @parameterized.expand(
+        [
+            # `:material/...:` strings are passed through as ICON avatars.
+            ("material_icon", "user", ":material/thumb_up:", ":material/thumb_up:"),
+            # Custom names that are neither presets nor emojis fall through to
+            # the empty ICON branch with no avatar string.
+            ("custom_name_no_avatar", "bot42", None, ""),
+        ]
+    )
+    def test_chat_message_icon_avatar(
+        self, _case: str, name: str, avatar: str | None, expected_avatar: str
+    ) -> None:
+        """Test chat_message produces ICON avatar_type with the expected avatar."""
+        if avatar is None:
+            st.chat_message(name)
+        else:
+            st.chat_message(name, avatar=avatar)
+
+        block = self.get_delta_from_queue()
+        assert (
+            block.add_block.chat_message.avatar_type
+            == BlockProto.ChatMessage.AvatarType.ICON
+        )
+        assert block.add_block.chat_message.avatar == expected_avatar
+
+    def test_chat_message_raises_when_name_is_none(self) -> None:
+        """Test chat_message raises when name is explicitly None."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`name` parameter is required",
+        ):
+            st.chat_message(None)  # type: ignore[arg-type]
+
+
+class ChatInputSubmitModeTest(DeltaGeneratorTestCase):
+    """Test submit_mode parameter for st.chat_input."""
+
+    @parameterized.expand(
+        [
+            ("submit", ChatInput.SubmitMode.SUBMIT_MODE_SUBMIT, "submit"),
+            ("disable", ChatInput.SubmitMode.SUBMIT_MODE_DISABLE, "disable"),
+            ("stop", ChatInput.SubmitMode.SUBMIT_MODE_STOP, "stop"),
+        ]
+    )
+    def test_submit_mode_mapping(self, submit_mode, expected, _name):
+        """Test that submit_mode parameter maps correctly to proto enum values."""
+        st.chat_input("Placeholder", submit_mode=submit_mode)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.submit_mode == expected
+
+    def test_submit_mode_default(self):
+        """Test that submit_mode defaults to SUBMIT_MODE_SUBMIT when not specified."""
+        st.chat_input("Placeholder")
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.submit_mode == ChatInput.SubmitMode.SUBMIT_MODE_SUBMIT
+
+    def test_submit_mode_invalid(self):
+        """Test that invalid submit_mode values raise an error."""
+        with pytest.raises(StreamlitValueError) as exc:
+            st.chat_input("Placeholder", submit_mode="invalid")
+        assert "Invalid `submit_mode` value" in str(exc.value)
+
+    def test_submit_mode_bool_not_allowed(self):
+        """Test that bool values are not accepted for submit_mode."""
+        with pytest.raises(StreamlitValueError) as exc:
+            st.chat_input("Placeholder", submit_mode=True)
+        assert "Invalid `submit_mode` value" in str(exc.value)

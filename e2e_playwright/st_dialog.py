@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +13,14 @@
 # limitations under the License.
 
 import time
+from datetime import date
 
+import altair as alt
 import numpy as np
 import pandas as pd
 
 import streamlit as st
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 
 np.random.seed(0)
 data = np.random.randint(low=0, high=20, size=(20, 3))
@@ -31,7 +33,8 @@ def dialog_with_images() -> None:
 
     # render a dataframe
     st.dataframe(
-        pd.DataFrame(np.zeros((1000, 6)), columns=["A", "B", "C", "D", "E", "F"])
+        pd.DataFrame(np.zeros((1000, 6)), columns=["A", "B", "C", "D", "E", "F"]),
+        width="stretch",
     )
 
     st.subheader("Images", help="Some images are generated")
@@ -59,6 +62,52 @@ def simple_dialog() -> None:
 
 if st.button("Open Dialog without Images"):
     simple_dialog()
+
+
+@st.dialog("Dialog with Date Input")
+def dialog_with_date_input() -> None:
+    c_amount, c_due = st.columns(2)
+    c_amount.number_input("Amount")
+    due_date = c_due.date_input("Due Date", value=date(2024, 1, 1))
+    status = st.selectbox("Status", ["Draft", "Paid", "Cancelled"])
+    tags = st.multiselect("Tags", ["Rent", "Utilities", "Other"])
+    st.write(f"Due Date Value: {due_date}")
+    st.write(f"Status Value: {status}")
+    st.write(f"Tags Value: {tags}")
+
+
+if st.button("Open Dialog with Date Input"):
+    dialog_with_date_input()
+
+
+@st.dialog("Dialog with Icon", icon="🌟")
+def dialog_with_icon() -> None:
+    st.write("This dialog title renders a star icon.")
+    st.text_input("Icon dialog input", key="icon-dialog-input")
+
+
+if st.button("Open Dialog with Icon"):
+    dialog_with_icon()
+
+
+@st.dialog("Dialog with Spinner Icon", icon="spinner")
+def dialog_with_spinner_icon() -> None:
+    st.write("This dialog renders the spinner icon in its title.")
+    st.checkbox("Toggle spinner dialog value", key="spinner-dialog-checkbox")
+
+
+if st.button("Open Dialog with Spinner Icon"):
+    dialog_with_spinner_icon()
+
+
+@st.dialog("Dialog with Material Icon", icon=":material/info:")
+def dialog_with_material_icon() -> None:
+    st.write("This dialog renders a material icon in its title.")
+    st.checkbox("Material icon dialog value", key="material-dialog-checkbox")
+
+
+if st.button("Open Dialog with Material Icon"):
+    dialog_with_material_icon()
 
 
 @st.dialog("Medium-width Dialog", width="medium")
@@ -111,7 +160,7 @@ with st.sidebar:
 @st.dialog("Submit-button Dialog")
 def submit_button_dialog() -> None:
     st.write("This dialog has a submit button.")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
+    st.write(f"Fragment Id: {ThreadState.get().fragment_id}")
 
     if st.button("Submit", key="dialog6-btn"):
         st.rerun()
@@ -129,7 +178,7 @@ def level2_dialog() -> None:
 @st.dialog("Level1 Dialog")
 def level1_dialog() -> None:
     st.write("First level dialog")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
+    st.write(f"Fragment Id: {ThreadState.get().fragment_id}")
     level2_dialog()
 
 
@@ -141,7 +190,7 @@ if st.button("Open Nested Dialogs"):
 def dialog_with_error() -> None:
     with st.form(key="forecast_form"):
         # foo is an invalid argument, so this shows an error
-        st.form_submit_button("Submit", foo="bar")  # type: ignore[call-arg]
+        st.form_submit_button("Submit", foo="bar")  # type: ignore[call-arg] # ty: ignore[unknown-argument]
 
 
 if st.button("Open Dialog with Key Error"):
@@ -179,6 +228,33 @@ if st.button("Open Chart Dialog"):
     dialog_with_chart()
 
 
+@st.dialog("Dialog with layered chart")
+def dialog_with_layered_chart() -> None:
+    df = pd.DataFrame(
+        {
+            "x": list(range(1, 11)),
+            "y": list(range(5, 15)),
+            "y2": list(range(1, 11)),
+            "kpi": ["kpi1"] * 10,
+        }
+    )
+    chart1 = (
+        alt.Chart(df)
+        .mark_area()
+        .encode(x="x", y="y2", color="kpi", tooltip=["x", "y2"])
+    )
+    chart2 = (
+        alt.Chart(df)
+        .mark_line(point=alt.OverlayMarkDef(size=80))
+        .encode(x="x", y="y", color="kpi", tooltip=["x", "y"])
+    )
+    st.altair_chart(alt.layer(chart1, chart2).interactive())
+
+
+if st.button("Open Layered Chart Dialog"):
+    dialog_with_layered_chart()
+
+
 @st.dialog("Dialog with dataframe")
 def dialog_with_dataframe() -> None:
     st.dataframe(
@@ -189,6 +265,7 @@ def dialog_with_dataframe() -> None:
             "c": st.column_config.Column(width="small"),
         },
         hide_index=True,
+        width="content",
     )
 
 
@@ -268,3 +345,77 @@ if st.button("Open on_dismiss callback Dialog"):
 
 if st.session_state.get("callback_executed"):
     st.write("Callback executions:", st.session_state.get("dismiss_count", 0))
+
+
+# Test case for issue #10907:
+# Prevent dialogs from showing stale elements from previous dialog
+@st.dialog("Fast Dialog")
+def fast_dialog() -> None:
+    st.write("Fast dialog content")
+    st.text_input("Fast dialog input")
+
+
+@st.dialog("Slow Dialog")
+def slow_dialog() -> None:
+    time.sleep(1)
+    st.write("Slow dialog content")
+
+
+if st.button("Open Fast Dialog"):
+    fast_dialog()
+
+if st.button("Open Slow Dialog"):
+    slow_dialog()
+
+
+# Regression coverage for #16005: widgets inside an st.popover that is opened
+# inside an st.dialog should be interactable (the popover body must not be
+# occluded by the dialog's React Aria overlay).
+@st.dialog("Dialog with popover")
+def dialog_with_popover() -> None:
+    st.write("dialog content")
+    with st.popover("Open popover"):
+        fruit = st.selectbox("Fruit", ["Apple", "Banana", "Cherry"])
+        st.write(f"picked: {fruit}")
+
+
+if st.button("Open Dialog with Popover"):
+    dialog_with_popover()
+
+
+# Regression coverage for #16538: a color picker palette opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with color picker")
+def dialog_with_color_picker() -> None:
+    color = st.color_picker("Dialog color picker")
+    st.write(f"Selected color: {color}")
+
+
+if st.button("Open Dialog with Color Picker"):
+    dialog_with_color_picker()
+
+
+# Regression coverage (#16005): a menu button dropdown opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with menu button")
+def dialog_with_menu_button() -> None:
+    selected = st.menu_button(
+        "Dialog menu",
+        options=["Alpha", "Beta", "Gamma"],
+    )
+    st.write(f"menu selected: {selected}")
+
+
+if st.button("Open Dialog with Menu Button"):
+    dialog_with_menu_button()
+
+
+# Regression coverage (#16005): a JSON path tooltip opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with JSON path tooltip")
+def dialog_with_json_path_tooltip() -> None:
+    st.json({"level1": {"level2": "value"}}, expanded=True)
+
+
+if st.button("Open Dialog with JSON Path Tooltip"):
+    dialog_with_json_path_tooltip()

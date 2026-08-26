@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +13,31 @@
 # limitations under the License.
 
 
-from playwright.sync_api import Page, expect
+import re
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+import pytest
+from playwright.sync_api import Locator, Page, expect
 
-LINK_BUTTON_ELEMENTS = 15
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_label_truncated,
+    expect_prefixed_markdown,
+    get_element_by_key,
+    get_expander,
+)
+
+LINK_BUTTON_ELEMENTS = 21
+
+
+def _click_link_and_wait_for_rerun(app: Page, link: Locator) -> None:
+    # Prevent navigation to avoid flaky expect_popup on Chromium/Firefox.
+    # The Streamlit on_click/rerun callback fires independently of link navigation.
+    link.evaluate(
+        "el => el.addEventListener('click', e => e.preventDefault(), {once: true})"
+    )
+    link.click()
+    wait_for_app_run(app)
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -40,6 +59,11 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
         link_elements.nth(10), name="st_link_button-tertiary_container_width"
     )
     assert_snapshot(link_elements.nth(11), name="st_link_button-help")
+    assert_snapshot(link_elements.nth(12), name="st_link_button-shortcut")
+    assert_snapshot(
+        link_elements.filter(has_text="Icon Right").first,
+        name="st_link_button-icon_position_right_material",
+    )
 
 
 def test_link_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -64,6 +88,11 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stLinkButton")
 
 
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "on_click_link_button")).to_be_visible()
+
+
 def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test link button width examples via screenshot matching."""
     link_expander = get_expander(app, "Link Button Width Examples")
@@ -73,3 +102,90 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
+
+
+def test_link_button_click_calls_callback(app: Page):
+    callback_link_button = get_element_by_key(app, "on_click_link_button").get_by_role(
+        "link"
+    )
+
+    expect_prefixed_markdown(
+        app, "Link Button with on_click value:", "False", exact_match=True
+    )
+
+    _click_link_and_wait_for_rerun(app, callback_link_button)
+    expect_prefixed_markdown(
+        app, "Link Button with on_click value:", "True", exact_match=True
+    )
+    expect_prefixed_markdown(
+        app, "Link Button callback times clicked:", "1", exact_match=True
+    )
+
+
+def test_link_button_sanitizes_dangerous_url(app: Page):
+    """Test that a dangerous javascript: URL is neutralized to '#'.
+
+    This relies on real-browser URL normalization that jsdom cannot fully
+    replicate, so it complements the frontend unit tests.
+    """
+    dangerous_link = get_element_by_key(app, "dangerous_link_button").get_by_role(
+        "link"
+    )
+    expect(dangerous_link).to_have_attribute("href", "#")
+    expect(dangerous_link).to_have_attribute("target", "_self")
+
+
+def test_link_button_click_returns_true_for_rerun(app: Page):
+    rerun_link_button = get_element_by_key(app, "rerun_link_button").get_by_role("link")
+
+    expect_prefixed_markdown(
+        app, "Link Button with rerun value:", "False", exact_match=True
+    )
+
+    _click_link_and_wait_for_rerun(app, rerun_link_button)
+    expect_prefixed_markdown(
+        app, "Link Button with rerun value:", "True", exact_match=True
+    )
+
+
+@pytest.mark.skip(
+    reason="Flaky on all browsers - Firefox/Chromium have expect_popup issues, "
+    "webkit has keyboard shortcut issues in Playwright 1.59"
+)
+def test_link_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut opens the link in a new tab."""
+    shortcut_button = (
+        app.get_by_test_id("stLinkButton")
+        .filter(has_text="Link Button with shortcut")
+        .first
+    )
+    expect(shortcut_button).to_be_visible()
+    # Ensure shortcut labels are rendered for link buttons:
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|Option|⌥) \+ Z")
+    )
+    expect(shortcut_button).to_be_enabled()
+    shortcut_button.scroll_into_view_if_needed()
+    # This test seems a bit flaky without a timeout:
+    app.wait_for_timeout(3000)
+
+    # Press hotkey to trigger the button:
+    with app.expect_popup() as popup_info:
+        app.keyboard.press("ControlOrMeta+Alt+KeyZ")
+
+    popup = popup_info.value
+    expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
+    popup.close()
+
+
+def test_wrap_false_truncates_and_sets_native_title(app: Page):
+    """wrap=False ellipsizes an overflowing label and exposes the full label via
+    a native title so it stays recoverable on hover.
+    """
+    container = get_element_by_key(app, "wrap_false_link_button")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

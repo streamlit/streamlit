@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
+import ButtonColumn from "./ButtonColumn"
+import ButtonCellRenderer from "./cells/ButtonCell"
 import JsonCellRenderer from "./cells/JsonCell"
+import MarkdownCellRenderer from "./cells/MarkdownCell"
+import MediaCellRenderer from "./cells/MediaCell"
+import MultiSelectCellRenderer from "./cells/MultiSelectCell"
 import {
   AreaChartColumn,
   BarChartColumn,
@@ -26,6 +31,8 @@ import ImageColumn from "./ImageColumn"
 import JsonColumn from "./JsonColumn"
 import LinkColumn from "./LinkColumn"
 import ListColumn from "./ListColumn"
+import MarkdownColumn from "./MarkdownColumn"
+import { AudioColumn, VideoColumn } from "./MediaColumn"
 import MultiselectColumn from "./MultiselectColumn"
 import NumberColumn from "./NumberColumn"
 import ObjectColumn from "./ObjectColumn"
@@ -35,7 +42,7 @@ import TextColumn from "./TextColumn"
 import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
-export type { JsonCell } from "./cells/JsonCell"
+
 export type { DateTimeColumnParams } from "./DateTimeColumn"
 export type { LinkColumnParams } from "./LinkColumn"
 export type { NumberColumnParams } from "./NumberColumn"
@@ -57,6 +64,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     multiselect: MultiselectColumn,
     number: NumberColumn,
     link: LinkColumn,
+    button: ButtonColumn,
     datetime: DateTimeColumn,
     date: DateColumn,
     time: TimeColumn,
@@ -64,28 +72,29 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     bar_chart: BarChartColumn,
     area_chart: AreaChartColumn,
     image: ImageColumn,
+    audio: AudioColumn,
+    video: VideoColumn,
     progress: ProgressColumn,
     json: JsonColumn,
+    markdown: MarkdownColumn,
   })
 )
 
-export const CustomCells = [JsonCellRenderer]
+export const CustomCells = [
+  JsonCellRenderer,
+  MarkdownCellRenderer,
+  MediaCellRenderer,
+  MultiSelectCellRenderer,
+  ButtonCellRenderer,
+]
 
 export {
-  AreaChartColumn,
-  BarChartColumn,
   CheckboxColumn,
   DateColumn,
   DateTimeColumn,
-  ImageColumn,
-  JsonColumn,
-  LineChartColumn,
-  LinkColumn,
   ListColumn,
-  MultiselectColumn,
   NumberColumn,
   ObjectColumn,
-  ProgressColumn,
   SelectboxColumn,
   TextColumn,
   TimeColumn,

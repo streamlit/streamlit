@@ -1,0 +1,38 @@
+# This workflow automatically comments on pull requests from forks to let
+# external contributors know that PRs from outside the maintainer team are
+# paused and to point them to other ways to contribute.
+
+name: Fork PR Welcome Comment
+
+on:
+  pull_request_target:
+    types:
+      - opened
+
+jobs:
+  fork-pr-welcome-comment:
+    # Only run for PRs from forks (external contributors)
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add fork PR welcome comment
+        run: gh pr comment "$PR_URL" --body "$PR_COMMENT_BODY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_COMMENT_BODY: |
+            Thanks for your interest in contributing to Streamlit! 🎈
+
+            We have **paused accepting pull requests from outside the Streamlit maintainer team**. AI coding tools have increased PR volume beyond what we can review sustainably, while detailed issues give maintainers a more effective starting point for improving Streamlit. As a result, this PR most likely won't be reviewed or merged.
+
+            There are still many valuable ways to contribute:
+
+            - 🐛 [Report a bug](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml) with clear, reproducible steps.
+            - 💡 [Request a feature](https://github.com/streamlit/streamlit/issues/new?template=feature_request.yml) and describe your use case.
+            - 👍 Improve or upvote [existing issues](https://github.com/streamlit/streamlit/issues?q=is%3Aissue%20state%3Aopen%20sort%3Areactions-%2B1-desc), and comment on [open specs](https://github.com/streamlit/streamlit/issues?q=state%3Aopen%20label%3Achange%3Aspec).
+            - 🧩 Build a [custom component](https://docs.streamlit.io/develop/concepts/custom-components) or contribute to [streamlit-extras](https://github.com/arnaudmiribel/streamlit-extras).
+            - 🙋 Help other users in the [community forum](https://discuss.streamlit.io).
+
+            Please read our [Contributing Guide](https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md) for details. Thanks for helping shape what we build next! 🙏

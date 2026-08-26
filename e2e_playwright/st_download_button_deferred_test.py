@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ def test_deferred_download_error_handling(app: Page):
     # Error message should be visible after the failed request
     error_message = app.get_by_test_id("stDownloadButtonError")
     expect(error_message).to_be_visible(timeout=5000)
-    expect(error_message).to_contain_text("Callable execution failed")
+    expect(error_message).to_contain_text("Failed to generate file for download")
 
 
 def test_deferred_download_with_ignore_rerun(app: Page):

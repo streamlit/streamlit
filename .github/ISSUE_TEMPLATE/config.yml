@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: ☁️ Streamlit Community Cloud support (usage limits, accounts, 403 errors)
+    url: https://docs.streamlit.io/knowledge-base/deploy/how-to-submit-a-support-case-for-streamlit-community-cloud
+    about: "Community Cloud support (usage limits/403): submit a support case (not a GitHub issue)."
   - name: 📚 Documentation request
     url: https://github.com/streamlit/docs/issues/new/choose
     about: Let us know how our docs could be better

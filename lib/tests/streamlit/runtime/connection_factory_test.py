@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import os
 import sys
 import threading
 import unittest
+from typing import Literal
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -25,13 +26,15 @@ from parameterized import parameterized
 
 from streamlit.connections import (
     BaseConnection,
+    SnowflakeCallersRightsConnection,
     SnowflakeConnection,
-    SnowparkConnection,
     SQLConnection,
 )
 from streamlit.errors import StreamlitAPIException, StreamlitSecretNotFoundError
+from streamlit.runtime import connection_factory as connection_factory_module
 from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.connection_factory import (
+    _SNOWPARK_CONNECTION_REMOVED_ERROR,
     _create_connection,
     _get_first_party_connection,
     connection_factory,
@@ -80,7 +83,7 @@ class ConnectionFactoryTest(unittest.TestCase):
     @parameterized.expand(
         [
             ("snowflake", SnowflakeConnection),
-            ("snowpark", SnowparkConnection),
+            ("snowflake-callers-rights", SnowflakeCallersRightsConnection),
             ("sql", SQLConnection),
         ]
     )
@@ -97,6 +100,12 @@ class ConnectionFactoryTest(unittest.TestCase):
             _get_first_party_connection("not_a_first_party_connection")
 
         assert "Invalid connection" in str(e.value)
+
+    def test_get_first_party_connection_helper_errors_when_snowpark(self):
+        with pytest.raises(StreamlitAPIException) as e:
+            _get_first_party_connection("snowpark")
+
+        assert str(e.value) == _SNOWPARK_CONNECTION_REMOVED_ERROR
 
     @parameterized.expand(
         [
@@ -168,14 +177,41 @@ type="streamlit.connections.SQLConnection"
     def test_can_specify_first_party_class_in_config(self, patched_create_connection):
         mock_toml = """
 [connections.my_connection]
-type="snowpark"
+type="snowflake"
 """
         with patch("builtins.open", new_callable=mock_open, read_data=mock_toml):
             connection_factory("my_connection")
 
         patched_create_connection.assert_called_once_with(
-            "my_connection", SnowparkConnection, max_entries=None, ttl=None
+            "my_connection", SnowflakeConnection, max_entries=None, ttl=None
         )
+
+    @parameterized.expand(
+        [
+            ("inferred", "snowpark", None),
+            ("explicit", "my_connection", "snowpark"),
+        ]
+    )
+    def test_connection_factory_errors_for_removed_snowpark_type(
+        self, _case, name, connection_type
+    ):
+        with pytest.raises(StreamlitAPIException) as e:
+            connection_factory(name, type=connection_type)
+
+        assert str(e.value) == _SNOWPARK_CONNECTION_REMOVED_ERROR
+
+    def test_connection_factory_errors_for_removed_snowpark_type_in_config(self):
+        mock_toml = """
+[connections.my_connection]
+type="snowpark"
+"""
+        with (
+            patch("builtins.open", new_callable=mock_open, read_data=mock_toml),
+            pytest.raises(StreamlitAPIException) as e,
+        ):
+            connection_factory("my_connection")
+
+        assert str(e.value) == _SNOWPARK_CONNECTION_REMOVED_ERROR
 
     def test_can_pass_class_directly_to_factory_func(self):
         conn = connection_factory("my_connection", MockConnection, foo="bar")
@@ -207,6 +243,82 @@ type="snowpark"
             connection_factory("my_connection2", MockConnection, max_entries=20)
 
         assert patched_init.call_count == 2
+
+    def test_friendly_error_for_bad_scope(self):
+        """A bad scope on a BaseConnection class triggers an exception."""
+
+        class BadScopeConnection(BaseConnection):
+            @classmethod
+            def scope(cls) -> Literal["request"]:
+                return "request"
+
+            def _connect(self, **kwargs):
+                pass
+
+        with pytest.raises(StreamlitAPIException) as e:
+            connection_factory("my_connection", BadScopeConnection)
+
+        e.match("BadScopeConnection.*has scope 'request'")
+
+    def test_scope_is_passed_to_cache(self):
+        """Scope should be passed to the underlying cache."""
+
+        class SessionScopedConnection(BaseConnection):
+            @classmethod
+            def scope(cls) -> Literal["session"]:
+                return "session"
+
+            def _connect(self, **kwargs):
+                pass
+
+        class GloballyScopedConnection(BaseConnection):
+            @classmethod
+            def scope(cls) -> Literal["global"]:
+                return "global"
+
+            def _connect(self, **kwargs):
+                pass
+
+        with patch.object(
+            connection_factory_module, "cache_resource"
+        ) as mock_cache_resource:
+            connection_factory("my_connection", SessionScopedConnection)
+
+        mock_cache_resource.assert_called_once()
+        assert mock_cache_resource.call_args.kwargs["scope"] == "session"
+
+        with patch.object(
+            connection_factory_module, "cache_resource"
+        ) as mock_cache_resource:
+            connection_factory("my_connection", GloballyScopedConnection)
+
+        mock_cache_resource.assert_called_once()
+        assert mock_cache_resource.call_args.kwargs["scope"] == "global"
+
+    def test_close_is_passed_to_cache(self):
+        """Close should be passed to the underlying cache as on_release."""
+
+        class ConnectionWithClose(BaseConnection):
+            def __init__(self):
+                super().__init__("test")
+                self.close_count = 0
+
+            def _connect(self, **kwargs):
+                pass
+
+            def close(self):
+                self.close_count += 1
+
+        with patch.object(
+            connection_factory_module, "cache_resource"
+        ) as mock_cache_resource:
+            connection_factory("my_connection", ConnectionWithClose)
+
+        fake_connection = ConnectionWithClose()
+        mock_cache_resource.assert_called_once()
+        on_release = mock_cache_resource.call_args.kwargs["on_release"]
+        on_release(fake_connection)
+        assert fake_connection.close_count == 1, "connection should have been closed"
 
     @parameterized.expand(
         [

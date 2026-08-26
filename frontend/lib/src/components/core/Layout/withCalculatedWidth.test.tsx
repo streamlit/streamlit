@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
@@ -27,13 +27,23 @@ vi.mock("~lib/hooks/useResizeObserver", () => ({
   useResizeObserver: vi.fn(),
 }))
 
+/** Simple test component that displays its width prop. */
+const TestComponent: FC<{ width?: number }> = ({ width }) => (
+  <div data-testid="test-component">Width: {width}</div>
+)
+
+/** Test component that accepts additional props. */
+const ComponentWithProps: FC<{
+  width?: number
+  testProp: string
+}> = ({ width, testProp }) => (
+  <div data-testid="test-component">
+    Width: {width}, TestProp: {testProp}
+  </div>
+)
+
 describe("withCalculatedWidth", () => {
   const mockElementRef = { current: null }
-
-  // Simple test component that displays its width prop
-  const TestComponent: FC<{ width?: number }> = ({ width }) => (
-    <div data-testid="test-component">Width: {width}</div>
-  )
 
   it("should pass width to the wrapped component", () => {
     const mockWidth = 500
@@ -67,16 +77,6 @@ describe("withCalculatedWidth", () => {
       values: [300],
       elementRef: mockElementRef,
     })
-
-    // Create a component that accepts additional props
-    const ComponentWithProps: FC<{
-      width?: number
-      testProp: string
-    }> = ({ width, testProp }) => (
-      <div data-testid="test-component">
-        Width: {width}, TestProp: {testProp}
-      </div>
-    )
 
     const EnhancedComponent = withCalculatedWidth(ComponentWithProps)
     render(<EnhancedComponent testProp="test-value" />)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
-
 import styled from "@emotion/styled"
-import { TextCellEntry } from "@glideapps/glide-data-grid"
+import {
+  type Theme as GlideTheme,
+  TextCellEntry,
+} from "@glideapps/glide-data-grid"
 import { getLuminance } from "color2k"
 import JSON5 from "json5"
-import ReactJson from "react-json-view"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import { toJsonString } from "~lib/components/widgets/DataFrame/columns/utils"
+import ReactJson from "~lib/util/reactJsonViewCompat"
 
 const StyledJsonWrapper = styled.div(({ theme }) => ({
   overflowY: "auto",
@@ -39,8 +40,7 @@ const StyledJsonWrapper = styled.div(({ theme }) => ({
 
 interface JsonViewerProps {
   jsonValue: string | object | undefined | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  theme: any
+  theme: GlideTheme
 }
 
 /**
@@ -63,8 +63,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         typeof jsonValue === "string"
           ? JSON5.parse(jsonValue)
           : JSON5.parse(JSON5.stringify(jsonValue))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       // Keep the parsed JSON as undefined.
       parsedJson = undefined
     }
@@ -95,6 +94,8 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         displayObjectSize={false}
         name={false}
         enableClipboard={true}
+        // @ts-expect-error showComma prop exists at runtime but is missing from type definitions
+        showComma={false}
         style={{
           fontFamily: theme.fontFamily,
           fontSize: theme.baseFontStyle,
@@ -105,5 +106,3 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
     </StyledJsonWrapper>
   )
 }
-
-export default memo(JsonViewer)

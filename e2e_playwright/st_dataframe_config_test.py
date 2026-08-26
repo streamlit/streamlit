@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
 
-NUM_DATAFRAME_ELEMENTS = 33
+NUM_DATAFRAME_ELEMENTS = 38
 
 
 def test_dataframe_supports_various_configurations(
@@ -69,24 +69,29 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(20), name="st_dataframe-area_chart_column")
     assert_snapshot(dataframe_elements.nth(21), name="st_dataframe-chart_column_colors")
     assert_snapshot(dataframe_elements.nth(22), name="st_dataframe-image_column")
-    assert_snapshot(dataframe_elements.nth(23), name="st_dataframe-auto_sized_columns")
+    assert_snapshot(dataframe_elements.nth(23), name="st_dataframe-audio_column")
+    assert_snapshot(dataframe_elements.nth(24), name="st_dataframe-video_column")
+    assert_snapshot(dataframe_elements.nth(25), name="st_dataframe-auto_sized_columns")
     assert_snapshot(
-        dataframe_elements.nth(24), name="st_dataframe-hierarchical_headers"
+        dataframe_elements.nth(26), name="st_dataframe-hierarchical_headers"
     )
 
     # The pinned columns webkit snapshot is a bit flaky (vertical scrollbar is sometimes visible)
     # And needs a bit of extra handling:
-    dataframe_elements.nth(24).scroll_into_view_if_needed()
-    expect_canvas_to_be_stable(dataframe_elements.nth(24))
-    assert_snapshot(dataframe_elements.nth(25), name="st_dataframe-pinned_columns")
-    assert_snapshot(dataframe_elements.nth(26), name="st_dataframe-row_height")
-    assert_snapshot(dataframe_elements.nth(27), name="st_dataframe-number_formatting")
-    assert_snapshot(dataframe_elements.nth(28), name="st_dataframe-datetime_formatting")
-    assert_snapshot(dataframe_elements.nth(29), name="st_dataframe-json_column")
-    # 29th is the localized date/number formatting test - screenshot taken separately
-    # below so that the set locale doesn't impact other tests/screenshots
-    assert_snapshot(dataframe_elements.nth(31), name="st_dataframe-multiselect_column")
-    assert_snapshot(dataframe_elements.nth(32), name="st_dataframe-missing_placeholder")
+    dataframe_elements.nth(26).scroll_into_view_if_needed()
+    expect_canvas_to_be_stable(dataframe_elements.nth(26))
+    assert_snapshot(dataframe_elements.nth(27), name="st_dataframe-pinned_columns")
+    assert_snapshot(dataframe_elements.nth(28), name="st_dataframe-row_height")
+    assert_snapshot(dataframe_elements.nth(29), name="st_dataframe-number_formatting")
+    assert_snapshot(dataframe_elements.nth(30), name="st_dataframe-datetime_formatting")
+    assert_snapshot(dataframe_elements.nth(31), name="st_dataframe-json_column")
+    # 32nd (nth(32)) is the localized date/number formatting test - screenshot taken
+    # separately below so that the set locale doesn't impact other tests/screenshots
+    assert_snapshot(dataframe_elements.nth(33), name="st_dataframe-multiselect_column")
+    assert_snapshot(dataframe_elements.nth(34), name="st_dataframe-markdown_column")
+    assert_snapshot(dataframe_elements.nth(35), name="st_dataframe-missing_placeholder")
+    assert_snapshot(dataframe_elements.nth(36), name="st_dataframe-column_alignment")
+    assert_snapshot(dataframe_elements.nth(37), name="st_dataframe-button_column")
 
 
 def test_check_top_level_class(app: Page):
@@ -116,7 +121,7 @@ def _open_json_cell_overlay(
 )
 def test_json_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the JSON cell overlay works correctly."""
-    dataframe_element = themed_app.get_by_test_id("stDataFrame").nth(29)
+    dataframe_element = themed_app.get_by_test_id("stDataFrame").nth(31)
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
@@ -158,12 +163,14 @@ def test_list_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFuncti
     click_on_cell(dataframe_element, 1, 1, double_click=True, column_width="medium")
 
     cell_overlay = get_open_cell_overlay(themed_app)
+    # Reset the hovering to ensure that there aren't unexpected UI elements visible
+    reset_hovering(themed_app)
     assert_snapshot(cell_overlay, name="st_dataframe-list_column_overlay")
 
 
 def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the multiselect column overlay works correctly."""
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(31)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(33)
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
@@ -172,6 +179,71 @@ def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFuncti
 
     cell_overlay = get_open_cell_overlay(app)
     assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
+
+
+def _test_media_cell_overlay(
+    app: Page, index: int, element_type: str, opposite_element_type: str
+):
+    """Helper to test a single media cell overlay."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(index)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Wait after scrolling to ensure the canvas is stable
+    app.wait_for_timeout(300)
+
+    # Click on the first cell to open the overlay
+    # Use a longer wait_after_ms to allow the overlay to render
+    click_on_cell(
+        dataframe_element,
+        1,
+        0,
+        double_click=True,
+        column_width="medium",
+        wait_after_ms=500,
+    )
+
+    # The media cell overlay renders the audio/video element in the portal
+    portal = app.get_by_test_id("portal")
+    media_element = portal.locator(element_type)
+    expect(media_element).to_be_visible(timeout=10000)
+    expect(media_element).to_have_attribute("controls", "")
+
+    # Verify that the opposite media element is NOT present
+    opposite_element = portal.locator(opposite_element_type)
+    expect(opposite_element).not_to_be_attached()
+
+
+def test_audio_cell_overlay(app: Page):
+    """Test that the audio cell overlay opens and contains the expected audio element."""
+    _test_media_cell_overlay(
+        app, index=23, element_type="audio", opposite_element_type="video"
+    )
+
+
+def test_video_cell_overlay(app: Page):
+    """Test that the video cell overlay opens and contains the expected video element."""
+    _test_media_cell_overlay(
+        app, index=24, element_type="video", opposite_element_type="audio"
+    )
+
+
+def test_markdown_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the markdown column overlay works correctly in read-only mode."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(34)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on a cell of the markdown column to open the overlay
+    click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(app)
+    # The overlay should show the rendered markdown content (no edit button in read-only mode)
+    expect(cell_overlay).to_be_visible()
+    expect(cell_overlay.get_by_test_id("stMarkdownColumnViewer")).to_be_visible()
+    # Verify edit button is not shown in read-only mode
+    expect(cell_overlay.get_by_label("Edit")).not_to_be_visible()
+    assert_snapshot(cell_overlay, name="st_dataframe-markdown_column_overlay")
 
 
 def test_number_column_formatting_via_ui(
@@ -322,8 +394,51 @@ def test_localized_date_and_number_formatting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the localized date and number formatting works correctly."""
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(30)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(32)
     expect_canvas_to_be_visible(dataframe_element)
     assert_snapshot(
         dataframe_element, name="st_dataframe-localized_date_and_number_formatting"
     )
+
+
+def test_button_column_click(app: Page):
+    """Test that clicking a button in a button column triggers the callback."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(37)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the "Primary" button in the first row (column index 1)
+    click_on_cell(dataframe_element, 1, 1, column_width="small")
+
+    # Verify that the click result is displayed
+    click_result = app.get_by_text("Clicked row 0, label: View")
+    expect(click_result).to_be_visible()
+
+
+def test_button_column_multi_action_menu(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that clicking a multi-action button opens a menu."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(37)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the multi-action cell in the first row (column index 6)
+    click_on_cell(dataframe_element, 1, 6, column_width="small")
+
+    # Verify that the menu appears
+    menu = app.get_by_test_id("stDataFrameButtonActionMenu")
+    expect(menu).to_be_visible()
+    assert_snapshot(menu, name="st_dataframe-button_column_multi_action_menu")
+
+    # Click on "Edit" option (use exact match to avoid matching "Edit" in other text)
+    menu.get_by_text("Edit", exact=True).click()
+
+    # Verify the click result - material icon is rendered, so match partial text
+    click_result = app.get_by_text("Clicked row 0, label:")
+    expect(click_result).to_be_visible()
+    # Verify it contains "Edit" (the icon is rendered, not the :material/edit: text)
+    expect(click_result).to_contain_text("Edit")
+
+    # Menu should be closed after selection
+    expect(menu).not_to_be_visible()

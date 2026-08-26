@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ class PollingPathWatcher:
         self._modification_time = util.path_modification_time(
             str(self._path), self._allow_nonexistent
         )
-        self._md5 = util.calc_md5_with_blocking_retries(
+        self._content_hash = util.calc_hash_with_blocking_retries(
             str(self._path),
             glob_pattern=self._glob_pattern,
             allow_nonexistent=self._allow_nonexistent,
@@ -101,34 +101,32 @@ class PollingPathWatcher:
             modification_time = util.path_modification_time(
                 str(self._path), self._allow_nonexistent
             )
-            # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-            # modification_time is always 0.0 because of file system limitations.
-            if (
-                modification_time != 0.0
-                and modification_time <= self._modification_time
-            ):
+            # We add the modification_time > 0.0 check since on some file systems
+            # (s3fs/fuse), modification_time is always 0.0 because of file system
+            # limitations.
+            if modification_time > 0.0 and modification_time <= self._modification_time:
                 self._schedule()
                 return
 
             self._modification_time = modification_time
 
-            md5 = util.calc_md5_with_blocking_retries(
+            new_hash = util.calc_hash_with_blocking_retries(
                 str(self._path),
                 glob_pattern=self._glob_pattern,
                 allow_nonexistent=self._allow_nonexistent,
             )
-            if md5 == self._md5:
+            if new_hash == self._content_hash:
                 self._schedule()
                 return
         except StreamlitMaxRetriesError as ex:
             _LOGGER.debug(
-                "Ignoring file change. Failed to calculate MD5 for path %s",
+                "Ignoring file change. Failed to calculate hash for path %s",
                 self._path,
                 exc_info=ex,
             )
             return
 
-        self._md5 = md5
+        self._content_hash = new_hash
 
         _LOGGER.debug("Change detected: %s", self._path)
         self._on_changed(str(self._path))

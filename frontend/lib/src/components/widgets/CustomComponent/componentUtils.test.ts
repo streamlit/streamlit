@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ import { Mock } from "vitest"
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
+  type ISpecialArg,
 } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { toExportedTheme } from "~lib/theme"
+import { toExportedTheme } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -125,13 +126,80 @@ describe("test componentUtils", () => {
 
       expect(widgetMgr.setJsonValue).toBeCalledTimes(1)
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         jsonValue,
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
+    })
+
+    it("should call widgetManager.setArrowValue when SET_COMPONENT_VALUE has dataframe dataType", () => {
+      const dataframeValue = { data: new Uint8Array([1, 2, 3]) }
+      iframeMessageHandler(ComponentMessageType.SET_COMPONENT_VALUE, {
+        value: dataframeValue,
+        dataType: "dataframe",
+      })
+
+      expect(widgetMgr.setArrowValue).toBeCalledTimes(1)
+      expect(widgetMgr.setArrowValue).toHaveBeenCalledWith(
+        element.id,
+        dataframeValue,
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
+      )
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+    })
+
+    it("should call widgetManager.setBytesValue when SET_COMPONENT_VALUE has bytes dataType", () => {
+      const bytesValue = new Uint8Array([4, 5, 6])
+      iframeMessageHandler(ComponentMessageType.SET_COMPONENT_VALUE, {
+        value: bytesValue,
+        dataType: "bytes",
+      })
+
+      expect(widgetMgr.setBytesValue).toBeCalledTimes(1)
+      expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
+        element.id,
+        bytesValue,
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
+      )
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+    })
+
+    it("should ignore SET_COMPONENT_VALUE messages with undefined value", () => {
+      iframeMessageHandler(ComponentMessageType.SET_COMPONENT_VALUE, {
+        value: undefined,
+        dataType: "json",
+      })
+
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(widgetMgr.setArrowValue).not.toBeCalled()
+      expect(widgetMgr.setBytesValue).not.toBeCalled()
+    })
+
+    it("should not throw or call callbacks when ref.current is null", () => {
+      const emptyRef: RefObject<IframeMessageHandlerProps> = { current: null }
+      const handler = createIframeMessageHandler(emptyRef)
+      expect(() =>
+        handler(ComponentMessageType.COMPONENT_READY, {
+          apiVersion: CUSTOM_COMPONENT_API_VERSION,
+        })
+      ).not.toThrow()
+      expect(componentReadyCallback).not.toBeCalled()
+      expect(frameHeightCallback).not.toBeCalled()
+      expect(setComponentError).not.toBeCalled()
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(widgetMgr.setArrowValue).not.toBeCalled()
+      expect(widgetMgr.setBytesValue).not.toBeCalled()
+    })
+
+    it("should ignore unrecognized message types", () => {
+      iframeMessageHandler("UNKNOWN_TYPE", {
+        foo: "bar",
+      } as unknown as IframeMessage)
+
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(componentReadyCallback).not.toBeCalled()
+      expect(frameHeightCallback).not.toBeCalled()
+      expect(setComponentError).not.toBeCalled()
     })
   })
 
@@ -139,12 +207,11 @@ describe("test componentUtils", () => {
     it("should send message to iframe", () => {
       const handleAction = vi.fn()
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const mockIframe: any = {
+      const mockIframe = {
         contentWindow: {
           postMessage: handleAction,
         },
-      }
+      } as unknown as HTMLIFrameElement
 
       const args = { foo: "bar" }
       const dataframeArgs = [{ key: "foo", value: "bar" }]
@@ -177,8 +244,7 @@ describe("test componentUtils", () => {
     it("should not send message when iframe is undefined", () => {
       const handleAction = vi.fn()
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const mockIframe: any = undefined
+      const mockIframe = undefined
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
       expect(handleAction).toBeCalledTimes(0)
     })
@@ -186,10 +252,9 @@ describe("test componentUtils", () => {
     it("should not send message when iframe's content window is undefined", () => {
       const handleAction = vi.fn()
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const mockIframe: any = {
+      const mockIframe = {
         contentWindow: undefined,
-      }
+      } as unknown as HTMLIFrameElement
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
       expect(handleAction).toBeCalledTimes(0)
     })
@@ -206,7 +271,7 @@ describe("test componentUtils", () => {
       const specialArgs = [
         {
           key: "some-dataframe",
-          value: "arrowDataFrame",
+          value: "arrowDataframe",
           arrowDataframe: arrowDataframe,
         },
         {
@@ -214,7 +279,7 @@ describe("test componentUtils", () => {
           value: "bytes",
           bytes: someBytes,
         },
-      ]
+      ] satisfies ISpecialArg[]
 
       const [newArgs, dataframeArgs] = parseArgs(
         JSON.stringify(args),
@@ -236,7 +301,7 @@ describe("test componentUtils", () => {
           key: "some-dataframe",
           value: "some-unknown-type",
         },
-      ]
+      ] as unknown as ISpecialArg[]
 
       expect(() => parseArgs(JSON.stringify(args), specialArgs)).toThrowError(
         Error

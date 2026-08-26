@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ from PIL import Image, ImageDraw
 
 import streamlit as st
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 
 img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
 img800: npt.NDArray[np.int64] = np.repeat(0, 640000).reshape(800, 800)
@@ -175,7 +175,7 @@ st.image(SVG_GREEN_SQUARE_VIEWBOX_ONLY)
 
 st.header("Image from file (str and Path)")
 
-CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
+CAT_IMAGE = STATIC_DIR / "test-cat.jpg"
 st.image(str(CAT_IMAGE), caption="Image from jpg file (str).", width=200)
 st.image(CAT_IMAGE, caption="Image from jpg file (Path).", width=200)
 
@@ -185,19 +185,6 @@ red_image = Image.new("RGB", (100, 100), color="red")
 red_bgr_img = np.array(red_image)[..., ["BGR".index(s) for s in "RGB"]]
 st.image(red_bgr_img, caption="BGR channel (red).", channels="BGR", width=100)
 st.image(red_bgr_img, caption="RGB channel (blue).", channels="RGB", width=100)
-
-st.header("use_column_width parameter (deprecated)")
-
-with st.container(key="use_column_width"):
-    col1, col2, col3, col4 = st.columns(4)
-    col1.image(img)  # 100 px
-    col1.image(img, use_column_width="auto")  # 100 px
-    col1.image(img, use_column_width="never")  # 100 px
-    col1.image(img, use_column_width=False)  # 100 px
-
-    col2.image(img, use_column_width="always")  # column width
-    col2.image(img, use_column_width=True)  # column width
-    col2.image(img800, use_column_width="auto")  # column width
 
 st.header("List of images")
 
@@ -260,3 +247,21 @@ st.image(img800, width="content", caption="Large image with width='content'")
 # Stretch width - full container width
 st.image(img, width="stretch", caption="Small image with width='stretch'")
 st.image(img800, width="stretch", caption="Large image with width='stretch'")
+
+st.header("link parameter")
+
+st.image(
+    img,
+    width=100,
+    caption="Image with link.",
+    link="https://streamlit.io",
+)
+
+# Image with a dangerous javascript: link. The frontend must neutralize this to
+# "#" to prevent XSS when the link is clicked.
+st.image(
+    img,
+    width=100,
+    caption="Image with dangerous link.",
+    link="javascript:alert('xss')",
+)

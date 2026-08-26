@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,45 +16,49 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
+
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.watcher import util
 
 
 class UtilTest(unittest.TestCase):
-    def test_md5_calculation_succeeds_with_bytes_input(self):
+    def test_hash_calculation_succeeds_with_bytes_input(self):
         with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")):
-            md5 = util.calc_md5_with_blocking_retries("foo")
-            assert md5 == "5d41402abc4b2a76b9719d911017c592"
+            result = util.calc_hash_with_blocking_retries("foo")
+            assert result == "46fb7408d4f285228f4af516ea25851b"
 
     @patch("os.path.isdir", MagicMock(return_value=True))
     @patch("streamlit.watcher.util._stable_dir_identifier")
-    def test_md5_calculation_succeeds_with_dir_input(self, mock_stable_dir_identifier):
+    def test_hash_calculation_succeeds_with_dir_input(self, mock_stable_dir_identifier):
         mock_stable_dir_identifier.return_value = "hello"
 
-        md5 = util.calc_md5_with_blocking_retries("foo")
-        assert md5 == "5d41402abc4b2a76b9719d911017c592"
+        result = util.calc_hash_with_blocking_retries("foo")
+        assert result == "46fb7408d4f285228f4af516ea25851b"
         mock_stable_dir_identifier.assert_called_once_with("foo", "*")
 
     @patch("os.path.isdir", MagicMock(return_value=True))
     @patch("streamlit.watcher.util._stable_dir_identifier")
-    def test_md5_calculation_can_pass_glob(self, mock_stable_dir_identifier):
+    def test_hash_calculation_can_pass_glob(self, mock_stable_dir_identifier):
         mock_stable_dir_identifier.return_value = "hello"
 
-        util.calc_md5_with_blocking_retries("foo", glob_pattern="*.py")
+        util.calc_hash_with_blocking_retries("foo", glob_pattern="*.py")
         mock_stable_dir_identifier.assert_called_once_with("foo", "*.py")
 
     @patch("os.path.exists", MagicMock(return_value=False))
-    def test_md5_calculation_allow_nonexistent(self):
-        md5 = util.calc_md5_with_blocking_retries("hello", allow_nonexistent=True)
-        assert md5 == "5d41402abc4b2a76b9719d911017c592"
+    def test_hash_calculation_allow_nonexistent(self):
+        result = util.calc_hash_with_blocking_retries("hello", allow_nonexistent=True)
+        assert result == "46fb7408d4f285228f4af516ea25851b"
 
-    def test_md5_calculation_opens_file_with_rb(self):
+    def test_hash_calculation_opens_file_with_rb(self):
         # This tests implementation :( . But since the issue this is addressing
         # could easily come back to bite us if a distracted coder tweaks the
         # implementation, I'm putting this here anyway.
         with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")) as m:
-            util.calc_md5_with_blocking_retries("foo")
+            util.calc_hash_with_blocking_retries("foo")
             m.assert_called_once_with("foo", "rb")
 
 
@@ -109,6 +113,21 @@ class DirHelperTests(unittest.TestCase):
         filename_prefixes = [f[:2] for f in dirfiles.split("+")]
         assert filename_prefixes == ["01", "02", "03"]
 
+    def test_dirfiles_ignores_python_cache_artifacts(self):
+        """Test that _dirfiles excludes __pycache__, .pyc, and .pyo artifacts."""
+        test_dir = Path(self._test_dir.name)
+        cache_dir = test_dir / "__pycache__"
+        cache_dir.mkdir()
+        (cache_dir / "module.cpython-313.pyc").write_bytes(b"compiled")
+        (test_dir / "legacy.pyc").write_bytes(b"compiled")
+        (test_dir / "optimized.pyo").write_bytes(b"compiled")
+
+        dirfiles = util._dirfiles(self._test_dir.name, "**/*")
+
+        assert "__pycache__" not in dirfiles
+        assert ".pyc" not in dirfiles
+        assert ".pyo" not in dirfiles
+
     @patch("streamlit.watcher.util._dirfiles", MagicMock(side_effect=["foo", "foo"]))
     def test_stable_dir(self):
         assert util._stable_dir_identifier("my_dir", "*") == "my_dir+foo"
@@ -118,3 +137,97 @@ class DirHelperTests(unittest.TestCase):
     )
     def test_stable_dir_files_change(self):
         assert util._stable_dir_identifier("my_dir", "*") == "my_dir+bar"
+
+
+class PathComparisonTests(unittest.TestCase):
+    def test_windows_extended_paths_match_standard_paths(self):
+        """Test that extended-length/UNC Windows paths match their standard spelling."""
+        with patch.object(util.env_util, "IS_WINDOWS", True):
+            assert util.paths_are_same(
+                r"C:\project\module.py", r"\\?\c:\PROJECT\module.py"
+            )
+            assert util.paths_are_same(
+                r"\\server\share\module.py",
+                r"\\?\UNC\SERVER\share\module.py",
+            )
+            assert util.path_is_in_directory(
+                r"\\?\C:\project\__pycache__\module.pyc", r"C:\project"
+            )
+
+    def test_windows_paths_on_different_drives_do_not_match(self):
+        """Test that paths on different drives or distinct files are not matched."""
+        with patch.object(util.env_util, "IS_WINDOWS", True):
+            assert not util.path_is_in_directory(r"D:\project\module.py", r"C:\project")
+            # Normalization must not collapse genuinely different files into a
+            # match (guards against over-matching).
+            assert not util.paths_are_same(
+                r"C:\project\module.py", r"C:\project\other.py"
+            )
+
+    def test_path_is_in_directory_handles_commonpath_value_error(self):
+        """Test that path_is_in_directory returns False when commonpath raises."""
+        with patch.object(util.os.path, "commonpath", side_effect=ValueError):
+            assert not util.path_is_in_directory("/other/file.py", "/watched")
+
+
+class RaceConditionTests(unittest.TestCase):
+    """Tests for race conditions where files are deleted during watcher operations."""
+
+    @patch("streamlit.watcher.util._do_with_retries")
+    @patch("streamlit.watcher.util.os.path.exists")
+    def test_path_modification_time_handles_deletion_race_condition(
+        self, mock_exists: MagicMock, mock_do_with_retries: MagicMock
+    ) -> None:
+        """Test that path_modification_time handles file deletion gracefully.
+
+        Scenario: File exists when checked, but is deleted before os.stat() completes.
+        With allow_nonexistent=True, should return 0.0 instead of raising.
+        """
+        # File exists initially
+        mock_exists.return_value = True
+        # But stat fails because file was deleted (race condition)
+        mock_do_with_retries.side_effect = StreamlitMaxRetriesError("File gone")
+
+        # With allow_nonexistent=True, should return 0.0 (not raise)
+        result = util.path_modification_time(
+            "deleted_file.toml", allow_nonexistent=True
+        )
+        assert result == 0.0
+
+        # Without allow_nonexistent, should raise
+        with pytest.raises(StreamlitMaxRetriesError):
+            util.path_modification_time("deleted_file.toml", allow_nonexistent=False)
+
+    @patch("streamlit.watcher.util._do_with_retries")
+    @patch("streamlit.watcher.util.os.path.isdir")
+    @patch("streamlit.watcher.util.os.path.exists")
+    def test_calc_hash_handles_deletion_race_condition(
+        self,
+        mock_exists: MagicMock,
+        mock_isdir: MagicMock,
+        mock_do_with_retries: MagicMock,
+    ) -> None:
+        """Test that calc_hash_with_blocking_retries handles file deletion gracefully.
+
+        Scenario: File exists when checked, but is deleted before read() completes.
+        With allow_nonexistent=True, should return hash of path string instead of raising.
+        """
+        # File exists initially, is not a directory
+        mock_exists.return_value = True
+        mock_isdir.return_value = False
+        # But read fails because file was deleted (race condition)
+        mock_do_with_retries.side_effect = StreamlitMaxRetriesError("File gone")
+
+        # With allow_nonexistent=True, should return hash of path (not raise)
+        result = util.calc_hash_with_blocking_retries(
+            "deleted_file.toml", allow_nonexistent=True
+        )
+        # Hash of "deleted_file.toml" encoded as UTF-8
+        expected_hash = util.calc_hash(b"deleted_file.toml")
+        assert result == expected_hash
+
+        # Without allow_nonexistent, should raise
+        with pytest.raises(StreamlitMaxRetriesError):
+            util.calc_hash_with_blocking_retries(
+                "deleted_file.toml", allow_nonexistent=False
+            )

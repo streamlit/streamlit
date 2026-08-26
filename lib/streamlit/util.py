@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from hashlib import _Hash
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -65,21 +66,37 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-def calc_md5(s: bytes | str) -> str:
-    """Return the md5 hash of the given string.
+def create_fast_hasher() -> _Hash:
+    """Create a fast hasher for incremental hashing.
 
-    This should not be used for security-related purposes.
+    Prefers BLAKE2b with a 16-byte digest. If the platform BLAKE2b provider
+    rejects a custom ``digest_size`` (common on FIPS/OpenSSL builds), falls
+    back to MD5. Both produce 32-character hex digests (16 bytes).
     """
-    # Due to security issue in md5 and sha1, usedforsecurity
-    h = hashlib.new("md5", usedforsecurity=False)
+    try:
+        return hashlib.blake2b(  # type: ignore[return-value]  # ty: ignore[invalid-return-type]  # noqa: TID251
+            digest_size=16, usedforsecurity=False
+        )
+    except (TypeError, ValueError):
+        # Some FIPS-enabled Python builds replace the standard BLAKE2b
+        # implementation with an OpenSSL wrapper that rejects a custom digest
+        # size, raising TypeError or ValueError depending on the provider.
+        return hashlib.new("md5", usedforsecurity=False)  # noqa: TID251
 
+
+def calc_hash(s: bytes | str) -> str:
+    """Return a fast hash of the given string.
+
+    Uses BLAKE2b (~2.4x faster than MD5) where supported, with an MD5 fallback
+    for limited FIPS providers. This should not be used for security purposes.
+    """
     b = s.encode("utf-8") if isinstance(s, str) else s
-
+    h = create_fast_hasher()
     h.update(b)
     return h.hexdigest()
 
 
-class AttributeDictionary(dict[Any, Any]):
+class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
     """
     A dictionary subclass that supports attribute-style access.
 
@@ -101,6 +118,83 @@ class AttributeDictionary(dict[Any, Any]):
 
     def __setattr__(self, name: str, value: Any) -> None:
         self[name] = value
+
+
+_READ_ONLY_ERROR_MSG = (
+    "Widget state is read-only because modifying nested values has no effect "
+    "on the app. For widget states that support programmatic updates "
+    "(e.g. st.dataframe selections), assign a new dictionary to the Session "
+    "State key instead, for example:\n"
+    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}"
+)
+
+
+class ReadOnlyAttributeDictionary(AttributeDictionary):
+    """Read-only dictionary subclass with attribute-style access.
+
+    Similar to AttributeDictionary, but raises TypeError on any mutation attempt.
+    Used for widget state return values (e.g., dataframe selections) to prevent
+    users from modifying values in ways that don't trigger proper state updates.
+
+    For widget states that support programmatic updates (e.g. dataframe
+    selections), assign a new dictionary to the Session State key, e.g.
+    ``st.session_state['key'] = {'selection': {'rows': [0]}}``. Other widget
+    states (e.g. chart selections) cannot be updated programmatically.
+    """
+
+    def __getitem__(self, key: Any) -> Any:
+        item = super().__getitem__(key)
+        # Wrap nested dicts in ReadOnlyAttributeDictionary to protect bracket access
+        return ReadOnlyAttributeDictionary(item) if isinstance(item, dict) else item
+
+    def __getattr__(self, key: str) -> Any:
+        # Delegate directly to self[key] which handles wrapping in __getitem__
+        try:
+            return self[key]
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            ) from err
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __delitem__(self, key: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __ior__(self, other: Any) -> ReadOnlyAttributeDictionary:  # type: ignore[misc]  # noqa: PYI034
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def clear(self) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def pop(self, *args: Any) -> Any:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def popitem(self) -> tuple[Any, Any]:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def setdefault(self, key: Any, default: Any = None) -> Any:  # noqa: ARG002
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __copy__(self) -> ReadOnlyAttributeDictionary:
+        # Reconstruct via the concrete subclass (e.g. DataframeState) so copies
+        # preserve their type. Hardcoding the base class would collapse typed
+        # widget states to a plain ReadOnlyAttributeDictionary.
+        return type(self)(dict.copy(self))
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> ReadOnlyAttributeDictionary:
+        import copy
+
+        return type(self)(
+            {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
+        )
 
 
 def in_sidebar(dg: DeltaGenerator) -> bool:

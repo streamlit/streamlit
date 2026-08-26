@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BidiComponent as BidiComponentProto } from "@streamlit/protobuf"
 
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BidiComponent from "./BidiComponent"
 import { blobUrlManager } from "./utils/blobUrl"
+
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 // Mock WidgetStateManager
 vi.mock("~lib/WidgetStateManager")
@@ -69,6 +79,7 @@ describe("BidiComponent", () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    globalThis.__mockStreamlitConfig = {}
   })
 
   const createMockElement = (
@@ -182,15 +193,13 @@ describe("BidiComponent", () => {
 
       // For shadow DOM, we need to check inside the shadow root
       await waitFor(() => {
-        const shadowRoot = container.shadowRoot
+        const shadowRoot = container.shadowRoot as ShadowRoot
         expect(shadowRoot).toBeTruthy()
-        if (shadowRoot) {
-          const testContent = shadowRoot.querySelector(
-            "[data-testid='test-isolated-html']"
-          )
-          expect(testContent).toBeTruthy()
-          expect(testContent?.textContent).toBe("Isolated HTML")
-        }
+        const testContent = shadowRoot.querySelector(
+          "[data-testid='test-isolated-html']"
+        )
+        expect(testContent).toBeTruthy()
+        expect(testContent?.textContent).toBe("Isolated HTML")
       })
     })
 
@@ -329,14 +338,12 @@ describe("BidiComponent", () => {
 
       const container = screen.getByTestId("stBidiComponentIsolated")
       await waitFor(() => {
-        const shadowRoot = container.shadowRoot
+        const shadowRoot = container.shadowRoot as ShadowRoot
         expect(shadowRoot).toBeTruthy()
-        if (shadowRoot) {
-          const styleElement = shadowRoot.querySelector("style")
-          expect(styleElement?.textContent).toContain(
-            ".isolated-style { background: blue; }"
-          )
-        }
+        const styleElement = shadowRoot.querySelector("style")
+        expect(styleElement?.textContent).toContain(
+          ".isolated-style { background: blue; }"
+        )
       })
     })
 
@@ -360,13 +367,87 @@ describe("BidiComponent", () => {
       )
 
       await waitFor(() => {
-        const linkElements = document.querySelectorAll(
-          "link[rel='stylesheet']"
+        const container = screen.getByTestId("stBidiComponentRegular")
+        const linkElement = container.querySelector("link[rel='stylesheet']")
+
+        expect(linkElement).toBeInTheDocument()
+        expect(linkElement?.getAttribute("href")).toContain(
+          "TestComponent/styles.css"
         )
-        const hasExpectedLink = Array.from(linkElements).some(link =>
-          link.getAttribute("href")?.includes("TestComponent/styles.css")
+        expect(linkElement).not.toHaveAttribute("crossOrigin")
+      })
+    })
+
+    describe("linked CSS crossOrigin attribute", () => {
+      beforeEach(() => {
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com:8080/app"
+      })
+
+      it.each([
+        { resourceCrossOriginMode: "anonymous", expected: "anonymous" },
+        {
+          resourceCrossOriginMode: "use-credentials",
+          expected: "use-credentials",
+        },
+      ] as const)(
+        "sets crossOrigin=$expected when cssSourcePath is relative and mode=$resourceCrossOriginMode",
+        async ({ resourceCrossOriginMode, expected }) => {
+          const element = createMockElement({
+            isolateStyles: false,
+            cssSourcePath: "styles.css",
+          })
+
+          const customRegistry = createMockComponentRegistry(
+            (componentName, path) => `/components/${componentName}/${path}`
+          )
+
+          renderWithContexts(
+            <BidiComponent
+              element={element}
+              widgetMgr={mockWidgetMgr}
+              fragmentId={mockFragmentId}
+              componentRegistry={customRegistry}
+            />,
+            { libConfigContext: { resourceCrossOriginMode } }
+          )
+
+          await waitFor(() => {
+            const container = screen.getByTestId("stBidiComponentRegular")
+            const linkElement = container.querySelector(
+              "link[rel='stylesheet']"
+            )
+            expect(linkElement).toHaveAttribute("crossOrigin", expected)
+          })
+        }
+      )
+
+      it("does not set crossOrigin when css URL is absolute and not the backend origin", async () => {
+        const element = createMockElement({
+          isolateStyles: false,
+          cssSourcePath: "styles.css",
+        })
+
+        const customRegistry = createMockComponentRegistry(
+          (componentName, path) =>
+            `https://external.example.com/components/${componentName}/${path}`
         )
-        expect(hasExpectedLink).toBe(true)
+
+        renderWithContexts(
+          <BidiComponent
+            element={element}
+            widgetMgr={mockWidgetMgr}
+            fragmentId={mockFragmentId}
+            componentRegistry={customRegistry}
+          />,
+          { libConfigContext: { resourceCrossOriginMode: "anonymous" } }
+        )
+
+        await waitFor(() => {
+          const container = screen.getByTestId("stBidiComponentRegular")
+          const linkElement = container.querySelector("link[rel='stylesheet']")
+          expect(linkElement).not.toHaveAttribute("crossOrigin")
+        })
       })
     })
   })
@@ -757,10 +838,9 @@ describe("BidiComponent", () => {
       // Verify setStateValue was called
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "test-js-component", formId: undefined },
+          "test-js-component",
           { testKey: "testValue" },
-          { fromUi: true },
-          mockFragmentId
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -798,10 +878,9 @@ describe("BidiComponent", () => {
       // Verify setJsonValue was called with merged state
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "test-state-component", formId: "test-form" },
+          "test-state-component",
           { existing: "value", counter: 42 },
-          { fromUi: true },
-          mockFragmentId
+          { formId: "test-form", fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -839,10 +918,9 @@ describe("BidiComponent", () => {
       // This demonstrates that the error was caught and the fallback path was taken
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "error-component", formId: undefined },
+          "error-component",
           { newKey: "newValue" },
-          { fromUi: true },
-          mockFragmentId
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -876,12 +954,8 @@ describe("BidiComponent", () => {
       // Format: $$STREAMLIT_INTERNAL_KEY_<base>__events
       await waitFor(() => {
         expect(mockWidgetMgr.setTriggerValue).toHaveBeenCalledWith(
-          {
-            id: "$$STREAMLIT_INTERNAL_KEY_trigger-component__events",
-            formId: undefined,
-          },
-          { fromUi: true },
-          mockFragmentId,
+          "$$STREAMLIT_INTERNAL_KEY_trigger-component__events",
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true },
           { event: "onClick", value: { buttonId: "btn1" } }
         )
       })

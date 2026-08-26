@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
 from streamlit.components.v2.presentation import make_bidi_component_presenter
@@ -78,6 +78,29 @@ def test_apply_presenter_swallows_presenter_errors() -> None:
     ss._new_widget_state.widget_metadata["wid"] = SimpleNamespace(presenter=_boom)
     base = "hello"
     out = apply_presenter(ss, "wid", base)
+    assert out is base
+
+
+def test_apply_presenter_non_callable_presenter() -> None:
+    """Return base value unchanged when presenter is not callable."""
+    ss = _FakeSession()
+    ss._new_widget_state.widget_metadata["wid"] = SimpleNamespace(
+        presenter="not-callable"
+    )
+    base = {"value": 42}
+    out = apply_presenter(ss, "wid", base)
+    assert out is base
+
+
+def test_apply_presenter_swallows_metadata_lookup_errors() -> None:
+    """Return base value unchanged when resolving widget metadata raises."""
+
+    class _RaisingSession:
+        def _get_widget_metadata(self, widget_id: str) -> Any:
+            raise RuntimeError("metadata boom")
+
+    base = {"value": 7}
+    out = apply_presenter(cast("SessionState", _RaisingSession()), "wid", base)
     assert out is base
 
 
@@ -328,7 +351,7 @@ def test_bidi_presenter_state_overrides_duplicate_keys() -> None:
     """State must override trigger values on duplicate keys.
 
     This verifies the merge precedence documented in the presenter and in
-    BidiComponentResult: triggers are surfaced first, but persistent state
+    ComponentResult: triggers are surfaced first, but persistent state
     wins for duplicate keys.
     """
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen } from "@testing-library/react"
+import { act, createEvent, screen, waitFor } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -28,7 +26,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   label: "LABEL",
   onDrop: vi.fn(),
   multiple: true,
-  acceptedExtensions: [],
+  acceptedTypes: [],
   maxSizeBytes: 200,
   ...props,
 })
@@ -41,9 +39,17 @@ describe("FileDropzone widget", () => {
     expect(screen.getByTestId("stFileUploaderDropzone")).toBeInTheDocument()
   })
 
+  it("removes the dropzone section from the keyboard tab order", () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+    expect(dropzone).toHaveAttribute("tabindex", "-1")
+  })
+
   it("renders dropzone without extensions", () => {
     const props = getProps({
-      acceptedExtensions: [],
+      acceptedTypes: [],
     })
     render(<FileDropzone {...props} />)
     expect(
@@ -53,7 +59,7 @@ describe("FileDropzone widget", () => {
 
   it("renders dropzone with extensions", () => {
     const props = getProps({
-      acceptedExtensions: [".jpg"],
+      acceptedTypes: [".jpg"],
     })
     render(<FileDropzone {...props} />)
     expect(
@@ -68,7 +74,7 @@ describe("FileDropzone widget", () => {
     render(<FileDropzone {...props} />)
 
     const button = screen.getByRole("button")
-    expect(button).toHaveTextContent("Browse directories")
+    expect(button).toHaveTextContent("Upload directories")
   })
 
   it("renders regular file upload button text when not directory mode", () => {
@@ -78,7 +84,7 @@ describe("FileDropzone widget", () => {
     render(<FileDropzone {...props} />)
 
     const button = screen.getByRole("button")
-    expect(button).toHaveTextContent("Browse files")
+    expect(button).toHaveTextContent("Upload")
   })
 
   it("sets webkitdirectory attribute for directory uploads", () => {
@@ -112,6 +118,17 @@ describe("FileDropzone widget", () => {
     expect(input).not.toHaveAttribute("webkitdirectory")
   })
 
+  it("keeps the hidden input out of flow so it adds no layout gap", () => {
+    // react-dropzone renders the hidden input in-flow (display: block), which
+    // would make it an extra flex item in the dropzone and add a spurious gap
+    // above the content. We override it to position: absolute to avoid that.
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).toHaveStyle({ position: "absolute" })
+  })
+
   it("disables directory upload button when disabled", () => {
     const props = getProps({
       acceptDirectory: true,
@@ -121,5 +138,119 @@ describe("FileDropzone widget", () => {
 
     const button = screen.getByRole("button")
     expect(button).toBeDisabled()
+  })
+
+  it("renders uploaded files when hasFiles is true", () => {
+    const props = getProps({
+      uploadedFiles: <div data-testid="mockUploadedFiles">files here</div>,
+      hasFiles: true,
+    })
+    render(<FileDropzone {...props} />)
+
+    expect(screen.getByTestId("mockUploadedFiles")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stFileUploaderDropzoneInstructions")
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders instructions and upload button when hasFiles is false", () => {
+    const props = getProps({
+      uploadedFiles: <div data-testid="mockUploadedFiles">files here</div>,
+      hasFiles: false,
+    })
+    render(<FileDropzone {...props} />)
+
+    expect(screen.queryByTestId("mockUploadedFiles")).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button")).toBeInTheDocument()
+  })
+
+  it("renders instructions when uploadedFiles is not provided", () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    expect(
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button")).toBeInTheDocument()
+  })
+
+  it("shows drag overlay with plural text when multiple is true", async () => {
+    const props = getProps({ multiple: true })
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+
+    const dragEvent = createEvent.dragEnter(dropzone)
+    Object.defineProperty(dragEvent, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        items: [{ kind: "file", type: "text/plain" }],
+      },
+    })
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("Drag and drop files here")).toBeInTheDocument()
+    })
+  })
+
+  it("shows drag overlay with singular text when multiple is false", async () => {
+    const props = getProps({ multiple: false })
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+
+    const dragEvent = createEvent.dragEnter(dropzone)
+    Object.defineProperty(dragEvent, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        items: [{ kind: "file", type: "text/plain" }],
+      },
+    })
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("Drag and drop a file here")).toBeInTheDocument()
+    })
+  })
+
+  it("shows drag overlay with directories text when acceptDirectory is true", async () => {
+    const props = getProps({ acceptDirectory: true })
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+
+    const dragEvent = createEvent.dragEnter(dropzone)
+    Object.defineProperty(dragEvent, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        items: [{ kind: "file", type: "text/plain" }],
+      },
+    })
+    act(() => {
+      dropzone.dispatchEvent(dragEvent)
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Drag and drop directories here")
+      ).toBeInTheDocument()
+    })
+  })
+
+  it("does not show drag overlay by default", () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    expect(
+      screen.queryByText("Drag and drop files here")
+    ).not.toBeInTheDocument()
   })
 })

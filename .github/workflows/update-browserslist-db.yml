@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -36,11 +36,11 @@ jobs:
         run: corepack enable
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
-          cache-dependency-path: "component-lib/yarn.lock"
+          cache-dependency-path: "frontend/yarn.lock"
 
       - name: Run update-browserslist-db in frontend
         id: run-update
@@ -72,15 +72,17 @@ jobs:
 
       - name: Add changes to the branch
         if: steps.check-lock.outputs.lock_changed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add frontend/yarn.lock
           git commit -m "[chore] Update Browserslist DB"
-          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+          git push origin "$BRANCH_NAME"
 
       - name: Create PR to merge changes into develop
         id: create_pr
         if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:
@@ -106,7 +108,7 @@ jobs:
 
             core.setOutput('pr_url', pr.html_url);
 
-            const labels = ['change:chore', 'impact:internal'];
+            const labels = ['change:chore', 'impact:internal', 'autofix'];
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -132,6 +134,10 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Setup Python automation environment
+        if: ${{ always() && steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        uses: ./.github/actions/setup_automation
+
       - name: Slack notification - PR created
         if: ${{ success() && steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
         env:
@@ -140,7 +146,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           PR_URL: ${{ steps.create_pr.outputs.pr_url }}
         run: |
-          python scripts/slack_notifications.py browserslist success
+          uv run --no-sync python scripts/slack_notifications.py browserslist success
 
       - name: Slack notification - PR creation failed
         if: ${{ failure() && steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
@@ -149,4 +155,4 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          python scripts/slack_notifications.py browserslist failure
+          uv run --no-sync python scripts/slack_notifications.py browserslist failure

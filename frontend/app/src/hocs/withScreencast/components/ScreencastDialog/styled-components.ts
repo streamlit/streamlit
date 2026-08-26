@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,6 @@ export const StyledRecordAudioLabel = styled.label({
   margin: 0,
 })
 
-export const StyledInstruction = styled.p({
+export const StyledInstruction = styled.div({
   margin: 0,
 })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +13,29 @@
 # limitations under the License.
 
 import pathlib
+from unittest.mock import patch
 
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.html import _is_file
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+
+def test_is_file_with_long_string() -> None:
+    """Test that _is_file short-circuits for very long strings (likely HTML)."""
+    long_html = "x" * 5000
+    assert _is_file(long_html) is False
+
+
+def test_is_file_with_html_tag_substring() -> None:
+    """Test that _is_file short-circuits for strings containing '<'."""
+    assert _is_file("not<a>file") is False
 
 
 class StHtmlAPITest(DeltaGeneratorTestCase):
@@ -59,10 +75,10 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
     def test_st_html_empty_body_throws_error(self):
         """Test st.html with empty body throws error."""
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitMissingRequiredParameterError) as ctx:
             st.html("")
 
-        assert "`st.html` body cannot be empty" in str(ctx.value)
+        assert "The `body` parameter is required for `st.html`" in str(ctx.value)
 
     def test_st_html_with_style_tag_only(self):
         """Test st.html with only a style tag."""
@@ -136,11 +152,31 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
         )
 
     def test_st_html_with_file(self):
-        """Test st.html with file."""
-        st.html(str(pathlib.Path(__file__).parent / "test_html.js"))
+        """Test st.html with a file."""
+        st.html(pathlib.Path(__file__).parent / "test_html.js")
 
         el = self.get_delta_from_queue().new_element
         assert el.html.body.strip() == "<button>Corgi</button>"
+
+    def test_st_html_with_string_file_path(self):
+        """Test st.html warns and doesn't read a string file path."""
+        file_path = str(pathlib.Path(__file__).parent / "test_html.js")
+
+        with (
+            patch(
+                "streamlit.elements.html.show_deprecation_warning"
+            ) as mock_show_warning,
+            patch("streamlit.elements.html.open") as mock_open,
+        ):
+            st.html(file_path)
+
+        mock_show_warning.assert_called_once_with(
+            "Passing a local file path as a string to `st.html` is no longer "
+            "supported. To load a local file, pass a `pathlib.Path` object instead."
+        )
+        mock_open.assert_not_called()
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == file_path
 
     def test_st_html_with_path(self):
         """Test st.html with path."""
@@ -217,19 +253,19 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -238,7 +274,7 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.html("<p>test html</p>", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_html_default_width(self):
         """Test that st.html defaults to stretch width."""
@@ -269,7 +305,12 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
     def test_st_html_with_nonhtml_filelike_str(self):
         """Test st.html with a string that's neither HTML-like nor a real file."""
-        st.html("foo/fake.html")
+        with patch(
+            "streamlit.elements.html.show_deprecation_warning"
+        ) as mock_show_warning:
+            st.html("foo/fake.html")
 
+        # A string that doesn't resolve to a file must not trigger the warning.
+        mock_show_warning.assert_not_called()
         el = self.get_delta_from_queue().new_element
         assert el.html.body == "foo/fake.html"

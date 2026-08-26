@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
-from typing import TYPE_CHECKING, TypeAlias, cast
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -33,6 +32,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -45,12 +45,21 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 SomeUploadedSnapshotFile: TypeAlias = UploadedFile | DeletedFile | None
+
+CameraInputResolution: TypeAlias = Literal["480p", "720p", "1080p"]
+
+_RESOLUTION_TO_HEIGHT: Final[dict[str, int]] = {
+    "480p": 480,
+    "720p": 720,
+    "1080p": 1080,
+}
 
 
 @dataclass
@@ -95,6 +104,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        resolution: CameraInputResolution | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None:
         r"""Display a widget that returns pictures from the user's webcam.
@@ -109,9 +119,9 @@ class CameraInputMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -123,10 +133,21 @@ class CameraInputMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -157,6 +178,23 @@ class CameraInputMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
+        resolution : "480p", "720p", "1080p", or None
+            The capture resolution to request from the user's camera. Resolution
+            presets set the target image height in pixels; the width is determined
+            by the camera's native aspect ratio. This can be one of the following:
+
+            - ``None`` (default): Streamlit captures at a resolution determined by
+              the widget's display size.
+            - ``"480p"``: Target a height of 480 pixels.
+            - ``"720p"``: Target a height of 720 pixels.
+            - ``"1080p"``: Target a height of 1080 pixels.
+
+            The value is a request, not a guarantee. Cameras support a fixed set of
+            resolutions, so the browser selects the closest supported resolution and
+            the returned image may differ from the requested height. If you need
+            exact dimensions, resize the captured image after capture (for example,
+            with ``PIL.Image.resize``).
+
         width : "stretch" or int
             The width of the camera input widget. This can be one of the
             following:
@@ -171,12 +209,15 @@ class CameraInputMixin:
         Returns
         -------
         None or UploadedFile
-            The UploadedFile class is a subclass of BytesIO, and therefore is
-            "file-like". This means you can pass an instance of it anywhere a
-            file is expected.
+            The ``UploadedFile`` class is a subclass of ``BytesIO``, and
+            therefore is "file-like". This means you can pass an instance of it
+            anywhere a file is expected. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
         Examples
         --------
+        *Example 1:* Capture a photo and display it.
+
         >>> import streamlit as st
         >>>
         >>> enable = st.checkbox("Enable camera")
@@ -189,7 +230,21 @@ class CameraInputMixin:
            https://doc-camera-input.streamlit.app/
            height: 600px
 
+        *Example 2:* Capture a photo at 720p resolution.
+
+        >>> import streamlit as st
+        >>>
+        >>> picture = st.camera_input("Scan QR code", resolution="720p")
+        >>>
+        >>> if picture:
+        ...     st.image(picture)
+
         """
+        if resolution is not None and resolution not in _RESOLUTION_TO_HEIGHT:
+            raise StreamlitValueError(
+                "resolution", ["'480p'", "'720p'", "'1080p'", "None"]
+            )
+
         ctx = get_script_run_ctx()
         return self._camera_input(
             label=label,
@@ -200,6 +255,7 @@ class CameraInputMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            resolution=resolution,
             width=width,
             ctx=ctx,
         )
@@ -215,6 +271,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        resolution: CameraInputResolution | None = None,
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
@@ -227,7 +284,7 @@ class CameraInputMixin:
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "camera_input",
@@ -237,6 +294,7 @@ class CameraInputMixin:
             label=label,
             help=help,
             width=width,
+            resolution=resolution,
         )
 
         camera_input_proto = CameraInputProto()
@@ -248,11 +306,13 @@ class CameraInputMixin:
             label_visibility
         )
 
-        if help is not None:
-            camera_input_proto.help = dedent(help)
+        if resolution is not None:
+            camera_input_proto.resolution_height = _RESOLUTION_TO_HEIGHT[resolution]
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        if help is not None:
+            camera_input_proto.help = to_help_str(help)
+
+        layout_config = create_layout_config(width=width)
 
         serde = CameraInputSerde()
 
@@ -265,6 +325,7 @@ class CameraInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         self.dg._enqueue(
@@ -277,5 +338,5 @@ class CameraInputMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

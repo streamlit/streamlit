@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import { Quiver } from "./Quiver"
 /**
  * A styled header object with information from Pandas Styler.
  */
-export interface StyledHeader {
+interface StyledHeader {
   /** The column header name. */
   name: string
   /** The CSS class to apply to the column header. */

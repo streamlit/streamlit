@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -21,6 +22,7 @@ import streamlit as st
 from streamlit.commands.page_config import (
     RANDOM_EMOJIS,
     PageIcon,
+    _get_favicon_string,
     _lower_clean_dict_keys,
 )
 from streamlit.errors import (
@@ -117,9 +119,26 @@ class PageConfigTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue().page_config_changed
         assert c.initial_sidebar_state == PageConfigProto.SIDEBAR_UNSET
 
+    def test_set_page_config_sidebar_locked(self):
+        """``"locked"`` maps to the LOCKED protobuf enum value."""
+        st.set_page_config(initial_sidebar_state="locked")
+        c = self.get_message_from_queue().page_config_changed
+        assert c.initial_sidebar_state == PageConfigProto.LOCKED
+
     def test_set_page_config_sidebar_invalid(self):
         with pytest.raises(StreamlitInvalidSidebarStateError):
             st.set_page_config(initial_sidebar_state="INVALID")
+
+    def test_set_page_config_sidebar_width_positive(self):
+        st.set_page_config(initial_sidebar_state=400)
+        c = self.get_message_from_queue().page_config_changed
+        assert c.initial_sidebar_state == PageConfigProto.AUTO
+        assert c.initial_sidebar_width.pixel_width == 400
+
+    @parameterized.expand([param(0), param(-100)])
+    def test_set_page_config_sidebar_width_invalid(self, invalid_value: int):
+        with pytest.raises(StreamlitInvalidSidebarStateError):
+            st.set_page_config(initial_sidebar_state=invalid_value)
 
     def test_set_page_config_menu_items_about(self):
         menu_items = {" about": "*This is an about. This accepts markdown.*"}
@@ -184,3 +203,51 @@ class PageConfigTest(DeltaGeneratorTestCase):
     def test_lower_clean_dict_keys(self, input_dict, answer_dict):
         return_dict = _lower_clean_dict_keys(input_dict)
         assert return_dict == answer_dict
+
+    def test_set_page_config_no_op_without_ctx(self):
+        """When no script run context exists, ``set_page_config`` enqueues nothing.
+
+        The early ``return`` when ``get_script_run_ctx()`` is ``None`` prevents the
+        page-config message from reaching the (otherwise populated) message queue.
+        """
+        with mock.patch(
+            "streamlit.commands.page_config.get_script_run_ctx",
+            return_value=None,
+        ):
+            st.set_page_config(page_title="Hello")
+
+        assert self.forward_msg_queue._queue == []
+
+
+def test_get_favicon_string_material_icon() -> None:
+    """A ``:material/...:`` page icon is validated and returned as a Material icon."""
+    assert _get_favicon_string(":material/thumb_up:") == ":material/thumb_up:"
+
+
+def test_get_favicon_string_converts_path_to_str() -> None:
+    """A ``Path`` page icon is converted to a string before ``image_to_url``."""
+    with mock.patch(
+        "streamlit.commands.page_config.image_to_url",
+        return_value="https://mock.url",
+    ) as mock_image_to_url:
+        result = _get_favicon_string(Path("some/icon.png"))
+
+    assert result == "https://mock.url"
+    # The Path must be stringified before reaching image_to_url.
+    assert isinstance(mock_image_to_url.call_args.args[0], str)
+
+
+def test_get_favicon_string_reraises_for_non_string_icon() -> None:
+    """Re-raise ``image_to_url`` errors when the page icon is not a string.
+
+    String icons fall through to be returned as-is (they may be emoji shortcodes),
+    but a non-string icon that ``image_to_url`` cannot handle must propagate.
+    """
+    with (
+        mock.patch(
+            "streamlit.commands.page_config.image_to_url",
+            side_effect=RuntimeError("boom"),
+        ),
+        pytest.raises(RuntimeError, match="boom"),
+    ):
+        _get_favicon_string(b"123")

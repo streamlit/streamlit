@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,10 +22,12 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 from urllib import parse
 
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.pages_manager import PagesManager
@@ -50,16 +52,21 @@ from streamlit.testing.v1.element_tree import (
     DateInput,
     DateTimeInput,
     Divider,
+    DownloadButton,
     ElementList,
     ElementTree,
     Error,
     Exception,  # noqa: A004
     Expander,
+    Feedback,
+    FileUploader,
     Header,
+    Image,
     Info,
     Json,
     Latex,
     Markdown,
+    MenuButton,
     Metric,
     Multiselect,
     Node,
@@ -86,7 +93,7 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -119,17 +126,21 @@ class AppTest:
     ``AppTest.run()``.
 
     ``AppTest`` enables developers to build tests on their app as-is, in the
-    familiar python test format, without major refactoring or abstracting out
+    familiar Python test format, without major refactoring or abstracting out
     logic to be tested separately from the UI. Tests can run quickly with very
     low overhead. A typical pattern is to build a suite of tests for an app
     that ensure consistent functionality as the app evolves, and run the tests
-    locally and/or in a CI environment like Github Actions.
+    locally and/or in a CI environment like GitHub Actions.
 
     .. note::
-        ``AppTest`` only supports testing a single page of an app per
-        instance. For multipage apps, each page will need to be tested
-        separately. ``AppTest`` is not yet compatible with multipage apps
-        using ``st.navigation`` and ``st.Page``.
+        ``AppTest`` renders one page at a time. For a multipage app, initialize
+        ``AppTest`` with the app's entrypoint script, which is the same file
+        you would pass to ``streamlit run``. This applies to apps that use
+        ``st.navigation`` or a ``pages/`` directory. To test another
+        file-based page, call ``AppTest.switch_page()`` followed by
+        ``AppTest.run()``. Passing a page directly to ``AppTest.from_file()``
+        makes that page the main script and changes how relative page paths
+        are resolved.
 
     .. |st.testing.v1.AppTest.from_file| replace:: ``st.testing.v1.AppTest.from_file``
     .. _st.testing.v1.AppTest.from_file: #apptestfrom_file
@@ -141,7 +152,7 @@ class AppTest:
     Attributes
     ----------
     secrets: dict[str, Any]
-        Dictionary of secrets to be used the simulated app. Use dict-like
+        Dictionary of secrets to be used by the simulated app. Use dict-like
         syntax to set secret values for the simulated app.
 
     session_state: SafeSessionState
@@ -149,7 +160,7 @@ class AppTest:
         read and write operations as usual for Streamlit apps.
 
     query_params: dict[str, Any]
-        Dictionary of query parameters to be used by the simluated app. Use
+        Dictionary of query parameters to be used by the simulated app. Use
         dict-like syntax to set ``query_params`` values for the simulated app.
     """
 
@@ -171,6 +182,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Cache the discovered component manager so installed CCv2 components are
+        # only scanned once per AppTest instance instead of on every rerun.
+        self._bidi_component_manager: BidiComponentManager | None = None
 
         tree = ElementTree()
         tree._runner = self
@@ -214,11 +228,11 @@ class AppTest:
         args: tuple[Any, ...] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
-        script_name = calc_md5(bytes(script, "utf-8"))
+        script_name = calc_hash(bytes(script, "utf-8"))
 
         path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
-        path.write_text(aligned_script)
+        path.write_text(aligned_script, encoding="utf-8")
         return AppTest(
             str(path), default_timeout=default_timeout, args=args, kwargs=kwargs
         )
@@ -278,18 +292,21 @@ class AppTest:
         cls, script_path: str | Path, *, default_timeout: float = 3
     ) -> AppTest:
         """
-        Create an instance of ``AppTest`` to simulate an app page defined\
-        within a file.
+        Create an ``AppTest`` for an app entrypoint defined in a file.
 
         This option is most convenient for CI workflows and testing of
         published apps. The script must be executable on its own and so must
-        contain all necessary imports.
+        contain all necessary imports. For a multipage app, pass the main
+        script that you would supply to ``streamlit run``. To test a
+        file-based child page, initialize from the main script and use
+        ``AppTest.switch_page()``.
 
         Parameters
         ----------
         script_path: str | Path
-            Path to a script file. The path should be absolute or relative to
-            the file calling ``.from_file``.
+            Path to the app's entrypoint script. An absolute path is used as
+            given. A relative path is resolved against the Python file that
+            calls ``AppTest.from_file()``.
 
         default_timeout: float
             Default time in seconds before a script run is timed out. Can be
@@ -300,17 +317,33 @@ class AppTest:
         AppTest
             A simulated Streamlit app for testing. The simulated app can be
             executed via ``.run()``.
+
+        Raises
+        ------
+        FileNotFoundError
+            If ``script_path`` does not point to an existing file.
+
+        Examples
+        --------
+        Initialize a multipage app from its entrypoint, then switch to a page:
+
+        >>> at = AppTest.from_file("app.py").run()
+        >>> at.switch_page("pages/settings.py").run()
         """
         script_path = Path(script_path)
-        if script_path.is_file():
+        if script_path.is_absolute():
             path = script_path
         else:
-            # TODO: Make this not super fragile
-            # Attempt to find the test file calling this method, so the
-            # path can be relative to there.
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-            filepath = Path(stack[1].filename)
-            path = filepath.parent / script_path
+            caller_file = Path(stack[1].filename)
+            path = caller_file.parent / script_path
+
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"AppTest script not found at {path.resolve()}. Relative paths are "
+                "resolved against the file that calls AppTest.from_file()."
+            )
+
         return AppTest(path, default_timeout=default_timeout)
 
     def _run(
@@ -335,9 +368,19 @@ class AppTest:
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        mock_runtime.dataframe_source_mgr = DataframeSourceManager()
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        if self._bidi_component_manager is None:
+            bidi_component_manager = BidiComponentManager()
+            bidi_component_manager.discover_and_register_components(
+                start_file_watching=False
+            )
+            self._bidi_component_manager = bidi_component_manager
+        mock_runtime.bidi_component_registry = self._bidi_component_manager
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
+        # Reset to ensure st.navigation works correctly regardless of prior test state.
+        PagesManager.uses_pages_directory = None
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )
@@ -356,6 +399,10 @@ class AppTest:
             args=self.args,
             kwargs=self.kwargs,
         )
+
+        # Register any files from FileUploader widgets with the file manager
+        self._register_uploaded_files(script_runner)
+
         with patch_config_options({"global.appTest": True}):
             self._tree = script_runner.run(
                 widget_state, self.query_params, timeout, self._page_hash
@@ -372,6 +419,25 @@ class AppTest:
         Runtime._instance = None
 
         return self
+
+    def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
+        """Register files from FileUploader widgets with the file manager."""
+        from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+
+        for widget in self._tree.file_uploader:
+            for (
+                file_id,
+                filename,
+                content,
+                mime_type,
+            ) in widget._get_files_to_register():
+                file_rec = UploadedFileRec(
+                    file_id=file_id,
+                    name=filename,
+                    type=mime_type,
+                    data=content,
+                )
+                script_runner.register_file(file_rec)
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script from the current state.
@@ -397,10 +463,12 @@ class AppTest:
         return self._tree.run(timeout=timeout)
 
     def switch_page(self, page_path: str) -> AppTest:
-        """Switch to another page of the app.
+        """Switch to a file-based page relative to the app's main script.
 
         This method does not automatically rerun the app. Use a follow-up call
-        to ``AppTest.run()`` to obtain the elements on the selected page.
+        to ``AppTest.run()`` to obtain the elements on the selected page. The
+        main script supplied to ``AppTest.from_file()`` remains the path root
+        after switching pages.
 
         Parameters
         ----------
@@ -413,16 +481,29 @@ class AppTest:
         AppTest
             self
 
+        Raises
+        ------
+        ValueError
+            If ``page_path`` does not point to a file relative to the main
+            script.
+
+        Examples
+        --------
+        >>> at = AppTest.from_file("app.py").run()
+        >>> at.switch_page("pages/settings.py").run()
+
         """
         main_dir = Path(self._script_path).parent
         full_page_path = main_dir / page_path
         if not full_page_path.is_file():
             raise ValueError(
-                f"Unable to find script at {page_path}, make sure the page given is relative to the main script."
+                f"Could not find page {page_path!r} relative to the main script "
+                f"{self._script_path!r}. Resolved page path: "
+                f"{str(full_page_path.resolve())!r}."
             )
         page_path_str = str(full_page_path.resolve())
         _, page_name = page_icon_and_name(Path(page_path_str))
-        self._page_hash = calc_md5(page_name)
+        self._page_hash = calc_hash(page_name)
         return self
 
     @property
@@ -468,17 +549,48 @@ class AppTest:
 
     @property
     def button_group(self) -> WidgetList[ButtonGroup[Any]]:
-        """Sequence of all ``st.feedback`` widgets.
+        """Sequence of all ``st.pills`` and ``st.segmented_control`` widgets.
 
         Returns
         -------
         WidgetList of ButtonGroup
-            Sequence of all ``st.feedback`` widgets. Individual widgets can be
-            accessed from a WidgetList by index (order on the page) or key. For
-            example, ``at.button_group[0]`` for the first widget or
-            ``at.button_group(key="my_key")`` for a widget with a given key.
+            Sequence of all ``st.pills`` and ``st.segmented_control`` widgets.
+            Individual widgets can be accessed from a WidgetList by index
+            (order on the page) or key. For example, ``at.button_group[0]`` for
+            the first widget or ``at.button_group(key="my_key")`` for a widget
+            with a given key.
         """
         return self._tree.button_group
+
+    @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.pills`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.pills`` widgets (filtered by style).
+            Individual widgets can be accessed from a WidgetList by index
+            (order on the page) or key. For example, ``at.pills[0]`` for
+            the first widget or ``at.pills(key="my_key")`` for a widget
+            with a given key.
+        """
+        return self._tree.pills
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.segmented_control`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.segmented_control`` widgets (filtered by style).
+            Individual widgets can be accessed from a WidgetList by index
+            (order on the page) or key. For example, ``at.segmented_control[0]``
+            for the first widget or ``at.segmented_control(key="my_key")``
+            for a widget with a given key.
+        """
+        return self._tree.segmented_control
 
     @property
     def caption(self) -> ElementList[Caption]:
@@ -638,6 +750,20 @@ class AppTest:
         return self._tree.divider
 
     @property
+    def download_button(self) -> WidgetList[DownloadButton]:
+        """Sequence of all ``st.download_button`` widgets.
+
+        Returns
+        -------
+        WidgetList of DownloadButton
+            Sequence of all ``st.download_button`` widgets. Individual widgets
+            can be accessed from a WidgetList by index (order on the page) or
+            key. For example, ``at.download_button[0]`` for the first widget or
+            ``at.download_button(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.download_button
+
+    @property
     def error(self) -> ElementList[Error]:
         """Sequence of all ``st.error`` elements.
 
@@ -666,6 +792,34 @@ class AppTest:
         return self._tree.exception
 
     @property
+    def feedback(self) -> WidgetList[Feedback]:
+        """Sequence of all ``st.feedback`` widgets.
+
+        Returns
+        -------
+        WidgetList of Feedback
+            Sequence of all ``st.feedback`` widgets. Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key. For
+            example, ``at.feedback[0]`` for the first widget or
+            ``at.feedback(key="my_key")`` to access by key.
+        """
+        return self._tree.feedback
+
+    @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        """Sequence of all ``st.file_uploader`` widgets.
+
+        Returns
+        -------
+        WidgetList of FileUploader
+            Sequence of all ``st.file_uploader`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.file_uploader[0]`` for the first widget or
+            ``at.file_uploader(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.file_uploader
+
+    @property
     def expander(self) -> Sequence[Expander]:
         """Sequence of all ``st.expander`` elements.
 
@@ -692,6 +846,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.header
+
+    @property
+    def image(self) -> ElementList[Image]:
+        """Sequence of all ``st.image`` elements.
+
+        Returns
+        -------
+        ElementList of Image
+            Sequence of all ``st.image`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.image[0]`` for the first element. Image is an
+            extension of the Element class.
+        """
+        return self._tree.image
 
     @property
     def info(self) -> ElementList[Info]:
@@ -762,6 +930,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.metric
+
+    @property
+    def menu_button(self) -> WidgetList[MenuButton[Any]]:
+        """Sequence of all ``st.menu_button`` widgets.
+
+        Returns
+        -------
+        WidgetList of MenuButton
+            Sequence of all ``st.menu_button`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.menu_button[0]`` for the first widget or
+            ``at.menu_button(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.menu_button
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 import styled from "@emotion/styled"
 
-import { computeSpacingStyle, IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
+import { computeSpacingStyle } from "~lib/theme/utils"
 
 export interface StyledMaterialIconProps {
   size: IconSize
@@ -30,7 +31,7 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
     return {
       display: "inline-flex",
       alignItems: "center",
-      justifyContents: "center",
+      justifyContent: "center",
       color: color,
       fontSize: theme.iconSizes[size],
       width: theme.iconSizes[size],

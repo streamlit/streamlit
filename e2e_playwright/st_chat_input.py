@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import io
+import wave
 
 import streamlit as st
 from streamlit import config, runtime
@@ -28,13 +31,14 @@ if key is None or key == "inline":
 
 if key is None or key == "disabled_with_file":
     col1, _ = st.columns(2)
-    disabled_value = col1.chat_input(
+    # Note: This input is disabled, so it will always return None.
+    # Tests only verify the disabled UI state.
+    col1.chat_input(
         "Chat input (in column, disabled)",
         accept_file=True,
         disabled=True,
         key="disabled_with_file",
     )
-    st.write("disabled_with_file - value:", disabled_value)
 
 if key is None or key == "callback":
     if st.button("Set Value"):
@@ -74,14 +78,22 @@ if key is None or key == "multiple_files":
     st.write("multiple_files - value:", multiple_files_value)
 
 if key is None or key == "width_300":
-    width_300_value = st.container().chat_input(
-        "Chat input (width=300px)", width=300, key="width_300"
-    )
+    st.container().chat_input("Chat input (width=300px)", width=300, key="width_300")
 
 if key is None or key == "width_stretch":
-    width_stretch_value = st.container().chat_input(
+    st.container().chat_input(
         "Chat input (width='stretch')", width="stretch", key="width_stretch"
     )
+
+if key is None or key == "height_200":
+    st.container().chat_input("Chat input (height=200px)", height=200, key="height_200")
+
+if key is None or key == "height_stretch":
+    # Use a container with defined height so stretch can fill it
+    with st.container(height=300, key="height_stretch_container"):
+        st.chat_input(
+            "Chat input (height='stretch')", height="stretch", key="height_stretch"
+        )
 
 if key is None or key == "bottom_max_chars":
     bottom_value = st.chat_input(
@@ -101,13 +113,14 @@ if key is None or key == "directory":
     st.write("directory - value:", directory_value)
 
 if key is None or key == "directory_disabled":
-    directory_disabled_value = st.container().chat_input(
+    # Note: This input is disabled, so it will always return None.
+    # Tests only verify the disabled UI state.
+    st.container().chat_input(
         "Chat input (directory upload disabled)",
         accept_file="directory",
         disabled=True,
         key="directory_disabled",
     )
-    st.write("directory_disabled - value:", directory_disabled_value)
 
 if key is None or key == "dynamic":
     st.markdown("Dynamic chat input:")
@@ -182,21 +195,14 @@ if key is None or key == "audio_only":
             st.audio(audio_only_value.audio)
 
 if key is None or key == "audio_disabled":
-    audio_disabled_value = st.container().chat_input(
+    # Note: This input is disabled, so audio_disabled_value will always be None.
+    # The st.write output is intentionally omitted since tests only verify the disabled UI state.
+    st.container().chat_input(
         "Chat input (audio disabled)",
         accept_audio=True,
         disabled=True,
         key="audio_disabled",
     )
-
-    if audio_disabled_value:
-        st.write(f"audio_disabled - text: {audio_disabled_value.text}")
-        st.write(
-            f"audio_disabled - audio: {audio_disabled_value.audio.name if audio_disabled_value.audio else None}"
-        )
-
-        if audio_disabled_value.audio:
-            st.audio(audio_disabled_value.audio)
 
 if key is None or key == "audio_column":
     st.subheader("Audio in Columns")
@@ -236,3 +242,121 @@ if key is None or key == "audio_column":
 
             if audio_column_b_value.audio:
                 st.audio(audio_column_b_value.audio)
+
+if key is None or key == "audio_sample_rate":
+    st.subheader("Audio Sample Rate Testing")
+
+    # Dropdown to select sample rate
+    sample_rate_options = {
+        "8 kHz (Low quality)": 8000,
+        "16 kHz (Default)": 16000,
+        "22.05 kHz": 22050,
+        "44.1 kHz (CD quality)": 44100,
+        "48 kHz (High quality)": 48000,
+        "Browser default (None)": None,
+    }
+
+    selected_option = st.selectbox(
+        "Select audio sample rate",
+        options=list(sample_rate_options.keys()),
+        key="sample_rate_selector",
+        index=1,  # Default to 16 kHz
+    )
+
+    selected_sample_rate = sample_rate_options[selected_option]
+
+    st.write(f"Selected sample rate: {selected_sample_rate}")
+
+    # Create chat input with selected sample rate
+    audio_sample_rate_value = st.container().chat_input(
+        f"Chat input (audio with {selected_option})",
+        accept_audio=True,
+        audio_sample_rate=selected_sample_rate,
+        key="audio_sample_rate_test",
+    )
+
+    if audio_sample_rate_value:
+        st.write(f"audio_sample_rate_test - text: {audio_sample_rate_value.text}")
+        audio_name = (
+            audio_sample_rate_value.audio.name
+            if audio_sample_rate_value.audio
+            else None
+        )
+        st.write(f"audio_sample_rate_test - audio: {audio_name}")
+
+        if audio_sample_rate_value.audio:
+            # Validate the actual sample rate of the recorded audio
+            audio_bytes = audio_sample_rate_value.audio.read()
+            audio_sample_rate_value.audio.seek(0)  # Reset for playback
+
+            with wave.open(io.BytesIO(audio_bytes), "rb") as wav:
+                actual_sample_rate = wav.getframerate()
+                num_channels = wav.getnchannels()
+                sample_width = wav.getsampwidth()
+
+                st.success(f"Actual sample rate: {actual_sample_rate} Hz")
+                st.write(f"Channels: {num_channels}")
+                st.write(f"Sample width: {sample_width} bytes")
+
+                # Validate that the actual sample rate matches the expected
+                if selected_sample_rate is not None:
+                    if actual_sample_rate == selected_sample_rate:
+                        st.success(
+                            f"Sample rate validation PASSED: "
+                            f"Expected {selected_sample_rate} Hz, "
+                            f"got {actual_sample_rate} Hz"
+                        )
+                    else:
+                        st.error(
+                            f"Sample rate validation FAILED: "
+                            f"Expected {selected_sample_rate} Hz, "
+                            f"got {actual_sample_rate} Hz"
+                        )
+                else:
+                    st.info(f"Browser default used: {actual_sample_rate} Hz")
+
+            # Play the audio
+            st.audio(audio_sample_rate_value.audio)
+
+if key is None or key == "submit_mode_disable":
+    import time
+
+    submit_mode_disable_value = st.container().chat_input(
+        "Chat input (submit_mode=disable)",
+        submit_mode="disable",
+        key="submit_mode_disable",
+    )
+    if submit_mode_disable_value:
+        st.write(f"submit_mode_disable - value: {submit_mode_disable_value}")
+        time.sleep(2)
+        st.write("submit_mode_disable - processing complete")
+
+if key is None or key == "submit_mode_stop":
+    import time
+
+    submit_mode_stop_value = st.container().chat_input(
+        "Chat input (submit_mode=stop)",
+        submit_mode="stop",
+        key="submit_mode_stop",
+    )
+    if submit_mode_stop_value:
+        st.write(f"submit_mode_stop - value: {submit_mode_stop_value}")
+        time.sleep(5)
+        st.write("submit_mode_stop - processing complete")
+
+if key is None or key == "submit_mode_fragment":
+    import time
+
+    @st.fragment
+    def submit_mode_fragment():
+        fragment_value = st.chat_input(
+            "Chat input (submit_mode=disable in fragment)",
+            submit_mode="disable",
+            key="submit_mode_fragment",
+        )
+        if fragment_value:
+            st.write(f"submit_mode_fragment - value: {fragment_value}")
+            time.sleep(2)
+            st.write("submit_mode_fragment - processing complete")
+
+    submit_mode_fragment()

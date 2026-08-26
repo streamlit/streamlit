@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
  */
 
 import { Field, Struct, StructRow, TimeUnit, util } from "apache-arrow"
-import trimEnd from "lodash/trimEnd"
+import { trimEnd } from "lodash-es"
 import { getLogger } from "loglevel"
 import moment from "moment-timezone"
 import numbro from "numbro"
@@ -440,8 +440,7 @@ function formatPeriod(duration: number | bigint, field?: Field): string {
  * @param field The field metadata from arrow containing metadata about the column.
  * @returns The formatted JSON string.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function formatObject(object: any, field?: Field): string {
+function formatObject(object: unknown, field?: Field): string {
   if (field?.type instanceof Struct) {
     // This type is used by python dictionary values
 

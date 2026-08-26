@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,14 +64,14 @@ def test_data_frame_with_different_sizes(app: Page):
             actual_width_str = element.evaluate("el => getComputedStyle(el).width")
             actual_width_px = int(actual_width_str.replace("px", ""))
 
-            assert actual_width_px in [226, 229], (
+            assert actual_width_px in {226, 229}, (
                 f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 226px or 229px"
             )
         elif i == 15:
             actual_width_str = element.evaluate("el => getComputedStyle(el).width")
             actual_width_px = int(actual_width_str.replace("px", ""))
 
-            assert actual_width_px in [284, 288], (
+            assert actual_width_px in {284, 288}, (
                 f"Content width dataframe {i} has unexpected width {actual_width_px}px, expected 284px or 288px"
             )
         else:

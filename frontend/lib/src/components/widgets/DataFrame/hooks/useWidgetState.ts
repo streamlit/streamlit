@@ -1,0 +1,645 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {
+  MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
+
+import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+
+import { Dataframe as DataframeProto } from "@streamlit/protobuf"
+
+import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+
+import EditingState, { getColumnName } from "./EditingState"
+
+// Debounce time for triggering a widget state update
+// This prevents rapid updates to the widget state.
+export const DEBOUNCE_TIME_MS = 150
+
+/**
+ * Validate that a parsed JSON value has the minimum shape
+ * required to represent dataframe selections.
+ */
+function isSelectionState(
+  value: unknown
+): value is Pick<DataframeState, "selection"> {
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+
+  const selection = (value as { selection?: unknown }).selection
+  return typeof selection === "object" && selection !== null
+}
+
+/**
+ * Parses a JSON selection state string into a GridSelection object.
+ * Shared by loadInitialSelectionState and getProgrammaticSelectionState.
+ *
+ * When returnEmptySelection is true, returns an empty GridSelection instead
+ * of undefined when no items are selected (used for programmatic clearing).
+ * originalToDisplayIndex maps backend row indices to display indices when
+ * the grid is sorted.
+ */
+function parseSelectionStateToGridSelection(
+  selectionStateJson: string,
+  columns: BaseColumn[],
+  isCellSelectionActivated: boolean,
+  isMultiCellSelectionActivated: boolean,
+  returnEmptySelection: boolean,
+  originalToDisplayIndex?: (originalIdx: number) => number | undefined
+): GridSelection | undefined {
+  let selectionState: unknown
+  try {
+    selectionState = JSON.parse(selectionStateJson)
+  } catch {
+    return undefined
+  }
+
+  if (!isSelectionState(selectionState)) {
+    return undefined
+  }
+
+  const columnNames = columns.map(column => getColumnName(column))
+
+  let rowSelection = CompactSelection.empty()
+  let columnSelection = CompactSelection.empty()
+  let cellSelection: [number, number] | undefined = undefined
+
+  selectionState.selection?.rows?.forEach(row => {
+    const displayRow = originalToDisplayIndex
+      ? originalToDisplayIndex(row)
+      : row
+    if (displayRow !== undefined) {
+      rowSelection = rowSelection.add(displayRow)
+    }
+  })
+
+  selectionState.selection?.columns?.forEach(column => {
+    const idx = columnNames.indexOf(column)
+    if (idx >= 0) {
+      columnSelection = columnSelection.add(idx)
+    }
+  })
+
+  // Reconstruct cell selection for single-cell mode only.
+  // Multi-cell ranges cannot be properly reconstructed from individual cell positions
+  // because they require rectangular range information.
+  if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
+    const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
+    if (rowIdx !== undefined && columnName !== undefined) {
+      const displayRow = originalToDisplayIndex
+        ? originalToDisplayIndex(rowIdx)
+        : rowIdx
+      const columnIdx = columnNames.indexOf(columnName)
+      if (displayRow !== undefined && columnIdx >= 0) {
+        cellSelection = [columnIdx, displayRow]
+      }
+    }
+  }
+
+  if (
+    returnEmptySelection ||
+    rowSelection.length > 0 ||
+    columnSelection.length > 0 ||
+    cellSelection !== undefined
+  ) {
+    return {
+      rows: rowSelection,
+      columns: columnSelection,
+      current: cellSelection
+        ? {
+            cell: cellSelection,
+            range: {
+              x: cellSelection[0],
+              y: cellSelection[1],
+              // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+              width: 1,
+              // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+              height: 1,
+            },
+            rangeStack: [],
+          }
+        : undefined,
+    }
+  }
+
+  return undefined
+}
+
+// This is the state that is sent to the backend for selections
+// This needs to be the same structure that is also defined
+// in the Python code.
+type CellPosition = readonly [row: number, column: string]
+
+interface DataframeState {
+  selection: {
+    rows: number[]
+    // We use column names instead of indices to make
+    // it easier to use and unify with how data editor edits
+    // are stored.
+    columns: string[]
+    cells: CellPosition[]
+  }
+}
+
+interface UseWidgetStateParams {
+  element: DataframeProto
+  widgetMgr: WidgetStateManager | undefined
+  fragmentId?: string
+  originalNumRows: number
+  originalColumns: BaseColumn[]
+}
+
+interface UseWidgetStateReturn {
+  // The editing state reference
+  editingState: MutableRefObject<EditingState>
+  // The current number of rows (including additions/deletions)
+  numRows: number
+  // Counter that increments once pending edits have been restored from the
+  // widget manager on initial mount. Consumers can watch this to reconcile the
+  // restored edits (e.g. clear edits that already match the current source).
+  editStateHydrationCount: number
+  // Callback to reset the editing state
+  resetEditingState: () => void
+  // Callback to update numRows from editing state
+  updateNumRows: () => void
+  // Debounced callback to sync editing state with widget manager
+  syncEditState: () => void
+  // Immediately syncs a pending edit and cancels its debounce timeout
+  flushEditState: () => void
+  // Creates a sync selection state callback for the given columns and getOriginalIndex
+  // This needs to be called after useColumnSort since it needs the sorted columns and getOriginalIndex
+  createSyncSelectionState: (
+    columns: BaseColumn[],
+    getOriginalIndex: (row: number) => number
+  ) => (newSelection: GridSelection, syncCellSelections: boolean) => void
+  // Callback for form clear handling
+  onFormCleared: () => void
+  // Loads initial selection state from widget manager
+  // Returns the initial selection if found, undefined otherwise
+  loadInitialSelectionState: (params: {
+    columns: BaseColumn[]
+    isRowSelectionActivated: boolean
+    isRequiredRowSelectionActivated: boolean
+    isColumnSelectionActivated: boolean
+    isCellSelectionActivated: boolean
+    isMultiCellSelectionActivated: boolean
+  }) => GridSelection | undefined
+  // Gets the programmatic selection state from a selection state JSON string.
+  // Returns the GridSelection and syncs to widget manager if present.
+  getProgrammaticSelectionState: (params: {
+    selectionState: string
+    columns: BaseColumn[]
+    isRowSelectionActivated: boolean
+    isColumnSelectionActivated: boolean
+    isCellSelectionActivated: boolean
+    isMultiCellSelectionActivated: boolean
+    getOriginalIndex: (displayIdx: number) => number
+  }) => GridSelection | undefined
+}
+
+/**
+ * Custom hook that handles widget state management for the DataFrame component.
+ * This includes:
+ * - Managing the EditingState (edits, added rows, deleted rows)
+ * - Syncing editing state with the widget manager
+ * - Syncing selection state with the widget manager
+ * - Loading initial state from the widget manager
+ * - Handling form clear events
+ *
+ * @param params - The parameters for the hook
+ * @returns The widget state management utilities
+ */
+function useWidgetState({
+  element,
+  widgetMgr,
+  fragmentId,
+  originalNumRows,
+  originalColumns,
+}: UseWidgetStateParams): UseWidgetStateReturn {
+  const { READ_ONLY } = DataframeProto.EditingMode
+
+  // EditingState management
+  const editingStateRef = useRef<EditingState>(
+    new EditingState(originalNumRows)
+  )
+  const [numRows, setNumRows] = useState(editingStateRef.current.getNumRows())
+
+  // Bumped after the initial hydration of edits from the widget manager so
+  // edit reconciliation can run against the restored edits (which may already
+  // match the current source data).
+  const [editStateHydrationCount, setEditStateHydrationCount] = useState(0)
+
+  // Reset editing state when originalNumRows changes.
+  // Using useExecuteWhenChanged instead of useEffect to follow React best practices
+  // for adjusting state when props change (avoids extra render cycle).
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  useExecuteWhenChanged(() => {
+    editingStateRef.current = new EditingState(originalNumRows)
+    setNumRows(editingStateRef.current.getNumRows())
+  }, [originalNumRows])
+
+  /**
+   * Resets the editing state to a fresh state
+   */
+  const resetEditingState = useCallback(() => {
+    editingStateRef.current = new EditingState(originalNumRows)
+    setNumRows(editingStateRef.current.getNumRows())
+  }, [originalNumRows])
+
+  /**
+   * Updates numRows from the editing state.
+   * This is required to keep the component state in sync with the editing state.
+   * Uses functional update form to avoid stale closure issues while keeping the callback stable.
+   */
+  const updateNumRows = useCallback(() => {
+    setNumRows(currentNumRows => {
+      const newNumRows = editingStateRef.current.getNumRows()
+      return currentNumRows !== newNumRows ? newNumRows : currentNumRows
+    })
+  }, [])
+
+  /**
+   * Load initial editing state from widget manager on first render.
+   * This is required in the case that other elements are inserted before this widget.
+   * In this case, it can happen that the dataframe component is unmounted and thereby loses
+   * its state. Once the same element is rendered again, we try to reconstruct the state
+   * from the widget manager values.
+   */
+  useEffect(
+    () => {
+      if (element.editingMode === READ_ONLY || !widgetMgr) {
+        // We don't need to load the initial widget state
+        // for read-only dataframes.
+        return
+      }
+
+      const initialWidgetValue = widgetMgr.getStringValue({
+        id: element.id,
+        formId: element.formId ?? undefined,
+      })
+
+      if (!initialWidgetValue) {
+        // No initial widget value was saved in the widget manager.
+        // No need to reconstruct something.
+        return
+      }
+
+      editingStateRef.current.fromJson(initialWidgetValue, originalColumns)
+      setNumRows(editingStateRef.current.getNumRows())
+      // Signal that edits were restored so reconciliation can clear any
+      // restored edits that already match the current source data.
+      setEditStateHydrationCount(count => count + 1)
+    },
+    // We only want to run this effect once during the initial component load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
+
+  /**
+   * Inner function to sync editing state with widget manager.
+   * This is wrapped with debounce below.
+   */
+  const innerSyncEditState = useCallback(() => {
+    if (!widgetMgr) {
+      return
+    }
+
+    const currentEditingState = editingStateRef.current.toJson(originalColumns)
+    let currentWidgetState = widgetMgr.getStringValue({
+      id: element.id,
+      formId: element.formId ?? undefined,
+    })
+
+    if (currentWidgetState === undefined) {
+      // Create an empty widget state
+      currentWidgetState = new EditingState(0).toJson([])
+    }
+
+    // Only update if there is actually a difference between editing and widget state
+    if (currentEditingState !== currentWidgetState) {
+      widgetMgr.setStringValue(element.id, currentEditingState, {
+        formId: element.formId ?? undefined,
+        fragmentId,
+        fromUser: true,
+      })
+    }
+  }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
+
+  // Debounced version of syncEditState to prevent rapid updates
+  const { debouncedCallback: syncEditState, flush: flushEditState } =
+    useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
+
+  /**
+   * Creates a function to sync selection state with the widget manager.
+   * This needs to be called after useColumnSort to get the sorted columns and getOriginalIndex.
+   *
+   * @param columns - The sorted columns from useColumnSort
+   * @param getOriginalIndex - Function to get the original row index (from useColumnSort)
+   * @returns A function that syncs selection state with the widget manager
+   */
+  const createSyncSelectionState = useCallback(
+    (
+      columns: BaseColumn[],
+      getOriginalIndex: (row: number) => number
+    ): ((
+      newSelection: GridSelection,
+      syncCellSelections: boolean
+    ) => void) => {
+      return (newSelection: GridSelection, syncCellSelections: boolean) => {
+        if (!widgetMgr) {
+          return
+        }
+
+        const selectionState: DataframeState = {
+          selection: {
+            rows: [] as number[],
+            columns: [] as string[],
+            cells: [] as CellPosition[],
+          },
+        }
+
+        selectionState.selection.rows = newSelection.rows
+          .toArray()
+          .map(row => getOriginalIndex(row))
+          // Report row indices in a stable ascending order so the serialized
+          // selection is independent of the current sort/display order. This
+          // keeps the widget value unchanged when only the display order
+          // changes (e.g. after sorting), avoiding spurious reruns / on_select
+          // callbacks.
+          .sort((a, b) => a - b)
+        selectionState.selection.columns = newSelection.columns
+          .toArray()
+          .map(columnIdx => getColumnName(columns[columnIdx]))
+
+        // Parse cell selections into our widget state structure:
+        if (syncCellSelections && newSelection.current) {
+          const { cell, range } = newSelection.current
+          if (range) {
+            // Multi-cell selection (rectangular structure)
+            for (let r = range.y; r < range.y + range.height; r++) {
+              for (let c = range.x; c < range.x + range.width; c++) {
+                if (!columns[c].isIndex) {
+                  selectionState.selection.cells.push([
+                    getOriginalIndex(r),
+                    getColumnName(columns[c]),
+                  ])
+                }
+              }
+            }
+          } else if (cell) {
+            // Single-cell selection
+            const [col, row] = cell
+            if (!columns[col].isIndex) {
+              selectionState.selection.cells.push([
+                getOriginalIndex(row),
+                getColumnName(columns[col]),
+              ])
+            }
+          }
+        }
+
+        const newWidgetState = JSON.stringify(selectionState)
+        const currentWidgetState = widgetMgr.getStringValue({
+          id: element.id,
+          formId: element.formId ?? undefined,
+        })
+
+        // Only update if there is actually a difference to the previous selection state
+        if (
+          currentWidgetState === undefined ||
+          currentWidgetState !== newWidgetState
+        ) {
+          widgetMgr.setStringValue(element.id, newWidgetState, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: true,
+          })
+        }
+      }
+    },
+    [element.id, element.formId, widgetMgr, fragmentId]
+  )
+
+  /**
+   * Loads initial selection state from the widget manager during component
+   * initialization. Returns the restored GridSelection, or undefined.
+   */
+  const loadInitialSelectionState = useCallback(
+    ({
+      columns,
+      isRowSelectionActivated,
+      isRequiredRowSelectionActivated,
+      isColumnSelectionActivated,
+      isCellSelectionActivated,
+      isMultiCellSelectionActivated,
+    }: {
+      columns: BaseColumn[]
+      isRowSelectionActivated: boolean
+      isRequiredRowSelectionActivated: boolean
+      isColumnSelectionActivated: boolean
+      isCellSelectionActivated: boolean
+      isMultiCellSelectionActivated: boolean
+    }): GridSelection | undefined => {
+      // Skip if programmatic selection is set; the dedicated effect handles it
+      if (element.selectionState) {
+        return undefined
+      }
+
+      if (
+        (!isRowSelectionActivated &&
+          !isColumnSelectionActivated &&
+          !isCellSelectionActivated) ||
+        !widgetMgr
+      ) {
+        return undefined
+      }
+
+      const initialWidgetValue = widgetMgr.getStringValue({
+        id: element.id,
+        formId: element.formId ?? undefined,
+      })
+
+      if (initialWidgetValue) {
+        return parseSelectionStateToGridSelection(
+          initialWidgetValue,
+          columns,
+          isCellSelectionActivated,
+          isMultiCellSelectionActivated,
+          false // Don't return empty selection for initial load
+        )
+      }
+
+      if (element.selectionDefault) {
+        const defaultSelection = parseSelectionStateToGridSelection(
+          element.selectionDefault,
+          columns,
+          isCellSelectionActivated,
+          isMultiCellSelectionActivated,
+          true // Return empty selection to allow explicit defaults
+        )
+
+        if (defaultSelection !== undefined) {
+          widgetMgr.setStringValue(element.id, element.selectionDefault, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: false,
+          })
+        }
+
+        return defaultSelection
+      }
+
+      // In single-row-required mode, auto-select the first row if there's
+      // no stored selection and no explicit default.
+      if (isRequiredRowSelectionActivated && originalNumRows > 0) {
+        const defaultRequiredSelection: GridSelection = {
+          rows: CompactSelection.empty().add(0),
+          columns: CompactSelection.empty(),
+          current: undefined,
+        }
+
+        // Sync this default selection to the widget manager
+        const selectionState = JSON.stringify({
+          selection: {
+            rows: [0],
+            columns: [],
+            cells: [],
+          },
+        })
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
+
+        return defaultRequiredSelection
+      }
+
+      return undefined
+    },
+    [
+      widgetMgr,
+      element.id,
+      element.formId,
+      element.selectionState,
+      element.selectionDefault,
+      fragmentId,
+      originalNumRows,
+    ]
+  )
+
+  /**
+   * Callback for when the form is cleared.
+   * Resets the editing state.
+   */
+  const onFormCleared = useCallback(() => {
+    resetEditingState()
+  }, [resetEditingState])
+
+  /**
+   * Parses element.selectionState into a GridSelection and syncs it to the
+   * widget manager. Used when the user sets selection via st.session_state.
+   */
+  const getProgrammaticSelectionState = useCallback(
+    ({
+      selectionState,
+      columns,
+      isRowSelectionActivated,
+      isColumnSelectionActivated,
+      isCellSelectionActivated,
+      isMultiCellSelectionActivated,
+      getOriginalIndex,
+    }: {
+      selectionState: string
+      columns: BaseColumn[]
+      isRowSelectionActivated: boolean
+      isColumnSelectionActivated: boolean
+      isCellSelectionActivated: boolean
+      isMultiCellSelectionActivated: boolean
+      getOriginalIndex: (displayIdx: number) => number
+    }): GridSelection | undefined => {
+      if (!widgetMgr) {
+        return undefined
+      }
+
+      if (
+        !isRowSelectionActivated &&
+        !isColumnSelectionActivated &&
+        !isCellSelectionActivated
+      ) {
+        return undefined
+      }
+
+      // Build reverse mapping: original → display row index (they differ
+      // when the grid is sorted).
+      const originalToDisplay = new Map<number, number>()
+      for (let i = 0; i < originalNumRows; i++) {
+        originalToDisplay.set(getOriginalIndex(i), i)
+      }
+      const originalToDisplayIndex = (
+        originalIdx: number
+      ): number | undefined => originalToDisplay.get(originalIdx)
+
+      const selection = parseSelectionStateToGridSelection(
+        selectionState,
+        columns,
+        isCellSelectionActivated,
+        isMultiCellSelectionActivated,
+        true, // Return empty selection to allow programmatic clearing
+        originalToDisplayIndex
+      )
+
+      // Only sync to widget manager if the selection state could be parsed.
+      // This avoids overwriting a previously valid persisted selection with
+      // malformed JSON.
+      if (selection !== undefined) {
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
+      }
+
+      return selection
+    },
+    [element.id, element.formId, widgetMgr, fragmentId, originalNumRows]
+  )
+
+  return {
+    editingState: editingStateRef,
+    numRows,
+    editStateHydrationCount,
+    resetEditingState,
+    updateNumRows,
+    syncEditState,
+    flushEditState,
+    createSyncSelectionState,
+    onFormCleared,
+    loadInitialSelectionState,
+    getProgrammaticSelectionState,
+  }
+}
+
+export default useWidgetState

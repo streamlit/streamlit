@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,11 +30,14 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
-from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
+from streamlit.runtime.caching.cache_data_api import (
+    _data_caches,
+    get_data_cache_stats_provider,
+)
 from streamlit.runtime.caching.cache_errors import CacheError
 from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
@@ -58,7 +61,7 @@ from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     get_cache_folder_path,
 )
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -81,9 +84,9 @@ def as_replay_test_data() -> CachedResult:
     """
     return CachedResult(
         1,
-        [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
-        st._main.id,
-        st.sidebar.id,
+        [ElementMsgData("text", TextProto(body="1"), st._main._id, "")],
+        st._main._id,
+        st.sidebar._id,
     )
 
 
@@ -367,15 +370,14 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
 
             @st.cache_data(persist="yesplz")
             def foo():
                 pass
 
         assert (
-            str(e.value)
-            == "Unsupported persist option 'yesplz'. Valid values are 'disk' or None."
+            str(e.value) == "Invalid `persist` value. Supported values: 'disk', None."
         )
 
     @patch("shutil.rmtree")
@@ -573,7 +575,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         st.cache_data.clear()
 
     def test_no_stats(self):
-        assert get_data_cache_stats_provider().get_stats() == []
+        assert get_data_cache_stats_provider().get_stats() == {}
 
     def test_multiple_stats(self):
         @st.cache_data
@@ -610,7 +612,9 @@ class CacheDataStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        assert set(expected) == set(get_data_cache_stats_provider().get_stats())
+        stats_dict = get_data_cache_stats_provider().get_stats()
+        assert CACHE_MEMORY_FAMILY in stats_dict
+        assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
@@ -742,12 +746,16 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that it works with element replay if used as non-widget element."""
 
-        if element_name == "toast":
-            # The toast element is not supported in the cache_data API
-            # since elements on the event dg are not supported.
+        if element_name in {"toast", "spinner", "logo", "echo"}:
+            # These elements are not supported in the cache_data API
+            #   - toast only corresponds to the event dg
+            #   - spinner is transient and not replayed
+            #   - logo is not replayed because it's not tied to a specific dg
+            #   - echo does not produce an element unless it's executed with code
+
             return
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_element():
             element_producer()
 
@@ -804,7 +812,7 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
         expected_width = 400
         expected_height = 200
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_code_with_layout():
             st.code(
                 "print('Hello, World!')", width=expected_width, height=expected_height
@@ -862,3 +870,156 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
 
     def check_context(self, context: CacheStorageContext) -> None:
         raise InvalidCacheStorageContextError("This CacheStorageManager always fails")
+
+
+class CacheDataBackgroundRefreshTest(unittest.TestCase):
+    """st.cache_data refresh_mode="background" tests."""
+
+    def setUp(self) -> None:
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+
+    def test_background_without_ttl_raises(self) -> None:
+        """refresh_mode="background" without a ttl raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as exc:
+
+            @st.cache_data(refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+        assert "requires a 'ttl' value" in str(exc.value)
+
+    def test_background_with_zero_ttl_raises(self) -> None:
+        """A non-positive ttl is treated as no ttl for background refresh."""
+        with pytest.raises(StreamlitAPIException) as exc:
+
+            @st.cache_data(ttl=0, refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+        assert "requires a 'ttl' value" in str(exc.value)
+
+    def test_background_with_persist_disk_raises(self) -> None:
+        """refresh_mode="background" with persist="disk" raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as exc:
+
+            @st.cache_data(ttl="1h", persist="disk", refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+        assert "not compatible with 'persist'" in str(exc.value)
+
+    def test_background_with_persist_true_raises(self) -> None:
+        """refresh_mode="background" with persist=True raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as exc:
+
+            @st.cache_data(ttl="1h", persist=True, refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+        assert "not compatible with 'persist'" in str(exc.value)
+
+    def test_invalid_refresh_mode_raises(self) -> None:
+        """An unknown refresh_mode value raises a StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
+
+            @st.cache_data(ttl="1h", refresh_mode="sideways")
+            def foo() -> int:
+                return 1
+
+        assert (
+            str(exc.value)
+            == "Invalid `refresh_mode` value. Supported values: foreground, background."
+        )
+
+    def test_hard_ttl_is_double_fresh_ttl(self) -> None:
+        """In background mode the underlying storage ttl is 2x the user-facing ttl."""
+        cache = _data_caches.get_cache(
+            key="bg_key",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="bg",
+            refresh_mode="background",
+        )
+        assert cache.fresh_ttl_seconds == 100
+        assert cache.ttl_seconds == 200
+
+    def test_stored_at_set_only_in_background_mode(self) -> None:
+        """stored_at is set (and survives pickling) in background mode, and None otherwise."""
+        bg_cache = _data_caches.get_cache(
+            key="bg",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="bg",
+            refresh_mode="background",
+        )
+        bg_cache.write_result("vk", 123, [])
+        bg_result = bg_cache.read_result("vk")
+        assert bg_result.value == 123
+        assert isinstance(bg_result.stored_at, float)
+
+        fg_cache = _data_caches.get_cache(
+            key="fg",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="fg",
+            refresh_mode="foreground",
+        )
+        fg_cache.write_result("vk", 456, [])
+        assert fg_cache.read_result("vk").stored_at is None
+
+    def test_background_writeback_checks_presence_without_reading_value(self) -> None:
+        """A background write-back doesn't deserialize the existing cached value."""
+        cache = _data_caches.get_cache(
+            key="bg_presence",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="bg_presence",
+            refresh_mode="background",
+        )
+        cache.write_result("vk", 123, [])
+
+        with (
+            patch.object(cache.storage, "has", wraps=cache.storage.has) as mock_has,
+            patch.object(cache.storage, "get", wraps=cache.storage.get) as mock_get,
+        ):
+            cache.write_background_refresh_result(
+                "vk",
+                456,
+                expected_generation=cache.generation,
+                expected_key_generation=cache.key_generation("vk"),
+            )
+            mock_has.assert_called_once_with("vk")
+            mock_get.assert_not_called()
+
+        assert cache.read_result("vk").value == 456
+
+    def test_cache_recreated_on_mode_change(self) -> None:
+        """Changing refresh_mode across reruns rebuilds the cache."""
+        common_kwargs = {
+            "key": "mode_key",
+            "persist": None,
+            "max_entries": None,
+            "ttl": 100,
+            "display_name": "mode",
+        }
+        cache_fg = _data_caches.get_cache(**common_kwargs, refresh_mode="foreground")
+        # Same params -> same cache object.
+        assert (
+            _data_caches.get_cache(**common_kwargs, refresh_mode="foreground")
+            is cache_fg
+        )
+        # Different refresh_mode -> new cache object.
+        cache_bg = _data_caches.get_cache(**common_kwargs, refresh_mode="background")
+        assert cache_bg is not cache_fg
+        # The replaced cache is detached so an in-flight refresh would be discarded.
+        assert cache_fg.is_active is False

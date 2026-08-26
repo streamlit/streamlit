@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,37 @@
  * limitations under the License.
  */
 
-import React, { useState } from "react"
+import { Fragment, useCallback, useRef, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
   KeyboardArrowDown,
   KeyboardArrowUp,
 } from "@emotion-icons/material-outlined"
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+import { FloatingPortal } from "@floating-ui/react"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { hasLightBackgroundColor, Icon } from "@streamlit/lib"
+import {
+  convertRemToPx,
+  Icon,
+  StreamlitMarkdown,
+  useEmotionTheme,
+  useFloatingOverlay,
+  useOverlayDismissal,
+} from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledIconContainer,
   StyledNavSection,
   StyledNavSectionText,
   StyledPopoverContent,
   StyledSectionName,
+  StyledTopNavPopoverBody,
   StyledTopNavSidebarNavLinkContainer,
 } from "./styled-components"
-
-import { SidebarNavLink } from "./index"
+import { getExternalPageUrl, isExternalPage } from "./utils"
 
 interface TopNavSectionProps {
   handlePageChange: (pageScriptHash: string) => void
@@ -61,9 +68,34 @@ const TopNavSection = ({
   widgetsDisabled,
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
-  const theme = useTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
+  const theme = useEmotionTheme()
   const showSections = sections.length > 1
+
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open,
+    placement: "bottom-start",
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
+  })
+
+  const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
+    isOpen: open,
+    onClose: () => setOpen(false),
+    floatingSetFn: refs.setFloating,
+    referenceSetFn: refs.setReference,
+    restoreFocusFn: () => triggerRef.current?.focus(),
+  })
+
+  // Attach both triggerRef (for focus restoration) and setReferenceRef
+  // (for floating-ui + dismissal hit-testing) to the same button element.
+  const setNavSectionRef = useCallback(
+    (node: HTMLButtonElement | null) => {
+      triggerRef.current = node
+      setReferenceRef(node)
+    },
+    [setReferenceRef]
+  )
 
   if (
     isNullOrUndefined(sections) ||
@@ -73,124 +105,105 @@ const TopNavSection = ({
     return null
   }
 
-  return (
-    <UIPopover
-      triggerType={TRIGGER_TYPE.click}
-      placement={PLACEMENT.bottomLeft}
-      content={() => (
-        <StyledPopoverContent data-testid="stTopNavPopover">
-          {sections.map((section, _sectionIndex) => {
-            const sectionName = section[0].sectionHeader
+  const popoverContent = sections.map((section, _sectionIndex) => {
+    const sectionName = section[0].sectionHeader
 
-            return section.map((item, index) => {
-              const handleClick = (e: React.MouseEvent): boolean => {
-                e.preventDefault()
-                if (item.pageScriptHash) {
-                  handlePageChange(item.pageScriptHash)
-                }
-                setOpen(false)
-                return false
-              }
+    return section.map((item, index) => {
+      const isExternal = isExternalPage(item)
+      const handleClick = (e: React.MouseEvent): void => {
+        // External links are handled by the browser (target="_blank")
+        if (isExternal) {
+          setOpen(false)
+          return
+        }
+        e.preventDefault()
+        if (item.pageScriptHash) {
+          handlePageChange(item.pageScriptHash)
+        }
+        setOpen(false)
+      }
 
-              // Convert potentially null pageName to string safely
-              const pageName = String(item.pageName || "")
+      // Convert potentially null pageName to string safely
+      const pageName = String(item.pageName || "")
 
-              return (
-                <React.Fragment key={`${item.pageScriptHash}-${pageName}`}>
-                  {index === 0 && showSections && (
-                    <StyledSectionName>{sectionName}</StyledSectionName>
-                  )}
-                  <StyledTopNavSidebarNavLinkContainer>
-                    <SidebarNavLink
-                      {...item}
-                      icon={item.icon || null}
-                      isTopNav={true}
-                      isInDropdown={true}
-                      isActive={currentPageScriptHash === item.pageScriptHash}
-                      onClick={handleClick}
-                      pageUrl={endpoints.buildAppPageURL(
-                        pageLinkBaseUrl,
-                        item
-                      )}
-                      widgetsDisabled={widgetsDisabled}
-                    >
-                      {pageName}
-                    </SidebarNavLink>
-                  </StyledTopNavSidebarNavLinkContainer>
-                </React.Fragment>
-              )
-            })
-          })}
-        </StyledPopoverContent>
-      )}
-      isOpen={open}
-      onClickOutside={() => setOpen(false)}
-      onClick={() => (open ? setOpen(false) : undefined)}
-      onEsc={() => setOpen(false)}
-      // Consistently render the content for smoother opening/closing
-      renderAll={true}
-      overrides={{
-        Body: {
-          style: () => ({
-            marginTop: theme.spacing.sm,
-            marginRight: theme.spacing.lg,
-            marginBottom: theme.spacing.lg,
-
-            maxHeight: "70vh",
-            minWidth: "8rem",
-            overflow: "auto",
-            maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-
-            borderTopLeftRadius: theme.radii.xl,
-            borderTopRightRadius: theme.radii.xl,
-            borderBottomRightRadius: theme.radii.xl,
-            borderBottomLeftRadius: theme.radii.xl,
-
-            borderLeftWidth: theme.sizes.borderWidth,
-            borderRightWidth: theme.sizes.borderWidth,
-            borderTopWidth: theme.sizes.borderWidth,
-            borderBottomWidth: theme.sizes.borderWidth,
-
-            borderLeftStyle: "solid",
-            borderRightStyle: "solid",
-            borderTopStyle: "solid",
-            borderBottomStyle: "solid",
-
-            borderLeftColor: theme.colors.borderColor,
-            borderRightColor: theme.colors.borderColor,
-            borderTopColor: theme.colors.borderColor,
-            borderBottomColor: theme.colors.borderColor,
-
-            boxShadow: lightBackground
-              ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-              : "0px 4px 16px rgba(0, 0, 0, 0.7)",
-
-            [`@media (max-width: ${theme.breakpoints.sm})`]: {
-              maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
-            },
-          }),
-        },
-      }}
-    >
-      <div>
-        <StyledNavSection
-          tabIndex={0}
-          onClick={() => setOpen(!open)}
-          isOpen={open}
-          data-testid="stTopNavSection"
-        >
-          <StyledNavSectionText>{title}</StyledNavSectionText>
-          {!hideChevron && (
-            <StyledIconContainer>
-              <Icon
-                content={open ? KeyboardArrowUp : KeyboardArrowDown}
-                size="lg"
+      return (
+        <Fragment key={`${item.pageScriptHash}-${pageName}`}>
+          {index === 0 && showSections && (
+            <StyledSectionName>
+              <StreamlitMarkdown
+                source={sectionName || ""}
+                allowHTML={false}
+                isLabel
+                disableLinks
+                truncate
+                inheritFont
               />
-            </StyledIconContainer>
+            </StyledSectionName>
           )}
-        </StyledNavSection>
-      </div>
-    </UIPopover>
+          <StyledTopNavSidebarNavLinkContainer>
+            <SidebarNavLink
+              icon={item.icon || null}
+              isTopNav={true}
+              isInDropdown={true}
+              isActive={currentPageScriptHash === item.pageScriptHash}
+              onClick={handleClick}
+              pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
+              widgetsDisabled={widgetsDisabled}
+              isExternal={isExternal}
+              externalUrl={getExternalPageUrl(item)}
+            >
+              {pageName}
+            </SidebarNavLink>
+          </StyledTopNavSidebarNavLinkContainer>
+        </Fragment>
+      )
+    })
+  })
+
+  return (
+    <>
+      <StyledNavSection
+        ref={setNavSectionRef}
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        isOpen={open}
+        aria-expanded={open}
+        aria-haspopup="true"
+        data-testid="stTopNavSection"
+      >
+        <StyledNavSectionText>
+          <StreamlitMarkdown
+            source={title}
+            allowHTML={false}
+            isLabel
+            disableLinks
+            truncate
+            inheritFont
+          />
+        </StyledNavSectionText>
+        {!hideChevron && (
+          <StyledIconContainer>
+            <Icon
+              content={open ? KeyboardArrowUp : KeyboardArrowDown}
+              size="lg"
+            />
+          </StyledIconContainer>
+        )}
+      </StyledNavSection>
+      {open && (
+        <FloatingPortal>
+          <StyledTopNavPopoverBody
+            ref={setFloatingRef}
+            style={floatingStyles}
+            data-testid="stTopNavPopoverBody"
+          >
+            <StyledPopoverContent data-testid="stTopNavPopover">
+              {popoverContent}
+            </StyledPopoverContent>
+          </StyledTopNavPopoverBody>
+        </FloatingPortal>
+      )}
+    </>
   )
 }
 

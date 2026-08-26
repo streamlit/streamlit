@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,6 +107,34 @@ DISALLOWED_SNAPSHOTS = {
     "st_data_editor-input_data_32[firefox].png",
     "st_data_editor-input_data_33[firefox].png",
     "st_data_editor-input_data_34[firefox].png",
+    # st_chat_input file chip snapshots that are not detected by static analysis
+    "st_chat_input-file_chip_archive[chromium].png",
+    "st_chat_input-file_chip_archive[firefox].png",
+    "st_chat_input-file_chip_archive[webkit].png",
+    "st_chat_input-file_chip_audio[chromium].png",
+    "st_chat_input-file_chip_audio[firefox].png",
+    "st_chat_input-file_chip_audio[webkit].png",
+    "st_chat_input-file_chip_code[chromium].png",
+    "st_chat_input-file_chip_code[firefox].png",
+    "st_chat_input-file_chip_code[webkit].png",
+    "st_chat_input-file_chip_pdf[chromium].png",
+    "st_chat_input-file_chip_pdf[firefox].png",
+    "st_chat_input-file_chip_pdf[webkit].png",
+    "st_chat_input-file_chip_spreadsheet[chromium].png",
+    "st_chat_input-file_chip_spreadsheet[firefox].png",
+    "st_chat_input-file_chip_spreadsheet[webkit].png",
+    "st_chat_input-file_chip_text[chromium].png",
+    "st_chat_input-file_chip_text[firefox].png",
+    "st_chat_input-file_chip_text[webkit].png",
+    "st_chat_input-file_chip_truncated[chromium].png",
+    "st_chat_input-file_chip_truncated[firefox].png",
+    "st_chat_input-file_chip_truncated[webkit].png",
+    "st_chat_input-file_chip_unknown[chromium].png",
+    "st_chat_input-file_chip_unknown[firefox].png",
+    "st_chat_input-file_chip_unknown[webkit].png",
+    "st_chat_input-file_chip_video[chromium].png",
+    "st_chat_input-file_chip_video[firefox].png",
+    "st_chat_input-file_chip_video[webkit].png",
 }
 
 
@@ -137,7 +165,7 @@ def get_used_snapshots() -> dict[str, tuple[set[str], set[str]]]:
 
     for test_file in test_files:
         try:
-            with open(test_file) as f:
+            with open(test_file, encoding="utf-8") as f:
                 content = f.read()
 
             test_name = os.path.basename(test_file).replace(".py", "")
@@ -265,6 +293,7 @@ def main() -> None:
     if not ci:
         print(f"Found {len(all_snapshot_files)} total snapshot files")
 
+    debug_test: str | None = None
     # Debug specific test
     if debug and "--test" in sys.argv:
         test_idx = sys.argv.index("--test")
@@ -378,6 +407,11 @@ def main() -> None:
         ):
             count = len(orphaned_by_test[test_name])
             print(f"  {test_name}: {count} orphaned files")
+
+        print("\n--- COPY_PASTE_START ---")
+        for filename in sorted([os.path.basename(f) for f in orphaned_files]):
+            print(f'    "{filename}",')
+        print("--- COPY_PASTE_END ---")
 
         print("\nTo fix this, run: python scripts/snapshot_cleanup.py")
         print("Or review the snapshots manually to ensure they're actually orphaned.")

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
     StreamlitInvalidMenuItemKeyError,
-    StreamlitInvalidPageLayoutError,
     StreamlitInvalidSidebarStateError,
     StreamlitInvalidURLError,
+    StreamlitValueError,
 )
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
@@ -44,7 +44,9 @@ ABOUT_KEY: Final = "about"
 
 PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
-InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"]
+InitialSideBarState: TypeAlias = (
+    Literal["auto", "expanded", "collapsed", "locked"] | int
+)
 _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
@@ -170,25 +172,32 @@ def set_page_config(
         .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
     layout: "centered", "wide", or None
-        How the page content should be laid out. If this is ``None`` (default),
-        the page layout is inherited from the previous call of
-        ``st.set_page_config``. If this is ``None`` and no previous call
-        exists, the page layout is ``"centered"``.
+        Layout of the page content. The following layouts are supported:
 
-        ``"centered"`` constrains the elements into a centered column of fixed
-        width. ``"wide"`` uses the entire screen.
+        - ``None`` (default): The page layout is inherited from the previous
+          call of ``st.set_page_config``. If no previous call exists, the page
+          layout is ``"centered"``.
+        - ``"centered"``: Page elements are constrained to a centered column of
+          fixed width.
+        - ``"wide"``: Page elements use the entire screen width.
 
-    initial_sidebar_state: "auto", "expanded", "collapsed", or None
-        How the sidebar should start out. If this is ``None`` (default), the
-        sidebar state is inherited from the previous call of
-        ``st.set_page_config``. If no previous call exists, the sidebar state
-        is ``"auto"``.
+    initial_sidebar_state: "auto", "expanded", "collapsed", "locked", int, or None
+        Initial state of the sidebar. The following states are supported:
 
-        The folowing states are supported:
-
-        - ``"auto"``: The sidebar is hidden on small devices and shown otherwise.
+        - ``None`` (default): The sidebar state is inherited from the previous
+          call of ``st.set_page_config``. If no previous call exists, the
+          sidebar state is ``"auto"``.
+        - ``"auto"``: The sidebar is hidden on small devices and shown
+          otherwise.
         - ``"expanded"``: The sidebar is shown initially.
         - ``"collapsed"``: The sidebar is hidden initially.
+        - ``"locked"``: On desktop, the sidebar is expanded with all collapse
+          controls hidden so users cannot close it. On narrow/mobile
+          viewports the lock degrades gracefully: the sidebar starts
+          collapsed and can be toggled to avoid covering the main content.
+        - ``int``: The sidebar will use ``"auto"`` behavior but start with the
+          specified width in pixels. The width must be between 200 and 600
+          pixels, inclusive.
 
         In most cases, ``"auto"`` provides the best user experience across
         devices of different sizes.
@@ -209,8 +218,8 @@ def set_page_config(
         item that was specified in a previous call to ``st.set_page_config``,
         set its value to ``None`` in the dictionary.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> st.set_page_config(
@@ -244,7 +253,7 @@ def set_page_config(
         pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidPageLayoutError(layout=layout)
+        raise StreamlitValueError("layout", ["'centered'", "'wide'"])
 
     msg.page_config_changed.layout = pb_layout
 
@@ -255,9 +264,21 @@ def set_page_config(
         pb_sidebar_state = PageConfigProto.EXPANDED
     elif initial_sidebar_state == "collapsed":
         pb_sidebar_state = PageConfigProto.COLLAPSED
+    elif initial_sidebar_state == "locked":
+        pb_sidebar_state = PageConfigProto.LOCKED
     elif initial_sidebar_state is None:
         # Allows for multiple (additive) calls to set_page_config
         pb_sidebar_state = PageConfigProto.SIDEBAR_UNSET
+    elif isinstance(initial_sidebar_state, int):
+        # Integer values set the sidebar width and use AUTO state
+        if initial_sidebar_state <= 0:
+            raise StreamlitInvalidSidebarStateError(
+                initial_sidebar_state=f"width must be positive (got {initial_sidebar_state})"
+            )
+        pb_sidebar_state = PageConfigProto.AUTO
+        msg.page_config_changed.initial_sidebar_width.pixel_width = (
+            initial_sidebar_state
+        )
     else:
         # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidSidebarStateError(
@@ -287,14 +308,16 @@ def set_menu_items_proto(
     lowercase_menu_items: MenuItems, menu_items_proto: PageConfigProto.MenuItems
 ) -> None:
     if GET_HELP_KEY in lowercase_menu_items:
-        if lowercase_menu_items[GET_HELP_KEY] is not None:
-            menu_items_proto.get_help_url = lowercase_menu_items[GET_HELP_KEY]
+        get_help_url = lowercase_menu_items[GET_HELP_KEY]
+        if get_help_url is not None:
+            menu_items_proto.get_help_url = get_help_url
         else:
             menu_items_proto.hide_get_help = True
 
     if REPORT_A_BUG_KEY in lowercase_menu_items:
-        if lowercase_menu_items[REPORT_A_BUG_KEY] is not None:
-            menu_items_proto.report_a_bug_url = lowercase_menu_items[REPORT_A_BUG_KEY]
+        report_a_bug_url = lowercase_menu_items[REPORT_A_BUG_KEY]
+        if report_a_bug_url is not None:
+            menu_items_proto.report_a_bug_url = report_a_bug_url
         else:
             menu_items_proto.hide_report_a_bug = True
 

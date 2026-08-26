@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,15 +19,14 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.shared.app_utils import reset_hovering, select_selectbox_option
 
 
 def _select_pdf_scenario(app: Page, scenario: str):
     """Select a PDF test scenario from the dropdown."""
-    selectbox_input = app.get_by_test_id("stSelectbox").locator("input")
-    selectbox_input.clear()
-    selectbox_input.type(scenario)
-    selectbox_input.press("Enter")
-    wait_for_app_run(app)
+    select_selectbox_option(app, "PDF Test Scenarios", scenario)
+    # reset hovering to avoid some flakiness:
+    reset_hovering(app)
 
 
 def _expect_pdf_container_attached(app: Page):
@@ -304,9 +303,9 @@ def test_st_pdf_widget_interactions(app: Page):
     # Wait for slider to be ready for interaction
     _wait_for_slider_to_be_ready(app)
 
-    slider_thumb = height_slider.locator("[role='slider']")
-    expect(slider_thumb).to_be_visible()
-    expect(slider_thumb).to_have_attribute("aria-valuenow", re.compile(r".*"))
+    expect(height_slider.get_by_test_id("stSliderThumbValue")).to_be_visible()
+    slider_thumb = height_slider.get_by_role("slider")
+    expect(slider_thumb).to_have_attribute("value", re.compile(r".*"))
 
     # Verify that the PDF renders with the current slider value
     _expect_pdf_container_attached(app)
@@ -339,12 +338,10 @@ def test_st_pdf_different_heights_snapshots(
     initial_height = initial_box["height"]
     assert_snapshot(pdf_container, name="st_pdf-height_default")
 
-    # Get the actual slider element
-    slider_element = height_slider.get_by_role("slider")
-    expect(slider_element).to_be_visible()
+    expect(height_slider.get_by_test_id("stSliderThumbValue")).to_be_visible()
 
-    # Move slider to minimum (200px) using proper e2e slider interaction
-    slider_element.hover()
+    # Move slider to minimum (200px) — hover the visible stSlider container, then drag left
+    height_slider.hover()
     app.mouse.down()
 
     # Move mouse far to the left to reach minimum value
@@ -367,8 +364,8 @@ def test_st_pdf_different_heights_snapshots(
 
     assert_snapshot(pdf_container, name="st_pdf-height_minimum")
 
-    # Move slider to maximum (800px) using proper e2e slider interaction
-    slider_element.hover()
+    # Move slider to maximum (800px) — hover the visible stSlider container, then drag right
+    height_slider.hover()
     app.mouse.down()
 
     # Move mouse far to the right to reach maximum value

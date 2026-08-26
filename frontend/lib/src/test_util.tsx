@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-import React, { FC, PropsWithChildren, ReactElement } from "react"
+import { FC, PropsWithChildren, ReactElement, useRef } from "react"
 
 import {
   render as reactTestingLibraryRender,
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
-import { Vector } from "apache-arrow"
 
-import { PageConfig } from "@streamlit/protobuf"
+import { Config, PageConfig } from "@streamlit/protobuf"
 
 import {
-  DownloadContext,
-  DownloadContextProps,
-} from "./components/core/DownloadContext"
+  BackendOperationContext,
+  BackendOperationContextProps,
+} from "./components/core/BackendOperationContext"
 import {
   FormsContext,
   FormsContextProps,
@@ -52,6 +51,10 @@ import {
   SidebarConfigContextProps,
 } from "./components/core/SidebarConfigContext"
 import {
+  SkillsInstallContext,
+  SkillsInstallContextProps,
+} from "./components/core/SkillsInstallContext"
+import {
   ThemeContext,
   ThemeContextProps,
 } from "./components/core/ThemeContext"
@@ -68,6 +71,7 @@ import { createFormsData } from "./WidgetStateManager"
 const flexContextValue = {
   direction: Direction.VERTICAL,
   isInHorizontalLayout: false,
+  isDirectlyInColumn: false,
   isInRoot: false,
   isInContentWidthContainer: false,
 }
@@ -77,6 +81,8 @@ const defaultLibConfigContextValue = {
   mapboxToken: undefined,
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
+  showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+  disableDataExport: false,
 }
 
 const defaultSidebarConfigContextValue = {
@@ -85,6 +91,7 @@ const defaultSidebarConfigContextValue = {
   sidebarChevronDownshift: 0,
   expandSidebarNav: false,
   hideSidebarNav: false,
+  isSidebarLocked: false,
 }
 
 const defaultThemeContextValue = {
@@ -107,9 +114,16 @@ const defaultViewStateContextValue = {
 }
 
 const defaultScriptRunContextValue = {
+  stopScript: () => {},
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: "script run 123",
   fragmentIdsThisRun: [],
+  scriptRunFinishedSequence: 0,
+  scriptRunFinishedFragmentIds: [],
+}
+
+const defaultBackendOperationContextValue = {
+  backendOperationClient: undefined,
 }
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -131,7 +145,11 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
                     <ScriptRunContext.Provider
                       value={defaultScriptRunContextValue}
                     >
-                      {children}
+                      <BackendOperationContext.Provider
+                        value={defaultBackendOperationContextValue}
+                      >
+                        {children}
+                      </BackendOperationContext.Provider>
                     </ScriptRunContext.Provider>
                   </NavigationContext.Provider>
                 </ViewStateContext.Provider>
@@ -164,10 +182,14 @@ export function mockWindowLocation(hostname: string): void {
   // @ts-expect-error
   delete window.location
 
+  const hasScheme = /^https?:\/\//.test(hostname)
+  const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
+
   // @ts-expect-error
   window.location = {
     assign: vi.fn(),
-    hostname: hostname,
+    hostname: hasScheme ? new URL(hostname).hostname : hostname,
+    origin,
   }
 }
 
@@ -178,12 +200,22 @@ export function mockWindowLocation(hostname: string): void {
 export interface RenderWithContextsOptions {
   viewStateContext?: Partial<ViewStateContextProps>
   libConfigContext?: Partial<LibConfigContextProps>
-  sidebarConfigContext?: Partial<SidebarConfigContextProps>
+  /**
+   * Sidebar config context overrides. Note: `appRootRef` accepts a boolean here -
+   * when true, the helper creates a wrapper div with data-testid="stApp" and
+   * provides the ref through context (mirroring App.tsx behavior).
+   */
+  sidebarConfigContext?: Partial<
+    Omit<SidebarConfigContextProps, "appRootRef" | "isSidebarLocked">
+  > & {
+    appRootRef?: boolean
+  }
   themeContext?: Partial<ThemeContextProps>
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
-  downloadContext?: Partial<DownloadContextProps>
+  backendOperationContext?: Partial<BackendOperationContextProps>
+  skillsInstallContext?: Partial<SkillsInstallContextProps>
 }
 
 /**
@@ -237,6 +269,8 @@ export const renderWithContexts = (
     mapboxToken: undefined,
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
+    showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+    disableDataExport: false,
     ...options.libConfigContext,
   }
 
@@ -246,8 +280,23 @@ export const renderWithContexts = (
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
     hideSidebarNav: false,
-    ...options.sidebarConfigContext,
+    // Note: appRootRef is handled separately in the Wrapper component
+    ...(options.sidebarConfigContext
+      ? Object.fromEntries(
+          Object.entries(options.sidebarConfigContext).filter(
+            ([key]) => key !== "appRootRef"
+          )
+        )
+      : {}),
+    // Derive isSidebarLocked from initialSidebarState so tests can't provide
+    // an inconsistent context value.
+    isSidebarLocked:
+      (options.sidebarConfigContext?.initialSidebarState ??
+        PageConfig.SidebarState.AUTO) === PageConfig.SidebarState.LOCKED,
   }
+
+  // Track whether we should create an app root wrapper
+  const shouldCreateAppRoot = options.sidebarConfigContext?.appRootRef === true
 
   let currentThemeContextProps: ThemeContextProps = {
     activeTheme: mockTheme,
@@ -275,6 +324,9 @@ export const renderWithContexts = (
     scriptRunState: ScriptRunState.NOT_RUNNING,
     scriptRunId: "script run 123",
     fragmentIdsThisRun: [],
+    scriptRunFinishedSequence: 0,
+    scriptRunFinishedFragmentIds: [],
+    stopScript: vi.fn(),
     ...options.scriptRunContext,
   }
 
@@ -283,48 +335,94 @@ export const renderWithContexts = (
     ...options.formsContext,
   }
 
-  let currentDownloadContextProps: DownloadContextProps = {
-    requestDeferredFile: undefined,
-    ...options.downloadContext,
+  let currentBackendOperationContextProps: BackendOperationContextProps = {
+    backendOperationClient: undefined,
+    ...options.backendOperationContext,
   }
 
-  const Wrapper: FC<PropsWithChildren> = ({ children }) => (
-    <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>
-        <FlexContext.Provider value={flexContextValue}>
-          <LibConfigContext.Provider value={currentLibConfigContextProps}>
-            <SidebarConfigContext.Provider
-              value={currentSidebarConfigContextProps}
-            >
-              <ThemeContext.Provider value={currentThemeContextProps}>
-                <NavigationContext.Provider
-                  value={currentNavigationContextProps}
-                >
-                  <ViewStateContext.Provider
-                    value={currentViewStateContextProps}
+  // Shared single callout slot so the dedup behavior (first eligible
+  // ExceptionElement wins) matches production when several are rendered.
+  let skillsCalloutOwner: symbol | null = null
+  let currentSkillsInstallContextProps: SkillsInstallContextProps = {
+    enabled: false,
+    onInstall: () => Promise.resolve(undefined),
+    onShown: vi.fn(),
+    claimCallout: (token: symbol): boolean => {
+      if (skillsCalloutOwner === null || skillsCalloutOwner === token) {
+        skillsCalloutOwner = token
+        return true
+      }
+      return false
+    },
+    releaseCallout: (token: symbol): void => {
+      if (skillsCalloutOwner === token) {
+        skillsCalloutOwner = null
+      }
+    },
+    ...options.skillsInstallContext,
+  }
+
+  const Wrapper: FC<PropsWithChildren> = ({ children }) => {
+    // Create ref for app root if needed
+    const appRootRef = useRef<HTMLDivElement>(null)
+
+    // Build the actual sidebar config with the ref if needed
+    // Note: We intentionally don't use useMemo here because rerenderWithContexts
+    // needs to update the context value on each rerender when currentSidebarConfigContextProps changes.
+    // eslint-disable-next-line @eslint-react/no-unstable-context-value
+    const sidebarConfigValue: SidebarConfigContextProps = {
+      ...currentSidebarConfigContextProps,
+      ...(shouldCreateAppRoot && { appRootRef }),
+    }
+
+    const content = shouldCreateAppRoot ? (
+      <div data-testid="stApp" ref={appRootRef}>
+        {children}
+      </div>
+    ) : (
+      children
+    )
+
+    return (
+      <ThemeProvider theme={mockTheme.emotion}>
+        <WindowDimensionsProvider>
+          <FlexContext.Provider value={flexContextValue}>
+            <LibConfigContext.Provider value={currentLibConfigContextProps}>
+              <SidebarConfigContext.Provider value={sidebarConfigValue}>
+                <ThemeContext.Provider value={currentThemeContextProps}>
+                  <NavigationContext.Provider
+                    value={currentNavigationContextProps}
                   >
-                    <ScriptRunContext.Provider
-                      value={currentScriptRunContextProps}
+                    <ViewStateContext.Provider
+                      value={currentViewStateContextProps}
                     >
-                      <DownloadContext.Provider
-                        value={currentDownloadContextProps}
+                      <ScriptRunContext.Provider
+                        value={currentScriptRunContextProps}
                       >
-                        <FormsContext.Provider
-                          value={currentFormsContextProps}
+                        <BackendOperationContext.Provider
+                          value={currentBackendOperationContextProps}
                         >
-                          {children}
-                        </FormsContext.Provider>
-                      </DownloadContext.Provider>
-                    </ScriptRunContext.Provider>
-                  </ViewStateContext.Provider>
-                </NavigationContext.Provider>
-              </ThemeContext.Provider>
-            </SidebarConfigContext.Provider>
-          </LibConfigContext.Provider>
-        </FlexContext.Provider>
-      </WindowDimensionsProvider>
-    </ThemeProvider>
-  )
+                          <FormsContext.Provider
+                            value={currentFormsContextProps}
+                          >
+                            <SkillsInstallContext.Provider
+                              value={currentSkillsInstallContextProps}
+                            >
+                              {content}
+                            </SkillsInstallContext.Provider>
+                          </FormsContext.Provider>
+                        </BackendOperationContext.Provider>
+                      </ScriptRunContext.Provider>
+                    </ViewStateContext.Provider>
+                  </NavigationContext.Provider>
+                </ThemeContext.Provider>
+              </SidebarConfigContext.Provider>
+            </LibConfigContext.Provider>
+          </FlexContext.Provider>
+        </WindowDimensionsProvider>
+      </ThemeProvider>
+    )
+  }
 
   const result = reactTestingLibraryRender(component, {
     wrapper: Wrapper,
@@ -350,9 +448,21 @@ export const renderWithContexts = (
         }
       }
       if (newOptions?.sidebarConfigContext) {
+        // Filter out appRootRef since it's handled separately (boolean in options vs RefObject in context)
+        const filteredSidebarConfig = Object.fromEntries(
+          Object.entries(newOptions.sidebarConfigContext).filter(
+            ([key]) => key !== "appRootRef"
+          )
+        )
+        const newInitialSidebarState =
+          newOptions.sidebarConfigContext.initialSidebarState ??
+          currentSidebarConfigContextProps.initialSidebarState
         currentSidebarConfigContextProps = {
           ...currentSidebarConfigContextProps,
-          ...newOptions.sidebarConfigContext,
+          ...filteredSidebarConfig,
+          // Re-derive so it stays consistent with initialSidebarState.
+          isSidebarLocked:
+            newInitialSidebarState === PageConfig.SidebarState.LOCKED,
         }
       }
       if (newOptions?.themeContext) {
@@ -373,10 +483,10 @@ export const renderWithContexts = (
           ...newOptions.formsContext,
         }
       }
-      if (newOptions?.downloadContext) {
-        currentDownloadContextProps = {
-          ...currentDownloadContextProps,
-          ...newOptions.downloadContext,
+      if (newOptions?.backendOperationContext) {
+        currentBackendOperationContextProps = {
+          ...currentBackendOperationContextProps,
+          ...newOptions.backendOperationContext,
         }
       }
       if (newOptions?.scriptRunContext) {
@@ -385,23 +495,16 @@ export const renderWithContexts = (
           ...newOptions.scriptRunContext,
         }
       }
+      if (newOptions?.skillsInstallContext) {
+        currentSkillsInstallContextProps = {
+          ...currentSkillsInstallContextProps,
+          ...newOptions.skillsInstallContext,
+        }
+      }
       // Use the original rerender with the wrapper
       result.rerender(newComponent)
     },
   }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function arrayFromVector(vector: any): any {
-  if (Array.isArray(vector)) {
-    return vector.map(arrayFromVector)
-  }
-
-  if (vector instanceof Vector) {
-    return Array.from(vector)
-  }
-
-  return vector
 }
 
 /**

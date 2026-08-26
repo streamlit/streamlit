@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
+from streamlit.string_util import clean_text, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -77,16 +77,22 @@ class TextMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
 
-        Example
-        -------
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
+
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.text("This is text\n[and more text](that's not a Markdown link).")
 
-        .. output ::
+        .. output::
             https://doc-text.streamlit.app/
             height: 220px
 
@@ -94,14 +100,17 @@ class TextMixin:
         text_proto = TextProto()
         text_proto.body = clean_text(body)
         if help:
-            text_proto.help = help
+            text_proto.help = to_help_str(help)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue("text", text_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

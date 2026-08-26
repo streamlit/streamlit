@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,18 +17,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, cast
 
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.type_util import SupportsStr
 
 
@@ -109,7 +104,7 @@ class CodeMixin:
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language="python")
 
-        .. output ::
+        .. output::
             https://doc-code.streamlit.app/
             height: 220px
 
@@ -129,7 +124,7 @@ class CodeMixin:
         ... '''
         >>> st.code(code, language=None)
 
-        .. output ::
+        .. output::
             https://doc-code-ascii.streamlit.app/
             height: 380px
         """
@@ -141,14 +136,16 @@ class CodeMixin:
 
         if height is None:
             height = "content"
-        else:
-            validate_height(height, allow_content=True)
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(height=height, width=width)
+        layout_config = create_layout_config(
+            height=height,
+            width=width,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
 
         return self.dg._enqueue("code", code_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

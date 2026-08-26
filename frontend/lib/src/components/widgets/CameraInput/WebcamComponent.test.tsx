@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import Webcam from "react-webcam"
 
 import { render } from "~lib/test_util"
 
@@ -39,7 +38,9 @@ beforeEach(() => {
 
 // Clean up timers after each test to prevent memory leaks
 afterEach(() => {
-  vi.runOnlyPendingTimers() // Execute pending timers first
+  act(() => {
+    vi.runOnlyPendingTimers() // Execute pending timers first
+  })
   vi.clearAllTimers() // Then clear any remaining timers
   vi.useRealTimers() // Finally restore real timers
 })
@@ -58,13 +59,19 @@ const getProps = (props: Partial<Props> = {}): Props => {
   }
 }
 
+const advanceDebounceTimer = (): void => {
+  act(() => {
+    vi.advanceTimersByTime(1000)
+  })
+}
+
 describe("Test Webcam Component", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -75,7 +82,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -96,7 +103,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -118,7 +125,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -134,7 +141,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -142,12 +149,15 @@ describe("Test Webcam Component", () => {
   })
 
   it("changes `facingMode` when SwitchFacingMode button clicked", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTime,
+      skipHover: true,
+    })
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
 
     expect(screen.getByTestId("stCameraInputSwitchButton")).toBeInTheDocument()
 
@@ -155,18 +165,26 @@ describe("Test Webcam Component", () => {
       screen.getByTestId("stCameraInputSwitchButton")
     ).getByRole("button")
 
-    await user.click(switchButton)
+    await act(async () => {
+      await user.click(switchButton)
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     expect(props.setFacingMode).toHaveBeenCalledTimes(1)
   })
 
   it("test handle capture function", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTime,
+      skipHover: true,
+    })
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -174,5 +192,63 @@ describe("Test Webcam Component", () => {
     await user.click(screen.getByRole("button", { name: "Take Photo" }))
 
     expect(props.handleCapture).toHaveBeenCalled()
+  })
+})
+
+describe("WebcamComponent resolution constraints", () => {
+  beforeEach(() => {
+    vi.mocked(Webcam).mockClear()
+  })
+
+  const getProps = (props: Partial<Props> = {}): Props => ({
+    handleCapture: vi.fn(),
+    width: 500,
+    disabled: false,
+    setClearPhotoInProgress: vi.fn(),
+    clearPhotoInProgress: false,
+    facingMode: FacingMode.USER,
+    setFacingMode: vi.fn(),
+    testOverride: WebcamPermission.SUCCESS,
+    ...props,
+  })
+
+  const advanceDebounceTimer = (): void => {
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+  }
+
+  it("uses width ideal constraint and forceScreenshotSourceSize=false when no resolutionHeight", () => {
+    const props = getProps()
+    render(<WebcamComponent {...props} />)
+    advanceDebounceTimer()
+
+    const webcamCalls = vi.mocked(Webcam).mock.calls
+    expect(webcamCalls.length).toBeGreaterThan(0)
+    const webcamProps = webcamCalls[webcamCalls.length - 1][0] as Record<
+      string,
+      unknown
+    >
+    const constraints = webcamProps.videoConstraints as MediaTrackConstraints
+    expect(constraints).toMatchObject({ width: { ideal: expect.any(Number) } })
+    expect(constraints).not.toHaveProperty("height")
+    expect(webcamProps.forceScreenshotSourceSize).toBe(false)
+  })
+
+  it("uses height ideal constraint and forceScreenshotSourceSize=true when resolutionHeight is set", () => {
+    const props = getProps({ resolutionHeight: 1080 })
+    render(<WebcamComponent {...props} />)
+    advanceDebounceTimer()
+
+    const webcamCalls = vi.mocked(Webcam).mock.calls
+    expect(webcamCalls.length).toBeGreaterThan(0)
+    const webcamProps = webcamCalls[webcamCalls.length - 1][0] as Record<
+      string,
+      unknown
+    >
+    const constraints = webcamProps.videoConstraints as MediaTrackConstraints
+    expect(constraints).toMatchObject({ height: { ideal: 1080 } })
+    expect(constraints).not.toHaveProperty("width")
+    expect(webcamProps.forceScreenshotSourceSize).toBe(true)
   })
 })

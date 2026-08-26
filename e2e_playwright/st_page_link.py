@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,8 +39,16 @@ page_with_material_icon = st.Page(
 )
 
 # Test passing st.Page objects to st.page_link
-st.page_link(page_with_icon, label="Page Link with Icon from st.Page")
-st.page_link(page_with_material_icon, label="Page Link with Material Icon from st.Page")
+st.page_link(
+    page_with_icon,
+    label="Page Link with Icon from st.Page",
+    query_params={"foo": ["bar", "baz"]},
+)
+st.page_link(
+    page_with_material_icon,
+    label="Page Link with Material Icon from st.Page",
+    query_params=[("foo", "bar"), ("baz", "qux")],
+)
 
 # Test overriding page icons in st.page_link
 st.page_link(page_with_icon, label="Override Page Icon from st.Page", icon="🔥")
@@ -67,3 +75,11 @@ with st.sidebar:
 with st.container(key="custom_theme"):
     st.page_link("http://www.example.com", label="Custom Theme Example")
     st.button("Button Example", type="primary")
+
+
+st.page_link(
+    "http://www.example.com",
+    label="Icon Right",
+    icon="🌎",
+    icon_position="right",
+)

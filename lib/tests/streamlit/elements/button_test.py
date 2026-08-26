@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,8 +29,16 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.button import marshall_file
-from streamlit.errors import StreamlitAPIException, StreamlitPageNotFoundError
-from streamlit.navigation.page import StreamlitPage
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
+from streamlit.navigation.page import Page
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
@@ -111,6 +119,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert not c.is_form_submitter
         assert not c.disabled
 
+    @parameterized.expand(get_button_command_matrix([123]))
+    def test_non_string_label_is_coerced(
+        self, name: str, command: Callable[..., Any], label: int
+    ) -> None:
+        """Non-string labels are coerced to strings for protobuf assignment."""
+        command(label=label)
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.label == "123"
+
     @parameterized.expand(
         [
             (name, command, type_)
@@ -141,12 +158,116 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert c.icon == icon
 
     @parameterized.expand(get_button_command_matrix())
+    def test_invalid_icon_position_raises(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that invalid icon_position values raise an error."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
+            command(icon_position="center")  # type: ignore[arg-type]
+
+    @parameterized.expand(
+        [
+            (name, command, position)
+            for name, command in get_button_command_matrix()
+            for position in ["left", "right"]
+        ]
+    )
+    def test_icon_position(
+        self, name: str, command: Callable[..., Any], icon_position: str
+    ):
+        """Test that icon_position is serialized for button-like commands."""
+        command(icon_position=icon_position)
+
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        expected = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
+        assert c.icon_position == expected
+
+    @parameterized.expand(get_button_command_matrix())
     def test_just_disabled(self, name: str, command: Callable[..., Any]):
         """Test that it can be called with disabled param."""
         command(disabled=True)
 
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.disabled
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_serialization(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts are serialized for supported buttons."""
+        command(shortcut="Ctrl+K")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+k"
+
+    def test_cmd_shortcut_alias(self) -> None:
+        """Test that Cmd shortcuts are normalized."""
+        st.button("the label", shortcut="Cmd+O")
+
+        proto = self.get_delta_from_queue().new_element.button
+        assert proto.shortcut == "cmd+o"
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_ignores_case_and_whitespace(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts ignore casing and extraneous whitespace."""
+        command(shortcut="  CtRl  +  OptIon +   ShIfT   +   N   ")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+alt+shift+n"
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_modifier_only_shortcuts_raise(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that modifier-only shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="ctrl")
+
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="   shift   ")
+
+    @parameterized.expand(
+        [
+            ("upper_r", "R"),
+            ("lower_r", "r"),
+            ("shift_r", "Shift+R"),
+            ("ctrl_c", "Ctrl+C"),
+            ("cmd_c", "cmd+c"),
+        ]
+    )
+    def test_reserved_shortcuts_raise(self, _name: str, shortcut: str) -> None:
+        """Test that reserved shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("reserved", shortcut=shortcut)
+
+    def test_invalid_shortcut_raises(self) -> None:
+        """Test that invalid shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("invalid", shortcut="A+B")
 
     def test_stable_id_button_with_key(self):
         """Test that the button ID is stable when a stable key is provided."""
@@ -224,6 +345,60 @@ class ButtonTest(DeltaGeneratorTestCase):
             id2 = c2.id
             assert id1 == id2
 
+    @parameterized.expand(
+        [
+            ("rerun_and_callback", "rerun", lambda: st.write("Link clicked"), True),
+            ("ignore_mode", "ignore", "ignore", False),
+        ]
+    )
+    def test_stable_id_link_button_with_key(
+        self, _, first_on_click, second_on_click, include_callback_args
+    ):
+        """Test that key-based identity is stable for rerun and ignore modes."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            first_link_button_kwargs = {"on_click": first_on_click}
+            second_link_button_kwargs = {"on_click": second_on_click}
+
+            if include_callback_args:
+                first_link_button_kwargs |= {
+                    "args": ("arg1", "arg2"),
+                    "kwargs": {"kwarg1": "kwarg1"},
+                }
+                second_link_button_kwargs |= {
+                    "args": ("arg_1", "arg_2"),
+                    "kwargs": {"kwarg_1": "kwarg_1"},
+                }
+
+            st.link_button(
+                label="Label 1",
+                url="https://streamlit.io/1",
+                key="link_button_key",
+                help="Help 1",
+                type="secondary",
+                disabled=False,
+                width="content",
+                **first_link_button_kwargs,
+            )
+            c1 = self.get_delta_from_queue().new_element.link_button
+            id1 = c1.id
+
+            st.link_button(
+                label="Label 2",
+                url="https://streamlit.io/2",
+                key="link_button_key",
+                help="Help 2",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                **second_link_button_kwargs,
+            )
+            c2 = self.get_delta_from_queue().new_element.link_button
+            id2 = c2.id
+            assert id1 == id2
+
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
         for button_type, button_func, width in get_button_command_matrix(
@@ -291,7 +466,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.button("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -363,11 +538,57 @@ class ButtonTest(DeltaGeneratorTestCase):
             if name != "page_link"
         ]
     )
+    def test_button_wrap_default(self, name: str, command: Callable[..., Any]):
+        """By default wrap is left unset (auto) so the frontend can resolve it
+        based on the layout."""
+        command()
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert not el.HasField("wrap")
+
+    @parameterized.expand(
+        [
+            (name, command, wrap_value)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+            for wrap_value in (True, False)
+        ]
+    )
+    def test_button_wrap(
+        self, name: str, command: Callable[..., Any], wrap_value: bool
+    ):
+        """The wrap parameter is forwarded to the button proto."""
+        command(wrap=wrap_value)
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert el.wrap is wrap_value
+
+    def test_button_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the element id.
+
+        Two otherwise-identical buttons that differ only in wrap collide on the
+        same auto-generated id, proving wrap is excluded from id computation and
+        so preserves widget state when toggled.
+        """
+        st.button("same label")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.button("same label", wrap=False)
+
+    def test_page_link_does_not_support_wrap(self):
+        """st.page_link is intentionally excluded from the wrap parameter."""
+        with pytest.raises(TypeError):
+            st.page_link("https://example.com", label="Example", wrap=False)
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+        ]
+    )
     def test_invalid_type(self, name: str, command: Callable[..., Any]):
         """Test with invalid type parameter."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             command(type="invalid")
-        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
+        assert "Invalid `type` value" in str(exc_info.value)
 
     @parameterized.expand(
         [
@@ -453,6 +674,31 @@ class ButtonTest(DeltaGeneratorTestCase):
                     assert c.page_script_hash == "hash123"
                     assert c.label == "Page 1"
 
+    def test_page_link_missing_url_pathname_does_not_raise_keyerror(self):
+        """Pages without ``url_pathname`` (default registry payload) still resolve."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page1": {
+                "script_path": "/app/pages/page1.py",
+                "page_name": "Page 1",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/page1.py"):
+                    st.page_link("pages/page1.py")
+                    c = self.get_delta_from_queue().new_element.page_link
+                    assert c.page == ""
+                    assert c.page_script_hash == "hash123"
+                    assert c.label == "Page 1"
+
     def test_page_link_page_not_found(self):
         """Test page_link with non-existent page."""
         ctx = MagicMock()
@@ -472,10 +718,10 @@ class ButtonTest(DeltaGeneratorTestCase):
                         st.page_link("pages/nonexistent.py")
 
     def test_page_link_with_streamlit_page(self):
-        """Test page_link with StreamlitPage object."""
-        # Create a StreamlitPage manually without going through the constructor
+        """Test page_link with Page object."""
+        # Create a Page manually without going through the constructor
         # that checks for file existence
-        page = MagicMock(spec=StreamlitPage)
+        page = MagicMock(spec=Page)
         page._page = Path("/app/page.py")
         page._title = "Test Page"
         page._icon = "🏠"
@@ -485,6 +731,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         page.title = "Test Page"
         page.icon = "🏠"
         page.url_path = "test-page"
+        page.is_external = False
 
         ctx = MagicMock()
         with patch(

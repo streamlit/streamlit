@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,59 @@
 
 import styled from "@emotion/styled"
 
-export const StyledPopoverLabelContainer = styled.div(({ theme }) => ({
+import { getOverlayZIndex } from "~lib/components/shared/Base/styled-components"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+
+export const StyledPopoverBody = styled.div<{
+  $stretchWidth?: boolean
+  $calculatedWidth?: number
+}>(({ theme, $stretchWidth, $calculatedWidth = 0 }) => {
+  const isLight = hasLightBackgroundColor(theme)
+  return {
+    boxSizing: "border-box",
+    borderRadius: theme.radii.xl,
+    border: `${theme.sizes.borderWidth} solid ${isLight ? theme.colors.bgColor : theme.colors.borderColor}`,
+    boxShadow: isLight ? theme.shadows.popover : theme.shadows.none,
+    padding: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    maxHeight: "70vh",
+    overflow: "auto",
+    maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2 * ${theme.spacing.lg})`,
+    minWidth: $stretchWidth
+      ? `max(${$calculatedWidth}px, 10rem)`
+      : theme.sizes.minPopupWidth,
+    backgroundColor: theme.colors.bgColor,
+    zIndex: getOverlayZIndex(theme),
+    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+      maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
+    },
+  }
+})
+
+export const StyledPopoverLabelContainer = styled.div<{
+  $hideChevron?: boolean
+  $truncate?: boolean
+}>(({ theme, $hideChevron, $truncate }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,
-  // This is a hacky way to offset the "padding" of the expansion svg
-  // icon. Reason is that we want to use the same padding to the right side
-  // as the text on the left side. The alternative would be to overwrite the
-  // right padding of the button, which would also be hacky and involve slightly
-  // more logic.
-  // If the padding of the icon changes, this value needs to be adjusted.
-  // Also, if we want to apply the same adjustment for other elements, we should
-  // consider putting this into a theme variable or creating a shared styled component.
   // The SVG icon we are using seems to have an internal padding of around 25%.
-  marginRight: `calc(-${theme.iconSizes.lg} * 0.25)`,
+  // Only apply when the chevron is visible.
+  marginRight: $hideChevron ? 0 : `calc(-${theme.iconSizes.lg} * 0.25)`,
+  // Constrain the container to the button width so the label can ellipsize
+  // while the chevron stays visible. Account for the negative chevron margin;
+  // otherwise a content-width trigger loses that space and truncates a label
+  // that fits at its natural width.
+  ...($truncate && {
+    maxWidth: $hideChevron
+      ? "100%"
+      : `calc(100% + ${theme.iconSizes.lg} * 0.25)`,
+  }),
 }))
 
 export const StyledPopoverExpansionIcon = styled.div(({ theme }) => ({
   display: "inline-flex",
   // Small hack to better align the expansion icon with the label.
   marginTop: theme.spacing.threeXS,
+  // Keep the chevron visible when the label ellipsizes.
+  flexShrink: 0,
 }))

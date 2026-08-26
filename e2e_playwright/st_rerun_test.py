@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     expect_markdown,
     expect_prefixed_markdown,
+    get_text_input,
+    select_selectbox_option,
 )
 
 
@@ -69,10 +71,7 @@ def test_state_retained_on_app_scoped_rerun(app: Page):
     expect_prefixed_markdown(app, "selectbox selection:", "None")
 
     # Click on the selectbox and select the first option.
-    app.get_by_test_id("stSelectbox").first.locator("input").click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").first.click()
-    wait_for_app_run(app)
+    select_selectbox_option(app, "i should retain my state", "a")
 
     # Sanity check 2
     expect_markdown(app, "selectbox selection: a")
@@ -87,3 +86,47 @@ def test_clears_stale_elements_correctly(app: Page):
     click_button(app, "#8599 - Bug")
 
     expect(app.get_by_text("#8599 - Bug")).to_have_count(1)
+
+
+def test_st_rerun_in_widget_callback_preserves_widget_values(app: Page):
+    """st.rerun() in a widget callback reruns without discarding widget values.
+
+    One scenario test, since every step builds on the previous page state and e2e
+    runs are expensive. Exact body-run counts are deliberately left to the AppTest
+    in session_state_test.py: an assertion on the rendered run count here could
+    match the intermediate value of a double run before the second run lands.
+    """
+    _expect_initial_reruns_finished(app)
+
+    # Give a widget that no callback touches a value, so we can watch it survive
+    # an interaction on a different widget.
+    untouched_field = (
+        get_text_input(app, "untouched by callbacks").locator("input").first
+    )
+    untouched_field.focus()
+    untouched_field.fill("keep me")
+    untouched_field.blur()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "untouched text:", "keep me", exact_match=True)
+
+    # Typing here fires a callback that calls st.rerun().
+    callback_field = get_text_input(app, "rerun from callback").locator("input").first
+    callback_field.focus()
+    callback_field.fill("hello")
+    callback_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "callback count:", "1", exact_match=True)
+    # The rerun takes effect: it interrupts the callback body.
+    expect_prefixed_markdown(app, "resumed after rerun:", "False", exact_match=True)
+    # The interacting widget keeps the value the user just entered...
+    expect_prefixed_markdown(app, "callback text:", "hello", exact_match=True)
+    # ...and so does every other widget in the app.
+    expect_prefixed_markdown(app, "untouched text:", "keep me", exact_match=True)
+
+    # A trigger is delivered to its callback and is not replayed to the body of
+    # the rerun it queued.
+    click_button(app, "rerun from button callback")
+    expect_prefixed_markdown(app, "callback count:", "2", exact_match=True)
+    expect_prefixed_markdown(app, "button in body:", "False", exact_match=True)
+    expect_prefixed_markdown(app, "callback text:", "hello", exact_match=True)

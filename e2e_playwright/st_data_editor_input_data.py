@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,4 +54,4 @@ for i, test_case in enumerate(TEST_CASES):
         width="content",
     )
     if show_return_data:
-        st.dataframe(return_df_fixed, use_container_width=False)
+        st.dataframe(return_df_fixed, width="content")

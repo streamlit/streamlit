@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,15 @@
 # limitations under the License.
 
 
+import re
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -25,8 +31,12 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_text_input,
 )
+from e2e_playwright.shared.input_utils import (
+    expect_global_hotkeys_not_fired,
+    type_common_characters_into_input,
+)
 
-TEXT_INPUT_ELEMENTS = 19
+TEXT_INPUT_ELEMENTS = 34
 
 
 def test_text_input_widget_rendering(
@@ -93,6 +103,26 @@ def test_text_input_widget_rendering(
         name="st_text_input-material_icon",
     )
     assert_snapshot(
+        get_element_by_key(themed_app, "email_input"),
+        name="st_text_input-type_email",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "url_input"),
+        name="st_text_input-type_url",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "phone_input"),
+        name="st_text_input-type_phone",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "search_input"),
+        name="st_text_input-type_search",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "email_override_input"),
+        name="st_text_input-type_email_overrides",
+    )
+    assert_snapshot(
         get_text_input(themed_app, "text input 17 (width=200px)"),
         name="st_text_input-width_200px",
     )
@@ -118,7 +148,34 @@ def test_text_input_has_correct_initial_values(app: Page):
     expect_markdown(app, "value 11: my password")
     expect_markdown(app, "text input 12 (value from state) - value: xyz")
     expect_markdown(app, "text input 13 (value from form) - value:")
-    expect_markdown(app, "Rerun counter: 1")
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
+    expect_markdown(app, "validated regex value: ")
+    expect_markdown(app, "validated custom value: ")
+    expect_markdown(app, "invalid regex value: ")
+    expect_markdown(app, "validated form submitted: False")
+    expect_markdown(app, "validated form value: ")
+    expect_markdown(app, "Validation rerun counter: 1")
+
+
+def test_text_input_typing_common_characters_does_not_trigger_global_hotkeys(
+    app: Page,
+) -> None:
+    """Typing into st.text_input must not trigger global hotkeys (e.g. c/r)."""
+    text_input_field = (
+        get_text_input(app, "text input 1 (default)").locator("input").first
+    )
+    rerun_counter = app.get_by_text("Rerun counter: 1", exact=True)
+
+    expect_global_hotkeys_not_fired(app, expected_runs=1, runs_locator=rerun_counter)
+    typed = type_common_characters_into_input(
+        text_input_field,
+        after_each=lambda _ch: expect_global_hotkeys_not_fired(
+            app,
+            expected_runs=1,
+            runs_locator=rerun_counter,
+        ),
+    )
+    expect(text_input_field).to_have_value(typed)
 
 
 def test_text_input_shows_instructions_when_dirty(
@@ -197,12 +254,254 @@ def test_text_input_has_correct_value_on_click_outside(app: Page):
     expect_markdown(app, "value 1: hello world")
 
 
+def test_text_input_validation_blocks_invalid_commits_and_recovers(app: Page):
+    """Client-side validation blocks invalid commits and allows valid ones."""
+    validated_input = (
+        get_element_by_key(app, "validated_regex_input").locator("input").first
+    )
+
+    validated_input.fill("123")
+    validated_input.blur()
+
+    expect_markdown(app, "validated regex value: ")
+    expect_markdown(app, "Validation rerun counter: 1")
+
+    error_icon = get_element_by_key(app, "validated_regex_input").get_by_test_id(
+        "stTooltipErrorHoverTarget"
+    )
+    expect(error_icon).to_be_visible()
+
+    validated_input.fill("abc")
+    validated_input.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "validated regex value: abc")
+    expect_markdown(app, "Validation rerun counter: 2")
+    expect(error_icon).not_to_be_visible()
+
+
+def test_text_input_validation_custom_and_invalid_regex_messages(app: Page):
+    """Custom validation and invalid regex config surface the right tooltip text."""
+    custom_input = (
+        get_element_by_key(app, "validated_custom_input").locator("input").first
+    )
+    custom_input.fill("123")
+    custom_input.blur()
+
+    custom_error_icon = get_element_by_key(
+        app, "validated_custom_input"
+    ).get_by_test_id("stTooltipErrorHoverTarget")
+    expect(custom_error_icon).to_be_visible()
+    custom_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Lowercase only"
+    )
+
+    invalid_regex_widget = get_element_by_key(app, "invalid_validate_regex_input")
+    invalid_regex_error_icon = invalid_regex_widget.get_by_test_id(
+        "stTooltipErrorHoverTarget"
+    )
+    # The invalid-regex config error is surfaced immediately, even before any
+    # user interaction.
+    expect(invalid_regex_error_icon).to_be_visible()
+    invalid_regex_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Invalid validate regex: [. Error:"
+    )
+
+    # An invalid validation regex must block commits rather than silently
+    # accepting the value.
+    invalid_regex_widget.locator("input").first.fill("anything")
+    invalid_regex_widget.locator("input").first.press("Enter")
+    expect_markdown(app, "invalid regex value: ")
+
+
+def test_text_input_validation_error_state_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the validation error state is rendered correctly via screenshot."""
+    validated_widget = get_element_by_key(themed_app, "validated_regex_input")
+    validated_input = validated_widget.locator("input").first
+
+    validated_input.fill("123")
+    validated_input.blur()
+
+    error_icon = validated_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+
+    assert_snapshot(validated_widget, name="st_text_input-validation_error")
+
+
+def test_text_input_specialized_types_attributes(app: Page):
+    """Specialized types set the native input type and their smart defaults."""
+    email_widget = get_element_by_key(app, "email_input")
+    email_input = email_widget.locator("input").first
+    expect(email_input).to_have_attribute("type", "email")
+    expect(email_input).to_have_attribute("placeholder", "you@example.com")
+    expect(email_input).to_have_attribute("autocomplete", "email")
+    expect(email_widget.get_by_test_id("stTextInputIcon")).to_be_visible()
+    expect(email_widget.get_by_test_id("stIconMaterial")).to_have_text("mail")
+
+    url_input = get_element_by_key(app, "url_input").locator("input").first
+    expect(url_input).to_have_attribute("type", "url")
+    expect(url_input).to_have_attribute("placeholder", "https://example.com")
+    expect(url_input).to_have_attribute("autocomplete", "url")
+
+    phone_input = get_element_by_key(app, "phone_input").locator("input").first
+    expect(phone_input).to_have_attribute("type", "tel")
+    expect(phone_input).to_have_attribute("placeholder", "+1 234 567 8900")
+    expect(phone_input).to_have_attribute("autocomplete", "tel")
+
+    search_input = get_element_by_key(app, "search_input").locator("input").first
+    expect(search_input).to_have_attribute("type", "search")
+    expect(search_input).to_have_attribute("placeholder", "Search")
+    expect(search_input).to_have_attribute("autocomplete", "off")
+
+    # Explicit overrides win over the type defaults (icon, placeholder,
+    # autocomplete, and custom validate message).
+    override_widget = get_element_by_key(app, "email_override_input")
+    override_input = override_widget.locator("input").first
+    expect(override_input).to_have_attribute("type", "email")
+    expect(override_input).to_have_attribute("placeholder", "name@company.com")
+    expect(override_input).to_have_attribute("autocomplete", "off")
+    expect(override_widget.get_by_test_id("stIconMaterial")).to_have_text("work")
+
+    override_input.fill("user@example.com")
+    override_input.blur()
+    expect(
+        app.get_by_text("override value: user@example.com", exact=True)
+    ).to_have_count(0)
+    override_error_icon = override_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(override_error_icon).to_be_visible()
+    override_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Use your @company.com address."
+    )
+
+
+def test_text_input_search_clear_button(app: Page):
+    """The search type shows a clear (x) button that empties the input on click.
+
+    ``search_input`` is ``bind="query-params"``, so the clear-button path (which
+    bypasses the Enter/blur commit flow) must also drop the value from the URL.
+    """
+    search_widget = get_element_by_key(app, "search_input")
+    search_field = search_widget.locator("input").first
+
+    clear_button = search_widget.get_by_test_id("stTextInputClearButton")
+    # Empty search input: no clear button yet, and no bound query param.
+    expect(clear_button).not_to_be_visible()
+    expect(app).not_to_have_url(re.compile(r"[?&]search_input="))
+
+    # Commit a value so it is reflected in the bound query param.
+    search_field.fill("laptops")
+    search_field.press("Enter")
+    wait_for_app_run(app)
+    expect(clear_button).to_be_visible()
+    expect(app).to_have_url(re.compile(r"search_input=laptops"))
+
+    clear_button.click()
+    wait_for_app_run(app)
+
+    expect(search_field).to_have_value("")
+    expect(clear_button).not_to_be_visible()
+    # Clearing via the button also removes the value from the bound query param.
+    expect(app).not_to_have_url(re.compile(r"[?&]search_input="))
+
+
+def test_text_input_email_default_validation(app: Page):
+    """The email type validates by default: it blocks invalid and commits valid values."""
+    email_widget = get_element_by_key(app, "email_input")
+    email_field = email_widget.locator("input").first
+
+    # An invalid value is blocked from committing and surfaces an error. The
+    # committed value stays empty, so the invalid text must not appear in the
+    # `st.write` output.
+    email_field.fill("abc")
+    email_field.blur()
+    expect(app.get_by_text("email value: abc", exact=True)).to_have_count(0)
+
+    error_icon = email_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    # Streamlit owns the single error treatment: tooltip text is the shipped
+    # email message (not a native constraint bubble).
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Enter a valid email address."
+    )
+    expect(email_widget.get_by_test_id("stTextInputErrorIcon")).to_have_count(1)
+
+    # A valid value commits and clears the error.
+    email_field.fill("a@b.co")
+    email_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "email value: a@b.co")
+    expect(error_icon).not_to_be_visible()
+
+
+def test_text_input_url_default_validation(app: Page):
+    """The url type validates by default: it blocks invalid and commits valid values."""
+    url_widget = get_element_by_key(app, "url_input")
+    url_field = url_widget.locator("input").first
+
+    url_field.fill("not a url")
+    url_field.blur()
+    expect(app.get_by_text("url value: not a url", exact=True)).to_have_count(0)
+
+    error_icon = url_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+    error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_have_text(
+        "Enter a valid URL."
+    )
+
+    url_field.fill("example.com")
+    url_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "url value: example.com")
+    expect(error_icon).not_to_be_visible()
+
+
+def test_text_input_validation_blocks_form_submit_and_recovers(app: Page):
+    """Form submission is blocked when validation fails and succeeds after correction."""
+    form_input = get_element_by_key(app, "validated_form_input").locator("input").first
+    submit_button = app.get_by_role(
+        "button", name="Submit validated text input form", exact=True
+    )
+
+    form_input.fill("12")
+    submit_button.click()
+
+    expect_markdown(app, "validated form value: ")
+    expect_markdown(app, "Validation rerun counter: 1")
+
+    form_error_icon = get_element_by_key(app, "validated_form_input").get_by_test_id(
+        "stTooltipErrorHoverTarget"
+    )
+    expect(form_error_icon).to_be_visible()
+    form_error_icon.hover()
+    expect(app.get_by_test_id("stTooltipErrorContent")).to_contain_text(
+        "Enter exactly four digits."
+    )
+
+    form_input.fill("1234")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "validated form value: 1234")
+    expect_markdown(app, "validated form submitted: True")
+    expect_markdown(app, "Validation rerun counter: 2")
+    expect(form_error_icon).not_to_be_visible()
+
+
 def test_text_input_does_not_trigger_rerun_when_value_does_not_change_and_click_outside(
     app: Page,
 ):
     """Test that st.text_input has the correct value on click outside."""
 
-    expect_markdown(app, "Rerun counter: 1")
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
 
     first_text_input_field = (
         get_text_input(app, "text input 1 (default)").locator("input").first
@@ -212,11 +511,11 @@ def test_text_input_does_not_trigger_rerun_when_value_does_not_change_and_click_
     app.get_by_test_id("stMarkdown").first.click()
 
     expect_markdown(app, "value 1: hello world")
-    expect_markdown(app, "Rerun counter: 2")
+    expect(app.get_by_text("Rerun counter: 2", exact=True)).to_be_visible()
 
     first_text_input_field.focus()
     app.get_by_test_id("stMarkdown").first.click()
-    expect_markdown(app, "Rerun counter: 2")
+    expect(app.get_by_text("Rerun counter: 2", exact=True)).to_be_visible()
 
 
 def test_empty_text_input_behaves_correctly(app: Page):
@@ -344,3 +643,169 @@ def test_dynamic_text_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated text input value:", "bar")
+
+
+def test_text_input_query_param_seeding(page: Page, app_port: int):
+    """Test that text input value can be seeded from URL query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_text=seeded_value")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound text value:", "seeded_value")
+
+
+def test_text_input_query_param_updates_url(app: Page):
+    """Test that changing a bound text input updates the URL."""
+    # Initially empty, no query param in URL
+    expect_prefixed_markdown(app, "bound text value:", "")
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text="))
+
+    # Type a value and press Enter
+    text_input = get_text_input(app, "Bound no default")
+    text_input.locator("input").fill("test_value")
+    text_input.locator("input").press("Enter")
+    wait_for_app_run(app)
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_text=test_value"))
+    expect_prefixed_markdown(app, "bound text value:", "test_value")
+
+    # Clear the value
+    text_input.locator("input").fill("")
+    text_input.locator("input").press("Enter")
+    wait_for_app_run(app)
+
+    # Query param should be removed since value is back to default (empty)
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text="))
+
+
+def test_text_input_query_param_default_override(page: Page, app_port: int):
+    """Test text input with default value: seeding and param removal."""
+    # Load app with query param overriding the "hello" default
+    page.goto(f"http://localhost:{app_port}/?bound_text_default=world")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound text default value:", "world")
+
+    # Change back to default ("hello")
+    text_input = get_text_input(page, "Bound with default")
+    text_input.locator("input").fill("hello")
+    text_input.locator("input").press("Enter")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_text_default="))
+    expect_prefixed_markdown(page, "bound text default value:", "hello")
+
+
+def test_text_input_query_param_special_chars(page: Page, app_port: int):
+    """Test that URL-encoded special characters work in query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_text=hello%20world%21")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound text value:", "hello world!")
+
+
+def test_text_input_query_param_max_chars_truncation(page: Page, app_port: int):
+    """Test that URL-seeded values exceeding max_chars are truncated."""
+    page.goto(f"http://localhost:{app_port}/?bound_max=verylongtext")
+    wait_for_app_loaded(page)
+
+    # Should be truncated to 5 characters
+    expect_prefixed_markdown(page, "bound text max value:", "veryl")
+
+
+def test_text_input_query_param_programmatic_session_state_syncs_url(app: Page):
+    """Programmatic session_state updates sync bind=query-params to the URL."""
+    expect_prefixed_markdown(app, "bound text ss value:", "default")
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text_ss="))
+
+    app.get_by_role("button", name="Set bound_text_ss via session_state").click()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"bound_text_ss="))
+    expect_prefixed_markdown(app, "bound text ss value:", "arbitrary value")
+
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "bound text ss value:", "arbitrary value")
+
+    app.get_by_role("button", name="Reset bound_text_ss to default").click()
+    wait_for_app_run(app)
+
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text_ss="))
+    expect_prefixed_markdown(app, "bound text ss value:", "default")
+
+
+def test_text_input_setvalue_preserved_on_rerun(app: Page):
+    """Test that setValue=True commands are delivered even when the protobuf hash matches.
+
+    This verifies that text_input with a programmatic value is correctly set
+    on every rerun, not cached/skipped due to hash matching.
+    """
+    expect_markdown(app, "Text input counter: 1")
+    text_input = get_text_input(app, "Programmatic value input")
+    text_input_field = text_input.locator("input").first
+    expect(text_input_field).to_have_value("fixed_value")
+
+    for expected_counter in range(2, 5):
+        app.get_by_role("button", name="Trigger text input rerun", exact=True).click()
+        wait_for_app_run(app)
+        expect_markdown(app, f"Text input counter: {expected_counter}")
+        expect(text_input_field).to_have_value("fixed_value")
+
+
+def test_text_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore text value:", "hello")
+
+    text_input = get_text_input(app, "Ignore change text input")
+    text_input_field = text_input.locator("input").first
+
+    # Fill without committing - URL should not update until Enter.
+    text_input_field.fill("world")
+    expect(text_input_field).to_have_value("world")
+    wait_for_app_run(app)
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text="))
+
+    # Commit with Enter - should NOT trigger a rerun, but should update the URL
+    text_input_field.press("Enter")
+
+    # Give a spurious rerun a chance to land before asserting the counter.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Rerun counter: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Rerun counter: 2", exact=True)).not_to_be_visible()
+    expect(text_input_field).to_have_value("world")
+    expect_prefixed_markdown(app, "Ignore text value:", "hello")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_text=world"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore text", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify the updated value is now visible
+    expect(app.get_by_text("Ignore text value: world", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text value: world", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    text_input_field.fill("blurred")
+    expect(text_input_field).to_have_value("blurred")
+    app.get_by_role("button", name="Apply ignore text", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore text value: blurred", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text value: blurred", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_text_input(app, "Ignore change text input").locator("input").first
+    ).to_have_value("blurred")
+    expect_prefixed_markdown(app, "Ignore text value:", "blurred")

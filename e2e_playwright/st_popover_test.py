@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+import re
+
+from playwright.sync_api import Locator, Page, ViewportSize, expect
+
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_button,
+    click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
     get_popover,
     open_popover,
+    reset_hovering,
 )
 
 
@@ -29,7 +40,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(14)
+    expect(popover_elements).to_have_count(30)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -108,10 +119,161 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     columns_popover_1 = open_popover(app, "popover 16 (in column 1)")
     expect_markdown(columns_popover_1, "Popover in column 1")
 
+    # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
+    content_width_label = (
+        get_popover(app, "popover 17 (in column 2)")
+        .get_by_test_id("stMarkdownContainer")
+        .locator("p")
+    )
+    wait_until(
+        app,
+        lambda: content_width_label.evaluate("el => el.scrollWidth <= el.clientWidth"),
+    )
+
     assert_snapshot(
         columns_container,
         name="st_popover-columns",
     )
+
+
+def test_popover_in_sidebar_stays_within_viewport(app: Page):
+    """A popover opened inside the sidebar must render fully within the browser
+    viewport — the sidebar's `overflow: auto` must not clip or force-flip the
+    popover body off-screen. Regression test for
+    https://github.com/streamlit/streamlit/issues/9387.
+
+    Uses a small viewport so the popover body (which has content taller than
+    the available space) must be clamped by the `size` middleware to fit
+    within the viewport. Without the fix, shift/flip would treat the
+    sidebar's `overflow: auto` container as the boundary and render the
+    popover off-screen.
+    """
+    # Constrain viewport height so the popover content must be clamped to
+    # fit — this is what actually exercises the size middleware.
+    app.set_viewport_size({"width": 1024, "height": 600})
+
+    popover_body = open_popover(app, "popover 5 (in sidebar)")
+    expect_markdown(popover_body, "Popover in sidebar with dataframe")
+
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+
+    body_box = popover_body.bounding_box()
+    assert body_box is not None, "popover body must have a bounding box"
+
+    # The popover body's rect must fit entirely inside the viewport. Before the
+    # #9387 fix, shift/flip treated the sidebar's `overflow: auto` container as
+    # the boundary and squished the body against the sidebar's left edge (or
+    # flipped it off-screen), producing negative `x` / clipped `y` values.
+    # A 1px epsilon guards against subpixel layout differences across browsers.
+    epsilon = 1
+    assert body_box["x"] >= -epsilon, f"popover body extends off left edge: {body_box}"
+    assert body_box["y"] >= -epsilon, f"popover body extends off top edge: {body_box}"
+    assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
+        f"popover body extends past right edge: {body_box}, viewport={viewport}"
+    )
+    assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
+        f"popover body extends past bottom edge: {body_box}, viewport={viewport}"
+    )
+
+    # The popover body's minimum width (20rem = 320px) is wider than the
+    # default sidebar, so it MUST extend past the sidebar's right edge to
+    # render its content. This is the "escape the sidebar" behavior we want.
+    sidebar = app.get_by_test_id("stSidebar")
+    sidebar_box = sidebar.bounding_box()
+    assert sidebar_box is not None
+    assert (
+        body_box["x"] + body_box["width"] > sidebar_box["x"] + sidebar_box["width"]
+    ), (
+        "popover body must extend beyond the sidebar (it is portalled to body); "
+        f"body={body_box}, sidebar={sidebar_box}"
+    )
+
+
+def test_popover_stays_within_narrow_viewport(app: Page):
+    """Popover content must stay fully within a narrow viewport (e.g. an
+    oEmbed host iframe). Regression for
+    https://github.com/streamlit/streamlit/issues/9340.
+
+    Without `size` middleware, the ~704px design max-width (and, under
+    320px, the CSS min-width) overflow a narrow embed: `shift` pins one
+    edge and the host clips the other.
+
+    Three cases in one app load (see e2e_playwright/AGENTS.md):
+
+    - **640px** — between the 576px CSS media-query clamp and the ~704px
+      design max-width, so only JS `size` keeps the popover in bounds.
+      Also checks vertical overflow.
+    - **300px** — narrower than the 320px baseline min-width; exercises the
+      middleware's min-width cap (horizontal only — flip can pick a tight
+      vertical side at this width).
+    - **Stretch at 640px** — `width="stretch"` uses
+      `min-width: max($calculatedWidth, 10rem)`; exercises the
+      stretch-aware min-width path against the applied max-width.
+    """
+    # 1px epsilon guards against subpixel layout differences across browsers.
+    epsilon = 1
+
+    def assert_within_viewport(
+        popover_body: Locator,
+        viewport: ViewportSize,
+        *,
+        check_vertical: bool,
+    ) -> None:
+        body_box = popover_body.bounding_box()
+        assert body_box is not None, "popover body must have a bounding box"
+        assert body_box["x"] >= -epsilon, (
+            f"popover body extends off left edge: {body_box}"
+        )
+        assert body_box["x"] + body_box["width"] <= viewport["width"] + epsilon, (
+            f"popover body extends past right edge: {body_box}, viewport={viewport}"
+        )
+        if check_vertical:
+            assert body_box["y"] >= -epsilon, (
+                f"popover body extends off top edge: {body_box}"
+            )
+            assert body_box["y"] + body_box["height"] <= viewport["height"] + epsilon, (
+                f"popover body extends past bottom edge: {body_box}, "
+                f"viewport={viewport}"
+            )
+
+    # Case 1: 640px — past the 576px CSS clamp so JS `size` constrains width.
+    # Assert vertical bounds too (800px height catches top/bottom overflow).
+    app.set_viewport_size({"width": 640, "height": 800})
+    popover_body = open_popover(app, "popover 3 (with widgets)")
+    expect_markdown(popover_body, "Hello World 👋")
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=True)
+
+    # Re-open fresh at each viewport rather than relying on Floating UI's
+    # autoUpdate reflow. Dismiss with Escape, not an outside click at a fixed
+    # position: at 300px the layout can put that point on the trigger itself,
+    # which made this step intermittently fail to close the popover.
+    app.keyboard.press("Escape")
+    expect(popover_body).not_to_be_visible()
+
+    # Case 2: 300px — below the 320px CSS min-width; needs the min-width cap.
+    # Horizontal only — flip may pick a tight vertical side.
+    app.set_viewport_size({"width": 300, "height": 800})
+    popover_body = open_popover(app, "popover 3 (with widgets)")
+    expect_markdown(popover_body, "Hello World 👋")
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=False)
+
+    app.keyboard.press("Escape")
+    expect(popover_body).not_to_be_visible()
+
+    # Case 3: stretch popover (`min-width: max($calculatedWidth, 10rem)`).
+    # `expect_markdown` waits until content (and any ResizeObserver-driven
+    # `$calculatedWidth` update) has settled before we measure the box.
+    app.set_viewport_size({"width": 640, "height": 800})
+    popover_body = open_popover(app, "popover 11 (width=stretch)")
+    expect_markdown(popover_body, "Stretch width")
+    viewport = app.viewport_size
+    assert viewport is not None, "viewport_size must be set for this test"
+    assert_within_viewport(popover_body, viewport, check_vertical=False)
 
 
 def test_popover_container_rendering(
@@ -184,8 +346,8 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
     # Hover over dataframe
     dataframe_element.hover()
-    # Should only have  two buttons, search + download CSV
-    expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(2)
+    # Should have three buttons: search, download CSV, column visibility
+    expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(3)
 
 
 def test_show_tooltip_on_hover(app: Page):
@@ -195,7 +357,7 @@ def test_show_tooltip_on_hover(app: Page):
         .get_by_test_id("stPopoverButton")
         .first
     )
-    # Click the button to open it:
+    reset_hovering(app)
     popover_button.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
@@ -204,3 +366,367 @@ def test_show_tooltip_on_hover(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stPopover")
+
+
+def test_dynamic_popover_lazy_execution(app: Page):
+    """Test that dynamic popover only executes content when open."""
+    # Initially closed — content should not have executed
+    expect(app.get_by_text("Popover execution count: 0")).to_be_visible()
+
+    # Open the dynamic popover
+    open_popover(app, "Dynamic popover")
+    wait_for_app_run(app)
+
+    # Content should have executed once
+    expect(app.get_by_text("Popover execution count: 1")).to_be_visible()
+
+    # Close the popover by pressing Escape
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Count should stay at 1
+    expect(app.get_by_text("Popover execution count: 1")).to_be_visible()
+
+    # Popover content should not be visible when closed
+    expect(app.get_by_text("Popover content executed 1 times")).not_to_be_visible()
+
+
+def test_dynamic_popover_programmatic_control(app: Page):
+    """Test programmatic control of dynamic popover via session state."""
+    # Open via button
+    click_button(app, "Open Popover")
+
+    # Popover content should be visible
+    expect(app.get_by_text("Programmatically controlled popover")).to_be_visible()
+
+    # Close via button
+    click_button(app, "Close Popover")
+
+    # Content should not be visible
+    expect(app.get_by_text("Programmatically controlled popover")).not_to_be_visible()
+
+
+def test_popover_key_only_does_not_trigger_rerun(app: Page):
+    """Test that a popover with key but no on_change does not trigger reruns."""
+    # Record the initial rerun count
+    rerun_text = app.get_by_text("Key-only rerun count:")
+    expect(rerun_text).to_be_visible()
+    initial_count = rerun_text.text_content()
+
+    # Open the key-only popover
+    open_popover(app, "Key-only popover")
+
+    # Rerun count should NOT have changed (no rerun triggered)
+    expect(rerun_text).to_have_text(initial_count or "")
+
+    # Close via Escape
+    app.keyboard.press("Escape")
+
+    # Still no rerun
+    expect(rerun_text).to_have_text(initial_count or "")
+
+
+def test_dynamic_popover_in_fragment(app: Page):
+    """Test that a dynamic popover works correctly inside a fragment."""
+    # Initially closed — fragment content should not have executed
+    expect(app.get_by_text("Fragment popover exec count: 0")).to_be_visible()
+
+    # Open the fragment popover
+    open_popover(app, "Fragment popover")
+    wait_for_app_run(app)
+
+    # Content should have executed once
+    expect(app.get_by_text("Fragment popover exec count: 1")).to_be_visible()
+
+    # Close the popover
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Count should stay at 1
+    expect(app.get_by_text("Fragment popover exec count: 1")).to_be_visible()
+
+    # Popover content should not be visible when closed
+    expect(
+        app.get_by_text("Fragment popover content executed 1 times")
+    ).not_to_be_visible()
+
+
+def test_popover_callback_fires_on_open_and_close(app: Page):
+    """Test that a callable on_change callback fires when popover is toggled."""
+    # Initially, callback count should be 0
+    expect(app.get_by_text("Callback count: 0", exact=True)).to_be_visible()
+
+    # Open the callback popover
+    open_popover(app, "Basic callback popover")
+    wait_for_app_run(app)
+
+    # Callback should have fired once (popover opened)
+    expect(app.get_by_text("Callback count: 1", exact=True)).to_be_visible()
+
+    # Popover content should be visible
+    expect(app.get_by_text("Callback popover content", exact=True)).to_be_visible()
+
+    # Close the popover by pressing Escape
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Callback should have fired again (popover closed)
+    expect(app.get_by_text("Callback count: 2", exact=True)).to_be_visible()
+
+    # Popover content should not be visible
+    expect(app.get_by_text("Callback popover content", exact=True)).not_to_be_visible()
+
+
+def test_popover_callback_with_args_kwargs(app: Page):
+    """Test that a callback with args and kwargs receives the correct values."""
+    # Initially, the args result should not be set
+    expect(app.get_by_text("Callback args result: not called")).to_be_visible()
+
+    # Open the args popover
+    open_popover(app, "Callback args popover")
+    wait_for_app_run(app)
+
+    # Callback should have fired with args/kwargs
+    expect(
+        app.get_by_text("Callback args result: my_prefix-toggled-my_suffix")
+    ).to_be_visible()
+
+
+def test_popover_callback_in_fragment(app: Page):
+    """Test that a popover callback works correctly inside a fragment."""
+    # Initially, fragment callback count should be 0
+    expect(app.get_by_text("Fragment callback count: 0")).to_be_visible()
+
+    # Open the fragment callback popover
+    open_popover(app, "Fragment callback popover")
+    wait_for_app_run(app)
+
+    # Callback should have fired once
+    expect(app.get_by_text("Fragment callback count: 1")).to_be_visible()
+
+    # Popover content should be visible
+    expect(app.get_by_text("Fragment callback popover content")).to_be_visible()
+
+    # Close the popover
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Callback should have fired again
+    expect(app.get_by_text("Fragment callback count: 2")).to_be_visible()
+
+
+def test_keyed_popover_persists_open_state_across_remount(app: Page):
+    """Clicking a checkbox inside a keyed popover that adds an element above the
+    popover shifts the delta path, but the open state should be preserved via
+    elementStates.
+    """
+    # Open the keyed popover
+    open_popover(app, "Persist popover")
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+    # Click the checkbox inside the popover — triggers a rerun that inserts an
+    # element above the popover, shifting its delta path (remount)
+    click_checkbox(app, "Shift delta path")
+
+    # The extra text should now appear above the popover
+    expect(app.get_by_text("Extra text above popover")).to_be_visible()
+
+    # The popover should still be open after the delta-path shift
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+    # Uncheck — another delta-path shift back
+    click_checkbox(app, "Shift delta path")
+    expect(app.get_by_text("Extra text above popover")).not_to_be_visible()
+
+    # Still open
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+
+def test_keyed_popover_css_key_class(app: Page):
+    """Keyed popover should have the st-key-* CSS class on the outermost element."""
+    keyed_popover = get_element_by_key(app, "persist_popover")
+    expect(keyed_popover).to_have_class(re.compile(r"st-key-persist_popover"))
+
+
+def test_popover_menu_style_icons_hide_chevron(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that menu-style icon labels hide the chevron (expand/collapse icon)."""
+    container = get_element_by_key(app, "menu_style_icons_container")
+
+    # Verify all three popovers are visible
+    popovers = container.get_by_test_id("stPopover")
+    expect(popovers).to_have_count(3)
+
+    # Check that chevron icons are NOT present in these buttons
+    # The chevron uses expand_more/expand_less material icons
+    menu_icon_popover = get_element_by_key(app, "menu_icon_popover")
+    more_vert_popover = get_element_by_key(app, "more_vert_icon_popover")
+    more_horiz_popover = get_element_by_key(app, "more_horiz_icon_popover")
+
+    # None of these buttons should have expand_more or expand_less icons
+    expect(menu_icon_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_vert_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_horiz_popover.get_by_text("expand_more")).not_to_be_visible()
+
+    # Verify that regular popovers DO have the chevron (for contrast)
+    regular_popover = get_popover(app, "popover 3 (with widgets)")
+    expect(regular_popover.get_by_text("expand_more")).to_be_visible()
+
+    # Snapshot the container with all three menu-style icon popovers
+    assert_snapshot(container, name="st_popover-menu_style_icons")
+
+
+def test_multiselect_dropdown_renders_above_popover_body(app: Page):
+    """A multiselect dropdown opened inside a popover must render above
+    the popover body, not behind it.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
+    floating-ui popover body and the dropdown overlay both resolved to the
+    `popup` z-index, so the popover body (mounted later) painted over the
+    dropdown and hid the options.
+    """
+    popover_container = open_popover(app, "popover 20 (multiselect stacking)")
+    multiselect = popover_container.get_by_test_id("stMultiSelect")
+    expect(multiselect).to_be_visible()
+
+    # Open the multiselect dropdown.
+    multiselect.locator("input").first.click()
+    first_option = app.get_by_role("option", name="option_1", exact=True)
+    expect(first_option).to_be_visible()
+
+    # The option must be the top-most element at its own center. If the popover
+    # body painted over it (the bug), elementFromPoint returns the popover body
+    # instead of the option.
+    def option_is_on_top() -> bool:
+        return bool(
+            first_option.evaluate(
+                """(el) => {
+                const rect = el.getBoundingClientRect();
+                const topEl = document.elementFromPoint(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2
+                );
+                return el === topEl || el.contains(topEl);
+            }"""
+            )
+        )
+
+    wait_until(app, lambda: option_is_on_top() is True)
+
+    # Selecting the option must work (would fail the click hit-test if occluded).
+    first_option.click()
+    wait_for_app_run(app)
+    expect(multiselect.locator("[data-tag]")).to_have_count(1)
+
+
+def test_date_input_selection_does_not_dismiss_popover(app: Page):
+    """Selecting a day in a date_input calendar opened inside a popover must not
+    dismiss the popover.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15959.
+    Day selection must stay inside the popover even if the calendar
+    synchronously detaches the clicked day before the click handler runs.
+    """
+    popover_container = open_popover(app, "popover 21 (date dismissal)")
+    date_input = popover_container.get_by_test_id("stDateInput")
+    expect(date_input).to_be_visible()
+
+    # Open the calendar.
+    date_input.get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
+    ).first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # Select a different day.
+    calendar.get_by_role("button", name=re.compile(r"15,")).first.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open after the day selection.
+    expect(popover_container).to_be_visible()
+    expect(date_input).to_be_visible()
+
+
+def test_selectbox_selection_does_not_dismiss_popover(app: Page):
+    """Selecting an option in a React Aria selectbox opened inside a popover must
+    not dismiss the popover.
+
+    The selectbox dropdown (migrated to React Aria Components) portals to
+    document.body and is not tagged as a Streamlit overlay root, so it is not
+    matched by the popover's outside-click exclusions. It still does not dismiss
+    the popover because React Aria commits the selection via press events and
+    closes its own dropdown without an outside `click` reaching the popover's
+    document-level handler. This guards that contract for
+    https://github.com/streamlit/streamlit/issues/15959.
+    """
+    popover_container = open_popover(app, "popover 3 (with widgets)")
+    selectbox = popover_container.get_by_test_id("stSelectbox")
+    expect(selectbox).to_be_visible()
+
+    # Open the dropdown and select an option.
+    selectbox.locator("input").first.click()
+    option = app.get_by_role("option", name="b", exact=True)
+    expect(option).to_be_visible()
+    option.click()
+    wait_for_app_run(app)
+
+    # The popover must still be open, with the selection committed.
+    expect(popover_container).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("b")
+
+
+def test_programmatic_close_does_not_reopen_other_popover(app: Page):
+    """Test that programmatically closing one popover does not cause it to
+    reopen when another stateful popover is interacted with.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14943
+    """
+    # Open popover A
+    open_popover(app, "Multi pop A")
+    expect(app.get_by_text("Close A")).to_be_visible()
+
+    # Wait for the open rerun to finish before clicking "Close A". open_popover
+    # only waits for the (optimistically rendered) body to appear, not for the
+    # backend rerun that commits open=True. If we click "Close A" while that
+    # rerun is still in flight, the close rerun interrupts it before popover A's
+    # open=True delta is sent. The close rerun then renders open=False, which
+    # matches the cached initial False, so no delta is sent and the frontend's
+    # optimistic open state is never corrected — leaving the body stuck open.
+    wait_for_app_run(app)
+
+    # Programmatically close it via the button inside
+    click_button(app, "Close A")
+
+    # Popover A should be closed — the body should no longer be visible
+    expect(app.get_by_text("Close A")).not_to_be_visible()
+
+    # Open popover B
+    open_popover(app, "Multi pop B")
+
+    # Popover B should be open
+    expect(app.get_by_text("Close B")).to_be_visible()
+
+    # Wait for popover B's open rerun to finish so that, if the #14943 bug were
+    # present, popover A would have had the chance to reopen by now. Without this
+    # wait the assertion below could pass simply because B's rerun hasn't
+    # completed yet, weakening the regression guard.
+    wait_for_app_run(app)
+
+    # Popover A must NOT have reopened (the bug from #14943).
+    # If it did, "Close A" would be visible in a second popover body.
+    expect(app.get_by_text("Close A")).not_to_be_visible()
+
+
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
+    """
+    container = get_element_by_key(app, "wrap_false_popover")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()
+    expect(container.get_by_test_id("stPopoverButton")).to_contain_text("expand_more")

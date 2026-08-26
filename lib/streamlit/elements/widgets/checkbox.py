@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,14 +15,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -39,11 +37,14 @@ from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -75,6 +76,9 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> bool:
         r"""Display a checkbox widget.
 
@@ -88,9 +92,9 @@ class CheckboxMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -106,10 +110,20 @@ class CheckboxMixin:
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -152,13 +166,61 @@ class CheckboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the checkbox label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the checkbox keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the checkbox, it wraps onto
+              additional lines and the widget grows taller.
+            - ``False``: The checkbox keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the checkbox keeps a single-row label, hovering the label
+            reveals the full label in a tooltip, including when ``help`` is set.
+            The checkbox indicator and help icon remain visible.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         bool
             Whether or not the checkbox is checked.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> agree = st.checkbox("I agree")
@@ -185,6 +247,9 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.DEFAULT,
             ctx=ctx,
             width=width,
+            wrap=wrap,
+            bind=bind,
+            persist_state=persist_state,
         )
 
     @gather_metrics("toggle")
@@ -201,6 +266,9 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> bool:
         r"""Display a toggle widget.
 
@@ -214,9 +282,9 @@ class CheckboxMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -232,10 +300,20 @@ class CheckboxMixin:
             Preselect the toggle when it first renders. This will be
             cast to bool internally.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -278,13 +356,61 @@ class CheckboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the toggle label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the toggle keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the toggle, it wraps onto
+              additional lines and the widget grows taller.
+            - ``False``: The toggle keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the toggle keeps a single-row label, hovering the label reveals
+            the full label in a tooltip, including when ``help`` is set. The
+            toggle switch and help icon remain visible.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         bool
             Whether or not the toggle is checked.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> on = st.toggle("Activate feature")
@@ -311,6 +437,9 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.TOGGLE,
             ctx=ctx,
             width=width,
+            wrap=wrap,
+            bind=bind,
+            persist_state=persist_state,
         )
 
     def _checkbox(
@@ -328,6 +457,9 @@ class CheckboxMixin:
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> bool:
         key = to_key(key)
 
@@ -337,7 +469,7 @@ class CheckboxMixin:
             on_change,
             default_value=None if value is False else value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
@@ -362,10 +494,19 @@ class CheckboxMixin:
         )
 
         if help is not None:
-            checkbox_proto.help = dedent(help)
+            checkbox_proto.help = to_help_str(help)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        # wrap is layout-only, so it is intentionally excluded from the element
+        # id above. Leaving it unset lets the frontend resolve the auto default
+        # from the surrounding layout.
+        if wrap is not None:
+            checkbox_proto.wrap = wrap
+
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            checkbox_proto.query_param_key = str(key)
+
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         serde = CheckboxSerde(value)
 
@@ -378,16 +519,26 @@ class CheckboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="bool_value",
+            disabled=disabled,
+            bind=bind,
+            persist_state=persist_state,
+            # Checkbox/toggle is not clearable (always true or false)
+            clearable=False,
         )
 
         if checkbox_state.value_changed:
             checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
 
-        self.dg._enqueue("checkbox", checkbox_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "checkbox",
+            checkbox_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=checkbox_state.value_changed,
+        )
         return checkbox_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

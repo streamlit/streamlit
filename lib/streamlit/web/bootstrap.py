@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 import os
 import signal
 import sys
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
@@ -38,8 +39,19 @@ def _set_up_signal_handler(server: Server) -> None:
     _LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number: int, stack_frame: Any) -> None:  # noqa: ARG001
-        # The server will shut down its threads and exit its loop.
-        server.stop()
+        # This handler can interrupt the event loop in the middle of a
+        # buffered console write, in which case the console output triggered
+        # by `Server.stop` raises "RuntimeError: reentrant call inside
+        # <_io.BufferedWriter>" (mainly on Windows). Defer the stop to the
+        # event loop instead of running it inline whenever possible.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running event loop; the server will shut down its threads
+            # and exit its loop.
+            server.stop()
+        else:
+            loop.call_soon_threadsafe(server.stop)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -58,36 +70,27 @@ def _fix_sys_path(main_script_path: str) -> None:
     sys.path.insert(0, os.path.dirname(main_script_path))
 
 
-def _fix_tornado_crash() -> None:
-    """Set default asyncio policy to be compatible with Tornado 6.
+def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
+    """Install uvloop as the default event loop policy if available."""
 
-    Tornado 6 (at least) is not compatible with the default
-    asyncio implementation on Windows. So here we
-    pick the older SelectorEventLoopPolicy when the OS is Windows
-    if the known-incompatible default policy is in use.
+    if running_in_event_loop:
+        return
 
-    This has to happen as early as possible to make it a low priority and
-    overridable
-
-    See: https://github.com/tornadoweb/tornado/issues/2608
-
-    FIXME: if/when tornado supports the defaults in asyncio,
-    remove and bump tornado requirement for py38
-    """
     if env_util.IS_WINDOWS:
-        try:
-            from asyncio import (  # type: ignore[attr-defined]
-                WindowsProactorEventLoopPolicy,
-                WindowsSelectorEventLoopPolicy,
-            )
-        except ImportError:
-            pass
-            # Not affected
-        else:
-            if type(asyncio.get_event_loop_policy()) is WindowsProactorEventLoopPolicy:
-                # WindowsProactorEventLoopPolicy is not compatible with
-                # Tornado 6 fallback to the pre-3.8 default of Selector
-                asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+        return
+
+    try:
+        import uvloop
+    except ModuleNotFoundError:
+        return
+
+    try:
+        uvloop.install()
+        _LOGGER.debug("uvloop installed as default event loop policy.")
+    except Exception:
+        _LOGGER.warning(
+            "Failed to install uvloop. Falling back to default loop.", exc_info=True
+        )
 
 
 def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
@@ -100,17 +103,10 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 
 
 def _on_server_start(server: Server) -> None:
-    _maybe_print_static_folder_warning(server.main_script_path)
+    prepare_streamlit_environment(server.main_script_path)
     _print_url(server.is_running_hello)
+    _maybe_print_skills_recommendation()
     report_watchdog_availability()
-
-    # Load secrets.toml if it exists. If the file doesn't exist, this
-    # function will return without raising an exception. We catch any parse
-    # errors and display them here.
-    try:
-        secrets.load_if_toml_exists()
-    except Exception:
-        _LOGGER.exception("Failed to load secrets.toml file")
 
     def maybe_open_browser() -> None:
         if config.get_option("server.headless"):
@@ -123,7 +119,7 @@ def _on_server_start(server: Server) -> None:
             if server_address_is_unix_socket():
                 # Don't open browser when server address is an unix socket
                 return
-            addr = config.get_option("server.address")
+            addr = server_util.get_display_address(config.get_option("server.address"))
         else:
             addr = "localhost"
 
@@ -140,6 +136,55 @@ def _fix_pydeck_mapbox_api_warning() -> None:
 
     if "MAPBOX_API_KEY" not in os.environ:
         os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+
+
+def _initialize_mimetypes() -> None:
+    """Ensure common MIME types are correctly registered.
+
+    Some systems may have misconfigured /etc/mime.types, so we explicitly
+    register the types we need for serving web assets correctly.
+    """
+    mimetypes.add_type("text/html", ".html")
+    mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("application/javascript", ".mjs")
+    mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("image/webp", ".webp")
+
+
+def prepare_streamlit_environment(main_script_path: str) -> None:
+    """Prepare the Streamlit environment for running an app.
+
+    This function sets up the environment needed for Streamlit to run correctly.
+    It should be called before starting the runtime, whether using the CLI
+    (`streamlit run`) or an ASGI server (`uvicorn myapp:app`).
+
+    This function:
+    - Ensures common MIME types are correctly registered
+    - Sets the MAPBOX_API_KEY environment variable for PyDeck
+    - Loads secrets from secrets.toml if it exists
+    - Validates static folder configuration
+
+    Parameters
+    ----------
+    main_script_path
+        Path to the main Streamlit script.
+
+    Notes
+    -----
+    This function is automatically called by ``streamlit run``. When using
+    ``st.App`` with uvicorn directly, this is called during the ASGI lifespan
+    startup phase.
+    """
+    _initialize_mimetypes()
+    _fix_pydeck_mapbox_api_warning()
+
+    # Load secrets.toml if it exists
+    try:
+        secrets.load_if_toml_exists()
+    except Exception:
+        _LOGGER.exception("Failed to load secrets.toml file")
+
+    _maybe_print_static_folder_warning(main_script_path)
 
 
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
@@ -168,6 +213,9 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
 
 
 def _print_url(is_running_hello: bool) -> None:
+    if config.get_option("logger.hideWelcomeMessage"):
+        return
+
     if is_running_hello:
         title_message = "Welcome to Streamlit. Check out our demo in your browser."
     else:
@@ -181,8 +229,11 @@ def _print_url(is_running_hello: bool) -> None:
         ]
 
     elif (
-        config.is_manually_set("server.address") and not server_address_is_unix_socket()
+        config.is_manually_set("server.address")
+        and not server_address_is_unix_socket()
+        and config.get_option("server.address") not in {"0.0.0.0", "::"}  # noqa: S104
     ):
+        # Non-wildcard specific address - show single URL
         named_urls = [
             ("URL", server_util.get_url(config.get_option("server.address"))),
         ]
@@ -226,6 +277,35 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("")
 
 
+def _maybe_print_skills_recommendation() -> None:
+    """Recommend installing Streamlit agent skills when starting an app.
+
+    The message is only shown for interactive (non-headless) sessions where the
+    skills are not already installed. It points users to ``streamlit skills`` so
+    AI coding assistants can build and debug their apps more effectively.
+    """
+    if config.get_option("server.headless"):
+        # Don't advertise in headless mode (e.g. deployments, CI).
+        return
+
+    if config.get_option("logger.hideWelcomeMessage"):
+        return
+
+    from streamlit.web import skills
+
+    if skills.are_skills_installed():
+        # Skills are already installed - nothing to recommend.
+        return
+
+    skills_command = cli_util.style_for_cli("streamlit skills", fg="cyan", bold=True)
+    cli_util.print_to_cli("  Help agents write better Streamlit apps?", bold=True)
+    cli_util.print_to_cli(
+        f"  Install the official Streamlit skills by running {skills_command} "
+        "in your terminal."
+    )
+    cli_util.print_to_cli("")
+
+
 def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
@@ -260,8 +340,72 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
         load_config_options(flag_options)
 
     for filename in config.get_config_files("config.toml"):
-        if os.path.exists(filename):
-            watch_file(filename, on_config_changed)
+        # Watch each config file path directly, even if it doesn't exist yet.
+        # This allows detecting both file creation and subsequent modifications.
+        # We use the poll watcher because:
+        # 1. It handles non-existent paths gracefully, including when parent
+        #    directories (like ~/.streamlit/) don't exist yet. The event-based
+        #    watcher requires the parent directory to exist to schedule a watch.
+        # 2. Config files change rarely, so the polling overhead is negligible.
+        # 3. The 200ms poll interval latency is imperceptible for config reloads.
+        watch_file(
+            filename, on_config_changed, watcher_type="poll", allow_nonexistent=True
+        )
+
+
+def _prepare_asgi_app_run_context(
+    main_script_path: str,
+    args: list[str],
+    flag_options: dict[str, Any],
+    *,
+    server_mode: Literal["starlette-app", "starlette-app-direct"] = "starlette-app",
+) -> None:
+    """Apply process-level setup shared by st.App launch modes."""
+    _fix_sys_path(main_script_path)
+    _fix_sys_argv(main_script_path, args)
+    _install_config_watchers(flag_options)
+
+    config._server_mode = server_mode
+
+    report_watchdog_availability()
+
+
+def run_asgi_app(
+    main_script_path: str,
+    app_import_string: str,
+    args: list[str],
+    flag_options: dict[str, Any],
+) -> None:
+    """Run a Streamlit st.App with uvicorn.
+
+    This function is called when `streamlit run` detects an st.App instance
+    in the script. It sets up the process environment and starts uvicorn.
+
+    The App instance handles its own Streamlit-specific setup via its lifespan
+    (e.g., loading secrets, preparing runtime), while this function handles
+    the process-level setup that the CLI is responsible for.
+
+    Parameters
+    ----------
+    main_script_path
+        Path to the main Streamlit script containing the st.App.
+    app_import_string
+        Import string for uvicorn (e.g., "myapp:app").
+    args
+        Arguments to pass to the script (sys.argv).
+    flag_options
+        Config options from CLI flags.
+    """
+    from streamlit.web.server.starlette.starlette_server import UvicornRunner
+
+    _prepare_asgi_app_run_context(main_script_path, args, flag_options)
+
+    # Run the ASGI app using UvicornRunner
+    # UvicornRunner handles: port retry, SSL, WebSocket config, signal handling
+    # The st.App's lifespan will call prepare_streamlit_environment()
+    # Note: URL is printed inside UvicornRunner after port is finalized
+    runner = UvicornRunner(app_import_string)
+    runner.run()
 
 
 def run(
@@ -276,12 +420,12 @@ def run(
 
     This starts a blocking asyncio eventloop.
     """
-
     _fix_sys_path(main_script_path)
-    _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
-    _fix_pydeck_mapbox_api_warning()
     _install_config_watchers(flag_options)
+
+    # Set server mode for metrics tracking
+    config._server_mode = "starlette-managed"
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)
@@ -326,6 +470,7 @@ def run(
         # This prevents the task from being garbage collected
         server._bootstrap_task = task
     else:
+        _maybe_install_uvloop(running_in_event_loop)
         # No running event loop, so we can use asyncio.run
         # This is the normal case when running streamlit from the command line
         _LOGGER.debug("Starting new event loop for server")

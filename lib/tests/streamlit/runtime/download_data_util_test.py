@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,6 +54,24 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
                 os.unlink(path)
             except FileNotFoundError:
                 pass
+
+    def test_stringio_is_converted_to_bytes_and_text_plain(self):
+        """io.StringIO is read fully and inferred as text/plain."""
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            io.StringIO("hello"), unsupported_error=RuntimeError("unsupported")
+        )
+        assert data_as_bytes == b"hello"
+        assert mime == "text/plain"
+
+    def test_stringio_reads_full_buffer_regardless_of_cursor(self):
+        """io.StringIO with a moved cursor still yields its full contents."""
+        sio = io.StringIO()
+        sio.write("hello")  # Leaves the cursor at the end of the buffer.
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            sio, unsupported_error=RuntimeError("unsupported")
+        )
+        assert data_as_bytes == b"hello"
+        assert mime == "text/plain"
 
     def test_bytes_passthrough_and_octet_stream(self):
         """Bytes are returned as-is, with application/octet-stream."""

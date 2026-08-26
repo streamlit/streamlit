@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { GridMouseEventArgs } from "@glideapps/glide-data-grid"
 import { act, renderHook } from "@testing-library/react"
 
 import { CustomGridTheme } from "./useCustomTheme"
@@ -47,8 +48,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1], // [col, row]
         kind: "cell",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any)
+      } as unknown as GridMouseEventArgs)
     })
 
     // Check that row 1 has hover theme
@@ -71,8 +71,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1],
         kind: "cell",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any)
+      } as unknown as GridMouseEventArgs)
     })
 
     // Simulate mouse leaving (undefined location)
@@ -80,8 +79,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: undefined,
         kind: "out-of-bounds",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any)
+      } as unknown as GridMouseEventArgs)
     })
 
     // Check that hover theme is cleared
@@ -97,8 +95,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1],
         kind: "cell",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any)
+      } as unknown as GridMouseEventArgs)
     })
 
     // Move to row 2
@@ -106,8 +103,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 2],
         kind: "cell",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any)
+      } as unknown as GridMouseEventArgs)
     })
 
     // Check that row 1 no longer has hover theme

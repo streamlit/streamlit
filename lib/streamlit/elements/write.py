@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,8 +55,14 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.ModuleType,
 )
 
+# OpenAI Responses API stream event types that carry user-visible text.
+# Other event types (lifecycle, tool-call, etc.) are protocol metadata.
+_OPENAI_RESPONSE_TEXT_EVENT_TYPES: Final = frozenset(
+    {"response.output_text.delta", "response.refusal.delta"}
+)
 
-class StreamingOutput(list[Any]):
+
+class StreamingOutput(list[Any]):  # noqa: FURB189
     pass
 
 
@@ -85,6 +91,9 @@ class WriteMixin:
             If you pass an async generator, Streamlit will internally convert
             it to a sync generator. If the generator depends on a cached object
             with async references, this can raise an error.
+
+            Streamlit natively parses OpenAI streams (both the Chat
+            Completions API and the Responses API) and LangChain streams.
 
             .. note::
                 To use additional LLM libraries, you can create a wrapper to
@@ -119,8 +128,8 @@ class WriteMixin:
             is a string. Otherwise, this is a list of all the streamed objects.
             The return value is fully compatible as input for ``st.write``.
 
-        Example
-        -------
+        Examples
+        --------
         You can pass an OpenAI stream as shown in our tutorial, `Build a \
         basic LLM chat app <https://docs.streamlit.io/develop/tutorials/llms\
         /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
@@ -178,8 +187,7 @@ class WriteMixin:
 
         def flush_stream_response() -> None:
             """Write the full response to the app."""
-            nonlocal streamed_response
-            nonlocal stream_container
+            nonlocal streamed_response, stream_container
 
             if streamed_response and stream_container:
                 # Replace the stream_container element the full response
@@ -225,16 +233,32 @@ class WriteMixin:
                         "please report this issue to: https://github.com/streamlit/streamlit/issues."
                     ) from err
 
+            elif type_util.is_openai_response_event(chunk):
+                # Try to convert OpenAI Responses API stream events to a string.
+                try:
+                    if chunk.type in _OPENAI_RESPONSE_TEXT_EVENT_TYPES:
+                        chunk = chunk.delta or ""  # noqa: PLW2901
+                    else:
+                        chunk = ""  # noqa: PLW2901
+                except AttributeError as err:
+                    raise StreamlitAPIException(
+                        "Failed to parse the OpenAI Response stream event. "
+                        "The most likely cause is a change of the event object structure "
+                        "due to a recent OpenAI update. You might be able to fix this "
+                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                    ) from err
+
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute]
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute] # ty: ignore[unresolved-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent LangChain update. You might be able to fix this "
-                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "by downgrading the LangChain library or upgrading Streamlit. Also, "
                         "please report this issue to: https://github.com/streamlit/streamlit/issues."
                     ) from err
 
@@ -249,8 +273,11 @@ class WriteMixin:
                     first_text = True
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
-                stream_container.markdown(
+                # Use _markdown with unterminated_parsing=True to complete
+                # unclosed markdown syntax (e.g., **bold) during streaming.
+                stream_container._markdown(  # ty: ignore[unresolved-attribute]
                     streamed_response + ("" if first_text else cursor_str),
+                    unterminated_parsing=True,
                 )
             elif callable(chunk):
                 flush_stream_response()
@@ -305,8 +332,6 @@ class WriteMixin:
                   - Uses ``st.help()``.
                 * - Altair chart
                   - Uses ``st.altair_chart()``.
-                * - Bokeh figure
-                  - Uses ``st.bokeh_chart()``.
                 * - Graphviz graph
                   - Uses ``st.graphviz_chart()``.
                 * - Keras model
@@ -342,11 +367,6 @@ class WriteMixin:
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
 
-
-        Returns
-        -------
-        None
-
         Examples
         --------
         Its basic use case is to draw Markdown-formatted text, whenever the
@@ -358,7 +378,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write1.streamlit.app/
-            height: 150px
+            height: 200px
 
         As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
@@ -476,9 +496,6 @@ class WriteMixin:
             elif type_util.is_plotly_chart(arg):
                 flush_buffer()
                 self.dg.plotly_chart(arg)
-            elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
-                flush_buffer()
-                self.dg.bokeh_chart(arg)
             elif type_util.is_graphviz_chart(arg):
                 flush_buffer()
                 self.dg.graphviz_chart(arg)
@@ -516,6 +533,7 @@ class WriteMixin:
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
                 or type_util.is_pydantic_model(arg)
+                or type_util.is_sequence_of_pydantic_models(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)
@@ -582,5 +600,5 @@ class WriteMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

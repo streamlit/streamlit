@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import pick from "lodash/pick"
+import { pick } from "lodash-es"
 import { getLogger } from "loglevel"
 import { v4 as uuidv4 } from "uuid"
 
@@ -149,8 +149,7 @@ export class MetricsManager {
   }
 
   // Fallback - Checks if cached in localStorage, otherwise fetches the config from a default URL
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private async requestDefaultMetricsConfig(): Promise<any> {
+  private async requestDefaultMetricsConfig(): Promise<void> {
     const isLocalStoreAvailable = localStorageAvailable()
 
     if (isLocalStoreAvailable) {
@@ -253,6 +252,12 @@ export class MetricsManager {
 
     if (evName === "menuClick") {
       eventProto.label = data.label as string
+      // Optional surface dimension (e.g. "toast", "errorCallout") attributing
+      // the click to the UI surface that emitted it. Left unset for menu
+      // clicks that don't provide one.
+      if (data.surface) {
+        eventProto.surface = data.surface
+      }
     } else if (evName === "pageProfile") {
       return new MetricsEvent({ ...eventProto, ...data })
     }

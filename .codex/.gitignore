@@ -1,0 +1,9 @@
+# Ignore everything by default
+*
+
+# Allow specific files
+!.gitignore
+!skills
+!config.toml
+!agents/
+!agents/*.toml

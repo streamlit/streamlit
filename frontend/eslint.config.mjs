@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,14 @@
 import path from "path"
 import { fileURLToPath } from "url"
 import { createJiti } from "jiti"
+import { fixupPluginRules } from "@eslint/compat"
 
 // Core ESLint and plugins
 import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
-import react from "eslint-plugin-react"
 import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
-import importPlugin from "eslint-plugin-import"
-import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
+import importX from "eslint-plugin-import-x"
 import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
@@ -43,10 +42,165 @@ const __dirname = path.dirname(__filename)
 // This is to support our custom rules, which are written in TypeScript,
 // but need to be imported as JS to work in ESLint.
 const jiti = createJiti(import.meta.url)
-const streamlitCustom = await jiti.import(
-  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
-  { default: true }
-)
+const streamlitCustom = await jiti.import("eslint-plugin-streamlit-custom", {
+  default: true,
+})
+
+/**
+ * Helper to create the no-restricted-imports rule config.
+ *
+ * @param {Object[]} additionalPatterns - Extra "patterns" to restrict (merged with the base rules).
+ * @param {boolean} isTestFile - Whether to apply the relaxed rules for test files.
+ */
+export const getNoRestrictedImports = (
+  additionalPatterns = [],
+  isTestFile = false
+) => {
+  const restrictedImportPaths = [
+    {
+      name: "timezone-mock",
+      message: "Please use the withTimezones test harness instead",
+    },
+    {
+      name: "@emotion/react",
+      message:
+        "Please use the useEmotionTheme hook instead of useTheme for type-safety",
+      importNames: ["useTheme"],
+    },
+    {
+      name: "axios",
+      importNames: ["CancelToken"],
+      message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+    {
+      name: "react",
+      importNames: ["default"],
+      message:
+        "Please use named imports for React (e.g., import { useState } from 'react';)",
+    },
+  ]
+
+  const basePaths = isTestFile
+    ? restrictedImportPaths
+    : [
+        ...restrictedImportPaths,
+        {
+          name: "@streamlit/lib/testing",
+          message: "Test utilities must stay in test files.",
+        },
+      ]
+  return [
+    "error",
+    {
+      paths: [...basePaths],
+      patterns: [...additionalPatterns],
+    },
+  ]
+}
+
+const restrictedGlobals = [
+  {
+    name: "localStorage",
+    message:
+      "Please use window.localStorage instead since localStorage is not " +
+      "supported in some browsers (e.g. Android WebView).",
+  },
+  {
+    name: "innerWidth",
+    message: "Please use the `useWindowDimensionsContext` hook instead.",
+  },
+  {
+    name: "innerHeight",
+    message: "Please use the `useWindowDimensionsContext` hook instead.",
+  },
+]
+
+const useTimeoutRestrictedGlobals = [
+  {
+    name: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of direct `setTimeout` in non-test source files.",
+  },
+]
+
+const useTimeoutRestrictedProperties = [
+  {
+    object: "window",
+    property: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of `window.setTimeout` in non-test source files.",
+  },
+  {
+    object: "globalThis",
+    property: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of `globalThis.setTimeout` in non-test source files.",
+  },
+]
+
+/**
+ * Helper to create the no-restricted-globals rule config.
+ *
+ * @param {Object} options
+ * @param {boolean} [options.includeUseTimeout] - Whether to add setTimeout restrictions.
+ */
+export const getNoRestrictedGlobals = ({ includeUseTimeout = false } = {}) => {
+  return [
+    "error",
+    ...restrictedGlobals,
+    ...(includeUseTimeout ? useTimeoutRestrictedGlobals : []),
+  ]
+}
+
+/**
+ * Helper to create the no-restricted-properties rule config.
+ *
+ * @param {Object} options
+ * @param {boolean} [options.allowWindowStreamlit] - Whether to allow window.__streamlit access.
+ *   Set to true for files that need to mock the config module itself.
+ * @param {boolean} [options.includeUseTimeout] - Whether to add setTimeout restrictions.
+ */
+const getRestrictedProperties = ({ allowWindowStreamlit = false } = {}) => {
+  const restrictions = [
+    {
+      object: "window",
+      property: "innerWidth",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "window",
+      property: "innerHeight",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "navigator",
+      property: "clipboard",
+      message: "Please use the `useCopyToClipboard` hook instead.",
+    },
+  ]
+
+  if (!allowWindowStreamlit) {
+    restrictions.push({
+      object: "window",
+      property: "__streamlit",
+      message:
+        "Please access window.__streamlit properties via StreamlitConfig in '@streamlit/utils' instead.",
+    })
+  }
+
+  return restrictions
+}
+
+export const getNoRestrictedProperties = ({
+  allowWindowStreamlit = false,
+  includeUseTimeout = false,
+} = {}) => {
+  return [
+    "error",
+    ...getRestrictedProperties({ allowWindowStreamlit }),
+    ...(includeUseTimeout ? useTimeoutRestrictedProperties : []),
+  ]
+}
 
 export default defineConfig([
   // Base recommended configs
@@ -54,8 +208,7 @@ export default defineConfig([
   tseslint.configs.recommendedTypeChecked,
   reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
-  importPlugin.flatConfigs.recommended,
-  eslintPluginPrettierRecommended,
+  importX.flatConfigs.recommended,
   // Global configuration for all files
   {
     languageOptions: {
@@ -87,9 +240,8 @@ export default defineConfig([
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
       ...jsxA11y.flatConfigs.recommended.plugins,
-      react,
       lodash,
-      "no-relative-import-paths": noRelativeImportPaths,
+      "no-relative-import-paths": fixupPluginRules(noRelativeImportPaths),
       "streamlit-custom": streamlitCustom,
     },
     rules: {
@@ -100,22 +252,22 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
-      // We don't use PropTypes
-      "react/prop-types": "off",
-      // We don't escape entities
-      "react/no-unescaped-entities": "off",
       // We do want to discourage the usage of flushSync
-      "@eslint-react/dom/no-flush-sync": "error",
+      "@eslint-react/dom-no-flush-sync": "error",
       // This was giving false positives
       "@eslint-react/no-unused-class-component-members": "off",
       // This was giving false positives
-      "@eslint-react/naming-convention/use-state": "off",
+      "@eslint-react/use-state": "off",
       // Turning off for now until we have clearer guidance on how to fix existing usages
-      "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
+      "@eslint-react/set-state-in-effect": "off",
       // We don't want to warn about empty fragments
-      "@eslint-react/no-useless-fragment": "off",
+      "@eslint-react/jsx-no-useless-fragment": "off",
+      // Prevent context values from being recreated on every render
+      "@eslint-react/no-unstable-context-value": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
+      // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
+      "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
       // We want to use these, but we have far too many instances of these rules
       // for it to be realistic right now. Over time, we should fix these.
@@ -141,13 +293,11 @@ export default defineConfig([
           args: "all",
           ignoreRestSiblings: false,
           argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": [
-        "warn",
-        { functions: false },
-      ],
+      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -167,6 +317,17 @@ export default defineConfig([
       "@typescript-eslint/no-non-null-assertion": "error",
       // Prefer optional chaining over && chains
       "@typescript-eslint/prefer-optional-chain": "error",
+      // Ensure switch statements cover all possible enum/union values
+      "@typescript-eslint/switch-exhaustiveness-check": [
+        "error",
+        {
+          considerDefaultExhaustiveForUnions: true, // Allow default case for unions
+        },
+      ],
+      // Flag class properties that are never modified and should be readonly
+      "@typescript-eslint/prefer-readonly": "warn",
+      // Ensure return await is used in try/catch for proper error stack traces
+      "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -180,45 +341,12 @@ export default defineConfig([
             "Please use the useEmotionTheme hook instead.",
         },
       ],
-      "no-restricted-globals": [
-        "error",
-        {
-          name: "localStorage",
-          message:
-            "Please use window.localStorage instead since localStorage is not " +
-            "supported in some browsers (e.g. Android WebView).",
-        },
-        {
-          name: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          name: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-      ],
-      "no-restricted-properties": [
-        "error",
-        {
-          object: "window",
-          property: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "window",
-          property: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "navigator",
-          property: "clipboard",
-          message: "Please use the `useCopyToClipboard` hook instead.",
-        },
-      ],
+      "no-restricted-globals": getNoRestrictedGlobals(),
+      "no-restricted-properties": getNoRestrictedProperties(),
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
       // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
-      "import/extensions": [
+      "import-x/extensions": [
         "error",
         "ignorePackages",
         {
@@ -228,7 +356,7 @@ export default defineConfig([
           tsx: "never",
         },
       ],
-      "import/prefer-default-export": "off",
+      "import-x/prefer-default-export": "off",
       "max-classes-per-file": "off",
       "no-shadow": "off",
       "no-param-reassign": "off",
@@ -254,7 +382,7 @@ export default defineConfig([
           ignoreDeclarationSort: true,
         },
       ],
-      "import/order": [
+      "import-x/order": [
         "error",
         {
           pathGroups: [
@@ -295,50 +423,49 @@ export default defineConfig([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "timezone-mock",
-              message: "Please use the withTimezones test harness instead",
-            },
-            {
-              name: "@emotion/react",
-              message:
-                "Please use the useEmotionTheme hook instead of useTheme for type-safety",
-              importNames: ["useTheme"],
-            },
-            {
-              name: "axios",
-              importNames: ["CancelToken"],
-              message:
-                "Please use the `AbortController` API instead of `CancelToken`",
-            },
-          ],
-        },
-      ],
-      // React configuration
-      "react/jsx-uses-react": "off",
-      "react/react-in-jsx-scope": "off",
+      "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
+      "no-restricted-imports": getNoRestrictedImports(),
       // React hooks rules
       ...reactHooks.configs.flat.recommended.rules,
+      // New React Compiler rules in react-hooks v7.1 — disable until existing
+      // violations are addressed. Only rules-of-hooks and exhaustive-deps were
+      // previously enforced.
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+      // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
+      "react-hooks/no-deriving-state-in-effects": "error",
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop
       // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
       "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
+      // Stricter a11y enforcement beyond the recommended ruleset:
+      // - Require accessible names for icon-only controls
+      "jsx-a11y/control-has-associated-label": "error",
+      // - Do not hide focusable controls from assistive technology
+      "jsx-a11y/no-aria-hidden-on-focusable": "error",
+      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
+      "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
-      react: {
-        version: "detect",
-      },
-      "import/resolver": {
+      "import-x/resolver": {
         typescript: {
           // Use project service for import resolution as well
           project: path.resolve(__dirname, "./tsconfig.json"),
         },
       },
+    },
+  },
+  {
+    files: ["**/src/**/*.ts", "**/src/**/*.tsx"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "no-restricted-globals": getNoRestrictedGlobals({
+        includeUseTimeout: true,
+      }),
+      "no-restricted-properties": getNoRestrictedProperties({
+        includeUseTimeout: true,
+      }),
     },
   },
   // Test files specific configuration
@@ -360,6 +487,35 @@ export default defineConfig([
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",
+      // Prefer screen.getBy* over destructured queries for consistency
+      "testing-library/prefer-screen-queries": "warn",
+      // Prefer findBy* over waitFor + getBy* patterns
+      "testing-library/prefer-find-by": "error",
+      // Enforce consistent use of it() over test()
+      "vitest/consistent-test-it": ["error", { fn: "it" }],
+      "no-restricted-imports": getNoRestrictedImports([], true),
+    },
+  },
+  // Specific test files that need to access window.__streamlit for testing the config module itself
+  {
+    files: ["utils/src/config/index.test.ts", "lib/src/theme/utils.test.ts"],
+    rules: {
+      // These test files need to set window.__streamlit to test the config capture behavior
+      "no-restricted-properties": getNoRestrictedProperties({
+        allowWindowStreamlit: true,
+      }),
+    },
+  },
+  // Config module - allow direct window.__streamlit access for capturing values
+  {
+    files: ["utils/src/config/index.ts"],
+    rules: {
+      // This is the only place where direct window.__streamlit access is allowed
+      // as it captures values at module load time and exports frozen copies.
+      // Other restrictions (innerWidth, innerHeight, clipboard) still apply.
+      "no-restricted-properties": getNoRestrictedProperties({
+        allowWindowStreamlit: true,
+      }),
     },
   },
   // Theme files specific configuration
@@ -389,9 +545,11 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "**/vite.config.ts",
     "lib/src/proto.js",
     "lib/src/proto.d.ts",
-    "**/vendor/*",
     "**/node_modules/*",
     "**/dist/*",
     "**/build/*",

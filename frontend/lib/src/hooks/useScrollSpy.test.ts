@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,62 +16,14 @@
 
 import { act, renderHook } from "@testing-library/react"
 
-import useScrollSpy, { debounce } from "./useScrollSpy"
-
-describe("debounce function", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
-  it("should call the function immediately when no delay is provided", () => {
-    const fn = vi.fn()
-    const debouncedFn = debounce(fn, 0)
-
-    debouncedFn("arg1", "arg2")
-
-    expect(fn).toHaveBeenCalledTimes(1)
-    expect(fn).toHaveBeenCalledWith("arg1", "arg2")
-  })
-
-  it("should delay the function call when a delay is provided", () => {
-    const fn = vi.fn()
-    const debouncedFn = debounce(fn, 100)
-    debouncedFn("arg1", "arg2")
-    expect(fn).toHaveBeenCalledTimes(1)
-    expect(fn).toHaveBeenCalledWith("arg1", "arg2")
-
-    debouncedFn("arg3", "arg4")
-    expect(fn).not.toHaveBeenCalledWith("arg3", "arg4")
-    vi.advanceTimersByTime(99)
-    expect(fn).not.toHaveBeenCalledWith("arg3", "arg4")
-
-    vi.advanceTimersByTime(1)
-    expect(fn).toHaveBeenCalledTimes(2)
-    expect(fn).toHaveBeenCalledWith("arg3", "arg4")
-  })
-
-  it("should cancel the delay when the function is called again", () => {
-    const fn = vi.fn()
-    const debouncedFn = debounce(fn, 100)
-    debouncedFn("arg1", "arg2")
-    expect(fn).toHaveBeenCalledTimes(1)
-    expect(fn).toHaveBeenCalledWith("arg1", "arg2")
-
-    debouncedFn("arg3", "arg4")
-    vi.advanceTimersByTime(99)
-
-    debouncedFn("arg5", "arg6")
-    expect(fn).not.toHaveBeenCalledWith("arg5", "arg6")
-
-    vi.advanceTimersByTime(1)
-    expect(fn).toHaveBeenCalledTimes(2)
-    expect(fn).toHaveBeenCalledWith("arg5", "arg6")
-  })
-})
+import useScrollSpy from "./useScrollSpy"
 
 describe("useScrollSpy hook", () => {
   let target: HTMLElement
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let eventHandler: ({ timeStampLow }: any) => void
+  let eventHandler: (event: {
+    timeStampLow: number
+    target: EventTarget | null
+  }) => void
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -144,5 +96,27 @@ describe("useScrollSpy hook", () => {
 
     vi.advanceTimersByTime(1)
     expect(eventHandler).toHaveBeenCalledTimes(2)
+  })
+
+  it("should continue emitting while scroll events keep firing", () => {
+    renderHook(() => useScrollSpy(target, eventHandler, true))
+
+    const scrollEvent = new Event("scroll")
+
+    act(() => {
+      for (let i = 0; i < 5; i++) {
+        target.dispatchEvent(scrollEvent)
+        vi.advanceTimersByTime(20)
+      }
+    })
+    expect(eventHandler).toHaveBeenCalledTimes(2)
+
+    act(() => {
+      for (let i = 0; i < 5; i++) {
+        target.dispatchEvent(scrollEvent)
+        vi.advanceTimersByTime(20)
+      }
+    })
+    expect(eventHandler).toHaveBeenCalledTimes(3)
   })
 })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,9 +67,16 @@ class SafeSessionState:
             #  to a Lock.)
             self._state.on_script_will_rerun(latest_widget_states)
 
-    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
+    def on_script_finished(
+        self,
+        widget_ids_this_run: frozenset[str],
+        *,
+        remove_stale_widgets: bool = True,
+    ) -> None:
         with self._lock:
-            self._state.on_script_finished(widget_ids_this_run)
+            self._state.on_script_finished(
+                widget_ids_this_run, remove_stale_widgets=remove_stale_widgets
+            )
 
     def maybe_check_serializable(self) -> None:
         with self._lock:

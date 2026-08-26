@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+
+import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears stale nodes from the render tree. It does this by:
@@ -36,12 +37,12 @@ import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interfa
  * // newNode will be undefined if the node should be filtered out
  * ```
  */
-export class ClearStaleNodeVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class ClearStaleNodeVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly currentScriptRunId: string
   private readonly fragmentIdsThisRun: string[]
-  private fragmentIdOfBlock?: string
+  private readonly fragmentIdOfBlock?: string
 
   constructor(
     currentScriptRunId: string,
@@ -122,6 +123,21 @@ export class ClearStaleNodeVisitor
   }
 
   visitElementNode(node: ElementNode): AppNode | undefined {
+    // Toasts are fire-and-forget event notifications whose lifetime is governed
+    // by the frontend toast queue (react-aria timeout / manual dismissal), not
+    // by the element tree. Never treat them as stale: a toast emitted in a run
+    // that is interrupted by st.rerun() carries the interrupted run's
+    // scriptRunId, so pruning it here can remove its node before the Toast
+    // component mounts and registers it with the queue - which, when the
+    // retained delta and the next run's messages are applied in a single React
+    // batch, means the toast would never show at all (issue #7740). The node
+    // renders nothing on its own (the visible toast lives in a portal), so
+    // keeping it is safe; it is overwritten in place when a toast is re-emitted
+    // at the same delta path.
+    if (node.element.type === "toast") {
+      return node
+    }
+
     if (this.isFragmentRun) {
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,
@@ -137,5 +153,43 @@ export class ClearStaleNodeVisitor
       }
     }
     return node.scriptRunId === this.currentScriptRunId ? node : undefined
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    // If a transient was explicitly cleared in this run, restore its anchor directly.
+    // This prevents removing the anchor as stale before non-transient updates can reattach.
+    // However, we still need to check if the anchor itself is stale - it may have been
+    // captured from a previous run and should be filtered out.
+    if (
+      node.scriptRunId === this.currentScriptRunId &&
+      node.transientNodes.length === 0 &&
+      node.anchor
+    ) {
+      return node.anchor.accept(this)
+    }
+
+    // Check whether the anchor element and transient elements are stale
+    const anchorNode = node.anchor?.accept(this)
+    const transientNodes = node.updateTransientNodes(element => {
+      return element.accept(this) as ElementNode | undefined
+    })
+
+    // Everything is stale
+    if (!anchorNode && transientNodes.length === 0) {
+      return undefined
+    }
+
+    // All the transient elements are stale, but not the anchor element
+    // so we return the anchor element
+    if (transientNodes.length === 0) {
+      return anchorNode
+    }
+
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 }

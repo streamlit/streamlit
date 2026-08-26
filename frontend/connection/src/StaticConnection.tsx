@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,21 @@
 
 import { getLogger } from "loglevel"
 
-import { ForwardMsgList } from "@streamlit/protobuf"
+import { ForwardMsg, ForwardMsgList } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
 import { ConnectionState } from "./ConnectionState"
-import { StreamlitEndpoints } from "./types"
+import {
+  ErrorDetails,
+  OnConnectionStateChange,
+  OnMessage,
+  StreamlitEndpoints,
+} from "./types"
 
 // TODO: Change this to a stable location and eventually make it configurable
 // Holds url for static asset location
-export const STATIC_ASSET_CONFIG = "https://data.streamlit.io/static.json"
+const STATIC_ASSET_CONFIG = "https://data.streamlit.io/static.json"
 export const LOG = getLogger("StaticConnection")
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-type OnMessage = (ForwardMsg: any) => void
-type OnConnectionStateChange = (
-  connectionState: ConnectionState,
-  errMsg?: string
-) => void
 
 // Fetches the static asset url from the config file
 export async function getStaticConfig(): Promise<string> {
@@ -103,15 +101,15 @@ export async function dispatchAppForwardMessages(
   staticAppId: string,
   staticConfigUrl: string,
   onMessage: OnMessage,
-  onConnectionError: (message: string) => void
+  onConnectionError: (message: ErrorDetails) => void
 ): Promise<void> {
   const arrayBuffer = await getProtoResponse(staticAppId, staticConfigUrl)
 
   if (!arrayBuffer) {
     LOG.error("Failed to retrieve static app protos")
-    onConnectionError(
-      `Failed to retrieve static app protos. Please confirm the id is correct and try again. Given static app id: ${staticAppId}`
-    )
+    onConnectionError({
+      message: `Failed to retrieve static app protos. Please confirm the id is correct and try again. Given static app id: ${staticAppId}`,
+    })
     return
   }
 
@@ -120,7 +118,7 @@ export async function dispatchAppForwardMessages(
 
   // Dispatches each ForwardMsg to be handled by App.tsx's handleMessage
   forwardMsgList.messages.forEach(msg => {
-    onMessage(msg)
+    onMessage(msg as ForwardMsg)
   })
 }
 
@@ -128,7 +126,7 @@ export async function establishStaticConnection(
   staticAppId: string,
   onConnectionStateChange: OnConnectionStateChange,
   onMessage: OnMessage,
-  onConnectionError: (message: string) => void,
+  onConnectionError: (message: ErrorDetails) => void,
   endpoints: StreamlitEndpoints
 ): Promise<void> {
   // Static notebooks are not connected to a server - put into connecting
@@ -150,5 +148,3 @@ export async function establishStaticConnection(
   // Once protos are fetched & dispatched, we are connected
   onConnectionStateChange(ConnectionState.STATIC_CONNECTED)
 }
-
-export default establishStaticConnection

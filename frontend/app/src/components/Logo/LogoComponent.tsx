@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,36 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import { ReactElement, useCallback, useContext, useMemo } from "react"
 
 import { getLogger } from "loglevel"
 
 import {
+  StyledIconLogo,
   StyledLogo,
+  StyledLogoButton,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { getCrossOriginAttribute, LibConfigContext } from "@streamlit/lib"
+import {
+  DynamicIcon,
+  getCrossOriginAttribute,
+  IconSize,
+  LibConfigContext,
+  NavigationContext,
+} from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
 
-export interface LogoComponentProps {
+// Map logo size to DynamicIcon size for consistent scaling
+const LOGO_SIZE_TO_ICON_SIZE: Record<string, IconSize> = {
+  small: "lg", // 1.25rem
+  medium: "xl", // 1.5rem
+  large: "twoXL", // 1.8rem
+}
+
+interface LogoComponentProps {
   appLogo: Logo | null
   endpoints: StreamlitEndpoints
   collapsed?: boolean
@@ -47,6 +62,23 @@ const LogoComponent = ({
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
   const { resourceCrossOriginMode } = useContext(LibConfigContext)
+  const { appPages, onPageChange, currentPageScriptHash } =
+    useContext(NavigationContext)
+
+  // Find the home page (the default page) and check if this is a multi-page app
+  const homePage = useMemo(
+    () => appPages.find(page => page.isDefault),
+    [appPages]
+  )
+  const isMultiPageApp = appPages.length > 1
+  const isOnHomePage = homePage?.pageScriptHash === currentPageScriptHash
+
+  const handleLogoClick = useCallback(() => {
+    // Only navigate if we're not already on the home page
+    if (homePage?.pageScriptHash && !isOnHomePage) {
+      onPageChange(homePage.pageScriptHash)
+    }
+  }, [homePage, onPageChange, isOnHomePage])
 
   if (!appLogo) {
     return null
@@ -66,6 +98,8 @@ const LogoComponent = ({
   // Use icon image when collapsed in sidebar mode, otherwise use the main image
   const displayImage =
     collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
+  const displayImageType =
+    collapsed && appLogo.iconImage ? appLogo.iconImageType : appLogo.imageType
 
   const source = endpoints.buildMediaURL(displayImage)
 
@@ -74,7 +108,22 @@ const LogoComponent = ({
     displayImage
   )
 
-  const logo = (
+  // Render icon or emoji using DynamicIcon
+  const isIconOrEmoji =
+    displayImageType === Logo.ImageType.ICON ||
+    displayImageType === Logo.ImageType.EMOJI
+
+  const iconSize = LOGO_SIZE_TO_ICON_SIZE[appLogo.size] || "xl"
+
+  const logo = isIconOrEmoji ? (
+    <StyledIconLogo
+      size={appLogo.size}
+      className="stLogo"
+      data-testid={dataTestId}
+    >
+      <DynamicIcon iconValue={displayImage} size={iconSize} />
+    </StyledIconLogo>
+  ) : (
     <StyledLogo
       src={source}
       size={appLogo.size}
@@ -87,6 +136,7 @@ const LogoComponent = ({
     />
   )
 
+  // If an explicit link is provided, use it (opens in new tab)
   if (appLogo.link) {
     return (
       <StyledLogoLink
@@ -94,9 +144,25 @@ const LogoComponent = ({
         target="_blank"
         rel="noreferrer"
         data-testid="stLogoLink"
+        // Icon/emoji logos don't have alt text, so we need an aria-label for accessibility
+        aria-label={isIconOrEmoji ? "App Logo" : undefined}
       >
         {logo}
       </StyledLogoLink>
+    )
+  }
+
+  // In multi-page apps without an explicit link, clicking the logo navigates to home page
+  // Only use the clickable button when not already on the home page
+  if (isMultiPageApp && homePage && !isOnHomePage) {
+    return (
+      <StyledLogoButton
+        onClick={handleLogoClick}
+        data-testid="stLogoLink"
+        aria-label="Navigate to home page"
+      >
+        {logo}
+      </StyledLogoButton>
     )
   }
 

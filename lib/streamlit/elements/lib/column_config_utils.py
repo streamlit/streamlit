@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,19 +17,38 @@ from __future__ import annotations
 import copy
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    TypeAlias,
+    overload,
+)
 
 from streamlit.dataframe_util import DataFormat
-from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
+from streamlit.elements.lib.column_types import (
+    ButtonColumnResult,
+    ColumnConfig,
+    ColumnType,
+)
 from streamlit.elements.lib.dicttools import remove_none_values
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.state import register_widget
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     import pyarrow as pa
     from pandas import DataFrame, Index, Series
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.proto.Common_pb2 import StringTriggerValue
+    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
 
 
 # The index identifier can be used to apply configuration options
@@ -39,7 +58,7 @@ INDEX_IDENTIFIER: IndexIdentifierType = "_index"
 # This is used as prefix for columns that are configured via the numerical position.
 # The integer value is converted into a string key with this prefix.
 # This needs to match with the prefix configured in the frontend.
-_NUMERICAL_POSITION_PREFIX = "_pos:"
+NUMERICAL_POSITION_PREFIX = "_pos:"
 
 
 # The column data kind is used to describe the type of the data within the column.
@@ -112,6 +131,7 @@ _EDITING_COMPATIBILITY_MAPPING: Final[dict[ColumnType, list[ColumnDataKind]]] = 
         ColumnDataKind.STRING,
         ColumnDataKind.EMPTY,
     ],
+    "markdown": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
 }
 
 
@@ -170,7 +190,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     if pa.types.is_boolean(field_type):
         return ColumnDataKind.BOOLEAN
 
-    if pa.types.is_string(field_type):
+    if pa.types.is_string(field_type) or pa.types.is_large_string(field_type):
         return ColumnDataKind.STRING
 
     if pa.types.is_date(field_type):
@@ -208,7 +228,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
 
 def _determine_data_kind_via_pandas_dtype(
-    column: Series | Index,
+    column: Series[Any] | Index[Any],
 ) -> ColumnDataKind:
     """Determine the data kind by using the pandas dtype.
 
@@ -255,14 +275,16 @@ def _determine_data_kind_via_pandas_dtype(
     if pd.api.types.is_object_dtype(
         column_dtype
     ) is False and pd.api.types.is_string_dtype(column_dtype):
-        # The is_string_dtype
+        # This handles pandas 3.0+ StringDtype (and PyArrow-backed string types).
+        # We exclude object dtype here because object columns with string values
+        # are handled via _determine_data_kind_via_inferred_type in the caller.
         return ColumnDataKind.STRING
 
     return ColumnDataKind.UNKNOWN
 
 
 def _determine_data_kind_via_inferred_type(
-    column: Series | Index,
+    column: Series[Any] | Index[Any],
 ) -> ColumnDataKind:
     """Determine the data kind by inferring it from the underlying data.
 
@@ -289,7 +311,7 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "bytes":
         return ColumnDataKind.BYTES
 
-    if inferred_type in ["floating", "mixed-integer-float"]:
+    if inferred_type in {"floating", "mixed-integer-float"}:
         return ColumnDataKind.FLOAT
 
     if inferred_type == "integer":
@@ -304,13 +326,13 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "boolean":
         return ColumnDataKind.BOOLEAN
 
-    if inferred_type in ["datetime64", "datetime"]:
+    if inferred_type in {"datetime64", "datetime"}:
         return ColumnDataKind.DATETIME
 
     if inferred_type == "date":
         return ColumnDataKind.DATE
 
-    if inferred_type in ["timedelta64", "timedelta"]:
+    if inferred_type in {"timedelta64", "timedelta"}:
         return ColumnDataKind.TIMEDELTA
 
     if inferred_type == "time":
@@ -331,7 +353,7 @@ def _determine_data_kind_via_inferred_type(
 
 
 def _determine_data_kind(
-    column: Series | Index, field: pa.Field | None = None
+    column: Series[Any] | Index[Any], field: pa.Field | None = None
 ) -> ColumnDataKind:
     """Determine the data kind of a column.
 
@@ -395,7 +417,8 @@ def determine_dataframe_schema(
 
     # Add types for all columns:
     for i, column in enumerate(data_df.items()):
-        column_name, column_data = column
+        column_name = str(column[0])
+        column_data = column[1]
         dataframe_schema[column_name] = _determine_data_kind(
             column_data, arrow_schema.field(i)
         )
@@ -404,14 +427,147 @@ def determine_dataframe_schema(
 
 # A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = dict[IndexIdentifierType | str | int, ColumnConfig]
+
 ColumnConfigMappingInput: TypeAlias = Mapping[
     # TODO(lukasmasuch): This should also use int here to
     # correctly type the support for positional index. However,
     # allowing int here leads mypy to complain about simple dict[str, ...]
     # as input -> which seems like a mypy bug.
     IndexIdentifierType | str,
-    ColumnConfig | None | str,
+    ColumnConfig | ButtonColumnResult | str | None,
 ]
+
+
+ButtonColumnMapping: TypeAlias = dict[str, ButtonColumnResult]
+
+
+class ButtonColumnClickState(ReadOnlyAttributeDictionary):
+    """The schema for button click state in ButtonColumn.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    Read-only dict-like click payload with attribute and key access
+    (``click.row`` / ``click["row"]``). Both fields are always present when a
+    button click occurs.
+    """
+
+    row: int
+    label: str
+
+    @overload
+    def __getitem__(self, key: Literal["row"]) -> int: ...
+
+    @overload
+    def __getitem__(self, key: Literal["label"]) -> str: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
+
+
+@dataclass
+class ButtonClickSerde:
+    """Serializer/deserializer for ButtonColumn click values.
+
+    Uses string trigger value pattern (value resets after each run).
+    The frontend sends the click state as a JSON string.
+    """
+
+    def serialize(self, v: ButtonColumnClickState | None) -> StringTriggerValue:
+        from streamlit.proto.Common_pb2 import StringTriggerValue
+
+        if v is None:
+            return StringTriggerValue()
+        return StringTriggerValue(data=json.dumps(v))
+
+    def deserialize(self, ui_value: str | None) -> ButtonColumnClickState | None:
+        if not ui_value:
+            return None
+
+        parsed = json.loads(ui_value)
+        # Validate shape: must be a dict with "row" (int >= 0) and "label" (str).
+        # bool is a subclass of int, so booleans are explicitly rejected for "row".
+        if (
+            not isinstance(parsed, dict)
+            or not isinstance(parsed.get("row"), int)
+            or isinstance(parsed.get("row"), bool)
+            or not isinstance(parsed.get("label"), str)
+        ):
+            raise StreamlitAPIException(
+                "Invalid button click state: expected {row: int, label: str}."
+            )
+
+        # Validate row is non-negative (bounds check - row < num_rows is
+        # checked downstream when accessing the data)
+        if parsed["row"] < 0:
+            raise StreamlitAPIException(
+                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
+            )
+
+        return ButtonColumnClickState(parsed)
+
+
+def extract_button_column_configs(
+    column_config: ColumnConfigMappingInput | None,
+) -> tuple[dict[Any, ColumnConfig | str | None] | None, ButtonColumnMapping]:
+    """Extract interactive button-column configs from a column config mapping."""
+    button_columns: ButtonColumnMapping = {}
+    processed_column_config: dict[Any, ColumnConfig | str | None] | None = None
+
+    if column_config is not None:
+        processed_column_config = {}
+        for col_name, config in column_config.items():
+            if isinstance(config, ButtonColumnResult):
+                # Transform key the same way column config does for consistency.
+                column_widget_key = (
+                    f"{NUMERICAL_POSITION_PREFIX}{col_name}"
+                    if isinstance(col_name, int)
+                    else str(col_name)
+                )
+                button_columns[column_widget_key] = config
+                processed_column_config[col_name] = config.config
+            else:
+                processed_column_config[col_name] = config
+
+    return processed_column_config, button_columns
+
+
+def register_button_column_widgets(
+    *,
+    dg: DeltaGenerator,
+    proto: DataframeProto,
+    button_columns: ButtonColumnMapping,
+    ctx: ScriptRunContext | None,
+) -> None:
+    """Register widgets for interactive button columns and attach them to a dataframe proto."""
+    button_serde = ButtonClickSerde()
+    for col_name, button_col in button_columns.items():
+        check_widget_policies(
+            dg,
+            button_col.key,
+            on_change=button_col.on_click,
+            default_value=None,
+            writes_allowed=False,
+        )
+        widget_id = compute_and_register_element_id(
+            "dataframe_button",
+            user_key=button_col.key,
+            key_as_main_identity=True,
+            dg=dg,
+        )
+        register_widget(
+            widget_id,
+            on_change_handler=button_col.on_click,
+            args=button_col.args,
+            kwargs=button_col.kwargs,
+            deserializer=button_serde.deserialize,
+            serializer=button_serde.serialize,
+            ctx=ctx,
+            value_type="string_trigger_value",
+        )
+        proto.button_click_widgets[col_name] = widget_id
 
 
 def process_config_mapping(
@@ -439,6 +595,11 @@ def process_config_mapping(
             transformed_column_config[column] = ColumnConfig(hidden=True)
         elif isinstance(config, str):
             transformed_column_config[column] = ColumnConfig(label=config)
+        elif isinstance(config, ButtonColumnResult):
+            # ButtonColumnResult is typically preprocessed before reaching this function
+            # in both st.dataframe and st.data_editor. If we encounter it here, extract
+            # the config dict. Button columns are always read-only.
+            transformed_column_config[column] = copy.deepcopy(config.config)
         elif isinstance(config, dict):
             # Ensure that the column config objects are cloned
             # since we will apply in-place changes to it.
@@ -498,7 +659,7 @@ def apply_data_specific_configs(
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary
     # to show this index to the user. Therefore, we will hide it as default.
-    if data_format in [
+    if data_format in {
         DataFormat.SET_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.LIST_OF_VALUES,
@@ -514,8 +675,7 @@ def apply_data_specific_configs(
         DataFormat.POLARS_SERIES,
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.PYARROW_ARRAY,
-        DataFormat.RAY_DATASET,
-    ]:
+    }:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
 
@@ -524,7 +684,7 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
         # Ignore all None values and prefix columns specified by numerical index:
         return json.dumps(
             {
-                (f"{_NUMERICAL_POSITION_PREFIX}{k!s}" if isinstance(k, int) else k): v
+                (f"{NUMERICAL_POSITION_PREFIX}{k!s}" if isinstance(k, int) else k): v
                 for (k, v) in remove_none_values(column_config_mapping).items()
             },
             allow_nan=False,
@@ -536,13 +696,13 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
 
 
 def marshall_column_config(
-    proto: ArrowProto, column_config_mapping: ColumnConfigMapping
+    proto: DataframeProto, column_config_mapping: ColumnConfigMapping
 ) -> None:
-    """Marshall the column config into the Arrow proto.
+    """Marshall the column config into the Dataframe proto.
 
     Parameters
     ----------
-    proto : ArrowProto
+    proto : DataframeProto
         The proto to marshall into.
 
     column_config_mapping : ColumnConfigMapping

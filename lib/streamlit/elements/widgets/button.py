@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
 from __future__ import annotations
 
 import io
+import mimetypes
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     BinaryIO,
@@ -28,12 +28,14 @@ from typing import (
     TextIO,
     TypeAlias,
     cast,
+    overload,
 )
 
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.shortcut_utils import normalize_shortcut
 from streamlit.elements.lib.utils import (
     Key,
     compute_and_register_element_id,
@@ -42,12 +44,17 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitMissingPageLabelError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
     StreamlitPageNotFoundError,
+    StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page, _validate_registered_page
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
@@ -61,12 +68,14 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.runtime.state.query_params import process_query_params
+from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.url_util import is_url
 from streamlit.util import in_sidebar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.query_params import QueryParamsInput
 
 FORM_DOCS_INFO: Final = """
 
@@ -82,6 +91,33 @@ DownloadButtonDataType: TypeAlias = (
     | io.RawIOBase
     | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
 )
+
+IconPosition: TypeAlias = Literal["left", "right"]
+
+_DEFAULT_ICON_POSITION: Final[IconPosition] = "left"
+_VALID_ICON_POSITIONS: Final[tuple[IconPosition, ...]] = ("left", "right")
+
+
+def _normalize_icon_position(
+    icon_position: IconPosition | str | None,
+) -> IconPosition:
+    if icon_position is None:
+        return _DEFAULT_ICON_POSITION
+
+    if icon_position not in _VALID_ICON_POSITIONS:
+        raise StreamlitValueError("icon_position", ["'left'", "'right'"])
+
+    return icon_position
+
+
+def _icon_position_to_proto(
+    icon_position: IconPosition,
+) -> ProtoButtonLikeIconPosition.ValueType:
+    return (
+        ProtoButtonLikeIconPosition.RIGHT
+        if icon_position == "right"
+        else ProtoButtonLikeIconPosition.LEFT
+    )
 
 
 @dataclass
@@ -106,9 +142,12 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         r"""Display a button widget.
 
@@ -122,9 +161,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -132,10 +171,21 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -184,6 +234,10 @@ class ButtonMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
+
         disabled : bool
             An optional boolean that disables the button if set to ``True``.
             The default is ``False``.
@@ -215,6 +269,54 @@ class ButtonMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the button matches the width
               of the parent container.
+
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
+
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
+
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
+
+            The following special keys are supported: Backspace, Delete, Down,
+            End, Enter, Esc, Home, Left, PageDown, PageUp, Right, Space, Tab,
+            and Up.
+
+            The following modifiers are supported: Alt, Ctrl, Cmd, Meta, Mod,
+            Option, Shift.
+
+            - Ctrl, Cmd, Meta, and Mod are interchangeable and will display to
+              the user to match their platform.
+            - Option and Alt are interchangeable and will display to the user
+              to match their platform.
+
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
 
         Returns
         -------
@@ -260,6 +362,25 @@ class ButtonMixin:
            https://doc-button-icons.streamlit.app/
            height: 220px
 
+        **Example 3: Use keyboard shortcuts**
+
+        The following example shows how to use keyboard shortcuts to trigger a
+        button. If you use any of the platform-dependent modifiers (Ctrl, Cmd,
+        or Mod), they are interpreted interchangeably and always displayed to
+        the user to match their platform.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(horizontal=True, horizontal_alignment="distribute"):
+        >>>     "`A`" if st.button("A", shortcut="A") else "` `"
+        >>>     "`S`" if st.button("S", shortcut="Ctrl+S") else "` `"
+        >>>     "`D`" if st.button("D", shortcut="Cmd+Shift+D") else "` `"
+        >>>     "`F`" if st.button("F", shortcut="Mod+Alt+Shift+F") else "` `"
+
+        .. output::
+           https://doc-button-shortcuts.streamlit.app/
+           height: 220px
+
         """
         key = to_key(key)
         ctx = get_script_run_ctx()
@@ -268,11 +389,12 @@ class ButtonMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
-            raise StreamlitAPIException(
-                'The type argument to st.button must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+        if type not in {"primary", "secondary", "tertiary"}:
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
+
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self.dg._button(
             label,
@@ -285,8 +407,11 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
+            wrap=wrap,
         )
 
     @gather_metrics("download_button")
@@ -304,18 +429,23 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         r"""Display a download button widget.
 
         This is useful when you would like to provide a way for your users
         to download a file directly from your app.
 
-        Note that the data to be downloaded is stored in-memory while the
-        user is connected, so it's a good idea to keep file sizes under a
-        couple hundred megabytes to conserve memory.
+        If you pass the data directly to the ``data`` parameter, then the data
+        is stored in-memory while the user is connected. It's a good idea to
+        keep file sizes under a couple hundred megabytes to conserve memory or
+        use deferred data generation by passing a callable to the ``data``
+        parameter.
 
         If you want to prevent your app from rerunning when a user clicks the
         download button, wrap the download button in a `fragment
@@ -331,9 +461,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -341,15 +471,20 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        data : str, bytes, file, or callable
-            The contents of the file to be downloaded.
+        data : str, bytes, file-like, or callable
+            The contents of the file to be downloaded or a callable that
+            returns the contents of the file.
 
-            You can also pass a ``callable`` (no-arg function) that returns
-            ``str``, ``bytes``, or a file-like object. The callable is executed
-            when the user clicks the download button (deferred generation).
-            Streamlit commands inside the callable (for example,
-            ``st.write("Deferred data prepared")``) are ignored and will not
-            render.
+            File contents can be a string, bytes, or file-like object.
+            File-like objects include ``io.BytesIO``, ``io.StringIO``, or any
+            class that implements the abstract base class ``io.RawIOBase``.
+
+            If a callable is passed, it is executed when the user clicks
+            the download button and runs on a separate thread from the
+            resulting script rerun. This deferred generation is helpful for
+            large files to avoid blocking the page script. The callable can't
+            accept any arguments. If any Streamlit commands are executed inside
+            the callable, they will be ignored.
 
             To prevent unnecessary recomputation, use caching when converting
             your data for download. For more information, see the Example 1
@@ -364,6 +499,10 @@ class ButtonMixin:
             The MIME type of the data. If this is ``None`` (default), Streamlit
             sets the MIME type depending on the value of ``data`` as follows:
 
+            - If ``data`` is a file object with a string ``name`` attribute
+              (e.g. a file opened with ``open()``), Streamlit first tries to
+              guess the MIME type from the file name (``file_name`` if
+              specified, otherwise ``data.name``).
             - If ``data`` is a string or textual file (i.e. ``str`` or
               ``io.TextIOWrapper`` object), Streamlit uses the "text/plain"
               MIME type.
@@ -374,10 +513,21 @@ class ButtonMixin:
             For more information about MIME types, see
             https://www.iana.org/assignments/media-types/media-types.xhtml.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -437,6 +587,10 @@ class ButtonMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
+
         disabled : bool
             An optional boolean that disables the download button if set to
             ``True``. The default is ``False``.
@@ -468,6 +622,48 @@ class ButtonMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the button matches the width
               of the parent container.
+
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
+
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
+
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
+
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
 
         Returns
         -------
@@ -579,26 +775,30 @@ class ButtonMixin:
            https://doc-download-button-file.streamlit.app/
            height: 200px
 
-        **Example 4: Generate the data on click with a callable**
+        **Example 4: Generate the data on-click with a callable**
 
-        Pass a function to ``data`` to generate the bytes lazily when the user
-        clicks the button. Streamlit commands inside this function are ignored.
+        Pass a callable to ``data`` to generate the bytes lazily when the user
+        clicks the button. Streamlit commands inside this callable are ignored.
+        The callable can't accept any arguments and must return a file-like
+        object.
 
         >>> import streamlit as st
         >>> import time
         >>>
         >>> def make_report():
-        >>>     # Runs on click; Streamlit commands here won't render
         >>>     time.sleep(1)
-        >>>     # st.write("Deferred data prepared")  # Ignored
         >>>     return "col1,col2\n1,2\n3,4".encode("utf-8")
         >>>
         >>> st.download_button(
         ...     label="Download report",
-        ...     data=make_report,  # pass the function, don't call it
+        ...     data=make_report,
         ...     file_name="report.csv",
         ...     mime="text/csv",
         ... )
+
+        .. output::
+           https://doc-download-button-deferred.streamlit.app/
+           height: 200px
 
         """
         ctx = get_script_run_ctx()
@@ -606,11 +806,12 @@ class ButtonMixin:
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
-        if type not in ["primary", "secondary", "tertiary"]:
-            raise StreamlitAPIException(
-                'The type argument to st.download_button must be "primary", "secondary", or "tertiary". \n'
-                f'The argument passed was "{type}".'
+        if type not in {"primary", "secondary", "tertiary"}:
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
+
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self._download_button(
             label=label,
@@ -624,10 +825,76 @@ class ButtonMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
+            wrap=wrap,
         )
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: Literal["ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
+    ) -> DeltaGenerator: ...
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: Literal["rerun"],
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
+    ) -> bool: ...
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: WidgetCallback,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
+    ) -> bool: ...
 
     @gather_metrics("link_button")
     def link_button(
@@ -635,13 +902,20 @@ class ButtonMixin:
         label: str,
         url: str,
         *,
+        key: Key | None = None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         help: str | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
-    ) -> DeltaGenerator:
+        shortcut: str | None = None,
+        wrap: bool | None = None,
+    ) -> bool | DeltaGenerator:
         r"""Display a link button element.
 
         When clicked, a new tab will be opened to the specified URL. This will
@@ -657,9 +931,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -668,7 +942,45 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         url : str
-            The url to be opened on user click
+            The URL to open on user click.
+
+        key : str, int, or None
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            If ``on_click`` enables widget behavior and ``key`` is provided,
+            Streamlit will register the key in Session State to store the button state.
+            The button state is read-only. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
+        on_click : callable, "rerun", or "ignore"
+            How the button should respond to user interaction. This controls
+            whether or not the button behaves like an input widget. This can
+            be one of the following values:
+
+            - ``"ignore"`` (default): Streamlit opens the link in a new tab
+              and doesn't rerun the app. The button won't behave like an
+              input widget.
+            - ``"rerun"``: Streamlit opens the link in a new tab and reruns
+              the app. In this case, ``st.link_button`` returns a Boolean value
+              like ``st.button``.
+            - A ``callable``: Streamlit opens the link in a new tab, reruns
+              the app, and executes the callable at the beginning of the rerun.
+              In this case, ``st.link_button`` returns a Boolean value.
+
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback when
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback when
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -708,6 +1020,10 @@ class ButtonMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
+
         disabled : bool
             An optional boolean that disables the link button if set to
             ``True``. The default is ``False``.
@@ -740,8 +1056,58 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
-        Example
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
+
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
+
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
+
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
+
+        Returns
         -------
+        element or bool
+            If ``on_click`` is ``"ignore"`` (default), this command returns an internal
+            placeholder for the button element. Otherwise, this command returns a Boolean
+            value in the same manner as ``st.button``: ``True`` if the button was clicked
+            on the last rerun and ``False`` if it wasn't.
+
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
@@ -751,12 +1117,13 @@ class ButtonMixin:
            height: 200px
 
         """
-        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
-        if type not in ["primary", "secondary", "tertiary"]:
-            raise StreamlitAPIException(
-                'The type argument to st.link_button must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+        if type not in {"primary", "secondary", "tertiary"}:
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
+
+        ctx = get_script_run_ctx()
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
@@ -764,24 +1131,34 @@ class ButtonMixin:
         return self._link_button(
             label=label,
             url=url,
+            key=key,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
             help=help,
             disabled=disabled,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             width=width,
+            shortcut=shortcut,
+            wrap=wrap,
+            ctx=ctx,
         )
 
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,
         label: str | None = None,
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        query_params: QueryParamsInput | None = None,
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -795,10 +1172,31 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str, Path, or StreamlitPage
-            The file path (relative to the main script) or a ``StreamlitPage``
-            indicating the page to switch to. Alternatively, this can be the
-            URL to an external page (must start with "http://" or "https://").
+        page : str, Path, or Page
+            The page to switch to on user click. This can be one of the
+            following values:
+
+            - Path to a Python file: The path can be a string or
+              ``pathlib.Path`` object. It can be absolute or relative to the
+              entrypoint file. The Python file must be the source of a page in
+              ``st.navigation``.
+
+              If you are using the ``pages/`` directory instead of
+              ``st.navigation``, the Python file must be your entrypoint file
+              or a file in the ``pages/`` directory.
+
+            - ``Page``: The source of the ``Page`` and its
+              ``url_path`` must match a page defined in ``st.navigation``.
+              Use ``st.Page`` to create a ``Page`` object.
+
+            - URL: The URL must contain an HTTP or HTTPS scheme, like
+              ``"https://docs.streamlit.io"``. When a user clicks a
+              URL-defined page link, the URL opens in a new tab and the app
+              doesn't rerun. If the page link is defined by a URL, then the
+              ``label`` parameter is required.
+
+            To link to a page defined by a ``callable``, you must use a
+            ``Page`` object.
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -808,9 +1206,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -819,9 +1217,9 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         icon : str or None
-            An optional emoji or icon to display next to the button label. If
+            An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -837,6 +1235,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the link label. This
+            defaults to ``"left"``.
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If
@@ -874,15 +1276,27 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
-        Example
-        -------
-        Consider the following example given this file structure:
+        query_params : dict, list of tuples, or None
+            Query parameters to apply when navigating to the target page.
+            This can be a dictionary or an iterable of key-value tuples. Values can
+            be strings or iterables of strings (for repeated keys). When this is
+            ``None`` (default), all non-embed query parameters are cleared during
+            navigation.
 
-        >>> your-repository/
-        >>> ├── pages/
-        >>> │   ├── page_1.py
-        >>> │   └── page_2.py
-        >>> └── your_app.py
+        Examples
+        --------
+        **Example 1: Basic usage**
+
+        The following example shows how to create page links in a multipage app
+        that uses the ``pages/`` directory:
+
+        .. code-block:: text
+
+            your-repository/
+            ├── pages/
+            │   ├── page_1.py
+            │   └── page_2.py
+            └── your_app.py
 
         >>> import streamlit as st
         >>>
@@ -899,8 +1313,32 @@ class ButtonMixin:
         .. |client.showSidebarNavigation| replace:: ``client.showSidebarNavigation``
         .. _client.showSidebarNavigation: https://docs.streamlit.io/develop/api-reference/configuration/config.toml#client
 
-        .. output ::
+        .. output::
             https://doc-page-link.streamlit.app/
+            height: 350px
+
+        **Example 2: Passing query parameters**
+
+        The following example shows how to pass query parameters when creating a
+        page link in a multipage app:
+
+        .. code-block:: text
+
+            your-repository/
+            ├── page_2.py
+            └── your_app.py
+
+        >>> import streamlit as st
+        >>>
+        >>> def page_1():
+        >>>     st.title("Page 1")
+        >>>     st.page_link("page_2.py", query_params={"utm_source": "page_1"})
+        >>>
+        >>> pg = st.navigation([page_1, "page_2.py"])
+        >>> pg.run()
+
+        .. output::
+            https://doc-page-link-query-params.streamlit.app/
             height: 350px
 
         """
@@ -911,13 +1349,17 @@ class ButtonMixin:
             # Sidebar page links should always be stretch width.
             width = "stretch"
 
+        normalized_icon_position = _normalize_icon_position(icon_position)
+
         return self._page_link(
             page=page,
             label=label,
             icon=icon,
+            icon_position=normalized_icon_position,
             help=help,
             disabled=disabled,
             width=width,
+            query_params=query_params,
         )
 
     def _download_button(
@@ -934,17 +1376,25 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
 
         on_click_callback: WidgetCallback | None = (
             None
             if on_click is None or on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)
+            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
         )
+
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
@@ -966,10 +1416,12 @@ class ButtonMixin:
             help=help,
             type=type,
             width=width,
+            icon_position=icon_position,
+            shortcut=normalized_shortcut,
         )
 
         if is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
 
@@ -978,21 +1430,27 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
         download_button_proto.type = type
+        if wrap is not None:
+            download_button_proto.wrap = wrap
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
         download_button_proto.disabled = disabled
 
         if help is not None:
-            download_button_proto.help = dedent(help)
+            download_button_proto.help = to_help_str(help)
 
         if icon is not None:
             download_button_proto.icon = validate_icon_or_emoji(icon)
+        download_button_proto.icon_position = _icon_position_to_proto(icon_position)
 
         if on_click == "ignore":
             download_button_proto.ignore_rerun = True
         else:
             download_button_proto.ignore_rerun = False
+
+        if normalized_shortcut is not None:
+            download_button_proto.shortcut = normalized_shortcut
 
         serde = ButtonSerde()
 
@@ -1005,10 +1463,13 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="trigger_value",
+            disabled=disabled,
         )
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        if ctx:
+            save_for_app_testing(ctx, element_id, button_state.value)
+
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(
             "download_button", download_button_proto, layout_config=layout_config
         )
@@ -1018,47 +1479,130 @@ class ButtonMixin:
         self,
         label: str,
         url: str,
-        help: str | None,
+        key: Key | None = None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         width: Width = "content",
-    ) -> DeltaGenerator:
+        shortcut: str | None = None,
+        wrap: bool | None = None,
+        ctx: ScriptRunContext | None = None,
+    ) -> bool | DeltaGenerator:
+        key = to_key(key)
+        label = "" if label is None else to_str(label)
+        ignore_rerun = on_click == "ignore"
+        is_rerun_mode = not ignore_rerun
+        on_click_callback: WidgetCallback | None = (
+            None
+            if on_click in {"ignore", "rerun"}
+            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
+        )
+
         link_button_proto = LinkButtonProto()
+        normalized_shortcut = (
+            normalize_shortcut(shortcut) if shortcut is not None else None
+        )
+
+        should_check_widget_policies = is_rerun_mode or key is not None
+        should_register_element_id = (
+            should_check_widget_policies or normalized_shortcut is not None
+        )
+        if should_check_widget_policies:
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=on_click_callback,
+                default_value=None,
+                writes_allowed=False,
+            )
+
+        if should_register_element_id:
+            link_button_proto.id = compute_and_register_element_id(
+                "link_button",
+                user_key=key,
+                key_as_main_identity=should_check_widget_policies,
+                dg=self.dg,
+                label=label,
+                icon=icon,
+                url=url,
+                help=help,
+                type=type,
+                width=width,
+                icon_position=icon_position,
+                shortcut=normalized_shortcut,
+            )
+
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
         link_button_proto.disabled = disabled
+        link_button_proto.ignore_rerun = ignore_rerun
+        if wrap is not None:
+            link_button_proto.wrap = wrap
 
         if help is not None:
-            link_button_proto.help = dedent(help)
+            link_button_proto.help = to_help_str(help)
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
+        link_button_proto.icon_position = _icon_position_to_proto(icon_position)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
-        return self.dg._enqueue(
+        if normalized_shortcut is not None:
+            link_button_proto.shortcut = normalized_shortcut
+
+        button_state = None
+        if is_rerun_mode:
+            serde = ButtonSerde()
+            button_state = register_widget(
+                link_button_proto.id,
+                on_change_handler=on_click_callback,
+                args=args,
+                kwargs=kwargs,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="trigger_value",
+                disabled=disabled,
+            )
+
+        layout_config = create_layout_config(width=width, allow_content_width=True)
+        link_button_dg = self.dg._enqueue(
             "link_button", link_button_proto, layout_config=layout_config
         )
 
+        if button_state is not None:
+            return button_state.value
+        return link_button_dg
+
     def _page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         help: str | None = None,
         disabled: bool = False,
         width: Width = "content",
+        query_params: QueryParamsInput | None = None,
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
-        validate_width(width, allow_content=True)
+        if query_params:
+            page_link_proto.query_string = process_query_params(query_params)
+
+        layout_config = create_layout_config(width=width, allow_content_width=True)
+
+        # Set icon_position early so it's set even in early return paths
+        page_link_proto.icon_position = _icon_position_to_proto(icon_position)
 
         ctx = get_script_run_ctx()
         if not ctx:
-            layout_config = LayoutConfig(width=width)
             return self.dg._enqueue(
                 "page_link", page_link_proto, layout_config=layout_config
             )
@@ -1066,23 +1610,32 @@ class ButtonMixin:
         page_link_proto.disabled = disabled
 
         if label is not None:
-            page_link_proto.label = label
+            page_link_proto.label = to_str(label)
 
         if icon is not None:
             page_link_proto.icon = validate_icon_or_emoji(icon)
 
         if help is not None:
-            page_link_proto.help = dedent(help)
+            page_link_proto.help = to_help_str(help)
 
-        if isinstance(page, StreamlitPage):
-            page_link_proto.page_script_hash = page._script_hash
-            page_link_proto.page = page.url_path
+        if isinstance(page, Page):
             if label is None:
                 page_link_proto.label = page.title
             if icon is None:
                 page_link_proto.icon = page.icon
-                # Here the StreamlitPage's icon is already validated
+                # Here the Page's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
+
+            if page.is_external:
+                page_link_proto.page = page.external_url or ""
+                page_link_proto.external = True
+                return self.dg._enqueue(
+                    "page_link", page_link_proto, layout_config=layout_config
+                )
+
+            _validate_registered_page(page)
+            page_link_proto.page_script_hash = page._script_hash
+            page_link_proto.page = page.url_path
         else:
             # Convert Path to string if necessary
             if isinstance(page, Path):
@@ -1091,10 +1644,13 @@ class ButtonMixin:
             # Handle external links:
             if is_url(page):
                 if label is None or label == "":
-                    raise StreamlitMissingPageLabelError()
+                    raise StreamlitMissingRequiredParameterError(
+                        "st.page_link",
+                        "label",
+                        detail="Streamlit cannot infer a label for an external URL.",
+                    )
                 page_link_proto.page = page
                 page_link_proto.external = True
-                layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(
                     "page_link", page_link_proto, layout_config=layout_config
                 )
@@ -1113,12 +1669,16 @@ class ButtonMixin:
             for page_data in all_app_pages.values():
                 full_path = page_data["script_path"]
                 page_name = page_data["page_name"]
-                url_pathname = page_data["url_pathname"]
+                # Default pages payload omits url_pathname until st.navigation
+                # registers pages.
+                url_pathname = page_data.get("url_pathname")
                 if requested_page == full_path:
                     if label is None:
                         page_link_proto.label = page_name
                     page_link_proto.page_script_hash = page_data["page_script_hash"]
-                    page_link_proto.page = url_pathname
+                    # Click navigation uses page_script_hash. Do not fall back
+                    # to page_name (a display title) as the href.
+                    page_link_proto.page = url_pathname or ""
                     break
 
             if page_link_proto.page_script_hash == "":
@@ -1128,7 +1688,6 @@ class ButtonMixin:
                     uses_pages_directory=bool(PagesManager.uses_pages_directory),
                 )
 
-        layout_config = LayoutConfig(width=width)
         return self.dg._enqueue(
             "page_link", page_link_proto, layout_config=layout_config
         )
@@ -1145,11 +1704,19 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
+
+        normalized_shortcut: str | None = None
+        if shortcut is not None:
+            normalized_shortcut = normalize_shortcut(shortcut)
 
         check_widget_policies(
             self.dg,
@@ -1173,6 +1740,8 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             width=width,
+            icon_position=icon_position,
+            shortcut=normalized_shortcut,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -1182,11 +1751,13 @@ class ButtonMixin:
         # they will have no script_run_ctx.
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
-                raise StreamlitAPIException(
-                    f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                raise StreamlitInvalidLayoutContextError(
+                    "`st.button()` can't be used in an `st.form()`. Use "
+                    "`st.form_submit_button()` instead to submit the form."
+                    f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
-                raise StreamlitAPIException(
+                raise StreamlitInvalidLayoutContextError(
                     f"`st.form_submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
                 )
 
@@ -1198,12 +1769,18 @@ class ButtonMixin:
         button_proto.form_id = form_id
         button_proto.type = type
         button_proto.disabled = disabled
+        if wrap is not None:
+            button_proto.wrap = wrap
 
         if help is not None:
-            button_proto.help = dedent(help)
+            button_proto.help = to_help_str(help)
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
+        button_proto.icon_position = _icon_position_to_proto(icon_position)
+
+        if normalized_shortcut is not None:
+            button_proto.shortcut = normalized_shortcut
 
         serde = ButtonSerde()
 
@@ -1216,21 +1793,48 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="trigger_value",
+            disabled=disabled,
         )
 
         if ctx:
             save_for_app_testing(ctx, element_id, button_state.value)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue("button", button_proto, layout_config=layout_config)
 
         return button_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _maybe_infer_file_info(
+    data: DownloadButtonDataType,
+    file_name: str | None,
+    mimetype: str | None,
+) -> tuple[str | None, str | None]:
+    """Infer a missing ``file_name``/``mime`` from ``data.name`` when it is a
+    non-empty string, as on a file object opened from disk (e.g. ``io.FileIO``).
+
+    Explicit user-provided values always take precedence; when nothing can be
+    inferred, the values are returned unchanged.
+    """
+    # `data.name` may be a property that raises (e.g. on a detached
+    # TextIOWrapper), so getattr's default alone isn't enough.
+    try:
+        name = getattr(data, "name", None)
+    except (AttributeError, ValueError, OSError):
+        return file_name, mimetype
+    # FileIO.name is an int when the object was created from a file descriptor.
+    if not isinstance(name, str) or not name:
+        return file_name, mimetype
+    if file_name is None:
+        file_name = os.path.basename(name)
+    if mimetype is None:
+        mimetype = mimetypes.guess_type(file_name)[0]
+    return file_name, mimetype
 
 
 def marshall_file(
@@ -1247,9 +1851,14 @@ def marshall_file(
             proto_download_button.url = ""
             return
 
+        # ty needs this cast; mypy already narrows via callable() above.
+        data_callable = cast(  # type: ignore[redundant-cast]
+            "Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]", data
+        )
+
         # Register the callable for deferred execution
         file_id = runtime.get_instance().media_file_mgr.add_deferred(
-            data,
+            data_callable,
             mimetype,
             coordinates,
             file_name=file_name,
@@ -1257,6 +1866,10 @@ def marshall_file(
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click
         return
+
+    # A file object opened from disk carries a usable path in `name`: use it
+    # to fill in a missing file_name/mime. See issue #14159.
+    file_name, mimetype = _maybe_infer_file_info(data, file_name, mimetype)
 
     # Existing logic for non-callable data
     data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(

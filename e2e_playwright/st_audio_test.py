@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_until,
 )
 from e2e_playwright.shared.app_utils import (
@@ -53,7 +54,7 @@ def test_audio_has_correct_properties(app: Page):
     expect(audio_elements).to_have_count(8)
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
-    expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))
+    expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*mp3"))
 
 
 @pytest.mark.skip_browser("webkit")
@@ -164,22 +165,28 @@ def test_audio_uses_unified_height(
     # To prevent flakiness, we wait for the audio to finish loading:
     wait_until(
         themed_app,
-        lambda: audio_element.evaluate("el => el.readyState") == 4,
+        lambda: audio_element.evaluate(
+            "el => el.readyState === 4 && Number.isFinite(el.duration) && el.duration > 0"
+        ),
         timeout=15000,
     )
 
     expect(audio_element).to_have_css("height", "40px")
-    # Additional wait to ensure that the audio element is fully loaded
-    # and that its not causing flakiness in screenshots.
-    # This might not be 100% necessary.
-    themed_app.wait_for_timeout(1000)
 
-    assert_snapshot(audio_element, name="st_audio-unified_height")
+    # Hide the timeline to prevent flakiness in screenshots (same approach as
+    # test_audio_width_configurations). Native media controls can still paint
+    # the scrubber inconsistently even after readyState === 4.
+    hide_timeline_style = """
+    audio::-webkit-media-controls-timeline { display: none; }
+    """
+    assert_snapshot(
+        audio_element, name="st_audio-unified_height", style=hide_timeline_style
+    )
 
 
 # TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.
 @pytest.mark.only_browser("chromium")
-def test_audio_source_error_with_url(app: Page, app_port: int):
+def test_audio_source_error_with_url(app: Page, app_base_url: str):
     """Test `st.audio` source error when data is a url."""
     # Ensure audio source request return a 404 status
     app.route(
@@ -194,7 +201,7 @@ def test_audio_source_error_with_url(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with url
@@ -205,11 +212,11 @@ def test_audio_source_error_with_url(app: Page, app_port: int):
 
 # TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.
 @pytest.mark.only_browser("chromium")
-def test_audio_source_error_with_path(app: Page, app_port: int):
+def test_audio_source_error_with_path(app: Page, app_base_url: str):
     """Test `st.audio` source error when data is path (media endpoint)."""
     # Ensure audio source request return a 404 status
     app.route(
-        f"http://localhost:{app_port}/media/**",
+        build_app_url(app_base_url, path="/media/**"),
         lambda route: route.fulfill(
             status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
         ),
@@ -220,7 +227,7 @@ def test_audio_source_error_with_path(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     # Wait until the expected errors are logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with path

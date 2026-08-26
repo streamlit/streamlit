@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import zip from "lodash/zip"
+import { zip } from "lodash-es"
 
 import {
   FileUploaderState as FileUploaderStateProto,
@@ -54,7 +54,7 @@ export const uploadFiles = async ({
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
 }> => {
-  let fileUrls: IFileURLs[] = []
+  let fileUrls: IFileURLs[]
 
   try {
     fileUrls = await uploadClient.fetchFileURLs(files)
@@ -73,7 +73,10 @@ export const uploadFiles = async ({
   await Promise.all(
     filesWithUrls.map(async ([file, fileUrl]) => {
       if (!file || !fileUrl?.uploadUrl || !fileUrl.fileId) {
-        return { file, fileUrl, error: new Error("No upload URL found") }
+        if (file) {
+          failedUploads.push({ file, error: new Error("No upload URL found") })
+        }
+        return undefined
       }
 
       try {
@@ -89,11 +92,12 @@ export const uploadFiles = async ({
         const error = ensureError(e)
         failedUploads.push({ file, error })
       }
+      return undefined
     })
   )
 
   widgetMgr.setFileUploaderStateValue(
-    widgetInfo,
+    widgetInfo.id,
     new FileUploaderStateProto({
       uploadedFileInfo: successfulUploads.map(
         ({ file, fileUrl }) =>
@@ -106,9 +110,10 @@ export const uploadFiles = async ({
       ),
     }),
     {
-      fromUi: true,
-    },
-    fragmentId
+      formId: widgetInfo.formId,
+      fragmentId,
+      fromUser: true,
+    }
   )
 
   return { successfulUploads, failedUploads }

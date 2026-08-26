@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ describe("eslint-plugin-streamlit-custom", () => {
       "no-hardcoded-theme-values",
       "enforce-memo",
       "no-force-reflow-access",
+      "no-aria-hidden-with-focusable-children",
     ]
 
     expect(Object.keys(plugin.rules)).toHaveLength(EXPECTED_RULES.length)

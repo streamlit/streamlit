@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useCallback } from "react"
-
-import { StyledAction, StyledBody } from "baseui/card"
+import { ReactElement, ReactNode, useCallback } from "react"
 
 import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import Snowflake from "@streamlit/app/src/assets/svg/snowflake.svg"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import {
-  DetachedHead,
-  ModuleIsNotAdded,
-  NoRepositoryDetected,
-} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
+import DetachedHead from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/DetachedHead"
+import ModuleIsNotAdded from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/ModuleIsNotAdded"
+import NoRepositoryDetected from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/NoRepositoryDetected"
 import { PlainEventHandler } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
@@ -40,12 +36,13 @@ import {
 import { BaseButton, BaseButtonKind } from "@streamlit/lib"
 import { GitInfo, IGitInfo } from "@streamlit/protobuf"
 
-import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
 import Modal from "./DeployModal"
 import {
   StyledActionsWrapper,
   StyledCardContainer,
+  StyledDeployCard,
+  StyledDeployCardBody,
   StyledHeader,
   StyledSubheader,
 } from "./styled-components"
@@ -151,8 +148,8 @@ export function DeployDialog(
   return (
     <Modal onClose={onClose}>
       <StyledCardContainer>
-        <Card>
-          <StyledBody style={{ flexGrow: 1 }}>
+        <StyledDeployCard>
+          <StyledDeployCardBody $flexGrow={1}>
             <img
               src={StreamlitLogo}
               alt={"Streamlit Logo"}
@@ -165,8 +162,8 @@ export function DeployDialog(
             <ListElement>
               Explore and learn from Streamlit’s community and popular apps
             </ListElement>
-          </StyledBody>
-          <StyledAction>
+          </StyledDeployCardBody>
+          <div>
             <StyledActionsWrapper>
               <BaseButton
                 kind={BaseButtonKind.PRIMARY}
@@ -186,10 +183,10 @@ export function DeployDialog(
                 Learn more
               </BaseButton>
             </StyledActionsWrapper>
-          </StyledAction>
-        </Card>
-        <Card>
-          <StyledBody style={{ flexGrow: 1 }}>
+          </div>
+        </StyledDeployCard>
+        <StyledDeployCard>
+          <StyledDeployCardBody $flexGrow={1}>
             <img
               src={Snowflake}
               alt={"Snowflake"}
@@ -207,8 +204,8 @@ export function DeployDialog(
             <ListElement>
               Integrate with Snowflake’s full data stack
             </ListElement>
-          </StyledBody>
-          <StyledAction>
+          </StyledDeployCardBody>
+          <div>
             <StyledActionsWrapper>
               <BaseButton
                 kind={BaseButtonKind.SECONDARY}
@@ -233,10 +230,10 @@ export function DeployDialog(
                 Learn more
               </BaseButton>
             </StyledActionsWrapper>
-          </StyledAction>
-        </Card>
-        <Card>
-          <StyledBody style={{ flexGrow: 2 }}>
+          </div>
+        </StyledDeployCard>
+        <StyledDeployCard>
+          <StyledDeployCardBody $flexGrow={2}>
             <img
               src={Rocket}
               alt={"Rocket"}
@@ -250,8 +247,8 @@ export function DeployDialog(
             <ListElement>
               Set up and maintain your own authentication, resources, and costs
             </ListElement>
-          </StyledBody>
-          <StyledAction>
+          </StyledDeployCardBody>
+          <div>
             <StyledActionsWrapper>
               <BaseButton
                 onClick={() => {
@@ -265,8 +262,8 @@ export function DeployDialog(
                 Learn more
               </BaseButton>
             </StyledActionsWrapper>
-          </StyledAction>
-        </Card>
+          </div>
+        </StyledDeployCard>
       </StyledCardContainer>
     </Modal>
   )

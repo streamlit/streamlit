@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,4 +14,13 @@
 
 import streamlit as st
 
-st.balloons()
+# --- Button-triggered balloons (element hash memo regression test) ---
+if "balloons_count" not in st.session_state:
+    st.session_state.balloons_count = 0
+    # Initial balloons on first load
+    st.balloons()
+
+if st.button("Show more balloons"):
+    st.session_state.balloons_count += 1
+    st.balloons()
+    st.write(f"Balloons shown: {st.session_state.balloons_count}")

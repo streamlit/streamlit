@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ def test_checking_checkbox_unchecks_other(app: Page):
     first_checkbox = get_checkbox(app, "Checkbox1")
     second_checkbox = get_checkbox(app, "Checkbox2")
 
-    expect(first_checkbox.locator("input")).to_have_attribute("aria-checked", "true")
-    expect(second_checkbox.locator("input")).to_have_attribute("aria-checked", "false")
+    expect(first_checkbox.locator("input")).to_be_checked()
+    expect(second_checkbox.locator("input")).not_to_be_checked()
 
     click_checkbox(app, "Checkbox2")
 
-    expect(first_checkbox.locator("input")).to_have_attribute("aria-checked", "false")
-    expect(second_checkbox.locator("input")).to_have_attribute("aria-checked", "true")
+    expect(first_checkbox.locator("input")).not_to_be_checked()
+    expect(second_checkbox.locator("input")).to_be_checked()
 
 
 def test_has_correct_starting_values(app: Page):

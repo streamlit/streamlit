@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,8 +89,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     ) {
       try {
         displayTextRegex = new RegExp(configuredDisplayText, "us")
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
+      } catch {
         // The regex is invalid, interpret it as static display text.
         displayTextRegex = undefined
       }
@@ -148,20 +147,18 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/link:",
     sortMode: "default",
     validateInput,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any, validate?: boolean): GridCell {
+    getCell(data?: unknown, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-          data: null as any,
+          data: null as unknown as string,
           isMissingValue: true,
           onClickUri: () => {},
           themeOverride: undefined,
         } as UriCell
       }
 
-      const href: string = data
+      const href = toSafeString(data)
       if (typeof validateRegex === "string") {
         // The regex is invalid, we return an error to indicate this
         // to the developer:

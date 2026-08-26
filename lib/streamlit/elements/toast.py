@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
@@ -28,8 +31,10 @@ if TYPE_CHECKING:
 
 def validate_text(toast_text: SupportsStr) -> SupportsStr:
     if str(toast_text) == "":
-        raise StreamlitAPIException(
-            "Toast body cannot be blank - please provide a message."
+        raise StreamlitMissingRequiredParameterError(
+            "st.toast",
+            "body",
+            detail="Please provide a message.",
         )
     return toast_text
 
@@ -151,7 +156,7 @@ class ToastMixin:
         toast_proto.body = clean_text(validate_text(body))
         toast_proto.icon = validate_icon_or_emoji(icon)
 
-        if duration in ["short", "long", "infinite"] or (
+        if duration in {"short", "long", "infinite"} or (
             isinstance(duration, int) and duration > 0
         ):
             if duration == "short":
@@ -167,9 +172,9 @@ class ToastMixin:
                 "duration", ["short", "long", "infinite", "a positive integer"]
             )
 
-        return self.dg._enqueue("toast", toast_proto)
+        return self.dg._enqueue("toast", toast_proto, has_one_shot_effect=True)
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

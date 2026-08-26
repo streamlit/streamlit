@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
 import { PresetThemeName } from "~lib/theme/types"
@@ -22,6 +24,7 @@ import { isValidOrigin } from "~lib/util/UriUtil"
 import {
   AppConfig,
   DeployedAppMetadata,
+  GuestToHostEnvelope,
   IGuestToHostMessage,
   IHostToGuestMessage,
   IMenuItem,
@@ -29,9 +32,34 @@ import {
   VersionedMessage,
 } from "./types"
 
+const LOG = getLogger("HostCommunicationManager")
+
 export const HOST_COMM_VERSION = 1
 
-export interface HostCommunicationProps {
+/**
+ * Marks a same-window copy of a guest→host message so the guest does not
+ * handle it as a host command. Some types (notably `UPDATE_HASH`) are valid
+ * in both directions. Workspace consumers of this package can import
+ * the constant instead of hardcoding the string.
+ */
+export const IS_GUEST_TO_HOST_ECHO = "isGuestToHostEcho"
+
+/**
+ * True when `data`'s own `isGuestToHostEcho` is boolean `true`. Inherited or
+ * merely truthy values do not count, so they cannot suppress host commands.
+ * Callers must still require a same-window self-post; this helper does not
+ * inspect `event.source`.
+ */
+function isGuestToHostEchoPayload(data: unknown): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    Object.prototype.hasOwnProperty.call(data, IS_GUEST_TO_HOST_ECHO) &&
+    (data as Record<string, unknown>)[IS_GUEST_TO_HOST_ECHO] === true
+  )
+}
+
+interface HostCommunicationProps {
   readonly streamlitExecutionStartedAt: number
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
@@ -41,7 +69,7 @@ export interface HostCommunicationProps {
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
-  readonly sendAppHeartbeat: () => void
+  readonly sendAppHeartbeat: (ackTimeoutMilliseconds: number) => void
   readonly setInputsDisabled: (inputsDisabled: boolean) => void
   readonly themeChanged: (
     themeName?: PresetThemeName,
@@ -66,6 +94,7 @@ export interface HostCommunicationProps {
   ) => void
   readonly restartWebsocketConnection: () => void
   readonly terminateWebsocketConnection: () => void
+  readonly printApp: () => void
 }
 
 /**
@@ -78,6 +107,8 @@ export default class HostCommunicationManager {
 
   private deferredAuthToken: PromiseWithResolvers<string | undefined>
 
+  private isHostCommOpen = false
+
   constructor(props: HostCommunicationProps) {
     this.props = props
 
@@ -86,23 +117,32 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Adds a listener for messages from the host
-   * sends message that guest is ready to receive messages
+   * Adds a listener for messages from the host and sends a GUEST_READY
+   * message. This is idempotent: subsequent calls are no-ops while the
+   * communication channel is open, ensuring only one listener is registered
+   * and only one GUEST_READY is sent per app lifecycle.
    */
   public openHostCommunication = (): void => {
+    if (this.isHostCommOpen) {
+      return
+    }
+    this.isHostCommOpen = true
     window.addEventListener("message", this.receiveHostMessage)
-    this.sendMessageToHost({
+    const guestReadyMessage: IGuestToHostMessage = {
       type: "GUEST_READY",
       streamlitExecutionStartedAt: this.props.streamlitExecutionStartedAt,
       guestReadyAt: Date.now(),
-    })
+    }
+    this.sendMessageToHost(guestReadyMessage)
   }
 
   /**
-   * Cleans up message event listener
+   * Cleans up message event listener and resets the open flag so
+   * communication can be re-established if needed.
    */
   public closeHostCommunication = (): void => {
     window.removeEventListener("message", this.receiveHostMessage)
+    this.isHostCommOpen = false
   }
 
   /**
@@ -142,53 +182,120 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Register a function to deliver a message to the Host
-   * that is on the same origin as the Guest
+   * Deliver a message to a host that is on the same origin as the guest.
+   * When the app is embedded, also posts a tagged copy to this window so an
+   * in-iframe host can observe it.
    */
   public sendMessageToSameOriginHost = (
     message: IGuestToHostMessage
   ): void => {
-    window.parent.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
-      window.location.origin
-    )
+    this.postMessageToParentAndEcho(message, window.location.origin)
   }
 
   /**
-   * Register a function to deliver a message to the Host
+   * Deliver a message to the host.
+   * When the app is embedded, also posts a tagged copy to this window so an
+   * in-iframe host can observe it.
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
-    window.parent.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
-      "*"
-    )
+    this.postMessageToParentAndEcho(message, "*")
+  }
+
+  private buildVersionedMessage(
+    message: IGuestToHostMessage
+  ): VersionedMessage<IGuestToHostMessage> {
+    return {
+      stCommVersion: HOST_COMM_VERSION,
+      ...message,
+    }
+  }
+
+  /**
+   * Post `message` to `window.parent`. When embedded, also post a tagged copy
+   * to this window so an in-iframe host can observe guest messages even if
+   * the parent is a third-party page.
+   *
+   * - The copy sets `isGuestToHostEcho: true` so `receiveHostMessage` ignores it.
+   * - Target `"/"` is `postMessage`'s same-origin shortcut: it matches the
+   *   sender's effective origin and does not throw when `location.origin` is
+   *   `"null"`.
+   * - Echo before the parent post so an opaque-origin parent target (`"null"`)
+   *   cannot skip the in-window host.
+   * - Do not echo at top level: `isSelfPost` is false when
+   *   `window === window.parent`, so an unignored echo could run as a host
+   *   command (e.g. UPDATE_HASH).
+   */
+  private postMessageToParentAndEcho(
+    message: IGuestToHostMessage,
+    parentTargetOrigin: string
+  ): void {
+    const versionedMessage = this.buildVersionedMessage(message)
+    if (window !== window.parent) {
+      const echo: GuestToHostEnvelope = {
+        ...versionedMessage,
+        [IS_GUEST_TO_HOST_ECHO]: true,
+      }
+      window.postMessage(echo, "/")
+    }
+    window.parent.postMessage(versionedMessage, parentTargetOrigin)
   }
 
   /**
    * Register a function to handle a message from the Host
    */
   public receiveHostMessage = (event: MessageEvent): void => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
-    const message: VersionedMessage<IHostToGuestMessage> | any = event.data
+    const message = event.data as VersionedMessage<IHostToGuestMessage>
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP
-    // frame-anscestors header, it doesn't hurt to be extra safe). We avoid
+    // frame-ancestors header, it doesn't hurt to be extra safe). We avoid
     // processing messages received from origins we haven't explicitly
-    // labeled as trusted here to lower the probability that we end up
-    // processing malicious input.
-    if (
-      message.stCommVersion !== HOST_COMM_VERSION ||
-      !this.allowedOrigins.find(allowed =>
-        isValidOrigin(allowed, event.origin)
-      )
-    ) {
+    // labeled as trusted, and only accept trusted postMessage events from the
+    // direct parent frame (or a genuine same-window self-post, see below) so
+    // same-origin child iframes cannot spoof host commands.
+    const isFromParent = event.source === window.parent
+    // Genuine same-window self-post used by an in-iframe embed preamble to
+    // deliver host messages (e.g. SET_AUTH_TOKEN) to the library when there is
+    // no trusted parent frame to relay them (window.parent is a third-party
+    // page). The browser sets event.source to the calling window, so this can
+    // only match a post from this very window (not a child frame, whose source
+    // would be the child's window). Trusting it grants no extra privilege
+    // since any script in this same window already has full same-origin access.
+    const isSelfPost = event.source === window && window !== window.parent
+    // Ignore our own guest→host echo so bidirectional types (e.g. UPDATE_HASH)
+    // are not executed as host commands. Require isSelfPost so a parent cannot
+    // drop a host command by forging the marker.
+    if (isSelfPost && isGuestToHostEchoPayload(event.data)) {
+      return
+    }
+    // Reject script-dispatched (synthetic) events, and only accept messages
+    // from the direct parent frame or a genuine same-window self-post.
+    const isTrustedMessage = event.isTrusted && (isFromParent || isSelfPost)
+    const isHostMessage = message?.stCommVersion === HOST_COMM_VERSION
+    // Only parse origins for genuine host messages; this global handler
+    // receives many unrelated postMessages and isValidOrigin allocates
+    // URL/URLPattern objects on every call.
+    const isAllowedOrigin =
+      isHostMessage &&
+      this.allowedOrigins.some(allowed => isValidOrigin(allowed, event.origin))
+
+    if (!isTrustedMessage || !isHostMessage || !isAllowedOrigin) {
+      // Only log when the payload looks like a genuine host message so we don't
+      // spam logs for the many unrelated postMessages this global handler
+      // receives. This helps diagnose cases where a legitimate host's messages
+      // are unexpectedly dropped -- including a dropped same-window self-post
+      // from an in-iframe embed preamble (e.g. a SET_AUTH_TOKEN whose origin is
+      // not allow-listed).
+      if (isHostMessage) {
+        LOG.debug(
+          "Ignoring host message: isTrusted=%s, sourceIsParent=%s, selfPost=%s, allowedOrigin=%s, origin=%s",
+          event.isTrusted,
+          isFromParent,
+          isSelfPost,
+          isAllowedOrigin,
+          event.origin
+        )
+      }
       return
     }
 
@@ -213,7 +320,12 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SEND_APP_HEARTBEAT") {
-      this.props.sendAppHeartbeat()
+      const timeout = message.ackTimeoutMilliseconds
+      const validatedTimeout =
+        typeof timeout === "number" && Number.isFinite(timeout) && timeout > 0
+          ? timeout
+          : 0
+      this.props.sendAppHeartbeat(validatedTimeout)
     }
 
     if (message.type === "SET_INPUTS_DISABLED") {
@@ -286,6 +398,10 @@ export default class HostCommunicationManager {
 
     if (message.type === "TERMINATE_WEBSOCKET_CONNECTION") {
       this.props.terminateWebsocketConnection()
+    }
+
+    if (message.type === "PRINT_APP") {
+      this.props.printApp()
     }
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { createContext } from "react"
+import { createContext, RefObject } from "react"
 
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 export interface SidebarConfigContextProps {
   /**
-   * The initial sidebar state from page config (AUTO, EXPANDED, or COLLAPSED).
+   * The initial sidebar state from page config (AUTO, EXPANDED, COLLAPSED, or LOCKED).
    * Used to determine default sidebar behavior on app load.
    *
    * Consumed by: Sidebar, AppView
@@ -28,6 +28,13 @@ export interface SidebarConfigContextProps {
    * @see AppView
    */
   initialSidebarState: PageConfig.SidebarState
+
+  /**
+   * The sidebar's initial width in pixels.
+   * Set from the PageConfig protobuf when initial_sidebar_state is an integer.
+   * @see Sidebar
+   */
+  initialSidebarWidth?: number
 
   /**
    * The app logo configuration (image, link, icon).
@@ -58,6 +65,16 @@ export interface SidebarConfigContextProps {
   expandSidebarNav: boolean
 
   /**
+   * Maximum number of pages to display when the sidebar nav is collapsed.
+   * When undefined, uses the default (10 pages).
+   * When a positive number, shows that many pages before "View X more".
+   *
+   * Consumed by: SidebarNav
+   * @see SidebarNav
+   */
+  sidebarNavVisibleItems?: number
+
+  /**
    * Whether to hide the sidebar navigation menu entirely.
    * When true, sidebar nav is not rendered even if multiple pages exist.
    *
@@ -66,6 +83,33 @@ export interface SidebarConfigContextProps {
    * @see AppView
    */
   hideSidebarNav: boolean
+
+  /**
+   * Whether the developer requested the sidebar be locked open.
+   * Derived from initialSidebarState === LOCKED.
+   *
+   * On desktop viewports this is fully enforced: the sidebar stays expanded
+   * and collapse/expand controls are hidden. On narrow/mobile viewports the
+   * lock degrades gracefully (isSidebarLocked remains true, but components
+   * derive isEffectivelyLocked = isSidebarLocked && !isMobileViewport and
+   * allow the sidebar to be toggled to avoid covering the main content).
+   *
+   * Consumed by: Sidebar, AppView
+   * @see Sidebar
+   * @see AppView
+   */
+  isSidebarLocked: boolean
+
+  /**
+   * Ref to the root app container element.
+   * Used to detect if click events are inside the main app container
+   * vs. in a portal (dropdowns, modals, etc.) to prevent incorrect
+   * sidebar collapse on mobile.
+   *
+   * Consumed by: Sidebar
+   * @see Sidebar
+   */
+  appRootRef?: RefObject<HTMLDivElement> | null
 }
 
 /**
@@ -81,6 +125,7 @@ export const SidebarConfigContext = createContext<SidebarConfigContextProps>({
   sidebarChevronDownshift: 0,
   expandSidebarNav: false,
   hideSidebarNav: false,
+  isSidebarLocked: false,
 })
 
 // Set the context display name for React DevTools

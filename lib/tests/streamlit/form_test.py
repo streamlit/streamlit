@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,15 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
+    StreamlitValueError,
+)
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.runtime.state.session_state import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -243,11 +251,15 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_multiple_forms_same_key(self):
         """Multiple forms with the same key are not allowed."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitDuplicateElementKey) as ctx:
             st.form(key="foo")
             st.form(key="foo")
 
-        assert "There are multiple identical forms with `key='foo'`" in str(ctx.value)
+        assert str(ctx.value) == (
+            "There are multiple elements with the same `key='foo'`. "
+            "To fix this, please make sure that the `key` argument is unique for "
+            "each element you create."
+        )
 
     def test_multiple_forms_same_labels_different_keys(self):
         """Multiple forms with different keys are allowed."""
@@ -262,7 +274,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_form_in_form(self):
         """Test that forms cannot be nested in other forms."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             with st.form("foo"):
                 with st.form("bar"):
                     pass
@@ -272,11 +284,13 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_button_in_form(self):
         """Test that buttons are not allowed in forms."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             with st.form("foo"):
                 st.button("foo")
 
         assert "`st.button()` can't be used in an `st.form()`" in str(ctx.value)
+        # The error should point users to the correct alternative.
+        assert "`st.form_submit_button()`" in str(ctx.value)
 
     def test_form_block_data(self):
         """Test that a form creates a block element with correct data."""
@@ -301,7 +315,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             st.form_submit_button()
 
         assert "`st.form_submit_button()` must be used inside an `st.form()`" in str(
@@ -334,6 +348,25 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
 
         last_delta = self.get_delta_from_queue()
         assert last_delta.new_element.button.type == "secondary"
+
+    def test_submit_button_wrap_default(self):
+        """By default wrap is left unset (auto) so the frontend resolves it."""
+
+        form = st.form("foo")
+        form.form_submit_button()
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert not button_proto.HasField("wrap")
+
+    @parameterized.expand([(True,), (False,)])
+    def test_submit_button_wrap(self, wrap_value: bool):
+        """Test that the wrap parameter is forwarded to the submit button proto."""
+
+        form = st.form("foo")
+        form.form_submit_button(wrap=wrap_value)
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert button_proto.wrap is wrap_value
 
     def test_submit_button_with_key(self):
         """Test that a submit button can have a custom key."""
@@ -372,14 +405,27 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         last_delta = self.get_delta_from_queue()
         assert last_delta.new_element.button.icon == ":material/thumb_up:"
 
-    def test_submit_button_does_not_use_container_width_by_default(self):
-        """Test that a submit button does not use_use_container width by default."""
+    @parameterized.expand(["left", "right"])
+    def test_submit_button_icon_position(self, icon_position):
+        """Test that submit button icon positions are serialized."""
 
         form = st.form("foo")
-        form.form_submit_button(type="primary")
+        form.form_submit_button(icon_position=icon_position)
 
         last_delta = self.get_delta_from_queue()
-        assert not last_delta.new_element.button.use_container_width
+        expected = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
+        assert last_delta.new_element.button.icon_position == expected
+
+    def test_submit_button_invalid_icon_position(self):
+        """Test that invalid submit button icon positions raise an error."""
+
+        form = st.form("foo")
+        with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
+            form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
 
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
@@ -406,7 +452,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         cached_function()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

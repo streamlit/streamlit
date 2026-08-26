@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+from dataclasses import dataclass
 
 import pandas as pd
 
@@ -39,7 +42,7 @@ more_options = [
     "e2e/scripts/st_info.py",
     "e2e/scripts/st_echo.py",
     "e2e/scripts/st_json.py",
-    "e2e/scripts/st_experimental_get_query_params.py",
+    "e2e/scripts/st_query_params.py",
     "e2e/scripts/st_markdown.py",
     "e2e/scripts/st_color_picker.py",
     "e2e/scripts/st_expander.py",
@@ -90,7 +93,7 @@ v10 = st.selectbox(
 )
 st.write("value 10:", v10)
 
-v11 = st.selectbox(
+v11: str = st.selectbox(
     "selectbox 11 (options from dataframe)", pd.DataFrame({"foo": list(options)})
 )
 st.write("value 11:", v11)
@@ -150,7 +153,7 @@ st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch"
 if st.toggle("Update selectbox props"):
     sel_value = st.selectbox(
         "Updated dynamic selectbox",
-        index=1,
+        index=1,  # default is "papaya"
         width=200,
         help="updated help",
         key="dynamic_selectbox_with_key",
@@ -160,17 +163,18 @@ if st.toggle("Update selectbox props"):
         args=("Updated select arg",),
         kwargs={"param": "updated kwarg param"},
         placeholder="updated placeholder",
-        # options, format_func & accept_new_options are not yet supported for
-        # dynamic changes keeping it at the same value for now:
-        options=["apple", "banana", "orange"],
-        accept_new_options=True,
-        format_func=lambda x: x.capitalize(),
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 0 here, but default is index 1 (papaya)
+        options=["mango", "papaya", "grape", "apple"],
+        format_func=lambda x: x.upper(),
+        # Whitelisted kwargs (keep stable):
+        accept_new_options=False,
     )
     st.write("Updated selectbox value:", sel_value)
 else:
     sel_value = st.selectbox(
         "Initial dynamic selectbox",
-        index=0,
+        index=0,  # default is "apple"
         width="stretch",
         help="initial help",
         key="dynamic_selectbox_with_key",
@@ -180,8 +184,129 @@ else:
         args=("Initial select arg",),
         kwargs={"param": "initial kwarg param"},
         placeholder="initial placeholder",
-        options=["apple", "banana", "orange"],
-        accept_new_options=True,
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 2 here, default is index 0 (apple)
+        options=["apple", "banana", "mango", "orange"],
         format_func=lambda x: x.capitalize(),
+        # Whitelisted kwargs (keep stable):
+        accept_new_options=False,
     )
     st.write("Initial selectbox value:", sel_value)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/13435
+# Test that selectbox UI stays in sync when value is set via session_state
+# and user opens/closes dropdown without selecting
+with st.container(horizontal=True):
+    for value in ("male", "female"):
+        if st.button(f"Set {value}", key=f"set_{value}_btn"):
+            st.session_state["selectbox20"] = value
+v20 = st.selectbox(
+    "selectbox 20 - session_state sync test",
+    options,
+    index=0,
+    key="selectbox20",
+)
+st.write("value 20:", v20)
+
+v21 = st.selectbox(
+    "selectbox 21 (filter_mode='prefix')",
+    ["A123", "A1234", "BA123", "CA123"],
+    index=None,
+    filter_mode="prefix",
+)
+st.write("value 21:", v21)
+
+v22 = st.selectbox(
+    "selectbox 22 (filter_mode='contains')",
+    ["alice@example.com", "bob@company.com", "carol@example.com"],
+    index=None,
+    filter_mode="contains",
+)
+st.write("value 22:", v22)
+
+v23 = st.selectbox(
+    "selectbox 23 (filter_mode=None)",
+    ["Yes", "No", "Maybe"],
+    index=None,
+    filter_mode=None,
+)
+st.write("value 23:", v23)
+
+
+# Regression test for https://github.com/streamlit/streamlit/issues/15618:
+# custom-class options with a format_func that depends on object identity
+# (here a dict lookup) must not revert the selection on rerun.
+@dataclass(frozen=True)
+class _Choice:
+    id: int
+    name: str
+
+
+_choice_a = _Choice(1, "one")
+_choice_b = _Choice(2, "two")
+_choice_labels = {_choice_a: "I", _choice_b: "II"}
+
+v24 = st.selectbox(
+    "selectbox 24 (custom objects with identity-dependent format_func)",
+    [_choice_a, _choice_b],
+    format_func=lambda choice: f"{_choice_labels[choice]} ({choice.name})",
+    key="selectbox_24",
+)
+st.write("value 24:", v24.name)
+
+# Large option list to exercise the dropdown's virtualization: only a small
+# window of the options should be rendered in the DOM at any time.
+v25 = st.selectbox(
+    "selectbox 25 (large virtualized list)",
+    [f"Option {i}" for i in range(1000)],
+    index=None,
+    key="selectbox_25",
+)
+st.write("value 25:", v25)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/16003:
+# fuzzy (default) filter mode must keep non-contiguous matches. The react-aria
+# ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+# result, dropping matches whose query is not a contiguous substring (e.g. "ape"
+# fuzzy-matches "Apple", and "aple" is not a contiguous substring of any option).
+v26 = st.selectbox(
+    "selectbox 26 (fuzzy filter mode)",
+    ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+    index=None,
+    key="selectbox_26",
+)
+st.write("value 26:", v26)
+
+# --- Bound widgets (query-params) ---
+
+v_bound = st.selectbox(
+    "Bound selectbox",
+    ["cat", "dog", "bird"],
+    key="bound_select",
+    bind="query-params",
+)
+st.write("bound select value:", v_bound)
+
+v_bound_clear = st.selectbox(
+    "Bound clearable",
+    ["red", "green", "blue"],
+    index=None,
+    key="bound_select_clear",
+    bind="query-params",
+)
+st.write("bound select clear value:", v_bound_clear)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/16181:
+# a selectbox near the bottom of the sidebar must flip its dropdown up and stay
+# within the viewport instead of opening downward and overflowing. The
+# fixed-height spacer pushes the trigger toward the bottom so there is
+# insufficient room below for the dropdown.
+with st.sidebar:
+    st.container(height=500, border=False)
+    v_sidebar_bottom = st.selectbox(
+        "sidebar selectbox (bottom)",
+        [f"Option {i}" for i in range(1, 8)],
+        index=None,
+        key="sidebar_bottom_select",
+    )
+    st.write("sidebar bottom value:", v_sidebar_bottom)

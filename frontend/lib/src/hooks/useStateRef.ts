@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,9 +56,9 @@ export default function useStateRef<T>(
   initialState: T
 ): [T, Dispatch<SetStateAction<T>>, MutableRefObject<T>] {
   const [state, setState] = useState<T>(initialState)
-  const ref = useRef<T>(initialState)
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  ref.current = state
+  const stateRef = useRef<T>(initialState)
 
-  return [state, setState, ref]
+  stateRef.current = state
+
+  return [state, setState, stateRef]
 }

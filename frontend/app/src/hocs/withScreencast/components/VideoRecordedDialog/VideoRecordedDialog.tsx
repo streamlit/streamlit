@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FunctionComponent } from "react"
+import { FunctionComponent, useEffect, useState } from "react"
 
 import {
   BaseButton,
@@ -44,7 +44,14 @@ export interface Props {
 const VideoRecordedDialog: FunctionComponent<
   React.PropsWithChildren<Props>
 > = ({ onClose, videoBlob, fileName }) => {
-  const videoSource = URL.createObjectURL(videoBlob)
+  const [videoSource, setVideoSource] = useState("")
+
+  useEffect(() => {
+    const url = URL.createObjectURL(videoBlob)
+    setVideoSource(url)
+    return () => URL.revokeObjectURL(url)
+  }, [videoBlob])
+
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
@@ -57,17 +64,7 @@ const VideoRecordedDialog: FunctionComponent<
   }
 
   return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      overrides={{
-        Dialog: {
-          style: {
-            width: "80vw",
-          },
-        },
-      }}
-    >
+    <Modal isOpen onClose={onClose} width="80vw">
       <ModalHeader>Next steps</ModalHeader>
       <ModalBody>
         <StyledDialogContainer data-testid="stVideoRecordedDialog">

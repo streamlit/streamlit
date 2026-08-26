@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,10 @@ from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from streamlit import url_util
 from streamlit.elements.lib.layout_utils import validate_height
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -43,7 +46,7 @@ def _get_pdf_component() -> Any | None:
         import streamlit_pdf  # type: ignore
 
         return streamlit_pdf.pdf_viewer
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return None
 
 
@@ -94,16 +97,20 @@ class PdfMixin:
               larger. If the viewer is not in a parent container, the height
               of the viewer matches the height of its content.
 
-        Example
-        -------
+        Examples
+        --------
         >>> st.pdf("https://example.com/sample.pdf")
         >>> st.pdf("https://example.com/sample.pdf", height=600)
         """
         # Validate data parameter early
         if data is None:
-            raise StreamlitAPIException(
-                "The PDF data cannot be None. Please provide a valid PDF file path, URL, "
-                "bytes data, or file-like object."
+            raise StreamlitMissingRequiredParameterError(
+                "st.pdf",
+                "data",
+                detail=(
+                    "Please provide a valid PDF file path, URL, bytes data, "
+                    "or file-like object."
+                ),
             )
 
         # Check if custom PDF component is available first
@@ -186,5 +193,5 @@ class PdfMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ from __future__ import annotations
 
 __all__ = [
     "AreaChartColumn",
+    "AudioColumn",
     "BarChartColumn",
+    "ButtonColumn",
     "CheckboxColumn",
     "Column",
     "DateColumn",
@@ -30,18 +32,22 @@ __all__ = [
     "LineChartColumn",
     "LinkColumn",
     "ListColumn",
+    "MarkdownColumn",
     "MultiselectColumn",
     "NumberColumn",
     "ProgressColumn",
     "SelectboxColumn",
     "TextColumn",
     "TimeColumn",
+    "VideoColumn",
 ]
 
 
 from streamlit.elements.lib.column_types import (
     AreaChartColumn,
+    AudioColumn,
     BarChartColumn,
+    ButtonColumn,
     CheckboxColumn,
     Column,
     DateColumn,
@@ -51,10 +57,12 @@ from streamlit.elements.lib.column_types import (
     LineChartColumn,
     LinkColumn,
     ListColumn,
+    MarkdownColumn,
     MultiselectColumn,
     NumberColumn,
     ProgressColumn,
     SelectboxColumn,
     TextColumn,
     TimeColumn,
+    VideoColumn,
 )

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,9 @@ class MemoryCacheStorageManager(CacheStorageManager):
 
 
 class DummyCacheStorage(CacheStorage):
+    def has(self, key: str) -> bool:  # noqa: ARG002
+        return False
+
     def get(self, key: str) -> bytes:  # noqa: ARG002
         """
         Dummy gets the value for a given key,

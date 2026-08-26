@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { BaseProvider, LightTheme } from "baseui"
 
-import { render } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
@@ -36,31 +33,19 @@ describe("ScreencastDialog", () => {
   const props = getProps()
 
   it("renders without crashing", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <ScreencastDialog {...props} />
-      </BaseProvider>
-    )
+    render(<ScreencastDialog {...props} />)
     expect(screen.getByRole("dialog")).toBeInTheDocument()
   })
 
   it("should render a header", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <ScreencastDialog {...props} />
-      </BaseProvider>
-    )
+    render(<ScreencastDialog {...props} />)
     expect(screen.getByText("Record a screencast")).toBeInTheDocument()
   })
 
   describe("Modal body", () => {
     it("should have a record audio option to be selected", async () => {
       const user = userEvent.setup()
-      render(
-        <BaseProvider theme={LightTheme}>
-          <ScreencastDialog {...props} />
-        </BaseProvider>
-      )
+      render(<ScreencastDialog {...props} />)
       expect(
         screen.getByTestId("stScreencastAudioCheckbox")
       ).toHaveTextContent("Also record audio")
@@ -71,11 +56,7 @@ describe("ScreencastDialog", () => {
     })
 
     it("should have the stop recording explanation message", () => {
-      render(
-        <BaseProvider theme={LightTheme}>
-          <ScreencastDialog {...props} />
-        </BaseProvider>
-      )
+      render(<ScreencastDialog {...props} />)
       const instruction = screen.getByTestId("stScreencastInstruction")
       expect(instruction).toHaveTextContent(
         "Press Esc any time to stop recording."
@@ -86,11 +67,7 @@ describe("ScreencastDialog", () => {
   describe("Modal footer", () => {
     it("should have an start button", async () => {
       const user = userEvent.setup()
-      render(
-        <BaseProvider theme={LightTheme}>
-          <ScreencastDialog {...props} />
-        </BaseProvider>
-      )
+      render(<ScreencastDialog {...props} />)
       const startButton = screen.getByText("Start recording!")
       expect(startButton).toBeInTheDocument()
       await user.click(startButton)

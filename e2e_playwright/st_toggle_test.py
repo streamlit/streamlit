@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,19 +16,28 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
     expect_help_tooltip,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
     get_toggle,
+    reset_hovering,
 )
 
-TOGGLE_ELEMENTS = 17
+TOGGLE_ELEMENTS = 23
+
+WRAP_LABEL = "Enable live updates for every connected data source right now"
 
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -129,6 +138,55 @@ def test_grouped_toggles_height(app: Page, assert_snapshot: ImageCompareFunction
     )
 
 
+def test_wrap_false_single_row_and_auto_resolution(app: Page):
+    """wrap=False keeps the toggle on one row and exposes the full label via a
+    native title, while the auto default (wrap=None) wraps and grows taller in a
+    vertical layout but ellipsizes with a title inside a horizontal container.
+    """
+    wrap_false = get_element_by_key(app, "wrap_false_toggle")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_toggle")
+
+    # wrap=False: label ellipsized and full label exposed via a native title.
+    # The toggle indicator itself must remain visible (not clipped by truncation).
+    expect_label_truncated(wrap_false)
+    expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(wrap_false.get_by_role("switch")).to_be_visible()
+
+    # Auto default in a vertical layout wraps onto another line and adds no title.
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    false_box = wrap_false.get_by_test_id("stCheckbox").bounding_box()
+    auto_box = wrap_auto_vertical.get_by_test_id("stCheckbox").bounding_box()
+    assert false_box is not None
+    assert auto_box is not None
+    # The 4px margin absorbs sub-pixel rounding so the wrapped (two-line) toggle
+    # is clearly taller than the single-row one, not just larger by rounding.
+    assert auto_box["height"] > false_box["height"] + 4
+
+    # Auto default inside a horizontal container keeps one row with a title.
+    wrap_auto_horizontal = get_element_by_key(app, "wrap_auto_toggle")
+    expect_label_truncated(wrap_auto_horizontal)
+    expect(wrap_auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_wrap_false_title_and_help_coexist(app: Page):
+    """With help set, the full-label title stays on the label (the help tooltip
+    lives on a separate icon), so both coexist.
+    """
+    container = get_element_by_key(app, "wrap_help_toggle")
+    # The label is still ellipsized and exposes the full label via a native title.
+    # The toggle switch and help icon must remain visible (not clipped when
+    # the help icon shares the truncated row).
+    expect_label_truncated(container)
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(container.get_by_role("switch")).to_be_visible()
+    expect(container.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
+
+    # Hovering the separate help icon still shows the help tooltip.
+    reset_hovering(app)
+    expect_help_tooltip(app, container, "wrap help text")
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stCheckbox")
@@ -180,3 +238,59 @@ def test_dynamic_toggle_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Click the toggle
     click_toggle(app, "Updated dynamic toggle")
     expect_prefixed_markdown(app, "Updated toggle state:", "False")
+
+
+def test_toggle_query_param_seeding(page: Page, app_base_url: str):
+    """Test that toggle value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_toggle": "true"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound toggle value:", "True")
+
+
+def test_toggle_query_param_updates_url(app: Page):
+    """Test that clicking a bound toggle updates the URL."""
+    # Initially default False, no query param in URL
+    expect_prefixed_markdown(app, "bound toggle value:", "False")
+    expect(app).not_to_have_url(re.compile(r"bound_toggle="))
+
+    # Click the toggle -> True
+    click_toggle(app, "Bound toggle (default False)")
+    expect_prefixed_markdown(app, "bound toggle value:", "True")
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_toggle=true"))
+
+    # Click again -> back to default False
+    click_toggle(app, "Bound toggle (default False)")
+    expect_prefixed_markdown(app, "bound toggle value:", "False")
+
+    # Query param should be removed since value is back to default
+    expect(app).not_to_have_url(re.compile(r"bound_toggle="))
+
+
+def test_toggle_query_param_default_true(page: Page, app_base_url: str):
+    """Test toggle with default True: seeding and param removal."""
+    # Load app with query param overriding the True default
+    page.goto(build_app_url(app_base_url, query={"bound_toggle_true": "false"}))
+    wait_for_app_loaded(page)
+
+    # Toggle should be off (overriding True default)
+    expect_prefixed_markdown(page, "bound toggle true value:", "False")
+
+    # Click to re-toggle (back to default True)
+    click_toggle(page, "Bound toggle (default True)")
+    expect_prefixed_markdown(page, "bound toggle true value:", "True")
+
+    # Query param should be removed since value is back to default (True)
+    expect(page).not_to_have_url(re.compile(r"bound_toggle_true"))
+
+
+def test_toggle_query_param_invalid_value(page: Page, app_base_url: str):
+    """Test that invalid URL values are cleared and widget uses default."""
+    page.goto(build_app_url(app_base_url, query={"bound_toggle": "invalid"}))
+    wait_for_app_loaded(page)
+
+    # Toggle should use default (False), and invalid param should be cleared
+    expect_prefixed_markdown(page, "bound toggle value:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_toggle="))

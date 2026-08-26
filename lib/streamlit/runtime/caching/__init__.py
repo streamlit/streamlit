@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,13 +21,18 @@ from streamlit.runtime.caching.cache_data_api import (
     CacheDataAPI,
     get_data_cache_stats_provider,
 )
+from streamlit.runtime.caching.cache_data_api import (
+    clear_session_cache as clear_session_data_cache,
+)
 from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
     get_resource_cache_stats_provider,
 )
-from streamlit.runtime.caching.legacy_cache_api import cache as _cache
+from streamlit.runtime.caching.cache_resource_api import (
+    clear_session_cache as clear_session_resource_cache,
+)
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -92,16 +97,14 @@ def save_media_data(media_data: bytes | str, mimetype: str, media_id: str) -> No
 # Create and export public API singletons.
 cache_data = CacheDataAPI(decorator_metric_name="cache_data")
 cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
-# TODO(lukasmasuch): This is the legacy cache API name which is deprecated
-# and it should be removed in the future.
-cache = _cache
 
 
 __all__ = [
     "CACHE_DOCS_URL",
-    "cache",
     "cache_data",
     "cache_resource",
+    "clear_session_data_cache",
+    "clear_session_resource_cache",
     "get_data_cache_stats_provider",
     "get_resource_cache_stats_provider",
     "save_block_message",

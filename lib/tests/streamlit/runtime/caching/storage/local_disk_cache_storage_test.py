@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -191,6 +191,16 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         """Test that storage.get() returns the correct value."""
         self.storage.set("some-key", b"some-value")
         assert self.storage.get("some-key") == b"some-value"
+
+    def test_storage_has_does_not_read_value(self):
+        assert self.storage.has("some-key") is False
+        self.storage.set("some-key", b"some-value")
+
+        with patch(
+            "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_read"
+        ) as mock_read:
+            assert self.storage.has("some-key") is True
+            mock_read.assert_not_called()
 
     def test_storage_set(self):
         """Test that storage.set() writes the correct value to disk."""

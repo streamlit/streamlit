@@ -3,10 +3,30 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "forwardPorts": [3000],
+  "forwardPorts": [3000, 3001, 3002, 3003, 3004, 3005],
   "portsAttributes": {
     "3000": {
-      "label": "Dev Server",
+      "label": "Dev Server (3000)",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Dev Server (3001)",
+      "onAutoForward": "notify"
+    },
+    "3002": {
+      "label": "Dev Server (3002)",
+      "onAutoForward": "notify"
+    },
+    "3003": {
+      "label": "Dev Server (3003)",
+      "onAutoForward": "notify"
+    },
+    "3004": {
+      "label": "Dev Server (3004)",
+      "onAutoForward": "notify"
+    },
+    "3005": {
+      "label": "Dev Server (3005)",
       "onAutoForward": "notify"
     }
   },
@@ -14,7 +34,7 @@
     "vscode": {
       "extensions": [
         "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
+        "oxc.oxc-vscode",
         "ms-python.mypy-type-checker",
         "ms-python.python",
         "ms-python.debugpy",
@@ -22,19 +42,20 @@
         "charliermarsh.ruff",
         "EditorConfig.EditorConfig",
         "vitest.explorer",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "astral-sh.ty"
       ],
       "settings": {
         "[javascript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.defaultFormatter": "oxc.oxc-vscode",
           "editor.formatOnSave": true
         },
         "[json]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.defaultFormatter": "oxc.oxc-vscode",
           "editor.formatOnSave": true
         },
         "[jsonc]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.defaultFormatter": "oxc.oxc-vscode",
           "editor.formatOnSave": true
         },
         "[python]": {
@@ -48,25 +69,22 @@
           "editor.formatOnType": true
         },
         "[html]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "oxc.oxc-vscode"
         },
         "[typescriptreact]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.defaultFormatter": "oxc.oxc-vscode",
           "editor.formatOnSave": true
         },
         "[typescript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
-          "editor.formatOnSave": true,
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-          }
+          "editor.defaultFormatter": "oxc.oxc-vscode",
+          "editor.formatOnSave": true
         },
         "[yaml]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.defaultFormatter": "oxc.oxc-vscode",
           "editor.formatOnSave": true
         },
         "[yml]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.defaultFormatter": "oxc.oxc-vscode",
           "editor.formatOnSave": true
         },
         "[toml]": {
@@ -87,12 +105,15 @@
         ],
         "eslint.lintTask.enable": true,
         "editor.codeActionsOnSave": {
-          "source.fixAll": "always"
+          "source.fixAll": "always",
+          "source.fixAll.oxc": "always"
         },
+        "editor.formatOnSaveMode": "file",
+        "oxc.fmt.configPath": "frontend/.oxfmtrc.json",
         "vitest.maximumConfigs": 5,
         "mypy-type-checker.importStrategy": "fromEnvironment",
         "mypy-type-checker.preferDaemon": false,
-        "mypy-type-checker.args": ["--config-file=mypy.ini"],
+        "mypy-type-checker.args": [],
         "ruff.nativeServer": true,
         "ruff.organizeImports": true,
         "ruff.fixAll": true,

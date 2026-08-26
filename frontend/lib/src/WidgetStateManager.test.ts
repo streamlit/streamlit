@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import {
 import {
   createFormsData,
   FormsData,
+  microsToIsoString,
   WidgetInfo,
   WidgetStateDict,
   WidgetStateManager,
@@ -60,16 +61,15 @@ const MOCK_FORM_WIDGET = {
 }
 
 const MOCK_FILE_UPLOADER_STATE = new FileUploaderStateProto({
-  maxFileId: 42,
   uploadedFileInfo: [
     new UploadedFileInfoProto({
-      id: 4,
+      fileId: "file-1",
       name: "bob",
       size: 5,
     }),
 
     new UploadedFileInfoProto({
-      id: 42,
+      fileId: "file-2",
       name: "linus",
       size: 9001,
     }),
@@ -128,12 +128,11 @@ describe("Widget State Manager", () => {
     "sets string value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setStringValue(
-        widget,
-        "mockStringValue",
-        { fromUi: true },
-        undefined
-      )
+      widgetMgr.setStringValue(widget.id, "mockStringValue", {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getStringValue(widget)).toBe("mockStringValue")
       await assertCallbacks({ insideForm })
     }
@@ -143,7 +142,11 @@ describe("Widget State Manager", () => {
     "sets boolean value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
+      widgetMgr.setBoolValue(widget.id, true, {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getBoolValue(widget)).toBe(true)
       await assertCallbacks({ insideForm })
     }
@@ -153,7 +156,11 @@ describe("Widget State Manager", () => {
     "sets int value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setIntValue(widget, 100, { fromUi: true }, undefined)
+      widgetMgr.setIntValue(widget.id, 100, {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getIntValue(widget)).toBe(100)
       await assertCallbacks({ insideForm })
     }
@@ -163,7 +170,11 @@ describe("Widget State Manager", () => {
     "sets double value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setDoubleValue(widget, 3.14, { fromUi: true }, undefined)
+      widgetMgr.setDoubleValue(widget.id, 3.14, {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getDoubleValue(widget)).toBe(3.14)
       await assertCallbacks({ insideForm })
     }
@@ -175,7 +186,11 @@ describe("Widget State Manager", () => {
    */
   it("sets trigger value correctly", async () => {
     const widget = getWidget({ insideForm: false })
-    await widgetMgr.setTriggerValue(widget, { fromUi: true }, undefined)
+    await widgetMgr.setTriggerValue(widget.id, {
+      formId: widget.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
 
     // @ts-expect-error
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
@@ -186,14 +201,11 @@ describe("Widget State Manager", () => {
     "sets string array value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setStringArrayValue(
-        widget,
-        ["foo", "bar", "baz"],
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringArrayValue(widget.id, ["foo", "bar", "baz"], {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getStringArrayValue(widget)).toEqual([
         "foo",
         "bar",
@@ -207,12 +219,11 @@ describe("Widget State Manager", () => {
     "sets int array value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setIntArrayValue(
-        widget,
-        [4, 5, 6],
-        { fromUi: true },
-        undefined
-      )
+      widgetMgr.setIntArrayValue(widget.id, [4, 5, 6], {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getIntArrayValue(widget)).toEqual([4, 5, 6])
       await assertCallbacks({ insideForm })
     }
@@ -222,14 +233,11 @@ describe("Widget State Manager", () => {
     "sets double array value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setDoubleArrayValue(
-        widget,
-        [1.1, 2.2, 3.3],
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setDoubleArrayValue(widget.id, [1.1, 2.2, 3.3], {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([1.1, 2.2, 3.3])
       await assertCallbacks({ insideForm })
     }
@@ -239,12 +247,11 @@ describe("Widget State Manager", () => {
     "sets ArrowTable value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setArrowValue(
-        widget,
-        MOCK_ARROW_TABLE,
-        { fromUi: true },
-        undefined
-      )
+      widgetMgr.setArrowValue(widget.id, MOCK_ARROW_TABLE, {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getArrowValue(widget)).toEqual(MOCK_ARROW_TABLE)
       await assertCallbacks({ insideForm })
     }
@@ -254,14 +261,11 @@ describe("Widget State Manager", () => {
     "sets JSON value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setJsonValue(
-        widget,
-        MOCK_JSON,
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setJsonValue(widget.id, MOCK_JSON, {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getJsonValue(widget)).toBe(JSON.stringify(MOCK_JSON))
       await assertCallbacks({ insideForm })
     }
@@ -271,7 +275,11 @@ describe("Widget State Manager", () => {
     "sets bytes value correctly (insideForm=%s)",
     async insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setBytesValue(widget, MOCK_BYTES, { fromUi: true }, undefined)
+      widgetMgr.setBytesValue(widget.id, MOCK_BYTES, {
+        formId: widget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getBytesValue(widget)).toEqual(MOCK_BYTES)
       await assertCallbacks({ insideForm })
     }
@@ -282,12 +290,9 @@ describe("Widget State Manager", () => {
     async insideForm => {
       const widget = getWidget({ insideForm })
       widgetMgr.setFileUploaderStateValue(
-        widget,
+        widget.id,
         MOCK_FILE_UPLOADER_STATE,
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: widget.formId, fragmentId: undefined, fromUser: true }
       )
       expect(widgetMgr.getFileUploaderStateValue(widget)).toEqual(
         MOCK_FILE_UPLOADER_STATE
@@ -297,41 +302,151 @@ describe("Widget State Manager", () => {
   )
 
   it("setIntValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
-    widgetMgr.setIntValue(
-      MOCK_WIDGET,
-      Number.MAX_SAFE_INTEGER,
-      {
-        fromUi: true,
-      },
-      undefined
-    )
+    widgetMgr.setIntValue(MOCK_WIDGET.id, Number.MAX_SAFE_INTEGER, {
+      formId: MOCK_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
 
     expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MAX_SAFE_INTEGER)
 
-    widgetMgr.setIntValue(
-      MOCK_WIDGET,
-      Number.MIN_SAFE_INTEGER,
-      {
-        fromUi: true,
-      },
-      undefined
-    )
+    widgetMgr.setIntValue(MOCK_WIDGET.id, Number.MIN_SAFE_INTEGER, {
+      formId: MOCK_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
 
     expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MIN_SAFE_INTEGER)
   })
 
   it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
     const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
-    widgetMgr.setIntArrayValue(
-      MOCK_WIDGET,
-      values,
-      {
-        fromUi: true,
-      },
-      undefined
-    )
+    widgetMgr.setIntArrayValue(MOCK_WIDGET.id, values, {
+      formId: MOCK_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
 
     expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
+  })
+
+  describe("triggerRerun (on_change=ignore delivery override)", () => {
+    it("buffers the value without scheduling a rerun when triggerRerun is false", async () => {
+      widgetMgr.setDoubleArrayValue(MOCK_WIDGET.id, [1.1, 2.2], {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      })
+
+      // The value is stored so it can be delivered on a later rerun...
+      expect(widgetMgr.getDoubleArrayValue(MOCK_WIDGET)).toEqual([1.1, 2.2])
+      // ...but no macrotask flush is scheduled, so no rerun happens.
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("delivers a buffered (triggerRerun:false) value on the next committed rerun", async () => {
+      const bufferedWidget = { id: "bufferedWidget", formId: "" }
+      const committingWidget = { id: "committingWidget", formId: "" }
+
+      // Buffer a value without triggering a rerun.
+      widgetMgr.setDoubleValue(bufferedWidget.id, 42, {
+        formId: bufferedWidget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      })
+      expect(sendBackMsg).not.toHaveBeenCalled()
+
+      // A normal committed change on another widget triggers the rerun and
+      // carries the buffered value along.
+      widgetMgr.setBoolValue(committingWidget.id, true, {
+        formId: committingWidget.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+
+      await waitFor(() => {
+        expect(sendBackMsg).toHaveBeenCalledTimes(1)
+      })
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: expect.arrayContaining([
+            { id: "bufferedWidget", doubleValue: 42 },
+            { id: "committingWidget", boolValue: true },
+          ]),
+        },
+        undefined,
+        undefined,
+        undefined
+      )
+    })
+
+    it("defaults triggerRerun to fromUser when omitted", async () => {
+      widgetMgr.setBoolValue(MOCK_WIDGET.id, true, {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+      await waitFor(() => {
+        expect(sendBackMsg).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    it("does not schedule a rerun when triggerRerun is omitted and fromUser is false", async () => {
+      // The other half of `triggerRerun ?? fromUser`: a programmatic write
+      // (fromUser: false) defaults triggerRerun to false, so the value is
+      // stored without scheduling a flush/rerun.
+      widgetMgr.setBoolValue(MOCK_WIDGET.id, true, {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: false,
+      })
+
+      expect(widgetMgr.getBoolValue(MOCK_WIDGET)).toBe(true)
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("ignores triggerRerun inside a form: value is batched and delivered on submit", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      // triggerRerun:false inside a form behaves like a normal form change,
+      // because the form owns commit timing (values are sent on submit).
+      widgetMgr.setStringValue("formWidget", "buffered", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      })
+
+      // No immediate rerun; the form is marked as having pending changes.
+      expect(sendBackMsg).not.toHaveBeenCalled()
+      expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
+
+      // The batched value is delivered on submit.
+      widgetMgr.submitForm(formId, undefined)
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: expect.arrayContaining([
+            { id: "submitButton", triggerValue: true },
+            { id: "formWidget", stringValue: "buffered" },
+          ]),
+        },
+        undefined,
+        undefined,
+        undefined
+      )
+    })
   })
 
   describe("can set fragmentId in setter methods", () => {
@@ -386,14 +501,11 @@ describe("Widget State Manager", () => {
       },
     ])("%s", async ({ setterMethod, value }) => {
       // @ts-expect-error
-      await widgetMgr[setterMethod](
-        MOCK_WIDGET,
-        value,
-        {
-          fromUi: true,
-        },
-        "myFragmentId"
-      )
+      await widgetMgr[setterMethod](MOCK_WIDGET.id, value, {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: "myFragmentId",
+        fromUser: true,
+      })
       await waitFor(() => {
         expect(sendBackMsg).toHaveBeenCalledWith(
           expect.anything(),
@@ -407,13 +519,11 @@ describe("Widget State Manager", () => {
     // This test isn't parameterized like the ones above because setTriggerValue
     // has a slightly different signature from the other setter methods.
     it("can set fragmentId in setTriggerValue", async () => {
-      await widgetMgr.setTriggerValue(
-        MOCK_WIDGET,
-        {
-          fromUi: true,
-        },
-        "myFragmentId"
-      )
+      await widgetMgr.setTriggerValue(MOCK_WIDGET.id, {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: "myFragmentId",
+        fromUser: true,
+      })
       expect(sendBackMsg).toHaveBeenCalledWith(
         expect.anything(),
         "myFragmentId",
@@ -425,60 +535,62 @@ describe("Widget State Manager", () => {
 
   describe("Primitive types as JSON values", () => {
     it("sets string value as JSON correctly", () => {
-      widgetMgr.setJsonValue(
-        MOCK_WIDGET,
-        "mockStringValue",
-        { fromUi: true },
-        undefined
-      )
+      widgetMgr.setJsonValue(MOCK_WIDGET.id, "mockStringValue", {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify("mockStringValue")
       )
     })
 
     it("sets int value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, 45, { fromUi: true }, undefined)
+      widgetMgr.setJsonValue(MOCK_WIDGET.id, 45, {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(45))
     })
 
     it("sets double value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, 3.14, { fromUi: true }, undefined)
+      widgetMgr.setJsonValue(MOCK_WIDGET.id, 3.14, {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(3.14))
     })
 
     it("sets string array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(
-        MOCK_WIDGET,
-        ["foo", "bar", "baz"],
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setJsonValue(MOCK_WIDGET.id, ["foo", "bar", "baz"], {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify(["foo", "bar", "baz"])
       )
     })
 
     it("sets int array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(
-        MOCK_WIDGET,
-        [5, 6, 7],
-        { fromUi: true },
-        undefined
-      )
+      widgetMgr.setJsonValue(MOCK_WIDGET.id, [5, 6, 7], {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify([5, 6, 7])
       )
     })
 
     it("sets double array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(
-        MOCK_WIDGET,
-        [1.1, 2.2, 3.3],
-        { fromUi: true },
-        undefined
-      )
+      widgetMgr.setJsonValue(MOCK_WIDGET.id, [1.1, 2.2, 3.3], {
+        formId: MOCK_WIDGET.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify([1.1, 2.2, 3.3])
       )
@@ -532,22 +644,16 @@ describe("Widget State Manager", () => {
       )
 
       // Populate a form
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
-      widgetMgr.setStringValue(
-        { id: "widget2", formId },
-        "bar",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+      widgetMgr.setStringValue("widget2", "bar", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // We have a single pending form.
       expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
@@ -581,14 +687,11 @@ describe("Widget State Manager", () => {
       )
 
       // Populate a form
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       widgetMgr.submitForm(formId, "myFragmentId", undefined)
 
@@ -660,6 +763,112 @@ describe("Widget State Manager", () => {
         undefined
       )
     })
+
+    it("aborts submission when a form validator fails", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+
+      const validator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      expect(validator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).not.toHaveBeenCalled()
+      expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
+    })
+
+    it("runs all validators even when an earlier one fails", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const failingValidator = vi.fn(() => false)
+      const secondValidator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", failingValidator)
+      widgetMgr.addFormSubmitValidator(formId, "widget2", secondValidator)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(false)
+
+      // Both validators must run (no short-circuit) so every invalid field can
+      // surface its error state.
+      expect(failingValidator).toHaveBeenCalledTimes(1)
+      expect(secondValidator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("submits the form when all validators pass", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+
+      const validator = vi.fn(() => true)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+
+      expect(widgetMgr.submitForm(formId, undefined)).toBe(true)
+
+      expect(validator).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton", triggerValue: true },
+            { id: "widget1", stringValue: "foo" },
+          ],
+        },
+        undefined,
+        undefined,
+        undefined
+      )
+    })
+
+    it("does not run a validator after it is removed", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      const validator = vi.fn(() => false)
+      widgetMgr.addFormSubmitValidator(formId, "widget1", validator)
+      widgetMgr.removeFormSubmitValidator(formId, "widget1")
+
+      widgetMgr.submitForm(formId, undefined)
+
+      // The removed validator must not run and must no longer block submission.
+      expect(validator).not.toHaveBeenCalled()
+      expect(sendBackMsg).toHaveBeenCalled()
+    })
+
+    it("does not resurrect a phantom FormState when removing a validator for an evicted form", () => {
+      const formId = "neverCreatedForm"
+
+      // This mirrors the widget unmount cleanup path: if the form was already
+      // evicted, removing the validator must be a no-op and must not recreate
+      // an empty, dangling FormState that is never submitted or cleaned up.
+      expect(() =>
+        widgetMgr.removeFormSubmitValidator(formId, "widget1")
+      ).not.toThrow()
+
+      // @ts-expect-error - inspect internal state: no phantom form was created
+      expect(widgetMgr.forms.get(formId)).toBeFalsy()
+    })
   })
 
   describe("allowFormEnterToSubmit", () => {
@@ -671,14 +880,11 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "submitButton" })
       )
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // Form should exist & allow submission on Enter
       // @ts-expect-error - checking that form exists via internal state
@@ -694,14 +900,11 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "submitButton" })
       )
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // @ts-expect-error - Created form should exist
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
@@ -715,14 +918,11 @@ describe("Widget State Manager", () => {
       // Create form with a submit button
       const formId = "mockFormId"
 
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // @ts-expect-error - Created form should exist, but no allow submit on Enter
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
@@ -737,14 +937,11 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "submitButton", disabled: true })
       )
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // @ts-expect-error - Created form should exist, but no allow submit on Enter
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
@@ -763,14 +960,11 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "submitButton2", disabled: true })
       )
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // @ts-expect-error - Created form should exist and allow submit on Enter
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
@@ -788,14 +982,11 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "submitButton" })
       )
-      widgetMgr.setStringValue(
-        { id: "widget1", formId },
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue("widget1", "foo", {
+        formId: formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // @ts-expect-error - Created form should exist, but no allow submit on Enter
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
@@ -815,24 +1006,18 @@ describe("Widget State Manager", () => {
 
     beforeEach(() => {
       // Set widget value for the first form.
-      widgetMgr.setStringValue(
-        FORM_1,
-        "foo",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue(FORM_1.id, "foo", {
+        formId: FORM_1.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
 
       // Set widget value for the second form.
-      widgetMgr.setStringValue(
-        FORM_2,
-        "bar",
-        {
-          fromUi: true,
-        },
-        undefined
-      )
+      widgetMgr.setStringValue(FORM_2.id, "bar", {
+        formId: FORM_2.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
     })
 
     it("checks that there are two pending forms", () => {
@@ -977,38 +1162,26 @@ describe("Widget State Manager", () => {
     const widgetId4 = "TEST_ID_4"
     const elementId1 = "TEST_ID_5"
     const elementId2 = "TEST_ID_6"
-    widgetMgr.setStringValue(
-      { id: widgetId1 },
-      "widgetState1",
-      {
-        fromUi: false,
-      },
-      undefined
-    )
-    widgetMgr.setStringValue(
-      { id: widgetId2 },
-      "widgetState2",
-      {
-        fromUi: false,
-      },
-      undefined
-    )
-    widgetMgr.setStringValue(
-      { id: widgetId3 },
-      "widgetState3",
-      {
-        fromUi: false,
-      },
-      undefined
-    )
-    widgetMgr.setStringValue(
-      { id: widgetId4 },
-      "widgetState4",
-      {
-        fromUi: false,
-      },
-      undefined
-    )
+    widgetMgr.setStringValue(widgetId1, "widgetState1", {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: false,
+    })
+    widgetMgr.setStringValue(widgetId2, "widgetState2", {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: false,
+    })
+    widgetMgr.setStringValue(widgetId3, "widgetState3", {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: false,
+    })
+    widgetMgr.setStringValue(widgetId4, "widgetState4", {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: false,
+    })
 
     widgetMgr.setElementState(elementId1, "key1", "elementState1")
     widgetMgr.setElementState(elementId2, "key2", "elementState2")
@@ -1117,22 +1290,16 @@ describe("WidgetStateDict", () => {
       formsDataChanged: vi.fn(),
     })
 
-    widgetStateManager.setStringValue(
-      { id: "widget1" },
-      "foo",
-      {
-        fromUi: false,
-      },
-      undefined
-    )
-    widgetStateManager.setStringValue(
-      { id: "widget2" },
-      "bar",
-      {
-        fromUi: false,
-      },
-      undefined
-    )
+    widgetStateManager.setStringValue("widget1", "foo", {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: false,
+    })
+    widgetStateManager.setStringValue("widget2", "bar", {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: false,
+    })
 
     const activeIds = new Set(["widget2"])
     const widgetStates = widgetStateManager.getActiveWidgetStates(activeIds)
@@ -1164,9 +1331,13 @@ describe("Trigger JSON payloads (aggregated)", () => {
   it("setTriggerValue(payload): uses jsonTriggerValue field", async () => {
     const widget = { id: "batchedTriggerWidget", formId: "" }
 
-    await widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragT", {
-      t: 1,
-    })
+    await widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragT", fromUser: true },
+      {
+        t: 1,
+      }
+    )
 
     expect(sendBackMsg).toHaveBeenCalledTimes(1)
     expect(sendBackMsg).toHaveBeenCalledWith(
@@ -1189,12 +1360,15 @@ describe("Trigger JSON payloads (aggregated)", () => {
     const jsonValue = { foo: "bar" }
     const triggerPayload = { baz: 42 }
 
-    widgetMgr.setJsonValue(widget, jsonValue, { fromUi: true }, "fragJT")
+    widgetMgr.setJsonValue(widget.id, jsonValue, {
+      formId: widget.formId,
+      fragmentId: "fragJT",
+      fromUser: true,
+    })
 
     const triggerPromise = widgetMgr.setTriggerValue(
-      widget,
-      { fromUi: true },
-      "fragJT",
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragJT", fromUser: true },
       triggerPayload
     )
 
@@ -1220,12 +1394,20 @@ describe("Trigger JSON payloads (aggregated)", () => {
   it("setTriggerValue(payload): aggregates multiple payloads into a JSON array in one macrotask", async () => {
     const widget = { id: "batchedTriggerAgg", formId: "" }
 
-    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragAgg", {
-      a: 1,
-    })
-    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragAgg", {
-      b: 2,
-    })
+    const p1 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragAgg", fromUser: true },
+      {
+        a: 1,
+      }
+    )
+    const p2 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragAgg", fromUser: true },
+      {
+        b: 2,
+      }
+    )
 
     await Promise.all([p1, p2])
 
@@ -1248,15 +1430,27 @@ describe("Trigger JSON payloads (aggregated)", () => {
   it("setTriggerValue(payload): aggregates three payloads and sends once", async () => {
     const widget = { id: "batchedTriple", formId: "" }
 
-    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "frag3", {
-      x: 1,
-    })
-    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "frag3", {
-      y: 2,
-    })
-    const p3 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "frag3", {
-      z: 3,
-    })
+    const p1 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "frag3", fromUser: true },
+      {
+        x: 1,
+      }
+    )
+    const p2 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "frag3", fromUser: true },
+      {
+        y: 2,
+      }
+    )
+    const p3 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "frag3", fromUser: true },
+      {
+        z: 3,
+      }
+    )
 
     await Promise.all([p1, p2, p3])
 
@@ -1283,12 +1477,20 @@ describe("Trigger JSON payloads (aggregated)", () => {
     // future if we decide to change the behavior.
     const widget = { id: "batchedFragment", formId: "" }
 
-    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "f1", {
-      a: 1,
-    })
-    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "f2", {
-      b: 2,
-    })
+    const p1 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "f1", fromUser: true },
+      {
+        a: 1,
+      }
+    )
+    const p2 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "f2", fromUser: true },
+      {
+        b: 2,
+      }
+    )
 
     await Promise.all([p1, p2])
 
@@ -1314,12 +1516,20 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
     const widget = { id: "warnMixedFragments", formId: "" }
 
-    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragA", {
-      a: true,
-    })
-    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragB", {
-      b: true,
-    })
+    const p1 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragA", fromUser: true },
+      {
+        a: true,
+      }
+    )
+    const p2 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragB", fromUser: true },
+      {
+        b: true,
+      }
+    )
 
     await Promise.all([p1, p2])
 
@@ -1344,12 +1554,20 @@ describe("Trigger JSON payloads (aggregated)", () => {
   it("setTriggerValue(payload): retains existing fragment id if subsequent calls omit it", async () => {
     const widget = { id: "batchedFragmentFallback", formId: "" }
 
-    const p1 = widgetMgr.setTriggerValue(widget, { fromUi: true }, "fKeep", {
-      first: true,
-    })
-    const p2 = widgetMgr.setTriggerValue(widget, { fromUi: true }, undefined, {
-      second: true,
-    })
+    const p1 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fKeep", fromUser: true },
+      {
+        first: true,
+      }
+    )
+    const p2 = widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: undefined, fromUser: true },
+      {
+        second: true,
+      }
+    )
 
     await Promise.all([p1, p2])
 
@@ -1386,9 +1604,13 @@ describe("Trigger JSON payloads (aggregated)", () => {
       prev: 1,
     })
 
-    await widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragS", {
-      next: 2,
-    })
+    await widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragS", fromUser: true },
+      {
+        next: 2,
+      }
+    )
 
     expect(sendBackMsg).toHaveBeenCalledTimes(1)
     expect(sendBackMsg).toHaveBeenCalledWith(
@@ -1418,9 +1640,13 @@ describe("Trigger JSON payloads (aggregated)", () => {
       }
     ).widgetStates.createState(widget.id).jsonTriggerValue = "NOT JSON"
 
-    await widgetMgr.setTriggerValue(widget, { fromUi: true }, "fragPF", {
-      ok: true,
-    })
+    await widgetMgr.setTriggerValue(
+      widget.id,
+      { formId: widget.formId, fragmentId: "fragPF", fromUser: true },
+      {
+        ok: true,
+      }
+    )
 
     expect(sendBackMsg).toHaveBeenCalledTimes(1)
     expect(sendBackMsg).toHaveBeenCalledWith(
@@ -1436,5 +1662,1222 @@ describe("Trigger JSON payloads (aggregated)", () => {
       undefined,
       undefined
     )
+  })
+
+  describe("Query Param Binding", () => {
+    let mockOnQueryParamsChange: Mock
+    let originalLocation: Location
+    let originalReplaceState: typeof window.history.replaceState
+
+    beforeEach(() => {
+      // Store originals for cleanup
+      originalLocation = window.location
+      originalReplaceState = window.history.replaceState
+
+      mockOnQueryParamsChange = vi.fn()
+      widgetMgr.setQueryParamsChangeHandler(mockOnQueryParamsChange)
+      // Mock window.history.replaceState to capture URL changes
+      let currentUrl = "http://localhost:3000/"
+      window.history.replaceState = vi.fn((_, __, url) => {
+        if (url) currentUrl = url as string
+      })
+      // Mock window.location with proper URL structure
+      Object.defineProperty(window, "location", {
+        get() {
+          return new URL(currentUrl)
+        },
+        configurable: true,
+      })
+    })
+
+    afterEach(() => {
+      // Restore original window.location and history.replaceState
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        configurable: true,
+        writable: true,
+      })
+      window.history.replaceState = originalReplaceState
+    })
+
+    describe("registerQueryParamBinding", () => {
+      it("registers a binding", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default",
+          false
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("registers binding with urlDefault for select_slider", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "color",
+          "string_array_value",
+          ["Red"],
+          false,
+          "repeated"
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("registers binding with urlFormat", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "tags",
+          "string_array_value",
+          [],
+          true,
+          "comma"
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("cleans up old binding when different widget binds to same paramKey", () => {
+        // First widget binds to "my_key"
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default1",
+          false
+        )
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+
+        // Second widget binds to the same "my_key" - should clean up widget1
+        widgetMgr.registerQueryParamBinding(
+          "widget2",
+          "my_key",
+          "string_value",
+          "default2",
+          false
+        )
+
+        // widget2 should be bound, widget1 should be cleaned up
+        expect(widgetMgr.hasQueryParamBinding("widget2")).toBe(true)
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(false)
+      })
+
+      it("allows same widget to re-register with same paramKey", () => {
+        // Widget registers
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default1",
+          false
+        )
+
+        // Same widget re-registers (e.g., on re-render) - should not break
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default2",
+          false
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+    })
+
+    describe("unregisterQueryParamBinding", () => {
+      it("unregisters a binding", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default",
+          false
+        )
+        widgetMgr.unregisterQueryParamBinding("widget1")
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(false)
+      })
+
+      it("is a no-op for non-existent widget", () => {
+        expect(() => {
+          widgetMgr.unregisterQueryParamBinding("nonexistent")
+        }).not.toThrow()
+      })
+    })
+
+    describe("URL sync is independent of triggerRerun", () => {
+      it.each(["", "mockFormId"])(
+        "syncs the URL for a user change when triggerRerun is false (formId=%s)",
+        async formId => {
+          const widget = { id: "ignoreWidget", formId }
+          widgetMgr.registerQueryParamBinding(
+            "ignoreWidget",
+            "name",
+            "string_value",
+            "",
+            false
+          )
+
+          widgetMgr.setStringValue(widget.id, "Alice", {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+            triggerRerun: false,
+          })
+
+          // Same as a form: the URL reflects the UI value even though Python
+          // has not received it yet (no rerun / no submit).
+          expect(window.history.replaceState).toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=Alice")
+
+          await new Promise(resolve => {
+            setTimeout(resolve, 0)
+          })
+          expect(sendBackMsg).not.toHaveBeenCalled()
+        }
+      )
+
+      it("still syncs the URL for a normal committed change (triggerRerun omitted)", () => {
+        const widget = { id: "commitWidget", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "commitWidget",
+          "name",
+          "string_value",
+          "",
+          false
+        )
+
+        widgetMgr.setStringValue(widget.id, "Alice", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=Alice")
+      })
+    })
+
+    describe("URL sync for scalar values", () => {
+      it.each([
+        {
+          type: "bool",
+          paramKey: "enabled",
+          valueType: "bool_value" as const,
+          defaultVal: false,
+          testVal: true,
+          expected: "enabled=true",
+        },
+        {
+          type: "int",
+          paramKey: "count",
+          valueType: "int_value" as const,
+          defaultVal: 0,
+          testVal: 42,
+          expected: "count=42",
+        },
+        {
+          type: "double",
+          paramKey: "value",
+          valueType: "double_value" as const,
+          defaultVal: 0,
+          testVal: 3.14,
+          expected: "value=3.14",
+        },
+        {
+          type: "string",
+          paramKey: "name",
+          valueType: "string_value" as const,
+          defaultVal: "",
+          testVal: "Alice",
+          expected: "name=Alice",
+        },
+      ])(
+        "syncs $type value to URL",
+        ({ paramKey, valueType, defaultVal, testVal, expected }) => {
+          const widget = { id: "widget1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "widget1",
+            paramKey,
+            valueType,
+            defaultVal,
+            false
+          )
+
+          // Call the appropriate setter based on value type
+          if (valueType === "bool_value") {
+            widgetMgr.setBoolValue(widget.id, testVal, {
+              formId: widget.formId,
+              fragmentId: undefined,
+              fromUser: true,
+            })
+          } else if (valueType === "int_value") {
+            widgetMgr.setIntValue(widget.id, testVal, {
+              formId: widget.formId,
+              fragmentId: undefined,
+              fromUser: true,
+            })
+          } else if (valueType === "double_value") {
+            widgetMgr.setDoubleValue(widget.id, testVal, {
+              formId: widget.formId,
+              fragmentId: undefined,
+              fromUser: true,
+            })
+          } else {
+            widgetMgr.setStringValue(widget.id, testVal, {
+              formId: widget.formId,
+              fragmentId: undefined,
+              fromUser: true,
+            })
+          }
+
+          expect(window.history.replaceState).toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(expected)
+        }
+      )
+
+      it("does not sync when value is from backend (fromUser: false)", () => {
+        const widget = { id: "checkbox1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "checkbox1",
+          "enabled",
+          "bool_value",
+          false,
+          false
+        )
+
+        widgetMgr.setBoolValue(widget.id, true, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        })
+
+        expect(window.history.replaceState).not.toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("does not sync unbound widget", () => {
+        const widget = { id: "unbound_widget", formId: "" }
+        // Don't register any binding for this widget
+
+        widgetMgr.setStringValue(widget.id, "test", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(window.history.replaceState).not.toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("clears URL param when value equals default", () => {
+        const widget = { id: "checkbox1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "checkbox1",
+          "enabled",
+          "bool_value",
+          false,
+          false
+        )
+
+        // Set to non-default
+        widgetMgr.setBoolValue(widget.id, true, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        vi.clearAllMocks()
+
+        // Set back to default
+        widgetMgr.setBoolValue(widget.id, false, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("clears URL param when nullable value is set to null", () => {
+        const widget = { id: "number1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "number1",
+          "count",
+          "int_value",
+          0,
+          false
+        )
+
+        // Set a value first
+        widgetMgr.setIntValue(widget.id, 5, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        vi.clearAllMocks()
+
+        // Set to null (widget cleared)
+        widgetMgr.setIntValue(widget.id, null, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("encodes spaces as + in URL, not %20", () => {
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "name",
+          "string_value",
+          "",
+          false
+        )
+
+        widgetMgr.setStringValue(widget.id, "hello world", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        const url = (window.history.replaceState as Mock).mock.calls[0][2]
+        expect(url).toContain("name=hello+world")
+        expect(url).not.toContain("%20")
+      })
+    })
+
+    describe("URL sync for array values", () => {
+      it("syncs string array with repeated params", () => {
+        const widget = { id: "multiselect1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "multiselect1",
+          "tags",
+          "string_array_value",
+          [],
+          true
+        )
+
+        widgetMgr.setStringArrayValue(widget.id, ["foo", "bar"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "tags=foo&tags=bar"
+        )
+      })
+
+      it("syncs string array with comma format", () => {
+        const widget = { id: "multiselect1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "multiselect1",
+          "tags",
+          "string_array_value",
+          [],
+          true,
+          "comma"
+        )
+
+        widgetMgr.setStringArrayValue(widget.id, ["foo", "bar"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // Comma is URL-encoded by URLSearchParams.toString()
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("tags=foo%2Cbar")
+      })
+
+      it("syncs double array with repeated params", () => {
+        const widget = { id: "slider1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "slider1",
+          "range",
+          "double_array_value",
+          [0, 100],
+          false
+        )
+
+        widgetMgr.setDoubleArrayValue(widget.id, [10, 90], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "range=10&range=90"
+        )
+      })
+
+      it("filters out invalid double array values", () => {
+        const widget = { id: "slider1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "slider1",
+          "range",
+          "double_array_value",
+          [0, 100],
+          false
+        )
+
+        widgetMgr.setDoubleArrayValue(widget.id, [10, NaN, 90], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "range=10&range=90"
+        )
+      })
+
+      it("clears URL param when all double array values are invalid (fromUser: true)", () => {
+        const widget = { id: "slider1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "slider1",
+          "range",
+          "double_array_value",
+          [0, 100],
+          false
+        )
+
+        // First set a valid value to put something in the URL
+        widgetMgr.setDoubleArrayValue(widget.id, [10, 90], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "range=10&range=90"
+        )
+
+        // Now set all invalid values - should clear the URL
+        mockOnQueryParamsChange.mockClear()
+        widgetMgr.setDoubleArrayValue(widget.id, [NaN, NaN], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // URL should be cleared (empty string means param removed)
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        // State should NOT be updated when all values are invalid (previous value remains)
+        expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([10, 90])
+      })
+
+      it("does not update URL when all double array values are invalid (fromUser: false)", () => {
+        const widget = { id: "slider1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "slider1",
+          "range",
+          "double_array_value",
+          [0, 100],
+          false
+        )
+
+        widgetMgr.setDoubleArrayValue(widget.id, [NaN, NaN], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        })
+
+        // URL should NOT be modified for backend changes
+        expect(window.history.replaceState).not.toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+        // State should NOT be updated when all values are invalid
+        expect(widgetMgr.getDoubleArrayValue(widget)).toBeUndefined()
+      })
+
+      it("updates state but not URL for valid double array values (fromUser: false)", () => {
+        const widget = { id: "slider1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "slider1",
+          "range",
+          "double_array_value",
+          [0, 100],
+          false
+        )
+
+        widgetMgr.setDoubleArrayValue(widget.id, [25, 75], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        })
+
+        // URL should NOT be modified for backend changes
+        expect(window.history.replaceState).not.toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+        // State SHOULD be updated
+        expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([25, 75])
+      })
+
+      it("clears URL when empty array equals default (hide at default)", () => {
+        const widget = { id: "multiselect1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "multiselect1",
+          "tags",
+          "string_array_value",
+          [], // default is empty array
+          true // clearable
+        )
+
+        // First set a value to put something in the URL
+        widgetMgr.setStringArrayValue(widget.id, ["tag1", "tag2"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "tags=tag1&tags=tag2"
+        )
+
+        // Now clear the array - empty matches default, so clear param
+        mockOnQueryParamsChange.mockClear()
+        widgetMgr.setStringArrayValue(widget.id, [], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // Empty matches default [], so param is cleared (not ?tags=)
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("preserves empty array in URL when empty differs from default", () => {
+        const widget = { id: "multiselect2", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "multiselect2",
+          "langs",
+          "string_array_value",
+          ["Python"], // default is non-empty
+          true // clearable
+        )
+
+        // Clear to empty - differs from default, so preserve ?langs=
+        widgetMgr.setStringArrayValue(widget.id, [], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // Empty differs from default ["Python"], so we write ?langs=
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("langs=")
+      })
+    })
+
+    describe("empty value handling with clearable parameter", () => {
+      it("preserves empty value in URL when clearable=true (multiselect)", () => {
+        const widget = { id: "multiselect1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "multiselect1",
+          "tags",
+          "string_array_value",
+          ["default"],
+          true // clearable - multiselect always allows clearing
+        )
+
+        // Set empty array - should write ?tags= since clearable=true
+        widgetMgr.setStringArrayValue(widget.id, [], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("tags=")
+      })
+
+      it("preserves empty value in URL when clearable=true (pills)", () => {
+        const widget = { id: "pills1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "pills1",
+          "selected",
+          "int_array_value",
+          [0],
+          true // clearable - pills allows clearing
+        )
+
+        // Set empty array - should write ?selected= since clearable=true
+        widgetMgr.setIntArrayValue(widget.id, [], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("selected=")
+      })
+
+      it("preserves empty value in URL when clearable=true and empty differs from default (selectbox)", () => {
+        const widget = { id: "selectbox1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "selectbox1",
+          "choice",
+          "string_value",
+          "Red", // Non-null default
+          true // clearable - selectbox with index=None allows clearing
+        )
+
+        // Set null (cleared) - differs from default "Red", so write ?choice=
+        widgetMgr.setStringValue(widget.id, null, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("choice=")
+      })
+
+      it("clears URL when null equals null default (hide at default)", () => {
+        const widget = { id: "selectbox2", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "selectbox2",
+          "option",
+          "string_value",
+          null, // Null default
+          true // clearable
+        )
+
+        // First set a non-null value
+        widgetMgr.setStringValue(widget.id, "Blue", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("option=Blue")
+
+        // Set back to null - matches default, so clear param
+        mockOnQueryParamsChange.mockClear()
+        widgetMgr.setStringValue(widget.id, null, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // Null matches default null, so param is cleared (not ?option=)
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("clears URL param when clearable=false (checkbox)", () => {
+        const widget = { id: "checkbox1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "checkbox1",
+          "enabled",
+          "bool_value",
+          false,
+          false // not clearable - checkbox always has a value
+        )
+
+        // First set to non-default value to populate URL
+        widgetMgr.setBoolValue(widget.id, true, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("enabled=true")
+
+        // Clear mock and set back to default - should clear the param
+        mockOnQueryParamsChange.mockClear()
+        widgetMgr.setBoolValue(widget.id, false, {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("clears param when value matches non-null default (clearable=false)", () => {
+        const widget = { id: "text1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "text1",
+          "name",
+          "string_value",
+          "default text", // non-null default
+          false // not clearable
+        )
+
+        // First set to default to establish baseline
+        widgetMgr.setStringValue(widget.id, "default text", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        // Default value - no URL param
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+
+        // Set to non-default value
+        widgetMgr.setStringValue(widget.id, "hello", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=hello")
+
+        // Set back to default - clears param
+        mockOnQueryParamsChange.mockClear()
+        widgetMgr.setStringValue(widget.id, "default text", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("clears param when value matches null default (clearable=true)", () => {
+        const widget = { id: "text2", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "text2",
+          "bio",
+          "string_value",
+          null, // null default
+          true // clearable
+        )
+
+        // First set non-empty value
+        widgetMgr.setStringValue(widget.id, "hello", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("bio=hello")
+
+        // Set to empty string - matches null default, so clears param
+        mockOnQueryParamsChange.mockClear()
+        widgetMgr.setStringValue(widget.id, "", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+    })
+
+    describe("Date object default comparison", () => {
+      it("clears URL when string array matches Date[] default (date_input)", () => {
+        const widget = { id: "date1", formId: "" }
+        const dateDefault = [new Date(2025, 0, 15)] // Jan 15, 2025
+        widgetMgr.registerQueryParamBinding(
+          "date1",
+          "birthday",
+          "string_array_value",
+          dateDefault,
+          false
+        )
+
+        // Set to non-default value first
+        widgetMgr.setStringArrayValue(widget.id, ["2025-06-20"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "birthday=2025-06-20"
+        )
+
+        // Set back to default — URL string "2025-01-15" should match Date default
+        mockOnQueryParamsChange.mockClear()
+        widgetMgr.setStringArrayValue(widget.id, ["2025-01-15"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("clears URL when string array matches Date[] range default", () => {
+        const widget = { id: "daterange1", formId: "" }
+        const rangeDefault = [new Date(2025, 2, 1), new Date(2025, 2, 15)]
+        widgetMgr.registerQueryParamBinding(
+          "daterange1",
+          "range",
+          "string_array_value",
+          rangeDefault,
+          false
+        )
+
+        widgetMgr.setStringArrayValue(
+          widget.id,
+          ["2025-03-01", "2025-03-15"],
+          { formId: widget.formId, fragmentId: undefined, fromUser: true }
+        )
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("does not clear URL when string array differs from Date[] default", () => {
+        const widget = { id: "date2", formId: "" }
+        const dateDefault = [new Date(2025, 0, 15)]
+        widgetMgr.registerQueryParamBinding(
+          "date2",
+          "birthday",
+          "string_array_value",
+          dateDefault,
+          false
+        )
+
+        widgetMgr.setStringArrayValue(widget.id, ["2025-06-20"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "birthday=2025-06-20"
+        )
+      })
+    })
+
+    describe("handler edge cases", () => {
+      it("gracefully handles no handler set", () => {
+        // Create a new widgetMgr without setting a handler
+        const mgr = new WidgetStateManager({
+          sendRerunBackMsg: vi.fn(),
+          formsDataChanged: vi.fn(),
+        })
+
+        const widget = { id: "checkbox1", formId: "" }
+        mgr.registerQueryParamBinding(
+          "checkbox1",
+          "enabled",
+          "bool_value",
+          false,
+          false
+        )
+
+        // Should not throw when no handler is set
+        expect(() => {
+          mgr.setBoolValue(widget.id, true, {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+        }).not.toThrow()
+      })
+    })
+
+    describe("filterParamsForPageChange", () => {
+      it("returns only embed params when no widgets are bound", () => {
+        const result = widgetMgr.filterParamsForPageChange("embed=true")
+        expect(result).toBe("embed=true")
+      })
+
+      it("returns empty string when no embed params and no bound widgets", () => {
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toBe("")
+      })
+
+      it("preserves bound widget params from current URL", () => {
+        // Register a binding
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default",
+          false
+        )
+
+        // Set the widget value to update URL
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringValue(widget.id, "my_value", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // Now filter - should preserve the bound param
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toBe("my_key=my_value")
+      })
+
+      describe("date/time slider ISO URL formatting", () => {
+        it("formats date slider micros as ISO date strings in URL", () => {
+          const widget = { id: "date_slider1", formId: "" }
+          const dateMicros = Date.UTC(2024, 5, 15) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "date_slider1",
+            "date",
+            "double_array_value",
+            [dateMicros],
+            false,
+            "repeated",
+            "date"
+          )
+
+          widgetMgr.setDoubleArrayValue(widget.id, [dateMicros], {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+        })
+
+        it("formats non-default date as ISO string in URL", () => {
+          const widget = { id: "date_slider2", formId: "" }
+          const defaultMicros = Date.UTC(2024, 5, 15) * 1000
+          const newMicros = Date.UTC(2024, 2, 20) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "date_slider2",
+            "date",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            "date"
+          )
+
+          widgetMgr.setDoubleArrayValue(widget.id, [newMicros], {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "date=2024-03-20"
+          )
+        })
+
+        it("formats time slider micros as ISO time strings in URL", () => {
+          const widget = { id: "time_slider1", formId: "" }
+          const timeMicros = Date.UTC(2000, 0, 1, 14, 30) * 1000
+          const defaultMicros = Date.UTC(2000, 0, 1, 12, 0) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "time_slider1",
+            "time",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            "time"
+          )
+
+          widgetMgr.setDoubleArrayValue(widget.id, [timeMicros], {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("time=14%3A30")
+        })
+
+        it("formats datetime slider micros as ISO datetime strings in URL", () => {
+          const widget = { id: "dt_slider1", formId: "" }
+          const dtMicros = Date.UTC(2024, 2, 20, 9, 30) * 1000
+          const defaultMicros = Date.UTC(2024, 5, 15, 14, 30) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "dt_slider1",
+            "dt",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            "datetime"
+          )
+
+          widgetMgr.setDoubleArrayValue(widget.id, [dtMicros], {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "dt=2024-03-20T09%3A30"
+          )
+        })
+
+        it("formats date range slider as repeated ISO date params", () => {
+          const widget = { id: "daterange_slider1", formId: "" }
+          const startMicros = Date.UTC(2022, 0, 1) * 1000
+          const endMicros = Date.UTC(2024, 0, 1) * 1000
+          const defaultStart = Date.UTC(2020, 0, 1) * 1000
+          const defaultEnd = Date.UTC(2025, 0, 1) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "daterange_slider1",
+            "range",
+            "double_array_value",
+            [defaultStart, defaultEnd],
+            false,
+            "repeated",
+            "date"
+          )
+
+          widgetMgr.setDoubleArrayValue(widget.id, [startMicros, endMicros], {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "range=2022-01-01&range=2024-01-01"
+          )
+        })
+
+        it("clears URL when date slider returns to default", () => {
+          const widget = { id: "date_slider3", formId: "" }
+          const defaultMicros = Date.UTC(2024, 5, 15) * 1000
+          const newMicros = Date.UTC(2024, 2, 20) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "date_slider3",
+            "date",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            "date"
+          )
+
+          widgetMgr.setDoubleArrayValue(widget.id, [newMicros], {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "date=2024-03-20"
+          )
+
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setDoubleArrayValue(widget.id, [defaultMicros], {
+            formId: widget.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          })
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+      })
+
+      it("combines embed params with bound widget params", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "color",
+          "string_value",
+          "red",
+          false
+        )
+
+        // Set the widget value
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringValue(widget.id, "blue", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // Filter with embed params
+        const result = widgetMgr.filterParamsForPageChange("embed=true")
+        expect(result).toBe("embed=true&color=blue")
+      })
+
+      it("preserves multiple bound widget params", () => {
+        // Register multiple bindings
+
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "name",
+          "string_value",
+          "",
+          false
+        )
+        widgetMgr.registerQueryParamBinding(
+          "widget2",
+          "count",
+          "int_value",
+          0,
+          false
+        )
+
+        // Set widget values
+        const widget1 = { id: "widget1", formId: "" }
+
+        const widget2 = { id: "widget2", formId: "" }
+        widgetMgr.setStringValue(widget1.id, "test", {
+          formId: widget1.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        widgetMgr.setIntValue(widget2.id, 42, {
+          formId: widget2.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        // Filter - should preserve both bound params
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toContain("name=test")
+        expect(result).toContain("count=42")
+      })
+
+      it("encodes spaces as + in filterParamsForPageChange, not %20", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "q",
+          "string_value",
+          "",
+          false
+        )
+
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringValue(widget.id, "hello world", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toBe("q=hello+world")
+        expect(result).not.toContain("%20")
+      })
+    })
+  })
+})
+
+describe("microsToIsoString", () => {
+  it("formats date micros as YYYY-MM-DD", () => {
+    const micros = Date.UTC(2024, 5, 15) * 1000
+    expect(microsToIsoString(micros, "date")).toBe("2024-06-15")
+  })
+
+  it("formats time micros as HH:mm", () => {
+    const micros = Date.UTC(2000, 0, 1, 14, 30) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("14:30")
+  })
+
+  it("formats time micros with seconds as HH:mm:ss", () => {
+    const micros = Date.UTC(2000, 0, 1, 14, 30, 45) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("14:30:45")
+  })
+
+  it("formats datetime micros as YYYY-MM-DDTHH:mm", () => {
+    const micros = Date.UTC(2024, 5, 15, 14, 30) * 1000
+    expect(microsToIsoString(micros, "datetime")).toBe("2024-06-15T14:30")
+  })
+
+  it("formats datetime micros with seconds as YYYY-MM-DDTHH:mm:ss", () => {
+    const micros = Date.UTC(2024, 5, 15, 14, 30, 45) * 1000
+    expect(microsToIsoString(micros, "datetime")).toBe("2024-06-15T14:30:45")
+  })
+
+  it("handles midnight correctly for date", () => {
+    const micros = Date.UTC(2020, 0, 1) * 1000
+    expect(microsToIsoString(micros, "date")).toBe("2020-01-01")
+  })
+
+  it("handles midnight correctly for time", () => {
+    const micros = Date.UTC(2000, 0, 1, 0, 0) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("00:00")
+  })
+
+  it("omits seconds for time when seconds are zero", () => {
+    const micros = Date.UTC(2000, 0, 1, 9, 15, 0) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("09:15")
+  })
+
+  it("omits seconds for datetime when seconds are zero", () => {
+    const micros = Date.UTC(2024, 2, 20, 9, 30, 0) * 1000
+    expect(microsToIsoString(micros, "datetime")).toBe("2024-03-20T09:30")
   })
 })

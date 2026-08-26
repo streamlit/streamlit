@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -24,14 +22,14 @@ import { render } from "~lib/test_util"
 import FormattingMenu, { FormattingMenuProps } from "./FormattingMenu"
 
 describe("DataFrame FormattingMenu", () => {
-  const defaultProps: FormattingMenuProps = {
+  const defaultChildren = <div>Trigger</div>
+
+  const defaultProps: Omit<FormattingMenuProps, "children"> = {
     columnKind: "number",
     isOpen: true,
-    onMouseEnter: vi.fn(),
-    onMouseLeave: vi.fn(),
+    onOpenChange: vi.fn(),
     onChangeFormat: vi.fn(),
     onCloseMenu: vi.fn(),
-    children: <div>Trigger</div>,
   }
 
   beforeEach(() => {
@@ -39,7 +37,13 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("renders number format options when columnKind is number", () => {
-    render(<FormattingMenu {...defaultProps} />)
+    render(
+      <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
+    )
+
+    expect(screen.getByTestId("stDataFrameColumnFormattingMenu")).toHaveClass(
+      "stDataFrameColumnFormattingMenu"
+    )
 
     // Check for presence of number-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
@@ -52,7 +56,11 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("renders datetime format options when columnKind is datetime", () => {
-    render(<FormattingMenu {...defaultProps} columnKind="datetime" />)
+    render(
+      <FormattingMenu {...defaultProps} columnKind="datetime">
+        {defaultChildren}
+      </FormattingMenu>
+    )
 
     // Check for presence of datetime-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
@@ -66,7 +74,11 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("renders date format options when columnKind is date", () => {
-    render(<FormattingMenu {...defaultProps} columnKind="date" />)
+    render(
+      <FormattingMenu {...defaultProps} columnKind="date">
+        {defaultChildren}
+      </FormattingMenu>
+    )
 
     // Check for presence of date-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
@@ -78,7 +90,11 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("renders time format options when columnKind is time", () => {
-    render(<FormattingMenu {...defaultProps} columnKind="time" />)
+    render(
+      <FormattingMenu {...defaultProps} columnKind="time">
+        {defaultChildren}
+      </FormattingMenu>
+    )
 
     // Check for presence of time-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
@@ -90,7 +106,12 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("renders no format options for unknown column kind", () => {
-    render(<FormattingMenu {...defaultProps} columnKind="unknown" />)
+    // When columnKind is unknown, the component returns an empty fragment
+    render(
+      <FormattingMenu {...defaultProps} columnKind="unknown">
+        {defaultChildren}
+      </FormattingMenu>
+    )
 
     // Menu should be empty for unknown column types
     expect(screen.queryByText("Automatic")).not.toBeInTheDocument()
@@ -98,7 +119,9 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("calls onChangeFormat and onCloseMenu when clicking a format option", async () => {
-    render(<FormattingMenu {...defaultProps} />)
+    render(
+      <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
+    )
 
     // Click the "Dollar" format option
     await userEvent.click(screen.getByText("Dollar"))
@@ -117,5 +140,22 @@ describe("DataFrame FormattingMenu", () => {
     )
 
     expect(screen.getByText(triggerText)).toBeInTheDocument()
+  })
+
+  it("calls onOpenChange(true) when pointer enters the anchor", async () => {
+    const onOpenChange = vi.fn()
+    render(
+      <FormattingMenu
+        {...defaultProps}
+        isOpen={false}
+        onOpenChange={onOpenChange}
+      >
+        {defaultChildren}
+      </FormattingMenu>
+    )
+
+    const anchor = screen.getByRole("presentation")
+    await userEvent.hover(anchor)
+    expect(onOpenChange).toHaveBeenCalledWith(true)
   })
 })
