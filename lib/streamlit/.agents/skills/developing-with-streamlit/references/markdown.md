@@ -248,7 +248,9 @@ with `wrap=False`.
 
 When `wrap=False`, `st.markdown` and `st.caption` use the same inline-only
 subset as widget labels (no headings, lists, tables, or block quotes).
-`wrap=False` cannot be combined with `unsafe_allow_html=True`.
+`wrap=False` cannot be combined with `unsafe_allow_html=True`. Extra body
+lines after the first newline are not supported on `st.title`, `st.header`,
+and `st.subheader`.
 
 ```python
 metric, updated, region = st.columns(3, vertical_alignment="center")
