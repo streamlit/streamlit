@@ -632,6 +632,19 @@ const Multiselect: FC<Props> = props => {
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (disabled) return
 
+      // Let Ctrl/Cmd+A select the typed filter text. RAC would otherwise
+      // treat it as select-all options while the menu is open.
+      if (
+        e.currentTarget.value &&
+        e.key.toLowerCase() === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        e.stopPropagation()
+        return
+      }
+
       // Block character input for FILTER_MODE_NONE, but allow Backspace
       // through when input is empty so the tag-removal handler can process it.
       if (isFilterNone && !e.ctrlKey && !e.metaKey && !e.altKey) {

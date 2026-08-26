@@ -243,6 +243,27 @@ describe("Multiselect widget", () => {
     expect(match).toHaveTextContent("a")
   })
 
+  it("selects typed filter text with Ctrl/Cmd+A so Backspace can delete it", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Multiselect {...props} />)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const input = screen.getByRole<HTMLInputElement>("combobox")
+
+    await user.type(input, "ap")
+    await user.keyboard("{Control>}a{/Control}")
+
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(2)
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    await user.keyboard("{Backspace}")
+    expect(input).toHaveValue("")
+  })
+
   it("can be disabled", () => {
     const props = getProps({}, { disabled: true })
     render(<Multiselect {...props} />)

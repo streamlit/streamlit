@@ -260,6 +260,22 @@ def test_multiselect_valid_options(app: Page):
     expect(ms.locator("input")).to_have_attribute("placeholder", "Please select")
 
 
+def test_multiselect_can_select_and_delete_filter_text(app: Page):
+    """Should select typed filter text with Control/Command+A so Backspace can delete it."""
+    input_elem = _get_multiselect_input(app, "multiselect 1")
+    input_elem.click()
+    input_elem.press_sequentially("ma")
+
+    input_elem.press("ControlOrMeta+A")
+    expect(input_elem).to_have_js_property("selectionStart", 0)
+    expect(input_elem).to_have_js_property("selectionEnd", 2)
+    expect_text(app, "value 1: []")
+
+    input_elem.press("Backspace")
+    expect(input_elem).to_have_value("")
+    expect_text(app, "value 1: []")
+
+
 def test_multiselect_no_valid_options(app: Page):
     """Should show that there are no options."""
     ms = get_multiselect(app, "multiselect 3")
