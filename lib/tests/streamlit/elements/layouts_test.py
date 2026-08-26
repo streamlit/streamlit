@@ -1832,7 +1832,9 @@ class TabsTest(DeltaGeneratorTestCase):
         tabs = ["Tab 1", "Tab 2", "Tab 3"]
         default_tab = "Tab 4"
 
-        with pytest.raises(StreamlitValueError, match=r"`default`"):
+        with pytest.raises(
+            StreamlitValueError, match=r"`Tab 4` is not in the list of tabs"
+        ):
             st.tabs(tabs, default=default_tab)
 
     def test_valid_default_tab(self):

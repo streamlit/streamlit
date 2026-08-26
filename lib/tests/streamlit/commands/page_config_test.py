@@ -126,7 +126,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert c.initial_sidebar_state == PageConfigProto.LOCKED
 
     def test_set_page_config_sidebar_invalid(self):
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"Got 'INVALID'\."):
             st.set_page_config(initial_sidebar_state="INVALID")
 
     def test_set_page_config_sidebar_width_positive(self):
@@ -173,7 +173,9 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert c.about_section_md == ""
 
     def test_set_page_config_menu_items_invalid(self):
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(
+            StreamlitValueError, match=r"`invalid` is not a supported menu item key"
+        ):
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
 

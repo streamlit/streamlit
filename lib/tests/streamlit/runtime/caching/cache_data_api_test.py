@@ -900,10 +900,10 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
                 return 1
 
     def test_background_with_zero_ttl_raises(self) -> None:
-        """A non-positive ttl is treated as no ttl for background refresh."""
+        """A non-positive ttl is an invalid value for background refresh."""
         with pytest.raises(
-            StreamlitMissingRequiredParameterError,
-            match=r'Set a positive `ttl` \(for example `ttl="1h"`\)',
+            StreamlitValueError,
+            match=r"Background refresh requires a positive `ttl`",
         ):
 
             @st.cache_data(ttl=0, refresh_mode="background")

@@ -131,21 +131,32 @@ def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
     Raises
     ------
     StreamlitValueError
-        Raised if ``refresh_mode`` is not a valid value.
+        Raised if ``refresh_mode`` is not a valid value, or if
+        ``refresh_mode="background"`` is used with a non-positive ttl.
     StreamlitMissingRequiredParameterError
-        Raised if ``refresh_mode="background"`` is used without a positive ttl.
+        Raised if ``refresh_mode="background"`` is used without a ttl.
     """
     if refresh_mode not in {"foreground", "background"}:
         raise StreamlitValueError("refresh_mode", ["foreground", "background"])
 
-    if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
-        raise StreamlitMissingRequiredParameterError(
-            "ttl",
-            detail=(
-                'Set a positive `ttl` (for example `ttl="1h"`) or use '
-                '`refresh_mode="foreground"`.'
-            ),
-        )
+    if refresh_mode == "background":
+        if ttl_seconds is None:
+            raise StreamlitMissingRequiredParameterError(
+                "ttl",
+                detail=(
+                    'Set a positive `ttl` (for example `ttl="1h"`) or use '
+                    '`refresh_mode="foreground"`.'
+                ),
+            )
+        if ttl_seconds <= 0:
+            raise StreamlitValueError(
+                "ttl",
+                ["a positive duration"],
+                detail=(
+                    "Background refresh requires a positive `ttl` (for example "
+                    '`ttl="1h"`) or `refresh_mode="foreground"`.'
+                ),
+            )
 
 
 def get_session_id_or_throw() -> str:

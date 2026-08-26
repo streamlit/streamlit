@@ -250,13 +250,19 @@ def validate_space_size(size: SpaceSize) -> None:
         If the size value is invalid.
     """
     if not isinstance(size, (int, str)):
-        raise StreamlitValueError("size", _VALID_SPACE_SIZE_VALUES)
+        raise StreamlitValueError(
+            "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
+        )
 
     if isinstance(size, str):
         if size not in _VALID_SPACE_SIZE_STRINGS:
-            raise StreamlitValueError("size", _VALID_SPACE_SIZE_VALUES)
+            raise StreamlitValueError(
+                "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
+            )
     elif isinstance(size, int) and size <= 0:
-        raise StreamlitValueError("size", _VALID_SPACE_SIZE_VALUES)
+        raise StreamlitValueError(
+            "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
+        )
 
 
 def get_width_config(width: Width | SpaceSize) -> WidthConfig:
@@ -334,7 +340,7 @@ def get_gap_config(gap: Gap | None) -> GapConfig:
         gap_config.gap_size = _GAP_STRING_MAPPING[gap.lower()]
         return gap_config
 
-    raise StreamlitValueError("gap", _VALID_GAP_VALUES)
+    raise StreamlitValueError("gap", _VALID_GAP_VALUES, detail=f"Got {gap!r}.")
 
 
 _VALID_HORIZONTAL_ALIGNMENTS: Final = ["left", "center", "right", "distribute"]
@@ -352,6 +358,7 @@ def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> 
         raise StreamlitValueError(
             "horizontal_alignment",
             _VALID_HORIZONTAL_ALIGNMENT_VALUES,
+            detail=f"Got {horizontal_alignment!r}.",
         )
 
 
@@ -360,6 +367,7 @@ def validate_vertical_alignment(vertical_alignment: VerticalAlignment) -> None:
         raise StreamlitValueError(
             "vertical_alignment",
             _VALID_VERTICAL_ALIGNMENT_VALUES,
+            detail=f"Got {vertical_alignment!r}.",
         )
 
 

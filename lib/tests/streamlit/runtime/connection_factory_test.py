@@ -259,7 +259,9 @@ type="snowpark"
             def _connect(self, **kwargs):
                 pass
 
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(
+            StreamlitValueError, match=r"BadScopeConnection.*has scope 'request'"
+        ):
             connection_factory("my_connection", BadScopeConnection)
 
     def test_scope_is_passed_to_cache(self):

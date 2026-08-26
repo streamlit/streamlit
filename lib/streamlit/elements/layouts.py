@@ -995,7 +995,11 @@ class LayoutsMixin:
             )
 
         if default and default not in tabs:
-            raise StreamlitValueError("default", [f"'{tab}'" for tab in tabs])
+            raise StreamlitValueError(
+                "default",
+                ["a tab label from `tabs`"],
+                detail=f"`{default}` is not in the list of tabs.",
+            )
 
         for tab in tabs:
             if not isinstance(tab, str):

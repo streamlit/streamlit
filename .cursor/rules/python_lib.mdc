@@ -147,9 +147,10 @@ generic `StreamlitAPIException` with a one-off message.
 - `StreamlitIncompatibleParametersError(*uses, *, explanation=None)`: use
   when two or more parameter uses cannot be combined. Pass the value when
   the conflict depends on it (`wrap=False`), or the bare parameter name
-  when merely providing it conflicts (`on_change`). Optional `explanation`
-  is appended when the generic "cannot be used together" message needs more
-  context. Example:
+  when merely providing it conflicts (`on_change`). Uses are overlay-only;
+  uncaught-exception telemetry is the type name with no suffix. Optional
+  `explanation` is appended when the generic "cannot be used together"
+  message needs more context. Example:
   `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
@@ -164,8 +165,8 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
-  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout
-    or form context)
+  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
+    form, or dialog context, including opening a second dialog in the same run)
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)

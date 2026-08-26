@@ -473,7 +473,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         """Test that selection_default requires on_select to be activated."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitIncompatibleParametersError):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"Set `on_select` to `'rerun'` or a callback",
+        ):
             st.dataframe(df, selection_default={"selection": {"rows": [0]}})
 
     def test_row_selection_auto_hides_range_index(self):

@@ -372,6 +372,8 @@ class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
     Pass the value when the conflict depends on it (for example
     ``wrap=False``), or the bare parameter name when merely providing it
     conflicts (for example ``on_change``).
+    Uses are overlay-only; uncaught-exception telemetry is the type name
+    with no suffix.
     """
 
     def __init__(self, *uses: str, explanation: str | None = None) -> None:
@@ -508,7 +510,7 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidLayoutContextError(StreamlitAPIException):
-    """Raised when a command is used in a disallowed layout context."""
+    """Raised when a command is used in a disallowed layout, form, or dialog context."""
 
 
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
