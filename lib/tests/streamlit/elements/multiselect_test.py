@@ -31,6 +31,7 @@ from streamlit.elements.widgets.multiselect import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
@@ -248,8 +249,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
         with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
+            StreamlitIncompatibleParametersError,
+            match=r"`filter_mode=None` and `accept_new_options=True` cannot be used together.",
         ):
             st.multiselect(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True

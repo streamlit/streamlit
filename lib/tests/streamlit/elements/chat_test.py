@@ -30,6 +30,7 @@ from streamlit.elements.widgets.chat import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidWidthError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -168,7 +169,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as exception_message:
             st.form("Form Key").chat_input()
 
         assert (

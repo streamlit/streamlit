@@ -23,8 +23,6 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
-    StreamlitInvalidMenuItemKeyError,
-    StreamlitInvalidSidebarStateError,
     StreamlitInvalidURLError,
     StreamlitValueError,
 )
@@ -41,6 +39,13 @@ if TYPE_CHECKING:
 GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
 ABOUT_KEY: Final = "about"
+_VALID_SIDEBAR_STATE_VALUES: Final = [
+    "'auto'",
+    "'expanded'",
+    "'collapsed'",
+    "'locked'",
+    "a positive integer",
+]
 
 PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
@@ -272,8 +277,9 @@ def set_page_config(
     elif isinstance(initial_sidebar_state, int):
         # Integer values set the sidebar width and use AUTO state
         if initial_sidebar_state <= 0:
-            raise StreamlitInvalidSidebarStateError(
-                initial_sidebar_state=f"width must be positive (got {initial_sidebar_state})"
+            raise StreamlitValueError(
+                "initial_sidebar_state",
+                _VALID_SIDEBAR_STATE_VALUES,
             )
         pb_sidebar_state = PageConfigProto.AUTO
         msg.page_config_changed.initial_sidebar_width.pixel_width = (
@@ -281,8 +287,9 @@ def set_page_config(
         )
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidSidebarStateError(
-            initial_sidebar_state=initial_sidebar_state
+        raise StreamlitValueError(
+            "initial_sidebar_state",
+            _VALID_SIDEBAR_STATE_VALUES,
         )
 
     msg.page_config_changed.initial_sidebar_state = pb_sidebar_state
@@ -334,7 +341,10 @@ def set_menu_items_proto(
 def validate_menu_items(menu_items: MenuItems) -> None:
     for k, v in menu_items.items():
         if not valid_menu_item_key(k):
-            raise StreamlitInvalidMenuItemKeyError(key=k)
+            raise StreamlitValueError(
+                "menu_items",
+                ["'Get help'", "'Report a bug'", "'About'"],
+            )
         if v is not None and (
             not is_url(v, ("http", "https", "mailto")) and k != ABOUT_KEY
         ):

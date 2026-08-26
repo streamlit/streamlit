@@ -41,6 +41,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
     StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
 )
 from streamlit.logger import get_logger
 from streamlit.proto import Block_pb2
@@ -1256,7 +1257,7 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
                 cursor=outside_cursor,
             )
 
-            with pytest.raises(StreamlitAPIException) as exc_info:
+            with pytest.raises(StreamlitInvalidLayoutContextError) as exc_info:
                 outside_dg._enqueue("text", TextProto())
 
             assert "outside a parallel fragment" in str(exc_info.value)
@@ -1612,7 +1613,7 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         self.script_run_ctx.fragment_ids_this_run = ["frag"]
         _enter_fragment(self)
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as exc_info:
             outside.markdown("hi")
         assert "could not reserve a stable position" in str(exc_info.value)
 

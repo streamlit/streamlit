@@ -45,7 +45,11 @@ from streamlit.elements.lib.column_config_utils import (
     ButtonClickSerde,
     ButtonColumnClickState,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
@@ -469,8 +473,12 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         """Test that selection_default requires on_select to be activated."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
             st.dataframe(df, selection_default={"selection": {"rows": [0]}})
+
+        assert str(exc.value) == (
+            "`selection_default` and `on_select='ignore'` cannot be used together."
+        )
 
     def test_row_selection_auto_hides_range_index(self):
         """Test that a RangeIndex is auto-hidden when row selection is enabled.

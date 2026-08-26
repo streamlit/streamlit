@@ -16,7 +16,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -58,7 +62,7 @@ class StHeaderTest(DeltaGeneratorTestCase):
 
     def test_st_header_with_invalid_anchor(self):
         """Test st.header with invalid anchor."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.header("some header", anchor=True)
 
     def test_st_header_with_help(self):
@@ -193,7 +197,7 @@ class StSubheaderTest(DeltaGeneratorTestCase):
 
     def test_st_subheader_with_invalid_anchor(self):
         """Test st.subheader with invalid anchor."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.subheader("some header", anchor=True)
 
     def test_st_subheader_with_help(self):
@@ -328,13 +332,9 @@ class StTitleTest(DeltaGeneratorTestCase):
 
     def test_st_title_with_invalid_anchor(self):
         """Test st.title with invalid anchor."""
-        with pytest.raises(
-            StreamlitAPIException, match="Anchor parameter has invalid value:"
-        ):
+        with pytest.raises(StreamlitValueError, match="`anchor`"):
             st.title("some header", anchor=True)
-        with pytest.raises(
-            StreamlitAPIException, match="Anchor parameter has invalid type:"
-        ):
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="`anchor`"):
             st.title("some header", anchor=6)
 
     def test_st_title_with_help(self):

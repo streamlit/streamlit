@@ -42,10 +42,10 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitDefaultNotInOptionsError,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidVerticalAlignmentError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
@@ -389,11 +389,8 @@ class LayoutsMixin:
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
         if wrap is False and not horizontal:
-            raise StreamlitAPIException(
-                "`wrap=False` can only be used with `horizontal=True`. "
-                "A vertical container has no horizontal row of elements to keep "
-                "in a single, scrolling row. Set `horizontal=True` to use "
-                "`wrap=False`, or remove the `wrap` argument."
+            raise StreamlitIncompatibleParametersError(
+                {"wrap": False, "horizontal": False}
             )
         if horizontal:
             # `wrap=True` (default) keeps the default horizontal behavior of
@@ -691,9 +688,9 @@ class LayoutsMixin:
         }
 
         if vertical_alignment not in vertical_alignment_mapping:
-            raise StreamlitInvalidVerticalAlignmentError(
-                vertical_alignment=vertical_alignment,
-                element_type="st.columns",
+            raise StreamlitValueError(
+                "vertical_alignment",
+                [f"'{alignment}'" for alignment in vertical_alignment_mapping],
             )
 
         gap_config = get_gap_config(gap, "st.columns")
@@ -989,19 +986,18 @@ class LayoutsMixin:
 
         """
         if not tabs:
-            raise StreamlitAPIException(
-                "The input argument to st.tabs must contain at least one tab label."
-            )
+            raise StreamlitMissingRequiredParameterError("st.tabs", "tabs")
 
         if default and default not in tabs:
-            raise StreamlitAPIException(
-                f"The default tab '{default}' is not in the list of tabs."
-            )
+            raise StreamlitDefaultNotInOptionsError(default)
 
-        if any(not isinstance(tab, str) for tab in tabs):
-            raise StreamlitAPIException(
-                "The tabs input list to st.tabs is only allowed to contain strings."
-            )
+        for tab in tabs:
+            if not isinstance(tab, str):
+                raise StreamlitInvalidParameterTypeError(
+                    "tabs",
+                    type(tab).__name__,
+                    ["str"],
+                )
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(

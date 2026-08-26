@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitValueError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -155,9 +156,7 @@ def register_widget(
         to be used in a non-streamlit setting.
     """
     if on_change_handler is not None and callbacks is not None:
-        raise StreamlitAPIException(
-            "Cannot provide both `on_change` and `callbacks` to a widget."
-        )
+        raise StreamlitIncompatibleParametersError(["on_change", "callbacks"])
 
     # Validate bind parameter value
     if bind is not None and bind != "query-params":

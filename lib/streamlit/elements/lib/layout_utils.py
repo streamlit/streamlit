@@ -19,9 +19,7 @@ from typing import Final, Literal, TypeAlias, cast
 from streamlit.errors import (
     StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidSizeError,
-    StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -346,15 +344,19 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:
     valid_horizontal_alignments = ["left", "center", "right", "distribute"]
     if horizontal_alignment not in valid_horizontal_alignments:
-        raise StreamlitInvalidHorizontalAlignmentError(
-            horizontal_alignment, "st.container"
+        raise StreamlitValueError(
+            "horizontal_alignment",
+            [f"'{alignment}'" for alignment in valid_horizontal_alignments],
         )
 
 
 def validate_vertical_alignment(vertical_alignment: VerticalAlignment) -> None:
     valid_vertical_alignments = ["top", "center", "bottom", "distribute"]
     if vertical_alignment not in valid_vertical_alignments:
-        raise StreamlitInvalidVerticalAlignmentError(vertical_alignment, "st.container")
+        raise StreamlitValueError(
+            "vertical_alignment",
+            [f"'{alignment}'" for alignment in valid_vertical_alignments],
+        )
 
 
 def validate_text_alignment(text_alignment: TextAlignment) -> None:

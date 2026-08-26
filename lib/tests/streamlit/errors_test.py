@@ -241,6 +241,7 @@ def test_missing_required_parameter_error_message() -> None:
     """Default message includes command and parameter."""
     exc = errors.StreamlitMissingRequiredParameterError("st.expander", "label")
     assert str(exc) == "The `label` parameter is required for `st.expander`."
+    assert exc.exec_kwargs["parameter"] == "label"
 
 
 def test_missing_required_parameter_error_with_detail() -> None:
@@ -268,25 +269,93 @@ def test_missing_required_parameter_error_detail_with_braces() -> None:
 
 
 @pytest.mark.parametrize(
+    ("parameters", "expected_message", "expected_parameter"),
+    [
+        (
+            {"wrap": False, "unsafe_allow_html": True},
+            "`wrap=False` and `unsafe_allow_html=True` cannot be used together.",
+            "wrap=False+unsafe_allow_html=True",
+        ),
+        (
+            {"selection_default": {"selection": {"rows": [0]}}, "on_select": "ignore"},
+            "`selection_default` and `on_select='ignore'` cannot be used together.",
+            "selection_default+on_select='ignore'",
+        ),
+        (
+            ["on_change", "callbacks"],
+            "`on_change` and `callbacks` cannot be used together.",
+            "on_change+callbacks",
+        ),
+        (
+            {"refresh_mode": "background", "ttl": 0.0},
+            "`refresh_mode='background'` and `ttl=0` cannot be used together.",
+            "refresh_mode='background'+ttl=0",
+        ),
+    ],
+    ids=["bools", "omits-complex", "sequence-names", "whole-float"],
+)
+def test_incompatible_parameters_error_formats_uses(
+    parameters: dict[str, object] | list[str],
+    expected_message: str,
+    expected_parameter: str,
+) -> None:
+    """Uses are formatted into the message and the telemetry parameter suffix."""
+    exc = errors.StreamlitIncompatibleParametersError(parameters)
+    assert str(exc) == expected_message
+    assert exc.exec_kwargs["parameter"] == expected_parameter
+
+
+def test_incompatible_parameters_error_with_explanation() -> None:
+    """Optional explanation is appended to the generic message."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        {"bind": "query-params", "type": "password"},
+        explanation="Password values must not appear in URLs.",
+    )
+    assert str(exc) == (
+        "`bind='query-params'` and `type='password'` cannot be used together. "
+        "Password values must not appear in URLs."
+    )
+
+
+def test_incompatible_parameters_error_explanation_with_braces() -> None:
+    """Explanation text with braces does not break message formatting."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        {"refresh_mode": "background", "ttl": None},
+        explanation="Example: use {value}.",
+    )
+    assert str(exc) == (
+        "`refresh_mode='background'` and `ttl=None` cannot be used together. "
+        "Example: use {value}."
+    )
+
+
+def test_incompatible_parameters_error_requires_two_uses() -> None:
+    """The constructor requires at least two parameter uses."""
+    with pytest.raises(ValueError, match="at least two"):
+        errors.StreamlitIncompatibleParametersError({"wrap": False})
+
+
+def test_incompatible_parameters_error_rejects_string() -> None:
+    """A bare string is not treated as a sequence of uses."""
+    with pytest.raises(TypeError, match="mapping"):
+        errors.StreamlitIncompatibleParametersError("wrap")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
     ("alias", "shared"),
     [
         ("StreamlitInvalidPageLayoutError", "StreamlitValueError"),
         ("StreamlitInvalidTextAlignmentError", "StreamlitValueError"),
         ("StreamlitInvalidBindValueError", "StreamlitValueError"),
         ("StreamlitInvalidPersistStateError", "StreamlitValueError"),
+        ("StreamlitInvalidSidebarStateError", "StreamlitValueError"),
+        ("StreamlitInvalidMenuItemKeyError", "StreamlitValueError"),
+        ("StreamlitInvalidVerticalAlignmentError", "StreamlitValueError"),
+        ("StreamlitInvalidHorizontalAlignmentError", "StreamlitValueError"),
         ("StreamlitMissingPageLabelError", "StreamlitMissingRequiredParameterError"),
+        ("StreamlitModuleNotFoundError", "StreamlitAPIWarning"),
     ],
 )
 def test_deprecated_exception_aliases(alias: str, shared: str) -> None:
     """Deprecated exception names remain aliases of the shared types."""
     assert getattr(errors, alias) is getattr(errors, shared)
-
-
-# StreamlitModuleNotFoundError tests
-
-
-def test_module_not_found_error_message() -> None:
-    """Test that message includes the missing module name."""
-    exc = errors.StreamlitModuleNotFoundError("pandas")
-    assert "pandas" in str(exc)
-    assert "requires module" in str(exc)

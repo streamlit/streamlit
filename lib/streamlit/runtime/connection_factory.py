@@ -24,7 +24,7 @@ from streamlit.connections import (
     SnowflakeConnection,
     SQLConnection,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.secrets import secrets_singleton
@@ -103,10 +103,7 @@ def _create_connection(
 
     scope = connection_class.scope()
     if scope not in {"global", "session"}:
-        raise StreamlitAPIException(
-            f"Connection class {connection_class} has scope '{scope}'. Valid values "
-            "are 'global' or 'session'."
-        )
+        raise StreamlitValueError("scope", ["'global'", "'session'"])
 
     def on_release_wrapped(connection: ConnectionClass) -> None:
         connection.close()

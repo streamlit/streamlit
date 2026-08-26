@@ -42,7 +42,11 @@ from typing_extensions import ParamSpec
 from streamlit import type_util, util
 from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_background_refresh
 from streamlit.runtime.caching.cache_errors import (
@@ -128,17 +132,18 @@ def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
     ------
     StreamlitValueError
         Raised if ``refresh_mode`` is not a valid value.
-    StreamlitAPIException
+    StreamlitIncompatibleParametersError
         Raised if ``refresh_mode="background"`` is used without a positive ttl.
     """
     if refresh_mode not in {"foreground", "background"}:
         raise StreamlitValueError("refresh_mode", ["foreground", "background"])
 
     if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
-        raise StreamlitAPIException(
-            "The 'refresh_mode=\"background\"' option requires a 'ttl' value. "
-            "Background refresh only makes sense when cache entries can expire. Set "
-            'a \'ttl\' (e.g. ttl="1h") or use refresh_mode="foreground".'
+        raise StreamlitIncompatibleParametersError(
+            {"refresh_mode": "background", "ttl": ttl_seconds},
+            explanation=(
+                "Background refresh only makes sense when cache entries can expire."
+            ),
         )
 
 

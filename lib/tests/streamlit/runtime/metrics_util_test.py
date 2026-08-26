@@ -34,6 +34,7 @@ from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
@@ -877,6 +878,12 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitInvalidParameterTypeError:spec",
         ),
         (
+            StreamlitIncompatibleParametersError(
+                {"wrap": False, "unsafe_allow_html": True}
+            ),
+            "StreamlitIncompatibleParametersError:wrap=False+unsafe_allow_html=True",
+        ),
+        (
             StreamlitInvalidLayoutContextError(
                 "Forms cannot be nested in other forms."
             ),
@@ -948,6 +955,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "streamlit-value-error",
         "streamlit-missing-required-parameter",
         "invalid-parameter-type",
+        "incompatible-parameters",
         "invalid-context-no-command-suffix",
         "modulenotfound-message-fallback",
         "import-error-message-fallback",

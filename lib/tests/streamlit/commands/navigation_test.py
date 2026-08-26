@@ -18,7 +18,11 @@ import pytest
 
 import streamlit as st
 from streamlit.commands.navigation import convert_to_streamlit_page
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page, StreamlitPage
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -259,9 +263,9 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_convert_to_streamlit_page_invalid_type(self):
         """Test that invalid types raise exception"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
             convert_to_streamlit_page(123)
-        assert "Invalid page type" in str(exc_info.value)
+        assert "Invalid `page` type" in str(exc_info.value)
 
     def test_navigation_with_string_list(self):
         """Test navigation with list of strings"""

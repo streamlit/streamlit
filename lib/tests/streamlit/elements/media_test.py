@@ -32,7 +32,11 @@ from streamlit.elements.media import (
     _parse_start_time_end_time,
     marshall_video,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -338,9 +342,7 @@ def test_marshall_video_unsupported_subtitles_type_raises(
 ) -> None:
     """Reject subtitle containers that are not str, bytes, Path, BytesIO, or dict."""
     proto = VideoProto()
-    with pytest.raises(
-        StreamlitAPIException, match="Unsupported data type for subtitles"
-    ):
+    with pytest.raises(StreamlitInvalidParameterTypeError, match="`subtitles`"):
         marshall_video(
             mock.Mock(),
             "coord",

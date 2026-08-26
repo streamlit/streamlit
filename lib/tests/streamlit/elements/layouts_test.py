@@ -24,12 +24,13 @@ from streamlit.elements.dialog_decorator import dialog_decorator
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
+    StreamlitDefaultNotInOptionsError,
     StreamlitDuplicateElementId,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidColumnGapError,
     StreamlitInvalidFormCallbackError,
-    StreamlitInvalidHorizontalAlignmentError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidVerticalAlignmentError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
@@ -118,7 +119,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
     def test_columns_with_invalid_vertical_alignment(self):
         """Test that it throws an error on invalid vertical_alignment argument"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.columns(3, vertical_alignment="invalid")
 
     def test_not_equal_width_int_columns(self):
@@ -932,9 +933,11 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     def test_container_wrap_false_without_horizontal_raises(self) -> None:
         """Test that st.container raises for wrap=False without horizontal=True."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
             st.container(horizontal=False, wrap=False)
-        assert "horizontal=True" in str(exc.value)
+        assert str(exc.value) == (
+            "`wrap=False` and `horizontal=False` cannot be used together."
+        )
 
     def test_container_wrap_true_without_horizontal_allowed(self) -> None:
         """Test that wrap=True on a vertical container is a no-op, not an error."""
@@ -985,7 +988,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
         """Test that st.container raises on invalid horizontal_alignment."""
-        with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
+        with pytest.raises(StreamlitValueError):
             st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
 
     @parameterized.expand(
@@ -996,7 +999,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_vertical_alignment(self, vertical_alignment) -> None:
         """Test that st.container raises on invalid vertical_alignment."""
-        with pytest.raises(StreamlitInvalidVerticalAlignmentError):
+        with pytest.raises(StreamlitValueError):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
 
     @parameterized.expand(
@@ -1780,15 +1783,15 @@ class TabsTest(DeltaGeneratorTestCase):
         with pytest.raises(TypeError):
             st.tabs()
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.tabs([])
 
     def test_only_label_strings_allowed(self):
         """Test that only strings are allowed as tab labels."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.tabs(["tab1", True])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.tabs(["tab1", 10])
 
     def test_returns_all_expected_tabs(self):
@@ -1824,10 +1827,10 @@ class TabsTest(DeltaGeneratorTestCase):
         tabs = ["Tab 1", "Tab 2", "Tab 3"]
         default_tab = "Tab 4"
 
-        with pytest.raises(StreamlitAPIException) as context:
+        with pytest.raises(StreamlitDefaultNotInOptionsError) as context:
             st.tabs(tabs, default=default_tab)
 
-        assert "The default tab 'Tab 4' is not in the list of tabs." in str(
+        assert "The default value 'Tab 4' is not part of the options." in str(
             context.value
         )
 
@@ -2388,7 +2391,7 @@ class DialogTest(DeltaGeneratorTestCase):
         def dialog2():
             st.empty()
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as e:
             dialog1()
             dialog2()
 

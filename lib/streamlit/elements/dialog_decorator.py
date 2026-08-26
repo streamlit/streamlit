@@ -23,7 +23,7 @@ from streamlit.delta_generator_singletons import (
     get_last_dg_added_to_context_stack,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
     StreamlitMissingRequiredParameterError,
 )
 from streamlit.runtime.fragment import _check_not_parallel_worker, _fragment
@@ -49,14 +49,16 @@ def _assert_no_nested_dialogs() -> None:
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidLayoutContextError
         Raised if the user tries to nest dialogs inside of each other.
     """
     last_dg_in_current_context = get_last_dg_added_to_context_stack()
     if last_dg_in_current_context and "dialog" in set(
         last_dg_in_current_context._ancestor_block_types
     ):
-        raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
+        raise StreamlitInvalidLayoutContextError(
+            "Dialogs may not be nested inside other dialogs."
+        )
 
 
 F = TypeVar("F", bound=Callable[..., Any])

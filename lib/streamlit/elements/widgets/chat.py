@@ -55,6 +55,7 @@ from streamlit.elements.lib.utils import (
 from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
@@ -1027,7 +1028,7 @@ class ChatMixin:
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
         if runtime.exists() and is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "`st.chat_input()` can't be used in a `st.form()`."
             )
 

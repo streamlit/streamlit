@@ -136,8 +136,16 @@ generic `StreamlitAPIException` with a one-off message.
   an invalid value from a known finite set (Literal / enum-like options). Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
 - `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
-  use when a required parameter is missing, `None`, or empty. Example:
+  use when a required parameter is missing, `None`, or empty, including an
+  empty sequence. `parameter` is appended in uncaught-exception telemetry
+  (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
   `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
+- `StreamlitIncompatibleParametersError(parameters, *, explanation=None)`: use
+  when two or more parameter uses cannot be combined. Pass a mapping of name
+  to value so the message and telemetry record the specific uses (for example
+  `wrap=False`, not just `wrap`). Optional `explanation` is appended when the
+  generic "cannot be used together" message needs more context. Example:
+  `raise StreamlitIncompatibleParametersError({"wrap": False, "horizontal": False})`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
   uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
@@ -148,10 +156,6 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
     `StreamlitInvalidSizeError` (layout sizing helpers)
   - `StreamlitInvalidColorError`
-  - `StreamlitInvalidVerticalAlignmentError` /
-    `StreamlitInvalidHorizontalAlignmentError` /
-    `StreamlitInvalidColumnGapError` (layout alignment/gap; these keep
-    element-type context in the message)
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
@@ -166,8 +170,7 @@ generic `StreamlitAPIException` with a one-off message.
 - Do not raise the deprecated aliases.
 
 Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
-type (incompatible option combinations, nesting rules, serialization failures,
-and similar).
+type (serialization failures and similar).
 
 ## Theming and Layout
 

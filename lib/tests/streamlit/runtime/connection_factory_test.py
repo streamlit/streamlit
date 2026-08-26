@@ -30,7 +30,11 @@ from streamlit.connections import (
     SnowflakeConnection,
     SQLConnection,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitSecretNotFoundError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitSecretNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.runtime import connection_factory as connection_factory_module
 from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.connection_factory import (
@@ -255,10 +259,10 @@ type="snowpark"
             def _connect(self, **kwargs):
                 pass
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             connection_factory("my_connection", BadScopeConnection)
 
-        e.match("BadScopeConnection.*has scope 'request'")
+        e.match("Invalid `scope` value")
 
     def test_scope_is_passed_to_cache(self):
         """Scope should be passed to the underlying cache."""

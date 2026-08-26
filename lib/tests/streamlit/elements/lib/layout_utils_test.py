@@ -35,10 +35,9 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.errors import (
     StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidSizeError,
-    StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.GapSize_pb2 import GapSize
@@ -271,7 +270,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_horizontal_alignment_invalid(self):
         """validate_horizontal_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
+        with pytest.raises(StreamlitValueError):
             validate_horizontal_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -290,7 +289,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_vertical_alignment_invalid(self):
         """validate_vertical_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitInvalidVerticalAlignmentError):
+        with pytest.raises(StreamlitValueError):
             validate_vertical_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(

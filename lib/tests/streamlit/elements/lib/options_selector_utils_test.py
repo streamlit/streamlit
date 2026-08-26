@@ -38,6 +38,7 @@ from streamlit.elements.lib.options_selector_utils import (
 )
 from streamlit.errors import (
     StreamlitDefaultNotInOptionsError,
+    StreamlitIncompatibleParametersError,
     StreamlitValueError,
 )
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -108,39 +109,32 @@ class TestTransformOptions:
 
 class TestValidateSelectWidgetFilterMode:
     @pytest.mark.parametrize(
-        ("mode", "command", "expected"),
+        ("mode", "expected"),
         [
             (
                 "fuzzy",
-                "st.selectbox",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY,
             ),
             (
                 "contains",
-                "st.selectbox",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS,
             ),
             (
                 "prefix",
-                "st.multiselect",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_PREFIX,
             ),
             (
                 None,
-                "st.multiselect",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_NONE,
             ),
         ],
     )
-    def test_validates_known_modes(
-        self, mode: str | None, command: str, expected: int
-    ) -> None:
+    def test_validates_known_modes(self, mode: str | None, expected: int) -> None:
         """Test that known filter modes map to the expected protobuf values."""
         assert (
             validate_select_widget_filter_mode(
                 mode,
                 accept_new_options=False,
-                command=command,
             )
             == expected
         )
@@ -150,8 +144,18 @@ class TestValidateSelectWidgetFilterMode:
             validate_select_widget_filter_mode(
                 cast("Any", []),
                 accept_new_options=False,
-                command="st.selectbox",
             )
+
+    def test_rejects_none_with_accept_new_options(self) -> None:
+        """filter_mode=None cannot be combined with accept_new_options=True."""
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+            validate_select_widget_filter_mode(
+                None,
+                accept_new_options=True,
+            )
+        assert str(exc.value) == (
+            "`filter_mode=None` and `accept_new_options=True` cannot be used together."
+        )
 
 
 class TestIndexMethod(unittest.TestCase):

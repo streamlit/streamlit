@@ -17,7 +17,9 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Literal
+from collections.abc import Mapping, Sequence
+from itertools import starmap
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import util
 
@@ -35,10 +37,6 @@ class Error(Exception):  # pragma: no cover - trivial base class
     """
 
 
-class CustomComponentError(Error):  # pragma: no cover - trivial subclass
-    """Exceptions thrown in the custom components code path."""
-
-
 class StreamlitComponentRegistryError(Error):  # pragma: no cover - trivial subclass
     """Exceptions raised while discovering or registering Streamlit components.
 
@@ -46,10 +44,6 @@ class StreamlitComponentRegistryError(Error):  # pragma: no cover - trivial subc
     distributions for component metadata and registering them with the component
     registry.
     """
-
-
-class DeprecationError(Error):  # pragma: no cover - trivial subclass
-    pass
 
 
 class FragmentStorageKeyError(Error, KeyError):  # pragma: no cover - trivial subclass
@@ -62,10 +56,6 @@ class FragmentHandledException(Exception):  # noqa: N818  # pragma: no cover - t
     """An exception that is raised by the fragment
     when it has handled the exception itself.
     """
-
-
-class NoStaticFiles(Error):  # noqa: N818  # pragma: no cover - trivial subclass
-    pass
 
 
 class NoSessionContext(Error):  # noqa: N818  # pragma: no cover - trivial subclass
@@ -180,18 +170,6 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
         return util.repr_(self)
 
 
-class StreamlitModuleNotFoundError(StreamlitAPIWarning):
-    """Print a pretty message when a Streamlit command requires a dependency
-    that is not one of our core dependencies.
-    """
-
-    def __init__(self, module_name: str, *args: Any) -> None:
-        message = (
-            f'This Streamlit command requires module "{module_name}" to be installed.'
-        )
-        super().__init__(message, *args)
-
-
 class LocalizableStreamlitException(StreamlitAPIException):
     def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__((message).format(**kwargs))
@@ -200,27 +178,6 @@ class LocalizableStreamlitException(StreamlitAPIException):
     @property
     def exec_kwargs(self) -> dict[str, Any]:
         return self._exec_kwargs
-
-
-class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for `initial_sidebar_state`."""
-
-    def __init__(self, initial_sidebar_state: str) -> None:
-        super().__init__(
-            '`initial_sidebar_state` must be `"auto"`, `"expanded"`, `"collapsed"`, `"locked"`, '
-            'or a positive integer for width in pixels (got `"{initial_sidebar_state}"`)',
-            initial_sidebar_state=initial_sidebar_state,
-        )
-
-
-class StreamlitInvalidMenuItemKeyError(LocalizableStreamlitException):
-    """Exception raised when an invalid key is specified."""
-
-    def __init__(self, key: str) -> None:
-        super().__init__(
-            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` (`"{key}"` is not a valid key.)',
-            key=key,
-        )
 
 
 class StreamlitInvalidURLError(LocalizableStreamlitException):
@@ -247,19 +204,6 @@ class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for vertical_alignment."""
-
-    def __init__(self, vertical_alignment: str, element_type: str) -> None:
-        super().__init__(
-            "The `vertical_alignment` argument to `{element_type}` must be "
-            '`"top"`, `"center"`, `"bottom"`, or `"distribute"`. \n'
-            "The argument passed was {vertical_alignment}.",
-            vertical_alignment=vertical_alignment,
-            element_type=element_type,
-        )
-
-
 class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for gap."""
 
@@ -271,19 +215,6 @@ class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
             "the gap in pixels. \n"
             "The argument passed was {gap}.",
             gap=gap,
-            element_type=element_type,
-        )
-
-
-class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for horizontal_alignment."""
-
-    def __init__(self, horizontal_alignment: str, element_type: str) -> None:
-        super().__init__(
-            "The `horizontal_alignment` argument to `{element_type}` must be "
-            '`"left"`, `"center"`, `"right"`, or `"distribute"`. \n'
-            "The argument passed was {horizontal_alignment}.",
-            horizontal_alignment=horizontal_alignment,
             element_type=element_type,
         )
 
@@ -428,7 +359,11 @@ class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
 
 
 class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
-    """Raised when a required parameter is missing, ``None``, or empty."""
+    """Raised when a required parameter is missing, ``None``, or empty.
+
+    Uncaught-exception telemetry appends the parameter name, for example
+    ``StreamlitMissingRequiredParameterError:label``.
+    """
 
     def __init__(
         self, command: str, parameter: str, *, detail: str | None = None
@@ -441,6 +376,94 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
             command=command,
             parameter=parameter,
             detail=detail,
+        )
+
+
+_MAX_INCOMPATIBLE_PARAMETER_VALUE_LEN: Final = 32
+
+
+def _format_incompatible_parameter_use(name: str, value: object) -> str:
+    """Format a parameter use for messages and telemetry.
+
+    Low-cardinality values are included so telemetry can distinguish
+    ``wrap=False`` from ``wrap=True``. Complex or user-supplied values are
+    omitted, leaving just the parameter name.
+    """
+    # bool is an int subclass; f-strings still render True/False.
+    if value is None or isinstance(value, int):
+        return f"{name}={value}"
+    if isinstance(value, float):
+        formatted = int(value) if value.is_integer() else value
+        return f"{name}={formatted}"
+    if (
+        isinstance(value, str)
+        and len(value) <= _MAX_INCOMPATIBLE_PARAMETER_VALUE_LEN
+        and "\n" not in value
+        and "\r" not in value
+    ):
+        return f"{name}={value!r}"
+    return name
+
+
+def _join_incompatible_parameter_uses_for_message(uses: Sequence[str]) -> str:
+    """Join uses as ``A and B`` or ``A, B, and C``. Caller must pass at least two uses."""
+    quoted = [f"`{use}`" for use in uses]
+    if len(quoted) == 2:
+        return " and ".join(quoted)
+    return f"{', '.join(quoted[:-1])}, and {quoted[-1]}"
+
+
+def _normalize_incompatible_parameter_uses(
+    parameters: Mapping[str, object] | Sequence[str],
+) -> list[str]:
+    """Return formatted uses for the message and telemetry suffix.
+
+    A mapping becomes ``name=value`` strings (or just ``name`` when the value
+    is omitted). A sequence of strings is used as-is. A single ``str`` is
+    rejected so it is not treated as a sequence of characters.
+    """
+    if isinstance(parameters, Mapping):
+        return list(starmap(_format_incompatible_parameter_use, parameters.items()))
+    # str is a Sequence, but a single string is not a list of uses.
+    if isinstance(parameters, str) or not isinstance(parameters, Sequence):
+        raise TypeError(
+            "parameters must be a mapping of name to value or a sequence of uses."
+        )
+    return [str(use) for use in parameters]
+
+
+class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
+    """Raised when two or more parameter uses cannot be combined.
+
+    Pass a mapping of name to value so the message and telemetry record the
+    specific uses (for example ``wrap=False``, not just ``wrap``).
+    Pass a sequence of names only when values are not meaningful (for example
+    ``on_change`` vs ``callbacks``).
+    Uncaught-exception telemetry appends the joined uses, for example
+    ``StreamlitIncompatibleParametersError:wrap=False+horizontal=False``.
+    """
+
+    def __init__(
+        self,
+        parameters: Mapping[str, object] | Sequence[str],
+        *,
+        explanation: str | None = None,
+    ) -> None:
+        uses = _normalize_incompatible_parameter_uses(parameters)
+        if len(uses) < 2:
+            raise ValueError(
+                "StreamlitIncompatibleParametersError requires at least two "
+                "parameter uses."
+            )
+        uses_text = _join_incompatible_parameter_uses_for_message(uses)
+        message = "{uses_text} cannot be used together."
+        if explanation:
+            message += " {explanation}"
+        super().__init__(
+            message,
+            uses_text=uses_text,
+            explanation=explanation,
+            parameter="+".join(uses),
         )
 
 
@@ -694,13 +717,8 @@ class StreamlitDefaultNotInOptionsError(LocalizableStreamlitException):
 class StreamlitInvalidThemeError(LocalizableStreamlitException):
     """Exception raised for general theme errors."""
 
-    def __init__(self, message: str) -> None:
-        super().__init__(
-            message,
-        )
 
-
-class StreamlitInvalidThemeOptionError(LocalizableStreamlitException):
+class StreamlitInvalidThemeOptionError(StreamlitInvalidThemeError):
     """Exception raised when an invalid theme config option is provided."""
 
     def __init__(self, message: str) -> None:
@@ -709,7 +727,7 @@ class StreamlitInvalidThemeOptionError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
+class StreamlitInvalidThemeSectionError(StreamlitInvalidThemeError):
     """Exception raised when an invalid theme section is provided."""
 
     def __init__(self, option_name: str, file_path_or_url: str = "config.toml") -> None:
@@ -735,6 +753,21 @@ StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
 StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
     StreamlitValueError
 )
+StreamlitInvalidSidebarStateError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidMenuItemKeyError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidVerticalAlignmentError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidHorizontalAlignmentError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
 StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.
     StreamlitMissingRequiredParameterError
+)
+StreamlitModuleNotFoundError = (  # Replaced: StreamlitAPIWarning.
+    StreamlitAPIWarning
 )

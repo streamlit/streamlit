@@ -16,7 +16,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -49,7 +49,7 @@ class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
             with pytest.raises(StreamlitAPIException):
                 st.progress(value)
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.progress("some string")
 
     def test_progress_text(self):
@@ -63,7 +63,7 @@ class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
     def test_progress_with_text(self):
         """Test Progress with invalid type in text parameter."""
         text = object()
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.progress(42, text=text)
 
     def test_progress_with_close_float(self):

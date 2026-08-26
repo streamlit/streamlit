@@ -53,7 +53,11 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -1094,9 +1098,8 @@ class ButtonGroupMixin:
 
         # Validate required with multi-select
         if required and selection_mode == "multi":
-            raise StreamlitAPIException(
-                "The `required` argument cannot be used with `selection_mode='multi'`. "
-                "The `required` parameter is only supported for single-select mode."
+            raise StreamlitIncompatibleParametersError(
+                {"required": True, "selection_mode": "multi"}
             )
 
         # Use str as default format_func
