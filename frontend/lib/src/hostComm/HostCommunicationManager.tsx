@@ -218,9 +218,11 @@ export default class HostCommunicationManager {
    * to this window so an in-iframe host can observe guest messages even if
    * the parent is a third-party page. The copy sets `isGuestToHostEcho: true`
    * so `receiveHostMessage` can ignore it. Posting to `window` already limits
-   * delivery to this window's listeners. The echo uses `"/"` (same origin as
-   * the sender) so `postMessage` does not throw when `location.origin` is the
-   * literal `"null"` in an opaque-origin document.
+   * delivery to this window's listeners. The echo uses `"/"`, `postMessage`'s
+   * special same-origin target, so it matches the sender's effective origin.
+   * This also works in opaque-origin documents, where `location.origin` can be
+   * `"null"` (causing a `SyntaxError`) or differ from the effective origin
+   * (causing the browser to silently drop the message).
    *
    * Do not echo at top level: `isSelfPost` is false when
    * `window === window.parent`, so an unignored top-level echo could run as a
