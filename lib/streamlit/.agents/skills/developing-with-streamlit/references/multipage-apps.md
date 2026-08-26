@@ -17,7 +17,7 @@ app_pages/
 
 ## Main module
 
-Give every `st.Page` a context-appropriate Material Symbols icon so navigation is easy to scan.
+Give every `st.Page` a context-appropriate Material Symbols icon (`:material/icon_name:`) so navigation is easy to scan. Choose a name from the [supported icon list](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py) because unsupported names raise an error.
 
 ```python
 # streamlit_app.py
