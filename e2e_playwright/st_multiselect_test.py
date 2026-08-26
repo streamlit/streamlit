@@ -267,14 +267,14 @@ def test_multiselect_ctrl_cmd_a_selects_filter_text(app: Page):
     expect(app.get_by_role("option", name="male", exact=True)).to_be_visible()
 
     # Empty-filter Ctrl/Cmd+A must not bulk-select options.
-    input_elem.press("ControlOrMeta+A")
+    input_elem.press("ControlOrMeta+a")
     expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
     expect_text(app, "value 1: []")
 
     input_elem.press_sequentially("ma")
     expect(app.get_by_role("option", name="male", exact=True)).to_be_visible()
 
-    input_elem.press("ControlOrMeta+A")
+    input_elem.press("ControlOrMeta+a")
     expect(input_elem).to_have_js_property("selectionStart", 0)
     expect(input_elem).to_have_js_property("selectionEnd", 2)
     expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
