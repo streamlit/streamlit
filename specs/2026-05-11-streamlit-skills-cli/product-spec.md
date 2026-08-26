@@ -188,21 +188,24 @@ breaking changes roll out to users.
   so a missed detection costs the user the whole skill while a false positive
   costs a few unused symlinks. `~/.claude` alone is not sufficient: it is
   created lazily, so a freshly installed CLI has none yet. False positives
-  (a leftover dir after uninstall) and false negatives (a custom `CLAUDE_HOME`
-  with the CLI off `PATH`) are still accepted to keep detection simple.
+  (a leftover dir after uninstall) and false negatives (a `CLAUDE_CONFIG_DIR`
+  pointing elsewhere with the CLI off `PATH`) are still accepted to keep
+  detection simple.
 - **Install completeness:** A skill present in only some of a scope's target
   directories counts as *not* installed, so the startup recommendation and the
   in-app nudge both prompt again and the re-run fills in the missing agent
   directory. Completeness is judged per scope and either scope satisfying it is
   enough, so a deliberate global-only install is not flagged in every project. An
   install that cannot be inspected at all - every target directory raises, e.g.
-  on permissions - counts as installed rather than missing: neither surface can
-  tell, and the install they would recommend hits the same error.
+  on permissions - does not prompt: neither surface can tell, and the install
+  they would recommend hits the same error. The startup recommendation reaches
+  that by treating it as installed; the in-app nudge withholds under its own
+  `check_unreadable` reason, so the two stay distinguishable in telemetry.
 - **Who gets prompted:** The in-app nudge requires an agent harness to be
   present, judged by *either* detector - the home-directory harness list or the
   broader Claude Code detection above. Either is enough on purpose: a user
-  detected broadly enough to be given a `.claude/skills` target is also reported
-  as partially installed, so the startup recommendation prints for them. Gating
+  detected broadly enough to be given a `.claude/skills` target is not reported
+  as fully installed, so the startup recommendation prints for them. Gating
   the nudge on the narrower signal left that user nagged by the surface that
   cannot fix it and hidden from the one-click repair that can.
 - **Idempotent:** Safe to run multiple times; reports "up to date" for existing

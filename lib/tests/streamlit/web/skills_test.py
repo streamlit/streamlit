@@ -850,16 +850,17 @@ class TestAreSkillsInstalled:
 
 
 class TestInstallCompleteness:
-    """Tests for the three-state answer _install_completeness reports."""
+    """Tests for the four states _install_completeness reports."""
 
     @pytest.mark.parametrize(
         ("agents_installed", "claude_installed", "expected"),
         [
             (False, False, "absent"),
             (True, False, "partial"),
+            (False, True, "partial"),
             (True, True, "complete"),
         ],
-        ids=["absent", "partial", "complete"],
+        ids=["absent", "partial", "partial_claude_only", "complete"],
     )
     def test_reports_each_state(
         self,
@@ -872,7 +873,9 @@ class TestInstallCompleteness:
 
         The in-app nudge needs "partial" separated from "absent": only a
         half-finished install of *ours* should reopen a nudge the user has
-        already acted on.
+        already acted on. Both halves of a wedge count as partial - the common
+        one is .agents/skills with nothing in .claude/skills, and a hand-copied
+        .claude/skills with an empty .agents/skills is the mirror image.
         """
         agents_dir = tmp_path / "home" / ".agents" / "skills"
         claude_dir = tmp_path / "home" / ".claude" / "skills"
@@ -2237,7 +2240,7 @@ def _evaluate_nudge_reason(
             },
             "installed",
         ),
-        ({"completeness": "unknown"}, "check_failed"),
+        ({"completeness": "unknown"}, "check_unreadable"),
         (
             {
                 "installed_skills": ("home:agents:developing-with-streamlit",),
@@ -2423,7 +2426,7 @@ def test_nudge_is_hidden_when_no_install_target_can_be_read(tmp_path: Path) -> N
         patch.object(skills, "_one_click_install_would_be_refused", return_value=False),
         _unreadable(agents_dir),
     ):
-        assert skills.nudge_suppression_reason() == "check_failed"
+        assert skills.nudge_suppression_reason() == "check_unreadable"
 
 
 def test_should_show_skills_nudge_hidden_when_marker_is_from_another_harness(

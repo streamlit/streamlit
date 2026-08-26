@@ -300,12 +300,19 @@ def _lives_in_a_path_entry(executable: str) -> bool:
     }
 
 
+# Deliberately broader than the "claude" entry in _HARNESSES, which keys on the
+# home directory alone. That table answers "which harnesses exist" for telemetry,
+# where a stable definition matters more than catching a just-installed CLI; here
+# a miss breaks the feature outright. The two only disagree for an install never
+# invoked beyond `claude --version`, which creates nothing - the first command
+# that touches config creates both ~/.claude and ~/.claude.json, before login
+# (checked against Claude Code 2.1.235). Nobody is wedged in that window, since
+# being wedged means having used Claude Code and found the skill missing.
+#
 # Cached because this sits on the nudge show-gate, which re-evaluates on every
-# script rerun, and shutil.which() walks the whole PATH (plus a PATHEXT sweep on
-# Windows) - the same reason _symlink_blocker is cached. The cost is that Claude
-# Code installed mid-session is not noticed until the server restarts, so an
-# install in that window writes .agents only. That is self-correcting rather than
-# a dead end: the next session sees a partial install and offers the repair.
+# script rerun, and shutil.which() walks the whole PATH. Claude Code installed
+# mid-session is therefore missed until the server restarts; the next session
+# sees a partial install and offers the repair.
 @lru_cache(maxsize=1)
 def _is_claude_code_present() -> bool:
     """Whether the installer should also write a ``.claude`` skills target.
@@ -315,18 +322,6 @@ def _is_claude_code_present() -> bool:
     while a false positive costs a few unused symlinks. Detection is generous to
     match that asymmetry: ``~/.claude`` is created lazily, so ``~/.claude.json``
     or a ``claude`` on ``PATH`` counts as present too.
-
-    Deliberately broader than the ``claude`` entry in ``_HARNESSES``, which keys
-    on the home directory alone. That table answers "which harnesses exist" for
-    telemetry, where a stable definition matters more than catching a
-    just-installed CLI; here a miss breaks the feature outright.
-
-    The two only disagree in a narrow window, which is why they are left to
-    differ: ``claude --version`` creates nothing, but the first command that
-    touches config creates both ``~/.claude`` and ``~/.claude.json``, before
-    login. So the gap is "installed, never really run" - and nobody is wedged
-    there, because being wedged means having used Claude Code and found the
-    skill missing. Verified against Claude Code 2.1.235.
     """
     try:
         home = Path.home()
@@ -392,13 +387,15 @@ def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
     complete global install means every agent can load the skill, so a
     half-finished project install must not downgrade it.
 
-    Best-effort: target dirs that cannot be resolved are skipped, and target
-    dirs that cannot be read count as unknown rather than missing, so a
-    permissions error never reports a correctly-installed user as partial. When
-    no target dir in any scope can be read the whole answer is ``unknown``
-    rather than ``absent``, since "we could not look" is not evidence that the
-    skill is missing - and marker detection cannot see through those directories
-    either, so nothing else would catch it.
+    Best-effort, so a permissions error never reports a correctly-installed user
+    as partial:
+
+    - Target dirs that cannot be resolved are skipped.
+    - Target dirs that cannot be read count as unknown, not missing.
+    - When no target dir in any scope can be read, the whole answer is
+      ``unknown``: "we could not look" is not evidence the skill is missing, and
+      marker detection cannot see through those dirs either.
+
     Deliberately uncached, so repairing a partial install takes effect at once.
 
     Parameters
@@ -469,18 +466,18 @@ def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
 
 
 def are_skills_installed() -> bool:
-    """Check whether Streamlit agent skills appear to be installed.
+    """Whether the startup recommendation should stay quiet about the skills.
 
-    Returns ``True`` only when the bundled skill is present (as a symlink,
-    copied directory, or regular directory) in *every* target directory of at
-    least one install scope, so it is reachable from every agent ``streamlit
-    skills`` writes for. A partial install counts as not installed, so the
-    startup recommendation in ``bootstrap`` prints again and the re-run fills in
-    the missing agent directory - the case that matters when an agent is
-    installed after ``streamlit skills`` last ran.
+    ``True`` when the bundled skill is present (as a symlink, copied directory,
+    or regular directory) in *every* target directory of at least one install
+    scope, so it is reachable from every agent ``streamlit skills`` writes for.
+    A partial install counts as not installed, so the startup recommendation in
+    ``bootstrap`` prints again and the re-run fills in the missing agent
+    directory - the case that matters when an agent is installed after
+    ``streamlit skills`` last ran.
 
-    An install we could not inspect at all - target dirs resolved, but every one
-    of them raised - also reports ``True``. "We could not look" is not evidence
+    Also ``True`` for an install we could not inspect at all - target dirs
+    resolved, but every one of them raised. "We could not look" is not evidence
     the skill is missing, the recommendation has no dismissal path, and the
     install it points at would hit the same error.
 
@@ -490,10 +487,11 @@ def are_skills_installed() -> bool:
 
 
 def _skill_present_in(target_dir: Path) -> bool | None:
-    """Whether the bundled skill exists in ``target_dir``, as link or directory.
+    """Whether the bundled skill path exists in ``target_dir``.
 
-    Returns ``None`` when the filesystem check itself fails, so callers can tell
-    "not there" apart from "could not look".
+    Returns ``None`` when the filesystem cannot determine this, so callers can
+    tell "not there" apart from "could not look". Dangling symlinks count as
+    present.
     """
     skill_path = target_dir / _GLOBAL_SKILL_NAME
     try:
@@ -1554,7 +1552,10 @@ _NudgeSuppressionReason = Literal[
     "dismissed",  # The user asked never to see it again.
     # Names the stage that failed, not just "error": the sibling telemetry labels
     # are install failures, so a bare "error" would read as one.
-    "check_failed",  # The check could not answer: it threw, or no target read.
+    "check_failed",  # The eligibility check raised.
+    # Split from check_failed because the fixes differ: a code-path failure is
+    # ours, an unreadable install tree is the user's permissions.
+    "check_unreadable",  # No install target could be read.
     "headless",  # Headless mode: deployments, CI, SiS.
     "installed",  # The bundled skills are already present.
     "no_agent",  # No AI agent harness on this machine.
@@ -1562,6 +1563,10 @@ _NudgeSuppressionReason = Literal[
 ]
 
 
+# Keep the nudge's display gate and the in-app installer's action gate on this
+# one predicate: gating the display broadly and the action narrowly offers a
+# button that refuses, and the reverse withholds the one repair from users the
+# startup recommendation nags on every run.
 def agent_harness_present() -> bool:
     """Whether an AI agent harness that would consume the skills is installed.
 
@@ -1570,12 +1575,7 @@ def agent_harness_present() -> bool:
     eight harnesses; :func:`_is_claude_code_present` is the broader signal that
     decides whether ``.claude/skills`` is an install target at all. Anyone the
     broad one covers has a target the installer writes to, so something would
-    consume the skills - which is the question both the nudge's display gate and
-    the in-app install handler's action gate are really asking.
-
-    Shared by those two on purpose: gating the display broadly and the action
-    narrowly would offer a button that refuses, and the reverse withholds the
-    one repair from users the startup recommendation nags on every run.
+    consume the skills - which is the question both gates are really asking.
     """
     return bool(detect_installed_agents()) or _is_claude_code_present()
 
@@ -1612,10 +1612,11 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         detection result. Falls back to the current working directory when
         ``None``.
 
-    Best-effort: returns ``"check_failed"`` whenever the check cannot answer -
-    it threw, or every install target was unreadable - so a detection failure
-    never blocks app startup or surfaces a spurious nudge. Note this is a
-    *reason*, not a falsy value — the nudge stays hidden, as before.
+    Best-effort: the nudge is withheld rather than guessed whenever the check
+    cannot answer, so a detection failure never blocks app startup or surfaces a
+    spurious nudge - ``"check_failed"`` when the check raised, and
+    ``"check_unreadable"`` when every install target was unreadable. Note these
+    are *reasons*, not falsy values — the nudge stays hidden, as before.
     """
     from streamlit import config
 
@@ -1646,10 +1647,11 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         # No marker found and nothing readable either: every target dir raised,
         # so "not installed" is a conclusion we cannot draw, and the one-click
         # install we would offer hits the same error. Withhold instead of
-        # nudging a user whose setup may be fine, reusing "check_failed" because
-        # the cause is the same - the eligibility check could not answer.
+        # nudging a user whose setup may be fine. Its own label rather than
+        # "check_failed": this is a permissions population to go and look at, not
+        # a code path of ours that broke.
         if completeness == "unknown":
-            return "check_failed"
+            return "check_unreadable"
         # No usable install found. Withhold only on a deterministic conflict at
         # every target; the other always-fail causes (missing bundled package, a
         # copy that errors on permissions/path-length) stay fail-open, since those
