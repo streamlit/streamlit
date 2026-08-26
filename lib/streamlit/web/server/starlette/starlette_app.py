@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
@@ -393,7 +393,7 @@ class App:
 
     Parameters
     ----------
-    script_path : str | Path | Callable[[], None]
+    script_path : str, Path, or callable
         The app entrypoint: a script path, or a zero-argument synchronous
         callable defined in a filesystem-backed Python source file.
 
@@ -405,11 +405,12 @@ class App:
           - Invoked once per full rerun. Locals are fresh each run; closures
             and module globals are shared across reruns and sessions. Use
             ``st.session_state`` for per-session values.
-          - The callable's source file anchors Runtime script path, secrets,
-            static files, and source watching.
-          - Under ``streamlit run``, script-level config comes from the
-            launched file; when that path is unset (for example under
-            uvicorn), the source file also pins config.
+          - The callable's source file anchors the Runtime script path,
+            ``static/`` file serving, and source watching.
+          - Script-level ``config.toml`` and ``secrets.toml`` come from the
+            launched file under ``streamlit run``. When no launched file is
+            set (for example under uvicorn), the callable's source file pins
+            them instead.
           - Streamlit retains the callable object for the lifetime of the
             ``App``; restart the process after changing its definition.
           - Callable execution takes precedence over a legacy ``pages/``
@@ -572,9 +573,10 @@ class App:
             self._script_path = _resolve_callable_source_path(script_path)
             self._script_entrypoint = script_path
         else:
-            raise StreamlitAPIException(
-                "st.App script_path must be a path string, pathlib.Path, or "
-                f"zero-argument callable. Got {type(script_path).__name__}."
+            raise StreamlitInvalidParameterTypeError(
+                "script_path",
+                type(script_path).__name__,
+                ["str", "Path", "Callable"],
             )
         self._user_lifespan = lifespan
         self._user_routes = list(routes) if routes else []
@@ -649,7 +651,7 @@ class App:
 
     @property
     def script_path(self) -> Path:
-        """The resolved filesystem path of the app script or callable source."""
+        """The app script path as given, or the resolved source file of a callable entrypoint."""
         return self._script_path
 
     @property

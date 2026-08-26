@@ -38,7 +38,7 @@ from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
@@ -1776,9 +1776,9 @@ class TestAppInit:
             App(main)
 
     def test_app_rejects_unsupported_entrypoint_type(self) -> None:
-        """Non-path, non-callable entrypoints raise StreamlitAPIException."""
+        """Non-path, non-callable entrypoints raise StreamlitInvalidParameterTypeError."""
         with pytest.raises(
-            StreamlitAPIException, match=r"path string, pathlib\.Path, or"
+            StreamlitInvalidParameterTypeError, match=r"Invalid `script_path` type"
         ):
             App(42)  # type: ignore[arg-type]
 
