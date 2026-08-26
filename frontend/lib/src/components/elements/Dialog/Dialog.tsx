@@ -135,11 +135,9 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     if (isOpen && !element.dismissible) {
       // capture=true to intercept before App-level hotkeys
       document.addEventListener("keydown", handleRKeySuppress, true)
-      document.addEventListener("keyup", handleRKeySuppress, true)
 
       return () => {
         document.removeEventListener("keydown", handleRKeySuppress, true)
-        document.removeEventListener("keyup", handleRKeySuppress, true)
       }
     }
     return undefined

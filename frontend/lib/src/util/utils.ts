@@ -676,7 +676,8 @@ export function keysToSnakeCase(
   )
 }
 
-/** Convert camelCase to snake_case while keeping consecutive uppercase abbreviations intact. */
+/** Convert camelCase to snake_case, keeping consecutive uppercase abbreviations intact (`XMLHttpRequest` → `XML_http_request`).
+ *  Adapted from sindresorhus/decamelize (`preserveConsecutiveUppercase: true`), MIT. */
 function decamelizePreservingUppercase(value: string): string {
   if (value.length < 2) {
     return value

@@ -32,7 +32,7 @@ function normalizeKey(key: string): string {
   return key === "Escape" || key === "Esc" ? "esc" : key.toLowerCase()
 }
 
-/** Handles Streamlit's unmodified, single-key global shortcuts. */
+/** Handles Streamlit's single-key global shortcuts, ignoring Alt/Ctrl/Cmd chords. */
 export function GlobalHotkeys({
   keyName,
   onKeyDown,
@@ -41,6 +41,7 @@ export function GlobalHotkeys({
 }: GlobalHotkeysProps): ReactElement {
   const keyDownHandlerRef = useRef(onKeyDown)
   const keyUpHandlerRef = useRef(onKeyUp)
+  // Keep document listeners stable while dispatching to the latest callbacks.
   keyDownHandlerRef.current = onKeyDown
   keyUpHandlerRef.current = onKeyUp
 
@@ -54,8 +55,14 @@ export function GlobalHotkeys({
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       const normalizedKey = normalizeKey(event.key)
-      // Shift is allowed so advertised shortcuts like R and C still work.
-      const hasModifier = event.altKey || event.ctrlKey || event.metaKey
+      // Shift is allowed on single-character keys so advertised shortcuts
+      // like R and C still work. Multi-character keys such as esc still
+      // require an unmodified match.
+      const hasModifier =
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        (event.shiftKey && normalizedKey.length !== 1)
       if (
         !configuredKeys.has(normalizedKey) ||
         activeKeys.has(normalizedKey) ||

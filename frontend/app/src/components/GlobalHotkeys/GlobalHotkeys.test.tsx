@@ -69,6 +69,20 @@ describe("GlobalHotkeys", () => {
     expect(onKeyDown).toHaveBeenCalledWith("r", expect.any(KeyboardEvent))
   })
 
+  it("does not fire multi-character shortcuts when Shift is held", async () => {
+    const user = userEvent.setup()
+    const onKeyDown = vi.fn()
+    render(
+      <GlobalHotkeys keyName="esc" onKeyDown={onKeyDown}>
+        <div>content</div>
+      </GlobalHotkeys>
+    )
+
+    await user.keyboard("{Shift>}{Escape}{/Shift}")
+
+    expect(onKeyDown).not.toHaveBeenCalled()
+  })
+
   it("suppresses duplicate keydowns until keyup or window blur", () => {
     const onKeyDown = vi.fn()
     render(

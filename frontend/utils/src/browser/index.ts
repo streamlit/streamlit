@@ -88,7 +88,6 @@ const BROWSER_PATTERNS: Array<{ name: string; pattern: RegExp }> = [
   { name: "UCBrowser", pattern: /(?:UCBrowser|UC Browser)\/([\d.]+)/i },
   { name: "QQBrowser", pattern: /MQQBrowser\/([\d.]+)/i },
   { name: "Maxthon", pattern: /Maxthon\/([\d.]+)/i },
-  { name: "Brave", pattern: /Brave\/([\d.]+)/i },
   { name: "IE", pattern: /MSIE\s([\d.]+)/i },
   { name: "IE", pattern: /Trident\/.*?rv:([\d.]+)/i },
   { name: "Chrome", pattern: /(?:CriOS|Chrome)\/([\d.]+)/i },
@@ -107,7 +106,10 @@ const OS_PATTERNS: Array<{ os: string; pattern: RegExp }> = [
   { os: "Linux", pattern: /Linux/i },
 ]
 
-/** Parse the browser, device class, and operating system fields Streamlit uses. */
+/**
+ * Parse the browser, device class, and operating system fields Streamlit uses.
+ * Names intentionally mirror ua-parser-js so historical telemetry stays comparable.
+ */
 export function parseUserAgent(userAgent: string): UserAgentInfo {
   let browserName: string | undefined
   let browserVersion: string | undefined
@@ -134,9 +136,9 @@ export function parseUserAgent(userAgent: string): UserAgentInfo {
   }
 
   let deviceType: DeviceType | undefined
-  if (/(?:SMART-TV|SmartTV|Tizen|Web0S)/i.test(userAgent)) {
+  if (/(?:SMART-TV|SmartTV|Tizen|Web0S|webOS)/i.test(userAgent)) {
     deviceType = "smarttv"
-  } else if (/(?:Watch|Wear OS)/i.test(userAgent)) {
+  } else if (/(?:watchOS|Watch OS|Wear OS|Galaxy Watch)/i.test(userAgent)) {
     deviceType = "wearable"
   } else if (/(?:Xbox|PlayStation|Nintendo)/i.test(userAgent)) {
     deviceType = "console"
