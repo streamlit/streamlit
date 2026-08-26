@@ -219,3 +219,24 @@ with st.form("number_input_form"):
     )
     st.form_submit_button("Submit number input form")
 st.write("number input in form - value: ", form_num)
+
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+# --- on_change="ignore" number input ---
+ignore_number = st.number_input(
+    "Ignore change number input",
+    min_value=0,
+    max_value=100,
+    value=25,
+    step=1,
+    key="ignore_number",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore number value:", ignore_number)
+
+if st.button("Apply ignore number", key="apply_ignore_number"):
+    st.write("Applied ignore number value:", ignore_number)

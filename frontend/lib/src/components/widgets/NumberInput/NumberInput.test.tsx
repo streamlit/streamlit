@@ -29,7 +29,10 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import NumberInput, { Props } from "./NumberInput"
 
-const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<NumberInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: NumberInputProto.create({
     label: "Label",
     default: 0,
@@ -42,28 +45,39 @@ const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
+  ...widgetProps,
 })
 
-const getIntProps = (elementProps: Partial<NumberInputProto> = {}): Props => {
-  return getProps({
-    dataType: NumberInputProto.DataType.INT,
-    default: 10,
-    min: 0,
-    max: 100,
-    ...elementProps,
-  })
+const getIntProps = (
+  elementProps: Partial<NumberInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => {
+  return getProps(
+    {
+      dataType: NumberInputProto.DataType.INT,
+      default: 10,
+      min: 0,
+      max: 100,
+      ...elementProps,
+    },
+    widgetProps
+  )
 }
 
 const getFloatProps = (
-  elementProps: Partial<NumberInputProto> = {}
+  elementProps: Partial<NumberInputProto> = {},
+  widgetProps: Partial<Props> = {}
 ): Props => {
-  return getProps({
-    dataType: NumberInputProto.DataType.FLOAT,
-    default: 10.0,
-    min: 0.0,
-    max: 100.0,
-    ...elementProps,
-  })
+  return getProps(
+    {
+      dataType: NumberInputProto.DataType.FLOAT,
+      default: 10.0,
+      min: 0.0,
+      max: 100.0,
+      ...elementProps,
+    },
+    widgetProps
+  )
 }
 
 describe("NumberInput widget", () => {
@@ -2072,5 +2086,159 @@ describe("NumberInput query param binding", () => {
       true,
       undefined
     )
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getIntProps({ ignoreRerun: true }, { widgetMgr })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "30")
+    await user.keyboard("{enter}")
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 30, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ ignoreRerun: false })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "30")
+    await user.keyboard("{enter}")
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 30, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
+  it("forwards triggerRerun: false inside a form", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({
+      ignoreRerun: true,
+      formId: "testForm",
+    })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+
+    await user.click(screen.getByTestId("stNumberInputStepUp"))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 11, {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ ignoreRerun: true })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "12")
+
+    expect(setIntValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when step up is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getIntProps({ ignoreRerun: true }, { widgetMgr })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByTestId("stNumberInputStepUp"))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 11, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false for FLOAT commits", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getFloatProps({ ignoreRerun: true }, { widgetMgr })
+    const setDoubleValueSpy = vi.spyOn(props.widgetMgr, "setDoubleValue")
+
+    render(<NumberInput {...props} />)
+    setDoubleValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "12.5")
+    await user.tab()
+
+    expect(setDoubleValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      12.5,
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })
