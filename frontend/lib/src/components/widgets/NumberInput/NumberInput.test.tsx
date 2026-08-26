@@ -2101,6 +2101,15 @@ describe("on_change='ignore' mode", () => {
     vi.restoreAllMocks()
   })
 
+  // WidgetStateManager reaches sendRerunBackMsg via scheduleFlush → setTimeout(0).
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
   it("passes triggerRerun: false when ignoreRerun is true", async () => {
     const user = userEvent.setup()
     const sendRerunBackMsg = vi.fn()
@@ -2126,16 +2135,23 @@ describe("on_change='ignore' mode", () => {
       fromUser: true,
       triggerRerun: false,
     })
+    await flushScheduledRerun()
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 
   it("does not pass triggerRerun when ignoreRerun is false", async () => {
     const user = userEvent.setup()
-    const props = getIntProps({ ignoreRerun: false })
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getIntProps({ ignoreRerun: false }, { widgetMgr })
     const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
 
     render(<NumberInput {...props} />)
     setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
 
     const input = screen.getByTestId("stNumberInputField")
     await user.clear(input)
@@ -2147,6 +2163,8 @@ describe("on_change='ignore' mode", () => {
       fragmentId: undefined,
       fromUser: true,
     })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
   })
 
   it("forwards triggerRerun: false inside a form", async () => {
@@ -2207,6 +2225,7 @@ describe("on_change='ignore' mode", () => {
       fromUser: true,
       triggerRerun: false,
     })
+    await flushScheduledRerun()
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 
@@ -2239,6 +2258,7 @@ describe("on_change='ignore' mode", () => {
         triggerRerun: false,
       }
     )
+    await flushScheduledRerun()
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

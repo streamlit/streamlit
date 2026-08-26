@@ -357,7 +357,8 @@ class NumberInputMixin:
 
             - ``"rerun"`` (default): Streamlit will rerun the app when the
               user commits a new value (pressing Enter, blurring the field,
-              clicking the ``+/-`` buttons, or using the arrow-key stepper).
+              clicking the ``+/-`` buttons, using the arrow-key stepper, or
+              clearing the value).
 
             - ``"ignore"``: Streamlit will not rerun the app when the user
               commits a new value. The number input still updates in the UI.
@@ -445,8 +446,9 @@ class NumberInputMixin:
             parameter (e.g., ``?my_key=``) clears the widget.
 
             When ``on_change="ignore"``, the URL is updated as soon as the
-            value is committed (Enter, blur, ``+/-`` buttons, or the
-            arrow-key stepper); typing alone does not update it. As with
+            value is committed (Enter, blur, ``+/-`` buttons, the
+            arrow-key stepper, or clearing the value); typing alone does not
+            update it. As with
             widgets inside a form, the URL can show a value that Python
             hasn't received yet. Python receives the new value on the next
             rerun, so a page load or share uses the updated URL value.

@@ -220,6 +220,7 @@ with st.form("number_input_form"):
     st.form_submit_button("Submit number input form")
 st.write("number input in form - value: ", form_num)
 
+# Lets the on_change="ignore" test assert that committing a value does not rerun the app.
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
