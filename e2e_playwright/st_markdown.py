@@ -606,3 +606,16 @@ this is not valid mermaid syntax
 ```
 """
     )
+
+
+# Appended at the end on purpose: inserting an element mid-script shifts every
+# fixture below it, which perturbs the sub-pixel placement of their snapshots.
+with st.container(border=True, width=150, key="long_word_in_list"):
+    st.markdown(
+        """
+- bucket1/awesome_zoom_background.jpg
+- short item
+
+1. bucket2/folder1/folder2/lenna.png
+"""
+    )
