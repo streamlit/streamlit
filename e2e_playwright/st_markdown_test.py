@@ -801,19 +801,18 @@ def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
     """wrap=False keeps markdown on one line, ellipsizes overflow, and exposes
     the full text via a native title. wrap=True wraps and has no title.
     """
-    no_wrap = get_element_by_key(app, "wrap_false_markdown").get_by_test_id(
-        "stMarkdown"
-    )
-    wraps = get_element_by_key(app, "wrap_true_markdown").get_by_test_id("stMarkdown")
+    no_wrap_container = get_element_by_key(app, "wrap_false_markdown")
+    wrap_container = get_element_by_key(app, "wrap_true_markdown")
+    no_wrap = no_wrap_container.get_by_test_id("stMarkdown")
+    wraps = wrap_container.get_by_test_id("stMarkdown")
 
-    expect(no_wrap).to_have_attribute("title", WRAP_TEXT)
-    expect(wraps).not_to_have_attribute("title", WRAP_TEXT)
+    expect(no_wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect(wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
     expect_label_truncated(no_wrap)
 
-    horizontal = get_element_by_key(
-        app, "wrap_false_horizontal_markdown"
-    ).get_by_test_id("stMarkdown")
-    expect(horizontal).to_have_attribute("title", WRAP_TEXT)
+    horizontal_container = get_element_by_key(app, "wrap_false_horizontal_markdown")
+    horizontal = horizontal_container.get_by_test_id("stMarkdown")
+    expect(horizontal_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
     expect_label_truncated(horizontal)
 
     false_box = no_wrap.bounding_box()

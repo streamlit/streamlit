@@ -134,11 +134,13 @@ def test_wrap_false_ellipsizes_text_and_sets_title(app: Page):
     """wrap=False keeps plain text on one line, ellipsizes overflow, and exposes
     the full text via a native title. wrap=True wraps and has no title.
     """
-    no_wrap = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
-    wraps = get_element_by_key(app, "wrap_true_text").get_by_test_id("stText")
+    no_wrap_container = get_element_by_key(app, "wrap_false_text")
+    wrap_container = get_element_by_key(app, "wrap_true_text")
+    no_wrap = no_wrap_container.get_by_test_id("stText")
+    wraps = wrap_container.get_by_test_id("stText")
 
-    expect(no_wrap).to_have_attribute("title", WRAP_TEXT)
-    expect(wraps).not_to_have_attribute("title", WRAP_TEXT)
+    expect(no_wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect(wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
     wait_until(
         app,
         lambda: no_wrap.evaluate(
@@ -159,14 +161,16 @@ WRAP_NEWLINE_TEXT = "Line one Line two Line three extra"
 
 def test_wrap_false_collapses_text_newlines(app: Page):
     """wrap=False keeps st.text on one line even when the body contains newlines."""
-    no_wrap = get_element_by_key(app, "wrap_false_text_newlines").get_by_test_id(
-        "stText"
-    )
-    wraps = get_element_by_key(app, "wrap_true_text_newlines").get_by_test_id("stText")
+    no_wrap_container = get_element_by_key(app, "wrap_false_text_newlines")
+    wrap_container = get_element_by_key(app, "wrap_true_text_newlines")
+    no_wrap = no_wrap_container.get_by_test_id("stText")
+    wraps = wrap_container.get_by_test_id("stText")
     single_line = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
 
-    expect(no_wrap).to_have_attribute("title", WRAP_NEWLINE_TEXT)
-    expect(wraps).not_to_have_attribute("title", WRAP_NEWLINE_TEXT)
+    expect(
+        no_wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)
+    ).to_be_visible()
+    expect(wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)).to_have_count(0)
 
     false_box = no_wrap.bounding_box()
     true_box = wraps.bounding_box()

@@ -107,8 +107,7 @@ def test_wrap_false_ellipsizes_caption_and_sets_title(app: Page):
     """wrap=False keeps a caption on one line, ellipsizes overflow, and exposes
     the full text via a native title.
     """
-    markdown = get_element_by_key(app, "wrap_false_caption").get_by_test_id(
-        "stMarkdown"
-    )
-    expect(markdown).to_have_attribute("title", WRAP_TEXT)
+    container = get_element_by_key(app, "wrap_false_caption")
+    markdown = container.get_by_test_id("stMarkdown")
+    expect(container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
     expect_label_truncated(markdown)
