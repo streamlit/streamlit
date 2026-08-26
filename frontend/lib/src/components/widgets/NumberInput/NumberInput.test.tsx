@@ -2229,6 +2229,45 @@ describe("on_change='ignore' mode", () => {
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        dataType: NumberInputProto.DataType.INT,
+        default: null,
+        min: 0,
+        max: 100,
+        ignoreRerun: true,
+      },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.type(input, "42")
+    expect(setIntValueSpy).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId("stNumberInputClearButton"))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, null, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
   it("passes triggerRerun: false for FLOAT commits", async () => {
     const user = userEvent.setup()
     const sendRerunBackMsg = vi.fn()
