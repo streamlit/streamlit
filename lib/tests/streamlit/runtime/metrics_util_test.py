@@ -36,6 +36,7 @@ from streamlit.connections import SQLConnection
 from streamlit.errors import (
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.navigation.page import _create_page
@@ -868,6 +869,10 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitValueError:width",
         ),
         (
+            StreamlitMissingRequiredParameterError("st.expander", "label"),
+            "StreamlitMissingRequiredParameterError:label",
+        ),
+        (
             StreamlitInvalidParameterTypeError("spec", "str", ["int", "list"]),
             "StreamlitInvalidParameterTypeError:spec",
         ),
@@ -941,6 +946,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "unsupported-proto-type",
         "unsupported-byteslike",
         "streamlit-value-error",
+        "streamlit-missing-required-parameter",
         "invalid-parameter-type",
         "invalid-context-no-command-suffix",
         "modulenotfound-message-fallback",

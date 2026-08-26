@@ -234,6 +234,54 @@ def test_invalid_max_error_with_corrective_action() -> None:
     assert "Set it to None" in msg
 
 
+# StreamlitMissingRequiredParameterError tests
+
+
+def test_missing_required_parameter_error_message() -> None:
+    """Default message includes command and parameter."""
+    exc = errors.StreamlitMissingRequiredParameterError("st.expander", "label")
+    assert str(exc) == "The `label` parameter is required for `st.expander`."
+
+
+def test_missing_required_parameter_error_with_detail() -> None:
+    """Optional detail is appended to the default message."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "st.toast",
+        "body",
+        detail="It cannot be blank.",
+    )
+    assert str(exc) == (
+        "The `body` parameter is required for `st.toast`. It cannot be blank."
+    )
+
+
+def test_missing_required_parameter_error_detail_with_braces() -> None:
+    """Detail text with braces does not break message formatting."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "st.dialog",
+        "title",
+        detail="Example: use {value}.",
+    )
+    assert str(exc) == (
+        "The `title` parameter is required for `st.dialog`. Example: use {value}."
+    )
+
+
+@pytest.mark.parametrize(
+    ("alias", "shared"),
+    [
+        ("StreamlitInvalidPageLayoutError", "StreamlitValueError"),
+        ("StreamlitInvalidTextAlignmentError", "StreamlitValueError"),
+        ("StreamlitInvalidBindValueError", "StreamlitValueError"),
+        ("StreamlitInvalidPersistStateError", "StreamlitValueError"),
+        ("StreamlitMissingPageLabelError", "StreamlitMissingRequiredParameterError"),
+    ],
+)
+def test_deprecated_exception_aliases(alias: str, shared: str) -> None:
+    """Deprecated exception names remain aliases of the shared types."""
+    assert getattr(errors, alias) is getattr(errors, shared)
+
+
 # StreamlitModuleNotFoundError tests
 
 

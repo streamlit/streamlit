@@ -129,6 +129,9 @@ generic `StreamlitAPIException` with a one-off message.
 - `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
   an invalid value from a known finite set (Literal / enum-like options). Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
+- `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
+  use when a required parameter is missing, `None`, or empty. Example:
+  `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
   uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
@@ -154,10 +157,11 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
+- Do not raise the deprecated aliases.
 
 Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
-type (missing required args, incompatible option combinations, serialization
-failures, and similar).
+type (incompatible option combinations, nesting rules, serialization failures,
+and similar).
 
 ## Theming and Layout
 

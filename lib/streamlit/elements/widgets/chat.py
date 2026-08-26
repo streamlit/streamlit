@@ -53,7 +53,11 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
@@ -523,9 +527,7 @@ class ChatMixin:
 
         """
         if name is None:
-            raise StreamlitAPIException(
-                "The author name is required for a chat message, please set it via the parameter `name`."
-            )
+            raise StreamlitMissingRequiredParameterError("st.chat_message", "name")
 
         if avatar is None and (
             name.lower() in {item.value for item in PresetNames} or is_emoji(name)
