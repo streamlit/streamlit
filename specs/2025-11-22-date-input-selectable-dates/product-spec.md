@@ -1,6 +1,6 @@
 ---
 author: jrieke
-created: 2026-08-26
+created: 2025-11-22
 ---
 
 # Control selectable dates in `st.date_input`
