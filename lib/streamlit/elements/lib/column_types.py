@@ -3478,9 +3478,8 @@ def ButtonColumn(
             "st.column_config.ButtonColumn",
             "key",
             detail=(
-                "It is required when using `on_click`, `args`, or `kwargs`. "
-                "Please provide a unique `key` for the button column to enable "
-                "callback functionality."
+                "Callbacks passed via `on_click`, `args`, or `kwargs` need a unique "
+                "key to be registered."
             ),
         )
 

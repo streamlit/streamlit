@@ -344,7 +344,7 @@ class Page:
             raise StreamlitMissingRequiredParameterError(
                 "st.Page",
                 "title",
-                detail="Cannot infer page title for Callable. Set the `title=` keyword argument.",
+                detail="Streamlit cannot infer a title from this callable.",
             )
 
         self._page = page

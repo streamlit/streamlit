@@ -433,17 +433,14 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
     def __init__(
         self, command: str, parameter: str, *, detail: str | None = None
     ) -> None:
-        # Resolve command/parameter via f-string first. Escape braces in
-        # ``detail`` so LocalizableStreamlitException's later ``.format``
-        # does not treat them as placeholders (or re-substitute command/parameter).
-        message = f"The `{parameter}` parameter is required for `{command}`."
+        message = "The `{parameter}` parameter is required for `{command}`."
         if detail:
-            escaped_detail = detail.replace("{", "{{").replace("}", "}}")
-            message = f"{message} {escaped_detail}"
+            message += " {detail}"
         super().__init__(
             message,
             command=command,
             parameter=parameter,
+            detail=detail,
         )
 
 
@@ -725,8 +722,9 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
         )
 
 
-# Deprecated aliases kept only so user apps' isinstance checks and imports do not
-# break. Do not initialize these names; raise the shared types directly instead.
+# Deprecated aliases of the shared types so imports and isinstance/except checks
+# keep working. except OldName matches any instance of the shared type. Do not
+# construct these names; raise the shared types instead.
 StreamlitInvalidPageLayoutError = StreamlitValueError
 StreamlitInvalidTextAlignmentError = StreamlitValueError
 StreamlitInvalidBindValueError = StreamlitValueError

@@ -1647,7 +1647,7 @@ class ButtonMixin:
                     raise StreamlitMissingRequiredParameterError(
                         "st.page_link",
                         "label",
-                        detail="It is required for external links.",
+                        detail="Streamlit cannot infer a label for an external URL.",
                     )
                 page_link_proto.page = page
                 page_link_proto.external = True

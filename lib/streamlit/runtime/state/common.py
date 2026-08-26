@@ -289,7 +289,8 @@ def is_keyed_element_id(key: str) -> bool:
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
     if key == "":
-        # Empty keys are invalid even though ``key`` is optional on most widgets.
+        # Empty string is invalid input, not a missing required parameter: key is
+        # optional on most widgets.
         raise StreamlitAPIException("The `key` argument must be non-empty.")
     if is_element_id(key):
         raise StreamlitAPIException(
