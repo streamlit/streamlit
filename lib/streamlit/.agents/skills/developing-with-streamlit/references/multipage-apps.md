@@ -17,6 +17,8 @@ app_pages/
 
 ## Main module
 
+Give every `st.Page` a context-appropriate Material Symbols icon (`:material/icon_name:`) so navigation is easy to scan. Choose a name from the [supported icon list](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py) because unsupported names raise an error.
+
 ```python
 # streamlit_app.py
 import streamlit as st
@@ -50,7 +52,16 @@ page.run()
 **Few pages (3-7) → Top navigation:**
 
 ```python
-page = st.navigation([...], position="top")
+page = st.navigation(
+    [
+        st.Page("app_pages/home.py", title="Home", icon=":material/home:"),
+        st.Page(
+            "app_pages/analytics.py", title="Analytics", icon=":material/bar_chart:"
+        ),
+        st.Page("app_pages/settings.py", title="Settings", icon=":material/settings:"),
+    ],
+    position="top",
+)
 ```
 
 Creates a clean horizontal menu. Great for simple apps. Sections are supported too—they appear as dropdowns in the top nav.
@@ -61,12 +72,18 @@ Creates a clean horizontal menu. Great for simple apps. Sections are supported t
 page = st.navigation(
     {
         "Main": [
-            st.Page("app_pages/home.py", title="Home"),
-            st.Page("app_pages/analytics.py", title="Analytics"),
+            st.Page("app_pages/home.py", title="Home", icon=":material/home:"),
+            st.Page(
+                "app_pages/analytics.py",
+                title="Analytics",
+                icon=":material/bar_chart:",
+            ),
         ],
         "Admin": [
-            st.Page("app_pages/settings.py", title="Settings"),
-            st.Page("app_pages/users.py", title="Users"),
+            st.Page(
+                "app_pages/settings.py", title="Settings", icon=":material/settings:"
+            ),
+            st.Page("app_pages/users.py", title="Users", icon=":material/group:"),
         ],
     },
     position="sidebar",
@@ -81,12 +98,20 @@ Use an empty string key `""` for pages that shouldn't be in a section. These ung
 page = st.navigation(
     {
         "": [
-            st.Page("app_pages/home.py", title="Home"),
-            st.Page("app_pages/about.py", title="About"),
+            st.Page("app_pages/home.py", title="Home", icon=":material/home:"),
+            st.Page("app_pages/about.py", title="About", icon=":material/info:"),
         ],
         "Analytics": [
-            st.Page("app_pages/dashboard.py", title="Dashboard"),
-            st.Page("app_pages/reports.py", title="Reports"),
+            st.Page(
+                "app_pages/dashboard.py",
+                title="Dashboard",
+                icon=":material/dashboard:",
+            ),
+            st.Page(
+                "app_pages/reports.py",
+                title="Reports",
+                icon=":material/description:",
+            ),
         ],
     },
     position="top",

@@ -63,6 +63,13 @@ def page_10():
         if st.button("Submit"):
             st.rerun()
 
+        # On a fragment widget: the interaction is fragment-scoped, the navigation
+        # app-wide.
+        st.button(
+            "callback nav from fragment",
+            on_click=lambda: st.switch_page("page_5.py"),
+        )
+
     get_input()
 
 
@@ -150,6 +157,28 @@ if st.button("Navigate with query params"):
 
 if st.button("page 9"):
     st.switch_page(page9)
+
+
+def switch_to_page_5() -> None:
+    st.switch_page("page_5.py")
+
+
+def switch_to_page_5_with_query_params() -> None:
+    st.switch_page("page_5.py", query_params={"team": "streamlit"})
+
+
+def switch_to_page_9() -> None:
+    st.switch_page(page9)
+
+
+# Callback twins of the three buttons above, so the tests can compare navigating from a
+# callback against navigating from the script body.
+#
+# These labels must not contain the labels above: get_button() matches by substring and
+# would otherwise resolve to two elements.
+st.button("callback nav by path", on_click=switch_to_page_5)
+st.button("callback nav with params", on_click=switch_to_page_5_with_query_params)
+st.button("callback nav by object", on_click=switch_to_page_9)
 
 if st.checkbox("Show sidebar elements"):
     st.sidebar.write("Sidebar content")

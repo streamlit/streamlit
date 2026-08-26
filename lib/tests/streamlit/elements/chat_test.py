@@ -31,6 +31,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -1245,7 +1246,10 @@ class AvatarProcessingTest(DeltaGeneratorTestCase):
 
     def test_chat_message_raises_when_name_is_none(self) -> None:
         """Test chat_message raises when name is explicitly None."""
-        with pytest.raises(StreamlitAPIException, match="author name is required"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`name` parameter is required",
+        ):
             st.chat_message(None)  # type: ignore[arg-type]
 
 

@@ -195,7 +195,7 @@ function TextInput({
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
+    setValueWithSource({ value: uiValue, fromUser: true })
   }, [uiValue, setValueWithSource])
 
   const clearUserValidationError = useCallback((): void => {
@@ -253,7 +253,11 @@ function TextInput({
     }
 
     if (dirty) {
-      widgetMgr.setStringValue(element, uiValue, { fromUi: true }, fragmentId)
+      widgetMgr.setStringValue(element.id, uiValue, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
       setDirty(false)
     }
 
@@ -310,7 +314,7 @@ function TextInput({
     setDirty(false)
     setUiValue("")
     setHasUserError(false)
-    setValueWithSource({ value: "", fromUi: true })
+    setValueWithSource({ value: "", fromUser: true })
   }, [setValueWithSource])
 
   const onChange = useOnInputChange({
@@ -550,12 +554,15 @@ function updateWidgetMgrState(
   vws: ValueWithSource<string | null>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 /**

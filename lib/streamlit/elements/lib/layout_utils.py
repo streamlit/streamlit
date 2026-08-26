@@ -14,16 +14,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, cast
+from typing import Final, Literal, TypeAlias, cast
 
 from streamlit.errors import (
     StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidSizeError,
-    StreamlitInvalidTextAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
@@ -59,6 +59,17 @@ SIZE_TO_REM_MAPPING = {
     "large": 4.25,  # Height of large widget without label
     "xlarge": 6,  # Aligns with gap "xlarge" (96px)
     "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
+}
+
+# Shared by st.expander and st.status, which render through the same proto.
+ExpandableType: TypeAlias = Literal["default", "compact", "step"]
+
+EXPANDABLE_TYPE_TO_PROTO_MAPPING: Final[
+    dict[ExpandableType, Block.Expandable.Type.ValueType]
+] = {
+    "default": Block.Expandable.Type.DEFAULT,
+    "compact": Block.Expandable.Type.COMPACT,
+    "step": Block.Expandable.Type.STEP,
 }
 
 
@@ -356,12 +367,12 @@ def validate_text_alignment(text_alignment: TextAlignment) -> None:
 
     Raises
     ------
-    StreamlitInvalidTextAlignmentError
+    StreamlitValueError
         If the text_alignment value is invalid.
     """
     valid_alignments = ["left", "center", "right", "justify"]
     if text_alignment not in valid_alignments:
-        raise StreamlitInvalidTextAlignmentError(
+        raise StreamlitValueError(
             "text_alignment", ["'left'", "'center'", "'right'", "'justify'"]
         )
 

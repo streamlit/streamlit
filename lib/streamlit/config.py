@@ -27,11 +27,10 @@ from collections import OrderedDict
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
-from blinker import Signal
-
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
+from streamlit.signal_util import Signal
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -2941,7 +2940,7 @@ def _maybe_convert_to_number(v: Any) -> Any:
 
 # Allow outside modules to wait for the config file to be parsed before doing
 # something.
-_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
+_on_config_parsed = Signal()
 
 
 def get_config_files(file_name: str) -> list[str]:

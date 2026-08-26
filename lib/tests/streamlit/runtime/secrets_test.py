@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
-from blinker import Signal
 from parameterized import parameterized
 from typing_extensions import Self
 
@@ -43,6 +42,7 @@ from streamlit.runtime.secrets import (
     Secrets,
     _convert_to_dict,
 )
+from streamlit.signal_util import Signal
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads

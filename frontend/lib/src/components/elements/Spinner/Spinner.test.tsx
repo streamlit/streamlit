@@ -129,6 +129,40 @@ describe("Spinner component", () => {
     })
   })
 
+  it("puts the label in a live region", () => {
+    render(<Spinner {...getProps()} />)
+
+    const status = screen.getByRole("status")
+    expect(status).toHaveTextContent("Loading...")
+  })
+
+  it("keeps the elapsed time out of the live region", () => {
+    render(<Spinner {...getProps({}, { showTime: true })} />)
+
+    // The timer is rewritten every 100ms, so it must sit outside the live
+    // region to avoid queueing an announcement on every tick.
+    const status = screen.getByRole("status")
+    expect(status).not.toHaveTextContent("seconds")
+    expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
+  })
+
+  it("does not rewrite the live region as the timer ticks", async () => {
+    render(<Spinner {...getProps({}, { showTime: true })} />)
+
+    const status = screen.getByRole("status")
+
+    act(() => {
+      vi.advanceTimersByTime(2000)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/\([1-3]\.[0-9] seconds\)/)).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole("status")).toBe(status)
+    expect(status).toHaveTextContent("Loading...")
+  })
+
   it("does not show timer when showTime is false", () => {
     render(<Spinner {...getProps({}, { showTime: false })} />)
 

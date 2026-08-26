@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit import config
@@ -52,6 +51,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -420,7 +420,8 @@ class FileUploaderMixin:
 
             The ``UploadedFile`` class is a subclass of ``BytesIO``, and
             therefore is "file-like". This means you can pass an instance of it
-            anywhere a file is expected.
+            anywhere a file is expected. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -532,7 +533,7 @@ class FileUploaderMixin:
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "file_uploader",
@@ -579,7 +580,7 @@ class FileUploaderMixin:
         )
 
         if help is not None:
-            file_uploader_proto.help = dedent(help)
+            file_uploader_proto.help = to_help_str(help)
 
         serde = FileUploaderSerde(accept_multiple_files, allowed_types=normalized_type)
 

@@ -246,6 +246,8 @@ class DataframeState(ReadOnlyAttributeDictionary):
     """
     The schema for the dataframe event state.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states can be programmatically set
     through session state by assigning a dictionary with the same schema to the
@@ -708,9 +710,12 @@ class ArrowMixin:
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values, colors, and font weights. It does not support some of the
             more exotic styling options, like bar charts, hovering, and
-            captions. For these styling options, use column configuration
-            instead. Text and number formatting from ``column_config`` always
-            takes precedence over text and number formatting from ``pandas.Styler``.
+            captions. For these options, use column configuration where an
+            equivalent exists (for example, ``BarChartColumn`` or
+            ``ProgressColumn`` instead of Styler bars), or use ``st.table``
+            for small, static tables that need fuller Pandas Styler support.
+            Text and number formatting from ``column_config`` always takes
+            precedence over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -923,12 +928,13 @@ class ArrowMixin:
 
         Returns
         -------
-        element or dict
+        element or DataframeState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element. Otherwise, this
-            command returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``DataframeState`` class.
+            command returns a ``DataframeState`` object. This object is
+            dictionary-like and supports both key and attribute notation. To
+            use this type in an annotation, import it from
+            ``streamlit.typing``.
 
         Examples
         --------

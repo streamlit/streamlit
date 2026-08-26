@@ -22,12 +22,9 @@ import { StrictMode } from "react"
 import log from "loglevel"
 import { createRoot } from "react-dom/client"
 import { HelmetProvider } from "react-helmet-async"
-import { Client as Styletron } from "styletron-engine-atomic"
-import { Provider as StyletronProvider } from "styletron-react"
 
 import ThemedApp from "./ThemedApp"
 
-const engine = new Styletron({ prefix: "st-" })
 if (process.env.NODE_ENV === "development") {
   // By default, loglevel only shows warnings and errors.
   log.setLevel(log.levels.DEBUG)
@@ -44,9 +41,7 @@ const reactRoot = createRoot(rootDomNode)
 reactRoot.render(
   <StrictMode>
     <HelmetProvider>
-      <StyletronProvider value={engine}>
-        <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
-      </StyletronProvider>
+      <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
     </HelmetProvider>
   </StrictMode>
 )

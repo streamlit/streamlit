@@ -11,7 +11,7 @@ on:
         description: "Model to use for coverage improvement"
         required: false
         type: string
-        default: "cursor-grok-4.5-high"
+        default: "cursor-grok-4.6-xhigh"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -19,7 +19,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'cursor-grok-4.5-high' }}
+  MODEL: ${{ inputs.model || 'cursor-grok-4.6-xhigh' }}
 
 jobs:
   check-secrets:

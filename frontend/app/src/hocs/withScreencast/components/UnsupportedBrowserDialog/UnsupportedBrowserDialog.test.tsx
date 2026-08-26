@@ -15,7 +15,6 @@
  */
 
 import { screen } from "@testing-library/react"
-import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "@streamlit/lib/testing"
 
@@ -23,11 +22,7 @@ import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 
 describe("UnsupportedBrowserDialog", () => {
   it("renders without crashing", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <UnsupportedBrowserDialog onClose={() => {}} />
-      </BaseProvider>
-    )
+    render(<UnsupportedBrowserDialog onClose={() => {}} />)
 
     expect(screen.getByTestId("stDialog")).toBeInTheDocument()
     expect(
@@ -37,11 +32,7 @@ describe("UnsupportedBrowserDialog", () => {
 
   it("should render a header", () => {
     const onClose = vi.fn()
-    render(
-      <BaseProvider theme={LightTheme}>
-        <UnsupportedBrowserDialog onClose={onClose} />
-      </BaseProvider>
-    )
+    render(<UnsupportedBrowserDialog onClose={onClose} />)
 
     expect(
       screen.getByTestId("stUnsupportedBrowserDialog")
@@ -50,11 +41,7 @@ describe("UnsupportedBrowserDialog", () => {
   })
 
   it("should render a body with the correct message", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <UnsupportedBrowserDialog onClose={() => {}} />
-      </BaseProvider>
-    )
+    render(<UnsupportedBrowserDialog onClose={() => {}} />)
     expect(
       screen.getByTestId("stUnsupportedBrowserDialog")
     ).toBeInTheDocument()

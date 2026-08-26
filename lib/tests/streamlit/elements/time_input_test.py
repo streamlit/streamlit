@@ -29,6 +29,7 @@ from streamlit.elements.widgets.time_widgets import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -147,9 +148,9 @@ class TimeInputTest(DeltaGeneratorTestCase):
     def test_st_time_input_exceptions(self):
         """Test st.time_input exceptions."""
         value = time(9, 00)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.time_input("Set an alarm for", value, step=True)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.time_input("Set an alarm for", value, step=(90, 0))
         with pytest.raises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=0)
@@ -455,15 +456,18 @@ def test_convert_timelike_to_time_returns_same_instance_for_time() -> None:
 
 
 @pytest.mark.parametrize(
-    ("invalid_input", "match"),
-    [("not-a-time", "datetime, time"), (42, None)],
+    ("invalid_input", "exc", "match"),
+    [
+        ("not-a-time", StreamlitAPIException, "datetime, time"),
+        (42, StreamlitInvalidParameterTypeError, None),
+    ],
     ids=["invalid_string", "invalid_type"],
 )
 def test_convert_timelike_to_time_invalid_raises(
-    invalid_input: object, match: str | None
+    invalid_input: object, exc: type[Exception], match: str | None
 ) -> None:
-    """Unparseable strings or wrong types raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match=match):
+    """Unparseable strings or wrong types raise a Streamlit API exception."""
+    with pytest.raises(exc, match=match):
         _convert_timelike_to_time(invalid_input)  # type: ignore[arg-type]
 
 
@@ -514,15 +518,18 @@ def test_convert_datelike_to_date_parses_iso_strings(
 
 
 @pytest.mark.parametrize(
-    ("invalid_input", "match"),
-    [("not-a-date", "ISO string"), (42, None)],
+    ("invalid_input", "exc", "match"),
+    [
+        ("not-a-date", StreamlitAPIException, "ISO string"),
+        (42, StreamlitInvalidParameterTypeError, None),
+    ],
     ids=["invalid_string", "invalid_type"],
 )
 def test_convert_datelike_to_date_invalid_raises(
-    invalid_input: object, match: str | None
+    invalid_input: object, exc: type[Exception], match: str | None
 ) -> None:
-    """Unparseable strings or wrong types raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match=match):
+    """Unparseable strings or wrong types raise a Streamlit API exception."""
+    with pytest.raises(exc, match=match):
         _convert_datelike_to_date(invalid_input)  # type: ignore[arg-type]
 
 
@@ -533,7 +540,7 @@ def test_parse_date_value_none_is_not_range() -> None:
 
 def test_parse_date_value_too_many_dates_raises() -> None:
     """A range of more than 2 dates raises StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="0 - 2 date"):
+    with pytest.raises(StreamlitAPIException, match="0 to 2 date"):
         _parse_date_value([date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)])
 
 

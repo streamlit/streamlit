@@ -196,6 +196,8 @@ class PlotlyState(ReadOnlyAttributeDictionary):
     """
     The schema for the Plotly chart event state.
 
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
     The event state is stored in a read-only dictionary-like object that
     supports both key and attribute notation. Event states cannot be
     programmatically changed or set through Session State.
@@ -610,12 +612,12 @@ class PlotlyMixin:
 
         Returns
         -------
-        element or dict
+        element or PlotlyState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``PlotlyState`` class.
+            returns a ``PlotlyState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------

@@ -128,10 +128,9 @@ describe("NumberInput widget", () => {
 
     // Verify the TYPED value (42.5) was committed, not the old value (10.0)
     expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       42.5,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(numberInput).toHaveValue(42.5)
   })
@@ -149,10 +148,9 @@ describe("NumberInput widget", () => {
     await user.tab()
 
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       42,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(numberInput).toHaveValue(42)
   })
@@ -260,12 +258,9 @@ describe("NumberInput widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -512,12 +507,13 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
         {
-          fromUi: false,
-        },
-        undefined
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -663,10 +659,9 @@ describe("NumberInput widget", () => {
       // Verify the new value was committed
       expect(numberInput).toHaveDisplayValue("25.75")
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         25.75,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       // Submit the form – this should trigger onFormCleared
@@ -682,10 +677,9 @@ describe("NumberInput widget", () => {
 
       // 2. Verify that the default value was set in widgetMgr (dirty state was reset)
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         10.0,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       // 3. Verify we can interact with the widget again after form clear
@@ -696,10 +690,9 @@ describe("NumberInput widget", () => {
       // New value should be committed successfully. The browser normalizes "15.50" to "15.5".
       expect(numberInput).toHaveDisplayValue("15.5")
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         15.5,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -719,12 +712,13 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
         {
-          fromUi: false,
-        },
-        undefined
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -769,8 +763,10 @@ describe("NumberInput widget", () => {
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
         expect.anything(),
         10,
-        { fromUi: false },
-        "myFragmentId"
+        expect.objectContaining({
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        })
       )
     })
 
@@ -1950,10 +1946,9 @@ describe("NumberInput widget", () => {
         screen.queryByTestId("stNumberInputClearButton")
       ).not.toBeInTheDocument()
       expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         null,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -1973,10 +1968,9 @@ describe("NumberInput widget", () => {
 
       expect(input).toHaveDisplayValue("")
       expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         null,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 

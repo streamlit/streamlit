@@ -53,7 +53,11 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
@@ -96,6 +100,8 @@ _ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
 @dataclass
 class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
 
     This dataclass contains the user's input text, any files uploaded, and optionally
     an audio recording. It provides a dict-like interface for accessing and modifying
@@ -521,9 +527,7 @@ class ChatMixin:
 
         """
         if name is None:
-            raise StreamlitAPIException(
-                "The author name is required for a chat message, please set it via the parameter `name`."
-            )
+            raise StreamlitMissingRequiredParameterError("st.chat_message", "name")
 
         if avatar is None and (
             name.lower() in {item.value for item in PresetNames} or is_emoji(name)
@@ -801,7 +805,7 @@ class ChatMixin:
 
         Returns
         -------
-        None, str, or dict-like
+        None, str, or ChatInputValue
             The user's submission. This is one of the following types:
 
             - ``None``: If the user didn't submit a message, file, or audio
@@ -809,12 +813,17 @@ class ChatMixin:
             - A string: When the widget isn't configured to accept files or
               audio recordings, and the user submitted a message in the last
               rerun, the widget returns the user's message as a string.
-            - A dict-like object: When the widget is configured to accept files
-              or audio recordings, and the user submitted any content in the
-              last rerun, the widget returns a dict-like object.
+            - A ``ChatInputValue`` object: When the widget is configured to
+              accept files or audio recordings, and the user submitted any
+              content in the last rerun, the widget returns a ``ChatInputValue``
+              object. This object is dictionary-like and supports both key and
+              attribute notation.
               The object always includes the ``text`` attribute, and
               optionally includes ``files`` and/or ``audio`` attributes depending
               on the ``accept_file`` and ``accept_audio`` parameters.
+
+            To use ``ChatInputValue`` or ``UploadedFile`` in an annotation,
+            import them from ``streamlit.typing``.
 
             When the widget is configured to accept files or audio recordings,
             and the user submitted content in the last rerun, you can access
