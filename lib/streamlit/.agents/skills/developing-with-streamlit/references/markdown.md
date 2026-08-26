@@ -241,10 +241,10 @@ st.markdown(
 `st.markdown`, `st.caption`, `st.title`, `st.header`,
 `st.subheader`, and `st.text` accept `wrap`. The default is `True` (text
 wraps onto additional lines). Pass `wrap=False` to keep the text on one
-ellipsized line. Truncation needs a bounded width. `st.markdown` defaults
-to `width="auto"` (content-sized in a horizontal container) and `st.text`
-defaults to `width="content"`, so pass `width="stretch"` or a pixel width
-with `wrap=False`.
+ellipsized line. The ellipsis appears only when the element is narrower
+than its text. Content-sized elements are capped by their parent width, so
+they still truncate when the parent is narrower than their text. Use
+`width="stretch"` or a pixel width to set the available width explicitly.
 
 When `wrap=False`, `st.markdown` and `st.caption` use the same inline-only
 subset as widget labels (no headings, lists, tables, or block quotes).

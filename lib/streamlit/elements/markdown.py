@@ -248,9 +248,7 @@ class MarkdownMixin:
               with an ellipsis. Markdown is limited to inline formatting
               (the same subset used in widget labels). This cannot be
               combined with ``unsafe_allow_html=True``. Truncation only
-              appears when the element is narrower than its text. In a
-              horizontal container, the default ``width="auto"`` sizes to
-              the content, so pass ``width="stretch"`` or a pixel width.
+              appears when the element is narrower than its text.
 
         Examples
         --------
