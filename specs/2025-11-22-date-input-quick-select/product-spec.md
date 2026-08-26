@@ -45,9 +45,8 @@ behavior, and layout outside the calendar.
 - [#12331](https://github.com/streamlit/streamlit/issues/12331) requests control over
   quick-select visibility and custom ranges. Follow-up comments specifically request a
   previous-day endpoint and custom relative reporting periods.
-- Review feedback on [#13091](https://github.com/streamlit/streamlit/pull/13091) asks for
-  single-date presets now that the picker is no longer limited by BaseWeb's range-only
-  quick-select implementation.
+- Single-date inputs have no quick-select control at all, even though the React Aria
+  rewrite removed the range-only limitation that BaseWeb imposed.
 
 ## Proposal
 
@@ -57,12 +56,15 @@ Add `quick_select_options` after the existing keyword-only parameters in every
 `st.date_input` overload. The simplified type is:
 
 ```python
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from datetime import date, datetime
 from typing import Literal, TypeAlias
 
-DatePresetValue: TypeAlias = date | datetime | str
-QuickSelectPresetValue: TypeAlias = DatePresetValue | Sequence[DatePresetValue]
+DatePresetValue: TypeAlias = date | datetime | str | Literal["today"]
+DateRangePresetValue: TypeAlias = (
+    tuple[DatePresetValue, DatePresetValue] | list[DatePresetValue]
+)
+QuickSelectPresetValue: TypeAlias = DatePresetValue | DateRangePresetValue
 
 
 def date_input(
@@ -77,8 +79,9 @@ def date_input(
 The existing overloads narrow the mapping value according to the widget mode:
 
 - A single-date input accepts `Mapping[str, DatePresetValue]`.
-- A range input accepts `Mapping[str, Sequence[DatePresetValue]]`, with exactly two
-  values required for every entry.
+- A range input accepts `Mapping[str, DateRangePresetValue]`, with exactly two values
+  required for every entry. `str` is a scalar here, not a sequence, matching the
+  existing `date_input` range overload.
 
 `DatePresetValue` has the same scalar conversion semantics as `value`: a
 `datetime.date`, a `datetime.datetime` (time ignored), an ISO date/datetime string, or
@@ -136,6 +139,7 @@ reporting_period = st.date_input(
     "Reporting period",
     value=(yesterday - timedelta(days=29), yesterday),
     max_value=yesterday,
+    key="reporting_period",
     quick_select_options={
         "Previous day": (yesterday, yesterday),
         "Last 7 complete days": (yesterday - timedelta(days=6), yesterday),
@@ -160,6 +164,7 @@ days_until_next_monday = (7 - today.weekday()) % 7 or 7
 as_of_date = st.date_input(
     "As-of date",
     value=today,
+    key="as_of_date",
     quick_select_options={
         "Yesterday": today - timedelta(days=1),
         "Today": today,
@@ -171,20 +176,27 @@ as_of_date = st.date_input(
 ### Validation and errors
 
 Validate custom options in Python before registering the widget. Invalid input raises a
-`StreamlitAPIException` naming the parameter and offending label; presets are never
-silently dropped, reordered, or clamped.
+shared `streamlit.errors` subclass naming the parameter and offending label; presets are
+never silently dropped, reordered, or clamped. Prefer
+`StreamlitInvalidParameterTypeError` for unsupported types and unparseable dates,
+`StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` for bounds, and a
+`StreamlitAPIException` subclass only when no shared type fits. Do not reuse
+`_convert_datelike_to_date` unchanged: it hardcodes `"value"` as the parameter name, so
+preset parsing needs its own error path for `quick_select_options`. Classify a value as
+a sequence only when `isinstance(v, Sequence) and not isinstance(v, str)`, matching
+`_parse_date_value`.
 
 | Invalid input | Behavior |
 |---|---|
 | `True` or another unsupported top-level value | Raise and list `None`, `False`, or a mapping as the valid forms. |
-| Empty mapping | Raise; use `False` to hide the control. |
+| Empty mapping | Raise. `False` is the explicit hide sentinel; `{}` is treated as a likely authoring mistake rather than silently hiding the control. |
 | Non-string or empty/whitespace-only label | Raise. Labels are rendered as plain text in the initial release. |
-| Single-date mode with a sequence value | Raise; each preset must resolve to one scalar date. |
-| Range mode with a scalar or a sequence whose length is not two | Raise; each preset must contain exactly one start and one end date. |
+| Single-date mode with a sequence value | Raise; each preset must resolve to one scalar date. A `str` such as `"today"` is a scalar, not a sequence of characters. |
+| Range mode with a scalar or a sequence whose length is not two | Raise; each preset must contain exactly one start and one end date. A `str` is a scalar here too. |
 | Unsupported or unparseable date value, including `None` | Raise using the same date-conversion guidance as `value`. |
-| Start date after end date | Raise; do not normalize an author-provided preset. |
-| Date outside `min_value` / `max_value` | Raise; identify the preset and violated bound. |
-| Two labels that normalize to the same date or range | Raise because the selected label would otherwise be ambiguous. |
+| Start date after end date | Raise; do not normalize an author-provided preset. This is stricter than `value`, which currently accepts an inverted range. |
+| Date outside `min_value` / `max_value` | Raise; identify the preset and violated bound. Built-in `None` presets may still be filtered or clamped by the frontend because Streamlit owns that list; custom presets raise because the app author owns them. |
+| Two labels that normalize to the same date or range | Raise because the trigger shows a single selected label. Overlap that only happens on some calendar days (for example "Yesterday" vs "Last business day" on Monday) is still an error; authors should keep preset values distinct. |
 
 Validation uses the resolved `min_value` and `max_value`, including Streamlit's computed
 defaults when either argument is omitted. If those bounds change on a later rerun, the
@@ -204,12 +216,14 @@ custom options are validated again.
   it shows the existing placeholder.
 - On a clearable input, selecting the active preset again clears the value, matching the
   current range control. A non-clearable input keeps the preset selected.
-- The current value does not have to match a preset. Replacing or removing options on a
-  later rerun does not change the widget value.
+- The current value does not have to match a preset. On a keyed widget, replacing or
+  removing options on a later rerun does not change the widget value. Without a key,
+  changing options changes widget identity and resets the value, matching how
+  `options` behaves for `st.selectbox`.
 
-Custom mappings can update dynamically. With an explicit `key`, changing their labels or
-values does not reset widget state; without a key, normalized options participate in
-widget identity so otherwise-identical date inputs with different presets do not collide.
+Custom mappings can update dynamically. Apps whose preset dates move with the calendar
+(for example `date.today()` ranges) should pass an explicit `key`, or a midnight rerun
+remounts the widget and drops the selection.
 
 ### Design and accessibility
 
@@ -217,7 +231,9 @@ Use the current quick-select row, trigger, and scrollable React Aria listbox for
 single and range calendars. Custom labels replace only the listbox data; focus handling,
 keyboard selection, Escape behavior, selected-state announcement, sidebar positioning,
 and theming remain unchanged. Single-date mode adds the same row below its calendar only
-when a custom mapping is supplied.
+when a custom mapping is supplied. The range control keeps the visible label
+`Date range` and the accessible name `Quick select a date range`. The single-date control
+uses `Date` and `Quick select a date` so the chrome is not range-worded.
 
 Long option lists scroll within the existing dropdown height. The feature does not add a
 second calendar, native `<select>`, or app-authored HTML.

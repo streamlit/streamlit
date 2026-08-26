@@ -45,13 +45,14 @@ jobs:
               per_page: 100
             });
 
+            // Include removed files so a leftover asset cannot hide a missing spec.
+            // Skip validation later when the directory itself no longer exists.
             const specDirs = new Set(
               files
                 .filter(
                   f =>
-                    f.status !== 'removed' &&
                     f.filename.startsWith('specs/') &&
-                    f.filename !== 'specs/README.md'
+                    f.filename.split('/').length > 2
                 )
                 .map(f => f.filename.split('/')[1])
                 .filter(Boolean)
@@ -84,6 +85,9 @@ jobs:
             // Validate each spec
             for (const specDir of specDirs) {
               if (specDir === 'YYYY-MM-DD-template') continue;
+
+              // Deleted spec directories should not be validated.
+              if (!fs.existsSync(path.join('specs', specDir))) continue;
 
               const dirMatch = specDir.match(/^(\d{4}-\d{2}-\d{2})-(.+)$/);
               if (!dirMatch) {
