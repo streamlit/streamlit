@@ -23,7 +23,7 @@ import sys
 import threading
 import time
 from contextlib import asynccontextmanager
-from functools import partial
+from functools import partial, wraps
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1725,6 +1725,23 @@ class TestAppInit:
 
         with pytest.raises(StreamlitAPIException, match="does not support async"):
             App(main)
+
+    def test_app_accepts_sync_wraps_wrapper_around_async(self) -> None:
+        """Construction does not unwrap @wraps; a sync wrapper around async is accepted."""
+
+        def deco(fn: Any) -> Any:
+            @wraps(fn)
+            def wrapper() -> Any:
+                return fn()
+
+            return wrapper
+
+        @deco
+        async def main() -> None:
+            pass
+
+        app = App(main)
+        assert app._script_entrypoint is main
 
     def test_app_rejects_async_partial_callable(self) -> None:
         """st.App rejects functools.partial wrapping an async callable."""

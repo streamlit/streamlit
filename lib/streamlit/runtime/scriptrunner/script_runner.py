@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import gc
+import inspect
 import sys
 import threading
 import types
@@ -24,7 +25,7 @@ from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import config, runtime, util
-from streamlit.errors import FragmentStorageKeyError
+from streamlit.errors import FragmentStorageKeyError, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -74,6 +75,36 @@ if TYPE_CHECKING:
     from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 _LOGGER: Final = get_logger(__name__)
+
+
+def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
+    """Call a retained App entrypoint and reject coroutine or generator results.
+
+    Construction-time checks cannot follow ``@functools.wraps`` wrappers, so a
+    synchronous wrapper around an async or generator function can still be
+    retained. Invoking it would otherwise discard the returned coroutine or
+    generator. Valid sync wrappers that drive the inner coroutine themselves
+    return ``None`` and are allowed.
+    """
+    result: Any = entrypoint()
+    if not (
+        inspect.isawaitable(result)
+        or inspect.isgenerator(result)
+        or inspect.isasyncgen(result)
+    ):
+        return
+
+    if inspect.isasyncgen(result):
+        result.aclose().close()
+    else:
+        closer = getattr(result, "close", None)
+        if callable(closer):
+            closer()
+
+    raise StreamlitAPIException(
+        "st.App callable entrypoints must not return a coroutine or generator. "
+        "Pass a synchronous callable instead."
+    )
 
 
 class ScriptRunnerEvent(Enum):
@@ -685,6 +716,11 @@ class ScriptRunner:
             # If we get here, we've successfully prepared the entrypoint. Errors
             # thrown during execution will be shown to the user as ExceptionElements.
 
+            # Callable entrypoints keep the process's real ``__main__`` module.
+            # Installing a fake ``__main__`` would re-enter
+            # ``if __name__ == "__main__": app.run()`` for same-file
+            # ``python app.py`` launchers, and would break pickle of classes
+            # defined on the real launcher module.
             module: types.ModuleType | None = None
             if self._script_entrypoint is None:
                 # Create fake module. This gives us a named global namespace to
@@ -838,7 +874,7 @@ class ScriptRunner:
                         )
                         try:
                             if self._script_entrypoint is not None:
-                                self._script_entrypoint()
+                                _invoke_script_entrypoint(self._script_entrypoint)
                             elif PagesManager.uses_pages_directory:
                                 _mpa_v1(self._main_script_path)
                             else:

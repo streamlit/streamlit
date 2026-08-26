@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import sys
 import time
@@ -161,6 +162,34 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_text_deltas(scriptrunner, ["call 2"])
         scriptrunner._script_cache.get_bytecode.assert_not_called()
         assert sys.modules["__main__"] is original_main_module
+
+    def test_callable_entrypoint_rejects_wrapped_async_return(self):
+        """Wrappers that return a coroutine are rejected at invocation."""
+
+        def deco(fn: Any) -> Any:
+            @functools.wraps(fn)
+            def wrapper() -> Any:
+                return fn()
+
+            return wrapper
+
+        @deco
+        async def main() -> None:
+            pass
+
+        scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        exception_messages = [
+            element.exception.message
+            for element in scriptrunner.elements()
+            if element.WhichOneof("type") == "exception"
+        ]
+        assert any(
+            "coroutine or generator" in message for message in exception_messages
+        )
 
     def test_callable_entrypoint_uses_normal_error_handling(self):
         """Exceptions from callable entrypoints use the standard script error path."""

@@ -88,7 +88,7 @@ The `st.App` signature follows the [Starlette Application](https://www.starlette
 
 ```python
 st.App(
-    script_path: str | Path,
+    script_path: str | Path | Callable[[], None],
     *,
     lifespan: Callable[[App], AsyncContextManager[dict[str, Any] | None]] | None = None,
     routes: Sequence[BaseRoute] | None = None,
@@ -98,6 +98,11 @@ st.App(
 ) -> App
 ```
 
+> [!NOTE]
+> Callable entrypoints (`st.App(main)`) are specified in
+> [`App.run()`](../2026-06-14-app-run-method/product-spec.md). They are the supported
+> same-file launcher and match the existing `st.Page` callable pattern.
+
 ### Parameters
 
 > [!NOTE]
@@ -105,7 +110,7 @@ st.App(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `script_path` | `str \| Path` | required | Path to the main Streamlit script |
+| `script_path` | `str \| Path \| Callable[[], None]` | required | Path to the main Streamlit script, or a zero-argument synchronous callable that is the app body (see [`App.run()`](../2026-06-14-app-run-method/product-spec.md)) |
 | `lifespan` | `AsyncContextManager` | `None` | Async context manager for startup/shutdown |
 | `routes` | `Sequence[BaseRoute]` | `None` | Additional Starlette routes |
 | `middleware` | `Sequence[Middleware]` | `None` | Middleware stack for all requests |
