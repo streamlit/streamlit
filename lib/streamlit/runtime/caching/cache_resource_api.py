@@ -642,7 +642,9 @@ class CacheResourceAPI:
             raise StreamlitValueError("scope", ["'global'", "'session'"])
 
         validate_refresh_mode(
-            refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)
+            refresh_mode,
+            time_to_seconds(ttl, coerce_none_to_inf=False),
+            command="st.cache_resource",
         )
 
         # Support passing the params via function decorator, e.g.

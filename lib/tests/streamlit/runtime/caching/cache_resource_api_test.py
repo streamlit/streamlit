@@ -24,7 +24,10 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
+from streamlit.errors import (
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.runtime.caching import (
     cache_background_refresh,
     cache_resource_api,
@@ -596,17 +599,16 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         )
 
     def test_background_without_ttl_raises(self) -> None:
-        """refresh_mode="background" without a ttl raises an incompatibility error."""
-        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+        """refresh_mode="background" without a ttl requires a positive ttl."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
 
             @st.cache_resource(refresh_mode="background")
             def foo() -> int:
                 return 1
 
         assert str(exc.value) == (
-            "`refresh_mode='background'` and `ttl=None` cannot be used together. "
-            "Background refresh only makes sense when cache entries can expire. "
-            'Set a `ttl` such as `ttl="1h"`, or use `refresh_mode="foreground"`.'
+            "The `ttl` parameter is required for `st.cache_resource`. "
+            "Background refresh requires a positive `ttl`."
         )
 
     def test_invalid_refresh_mode_raises(self) -> None:

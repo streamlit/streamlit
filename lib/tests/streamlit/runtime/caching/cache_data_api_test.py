@@ -30,7 +30,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
-from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
@@ -885,31 +889,29 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         st.cache_data.clear()
 
     def test_background_without_ttl_raises(self) -> None:
-        """refresh_mode="background" without a ttl raises an incompatibility error."""
-        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+        """refresh_mode="background" without a ttl requires a positive ttl."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
 
             @st.cache_data(refresh_mode="background")
             def foo() -> int:
                 return 1
 
         assert str(exc.value) == (
-            "`refresh_mode='background'` and `ttl=None` cannot be used together. "
-            "Background refresh only makes sense when cache entries can expire. "
-            'Set a `ttl` such as `ttl="1h"`, or use `refresh_mode="foreground"`.'
+            "The `ttl` parameter is required for `st.cache_data`. "
+            "Background refresh requires a positive `ttl`."
         )
 
     def test_background_with_zero_ttl_raises(self) -> None:
         """A non-positive ttl is treated as no ttl for background refresh."""
-        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
 
             @st.cache_data(ttl=0, refresh_mode="background")
             def foo() -> int:
                 return 1
 
         assert str(exc.value) == (
-            "`refresh_mode='background'` and `ttl` cannot be used together. "
-            "Background refresh only makes sense when cache entries can expire. "
-            'Set a `ttl` such as `ttl="1h"`, or use `refresh_mode="foreground"`.'
+            "The `ttl` parameter is required for `st.cache_data`. "
+            "Background refresh requires a positive `ttl`."
         )
 
     @parameterized.expand(

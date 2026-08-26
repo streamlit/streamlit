@@ -44,7 +44,7 @@ from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.logger import get_logger
@@ -118,7 +118,9 @@ class CacheReadResult(Generic[R]):
     is_stale: bool
 
 
-def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
+def validate_refresh_mode(
+    refresh_mode: str, ttl_seconds: float | None, *, command: str
+) -> None:
     """Validate the ``refresh_mode`` parameter shared by both cache decorators.
 
     Parameters
@@ -127,26 +129,25 @@ def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
         The user-provided ``refresh_mode`` value.
     ttl_seconds : float or None
         The resolved ttl in seconds (``None`` if no ttl was provided).
+    command : str
+        The public command name used in missing-parameter errors
+        (``st.cache_data`` or ``st.cache_resource``).
 
     Raises
     ------
     StreamlitValueError
         Raised if ``refresh_mode`` is not a valid value.
-    StreamlitIncompatibleParametersError
+    StreamlitMissingRequiredParameterError
         Raised if ``refresh_mode="background"`` is used without a positive ttl.
     """
     if refresh_mode not in {"foreground", "background"}:
         raise StreamlitValueError("refresh_mode", ["foreground", "background"])
 
     if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
-        ttl_use = "ttl=None" if ttl_seconds is None else "ttl"
-        raise StreamlitIncompatibleParametersError(
-            "refresh_mode='background'",
-            ttl_use,
-            explanation=(
-                "Background refresh only makes sense when cache entries can expire. "
-                'Set a `ttl` such as `ttl="1h"`, or use `refresh_mode="foreground"`.'
-            ),
+        raise StreamlitMissingRequiredParameterError(
+            command,
+            "ttl",
+            detail="Background refresh requires a positive `ttl`.",
         )
 
 

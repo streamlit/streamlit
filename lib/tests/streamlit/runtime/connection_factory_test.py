@@ -263,7 +263,8 @@ type="snowpark"
             connection_factory("my_connection", BadScopeConnection)
 
         e.match("Invalid `scope` value")
-        e.match("Connection class")
+        assert "Connection class" in str(e.value)
+        assert "has scope 'request'" in str(e.value)
 
     def test_scope_is_passed_to_cache(self):
         """Scope should be passed to the underlying cache."""

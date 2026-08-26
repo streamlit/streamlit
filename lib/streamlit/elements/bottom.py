@@ -42,7 +42,7 @@ class BottomContainerProxy:
         object.__setattr__(self, "_bottom_dg", bottom_dg)
 
     def _check_context(self) -> None:
-        """Raise if st.bottom is used in an invalid context."""
+        """Raise ``StreamlitInvalidLayoutContextError`` if ``st.bottom`` is used outside the main app area."""
         current_stack = context_dg_stack.get()
         if not current_stack:
             return

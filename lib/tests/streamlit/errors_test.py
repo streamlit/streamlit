@@ -295,14 +295,22 @@ def test_incompatible_parameters_error_formats_uses() -> None:
 
 
 def test_incompatible_parameters_error_formats_three_uses() -> None:
-    """Three uses are joined with 'and'."""
+    """Three uses are joined with an Oxford comma."""
     exc = errors.StreamlitIncompatibleParametersError(
         "refresh_mode='background'", "ttl", "persist='disk'"
     )
     assert str(exc) == (
-        "`refresh_mode='background'` and `ttl` and `persist='disk'` "
+        "`refresh_mode='background'`, `ttl`, and `persist='disk'` "
         "cannot be used together."
     )
+
+
+def test_incompatible_parameters_error_requires_two_uses() -> None:
+    """Fewer than two uses is a constructor contract violation."""
+    with pytest.raises(ValueError, match="at least two parameter uses"):
+        errors.StreamlitIncompatibleParametersError()
+    with pytest.raises(ValueError, match="at least two parameter uses"):
+        errors.StreamlitIncompatibleParametersError("ttl")
 
 
 def test_incompatible_parameters_error_with_explanation() -> None:

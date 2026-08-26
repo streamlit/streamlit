@@ -372,12 +372,22 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
 class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
     """Raised when two or more parameter uses cannot be combined.
 
-    Pass formatted uses so the message records the specific combination
-    (for example ``wrap=False``, not just ``wrap``).
+    Pass the value when the conflict depends on it (for example
+    ``wrap=False``), or the bare parameter name when merely providing it
+    conflicts (for example ``on_change``).
     """
 
     def __init__(self, *uses: str, explanation: str | None = None) -> None:
-        uses_text = " and ".join(f"`{use}`" for use in uses)
+        if len(uses) < 2:
+            raise ValueError(
+                "StreamlitIncompatibleParametersError requires at least two "
+                "parameter uses."
+            )
+        quoted = [f"`{use}`" for use in uses]
+        if len(quoted) == 2:
+            uses_text = f"{quoted[0]} and {quoted[1]}"
+        else:
+            uses_text = ", ".join(quoted[:-1]) + f", and {quoted[-1]}"
         message = "{uses_text} cannot be used together."
         if explanation:
             message += " {explanation}"

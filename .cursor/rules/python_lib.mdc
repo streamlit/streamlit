@@ -145,10 +145,11 @@ generic `StreamlitAPIException` with a one-off message.
   (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
   `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
 - `StreamlitIncompatibleParametersError(*uses, *, explanation=None)`: use
-  when two or more parameter uses cannot be combined. Pass formatted uses
-  (for example `wrap=False`, not just `wrap`) so the message records the
-  specific combination. Optional `explanation` is appended when the generic
-  "cannot be used together" message needs more context. Example:
+  when two or more parameter uses cannot be combined. Pass the value when
+  the conflict depends on it (`wrap=False`), or the bare parameter name
+  when merely providing it conflicts (`on_change`). Optional `explanation`
+  is appended when the generic "cannot be used together" message needs more
+  context. Example:
   `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
