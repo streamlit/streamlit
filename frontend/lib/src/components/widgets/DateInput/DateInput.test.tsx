@@ -2952,6 +2952,61 @@ describe("DateInput month/year picker escape handling", () => {
 
     expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
   })
+
+  it("Tab in the month picker closes the picker without closing the calendar", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    await user.click(monthTrigger)
+
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toBeVisible()
+
+    await user.keyboard("{Tab}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
+
+  it("selecting a year from the picker keeps the calendar open", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const yearTrigger = within(calendar).getByRole("button", {
+      name: "year",
+    })
+    await user.click(yearTrigger)
+
+    const unselected = (await screen.findAllByRole("option")).find(
+      option => option.getAttribute("aria-selected") !== "true"
+    )
+    expect(unselected).toBeDefined()
+    await user.click(unselected as HTMLElement)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
 })
 
 describe("DateInput query param binding", () => {
