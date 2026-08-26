@@ -894,7 +894,8 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
 
         assert str(exc.value) == (
             "`refresh_mode='background'` and `ttl=None` cannot be used together. "
-            "Background refresh only makes sense when cache entries can expire."
+            "Background refresh only makes sense when cache entries can expire. "
+            'Set a `ttl` such as `ttl="1h"`, or use `refresh_mode="foreground"`.'
         )
 
     def test_background_with_zero_ttl_raises(self) -> None:
@@ -906,8 +907,9 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
                 return 1
 
         assert str(exc.value) == (
-            "`refresh_mode='background'` and `ttl=0` cannot be used together. "
-            "Background refresh only makes sense when cache entries can expire."
+            "`refresh_mode='background'` and `ttl` cannot be used together. "
+            "Background refresh only makes sense when cache entries can expire. "
+            'Set a `ttl` such as `ttl="1h"`, or use `refresh_mode="foreground"`.'
         )
 
     @parameterized.expand(
@@ -929,7 +931,8 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert str(exc.value) == (
             f"`refresh_mode='background'` and `{persist_use}` cannot be used together. "
             "Persisted (disk) caches do not support TTL-based expiration, "
-            "which background refresh requires."
+            "which background refresh requires. Use `persist=None` with "
+            '`refresh_mode="background"`, or use `refresh_mode="foreground"`.'
         )
 
     def test_invalid_refresh_mode_raises(self) -> None:

@@ -591,11 +591,21 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
 class StreamlitValueError(LocalizableStreamlitException):
     """Raised when a parameter receives a value outside a known finite set."""
 
-    def __init__(self, parameter: str, valid_values: list[str]) -> None:
+    def __init__(
+        self,
+        parameter: str,
+        valid_values: list[str],
+        *,
+        detail: str | None = None,
+    ) -> None:
+        message = "Invalid `{parameter}` value. Supported values: {valid_values}."
+        if detail:
+            message += " {detail}"
         super().__init__(
-            "Invalid `{parameter}` value. Supported values: {valid_values}.",
+            message,
             parameter=parameter,
             valid_values=", ".join(valid_values),
+            detail=detail,
         )
 
 

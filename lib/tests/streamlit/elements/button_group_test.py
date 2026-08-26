@@ -2186,7 +2186,10 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
         """Test that required=True with selection_mode='multi' raises an exception."""
         with pytest.raises(
             StreamlitIncompatibleParametersError,
-            match=r"`required=True` and `selection_mode='multi'` cannot be used together.",
+            match=(
+                r"`required=True` and `selection_mode='multi'` cannot be used together\. "
+                r"`required` is only supported for single-select mode\."
+            ),
         ):
             command("label", ["a", "b", "c"], selection_mode="multi", required=True)
 

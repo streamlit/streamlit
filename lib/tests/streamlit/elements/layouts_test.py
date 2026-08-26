@@ -935,7 +935,11 @@ class ContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitIncompatibleParametersError) as exc:
             st.container(horizontal=False, wrap=False)
         assert str(exc.value) == (
-            "`wrap=False` and `horizontal=False` cannot be used together."
+            "`wrap=False` and `horizontal=False` cannot be used together. "
+            "`wrap=False` can only be used with `horizontal=True`. "
+            "A vertical container has no horizontal row of elements to "
+            "keep in a single, scrolling row. Set `horizontal=True` to "
+            "use `wrap=False`, or remove the `wrap` argument."
         )
 
     def test_container_wrap_true_without_horizontal_allowed(self) -> None:

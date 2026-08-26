@@ -126,8 +126,10 @@ generic `StreamlitAPIException` with a one-off message.
 
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits.
-- `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
-  an invalid value from a known finite set (Literal / enum-like options). Example:
+- `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
+  parameter receives an invalid value from a known finite set (Literal /
+  enum-like options). Optional `detail` is overlay-only and is not appended
+  in uncaught-exception telemetry. Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
 - `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
   use when a required parameter is missing, `None`, or empty, including an

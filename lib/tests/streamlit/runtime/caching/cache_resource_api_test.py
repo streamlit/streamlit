@@ -605,7 +605,8 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
 
         assert str(exc.value) == (
             "`refresh_mode='background'` and `ttl=None` cannot be used together. "
-            "Background refresh only makes sense when cache entries can expire."
+            "Background refresh only makes sense when cache entries can expire. "
+            'Set a `ttl` such as `ttl="1h"`, or use `refresh_mode="foreground"`.'
         )
 
     def test_invalid_refresh_mode_raises(self) -> None:

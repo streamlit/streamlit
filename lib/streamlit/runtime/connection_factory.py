@@ -103,7 +103,11 @@ def _create_connection(
 
     scope = connection_class.scope()
     if scope not in {"global", "session"}:
-        raise StreamlitValueError("scope", ["'global'", "'session'"])
+        raise StreamlitValueError(
+            "scope",
+            ["'global'", "'session'"],
+            detail=f"Connection class {connection_class} has an invalid scope.",
+        )
 
     def on_release_wrapped(connection: ConnectionClass) -> None:
         connection.close()

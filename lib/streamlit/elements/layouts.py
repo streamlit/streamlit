@@ -387,7 +387,16 @@ class LayoutsMixin:
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
         if wrap is False and not horizontal:
-            raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")
+            raise StreamlitIncompatibleParametersError(
+                "wrap=False",
+                "horizontal=False",
+                explanation=(
+                    "`wrap=False` can only be used with `horizontal=True`. "
+                    "A vertical container has no horizontal row of elements to "
+                    "keep in a single, scrolling row. Set `horizontal=True` to "
+                    "use `wrap=False`, or remove the `wrap` argument."
+                ),
+            )
         if horizontal:
             # `wrap=True` (default) keeps the default horizontal behavior of
             # wrapping onto additional rows. `wrap=False` keeps the elements in

@@ -265,7 +265,7 @@ class NavigationTest(DeltaGeneratorTestCase):
         """Test that invalid types raise exception"""
         with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
             convert_to_streamlit_page(123)
-        assert "Invalid `page` type" in str(exc_info.value)
+        assert "Invalid `pages` type" in str(exc_info.value)
 
     def test_navigation_with_string_list(self):
         """Test navigation with list of strings"""

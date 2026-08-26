@@ -344,6 +344,7 @@ def validate_menu_items(menu_items: MenuItems) -> None:
             raise StreamlitValueError(
                 "menu_items",
                 ["'Get help'", "'Report a bug'", "'About'"],
+                detail=f"`{k}` is not a valid key.",
             )
         if v is not None and (
             not is_url(v, ("http", "https", "mailto")) and k != ABOUT_KEY

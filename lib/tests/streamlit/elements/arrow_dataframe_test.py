@@ -477,7 +477,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             st.dataframe(df, selection_default={"selection": {"rows": [0]}})
 
         assert str(exc.value) == (
-            "`selection_default` and `on_select='ignore'` cannot be used together."
+            "`selection_default` and `on_select='ignore'` cannot be used together. "
+            "Set `on_select` to `'rerun'` or a callback to use `selection_default`."
         )
 
     def test_row_selection_auto_hides_range_index(self):

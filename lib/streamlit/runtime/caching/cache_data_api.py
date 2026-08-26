@@ -723,7 +723,8 @@ class CacheDataAPI:
                 f"persist={persist!r}",
                 explanation=(
                     "Persisted (disk) caches do not support TTL-based expiration, "
-                    "which background refresh requires."
+                    "which background refresh requires. Use `persist=None` with "
+                    '`refresh_mode="background"`, or use `refresh_mode="foreground"`.'
                 ),
             )
 

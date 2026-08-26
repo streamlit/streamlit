@@ -178,7 +178,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
             st.set_page_config(menu_items=menu_items)
         assert str(e.value) == (
             "Invalid `menu_items` value. Supported values: 'Get help', "
-            "'Report a bug', 'About'."
+            "'Report a bug', 'About'. `invalid` is not a valid key."
         )
 
     def test_set_page_config_menu_items_empty_dict(self):

@@ -61,7 +61,7 @@ def convert_to_streamlit_page(
         return Page(page_input)
 
     raise StreamlitInvalidParameterTypeError(
-        "page",
+        "pages",
         type(page_input).__name__,
         ["str", "Path", "callable", "st.Page"],
     )

@@ -167,6 +167,21 @@ def test_invalid_parameter_type_error_message() -> None:
     }
 
 
+def test_value_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitValueError(
+        "scope",
+        ["'global'", "'session'"],
+        detail="Connection class Foo has an invalid scope.",
+    )
+    assert str(exc) == (
+        "Invalid `scope` value. Supported values: 'global', 'session'. "
+        "Connection class Foo has an invalid scope."
+    )
+    assert exc.exec_kwargs["parameter"] == "scope"
+    assert exc.exec_kwargs["detail"] == "Connection class Foo has an invalid scope."
+
+
 def test_widget_already_instantiated_error_message() -> None:
     """Session-state assignment after widget creation names the key."""
     exc = errors.StreamlitWidgetAlreadyInstantiatedError("my_key")
@@ -275,6 +290,18 @@ def test_incompatible_parameters_error_formats_uses() -> None:
     )
     assert str(exc) == (
         "`wrap=False` and `unsafe_allow_html=True` cannot be used together."
+    )
+    assert "parameter" not in exc.exec_kwargs
+
+
+def test_incompatible_parameters_error_formats_three_uses() -> None:
+    """Three uses are joined with 'and'."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "refresh_mode='background'", "ttl", "persist='disk'"
+    )
+    assert str(exc) == (
+        "`refresh_mode='background'` and `ttl` and `persist='disk'` "
+        "cannot be used together."
     )
 
 

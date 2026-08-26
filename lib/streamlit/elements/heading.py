@@ -412,7 +412,7 @@ class HeadingMixin:
                 raise StreamlitInvalidParameterTypeError(
                     "anchor",
                     type(anchor).__name__,
-                    ["str", "False", "None"],
+                    ["str", "bool", "None"],
                 )
 
         if help:

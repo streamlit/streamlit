@@ -1066,7 +1066,12 @@ class ArrowMixin:
 
         if selection_default is not None and not is_selection_activated:
             raise StreamlitIncompatibleParametersError(
-                "selection_default", "on_select='ignore'"
+                "selection_default",
+                "on_select='ignore'",
+                explanation=(
+                    "Set `on_select` to `'rerun'` or a callback to use "
+                    "`selection_default`."
+                ),
             )
 
         if is_selection_activated:
