@@ -141,7 +141,9 @@ describe("browser", () => {
         "smarttv",
       ],
       [
-        "legacy webOS TV",
+        // Palm Pre phone; the coarse `webOS` token wins over mobile, unlike
+        // historical ua-parser-js which reported this as `mobile`.
+        "legacy webOS device",
         "Mozilla/5.0 (webOS/1.4.2; U; en-US) AppleWebKit/532.2 (KHTML, like Gecko) Version/1.0 Safari/532.2 Pre/1.1",
         "smarttv",
       ],
@@ -182,6 +184,17 @@ describe("browser", () => {
         deviceType: undefined,
         os: undefined,
       })
+    })
+
+    it("reuses a parse for the same user agent and refreshes when it changes", () => {
+      const phoneUa =
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36"
+      const tabletUa =
+        "Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/123.0 Safari/537.36"
+
+      expect(parseUserAgent(phoneUa)).toBe(parseUserAgent(phoneUa))
+      expect(parseUserAgent(tabletUa).deviceType).toBe("tablet")
+      expect(parseUserAgent(phoneUa).deviceType).toBe("mobile")
     })
   })
 })

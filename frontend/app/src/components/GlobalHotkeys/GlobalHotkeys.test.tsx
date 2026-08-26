@@ -36,23 +36,57 @@ describe("GlobalHotkeys", () => {
     expect(onKeyUp.mock.calls.map(call => call[0])).toEqual(["r", "esc"])
   })
 
-  it("ignores modifier shortcuts, repeat events, and their keyup events", async () => {
-    const user = userEvent.setup()
+  it.each([
+    ["Meta", "{Meta>}c{/Meta}"],
+    ["Control", "{Control>}c{/Control}"],
+    ["Alt", "{Alt>}c{/Alt}"],
+  ])(
+    "ignores %s chords and their keyup events",
+    async (_modifier, sequence) => {
+      const user = userEvent.setup()
+      const onKeyDown = vi.fn()
+      const onKeyUp = vi.fn()
+      render(
+        <GlobalHotkeys keyName="c" onKeyDown={onKeyDown} onKeyUp={onKeyUp}>
+          <div>content</div>
+        </GlobalHotkeys>
+      )
+
+      await user.keyboard(sequence)
+
+      expect(onKeyDown).not.toHaveBeenCalled()
+      expect(onKeyUp).not.toHaveBeenCalled()
+    }
+  )
+
+  it("ignores repeat keydown events", () => {
     const onKeyDown = vi.fn()
-    const onKeyUp = vi.fn()
     render(
-      <GlobalHotkeys keyName="c" onKeyDown={onKeyDown} onKeyUp={onKeyUp}>
+      <GlobalHotkeys keyName="c" onKeyDown={onKeyDown}>
         <div>content</div>
       </GlobalHotkeys>
     )
 
-    await user.keyboard("{Meta>}c{/Meta}")
     document.dispatchEvent(
       new KeyboardEvent("keydown", { key: "c", repeat: true, bubbles: true })
     )
 
     expect(onKeyDown).not.toHaveBeenCalled()
-    expect(onKeyUp).not.toHaveBeenCalled()
+  })
+
+  it("removes document listeners on unmount", async () => {
+    const user = userEvent.setup()
+    const onKeyDown = vi.fn()
+    const { unmount } = render(
+      <GlobalHotkeys keyName="r" onKeyDown={onKeyDown}>
+        <div>content</div>
+      </GlobalHotkeys>
+    )
+
+    unmount()
+    await user.keyboard("r")
+
+    expect(onKeyDown).not.toHaveBeenCalled()
   })
 
   it("still fires letter shortcuts when Shift is held", async () => {

@@ -106,11 +106,19 @@ const OS_PATTERNS: Array<{ os: string; pattern: RegExp }> = [
   { os: "Linux", pattern: /Linux/i },
 ]
 
+/** Single-entry cache: the user agent is immutable for a page lifetime. */
+let cachedUserAgent: string | undefined
+let cachedUserAgentInfo: UserAgentInfo | undefined
+
 /**
  * Parse the browser, device class, and operating system fields Streamlit uses.
  * Names intentionally mirror ua-parser-js so historical telemetry stays comparable.
  */
 export function parseUserAgent(userAgent: string): UserAgentInfo {
+  if (cachedUserAgent === userAgent && cachedUserAgentInfo !== undefined) {
+    return cachedUserAgentInfo
+  }
+
   let browserName: string | undefined
   let browserVersion: string | undefined
 
@@ -157,6 +165,8 @@ export function parseUserAgent(userAgent: string): UserAgentInfo {
   }
 
   const os = OS_PATTERNS.find(({ pattern }) => pattern.test(userAgent))?.os
-
-  return { browserName, browserVersion, deviceType, os }
+  const info = { browserName, browserVersion, deviceType, os }
+  cachedUserAgent = userAgent
+  cachedUserAgentInfo = info
+  return info
 }
