@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
     from streamlit.runtime.state.safe_session_state import SafeSessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
 
 class LocalScriptRunner(ScriptRunner):
@@ -84,12 +85,41 @@ class LocalScriptRunner(ScriptRunner):
             self.events.append(event)
             self.event_data.append(kwargs)
 
+            if event == ScriptRunnerEvent.SCRIPT_STARTED:
+                # Drop stale deltas from the previous run so the element tree
+                # does not accumulate elements across (internal) reruns. This
+                # mirrors AppSession._clear_queue: fragment_ids_this_run is
+                # forwarded so that a fragment-scoped rerun preserves deltas
+                # belonging to elements outside the running fragment(s).
+                self.forward_msg_queue.clear(
+                    retain_lifecycle_msgs=True,
+                    fragment_ids_this_run=kwargs.get("fragment_ids_this_run"),
+                )
+
             # Send ENQUEUE_FORWARD_MSGs to our queue
             if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
                 forward_msg = kwargs["forward_msg"]
                 self.forward_msg_queue.enqueue(forward_msg)
 
         self.on_event.connect(record_event, weak=False)
+
+    def register_file(self, file_rec: UploadedFileRec) -> None:
+        """Register an uploaded file with the file manager.
+
+        This is a typed helper method to avoid accessing private attributes
+        directly from AppTest.
+
+        Parameters
+        ----------
+        file_rec
+            The uploaded file record to register.
+        """
+        # Cast to MemoryUploadedFileManager since that's what LocalScriptRunner uses.
+        # The Protocol UploadedFileManager doesn't include add_file.
+        from typing import cast
+
+        file_mgr = cast("MemoryUploadedFileManager", self._uploaded_file_mgr)
+        file_mgr.add_file(self._session_id, file_rec)
 
     def join(self) -> None:
         """Wait for the script thread to finish, if it is running."""
@@ -136,15 +166,20 @@ class LocalScriptRunner(ScriptRunner):
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run)
+            self._session_state.on_script_finished(
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=ctx.has_script_started,
+            )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
         # Remove orphaned files now that the script has run and files in use
-        # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # are marked as active. Skipped for a run that never reached its body, which
+        # re-registered nothing and would look like everything is orphaned.
+        if ctx.has_script_started:
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
     def _new_module(self, name: str) -> types.ModuleType:
         module = types.ModuleType(name)

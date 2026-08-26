@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ from typing import (
 from streamlit import util
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitValueError,
 )
 
 if TYPE_CHECKING:
@@ -50,6 +51,20 @@ T_co = TypeVar("T_co", covariant=True)
 WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
+
+# Type for the on_change mode parameter.
+# "rerun" (default): triggers a rerun when the widget value changes
+# "ignore": stores the value without triggering a rerun
+OnChangeMode: TypeAlias = Literal["rerun", "ignore"]
+
+# Type for the bind parameter on widgets
+# Currently only supports binding to query params
+BindOption: TypeAlias = Literal["query-params"] | None
+
+# Type for the persist_state parameter on widgets.
+# "page" keeps the widget value while it is not rendered on the same page.
+# "session" keeps it for the whole session, including across page switches.
+PersistStateOption: TypeAlias = Literal["page", "session"] | None
 
 # A deserializer receives the value from whatever field is set on the
 # WidgetState proto, and returns a regular python value. A serializer
@@ -147,6 +162,51 @@ class WidgetMetadata(Generic[T]):
     # multiple internal widget states.
     presenter: WidgetValuePresenter | None = None
 
+    # Optional binding for the widget's value to external state (e.g. query params)
+    bind: BindOption = None
+
+    # Optional server-side persistence of the widget's value when it is not
+    # rendered. "page" keeps the value while on the same page; "session" keeps it
+    # for the whole session, including across page switches. None disables it.
+    persist_state: PersistStateOption = None
+
+    # The list of valid formatted option strings for selection widgets.
+    # When set, _seed_widget_from_url validates URL values against this list and
+    # rejects any that aren't valid options (e.g., ?foo=invalid). Widgets with a fixed set
+    # of options (radio, selectbox) pass this; widgets that accept arbitrary values (selectbox
+    # with accept_new_options=True) should not, since any string is valid.
+    formatted_options: list[str] | None = None
+
+    # Whether the widget can be cleared to an empty state (reflects widget's UI behavior).
+    # When True, an empty URL param (e.g., ?foo=) will seed the widget with an empty value.
+    # When False, an empty URL param will be ignored and the widget uses its default.
+    # Examples:
+    #   - multiselect: always clearable (users can remove all selections)
+    #   - checkbox: never clearable (always has a boolean value)
+    #   - selectbox: clearable only if index=None (allows "no selection" state)
+    clearable: bool = False
+
+    # Maximum number of elements allowed in array-valued widgets (e.g. multiselect
+    # max_selections). When set, _seed_widget_from_url truncates URL-seeded arrays
+    # that exceed this limit to the first max_array_length values, preventing URL
+    # params from triggering selection-count errors.
+    max_array_length: int | None = None
+
+    # Whether duplicate values in URL array params are semantically valid for this
+    # widget. When False (default), _sanitize_url_array deduplicates URL values
+    # (e.g., ?tags=Red&tags=Red → ["Red"]) because the UI prevents duplicate
+    # selections (multiselect). When True, duplicates are preserved because the UI
+    # allows them (e.g., select_slider range mode: ?color=red&color=red is a valid
+    # zero-width range).
+    allow_url_duplicates: bool = False
+
+    # Whether the widget is disabled. A disabled widget cannot be interacted with
+    # in the browser, so it must never accept a value coming from the frontend.
+    # This is enforced server-side (see SessionState.register_widget): any incoming
+    # value for a disabled widget is discarded and its on-change callback is
+    # suppressed, guarding against forged BackMsg/WidgetState values.
+    disabled: bool = False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -170,10 +230,27 @@ class RegisterWidgetResult(Generic[T_co]):
         returned from the frontend.
 
         Implies an update to the frontend is needed.
+    incoming_serialized_value : str or None
+        The widget's stored serialized (wire) value as it entered this run,
+        captured before this run's serializer was applied. ``None`` for
+        non-string widgets or when no value is stored yet. Because it's the raw
+        wire form (not re-derived from the deserialized ``value``), callers can
+        reconcile a stored value against freshly computed state even when the
+        deserialized value is stale.
+    incoming_serialized_values : list of str or None
+        The array-widget counterpart of ``incoming_serialized_value``: the
+        stored serialized (wire) values as they entered this run, captured
+        before this run's serializer was applied. ``None`` for non-array
+        widgets or when no value is stored yet. Because these are the raw wire
+        labels (not re-derived from the deserialized ``value``), callers can
+        detect that a stored selection's formatted label changed between runs
+        even when the deserialized value is unchanged.
     """
 
     value: T_co
     value_changed: bool
+    incoming_serialized_value: str | None = None
+    incoming_serialized_values: list[str] | None = None
 
     @classmethod
     def failure(
@@ -211,7 +288,34 @@ def is_keyed_element_id(key: str) -> bool:
 
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
+    if key == "":
+        # Empty string is invalid input, not a missing required parameter: key is
+        # optional on most widgets.
+        raise StreamlitAPIException("The `key` argument must be non-empty.")
     if is_element_id(key):
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
+        )
+
+
+def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> None:
+    """Reject `on_change` values that are neither a callback nor a supported mode.
+
+    `None` is accepted as a legacy alias for `"rerun"`.
+
+    Raises
+    ------
+    StreamlitValueError
+        If `on_change` is not `None`, not callable, and not a valid mode string.
+    """
+    if on_change is None or callable(on_change):
+        return
+
+    # Require a str before membership so array-like values (e.g. NumPy arrays)
+    # cannot raise an ambiguous-truth ValueError from ``==``.
+    supported_modes = get_args(OnChangeMode)
+    if not isinstance(on_change, str) or on_change not in supported_modes:
+        raise StreamlitValueError(
+            "on_change",
+            [repr(mode) for mode in supported_modes] + ["a callback function"],
         )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useState,
-} from "react"
+import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
-import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import Modal, {
+  ModalBody,
+  ModalHeader,
+} from "~lib/components/shared/Modal/Modal"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledDialogTitle } from "./styled-components"
+import { StyledDialogIcon, StyledDialogTitle } from "./styled-components"
 
 /**
  * Maps the dialog width to the modal size.
@@ -70,13 +68,19 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   widgetMgr,
   fragmentId,
 }): ReactElement => {
-  const { title, dismissible, width, isOpen: initialIsOpen, id } = element
+  const {
+    title,
+    dismissible,
+    width,
+    isOpen: initialIsOpen,
+    id,
+    icon,
+  } = element
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
     // Only apply the open state if it was actually set in the proto.
     if (notNullOrUndefined(initialIsOpen)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setIsOpen(initialIsOpen)
     }
 
@@ -91,17 +95,21 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
 
     // Send widget event if on_dismiss is activated (indicated by presence of id)
     if (id && widgetMgr) {
-      void widgetMgr.setTriggerValue(
-        { id, formId: "" }, // WidgetInfo object - dialogs are not compatible with forms
-        { fromUi: true },
-        fragmentId
-      )
+      // Dialogs are not compatible with forms.
+      void widgetMgr.setTriggerValue(id, {
+        formId: "",
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [id, widgetMgr, fragmentId])
 
-  // Handler to suppress the R key when dialog is open and non-dismissible
-  // Otherwise, R would allow to dismiss the dialog by rerunning the script.
-  const handleKeyDown = useCallback(
+  // Handler to suppress the R key when dialog is open and non-dismissible.
+  // Otherwise, R would dismiss the dialog by rerunning the script.
+  // react-hot-keys binds both keydown and keyup to the same handler, so we
+  // must intercept both — blocking only keydown still lets keyup trigger
+  // App.rerunScript (reproduced on WebKit after backdrop click).
+  const handleRKeySuppress = useCallback(
     (e: KeyboardEvent): void => {
       if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
         const target = e.target as HTMLElement
@@ -118,25 +126,29 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
           return
         }
 
-        // Prevent the R key from bubbling up to the App level
+        // stopImmediatePropagation so other listeners on the same target
+        // (hotkeys-js on document) are skipped too.
         e.preventDefault()
-        e.stopPropagation()
+        e.stopImmediatePropagation()
       }
     },
     [isOpen, element.dismissible]
   )
 
-  // Set up keyboard event listener when dialog is open
+  // Set up keyboard event listeners when dialog is open
   useEffect(() => {
     if (isOpen && !element.dismissible) {
-      // Add event listener with capture=true to intercept before App level
-      document.addEventListener("keydown", handleKeyDown, true)
+      // capture=true to intercept before App-level hotkeys
+      document.addEventListener("keydown", handleRKeySuppress, true)
+      document.addEventListener("keyup", handleRKeySuppress, true)
 
       return () => {
-        document.removeEventListener("keydown", handleKeyDown, true)
+        document.removeEventListener("keydown", handleRKeySuppress, true)
+        document.removeEventListener("keyup", handleRKeySuppress, true)
       }
     }
-  }, [isOpen, element.dismissible, handleKeyDown])
+    return undefined
+  }, [isOpen, element.dismissible, handleRKeySuppress])
 
   // don't use the Modal's isOpen prop as it feels laggy when using it
   if (!isOpen) {
@@ -151,6 +163,11 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     >
       <ModalHeader>
         <StyledDialogTitle>
+          {icon && (
+            <StyledDialogIcon data-testid="stDialogIcon">
+              <DynamicIcon iconValue={icon} size="lg" />
+            </StyledDialogIcon>
+          )}
           <StreamlitMarkdown
             source={title}
             allowHTML={false}

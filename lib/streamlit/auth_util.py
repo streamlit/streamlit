@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,19 +14,40 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+import re
+import warnings
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from functools import cache
+from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
+from urllib.parse import urlencode, urlparse
 
 from streamlit import config
-from streamlit.errors import StreamlitAuthError
+from streamlit.errors import StreamlitAuthError, StreamlitMissingAuthlibError
+from streamlit.logger import get_logger
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
+
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
 
     class ProviderTokenPayload(TypedDict):
         provider: str
         exp: int
+
+
+MAX_COOKIE_BYTES: Final = 4096
+# Safety buffer for signing overhead to account for edge cases, rounding, and potential
+# variations in signing implementations (e.g., longer timestamps after year 2286)
+SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
+# Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
+SINGLE_BYTE_BASE64_SIZE: Final = 4
+_PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
+# joserfc emits SecurityWarning when the symmetric key is shorter than 14 bytes
+# (112 bits). We track the same threshold to surface a one-time Streamlit-level
+# warning when callers configure a weak ``cookie_secret``.
+_JOSERFC_MIN_KEY_BYTES: Final = 14
 
 
 class AuthCache:
@@ -60,7 +81,7 @@ def is_authlib_installed() -> bool:
 
         if authlib_version_tuple < (1, 3, 2):
             return False
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, ModuleNotFoundError):  # pragma: no cover - optional dep
         return False
     return True
 
@@ -76,54 +97,318 @@ def get_signing_secret() -> str:
 
 
 def get_secrets_auth_section() -> AttrDict:
-    auth_section = AttrDict({})
     """Get the 'auth' section of the secrets.toml."""
+    auth_section = AttrDict({})
     if secrets_singleton.load_if_toml_exists():
-        auth_section = cast("AttrDict", secrets_singleton.get("auth"))
+        auth_section = cast("AttrDict", secrets_singleton.get("auth", AttrDict({})))
 
     return auth_section
 
 
-def encode_provider_token(provider: str) -> str:
-    """Returns a signed JWT token with the provider and expiration time."""
-    try:
-        from authlib.jose import jwt
-    except ImportError:
-        raise StreamlitAuthError(
-            """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
-        ) from None
+def get_expose_tokens_config() -> list[str]:
+    """Get the expose_tokens configuration from secrets.toml.
 
-    header = {"alg": "HS256"}
+    Returns a list of token types to expose. Accepts both string and list formats:
+    - expose_tokens = "id" -> ["id"]
+    - expose_tokens = ["id", "access"] -> ["id", "access"]
+    """
+    auth_section = get_secrets_auth_section()
+    expose_tokens = auth_section.get("expose_tokens")
+
+    if isinstance(expose_tokens, str):
+        res = [expose_tokens]
+    elif isinstance(expose_tokens, list):
+        res = [str(token) for token in expose_tokens]
+    else:
+        return []
+
+    if set(res) - {"id", "access"}:
+        raise StreamlitAuthError(
+            "Invalid expose_tokens configuration. Only 'id' and 'access' are allowed."
+        )
+
+    return res
+
+
+def get_redirect_uri(auth_section: AttrDict) -> str | None:
+    """Get the redirect_uri from auth_section - filling in port number if needed."""
+
+    if "redirect_uri" not in auth_section:
+        return None
+
+    redirect_uri: str = auth_section["redirect_uri"]
+    if "{port}" in redirect_uri:
+        redirect_uri = redirect_uri.replace(
+            "{port}", str(config.get_option("server.port"))
+        )
+
+    try:
+        redirect_uri_parsed = urlparse(redirect_uri)
+    except ValueError:  # pragma: no cover - defensive
+        raise StreamlitAuthError(
+            f"Invalid redirect_uri: {redirect_uri}. Please check your configuration."
+        )
+
+    return redirect_uri_parsed.geturl()
+
+
+def get_validated_redirect_uri() -> str | None:
+    """Get the redirect_uri from secrets, validating it ends with /oauth2callback.
+
+    This is used for logout flows where we need a validated redirect URI
+    that matches the OAuth callback path.
+
+    Returns
+    -------
+    str | None
+        The validated redirect URI, or None if not configured or invalid.
+    """
+    auth_section = get_secrets_auth_section()
+    if not auth_section:
+        return None
+
+    redirect_uri = get_redirect_uri(auth_section)
+    if not redirect_uri:
+        return None
+
+    if not redirect_uri.endswith("/oauth2callback"):
+        _LOGGER.warning("Redirect URI does not end with /oauth2callback")
+        return None
+
+    return redirect_uri
+
+
+def get_origin_from_redirect_uri() -> str | None:
+    """Extract the origin (scheme + host) from the configured redirect_uri.
+
+    Returns
+    -------
+    str | None
+        The origin in format "scheme://host:port", or None if not configured.
+    """
+    auth_section = get_secrets_auth_section()
+    if not auth_section:
+        return None
+
+    redirect_uri = get_redirect_uri(auth_section)
+    if not redirect_uri:
+        return None
+
+    redirect_uri_parsed = urlparse(redirect_uri)
+    return f"{redirect_uri_parsed.scheme}://{redirect_uri_parsed.netloc}"
+
+
+def build_logout_url(
+    end_session_endpoint: str,
+    client_id: str,
+    post_logout_redirect_uri: str,
+    id_token: str | None = None,
+) -> str:
+    """Build an OIDC logout URL with the required parameters.
+
+    Parameters
+    ----------
+    end_session_endpoint
+        The OIDC provider's end_session_endpoint URL.
+    client_id
+        The OAuth client ID.
+    post_logout_redirect_uri
+        The URI to redirect to after logout.
+    id_token
+        Optional ID token to include as id_token_hint for the logout request.
+
+    Returns
+    -------
+    str
+        The complete logout URL with query parameters.
+    """
+    from urllib.parse import parse_qsl
+
+    logout_params: dict[str, str] = {
+        "client_id": client_id,
+        "post_logout_redirect_uri": post_logout_redirect_uri,
+    }
+
+    if id_token:
+        logout_params["id_token_hint"] = id_token
+
+    # Per OIDC spec, end_session_endpoint should be a clean URL without query params,
+    # but we handle existing params defensively for non-standard providers.
+    parsed = urlparse(end_session_endpoint)
+    existing_params = dict(parse_qsl(parsed.query))
+    merged_params = {**existing_params, **logout_params}
+    new_query = urlencode(merged_params)
+    return parsed._replace(query=new_query).geturl()
+
+
+def _get_provider_token_expiration_timestamp() -> int:
+    """Return the expiration timestamp for short-lived provider tokens."""
+    return int((datetime.now(timezone.utc) + timedelta(minutes=2)).timestamp())
+
+
+def _ensure_joserfc_security_warning_suppressed() -> None:
+    """Idempotently suppress joserfc's ``SecurityWarning`` for this process.
+
+    ``warnings.catch_warnings()`` is documented as not thread-safe: it saves
+    and restores the shared ``warnings.filters`` list, so concurrent calls
+    from the encode/decode hot path can racily leak filter state into other
+    sessions. We instead append a single category-only filter to the global
+    list (an O(1) check protects against duplicates), which is safe under the
+    GIL and survives ``warnings.simplefilter`` resets in a self-healing way.
+
+    The category-only match (rather than a string-matched message filter) is
+    intentional: ``OctKey.import_key`` is the only joserfc call site Streamlit
+    uses, so suppressing the entire ``SecurityWarning`` category here cannot
+    hide warnings from unrelated code, and it does not regress when joserfc
+    rewords the message.
+    """
+    from joserfc.errors import SecurityWarning
+
+    for entry in warnings.filters:
+        action, _msg, category, _module, _lineno = entry
+        if action == "ignore" and category is SecurityWarning:
+            return
+    warnings.filterwarnings("ignore", category=SecurityWarning)
+
+
+@cache
+def _warn_short_signing_secret_once() -> None:
+    """Emit a single Streamlit-level warning for sub-112-bit cookie secrets.
+
+    joserfc's ``SecurityWarning`` is suppressed by
+    ``_ensure_joserfc_security_warning_suppressed`` so it does not surface to
+    every app on every request, but a too-short ``cookie_secret`` is still a
+    real signal we want operators to see at least once per process.
+    """
+    _LOGGER.warning(
+        "auth.cookie_secret / server.cookieSecret is shorter than %d bytes "
+        "(112 bits). Use a longer, randomly generated secret to ensure "
+        "adequate cryptographic strength.",
+        _JOSERFC_MIN_KEY_BYTES,
+    )
+
+
+def _get_joserfc_signing_key() -> Any:
+    """Create the signing key used for provider tokens with ``joserfc``."""
+    from joserfc.jwk import OctKey
+
+    # TODO(auth): Revisit weak ``cookie_secret`` handling at the Streamlit level
+    # so we can validate / reject (rather than just log) sub-112-bit secrets.
+    _ensure_joserfc_security_warning_suppressed()
+    secret = get_signing_secret()
+    if len(secret) < _JOSERFC_MIN_KEY_BYTES:
+        _warn_short_signing_secret_once()
+    return OctKey.import_key(secret)
+
+
+def _encode_provider_token_with_joserfc(provider: str) -> str:
+    """Encode a provider token with ``joserfc``."""
+    from joserfc import jwt
+
+    header = {"alg": _PROVIDER_TOKEN_ALGORITHM}
     payload = {
         "provider": provider,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=2),
+        "exp": _get_provider_token_expiration_timestamp(),
     }
-    provider_token: bytes = jwt.encode(header, payload, get_signing_secret())
-    # JWT token is a byte string, so we need to decode it to a URL compatible string
-    return provider_token.decode("latin-1")
+    return jwt.encode(header, payload, _get_joserfc_signing_key())
 
 
-def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
-    """Decode the JWT token and validate the claims."""
+def _encode_provider_token_with_authlib(provider: str) -> str:
+    """Encode a provider token with the legacy Authlib JOSE API."""
+    from authlib.jose import jwt
+
+    header = {"alg": _PROVIDER_TOKEN_ALGORITHM}
+    payload = {
+        "provider": provider,
+        "exp": _get_provider_token_expiration_timestamp(),
+    }
+    provider_token = cast(
+        "str | bytes", jwt.encode(header, payload, get_signing_secret())
+    )
+    if isinstance(provider_token, bytes):
+        return provider_token.decode("latin-1")
+    return provider_token
+
+
+def _validate_provider_token_claims(
+    claims: Mapping[str, Any],
+) -> ProviderTokenPayload:
+    """Validate decoded provider-token claims."""
+    provider = claims.get("provider")
+    if provider is None:
+        raise ValueError("provider claim is missing")
+    if not isinstance(provider, str):
+        raise TypeError("provider claim is invalid")
+    if provider == "":
+        raise ValueError("provider claim is empty")
+
+    exp = claims.get("exp")
+    if exp is None:
+        raise ValueError("exp claim is missing")
+    if isinstance(exp, bool) or not isinstance(exp, (int, float)):
+        raise TypeError("exp claim is invalid")
+    if exp <= datetime.now(timezone.utc).timestamp():
+        raise ValueError("token has expired")
+
+    return {"provider": provider, "exp": int(exp)}
+
+
+def _decode_provider_token_with_joserfc(
+    provider_token: str,
+) -> ProviderTokenPayload:
+    """Decode a provider token with ``joserfc``."""
+    from joserfc import jwt
+    from joserfc.errors import JoseError
+
     try:
-        from authlib.jose import JoseError, JWTClaims, jwt
-    except ImportError:
-        raise StreamlitAuthError(
-            """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
-        ) from None
+        decoded_token = jwt.decode(
+            provider_token,
+            _get_joserfc_signing_key(),
+            algorithms=[_PROVIDER_TOKEN_ALGORITHM],
+        )
+        return _validate_provider_token_claims(decoded_token.claims)
+    except (JoseError, TypeError, ValueError) as e:
+        raise StreamlitAuthError(f"Error decoding provider token: {e}") from None
 
-    # Our JWT token is short-lived (2 minutes), so we check here that it contains
-    # the 'exp' (and it is not expired), and 'provider' field exists.
+
+def _decode_provider_token_with_authlib(
+    provider_token: str,
+) -> ProviderTokenPayload:
+    """Decode a provider token with the legacy Authlib JOSE API."""
+    from authlib.jose import JoseError, JWTClaims, jwt
+
     claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
     try:
         payload: JWTClaims = jwt.decode(
             provider_token, get_signing_secret(), claims_options=claim_options
         )
         payload.validate()
-    except JoseError as e:
+    except (JoseError, TypeError, ValueError) as e:
         raise StreamlitAuthError(f"Error decoding provider token: {e}") from None
 
     return cast("ProviderTokenPayload", payload)
+
+
+def encode_provider_token(provider: str) -> str:
+    """Returns a signed JWT token with the provider and expiration time."""
+    try:
+        return _encode_provider_token_with_joserfc(provider)
+    except ImportError:
+        try:
+            return _encode_provider_token_with_authlib(provider)
+        except ImportError:
+            raise StreamlitMissingAuthlibError() from None
+
+
+def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
+    """Decode the JWT token and validate the claims."""
+    try:
+        return _decode_provider_token_with_joserfc(provider_token)
+    except ImportError:
+        try:
+            return _decode_provider_token_with_authlib(provider_token)
+        except ImportError:
+            raise StreamlitMissingAuthlibError() from None
 
 
 def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
@@ -141,7 +426,192 @@ def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
         default_provider_section["client_kwargs"] = cast(
             "AttrDict", auth_section.get("client_kwargs", AttrDict({}))
         ).to_dict()
+    if auth_section.get("expose_tokens"):
+        default_provider_section["expose_tokens"] = auth_section.get("expose_tokens")
     return default_provider_section
+
+
+def set_cookie_with_chunks(
+    set_single_cookie_fn: Callable[[str, str], None],
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+    value: dict[str, Any],
+    *,
+    cookie_attr_size: int,
+) -> None:
+    """Set a cookie, splitting into multiple cookies if necessary.
+
+    Args:
+        set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
+        create_signed_value_fn: Function to create a signed cookie value (cookie_name, value)
+        cookie_name: Name of the cookie
+        value: Dictionary value to serialize and store
+        cookie_attr_size: Number of attribute bytes appended to each cookie.
+    """
+    serialized_cookie_value = json.dumps(value)
+
+    # Calculate actual cookie size using the provided signing function
+    signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
+
+    # Cookie format: "name=value" + cookie attributes
+    actual_cookie_size = len(cookie_name) + 1 + len(signed_value) + cookie_attr_size
+
+    # Check if cookie needs to be split
+    if actual_cookie_size > MAX_COOKIE_BYTES:
+        _LOGGER.debug(
+            "Cookie size (%d bytes) exceeds browser limit. Splitting into multiple cookies.",
+            actual_cookie_size,
+        )
+        _set_split_cookie(
+            set_single_cookie_fn,
+            create_signed_value_fn,
+            cookie_name,
+            serialized_cookie_value,
+            cookie_attr_size=cookie_attr_size,
+        )
+    else:
+        set_single_cookie_fn(cookie_name, serialized_cookie_value)
+
+
+def _calculate_signing_overhead(
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+) -> int:
+    """Calculate the server's signing overhead by measuring the size difference.
+
+    This empirically measures the overhead added by the signing function (e.g., itsdangerous
+    create_signed_value) by signing a minimal test value and computing the difference.
+
+    Args:
+        create_signed_value_fn: Function to create a signed cookie value
+        cookie_name: Name of the cookie (affects overhead due to length prefix)
+
+    Returns
+    -------
+        The number of bytes added by signing (excluding the base64-encoded value)
+    """
+    test_value = "x"  # Minimal test value (1 byte)
+    signed = create_signed_value_fn(cookie_name, test_value)
+    return len(signed) - SINGLE_BYTE_BASE64_SIZE
+
+
+def _set_split_cookie(
+    set_single_cookie_fn: Callable[[str, str], None],
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+    value: str,
+    *,
+    cookie_attr_size: int,
+) -> None:
+    """Split a large cookie value into multiple smaller cookies.
+
+    The main cookie always exists and either contains the whole value or the chunk count.
+    Additional chunks are stored as cookie_name_1, cookie_name_2, etc.
+
+    Args:
+        set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
+        create_signed_value_fn: Function to create a signed cookie value
+        cookie_name: Name of the cookie
+        value: Serialized string value to split and store
+        cookie_attr_size: Number of attribute bytes appended to each cookie.
+    """
+    # Calculate overhead empirically from the actual signing function, plus safety buffer
+    signing_overhead = (
+        _calculate_signing_overhead(create_signed_value_fn, cookie_name)
+        + SIGNING_OVERHEAD_SAFETY_BUFFER
+    )
+
+    # Available space for the signed value:
+    # MAX_COOKIE_BYTES - cookie_name - "=" (1 byte) - cookie attributes
+    available_for_signed_value = (
+        MAX_COOKIE_BYTES - len(cookie_name) - 1 - cookie_attr_size
+    )
+
+    # Space available for the base64-encoded value (after subtracting signing overhead)
+    available_for_base64_value = available_for_signed_value - signing_overhead
+
+    # If there is not enough space for the base64-encoded value, raise an error.
+    # We need at least 4 bytes for a minimal base64-encoded value.
+    if (
+        available_for_base64_value < SINGLE_BYTE_BASE64_SIZE
+    ):  # pragma: no cover - defensive
+        raise StreamlitAuthError("Not enough space available for the signed value.")
+
+    # Convert from base64 space to raw value space (base64 has 4/3 expansion ratio)
+    chunk_size = (available_for_base64_value * 3) // 4
+    chunks = []
+    for i in range(0, len(value), chunk_size):
+        chunk = value[i : i + chunk_size]
+        chunks.append(chunk)
+
+    if len(chunks) == 1:
+        set_single_cookie_fn(cookie_name, chunks[0])
+        return
+
+    # Store count in the main cookie
+    set_single_cookie_fn(cookie_name, f"chunks-{len(chunks)}")
+
+    # Store remaining chunks as cookie_name_1, cookie_name_2, etc.
+    for i in range(len(chunks)):
+        chunk_name = f"{cookie_name}_{i + 1}"
+        set_single_cookie_fn(chunk_name, chunks[i])
+
+    _LOGGER.info(
+        "Split cookie '%s' into %d chunks",
+        cookie_name,
+        len(chunks),
+    )
+
+
+_chunks_regex = re.compile(rb"chunks-(\d+)")
+
+
+def get_cookie_with_chunks(
+    get_single_cookie_fn: Callable[[str], bytes | None],
+    cookie_name: str,
+) -> bytes | None:
+    """Get a cookie, reconstructing from chunks if it was split.
+
+    If a count cookie exists, the main cookie contains the first chunk,
+    and additional chunks are in cookie_name_1, cookie_name_2, etc.
+    If no count cookie exists, the main cookie contains the entire value.
+
+    Args:
+        get_single_cookie_fn: Function to get a single cookie (cookie_name) -> bytes | None
+        cookie_name: Name of the cookie
+
+    Returns
+    -------
+        Cookie value as bytes, or None if not found
+    """
+    cookie_value = get_single_cookie_fn(cookie_name)
+    if cookie_value is None:
+        return cookie_value
+
+    match = _chunks_regex.match(cookie_value)
+    if match is None:
+        return cookie_value
+
+    # Parse chunk count
+    try:
+        chunk_count = int(match.group(1))
+    except (ValueError, TypeError):  # pragma: no cover - defensive
+        _LOGGER.exception("Invalid chunk count for cookie '%s'", cookie_name)
+        return None
+
+    # Reconstruct the original value from chunks
+    chunks = []
+
+    for i in range(chunk_count):
+        chunk_name = f"{cookie_name}_{i + 1}"
+        chunk_value = get_single_cookie_fn(chunk_name)
+        if chunk_value is None:
+            _LOGGER.error("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
+            return None
+        chunks.append(chunk_value)
+
+    reconstructed_value = b"".join(chunks)
+    return reconstructed_value
 
 
 def validate_auth_credentials(provider: str) -> None:

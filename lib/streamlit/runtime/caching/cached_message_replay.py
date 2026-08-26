@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
     from google.protobuf.message import Message
 
-    from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Block_pb2 import Block
     from streamlit.runtime.caching.cache_type import CacheType
@@ -85,6 +84,11 @@ class CachedResult(Generic[R]):
     messages: list[MsgData]
     main_id: str
     sidebar_id: str
+    # The monotonic time (via cache_utils.TTLCACHE_TIMER) at which this entry was
+    # written. Only used by refresh_mode="background" to distinguish a fresh entry
+    # ([0, ttl)) from a stale one ([ttl, 2*ttl)). ``None`` means "freshness not
+    # tracked" (foreground mode), in which case the entry is always treated as fresh.
+    stored_at: float | None = None
 
 
 """

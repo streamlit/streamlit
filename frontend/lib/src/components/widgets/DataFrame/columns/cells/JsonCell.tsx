@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import * as React from "react"
 
 import {
   type CustomCell,
@@ -46,9 +44,7 @@ export type JsonCell = CustomCell<JsonCellProps>
  * Note: this "editor" does not actually support editing at
  * the moment.
  */
-export const JsonCellEditor: ReturnType<
-  ProvideEditorCallback<JsonCell>
-> = cell => {
+const JsonCellEditor: ReturnType<ProvideEditorCallback<JsonCell>> = cell => {
   const theme = cell.theme
   const cellData = cell.value.data
 
@@ -84,8 +80,8 @@ export const JsonTextCellEditor: ReturnType<
  */
 const renderer: CustomRenderer<JsonCell> = {
   kind: GridCellKind.Custom,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  isMatch: (c): c is JsonCell => (c.data as any).kind === "json-cell",
+  isMatch: (c): c is JsonCell =>
+    (c.data as Record<string, unknown>).kind === "json-cell",
   draw: (args, cell) => {
     const { value, displayValue } = cell.data
     drawTextCell(

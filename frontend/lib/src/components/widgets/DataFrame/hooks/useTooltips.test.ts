@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -202,6 +202,25 @@ describe("useTooltips hook", () => {
 
     act(() => {
       result.current.clearTooltip()
+    })
+
+    expect(result.current.tooltip).toBeUndefined()
+  })
+
+  it("does not render a pending tooltip after clearTooltip is called", () => {
+    const { result } = renderHook(() => {
+      return useTooltips(MOCK_COLUMNS, getCellContentMock)
+    })
+
+    act(() => {
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+      result.current.onItemHovered!({
+        kind: "header",
+        location: [0, 0],
+        bounds: { x: 0, y: 0, width: 100, height: 30 },
+      } as object as GridMouseEventArgs)
+      result.current.clearTooltip()
+      vi.advanceTimersByTime(DEBOUNCE_TIME_MS)
     })
 
     expect(result.current.tooltip).toBeUndefined()

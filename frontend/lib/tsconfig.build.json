@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {
+      "src/*": ["./src/*"],
+      "~lib/*": ["./src/*"],
+      "@streamlit/lib": ["./src/index.ts"],
+      "@streamlit/lib/testing": ["./src/testing.ts"]
+    }
+  },
+  "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"]
+}

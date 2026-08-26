@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,8 +49,9 @@ describe("useVegaLiteSelections", () => {
 
     const debouncedMock = debounce as Mock
     // By default, the mocked debounce simply calls its callback immediately.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    debouncedMock.mockImplementation((_delay: number, fn: any) => fn)
+    debouncedMock.mockImplementation(
+      (_delay: number, fn: (...args: unknown[]) => void) => fn
+    )
   })
 
   afterEach(() => {
@@ -178,14 +179,13 @@ describe("useVegaLiteSelections", () => {
 
     // The or array is assigned to the "param1" key
     expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chartId", formId: "formId" },
+      "chartId",
       JSON.stringify({
         selection: {
           param1: [{ data: "A" }, { data: "B" }],
         },
       }),
-      { fromUi: true },
-      undefined // fragmentId not passed in this test
+      { formId: "formId", fragmentId: undefined, fromUser: true } // fragmentId not passed in this test
     )
   })
 
@@ -269,15 +269,14 @@ describe("useVegaLiteSelections", () => {
 
     // Expect empty selection state
     expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chartId", formId: "formId" },
+      "chartId",
       JSON.stringify({
         selection: {
           param1: {},
           param2: {},
         },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "formId", fragmentId: undefined, fromUser: true }
     )
   })
 })

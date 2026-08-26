@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    open_json_path_tooltip,
+)
 
 
 def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
@@ -65,3 +69,16 @@ def test_shows_copy_icon(themed_app: Page, assert_snapshot: ImageCompareFunction
     json_element.hover()
 
     assert_snapshot(json_element, name="st_json-copy_icon_on_hover")
+
+
+def test_shows_json_path_tooltip_on_click(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that clicking on a JSON value shows a tooltip with the JSON path."""
+    # Use a JSON element with nested values:
+    json_element = themed_app.get_by_test_id("stJson").nth(6)
+    expect(json_element).to_be_visible()
+
+    tooltip = open_json_path_tooltip(themed_app, json_element)
+
+    assert_snapshot(tooltip, name="st_json-path_tooltip")

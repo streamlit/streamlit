@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,19 @@ const headerDecoration = balloons - 1
 // Used for popup menus, chart tooltips, and other aspects
 // that need to be shown above the fullscreen wrapper
 const popup = fullscreenWrapper + 10
-// Used for rendering the cell overlay editor of the
-// dataframe component:
-const tablePortal = fullscreenWrapper + 60
+// Used for modal dialog backdrops and surfaces. Keep this below popup so
+// nested overlays opened from dialogs render above the modal surface.
+const modal = popup - 1
+// Used for rendering the cell overlay editor and column menus of the
+// dataframe component. Anchored above popup so that dataframe overlays
+// render above the modal surface (modal < popup).
+const tablePortal = popup + 50
+// Used for Vega chart tooltips in the dataframe statistics submenu.
+// Must be above tablePortal so tooltips appear over the column menu portal.
+const tablePortalTooltip = tablePortal + 10
 const cacheSpinner = sidebar + 1
-// Toasts should overlap chatInput container
-// should also show above dialog
-const toast = popup + 1
+// Toasts should overlap chatInput container and show above dialog.
+const toast = popup + 2
 
 export const zIndices = {
   hide: -1,
@@ -45,9 +51,11 @@ export const zIndices = {
   balloons,
   header,
   sidebarMobile,
+  modal,
   popup,
   fullscreenWrapper,
   tablePortal,
+  tablePortalTooltip,
   bottom,
   cacheSpinner,
   toast,

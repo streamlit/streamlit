@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,6 +36,25 @@ valid_color_tuples = [
     (0.0, 0.5, 1.0, 0.5),
 ]
 
+# Built-in color names that map to Streamlit theme colors
+valid_builtin_color_names = [
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "blue",
+    "violet",
+    "gray",
+    "grey",
+    "primary",
+    # Case variations
+    "Red",
+    "RED",
+    "Blue",
+    "GRAY",
+    "Grey",
+]
+
 invalid_colors = [
     # Funny number of components
     "#12345",
@@ -50,8 +69,8 @@ invalid_colors = [
     # Invalid data type
     {1, 2, 3},
     100,
-    # Unsupported CSS strings
-    "red",
+    # Unsupported CSS strings (not a builtin color name)
+    "foo",
     # This is only unsupported as user input, but it its used internally.
     "rgb(1, 2, 3)",
 ]
@@ -186,12 +205,54 @@ class ColorUtilTest(unittest.TestCase):
             out = color_util.is_color_tuple_like(test_arg)
             assert not out
 
+    def test_is_builtin_color_name_true(self):
+        """Test is_builtin_color_name returns True for valid built-in color names."""
+        for test_arg in valid_builtin_color_names:
+            out = color_util.is_builtin_color_name(test_arg)
+            assert out, f"Expected {test_arg!r} to be a valid builtin color name"
+
+    def test_is_builtin_color_name_false(self):
+        """Test is_builtin_color_name returns False for invalid inputs."""
+        invalid_builtin_names = [
+            # Not builtin names
+            "foo",
+            "bar",
+            "pink",
+            "cyan",
+            "magenta",
+            # Hex colors are not builtin names
+            "#f00",
+            "#ff0000",
+            # Tuples are not builtin names
+            (255, 0, 0),
+            [0, 255, 0],
+            # Other invalid types
+            None,
+            123,
+            [],
+        ]
+        for test_arg in invalid_builtin_names:
+            out = color_util.is_builtin_color_name(test_arg)
+            assert not out, (
+                f"Expected {test_arg!r} to NOT be a valid builtin color name"
+            )
+
     def test_is_color_like_true(self):
+        """Test is_color_like returns True for hex colors and tuples.
+
+        Note: is_color_like does NOT include built-in color names because those
+        require special handling and cannot be converted via to_css_color().
+        """
         for test_arg in [*valid_color_tuples, *valid_hex_colors]:
             out = color_util.is_color_like(test_arg)
-            assert out
+            assert out, f"Expected {test_arg!r} to be color-like"
 
     def test_is_color_like_false(self):
+        """Test is_color_like returns False for invalid colors.
+
+        Note: Built-in color names are intentionally NOT considered color-like
+        by this function because they require special frontend handling.
+        """
         test_args = list(invalid_colors)
 
         # Checking for this in our code is not worth the cost.
@@ -203,3 +264,36 @@ class ColorUtilTest(unittest.TestCase):
         for test_arg in test_args:
             out = color_util.is_color_like(test_arg)
             assert not out
+
+    def test_is_color_like_excludes_builtin_names(self):
+        """Test that is_color_like returns False for built-in color names.
+
+        Built-in color names are handled separately via is_builtin_color_name()
+        because they cannot be converted via to_css_color() - they are resolved
+        on the frontend instead.
+        """
+        for test_arg in valid_builtin_color_names:
+            out = color_util.is_color_like(test_arg)
+            assert not out, (
+                f"Expected is_color_like({test_arg!r}) to be False "
+                "(builtin names need special handling)"
+            )
+
+    def test_normalize_tuple_rejects_wrong_length(self):
+        """_normalize_tuple raises for a tuple that isn't length 3 or 4."""
+        with pytest.raises(errors.StreamlitInvalidColorError):
+            color_util._normalize_tuple(
+                (1, 2),  # type: ignore[arg-type]
+                color_util._int_formatter,
+                color_util._int_formatter,
+            )
+
+    def test_int_formatter_rejects_non_numeric_component(self):
+        """_int_formatter raises when the component is neither int nor float."""
+        with pytest.raises(errors.StreamlitInvalidColorError):
+            color_util._int_formatter("x", "x")  # type: ignore[arg-type]
+
+    def test_float_formatter_rejects_non_numeric_component(self):
+        """_float_formatter raises when the component is neither int nor float."""
+        with pytest.raises(errors.StreamlitInvalidColorError):
+            color_util._float_formatter("x", "x")  # type: ignore[arg-type]

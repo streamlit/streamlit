@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ fig = px.bar(
 event_data = st.plotly_chart(
     fig, on_select="rerun", key="StackedBar_chart", selection_mode=["box", "lasso"]
 )
-if len(event_data.selection["points"]) > 0:  # type: ignore
+if len(event_data.selection["points"]) > 0:
     st.write("Countries and their medal data that were selected:")
     points = st.session_state.StackedBar_chart.selection["points"]
     # Extract x and y values directly into lists
@@ -155,7 +155,7 @@ event_data = st.plotly_chart(
     fig_bubble, on_select="rerun", selection_mode=("points", "box")
 )
 if len(event_data["selection"]["points"]) > 0:
-    points = event_data.selection.points  # type: ignore
+    points = event_data.selection.points
     # Extract x and y values directly into lists
     x_values = [point["x"] for point in points]
     y_values = [point["y"] for point in points]
@@ -167,3 +167,42 @@ if len(event_data["selection"]["points"]) > 0:
     st.write(f"Selected points: {len(filtered_df)}")
 else:
     st.write("Nothing is selected")
+
+
+# Treemap chart for hierarchical selection
+st.header("Treemap with Selection")
+df_gapminder = px.data.gapminder().query("year == 2007")
+fig_treemap = px.treemap(
+    df_gapminder, path=["continent", "country"], values="pop", title="World Population"
+)
+event_treemap = st.plotly_chart(
+    fig_treemap, on_select="rerun", key="treemap_chart", selection_mode="points"
+)
+if event_treemap and len(event_treemap.selection.get("points", [])) > 0:
+    st.write("Treemap selection:")
+    point = event_treemap.selection["points"][0]
+    st.write(f"Selected: {point.get('label', 'N/A')}")
+    st.write(f"ID: {point.get('id', 'N/A')}")
+    st.write(f"Parent: {point.get('parent', 'N/A')}")
+else:
+    st.write("No treemap selection")
+
+
+# Sunburst chart for hierarchical selection
+st.header("Sunburst with Selection")
+fig_sunburst = px.sunburst(
+    df_gapminder,
+    path=["continent", "country"],
+    values="pop",
+    title="World Population Sunburst",
+)
+event_sunburst = st.plotly_chart(
+    fig_sunburst, on_select="rerun", key="sunburst_chart", selection_mode="points"
+)
+if event_sunburst and len(event_sunburst.selection.get("points", [])) > 0:
+    st.write("Sunburst selection:")
+    point = event_sunburst.selection["points"][0]
+    st.write(f"Selected: {point.get('label', 'N/A')}")
+    st.write(f"ID: {point.get('id', 'N/A')}")
+else:
+    st.write("No sunburst selection")

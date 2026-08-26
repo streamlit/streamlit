@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,53 +14,67 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
   useEffect,
+  useId,
+  useMemo,
   useRef,
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { Input as UIInput } from "baseui/input"
-import uniqueId from "lodash/uniqueId"
+import { TextField } from "react-aria-components"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import Icon, { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+  DynamicIcon,
+  isMaterialIcon,
+} from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledClearButton,
+  StyledEndEnhancer,
   StyledInputContainer,
   StyledInputControl,
   StyledInputControls,
+  StyledInputElement,
   StyledInstructionsContainer,
+  StyledStartEnhancer,
+  StyledVisuallyHidden,
 } from "./styled-components"
 import {
   canDecrement,
   canIncrement,
   formatValue,
-  getInitialValue,
+  getCurrStateFromProto,
+  getDefaultStateFromProto,
+  getStateFromWidgetMgr,
   getStep,
+  preciseStepArithmetic,
+  updateWidgetMgrState,
 } from "./utils"
 
 export interface Props {
@@ -80,36 +94,88 @@ const NumberInput: React.FC<Props> = ({
 
   const {
     dataType: elementDataType,
-    id: elementId,
     formId: elementFormId,
     default: elementDefault,
     format: elementFormat,
     icon,
     min,
     max,
+    hasMin,
+    hasMax,
   } = element
 
   const { width, elementRef } = useCalculatedDimensions()
 
-  const [step, setStep] = useState<number>(() => getStep(element))
-  const initialValue = getInitialValue({ element, widgetMgr })
-  const [dirty, setDirty] = useState(false)
-  const [value, setValue] = useState<number | null>(initialValue)
-  const [isFocused, setIsFocused] = useState(false)
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  const id = useRef(uniqueId("number_input_"))
+  const step = useMemo(
+    () => getStep({ step: element.step, dataType: element.dataType }),
+    [element.step, element.dataType]
+  )
 
-  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
-    formatValue({
+  // Helper to format a numeric value with the current format settings
+  const formatCurrentValue = useCallback(
+    (val: number | null) =>
+      formatValue({
+        value: val,
+        dataType: elementDataType,
+        format: elementFormat,
+        step,
+      }),
+    [elementDataType, elementFormat, step]
+  )
+
+  // Local ephemeral state - dirty and formattedValue need refs for onFormCleared
+  const [dirty, setDirty] = useState(false)
+
+  // Formatted value is state because the user can type intermediate values (like "1." for float)
+  // Initialize with the correctly formatted initial value to avoid double render
+  const [formattedValue, setFormattedValue] = useState<string | null>(() => {
+    const initialValue =
+      getStateFromWidgetMgr(widgetMgr, element) ?? elementDefault ?? null
+    return formatValue({
       value: initialValue,
       dataType: elementDataType,
       format: elementFormat,
       step,
     })
-  )
+  })
+  const [validationError, setValidationError] = useState<string | null>(null)
 
-  const canDec = canDecrement(value, step, min)
-  const canInc = canIncrement(value, step, max)
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "double_value" as const,
+        clearable: isNullOrUndefined(element.default),
+      }
+    : undefined
+
+  // Use useBasicWidgetState for core value management
+  const [value, setValueWithSource] = useBasicWidgetState<
+    number | null,
+    NumberInputProto
+  >({
+    getStateFromWidgetMgr,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
+    onFormCleared: useCallback(() => {
+      // Reset dirty state and formatted value when form is cleared
+      const newValue = elementDefault ?? null
+      setDirty(false)
+      setFormattedValue(formatCurrentValue(newValue))
+      setValidationError(null)
+    }, [elementDefault, formatCurrentValue]),
+    queryParamBinding,
+  })
+
+  // Additional local state for UI interactions
+  const [isFocused, setIsFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const id = useId()
+  const validationErrorId = `${id}-validation-error`
 
   const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
@@ -118,126 +184,120 @@ const NumberInput: React.FC<Props> = ({
     : dirty
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
-    isFocused && width > theme.breakpoints.hideWidgetDetails
+    isFocused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
-  // Update the step if the props change
+  // Sync formatted value when the core value changes from the backend.
+  // This Effect is justified because it synchronizes with an external system:
+  // the backend value changes via useBasicWidgetState (from st.session_state updates,
+  // form resets, or setValue calls). We can't compute this during render because:
+  // 1. When dirty=true, formattedValue comes from user input (e.g., typing "1.")
+  // 2. When dirty=false, formattedValue comes from the backend value
+  // This is the recommended pattern for syncing with external systems per React docs.
   useEffect(() => {
-    setStep(getStep({ step: element.step, dataType: element.dataType }))
-  }, [element.dataType, element.step])
-
-  // Update the formatted value if format related props changes
-  useEffect(() => {
-    // Only update if the user isn't currently actively editing:
     if (!dirty) {
-      setFormattedValue(
-        formatValue({
-          value,
-          dataType: elementDataType,
-          format: elementFormat,
-          step,
-        })
-      )
+      setFormattedValue(formatCurrentValue(value))
+      // Clear any stale validation error: when the widget is not dirty the
+      // displayed value is (re)synced from the backend (e.g. a session_state
+      // update or a step on an out-of-range value), so an error tied to the
+      // previous value no longer applies to what the user now sees.
+      setValidationError(null)
     }
-    // We only want to reformat the value if any of the formatting
-    // related parameters change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [elementDataType, elementFormat, step])
+  }, [value, dirty, formatCurrentValue])
 
+  const getRangeValidationMessage = useCallback(
+    (valueArg: number): string | null => {
+      const isBelowMin = valueArg < min
+      const isAboveMax = valueArg > max
+      if (!isBelowMin && !isAboveMax) {
+        return null
+      }
+
+      const minText = formatCurrentValue(min) ?? String(min)
+      const maxText = formatCurrentValue(max) ?? String(max)
+
+      if (hasMin && hasMax) {
+        return `Number is outside the allowed range. Please enter a value between ${minText} and ${maxText}.`
+      }
+      if (isBelowMin) {
+        return hasMin
+          ? `Number is below the allowed range. Please enter a value greater than or equal to ${minText}.`
+          : "Number is below the allowed range."
+      }
+      return hasMax
+        ? `Number is above the allowed range. Please enter a value less than or equal to ${maxText}.`
+        : "Number is above the allowed range."
+    },
+    [formatCurrentValue, hasMax, hasMin, max, min]
+  )
+
+  // Commit a value: validate, update widget manager, and sync to URL
   const commitValue = useCallback(
     ({
       value: valueArg,
-      source,
+      fromUser,
     }: {
       value: number | null
-      source: Source
-    }) => {
-      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
-        inputRef.current?.reportValidity()
-      } else {
-        const newValue = valueArg ?? elementDefault ?? null
-
-        switch (elementDataType) {
-          case NumberInputProto.DataType.INT:
-            widgetMgr.setIntValue(
-              { id: elementId, formId: elementFormId },
-              newValue,
-              source,
-              fragmentId
-            )
-            break
-          case NumberInputProto.DataType.FLOAT:
-            widgetMgr.setDoubleValue(
-              { id: elementId, formId: elementFormId },
-              newValue,
-              source,
-              fragmentId
-            )
-            break
-          default:
-            throw new Error("Invalid data type")
+      fromUser: boolean
+    }): boolean => {
+      // Validate range and show Streamlit-styled error message if out of range.
+      if (notNullOrUndefined(valueArg)) {
+        const rangeValidationError = getRangeValidationMessage(valueArg)
+        if (rangeValidationError) {
+          setValidationError(rangeValidationError)
+          return false
         }
+      }
 
-        setDirty(false)
-        setValue(newValue)
-        setFormattedValue(
-          formatValue({
-            value: newValue,
-            dataType: elementDataType,
-            format: elementFormat,
-            step,
-          })
+      const newValue = valueArg ?? elementDefault ?? null
+
+      setValidationError(null)
+      setValueWithSource({ value: newValue, fromUser })
+
+      // Inside a form, write the committed value to the WidgetStateManager
+      // synchronously. `setValueWithSource` only defers the write to an effect,
+      // but the Enter key handler submits the form synchronously in the same
+      // event, so without this the form would submit the *previously* committed
+      // value (the effect runs after `submitForm`). Writing a form's widget
+      // state doesn't schedule a rerun, so this adds no extra rerun.
+      if (inForm) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: newValue, fromUser },
+          fragmentId
         )
       }
+
+      setDirty(false)
+      setFormattedValue(formatCurrentValue(newValue))
+      return true
     },
     [
-      min,
-      max,
-      inputRef,
+      elementDefault,
+      formatCurrentValue,
+      getRangeValidationMessage,
+      setValueWithSource,
+      inForm,
+      element,
       widgetMgr,
       fragmentId,
-      step,
-      elementDataType,
-      elementId,
-      elementFormId,
-      elementDefault,
-      elementFormat,
     ]
   )
 
-  const onBlur = useCallback((): void => {
-    if (dirty) {
-      commitValue({ value, source: { fromUi: true } })
-    }
-    setIsFocused(false)
-  }, [dirty, value, commitValue])
+  // When the widget has no default, the user can clear the value to null.
+  // `clearable` is false when disabled, so the clear button is never shown in that state.
+  const clearable = isNullOrUndefined(element.default) && !disabled
 
-  const onFocus = useCallback((): void => {
+  const handleClear = useCallback(() => {
+    commitValue({ value: null, fromUser: true })
+  }, [commitValue])
+
+  const handleFocus = useCallback((): void => {
     setIsFocused(true)
   }, [])
 
-  const updateFromProtobuf = useCallback((): void => {
-    const { value: elementValue } = element
-    element.setValue = false
-    setValue(elementValue ?? null)
-    setFormattedValue(
-      formatValue({
-        value: elementValue ?? null,
-        dataType: elementDataType,
-        format: elementFormat,
-        step,
-      })
-    )
-    commitValue({ value: elementValue ?? null, source: { fromUi: false } })
-  }, [element, step, commitValue, elementDataType, elementFormat])
-
-  // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
+  // Prevent scroll wheel from changing the value
   useEffect(() => {
-    if (element.setValue) {
-      updateFromProtobuf()
-    } else {
-      commitValue({ value, source: { fromUi: false } })
-    }
-
     const numberInput = inputRef.current
     if (numberInput) {
       const preventScroll: EventListener = (e): void => {
@@ -252,72 +312,80 @@ const NumberInput: React.FC<Props> = ({
         numberInput.removeEventListener("wheel", preventScroll)
       }
     }
-
-    // I don't want to run this effect on every render, only on mount.
-    // Additionally, it's okay if commitValue changes, because we only call
-    // it once in the beginning anyways.
-    /* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
+    return undefined
   }, [])
 
-  // update from protobuf whenever component updates if element.setValue is truthy
-  if (element.setValue) {
-    updateFromProtobuf()
-  }
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const { value: targetValue } = e.target
 
-  const clearable = isNullOrUndefined(element.default) && !disabled
+      setValidationError(null)
 
-  const onFormCleared = useCallback(() => {
-    const newValue = element.default ?? null
-    setValue(newValue)
-    commitValue({ value: newValue, source: { fromUi: true } })
-  }, [element])
-
-  useFormClearHelper({
-    element,
-    widgetMgr,
-    onFormCleared,
-  })
-
-  const onChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ): void => {
-    const { value: targetValue } = e.target
-
-    if (targetValue === "") {
-      setDirty(true)
-      setValue(null)
-      setFormattedValue(null)
-    } else {
-      let numValue: number
-
-      if (element.dataType === NumberInputProto.DataType.INT) {
-        numValue = parseInt(targetValue, 10)
+      if (targetValue === "") {
+        setDirty(true)
+        setFormattedValue(null)
       } else {
-        numValue = parseFloat(targetValue)
-      }
+        setDirty(true)
+        setFormattedValue(targetValue)
 
-      setDirty(true)
-      setValue(numValue)
-      setFormattedValue(targetValue)
+        // We don't call setValueWithSource here because we want to allow
+        // intermediate values (like "1." for floats). The value is committed
+        // on blur or enter.
+      }
+    },
+    []
+  )
+
+  // Parse the current formatted value to get the numeric value for increment/decrement
+  const currentNumericValue = useMemo(() => {
+    if (formattedValue === null || formattedValue === "") {
+      return null
     }
-  }
+    if (element.dataType === NumberInputProto.DataType.INT) {
+      const parsed = parseInt(formattedValue, 10)
+      return isNaN(parsed) ? null : parsed
+    }
+    const parsed = parseFloat(formattedValue)
+    return isNaN(parsed) ? null : parsed
+  }, [formattedValue, element.dataType])
+
+  // Calculate button enabled states based on the currently displayed value, not the committed value
+  const canDec = canDecrement(currentNumericValue, step, min)
+  const canInc = canIncrement(currentNumericValue, step, max)
+
+  const handleBlur = useCallback((): void => {
+    if (dirty) {
+      // Use currentNumericValue (parsed from formattedValue) not value (from useBasicWidgetState)
+      // because value isn't updated until commit, but the user has typed a new value
+      commitValue({ value: currentNumericValue, fromUser: true })
+    }
+    setIsFocused(false)
+  }, [dirty, currentNumericValue, commitValue])
 
   const increment = useCallback(() => {
     if (canInc) {
-      setDirty(true)
-      commitValue({ value: (value ?? min) + step, source: { fromUi: true } })
+      const newValue = preciseStepArithmetic(
+        currentNumericValue ?? min,
+        step,
+        "add"
+      )
+      commitValue({ value: newValue, fromUser: true })
     }
-  }, [value, min, step, canInc])
+  }, [currentNumericValue, min, step, canInc, commitValue])
 
   const decrement = useCallback(() => {
     if (canDec) {
-      setDirty(true)
-      commitValue({ value: (value ?? max) - step, source: { fromUi: true } })
+      const newValue = preciseStepArithmetic(
+        currentNumericValue ?? max,
+        step,
+        "subtract"
+      )
+      commitValue({ value: newValue, fromUser: true })
     }
-  }, [value, max, step, canDec])
+  }, [currentNumericValue, max, step, canDec, commitValue])
 
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>): void => {
       const { key } = e
 
       switch (key) {
@@ -329,35 +397,66 @@ const NumberInput: React.FC<Props> = ({
           e.preventDefault()
           decrement()
           break
+        case "Escape":
+          if (clearable) {
+            e.preventDefault()
+            handleClear()
+          }
+          break
+        case "Enter": {
+          let shouldSubmitForm = true
+          if (dirty) {
+            // When committing, if currentNumericValue is null (empty input),
+            // commitValue will fall back to elementDefault
+            shouldSubmitForm = commitValue({
+              value: currentNumericValue,
+              fromUser: true,
+            })
+          }
+          // Also gate on `!validationError`: a step on an out-of-range value
+          // can set a validation error while `dirty` stays false, and in that
+          // case `commitValue` above is not called — so block submission while
+          // an error is visible to keep the UI consistent.
+          if (
+            shouldSubmitForm &&
+            !validationError &&
+            widgetMgr.allowFormEnterToSubmit(elementFormId)
+          ) {
+            widgetMgr.submitForm(elementFormId, fragmentId)
+          }
+          break
+        }
         default:
       }
     },
-    [increment, decrement]
-  )
-
-  const onKeyPress = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-      if (e.key === "Enter") {
-        if (dirty) {
-          commitValue({ value, source: { fromUi: true } })
-        }
-        if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
-          widgetMgr.submitForm(elementFormId, fragmentId)
-        }
-      }
-    },
-    [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
+    [
+      increment,
+      decrement,
+      clearable,
+      handleClear,
+      dirty,
+      currentNumericValue,
+      commitValue,
+      validationError,
+      widgetMgr,
+      elementFormId,
+      fragmentId,
+    ]
   )
 
   // Adjust breakpoint for icon so the total width of the input element
   // is same when input controls hidden
   const iconAdjustment =
     // Account for icon size + its left/right padding
-    convertRemToPx(theme.iconSizes.lg) +
+    convertRemToPx(theme.iconSizes.base) +
     2 * convertRemToPx(theme.spacing.twoXS)
+
+  const hideControlsBreakpoint = convertRemToPx(
+    theme.breakpoints.hideNumberInputControls
+  )
   const numberInputControlBreakpoint = icon
-    ? theme.breakpoints.hideNumberInputControls + iconAdjustment
-    : theme.breakpoints.hideNumberInputControls
+    ? hideControlsBreakpoint + iconAdjustment
+    : hideControlsBreakpoint
 
   return (
     <div
@@ -371,161 +470,148 @@ const NumberInput: React.FC<Props> = ({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
-        htmlFor={id.current}
+        htmlFor={id}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <StyledInputContainer
-        className={isFocused ? "focused" : ""}
-        data-testid="stNumberInputContainer"
+      {/*
+       * We use React Aria's generic TextField rather than NumberField as
+       * NumberField manages display formatting exclusively through
+       * Intl.NumberFormat (formatOptions), which is incompatible with the
+       * printf-style format strings supported by st.number_input's `format`
+       * parameter (e.g. "%0.2f", "%e", "%g").
+       */}
+      {/*
+       * `validationBehavior="aria"` disables React Aria's native constraint
+       * validation. Otherwise React Aria reflects the input's native `min`/`max`
+       * `ValidityState` into `aria-invalid`/`data-invalid` independently of our
+       * `validationError`, which leaves the field styled red (and marked invalid
+       * for screen readers) after the user corrects an out-of-range value.
+       * Driving `isInvalid` from `validationError` makes our custom range
+       * validation the single source of truth for the invalid state.
+       */}
+      <TextField
+        isDisabled={disabled}
+        aria-label={element.label}
+        validationBehavior="aria"
+        isInvalid={!!validationError}
       >
-        <UIInput
-          type="number"
-          inputRef={inputRef}
-          value={formattedValue ?? ""}
-          placeholder={element.placeholder}
-          onBlur={onBlur}
-          onFocus={onFocus}
-          onChange={onChange}
-          onKeyPress={onKeyPress}
-          onKeyDown={onKeyDown}
-          clearable={clearable}
-          clearOnEscape={clearable}
-          disabled={disabled}
-          aria-label={element.label}
-          startEnhancer={
-            element.icon && (
+        <StyledInputContainer
+          $isFocused={isFocused}
+          $hasError={!!validationError}
+          data-testid="stNumberInputContainer"
+        >
+          {element.icon && (
+            <StyledStartEnhancer
+              $isMaterialIcon={isMaterialIcon(element.icon)}
+            >
               <DynamicIcon
                 data-testid="stNumberInputIcon"
                 iconValue={element.icon}
-                size="lg"
+                size="base"
               />
-            )
-          }
-          id={id.current}
-          overrides={{
-            ClearIconContainer: {
-              style: {
-                padding: 0,
-              },
-            },
-            ClearIcon: {
-              props: {
-                overrides: {
-                  Svg: {
-                    style: {
-                      color: theme.colors.grayTextColor,
-                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                      padding: theme.spacing.threeXS,
-                      height: theme.sizes.clearIconSize,
-                      width: theme.sizes.clearIconSize,
-                      ":hover": {
-                        fill: theme.colors.bodyText,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            Input: {
-              props: {
-                "data-testid": "stNumberInputField",
-                step: step,
-                min: min,
-                max: max,
-                // We specify the type as "number" to have numeric keyboard on mobile devices.
-                // We also set inputMode to "" since by default BaseWeb sets "text",
-                // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.
-                type: "number",
-                inputMode: "",
-              },
-              style: {
-                fontWeight: theme.fontWeights.normal,
-                lineHeight: theme.lineHeights.inputWidget,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: theme.spacing.sm,
-                paddingLeft: theme.spacing.md,
-                paddingBottom: theme.spacing.sm,
-                paddingTop: theme.spacing.sm,
-                "::placeholder": {
-                  color: theme.colors.fadedText60,
-                },
-              },
-            },
-            InputContainer: {
-              style: () => ({
-                borderTopRightRadius: 0,
-                borderBottomRightRadius: 0,
-              }),
-            },
-            Root: {
-              style: {
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderTopRightRadius: 0,
-                borderBottomRightRadius: 0,
-                borderTopLeftRadius: 0,
-                borderBottomLeftRadius: 0,
-                borderLeftWidth: 0,
-                borderRightWidth: 0,
-                borderTopWidth: 0,
-                borderBottomWidth: 0,
-                paddingRight: 0,
-                paddingLeft: icon ? theme.spacing.sm : 0,
-              },
-            },
-            StartEnhancer: {
-              style: {
-                paddingLeft: 0,
-                paddingRight: 0,
-                // Keeps emoji icons from being cut off on the right
-                minWidth: theme.iconSizes.lg,
-                // Material icons color changed as inactionable
-                color: isMaterialIcon(icon)
-                  ? theme.colors.fadedText60
-                  : "inherit",
-              },
-            },
-          }}
-        />
-        {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-        {width > numberInputControlBreakpoint && (
-          <StyledInputControls>
-            <StyledInputControl
-              data-testid="stNumberInputStepDown"
-              onClick={decrement}
-              disabled={!canDec || disabled}
+            </StyledStartEnhancer>
+          )}
+          <StyledInputElement
+            ref={inputRef}
+            id={id}
+            data-testid="stNumberInputField"
+            type="number"
+            // Omit inputMode because the native default for type="number" provides
+            // the appropriate mobile keyboard.
+            step={step}
+            min={min}
+            max={max}
+            value={formattedValue ?? ""}
+            placeholder={element.placeholder}
+            // `aria-invalid` is driven by the TextField's `isInvalid` prop.
+            aria-describedby={validationError ? validationErrorId : undefined}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+          />
+          {validationError && (
+            <StyledEndEnhancer>
+              <Tooltip
+                content={
+                  <StreamlitMarkdown
+                    source={`**Error**: ${validationError}`}
+                    allowHTML={false}
+                  />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="base" />
+              </Tooltip>
+            </StyledEndEnhancer>
+          )}
+          {clearable && notNullOrUndefined(formattedValue) && (
+            <StyledClearButton
+              type="button"
+              data-testid="stNumberInputClearButton"
+              aria-label="Clear value"
+              // Plain <button> does not inherit isDisabled from React Aria's
+              // TextField context — must be passed explicitly.
+              disabled={disabled}
               tabIndex={-1}
+              // Prevent mousedown from moving focus away from the input before
+              // the click fires. Without this, handleBlur commits the current
+              // dirty value first, causing a spurious extra Streamlit rerun.
+              onMouseDown={e => e.preventDefault()}
+              onClick={handleClear}
             >
-              <Icon
-                content={Minus}
-                size="xs"
-                color={canDec ? "inherit" : theme.colors.fadedText40}
-              />
-            </StyledInputControl>
-            <StyledInputControl
-              data-testid="stNumberInputStepUp"
-              onClick={increment}
-              disabled={!canInc || disabled}
-              tabIndex={-1}
-            >
-              <Icon
-                content={Plus}
-                size="xs"
-                color={canInc ? "inherit" : theme.colors.fadedText40}
-              />
-            </StyledInputControl>
-          </StyledInputControls>
-        )}
-      </StyledInputContainer>
+              <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+            </StyledClearButton>
+          )}
+          {/* Show the increment/decrement controls only when there is sufficient room. */}
+          {width > numberInputControlBreakpoint && (
+            <StyledInputControls>
+              <StyledInputControl
+                type="button"
+                data-testid="stNumberInputStepDown"
+                aria-label="Decrement"
+                onClick={decrement}
+                disabled={!canDec || disabled}
+                tabIndex={-1}
+              >
+                <Icon
+                  content={Minus}
+                  size="xs"
+                  color={canDec ? "inherit" : theme.colors.fadedText40}
+                />
+              </StyledInputControl>
+              <StyledInputControl
+                type="button"
+                data-testid="stNumberInputStepUp"
+                aria-label="Increment"
+                onClick={increment}
+                disabled={!canInc || disabled}
+                tabIndex={-1}
+              >
+                <Icon
+                  content={Plus}
+                  size="xs"
+                  color={canInc ? "inherit" : theme.colors.fadedText40}
+                />
+              </StyledInputControl>
+            </StyledInputControls>
+          )}
+          {validationError && (
+            <StyledVisuallyHidden id={validationErrorId} role="alert">
+              {`Error: ${validationError}`}
+            </StyledVisuallyHidden>
+          )}
+        </StyledInputContainer>
+      </TextField>
       {shouldShowInstructions && (
-        <StyledInstructionsContainer clearable={clearable}>
+        <StyledInstructionsContainer
+          $clearable={clearable}
+          $hasError={!!validationError}
+        >
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}

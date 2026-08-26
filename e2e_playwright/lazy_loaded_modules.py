@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,12 +34,10 @@ lazy_loaded_modules = [
     "pyarrow",
     "pydeck",
     "rich",
-    "tenacity",
     # toml is automatically loaded if there is a secret.toml, config.toml or
     # a local credentials.toml file. So, we cannot test this here.
     # Internal modules:
     "streamlit.emojis",
-    "streamlit.external",
     "streamlit.material_icon_names",
     "streamlit.proto.openmetrics_data_model_pb2",
     "streamlit.vendor.pympler",

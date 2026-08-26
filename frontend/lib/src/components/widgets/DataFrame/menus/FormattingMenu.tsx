@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
-import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
+import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import {
+  StyledMenuList,
+  StyledMenuListItem,
+  StyledSubMenuAnchor,
+  StyledSubMenuPanel,
+} from "./styled-components"
 
-import { StyledMenuList, StyledMenuListItem } from "./styled-components"
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
 
 /**
  * A list of formats available for number columns (number & progress).
@@ -80,6 +86,7 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     icon: ":material/finance_chip:",
   },
 ]
+
 /**
  * A mapping of column kinds to their available formats.
  * Each column kind has an array of objects, each representing a format
@@ -150,10 +157,8 @@ export interface FormattingMenuProps {
   columnKind: string
   // Whether the menu is open.
   isOpen: boolean
-  // A callback when the mouse enters the menu.
-  onMouseEnter: () => void
-  // A callback when the mouse leaves the menu.
-  onMouseLeave: () => void
+  // A callback when the open state changes (fired by hover interactions).
+  onOpenChange: (open: boolean) => void
   // A callback when the user selects a new format.
   onChangeFormat: (format: string) => void
   // A callback when the menu is closed.
@@ -168,8 +173,7 @@ export interface FormattingMenuProps {
  *
  * @param columnKind - The kind of the column to format.
  * @param isOpen - Whether the menu is open.
- * @param onMouseEnter - The function to call when the mouse enters the menu.
- * @param onMouseLeave - The function to call when the mouse leaves the menu.
+ * @param onOpenChange - Called when hover interactions change the open state.
  * @param onChangeFormat - The function to call when the format changes.
  * @param onCloseMenu - The function to call when the menu is closed.
  * @param children - The menu item that triggers the menu to open.
@@ -177,16 +181,18 @@ export interface FormattingMenuProps {
 function FormattingMenu({
   columnKind,
   isOpen,
-  onMouseEnter,
-  onMouseLeave,
+  onOpenChange,
   onChangeFormat,
   onCloseMenu,
   children,
 }: FormattingMenuProps): ReactElement {
-  const theme = useEmotionTheme()
-  const { colors, fontSizes, radii, fontWeights } = theme
-
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
+
+  const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
+    isOpen,
+    onOpenChange,
+    enabled: formats.length > 0,
+  })
 
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
@@ -195,71 +201,39 @@ function FormattingMenu({
   }
 
   return (
-    <Popover
-      triggerType={TRIGGER_TYPE.hover}
-      returnFocus
-      autoFocus
-      focusLock
-      isOpen={isOpen}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      ignoreBoundary={true}
-      content={
-        <StyledMenuList role="menu">
-          {formats.map(format => (
-            <StyledMenuListItem
-              key={format.format}
-              onClick={() => {
-                onChangeFormat(format.format)
-                onCloseMenu()
-              }}
-              role="menuitem"
-            >
-              <DynamicIcon size="base" iconValue={format.icon} />
-              {format.label}
-            </StyledMenuListItem>
-          ))}
-        </StyledMenuList>
-      }
-      placement={PLACEMENT.right}
-      showArrow={false}
-      popoverMargin={2}
-      overrides={{
-        Body: {
-          props: {
-            "data-testid": "stDataFrameColumnFormattingMenu",
-          },
-          style: {
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-            backgroundColor: "transparent",
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-          },
-        },
-        Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-          },
-        },
-      }}
-    >
-      {children}
-    </Popover>
+    <>
+      <StyledSubMenuAnchor role="presentation" ref={setAnchorRef}>
+        {children}
+      </StyledSubMenuAnchor>
+      {isOpen && (
+        <DataFrameOverlayPortal>
+          <StyledSubMenuPanel
+            className={FORMATTING_MENU_CLASS}
+            ref={setFloatingRef}
+            style={floatingStyles}
+            data-testid="stDataFrameColumnFormattingMenu"
+            tabIndex={-1}
+            autoFocus
+          >
+            <StyledMenuList role="menu">
+              {formats.map(format => (
+                <StyledMenuListItem
+                  key={format.format}
+                  onClick={() => {
+                    onChangeFormat(format.format)
+                    onCloseMenu()
+                  }}
+                  role="menuitem"
+                >
+                  <DynamicIcon size="base" iconValue={format.icon} />
+                  {format.label}
+                </StyledMenuListItem>
+              ))}
+            </StyledMenuList>
+          </StyledSubMenuPanel>
+        </DataFrameOverlayPortal>
+      )}
+    </>
   )
 }
 

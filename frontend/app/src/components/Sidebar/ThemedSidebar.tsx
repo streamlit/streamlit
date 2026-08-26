@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import { ReactElement, useContext } from "react"
 
 import {
   createSidebarTheme,
@@ -32,10 +32,7 @@ const ThemedSidebar = ({
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
-    <ThemeProvider
-      theme={sidebarTheme.emotion}
-      baseuiTheme={sidebarTheme.basewebTheme}
-    >
+    <ThemeProvider theme={sidebarTheme.emotion}>
       <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )

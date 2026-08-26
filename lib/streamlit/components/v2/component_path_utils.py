@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,12 +22,12 @@ outside of a declared package root.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Final
 
 from streamlit.errors import StreamlitComponentRegistryError
 from streamlit.logger import get_logger
+from streamlit.path_security import is_unsafe_path_pattern
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -132,7 +132,12 @@ class ComponentPathUtils:
 
     @staticmethod
     def _assert_relative_no_traversal(path: str, *, label: str) -> None:
-        """Raise if ``path`` is absolute or contains ``..`` segments.
+        """Raise if ``path`` is absolute, contains traversal, or has unsafe patterns.
+
+        This method uses the shared ``is_unsafe_path_pattern`` function to ensure
+        consistent security checks across the codebase. The shared function also
+        checks for additional patterns like null bytes, forward-slash UNC paths,
+        and drive-relative paths (e.g., ``C:foo``).
 
         Parameters
         ----------
@@ -141,34 +146,17 @@ class ComponentPathUtils:
         label : str
             Human-readable label used in error messages (e.g., "component paths").
         """
-        # Absolute path checks (POSIX, Windows drive-letter, UNC)
-        is_windows_drive_abs = (
-            len(path) >= 3
-            and path[0].isalpha()
-            and path[1] == ":"
-            and path[2] in ("/", "\\")
-        )
-        is_unc_abs = path.startswith("\\\\")
-
-        # Consider rooted backslash paths "\\dir" as absolute on Windows-like inputs
-        is_rooted_backslash = path.startswith("\\") and not is_unc_abs
-
-        if (
-            os.path.isabs(path)
-            or is_windows_drive_abs
-            or is_unc_abs
-            or is_rooted_backslash
-        ):
+        if is_unsafe_path_pattern(path):
+            # Determine appropriate error message based on pattern.
+            # Use segment-based check to avoid false positives like "file..js"
+            normalized = path.replace("\\", "/")
+            segments = [seg for seg in normalized.split("/") if seg]
+            if ".." in segments:
+                raise StreamlitComponentRegistryError(
+                    f"Path traversal attempts are not allowed in {label}: {path}"
+                )
             raise StreamlitComponentRegistryError(
-                f"Absolute paths are not allowed in {label}: {path}"
-            )
-
-        # Segment-based traversal detection to avoid false positives (e.g. "file..js")
-        normalized = path.replace("\\", "/")
-        segments = [seg for seg in normalized.split("/") if seg != ""]
-        if any(seg == ".." for seg in segments):
-            raise StreamlitComponentRegistryError(
-                f"Path traversal attempts are not allowed in {label}: {path}"
+                f"Unsafe paths are not allowed in {label}: {path}"
             )
 
     @staticmethod

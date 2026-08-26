@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +21,13 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Final
+from typing import TYPE_CHECKING, Final
 from unittest.mock import mock_open, patch
 
 import pytest
+
+if TYPE_CHECKING:
+    from streamlit.runtime.pages_manager import PagesManager
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -133,6 +136,15 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture
+def anyio_backend() -> str:
+    """Pin `@pytest.mark.anyio` tests to the asyncio backend."""
+    # Streamlit only runs on asyncio. Without this pin, the anyio pytest plugin
+    # parametrizes tests over undeclared backends (like trio), which causes
+    # errors in the minimum-dependency test environment.
+    return "asyncio"
+
+
+@pytest.fixture
 def benchmark(
     benchmark,
     request: pytest.FixtureRequest,
@@ -152,3 +164,16 @@ def benchmark(
     # For pytest functions, return the benchmark function so that it can be
     # accessed via the fixture.
     return benchmark
+
+
+def enable_mpa_v2_mode(pages_manager: PagesManager) -> None:
+    """Enable MPA v2 mode on a PagesManager for test setup.
+
+    In MPA v1 (legacy), pages are auto-discovered from a ``pages/`` directory.
+    In MPA v2, pages are explicitly set via ``st.navigation()``. The distinction
+    is signaled by ``_pages`` being non-None (even if empty).
+
+    This helper documents the intent when tests need MPA v2 mode as a
+    precondition, without testing PagesManager functionality itself.
+    """
+    pages_manager._set_pages({})

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { act, screen, within } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
-import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
-import * as Utils from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Selectbox, { Props } from "./Selectbox"
@@ -48,16 +44,17 @@ const getProps = (
 })
 
 const pickOption = async (
-  selectbox: HTMLElement,
+  _selectbox: HTMLElement,
   value: string
 ): Promise<void> => {
   const user = userEvent.setup()
-  // Click on the selectbox to open the dropdown
-  await user.click(selectbox)
-  // Find the desired option and click on it to select
-  const valueElement = screen.getByText(value)
+  // Click the open button to open the dropdown
+  const openButton = screen.getByRole("button", { name: "Open" })
+  await user.click(openButton)
+  // Find the desired option by role and click it
+  const valueElement = screen.getByRole("option", { name: value })
   await user.click(valueElement)
-  // Select outside the widget to close the dropdown
+  // Click outside the widget to close the dropdown
   await user.click(document.body)
 }
 
@@ -80,10 +77,9 @@ describe("Selectbox widget", () => {
 
     render(<Selectbox {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -94,8 +90,7 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
 
-    const selectbox = screen.getByTestId("stSelectbox")
-    expect(within(selectbox).getByText("c")).toBeVisible()
+    expect(screen.getByDisplayValue("c")).toBeVisible()
   })
 
   it("can pass fragmentId to setStringValue", () => {
@@ -104,17 +99,19 @@ describe("Selectbox widget", () => {
 
     render(<Selectbox {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
   it("handles the onChange event", async () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringValue")
-    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
@@ -123,13 +120,11 @@ describe("Selectbox widget", () => {
     await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
-    expect(screen.queryByText("a")).not.toBeInTheDocument()
-    expect(screen.getByText("b")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
   it("resets its value when form is cleared", async () => {
@@ -138,7 +133,6 @@ describe("Selectbox widget", () => {
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     vi.spyOn(props.widgetMgr, "setStringValue")
-    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
@@ -146,10 +140,9 @@ describe("Selectbox widget", () => {
     await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -158,15 +151,14 @@ describe("Selectbox widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(screen.getByText("a")).toBeInTheDocument()
-    expect(screen.queryByText("b")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("a")).toBeVisible()
+    })
+    expect(screen.queryByDisplayValue("b")).not.toBeInTheDocument()
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -177,6 +169,70 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
 
-    expect(screen.getByText("Please select an option...")).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText("Please select an option...")
+    ).toBeInTheDocument()
+  })
+})
+
+describe("Selectbox query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_select" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select",
+      "string_value",
+      "a",
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_select" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<Selectbox {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with clearable=true when no default", () => {
+    const props = getProps({ queryParamKey: "my_select", default: null })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select",
+      "string_value",
+      null,
+      true,
+      undefined
+    )
   })
 })

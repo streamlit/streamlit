@@ -1,0 +1,364 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {
+  BackendOperationRequest,
+  BackendOperationResponse,
+} from "@streamlit/protobuf"
+
+import {
+  BackendOperationClient,
+  getBackendOperationReason,
+} from "./BackendOperationClient"
+
+function createClient(
+  sendRequest = vi.fn(),
+  getSessionId = () => "session-id"
+): BackendOperationClient {
+  return new BackendOperationClient({
+    sendRequest,
+    getSessionId,
+  })
+}
+
+describe("BackendOperationClient", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("sends deferred file requests with request and session IDs", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDeferredFile("file-id")
+
+    expect(sendRequest).toHaveBeenCalledTimes(1)
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.requestId).toBeTruthy()
+    expect(request.sessionId).toBe("session-id")
+    expect(request.deferredFile?.fileId).toBe("file-id")
+    expect(client.pendingCount).toBe(1)
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        deferredFile: { url: "/media/generated" },
+      })
+    )
+
+    await expect(promise).resolves.toEqual({ url: "/media/generated" })
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("sends dataframe chunk requests with the chunk payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+    })
+
+    expect(sendRequest).toHaveBeenCalledTimes(1)
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.requestId).toBeTruthy()
+    expect(request.sessionId).toBe("session-id")
+    expect(request.dataframeChunk?.sourceId).toBe("source-1")
+    expect(Number(request.dataframeChunk?.offset)).toBe(500)
+    expect(request.dataframeChunk?.limit).toBe(500)
+    expect(client.pendingCount).toBe(1)
+
+    const arrowData = { data: new Uint8Array([1, 2, 3]) }
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        dataframeChunk: {
+          sourceId: "source-1",
+          offset: 500,
+          arrowData,
+        },
+      })
+    )
+
+    const resolved = await promise
+    expect(resolved.sourceId).toBe("source-1")
+    expect(Number(resolved.offset)).toBe(500)
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("allows two minutes for dataframe chunk requests", async () => {
+    vi.useFakeTimers()
+    const client = createClient()
+
+    const promise = client.requestDataframeChunk({
+      sourceId: "source-1",
+      offset: 500,
+      limit: 500,
+    })
+    vi.advanceTimersByTime(119_999)
+    expect(client.pendingCount).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await expect(promise).rejects.toThrow("Request timed out")
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects the pending promise when the response contains an error", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDeferredFile("file-id")
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "download failed",
+      })
+    )
+
+    await expect(promise).rejects.toThrow("download failed")
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects timed out requests", async () => {
+    vi.useFakeTimers()
+    const client = createClient()
+
+    const promise = client.requestDeferredFile("file-id", 1000)
+
+    expect(client.pendingCount).toBe(1)
+    vi.advanceTimersByTime(1000)
+
+    await expect(promise).rejects.toThrow("Request timed out")
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects pending requests during cleanup", async () => {
+    const client = createClient()
+
+    const promise = client.requestDeferredFile("file-id")
+
+    client.cleanup()
+
+    await expect(promise).rejects.toThrow("Connection closed")
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("does not throw when receiving a response for an unknown request", () => {
+    const client = createClient()
+
+    expect(() => {
+      client.onResponse(
+        new BackendOperationResponse({
+          requestId: "unknown-request",
+          deferredFile: { url: "/media/generated" },
+        })
+      )
+    }).not.toThrow()
+  })
+
+  it("rejects and removes the request when sending fails", async () => {
+    const error = new Error("send failed")
+    const sendRequest = vi.fn().mockImplementation(() => {
+      throw error
+    })
+    const client = createClient(sendRequest)
+
+    await expect(client.requestDeferredFile("file-id")).rejects.toBe(error)
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects immediately when getSessionId throws", async () => {
+    const error = new Error("session not initialized")
+    const client = new BackendOperationClient({
+      sendRequest: vi.fn(),
+      getSessionId: () => {
+        throw error
+      },
+    })
+
+    await expect(client.requestDeferredFile("file-id")).rejects.toBe(error)
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects when response has no recognized payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDeferredFile("file-id")
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    // Send a response with no payload fields set
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        // No deferredFile or errorMsg set
+      })
+    )
+
+    await expect(promise).rejects.toThrow(
+      "Response contained no recognized payload"
+    )
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("sends install skills requests and resolves with the payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.installSkills).toBeTruthy()
+    expect(request.deferredFile).toBeFalsy()
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: { detail: "" },
+      })
+    )
+
+    await expect(promise).resolves.toEqual({ detail: "" })
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects install skills requests when the server reports an error", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "No skills found",
+      })
+    )
+
+    await expect(promise).rejects.toThrow("No skills found")
+  })
+
+  it("attaches the server's error_reason to the rejected install error", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "developing-with-streamlit already exists.",
+        errorReason: "conflict",
+      })
+    )
+
+    // The rejection carries both the human message and the machine-readable
+    // reason (so App can route it to install-failure telemetry by cause).
+    await expect(promise).rejects.toMatchObject({
+      message: "developing-with-streamlit already exists.",
+      reason: "conflict",
+    })
+  })
+
+  it("leaves reason undefined when the server omits error_reason", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        errorMsg: "Failed to install skills.",
+      })
+    )
+
+    await expect(promise).rejects.toSatisfy(
+      (error: unknown) => getBackendOperationReason(error) === undefined
+    )
+  })
+
+  it("preserves the server's fallback_reason on a successful install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: {
+          detail: "Installed to ~/.agents/skills",
+          fallbackReason: "symlinks_no_privilege",
+        },
+      })
+    )
+
+    // A project install rerouted to a global copy still SUCCEEDS, so this cohort's
+    // only diagnostic signal is the fallback reason riding the success payload
+    // through to skillsNudgeInstallSucceeded:<fallback_reason>.
+    await expect(promise).resolves.toEqual({
+      detail: "Installed to ~/.agents/skills",
+      fallbackReason: "symlinks_no_privilege",
+    })
+  })
+
+  it("leaves fallbackReason empty for a normal project install", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestInstallSkills()
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        installSkills: { detail: "Installed", fallbackReason: "" },
+      })
+    )
+
+    const payload = await promise
+    // Must stay falsy, or App would tag an ordinary symlink install as a fallback.
+    expect(payload.fallbackReason).toBeFalsy()
+  })
+
+  it("sends dismiss skills nudge requests and resolves on the ack", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDismissSkillsNudge()
+
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.dismissSkillsNudge).toBeTruthy()
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        dismissSkillsNudge: {},
+      })
+    )
+
+    await expect(promise).resolves.toBeTruthy()
+    expect(client.pendingCount).toBe(0)
+  })
+})

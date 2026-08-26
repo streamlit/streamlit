@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_CAMERA_INPUT_WIDGETS = 5
+NUM_CAMERA_INPUT_WIDGETS = 6
 
 
 def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
@@ -99,16 +99,26 @@ def test_take_photo_button_styling(app: Page):
 
     # Active button styling
     active_camera_input = get_camera_input(app, "Label1")
+
+    # Wait for debounced webcam dimensions to stabilize before checking styles
+    check_dimensions = check_dimensions_func(active_camera_input)
+    wait_until(app, check_dimensions)
+
     take_photo_button = active_camera_input.get_by_test_id("stCameraInputButton")
 
     # Check that the button is enabled and has the correct cursor
     expect(take_photo_button).to_be_enabled()
     expect(take_photo_button).to_have_css("cursor", "pointer")
 
-    # Check that the button is styled correctly when hovered over
+    # Check that the button is styled correctly when hovered over.
+    # Re-hover before each CSS assertion because Firefox can lose the :hover
+    # state between sequential expect() calls when the webcam layout reflows.
+    take_photo_button.scroll_into_view_if_needed()
     take_photo_button.hover()
     expect(take_photo_button).to_have_css("color", "rgb(255, 75, 75)")
+    take_photo_button.hover()
     expect(take_photo_button).to_have_css("border-color", "rgb(255, 75, 75)")
+    take_photo_button.hover()
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
     # Disabled button styling
@@ -124,6 +134,28 @@ def test_take_photo_button_styling(app: Page):
     expect(take_photo_button).to_have_css("color", "rgba(49, 51, 63, 0.4)")
     expect(take_photo_button).to_have_css("border-color", "rgba(49, 51, 63, 0.2)")
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
+
+
+@pytest.mark.only_browser("chromium")
+def test_captures_photo_with_720p_resolution(app: Page):
+    """A resolution='720p' capture is encoded at the requested 720px height.
+
+    The app script opens the uploaded file and writes its pixel height, so this
+    asserts the dimensions of the actual captured image (not just the on-screen
+    preview). The Chromium fake camera streams 1280x720 for an ideal-720 height
+    request, and ``forceScreenshotSourceSize`` makes the screenshot use the
+    stream's intrinsic size.
+    """
+    camera = get_element_by_key(app, "camera_720p").get_by_test_id("stCameraInput")
+    take_photo_button = camera.get_by_test_id("stCameraInputButton").first
+    # Wait until the fake video stream is ready (button becomes enabled)
+    expect(take_photo_button).to_be_enabled()
+    # Capture a photo
+    take_photo_button.click()
+    # Verify a photo was captured (Clear photo button appears)
+    expect(camera.get_by_text("Clear photo")).to_be_visible()
+    # The captured JPEG is encoded at the requested 720px height.
+    expect_prefixed_markdown(app, "720p captured height:", "720")
 
 
 def test_check_top_level_class(app: Page):
@@ -158,9 +190,20 @@ def test_camera_input_widths(
     assert_snapshot(pixel_width_camera, name="st_camera_input-width_300px")
 
 
-@pytest.mark.skip_browser("webkit")  # Webkit CI camera permission issue
+@pytest.mark.skip_browser(
+    "webkit"  # Webkit CI camera permission issue
+)
 def test_dynamic_camera_input_props(app: Page):
     """Test that the camera input can be updated dynamically while keeping the state."""
+    # Hide the header to avoid the header toolbar from interfering with hover action below:
+    app.add_style_tag(
+        content="""
+    .stAppHeader {
+        display: none;
+    }
+    """
+    )
+
     dynamic_camera_input = get_element_by_key(app, "dynamic_camera_input_with_key")
     expect(dynamic_camera_input).to_be_visible()
 
@@ -175,10 +218,15 @@ def test_dynamic_camera_input_props(app: Page):
     expect_prefixed_markdown(app, "Initial camera input value:", "False")
 
     # Check that the help tooltip is correct:
+    app.wait_for_timeout(
+        3000  # Camera input can be a bit unstable and change its height slightly delayed.
+    )
+    dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "initial help")
 
     # Click the toggle to update the camera input props
     click_toggle(app, "Update camera input props")
+    wait_until(app, check_dimensions)
 
     # Check updated state
     expect(dynamic_camera_input).to_contain_text("Updated dynamic camera input")
@@ -190,4 +238,8 @@ def test_dynamic_camera_input_props(app: Page):
     expect(dynamic_camera_input).to_have_css("width", "300px")
 
     # Check that the help tooltip is correct:
+    app.wait_for_timeout(
+        3000  # Camera input can be a bit unstable and change its height slightly delayed.
+    )
+    dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "updated help")

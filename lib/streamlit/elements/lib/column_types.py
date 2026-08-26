@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,17 +19,23 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict, overload
 
 from typing_extensions import NotRequired
 
 from streamlit.elements.lib.color_util import is_css_color_like
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import (
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
+
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 NumberFormat: TypeAlias = Literal[
     "plain",
@@ -45,7 +51,16 @@ NumberFormat: TypeAlias = Literal[
     "bytes",
 ]
 
+DateTimeFormat: TypeAlias = Literal[
+    "localized",
+    "distance",
+    "calendar",
+    "iso8601",
+]
+
 ColumnWidth: TypeAlias = Literal["small", "medium", "large"] | int
+
+ContentAlignment: TypeAlias = Literal["left", "center", "right"]
 
 # Type alias that represents all available column types
 # which are configurable by the user.
@@ -60,14 +75,20 @@ ColumnType: TypeAlias = Literal[
     "date",
     "time",
     "link",
+    "button",
     "line_chart",
     "bar_chart",
     "area_chart",
     "image",
+    "audio",
+    "video",
     "progress",
     "multiselect",
     "json",
+    "markdown",
 ]
+
+ButtonType: TypeAlias = Literal["primary", "secondary", "tertiary"]
 
 # Themeable colors supported in the theme config:
 ThemeColor: TypeAlias = Literal[
@@ -176,6 +197,14 @@ class ImageColumnConfig(TypedDict):
     type: Literal["image"]
 
 
+class AudioColumnConfig(TypedDict):
+    type: Literal["audio"]
+
+
+class VideoColumnConfig(TypedDict):
+    type: Literal["video"]
+
+
 class ListColumnConfig(TypedDict):
     type: Literal["list"]
 
@@ -194,9 +223,7 @@ class MultiselectColumnConfig(TypedDict):
 
 class DatetimeColumnConfig(TypedDict):
     type: Literal["datetime"]
-    format: NotRequired[
-        str | Literal["localized", "distance", "calendar", "iso8601"] | None
-    ]
+    format: NotRequired[str | DateTimeFormat | None]
     min_value: NotRequired[str | None]
     max_value: NotRequired[str | None]
     step: NotRequired[int | float | None]
@@ -230,6 +257,31 @@ class ProgressColumnConfig(TypedDict):
 
 class JsonColumnConfig(TypedDict):
     type: Literal["json"]
+
+
+class MarkdownColumnConfig(TypedDict):
+    type: Literal["markdown"]
+
+
+class ButtonColumnConfig(TypedDict):
+    type: Literal["button"]
+    button_type: NotRequired[ButtonType | None]
+
+
+@dataclass(frozen=True)
+class ButtonColumnResult:
+    """Wrapper holding serializable config and callback references for ButtonColumn.
+
+    ButtonColumn returns this when ``key`` is provided, allowing the caller to
+    extract both the JSON-serializable column config and the Python callback
+    references that need separate handling.
+    """
+
+    config: ColumnConfig
+    on_click: WidgetCallback | None = None
+    args: WidgetArgs | None = None
+    kwargs: WidgetKwargs | None = None
+    key: str | None = None
 
 
 class ColumnConfig(TypedDict, total=False):
@@ -290,6 +342,18 @@ class ColumnConfig(TypedDict, total=False):
     hidden : bool or None
         Whether to hide the column. This defaults to ``False``.
 
+        .. note::
+            Hidden columns can still be shown by the user via the column
+            visibility menu in the table toolbar. If a column contains
+            sensitive data that should not be exposed to the user, remove
+            it from the data before passing it to ``st.dataframe`` or
+            ``st.data_editor``.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type (e.g., numbers
+        are right-aligned, text is left-aligned).
+
     type_config : dict or str or None
         Configure a column type and type specific options.
     """
@@ -302,7 +366,7 @@ class ColumnConfig(TypedDict, total=False):
     required: bool | None
     pinned: bool | None
     default: str | bool | int | float | list[str] | None
-    alignment: Literal["left", "center", "right"] | None
+    alignment: ContentAlignment | None
     type_config: (
         NumberColumnConfig
         | TextColumnConfig
@@ -318,8 +382,12 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | AudioColumnConfig
+        | VideoColumnConfig
         | MultiselectColumnConfig
         | JsonColumnConfig
+        | MarkdownColumnConfig
+        | ButtonColumnConfig
         | None
     )
 
@@ -333,6 +401,7 @@ def Column(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure a generic column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -392,30 +461,43 @@ def Column(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type (e.g., numbers
+        are right-aligned, text is left-aligned).
+
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "widgets": st.column_config.Column(
-    >>>             "Streamlit Widgets",
-    >>>             help="Streamlit **widget** commands 🎈",
-    >>>             width="medium",
-    >>>             required=True,
-    >>>         )
-    >>>     },
-    >>>     hide_index=True,
-    >>>     num_rows="dynamic",
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "widgets": [
+                    "st.selectbox",
+                    "st.number_input",
+                    "st.text_area",
+                    "st.button",
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "widgets": st.column_config.Column(
+                    "Streamlit Widgets",
+                    help="Streamlit **widget** commands 🎈",
+                    width="medium",
+                    required=True,
+                )
+            },
+            hide_index=True,
+            num_rows="dynamic",
+        )
 
     .. output::
         https://doc-column.streamlit.app/
@@ -428,6 +510,7 @@ def Column(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
     )
 
 
@@ -440,6 +523,7 @@ def NumberColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: int | float | None = None,
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
@@ -500,6 +584,11 @@ def NumberColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), numbers are right-aligned. Some number-like types (e.g.,
+        durations) may use a different default alignment.
+
     default : int, float, or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -524,7 +613,9 @@ def NumberColumn(
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
           ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
-          ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
+          ``"£ %.2f"`` (e.g. "£ 1234.57"). Use ``,`` for thousand separators
+          (e.g. ``"%,d"`` yields ``"1,234"``). For more information, see
+          `sprintf-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
 
         Formatting from ``column_config`` always takes precedence over
@@ -552,29 +643,32 @@ def NumberColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "price": [20, 950, 250, 500],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "price": st.column_config.NumberColumn(
-    >>>             "Price (in USD)",
-    >>>             help="The price of the product in USD",
-    >>>             min_value=0,
-    >>>             max_value=1000,
-    >>>             step=1,
-    >>>             format="$%d",
-    >>>         )
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "price": [20, 950, 250, 500],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "price": st.column_config.NumberColumn(
+                    "Price (in USD)",
+                    help="The price of the product in USD",
+                    min_value=0,
+                    max_value=1000,
+                    step=1,
+                    format="$%d",
+                )
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-number-column.streamlit.app/
@@ -588,6 +682,7 @@ def NumberColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=NumberColumnConfig(
             type="number",
@@ -608,6 +703,7 @@ def TextColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -666,6 +762,10 @@ def TextColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), text is left-aligned.
+
     default : str or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -681,28 +781,36 @@ def TextColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "widgets": st.column_config.TextColumn(
-    >>>             "Widgets",
-    >>>             help="Streamlit **widget** commands 🎈",
-    >>>             default="st.",
-    >>>             max_chars=50,
-    >>>             validate=r"^st\.[a-z_]+$",
-    >>>         )
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "widgets": [
+                    "st.selectbox",
+                    "st.number_input",
+                    "st.text_area",
+                    "st.button",
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "widgets": st.column_config.TextColumn(
+                    "Widgets",
+                    help="Streamlit **widget** commands 🎈",
+                    default="st.",
+                    max_chars=50,
+                    validate=r"^st\.[a-z_]+$",
+                )
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-text-column.streamlit.app/
@@ -716,6 +824,7 @@ def TextColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=TextColumnConfig(
             type="text", max_chars=max_chars, validate=validate
@@ -732,6 +841,7 @@ def LinkColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -792,6 +902,11 @@ def LinkColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), links without ``display_text`` are left-aligned, while links
+        with ``display_text`` (including icon-only links) are center-aligned.
+
     default : str or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -828,42 +943,45 @@ def LinkColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "apps": [
-    >>>             "https://roadmap.streamlit.app",
-    >>>             "https://extras.streamlit.app",
-    >>>             "https://issues.streamlit.app",
-    >>>             "https://30days.streamlit.app",
-    >>>         ],
-    >>>         "creator": [
-    >>>             "https://github.com/streamlit",
-    >>>             "https://github.com/arnaudmiribel",
-    >>>             "https://github.com/streamlit",
-    >>>             "https://github.com/streamlit",
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "apps": st.column_config.LinkColumn(
-    >>>             "Trending apps",
-    >>>             help="The top trending Streamlit apps",
-    >>>             validate=r"^https://[a-z]+\.streamlit\.app$",
-    >>>             max_chars=100,
-    >>>             display_text=r"https://(.*?)\.streamlit\.app"
-    >>>         ),
-    >>>         "creator": st.column_config.LinkColumn(
-    >>>             "App Creator", display_text="Open profile"
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "apps": [
+                    "https://roadmap.streamlit.app",
+                    "https://extras.streamlit.app",
+                    "https://issues.streamlit.app",
+                    "https://30days.streamlit.app",
+                ],
+                "creator": [
+                    "https://github.com/streamlit",
+                    "https://github.com/arnaudmiribel",
+                    "https://github.com/streamlit",
+                    "https://github.com/streamlit",
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "apps": st.column_config.LinkColumn(
+                    "Trending apps",
+                    help="The top trending Streamlit apps",
+                    validate=r"^https://[a-z]+\.streamlit\.app$",
+                    max_chars=100,
+                    display_text=r"https://(.*?)\.streamlit\.app",
+                ),
+                "creator": st.column_config.LinkColumn(
+                    "App Creator", display_text="Open profile"
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-link-column.streamlit.app/
@@ -879,6 +997,7 @@ def LinkColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=LinkColumnConfig(
             type="link",
@@ -898,6 +1017,7 @@ def CheckboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: bool | None = None,
 ) -> ColumnConfig:
     """Configure a checkbox column in ``st.dataframe`` or ``st.data_editor``.
@@ -954,34 +1074,46 @@ def CheckboxColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), checkboxes are center-aligned.
+
     default : bool or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
-    >>>         "favorite": [True, False, False, True],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "favorite": st.column_config.CheckboxColumn(
-    >>>             "Your favorite?",
-    >>>             help="Select your **favorite** widgets",
-    >>>             default=False,
-    >>>         )
-    >>>     },
-    >>>     disabled=["widgets"],
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "widgets": [
+                    "st.selectbox",
+                    "st.number_input",
+                    "st.text_area",
+                    "st.button",
+                ],
+                "favorite": [True, False, False, True],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "favorite": st.column_config.CheckboxColumn(
+                    "Your favorite?",
+                    help="Select your **favorite** widgets",
+                    default=False,
+                )
+            },
+            disabled=["widgets"],
+            hide_index=True,
+        )
 
     .. output::
         https://doc-checkbox-column.streamlit.app/
@@ -995,6 +1127,7 @@ def CheckboxColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=CheckboxColumnConfig(type="checkbox"),
     )
@@ -1085,37 +1218,40 @@ def SelectboxColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "category": [
-    >>>             "📊 Data Exploration",
-    >>>             "📈 Data Visualization",
-    >>>             "🤖 LLM",
-    >>>             "📊 Data Exploration",
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "category": st.column_config.SelectboxColumn(
-    >>>             "App Category",
-    >>>             help="The category of the app",
-    >>>             width="medium",
-    >>>             options=[
-    >>>                 "📊 Data Exploration",
-    >>>                 "📈 Data Visualization",
-    >>>                 "🤖 LLM",
-    >>>             ],
-    >>>             required=True,
-    >>>         )
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "category": [
+                    "📊 Data Exploration",
+                    "📈 Data Visualization",
+                    "🤖 LLM",
+                    "📊 Data Exploration",
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "category": st.column_config.SelectboxColumn(
+                    "App Category",
+                    help="The category of the app",
+                    width="medium",
+                    options=[
+                        "📊 Data Exploration",
+                        "📈 Data Visualization",
+                        "🤖 LLM",
+                    ],
+                    required=True,
+                )
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-selectbox-column.streamlit.app/
@@ -1220,32 +1356,35 @@ def BarChartColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "sales": [
-    >>>             [0, 4, 26, 80, 100, 40],
-    >>>             [80, 20, 80, 35, 40, 100],
-    >>>             [10, 20, 80, 80, 70, 0],
-    >>>             [10, 100, 20, 100, 30, 100],
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "sales": st.column_config.BarChartColumn(
-    >>>             "Sales (last 6 months)",
-    >>>             help="The sales volume in the last 6 months",
-    >>>             y_min=0,
-    >>>             y_max=100,
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "sales": [
+                    [0, 4, 26, 80, 100, 40],
+                    [80, 20, 80, 35, 40, 100],
+                    [10, 20, 80, 80, 70, 0],
+                    [10, 100, 20, 100, 30, 100],
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "sales": st.column_config.BarChartColumn(
+                    "Sales (last 6 months)",
+                    help="The sales volume in the last 6 months",
+                    y_min=0,
+                    y_max=100,
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-barchart-column.streamlit.app/
@@ -1340,33 +1479,36 @@ def LineChartColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "sales": [
-    >>>             [0, 4, 26, 80, 100, 40],
-    >>>             [80, 20, 80, 35, 40, 100],
-    >>>             [10, 20, 80, 80, 70, 0],
-    >>>             [10, 100, 20, 100, 30, 100],
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "sales": st.column_config.LineChartColumn(
-    >>>             "Sales (last 6 months)",
-    >>>             width="medium",
-    >>>             help="The sales volume in the last 6 months",
-    >>>             y_min=0,
-    >>>             y_max=100,
-    >>>          ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "sales": [
+                    [0, 4, 26, 80, 100, 40],
+                    [80, 20, 80, 35, 40, 100],
+                    [10, 20, 80, 80, 70, 0],
+                    [10, 100, 20, 100, 30, 100],
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "sales": st.column_config.LineChartColumn(
+                    "Sales (last 6 months)",
+                    width="medium",
+                    help="The sales volume in the last 6 months",
+                    y_min=0,
+                    y_max=100,
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-linechart-column.streamlit.app/
@@ -1461,33 +1603,36 @@ def AreaChartColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "sales": [
-    >>>             [0, 4, 26, 80, 100, 40],
-    >>>             [80, 20, 80, 35, 40, 100],
-    >>>             [10, 20, 80, 80, 70, 0],
-    >>>             [10, 100, 20, 100, 30, 100],
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "sales": st.column_config.AreaChartColumn(
-    >>>             "Sales (last 6 months)",
-    >>>             width="medium",
-    >>>             help="The sales volume in the last 6 months",
-    >>>             y_min=0,
-    >>>             y_max=100,
-    >>>          ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "sales": [
+                    [0, 4, 26, 80, 100, 40],
+                    [80, 20, 80, 35, 40, 100],
+                    [10, 20, 80, 80, 70, 0],
+                    [10, 100, 20, 100, 30, 100],
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "sales": st.column_config.AreaChartColumn(
+                    "Sales (last 6 months)",
+                    width="medium",
+                    help="The sales volume in the last 6 months",
+                    y_min=0,
+                    y_max=100,
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-areachart-column.streamlit.app/
@@ -1514,19 +1659,26 @@ def ImageColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
-    The cell values need to be one of:
+    Image columns display an inline thumbnail. When a user double clicks a
+    thumbnail in a cell, Streamlit displays a larger image. To display an
+    image, a cell must have one of the following values:
 
-    * A URL to fetch the image from. This can also be a relative URL of an image
-      deployed via `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
-      Note that you can NOT use an arbitrary local image if it is not available through
-      a public URL.
-    * A data URL containing an SVG XML like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
-    * A data URL containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
+    - A URL to fetch the image from. If you use `static file serving
+      <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_, the
+      URL can be relative to your app's URL. Otherwise, the URL must be fully qualified with
+      a scheme, like ``"https://example.com/my_image.jpg"``.
 
-    Image columns are not editable at the moment. This command needs to be used in the
+      Paths to local image files aren't supported.
+
+    - A data URL containing an SVG XML like ``"data:image/svg+xml;utf8,<svg xmlns=...</svg>"``.
+
+    - A data URL containing a Base64 encoded image like ``"data:image/png;base64,iVBO..."``.
+
+    Image columns aren't editable at this time. This command must be used in the
     ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
 
     Parameters
@@ -1563,31 +1715,38 @@ def ImageColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), images are center-aligned.
+
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "apps": [
-    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/5435b8cb-6c6c-490b-9608-799b543655d3/Home_Page.png",
-    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/ef9a7627-13f2-47e5-8f65-3f69bb38a5c2/Home_Page.png",
-    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/31b99099-8eae-4ff8-aa89-042895ed3843/Home_Page.png",
-    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/6a399b09-241e-4ae7-a31f-7640dc1d181e/Home_Page.png",
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "apps": st.column_config.ImageColumn(
-    >>>             "Preview Image", help="Streamlit app preview screenshots"
-    >>>         )
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "apps": [
+                    "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/5435b8cb-6c6c-490b-9608-799b543655d3/Home_Page.png",
+                    "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/ef9a7627-13f2-47e5-8f65-3f69bb38a5c2/Home_Page.png",
+                    "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/31b99099-8eae-4ff8-aa89-042895ed3843/Home_Page.png",
+                    "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/6a399b09-241e-4ae7-a31f-7640dc1d181e/Home_Page.png",
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "apps": st.column_config.ImageColumn(
+                    "Preview Image", help="Streamlit app preview screenshots"
+                )
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-image-column.streamlit.app/
@@ -1598,7 +1757,238 @@ def ImageColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=ImageColumnConfig(type="image"),
+    )
+
+
+@gather_metrics("column_config.AudioColumn")
+def AudioColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+) -> ColumnConfig:
+    """Configure an audio column in ``st.dataframe`` or ``st.data_editor``.
+
+    Audio columns display an icon. When a user double clicks the icon in a cell,
+    Streamlit displays playback controls. To play an audio file, a cell must have
+    one of the following values:
+
+    - A URL to fetch the audio from. If you use `static file serving
+      <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_, the
+      URL can be relative to your app's URL. Otherwise, the URL must be fully qualified with
+      a scheme, like ``"https://example.com/my_audio.mp3"``.
+
+      Paths to local audio files aren't supported.
+
+    - A data URL containing a Base64-encoded audio like ``"data:audio/mp3;base64,//uQ..."``.
+
+    Audio columns aren't editable at this time. This command must be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), audio icons are center-aligned.
+
+    Examples
+    --------
+    You can use publicly accessible URLs or Base64-encoded audio data. To show
+    the playback controls, double click a cell in the audio column.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import base64
+        import pandas as pd
+        import streamlit as st
+
+
+        @st.cache_data
+        def load_audio_as_base64():
+            with open("cat-purr.mp3", "rb") as audio_file:
+                audio_bytes = audio_file.read()
+            return base64.b64encode(audio_bytes).decode("utf-8")
+
+
+        data_df = pd.DataFrame(
+            {
+                "source": [
+                    "Small and fluffy house panther",
+                    "Wikimedia, Performed by Muriel Nguyen Xuan and Stéphane Magnenat",
+                ],
+                "audio": [
+                    f"data:audio/mp3;base64,{load_audio_as_base64()}",
+                    "https://upload.wikimedia.org/wikipedia/commons/c/c4/Muriel-Nguyen-Xuan-Chopin-valse-opus64-1.ogg",
+                ],
+            }
+        )
+
+        st.dataframe(
+            data_df,
+            column_config={
+                "audio": st.column_config.AudioColumn("Preview Audio"),
+            },
+        )
+
+    .. output::
+        https://doc-audio-column.streamlit.app/
+        height: 400px
+
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        alignment=alignment,
+        type_config=AudioColumnConfig(type="audio"),
+    )
+
+
+@gather_metrics("column_config.VideoColumn")
+def VideoColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+) -> ColumnConfig:
+    """Configure a video column in ``st.dataframe`` or ``st.data_editor``.
+
+    Video columns display an icon. When a user double clicks the icon in a cell,
+    Streamlit displays playback controls. To display a video, a cell must have
+    one of the following values:
+
+    - A URL to fetch the video from. If you use `static file serving
+      <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_, the
+      URL can be relative to your app's URL. Otherwise, the URL must be fully qualified with
+      a scheme, like ``"https://example.com/my_video.mp4"``.
+
+      Paths to local video files and YouTube URLs aren't supported.
+
+    - A data URL containing a Base64-encoded video, like ``"data:video/mp4;base64,AAAA..."``.
+
+    Video columns aren't editable at this time. This command must be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), video icons are center-aligned.
+
+    Examples
+    --------
+    To show the playback controls, double click a cell in the video column.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "description": [
+                    "Get started with Streamlit",
+                    "Get started with Community Cloud",
+                ],
+                "video": [
+                    "https://s3-us-west-2.amazonaws.com/assets.streamlit.io/videos/hero-video.mp4",
+                    "https://s3-us-west-2.amazonaws.com/assets.streamlit.io/videos/streamlit_sharing_silent.mp4",
+                ],
+            }
+        )
+
+        st.dataframe(
+            data_df,
+            column_config={
+                "video": st.column_config.VideoColumn("Preview Video"),
+            },
+        )
+
+    .. output::
+        https://doc-video-column.streamlit.app/
+        height: 400px
+
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        alignment=alignment,
+        type_config=VideoColumnConfig(type="video"),
     )
 
 
@@ -1679,31 +2069,34 @@ def ListColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "sales": [
-    >>>             [0, 4, 26, 80, 100, 40],
-    >>>             [80, 20, 80, 35, 40, 100],
-    >>>             [10, 20, 80, 80, 70, 0],
-    >>>             [10, 100, 20, 100, 30, 100],
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "sales": st.column_config.ListColumn(
-    >>>             "Sales (last 6 months)",
-    >>>             help="The sales volume in the last 6 months",
-    >>>             width="medium",
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "sales": [
+                    [0, 4, 26, 80, 100, 40],
+                    [80, 20, 80, 35, 40, 100],
+                    [10, 20, 80, 80, 70, 0],
+                    [10, 100, 20, 100, 30, 100],
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "sales": st.column_config.ListColumn(
+                    "Sales (last 6 months)",
+                    help="The sales volume in the last 6 months",
+                    width="medium",
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-list-column.streamlit.app/
@@ -1847,35 +2240,38 @@ def MultiselectColumn(
     parameter. You can also format the option labels with the ``format_func``
     parameter.
 
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    ...     {
-    ...         "category": [
-    ...             ["exploration", "visualization"],
-    ...             ["llm", "visualization"],
-    ...             ["exploration"],
-    ...         ],
-    ...     }
-    ... )
-    >>>
-    >>> st.data_editor(
-    ...     data_df,
-    ...     column_config={
-    ...         "category": st.column_config.MultiselectColumn(
-    ...             "App Categories",
-    ...             help="The categories of the app",
-    ...             options=[
-    ...                 "exploration",
-    ...                 "visualization",
-    ...                 "llm",
-    ...             ],
-    ...             color=["#ffa421", "#803df5", "#00c0f2"],
-    ...             format_func=lambda x: x.capitalize(),
-    ...         ),
-    ...     },
-    ... )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "category": [
+                    ["exploration", "visualization"],
+                    ["llm", "visualization"],
+                    ["exploration"],
+                ],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "category": st.column_config.MultiselectColumn(
+                    "App Categories",
+                    help="The categories of the app",
+                    options=[
+                        "exploration",
+                        "visualization",
+                        "llm",
+                    ],
+                    color=["#ffa421", "#803df5", "#00c0f2"],
+                    format_func=lambda x: x.capitalize(),
+                ),
+            },
+        )
 
     .. output::
         https://doc-multiselect-column-1.streamlit.app/
@@ -1887,30 +2283,33 @@ def MultiselectColumn(
     and can be used to display colored tags. In this example, the dataframe
     uses the primary theme color for all tags.
 
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    ...     {
-    ...         "category": [
-    ...             ["exploration", "visualization"],
-    ...             ["llm", "visualization"],
-    ...             ["exploration"],
-    ...         ],
-    ...     }
-    ... )
-    >>>
-    >>> st.dataframe(
-    ...     data_df,
-    ...     column_config={
-    ...         "category": st.column_config.MultiselectColumn(
-    ...             "App Categories",
-    ...             options=["exploration", "visualization", "llm"],
-    ...             color="primary",
-    ...             format_func=lambda x: x.capitalize(),
-    ...         ),
-    ...     },
-    ... )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "category": [
+                    ["exploration", "visualization"],
+                    ["llm", "visualization"],
+                    ["exploration"],
+                ],
+            }
+        )
+
+        st.dataframe(
+            data_df,
+            column_config={
+                "category": st.column_config.MultiselectColumn(
+                    "App Categories",
+                    options=["exploration", "visualization", "llm"],
+                    color="primary",
+                    format_func=lambda x: x.capitalize(),
+                ),
+            },
+        )
 
     .. output::
         https://doc-multiselect-column-2.streamlit.app/
@@ -1971,8 +2370,9 @@ def DatetimeColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: datetime.datetime | None = None,
-    format: str | Literal["localized", "distance", "calendar", "iso8601"] | None = None,
+    format: str | DateTimeFormat | None = None,
     min_value: datetime.datetime | None = None,
     max_value: datetime.datetime | None = None,
     step: int | float | datetime.timedelta | None = None,
@@ -2033,6 +2433,10 @@ def DatetimeColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), datetimes are left-aligned.
+
     default : datetime.datetime or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -2077,34 +2481,37 @@ def DatetimeColumn(
 
     Examples
     --------
-    >>> from datetime import datetime
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "appointment": [
-    >>>             datetime(2024, 2, 5, 12, 30),
-    >>>             datetime(2023, 11, 10, 18, 0),
-    >>>             datetime(2024, 3, 11, 20, 10),
-    >>>             datetime(2023, 9, 12, 3, 0),
-    >>>         ]
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "appointment": st.column_config.DatetimeColumn(
-    >>>             "Appointment",
-    >>>             min_value=datetime(2023, 6, 1),
-    >>>             max_value=datetime(2025, 1, 1),
-    >>>             format="D MMM YYYY, h:mm a",
-    >>>             step=60,
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        from datetime import datetime
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "appointment": [
+                    datetime(2024, 2, 5, 12, 30),
+                    datetime(2023, 11, 10, 18, 0),
+                    datetime(2024, 3, 11, 20, 10),
+                    datetime(2023, 9, 12, 3, 0),
+                ]
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "appointment": st.column_config.DatetimeColumn(
+                    "Appointment",
+                    min_value=datetime(2023, 6, 1),
+                    max_value=datetime(2025, 1, 1),
+                    format="D MMM YYYY, h:mm a",
+                    step=60,
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-datetime-column.streamlit.app/
@@ -2118,6 +2525,7 @@ def DatetimeColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=None if default is None else default.isoformat(),
         type_config=DatetimeColumnConfig(
             type="datetime",
@@ -2139,6 +2547,7 @@ def TimeColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: datetime.time | None = None,
     format: str | Literal["localized", "iso8601"] | None = None,
     min_value: datetime.time | None = None,
@@ -2199,6 +2608,10 @@ def TimeColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), times are left-aligned.
+
     default : datetime.time or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -2235,34 +2648,37 @@ def TimeColumn(
 
     Examples
     --------
-    >>> from datetime import time
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "appointment": [
-    >>>             time(12, 30),
-    >>>             time(18, 0),
-    >>>             time(9, 10),
-    >>>             time(16, 25),
-    >>>         ]
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "appointment": st.column_config.TimeColumn(
-    >>>             "Appointment",
-    >>>             min_value=time(8, 0, 0),
-    >>>             max_value=time(19, 0, 0),
-    >>>             format="hh:mm a",
-    >>>             step=60,
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        from datetime import time
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "appointment": [
+                    time(12, 30),
+                    time(18, 0),
+                    time(9, 10),
+                    time(16, 25),
+                ]
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "appointment": st.column_config.TimeColumn(
+                    "Appointment",
+                    min_value=time(8, 0, 0),
+                    max_value=time(19, 0, 0),
+                    format="hh:mm a",
+                    step=60,
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-time-column.streamlit.app/
@@ -2276,6 +2692,7 @@ def TimeColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=None if default is None else default.isoformat(),
         type_config=TimeColumnConfig(
             type="time",
@@ -2296,6 +2713,7 @@ def DateColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: datetime.date | None = None,
     format: str | Literal["localized", "distance", "iso8601"] | None = None,
     min_value: datetime.date | None = None,
@@ -2356,6 +2774,10 @@ def DateColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), dates are left-aligned.
+
     default : datetime.date or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -2394,34 +2816,37 @@ def DateColumn(
 
     Examples
     --------
-    >>> from datetime import date
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "birthday": [
-    >>>             date(1980, 1, 1),
-    >>>             date(1990, 5, 3),
-    >>>             date(1974, 5, 19),
-    >>>             date(2001, 8, 17),
-    >>>         ]
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "birthday": st.column_config.DateColumn(
-    >>>             "Birthday",
-    >>>             min_value=date(1900, 1, 1),
-    >>>             max_value=date(2005, 1, 1),
-    >>>             format="DD.MM.YYYY",
-    >>>             step=1,
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        from datetime import date
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "birthday": [
+                    date(1980, 1, 1),
+                    date(1990, 5, 3),
+                    date(1974, 5, 19),
+                    date(2001, 8, 17),
+                ]
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "birthday": st.column_config.DateColumn(
+                    "Birthday",
+                    min_value=date(1900, 1, 1),
+                    max_value=date(2005, 1, 1),
+                    format="DD.MM.YYYY",
+                    step=1,
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-date-column.streamlit.app/
@@ -2434,6 +2859,7 @@ def DateColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=None if default is None else default.isoformat(),
         type_config=DateColumnConfig(
             type="date",
@@ -2512,7 +2938,9 @@ def ProgressColumn(
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
           ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
-          ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
+          ``"£ %.2f"`` (e.g. "£ 1234.57"). Use ``,`` for thousand separators
+          (e.g. ``"%,d"`` yields ``"1,234"``). For more information, see
+          `sprintf-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
 
         Number formatting from ``column_config`` always takes precedence over
@@ -2554,28 +2982,31 @@ def ProgressColumn(
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "sales": [200, 550, 1000, 80],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.data_editor(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "sales": st.column_config.ProgressColumn(
-    >>>             "Sales volume",
-    >>>             help="The sales volume in USD",
-    >>>             format="$%f",
-    >>>             min_value=0,
-    >>>             max_value=1000,
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "sales": [200, 550, 1000, 80],
+            }
+        )
+
+        st.data_editor(
+            data_df,
+            column_config={
+                "sales": st.column_config.ProgressColumn(
+                    "Sales volume",
+                    help="The sales volume in USD",
+                    format="$%f",
+                    min_value=0,
+                    max_value=1000,
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-progress-column.streamlit.app/
@@ -2608,6 +3039,7 @@ def JsonColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure a JSON column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2649,33 +3081,40 @@ def JsonColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), JSON content is left-aligned.
+
     Examples
     --------
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>>
-    >>> data_df = pd.DataFrame(
-    >>>     {
-    >>>         "json": [
-    >>>             {"foo": "bar", "bar": "baz"},
-    >>>             {"foo": "baz", "bar": "qux"},
-    >>>             {"foo": "qux", "bar": "foo"},
-    >>>             None,
-    >>>         ],
-    >>>     }
-    >>> )
-    >>>
-    >>> st.dataframe(
-    >>>     data_df,
-    >>>     column_config={
-    >>>         "json": st.column_config.JsonColumn(
-    >>>             "JSON Data",
-    >>>             help="JSON strings or objects",
-    >>>             width="large",
-    >>>         ),
-    >>>     },
-    >>>     hide_index=True,
-    >>> )
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "json": [
+                    {"foo": "bar", "bar": "baz"},
+                    {"foo": "baz", "bar": "qux"},
+                    {"foo": "qux", "bar": "foo"},
+                    None,
+                ],
+            }
+        )
+
+        st.dataframe(
+            data_df,
+            column_config={
+                "json": st.column_config.JsonColumn(
+                    "JSON Data",
+                    help="JSON strings or objects",
+                    width="large",
+                ),
+            },
+            hide_index=True,
+        )
 
     .. output::
         https://doc-json-column.streamlit.app/
@@ -2686,5 +3125,362 @@ def JsonColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=JsonColumnConfig(type="json"),
     )
+
+
+@gather_metrics("column_config.MarkdownColumn")
+def MarkdownColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    default: str | None = None,
+) -> ColumnConfig:
+    r"""Configure a markdown column in ``st.dataframe`` or ``st.data_editor``.
+
+    This column type displays cell values as plain text within the table cells.
+    When a cell is clicked, the content is shown in an overlay where the markdown
+    is rendered. The overlay supports the same Markdown directives as described
+    in the ``body`` parameter of ``st.markdown``. This command needs to be used
+    in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+    When used with ``st.data_editor``, editing will be enabled through a text
+    editor overlay.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    disabled : bool or None
+        Whether editing should be disabled for this column. If this is ``None``
+        (default), Streamlit will enable editing wherever possible.
+
+        If a column has mixed types, it may become uneditable regardless of
+        ``disabled``.
+
+    required : bool or None
+        Whether edited cells in the column need to have a value. If this is
+        ``False`` (default), the user can submit empty values for this column.
+        If this is ``True``, an edited cell in this column can only be
+        submitted if its value is not ``None``, and a new row will only be
+        submitted after the user fills in this column.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), text is left-aligned.
+
+    default : str or None
+        Specifies the default value in this column when a new row is added by
+        the user. This defaults to ``None``.
+
+    Examples
+    --------
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+
+        data_df = pd.DataFrame(
+            {
+                "description": [
+                    "# Title\\n\\nThis is **bold** text",
+                    "## Subtitle\\n\\n- Item 1\\n- Item 2",
+                    "Regular text with `code`",
+                ],
+            }
+        )
+
+        st.dataframe(
+            data_df,
+            column_config={
+                "description": st.column_config.MarkdownColumn(
+                    "Description",
+                    help="Markdown formatted text",
+                    width="large",
+                ),
+            },
+            hide_index=True,
+        )
+
+    .. output::
+        https://doc-markdown-column.streamlit.app/
+        height: 300px
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        pinned=pinned,
+        alignment=alignment,
+        default=default,
+        type_config=MarkdownColumnConfig(type="markdown"),
+    )
+
+
+@overload
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: WidgetCallback | None = None,
+    args: WidgetArgs | None = None,
+    kwargs: WidgetKwargs | None = None,
+    key: str,
+) -> ButtonColumnResult: ...
+
+
+@overload
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: None = None,
+    args: None = None,
+    kwargs: None = None,
+    key: None = None,
+) -> ColumnConfig: ...
+
+
+@gather_metrics("column_config.ButtonColumn")
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: WidgetCallback | None = None,
+    args: WidgetArgs | None = None,
+    kwargs: WidgetKwargs | None = None,
+    key: str | None = None,
+) -> ButtonColumnResult | ColumnConfig:
+    """Configure a button column in ``st.dataframe`` or ``st.data_editor``.
+
+    Button columns display clickable buttons in each cell, enabling row-level
+    actions with Python callbacks. The cell values determine the button labels.
+    This command needs to be used in the ``column_config`` parameter of
+    ``st.dataframe`` or ``st.data_editor``. Button columns are always read-only—
+    in ``st.data_editor``, the underlying cell values cannot be edited, but
+    button clicks still trigger callbacks.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of the button within the cell. If this is
+        ``None`` (default), buttons are centered.
+
+    type : "primary", "secondary", or "tertiary"
+        An optional string that specifies the button type. This can be one of
+        the following:
+
+        - ``"primary"``: The button's background is the app's primary color
+          for additional emphasis.
+        - ``"secondary"`` (default): The button's background coordinates
+          with the app's background color for normal emphasis.
+        - ``"tertiary"``: The button is plain text without a border or
+          background for subtlety.
+
+    on_click : callable or None
+        An optional callback invoked when a button is clicked. By default, the
+        callback receives no arguments. Use ``args`` and ``kwargs`` to pass
+        extra arguments. The click information is also available in
+        ``st.session_state[key]`` during the callback.
+
+    args : tuple or None
+        An optional tuple of args to pass to the callback.
+
+    kwargs : dict or None
+        An optional dict of kwargs to pass to the callback.
+
+    key : str or None
+        A session state key for the click trigger value. When a button is
+        clicked, the click information is stored under this key in Session
+        State as a ``ButtonColumnClickState`` object with ``row`` (int) and
+        ``label`` (str) entries that support both key and attribute notation.
+        For example, if ``key="my_click"``, you can access the clicked row with
+        ``st.session_state.my_click.row`` or
+        ``st.session_state["my_click"]["row"]``. The value is only present
+        during the rerun triggered by the click; it resets to ``None`` on
+        subsequent reruns. To use ``ButtonColumnClickState`` in an annotation,
+        import it from ``streamlit.typing``.
+
+        ``key`` is required to enable button clicks and callbacks.
+
+    Examples
+    --------
+    **Example 1: Basic button column with callback**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "name": ["Alice", "Bob", "Charlie"],
+    ...         "view": [":material/visibility: View"] * 3,
+    ...     }
+    ... )
+    >>>
+    >>> def handle_view():
+    ...     click = st.session_state.view_click
+    ...     st.toast(f"Viewing row {click['row']}: {df.iloc[click['row']]['name']}")
+    >>>
+    >>> st.dataframe(
+    ...     df,
+    ...     column_config={
+    ...         "view": st.column_config.ButtonColumn(
+    ...             "", type="tertiary", on_click=handle_view, key="view_click"
+    ...         ),
+    ...     },
+    ...     hide_index=True,
+    ... )
+
+    **Example 2: Multi-action dropdown**
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "name": ["Alice", "Bob", "Charlie"],
+    ...         "actions": [
+    ...             [":material/edit: Edit", ":material/delete: Delete"],
+    ...             [":material/edit: Edit", ":material/delete: Delete"],
+    ...             [":material/edit: Edit"],
+    ...         ],
+    ...     }
+    ... )
+    >>>
+    >>> def handle_action():
+    ...     click = st.session_state.action_click
+    ...     if "Delete" in click["label"]:
+    ...         st.warning(f"Deleting row {click['row']}")
+    ...     elif "Edit" in click["label"]:
+    ...         st.info(f"Editing row {click['row']}")
+    >>>
+    >>> st.dataframe(
+    ...     df,
+    ...     column_config={
+    ...         "actions": st.column_config.ButtonColumn(
+    ...             "Actions", on_click=handle_action, key="action_click"
+    ...         ),
+    ...     },
+    ... )
+
+    .. note::
+        Button columns are always read-only. In ``st.data_editor``, the underlying
+        cell values cannot be edited, but button clicks still trigger callbacks.
+    """
+    config: ColumnConfig = ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        alignment=alignment,
+        disabled=True,  # Button columns are always read-only
+        type_config=ButtonColumnConfig(
+            type="button",
+            button_type=type,
+        ),
+    )
+
+    # If key is specified, return wrapper with callback refs for widget registration
+    if key is not None:
+        return ButtonColumnResult(
+            config=config,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+            key=key,
+        )
+
+    # Raise an error if callbacks are provided without a key
+    if on_click is not None or args is not None or kwargs is not None:
+        raise StreamlitMissingRequiredParameterError(
+            "st.column_config.ButtonColumn",
+            "key",
+            detail=(
+                "Callbacks passed via `on_click`, `args`, or `kwargs` need a unique "
+                "key to be registered."
+            ),
+        )
+
+    return config

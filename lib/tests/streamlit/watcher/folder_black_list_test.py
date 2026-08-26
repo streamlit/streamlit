@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,3 +54,7 @@ class FileIsInFolderTest(unittest.TestCase):
 
         assert not is_blacklisted("/foo/not_blacklisted/script.py")
         assert not is_blacklisted("/foo/not_blacklisted/.hidden_script.py")
+
+    def test_repr_contains_class_name(self):
+        """The blacklist repr includes its class name for debugging."""
+        assert "FolderBlackList" in repr(FolderBlackList([]))

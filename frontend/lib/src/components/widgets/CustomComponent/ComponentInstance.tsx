@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useEffect,
@@ -30,14 +30,14 @@ import { flushSync } from "react-dom"
 import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
-  Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
+import { StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import AlertElement from "~lib/components/elements/AlertElement"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import { Kind } from "~lib/components/shared/AlertContainer"
-import ErrorElement from "~lib/components/shared/ErrorElement"
+import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
+import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useTimeout from "~lib/hooks/useTimeout"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
@@ -68,7 +68,7 @@ const LOG = getLogger("ComponentInstance")
  */
 export const COMPONENT_READY_WARNING_TIME_MS = 60000 // 60 seconds
 
-export interface Props {
+interface Props {
   widgetMgr: WidgetStateManager
   disabled: boolean
   element: ComponentInstanceProto
@@ -97,8 +97,7 @@ function getSrc(
   }
 
   // Add streamlitUrl query parameter to src
-  const customComponentClientId =
-    window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID
+  const customComponentClientId = StreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID
   const currentUrl = new URL(window.location.href)
   src = queryString.stringifyUrl({
     url: src,
@@ -218,13 +217,12 @@ function ComponentInstance(props: Props): ReactElement {
     dataframeArgs: [],
   })
   const haveDataframeArgsChanged = compareDataframeArgs(
-    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     parsedArgsRef.current.dataframeArgs,
     parsedDataframeArgs
   )
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   parsedArgsRef.current.args = parsedNewArgs
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
@@ -232,9 +230,10 @@ function ComponentInstance(props: Props): ReactElement {
   // custom components that define a height property, e.g. in Python
   // my_custom_component(height=100). undefined means no explicit height
   // was specified, but will be set to the default height of 0.
-  const [frameHeight, setFrameHeight] = useState<number | undefined>(() =>
-    isNaN(parsedNewArgs.height) ? undefined : parsedNewArgs.height
-  )
+  const [frameHeight, setFrameHeight] = useState<number | undefined>(() => {
+    const height = parsedNewArgs.height as number | undefined
+    return height === undefined || isNaN(height) ? undefined : height
+  })
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
   // and when the componentReady callback is called (for the first time)
@@ -248,7 +247,7 @@ function ComponentInstance(props: Props): ReactElement {
     COMPONENT_READY_WARNING_TIME_MS / 4
   )
   const { clear: clearTimeoutWarningElement } = useTimeout(() => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync -- To keep
+    /* eslint-disable-next-line @eslint-react/dom-no-flush-sync -- To keep
      * behavior the same as before introducing `createRoot` and after, we ensure
      * that the state updates are flushed immediately.
      */
@@ -313,7 +312,7 @@ function ComponentInstance(props: Props): ReactElement {
       // immediately change their frameHeight after mounting). This is wasteful,
       // and it also breaks certain components.
       iframeRef.current.height = height.toString()
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync -- To keep
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync -- To keep
        * behavior the same as before introducing `createRoot` and after, we ensure
        * that the state updates are flushed immediately.
        */
@@ -334,7 +333,7 @@ function ComponentInstance(props: Props): ReactElement {
       clearTimeoutLog()
       clearTimeoutWarningElement()
       isReadyRef.current = true
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync -- To keep
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync -- To keep
        * behavior the same as before introducing `createRoot` and after, we ensure
        * that the state updates are flushed immediately.
        */
@@ -405,24 +404,22 @@ function ComponentInstance(props: Props): ReactElement {
 
   // Show the loading Skeleton while we have not received the ready message from the custom component
   // but while we also have not waited until the ready timeout
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   const loadingSkeleton = !isReadyRef.current &&
     !isReadyTimeout &&
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
-      <Skeleton
-        element={SkeletonProto.create({
-          height: frameHeight,
-          style: SkeletonProto.SkeletonStyle.ELEMENT,
-        })}
+      <SquareSkeleton
+        data-testid="stSkeleton"
+        height={frameHeight ? `${frameHeight}px` : undefined}
+        aria-hidden="true"
       />
     )
 
   // If we've timed out waiting for the READY message from the component,
   // display a warning.
   const warns =
-    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     !isReadyRef.current && isReadyTimeout ? (
       <AlertElement
         body={getWarnMessage(componentName, url)}
@@ -446,7 +443,6 @@ function ComponentInstance(props: Props): ReactElement {
   // TODO: make sure horizontal scrolling still works!
   return (
     <>
-      {/* eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render */}
       {loadingSkeleton}
       {warns}
       <StyledComponentIframe
@@ -461,7 +457,6 @@ function ComponentInstance(props: Props): ReactElement {
         scrolling="no"
         sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
         title={componentName}
-        // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
         componentReady={isReadyRef.current}
         tabIndex={element.tabIndex ?? undefined}
       />

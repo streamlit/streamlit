@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,13 +83,13 @@ export default function useScrollAnimation(
   isAnimating: boolean,
   active: boolean
 ): void {
-  const animator = useRef(0)
+  const animatorRef = useRef(0)
 
   const animate = useCallback(
     (from: number, index: number, start = Date.now()) => {
-      cancelAnimationFrame(animator.current)
+      cancelAnimationFrame(animatorRef.current)
 
-      animator.current = requestAnimationFrame(() => {
+      animatorRef.current = requestAnimationFrame(() => {
         if (target) {
           // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
           const toNumber = target.scrollHeight - target.offsetHeight
@@ -109,17 +109,17 @@ export default function useScrollAnimation(
           if (toNumber === nextValue) {
             onEnd()
           } else {
-            // eslint-disable-next-line react-hooks/immutability -- TODO: Update to match React best practices
+            // eslint-disable-next-line react-hooks/immutability -- recursive requestAnimationFrame callback
             animate(from, index + 1, start)
           }
         }
       })
     },
-    [animator, onEnd, target]
+    [animatorRef, onEnd, target]
   )
 
   const handleCancelAnimation = useCallback(() => {
-    cancelAnimationFrame(animator.current)
+    cancelAnimationFrame(animatorRef.current)
     onEnd()
   }, [onEnd])
 
@@ -141,10 +141,17 @@ export default function useScrollAnimation(
       return () => {
         target.removeEventListener("pointerdown", handleCancelAnimation)
         target.removeEventListener("wheel", handleCancelAnimation)
-        cancelAnimationFrame(animator.current)
+        cancelAnimationFrame(animatorRef.current)
       }
     }
 
-    return () => cancelAnimationFrame(animator.current)
-  }, [animate, animator, handleCancelAnimation, target, isAnimating, active])
+    return () => cancelAnimationFrame(animatorRef.current)
+  }, [
+    animate,
+    animatorRef,
+    handleCancelAnimation,
+    target,
+    isAnimating,
+    active,
+  ])
 }

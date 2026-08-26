@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "CodeProto";
-
 // st.code
 message Code {
   // Content to display.
@@ -29,6 +26,5 @@ message Code {
   bool show_line_numbers = 3;
   bool wrap_lines = 4;
 
-  // deprecated use height on Element.proto
-  uint32 height = 5 [deprecated = true];
+  reserved 5;
 }

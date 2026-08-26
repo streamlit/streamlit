@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,27 +22,13 @@ import {
   toHex,
   transparentize,
 } from "color2k"
-import cloneDeep from "lodash/cloneDeep"
-import isObject from "lodash/isObject"
-import merge from "lodash/merge"
-import mergeWith from "lodash/mergeWith"
-import once from "lodash/once"
+import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import type { StreamlitWindowObject } from "@streamlit/utils"
-import { localStorageAvailable } from "@streamlit/utils"
+import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
-import {
-  baseTheme,
-  CachedTheme,
-  darkTheme,
-  EmotionTheme,
-  lightTheme,
-  ThemeConfig,
-  ThemeSpacing,
-} from "~lib/theme"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -50,9 +36,17 @@ import {
   notNullOrUndefined,
 } from "~lib/util/utils"
 
-import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
+import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
+import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
+import type {
+  CachedTheme,
+  EmotionTheme,
+  ThemeConfig,
+  ThemeSelection,
+  ThemeSpacing,
+} from "./types"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
@@ -63,7 +57,6 @@ export const CUSTOM_THEME_AUTO_NAME = "Custom Theme Auto"
 
 declare global {
   interface Window {
-    __streamlit?: StreamlitWindowObject
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -77,6 +70,38 @@ declare global {
   }
 }
 const LOG = getLogger("theme:utils")
+
+/**
+ * Recursively sorts the theme input keys to ensure consistent theme hashing.
+ * Used in App.tsx createThemeHash method.
+ *
+ * @param obj - The theme input object (or any nested value within it)
+ * @returns The same structure with all object keys sorted alphabetically
+ */
+export function sortThemeInputKeys(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj
+  }
+
+  // Handle arrays by recursively sorting their elements
+  if (Array.isArray(obj)) {
+    return obj.map(item => sortThemeInputKeys(item))
+  }
+
+  // Handle objects (including nested theme sections)
+  if (typeof obj === "object") {
+    const sorted: Record<string, unknown> = {}
+    Object.keys(obj)
+      .sort()
+      .forEach(key => {
+        sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
+      })
+    return sorted
+  }
+
+  // Return primitives as-is
+  return obj
+}
 
 function mergeTheme(
   theme: ThemeConfig,
@@ -95,17 +120,17 @@ function mergeTheme(
 }
 
 export const getMergedLightTheme = once(() =>
-  mergeTheme(lightTheme, window.__streamlit?.LIGHT_THEME)
+  mergeTheme(lightTheme, StreamlitConfig.LIGHT_THEME)
 )
 export const getMergedDarkTheme = once(() =>
-  mergeTheme(darkTheme, window.__streamlit?.DARK_THEME)
+  mergeTheme(darkTheme, StreamlitConfig.DARK_THEME)
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
-  return window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light"
+  const prefersDark =
+    window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false
+
+  return prefersDark ? "dark" : "light"
 }
 
 export const getSystemTheme = (): ThemeConfig => {
@@ -453,10 +478,23 @@ export const parseFontSize = (
   LOG.warn(
     `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
   )
+  return undefined
 }
 
 /**
- * Validate a font weight config
+ * Validates a font weight config value against three rules:
+ *   1. Must be an integer.
+ *   2. Must be an integer multiple of 50.
+ *   3. Must be within [`minWeight`, `maxWeight`] (inclusive).
+ *
+ * @param weightConfigName - Name of the config option, used in the warning message.
+ * @param fontWeight - The value to validate; null/undefined means "not configured".
+ * @param minWeight - Lower bound (inclusive).
+ * @param maxWeight - Upper bound (inclusive).
+ * @param inSidebar - When true, the warning message cites "theme.sidebar" instead of "theme".
+ * @returns `true` if the value is set and passes all three rules.
+ *   Returns `false` and logs a warning when the value is set but fails any rule.
+ *   Returns `false` silently when the value is null or undefined.
  */
 const isValidFontWeight = (
   weightConfigName: string,
@@ -470,12 +508,12 @@ const isValidFontWeight = (
   // If the font weight config is set, validate it (log warning if invalid)
   if (notNullOrUndefined(fontWeight)) {
     const isInteger = Number.isInteger(fontWeight)
-    const isIncrementOf100 = fontWeight % 100 === 0
+    const isIncrementOf50 = fontWeight % 50 === 0
     const isInRange = fontWeight >= minWeight && fontWeight <= maxWeight
 
-    if (!isInteger || !isIncrementOf100 || !isInRange) {
+    if (!isInteger || !isIncrementOf50 || !isInRange) {
       LOG.warn(
-        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 100. Falling back to default font weight.`
+        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 50. Falling back to default font weight.`
       )
       return false
     }
@@ -678,6 +716,10 @@ export const createEmotionTheme = (
     // Since chart color configs passed as array, handle separate from parsedColors
     chartCategoricalColors,
     chartSequentialColors,
+    chartDivergingColors,
+    // Metric value styling
+    metricValueFontSize,
+    metricValueFontWeight,
     ...customColors
   } = themeInput
 
@@ -702,7 +744,6 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
-    widgetBorderColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -762,11 +803,16 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
+  // Code background should use the codeBackgroundColor config if provided,
+  // otherwise use the derived bgMix (configured/derived or default) above
   conditionalOverrides.colors.codeBackgroundColor =
-    codeBackgroundColor ?? colors.codeBackgroundColor
+    codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
+  // Dataframe header background should use the config if provided,
+  // otherwise use the derived bgMix (configured/derived or default) above
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
-    dataframeHeaderBackgroundColor ?? colors.dataframeHeaderBackgroundColor
+    dataframeHeaderBackgroundColor ??
+    conditionalOverrides.colors.dataframeHeaderBackgroundColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
@@ -783,12 +829,9 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder || widgetBorderColor) {
-    // widgetBorderColor from the themeInput is deprecated. For compatibility
-    // with older SiS theming, we still apply it here if provided, but we should
-    // consider full removing it at some point.
+  if (showWidgetBorder) {
     conditionalOverrides.colors.widgetBorderColor =
-      widgetBorderColor || conditionalOverrides.colors.borderColor
+      conditionalOverrides.colors.borderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback
@@ -850,6 +893,27 @@ export const createEmotionTheme = (
     }
   }
 
+  if (
+    notNullOrUndefined(chartDivergingColors) &&
+    chartDivergingColors.length > 0
+  ) {
+    // Validate the diverging colors config
+    const validatedDivergingColors = validateChartColors(
+      "chartDivergingColors",
+      chartDivergingColors
+    )
+    // Set the validated colors, diverging colors should be an array of length 10
+    // Also checked on BE, but check here again in case one of the entries is not a valid color
+    if (validatedDivergingColors.length === 10) {
+      conditionalOverrides.colors.chartDivergingColors =
+        validatedDivergingColors
+    } else {
+      LOG.warn(
+        `Invalid chartDivergingColors: ${chartDivergingColors.toString()}. Falling back to default chartDivergingColors.`
+      )
+    }
+  }
+
   // Conditional Overrides - Radii
 
   if (notNullOrUndefined(baseRadius)) {
@@ -865,8 +929,12 @@ export const createEmotionTheme = (
       // Adapt all the other radii sizes based on the base radii:
       // We make sure that the value is rounded to 2 decimal places to avoid
       // floating point precision issues.
-      conditionalOverrides.radii.md = addCssUnit(
+      conditionalOverrides.radii.sm = addCssUnit(
         roundToTwoDecimals(radiusValue * 0.5),
+        cssUnit
+      )
+      conditionalOverrides.radii.md2 = addCssUnit(
+        roundToTwoDecimals(radiusValue * 0.75),
         cssUnit
       )
       conditionalOverrides.radii.xl = addCssUnit(
@@ -926,6 +994,27 @@ export const createEmotionTheme = (
     headingFontSizes
   )
 
+  // Conditional Overrides - Metric Value Font Size
+  if (metricValueFontSize) {
+    // Use parseFontSize for format validation
+    const parsedSize = parseFontSize(
+      "metricValueFontSize",
+      metricValueFontSize,
+      inSidebar
+    )
+    if (parsedSize) {
+      // Additional validation: must be greater than 0
+      const numericValue = parseFloat(parsedSize)
+      if (numericValue <= 0) {
+        LOG.warn(
+          `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+        )
+      } else {
+        conditionalOverrides.fontSizes.metricValueFontSize = parsedSize
+      }
+    }
+  }
+
   // Conditional Overrides - Font Weights
 
   // Set the font weights based on the font weight configs provided
@@ -936,6 +1025,15 @@ export const createEmotionTheme = (
     codeFontWeight,
     headingFontWeights
   )
+
+  // Conditional Overrides - Metric Value Font Weight
+  if (
+    metricValueFontWeight &&
+    isValidFontWeight("metricValueFontWeight", metricValueFontWeight, 100, 900)
+  ) {
+    conditionalOverrides.fontWeights.metricValueFontWeight =
+      metricValueFontWeight
+  }
 
   // Font Overrides
 
@@ -968,10 +1066,14 @@ export const createEmotionTheme = (
     fontsOverride.headingFont = parseFont(bodyFont, fonts.sansSerif)
   }
 
+  // Create shadows - auto-determines light/dark based on bgColor luminance
+  const shadows = createShadows(conditionalOverrides.colors)
+
   return {
     ...baseThemeConfig.emotion,
     genericFonts: fontsOverride,
     ...conditionalOverrides,
+    shadows,
   }
 }
 
@@ -1064,42 +1166,11 @@ export const createTheme = (
 
   const emotion = createEmotionTheme(completedThemeInput, startingTheme)
 
-  // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
-  // primitives to be modified globally. This cloning decouples our BaseWeb theme
-  // object from the shared primitive objects and prevents unintended side effects.
-  const basewebTheme = cloneDeep(
-    createBaseUiTheme(emotion, startingTheme.primitives)
-  )
-
   return {
     ...startingTheme,
     name: themeName,
     emotion,
-    basewebTheme,
     themeInput,
-  }
-}
-
-export const getCachedTheme = (): ThemeConfig | null => {
-  if (!localStorageAvailable()) {
-    return null
-  }
-
-  const cachedThemeStr = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
-  if (!cachedThemeStr) {
-    return null
-  }
-
-  const { name: themeName, themeInput }: CachedTheme =
-    JSON.parse(cachedThemeStr)
-  switch (themeName) {
-    case lightTheme.name:
-      return getMergedLightTheme()
-    case darkTheme.name:
-      return getMergedDarkTheme()
-    default:
-      // At this point we're guaranteed that themeInput is defined.
-      return createTheme(themeName, themeInput as Partial<CustomThemeConfig>)
   }
 }
 
@@ -1115,12 +1186,67 @@ const deleteOldCachedThemes = (): void => {
   // `stActiveTheme-${window.location.pathname}` with no version number.
   localStorage.removeItem(CACHED_THEME_BASE_KEY)
 
-  for (let i = 1; i <= CACHED_THEME_VERSION; i++) {
+  // Versions before the current schema stored full theme configs. Clear them.
+  for (let i = 1; i < CACHED_THEME_VERSION; i++) {
     localStorage.removeItem(`${CACHED_THEME_BASE_KEY}-v${i}`)
   }
 }
 
-export const setCachedTheme = (themeConfig: ThemeConfig): void => {
+export const getThemeSelectionFromThemeConfig = (
+  themeConfig: ThemeConfig
+): ThemeSelection => {
+  if (
+    themeConfig.name === AUTO_THEME_NAME ||
+    themeConfig.name === CUSTOM_THEME_AUTO_NAME
+  ) {
+    return "System"
+  }
+
+  if (
+    themeConfig.name === lightTheme.name ||
+    themeConfig.name === CUSTOM_THEME_LIGHT_NAME
+  ) {
+    return "Light"
+  }
+
+  if (
+    themeConfig.name === darkTheme.name ||
+    themeConfig.name === CUSTOM_THEME_DARK_NAME
+  ) {
+    return "Dark"
+  }
+
+  // Single custom theme ("Custom Theme") has no light/dark distinction,
+  // so we treat it as "System" for caching purposes. This ensures:
+  // 1. No false mapping to preset themes
+  // 2. Embed options can still override on subsequent visits
+  if (themeConfig.name === CUSTOM_THEME_NAME) {
+    return "System"
+  }
+
+  return "System" // This is reached for unrecognized theme names
+}
+
+const isThemeSelection = (value: unknown): value is ThemeSelection =>
+  value === "System" || value === "Light" || value === "Dark"
+
+export const getCachedThemeSelection = (): ThemeSelection | null => {
+  if (!localStorageAvailable()) {
+    return null
+  }
+
+  deleteOldCachedThemes()
+
+  const cachedThemeStr = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
+  if (!cachedThemeStr) {
+    return null
+  }
+
+  const cachedTheme: CachedTheme = JSON.parse(cachedThemeStr)
+  return isThemeSelection(cachedTheme) ? cachedTheme : null
+}
+
+export const setCachedThemeSelection = (themeConfig: ThemeConfig): void => {
   if (!localStorageAvailable()) {
     return
   }
@@ -1132,12 +1258,8 @@ export const setCachedTheme = (themeConfig: ThemeConfig): void => {
     return
   }
 
-  const cachedTheme: CachedTheme = {
-    name: themeConfig.name,
-    ...(!isPresetTheme(themeConfig) && {
-      themeInput: toThemeInput(themeConfig.emotion),
-    }),
-  }
+  const cachedTheme: CachedTheme =
+    getThemeSelectionFromThemeConfig(themeConfig)
 
   window.localStorage.setItem(
     LocalStore.ACTIVE_THEME,
@@ -1153,7 +1275,13 @@ export const removeCachedTheme = (): void => {
   window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
 }
 
-export const getHostSpecifiedTheme = (): ThemeConfig => {
+/**
+ * Returns the theme specified by the host via query parameters, or null if no theme is specified.
+ * This differs from getHostSpecifiedTheme() which falls back to auto theme.
+ *
+ * @returns ThemeConfig if host specified via query params (light_theme or dark_theme), null otherwise
+ */
+export const getHostSpecifiedThemeOnly = (): ThemeConfig | null => {
   if (isLightThemeInQueryParams()) {
     return getMergedLightTheme()
   }
@@ -1162,20 +1290,30 @@ export const getHostSpecifiedTheme = (): ThemeConfig => {
     return getMergedDarkTheme()
   }
 
-  return createAutoTheme()
+  return null
+}
+
+export const getHostSpecifiedTheme = (): ThemeConfig => {
+  return getHostSpecifiedThemeOnly() ?? createAutoTheme()
 }
 
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
-  const cachedTheme = getCachedTheme()
-
-  // We shouldn't ever have auto saved in our storage in case
-  // OS theme changes but we explicitly check in case!
-  if (cachedTheme && cachedTheme.name !== AUTO_THEME_NAME) {
-    return cachedTheme
+  const hostSpecified = getHostSpecifiedThemeOnly()
+  if (hostSpecified) {
+    return hostSpecified
   }
 
-  return getHostSpecifiedTheme()
+  const cachedSelection = getCachedThemeSelection()
+  if (cachedSelection === "Light") {
+    return getMergedLightTheme()
+  }
+
+  if (cachedSelection === "Dark") {
+    return getMergedDarkTheme()
+  }
+
+  return createAutoTheme()
 }
 
 const whiteSpace = /\s+/
@@ -1226,12 +1364,12 @@ export function blend(color: string, background: string | undefined): string {
 }
 
 /**
- * Convert a SCSS rem value to pixels.
- * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * Convert a CSS rem value to pixels.
+ * @param cssValue: a string containing a value in rem units with or without the "rem" unit suffix
  * @returns pixel value of the given rem value
  */
-export const convertRemToPx = (scssValue: string): number => {
-  const remValue = parseFloat(scssValue.replace(/rem$/, ""))
+export const convertRemToPx = (cssValue: string): number => {
+  const remValue = parseFloat(cssValue.replace(/rem$/, ""))
   return (
     // TODO(lukasmasuch): We might want to somehow cache this value at some point.
     // However, I did experimented with the performance of calling this, and
@@ -1244,14 +1382,13 @@ export const convertRemToPx = (scssValue: string): number => {
 
 /**
  * Customizer function for lodash mergeWith that skips protobuf default values
- * (empty strings, null, empty arrays) to prevent them from overwriting valid values.
- * @returns objValue (keep existing value) if srcValue is a protobuf default, undefined otherwise
+ * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
+ * and replaces non-empty arrays atomically instead of merging by index.
  */
 const skipProtobufDefaults = (
   objValue: unknown,
   srcValue: unknown
 ): unknown => {
-  // Exclude empty strings, empty arrays, and null values
   if (
     srcValue === "" ||
     srcValue === null ||
@@ -1259,7 +1396,11 @@ const skipProtobufDefaults = (
   ) {
     return objValue
   }
-  // Let mergeWith handle all other cases normally
+  // Replace non-empty arrays wholesale — lodash index-merges arrays, which
+  // leaves leftover parent colors/sizes when a section override is shorter.
+  if (Array.isArray(srcValue) && srcValue.length > 0) {
+    return srcValue
+  }
   return undefined
 }
 
@@ -1475,5 +1616,69 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     mergedSidebarThemeInput,
     undefined, // Creating a new theme from scratch
     true // inSidebar
+  )
+}
+
+/**
+ * Maps a user's cached theme selection to the best matching theme from available themes.
+ *
+ * @param cachedThemeSelection - The user's cached theme selection
+ * @param availableThemes - The list of currently available themes
+ * @returns The best matching theme, or null if no suitable match found
+ *
+ * @example
+ * // When custom themes exist:
+ * mapCachedThemeSelectionToAvailableTheme("Light", [customLight, customDark, customAuto])
+ * // Returns customLight (CUSTOM_THEME_LIGHT_NAME)
+ *
+ * @example
+ * // When only preset themes:
+ * mapCachedThemeSelectionToAvailableTheme("Light", [lightTheme, darkTheme])
+ * // Returns lightTheme ("Light")
+ */
+export const mapCachedThemeSelectionToAvailableTheme = (
+  cachedThemeSelection: ThemeSelection | null,
+  availableThemes: ThemeConfig[]
+): ThemeConfig | null => {
+  if (!cachedThemeSelection) {
+    return null
+  }
+
+  const mappedNames: Record<ThemeSelection, string[]> = {
+    System: [CUSTOM_THEME_AUTO_NAME, AUTO_THEME_NAME, CUSTOM_THEME_NAME],
+    Light: [CUSTOM_THEME_LIGHT_NAME, lightTheme.name],
+    Dark: [CUSTOM_THEME_DARK_NAME, darkTheme.name],
+  }
+
+  for (const themeName of mappedNames[cachedThemeSelection]) {
+    const match = availableThemes.find(theme => theme.name === themeName)
+    if (match) {
+      return match
+    }
+  }
+
+  return null
+}
+
+/**
+ * Gets the user's preferred theme from available themes.
+ * Host-specified embed options take precedence over cached selections.
+ *
+ * @param availableThemes - The list of currently available themes
+ * @returns The best matching theme, or null if no preference found
+ */
+export const getPreferredTheme = (
+  availableThemes: ThemeConfig[]
+): ThemeConfig | null => {
+  const hostSpecified = getHostSpecifiedThemeOnly()
+  const hostSpecifiedSelection = hostSpecified
+    ? getThemeSelectionFromThemeConfig(hostSpecified)
+    : null
+  const userPreferenceSelection =
+    hostSpecifiedSelection ?? getCachedThemeSelection()
+
+  return mapCachedThemeSelectionToAvailableTheme(
+    userPreferenceSelection,
+    availableThemes
   )
 }

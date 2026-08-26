@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,27 @@
  * limitations under the License.
  */
 
+import { opacities } from "~lib/theme/primitives/opacities"
+
 export const STALE_TRANSITION_PARAMS = "1s ease-in 0.5s"
 
 export const STALE_STYLES = {
-  opacity: 0.33,
+  opacity: opacities.stale,
   transition: `opacity ${STALE_TRANSITION_PARAMS}`,
+}
+
+/**
+ * Removes an element from the visual layout while keeping it in the
+ * accessibility tree, for text that only screen readers should reach.
+ */
+export const VISUALLY_HIDDEN_STYLES = {
+  position: "absolute" as const,
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap" as const,
+  border: 0,
 }

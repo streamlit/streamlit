@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ const SOURCE_SANS_REGULAR_HASH = "BsWL4Kly"
 const HTML = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8")
 document.documentElement.innerHTML = HTML.toString()
 
-test("index.html preloads expected font with expected hash", () => {
+it("index.html preloads expected font with expected hash", () => {
   const preloadedFonts = document.querySelectorAll<HTMLLinkElement>(
     "link[rel='preload']"
   )

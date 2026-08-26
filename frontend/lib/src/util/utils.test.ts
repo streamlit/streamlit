@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,21 +25,52 @@ import {
 } from "vitest"
 
 import {
+  ChatInput as ChatInputProto,
+  Element,
+  LabelVisibility as LabelVisibilityProto,
+} from "@streamlit/protobuf"
+
+import {
+  AcceptFileValue,
+  chatInputAcceptFileProtoValueToEnum,
+  debounce,
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
+  extractPageNameFromPathName,
+  generateUID,
+  getElementId,
+  getEmbeddingIdClassName,
   getEmbedUrlParams,
+  getIFrameEnclosingApp,
   getLoadingScreenType,
+  getLocaleLanguage,
+  getQueryString,
+  getScreencastTimestamp,
   getSelectPlaceholder,
+  getTimezone,
+  getTimezoneOffset,
   getUrl,
+  hashString,
   isDarkThemeInQueryParams,
   isEmbed,
+  isFromMac,
+  isFromWindows,
   isInChildFrame,
+  isInForm,
   isLightThemeInQueryParams,
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
+  isValidElementId,
+  isValidFormId,
   keysToSnakeCase,
+  LabelVisibilityOptions,
+  labelVisibilityProtoValueToEnum,
   LoadingScreenType,
+  makeAppSkeletonElement,
+  makeElementWithErrorText,
+  makeElementWithInfoText,
+  notUndefined,
   preserveEmbedQueryParams,
   setCookie,
 } from "./utils"
@@ -507,6 +538,35 @@ describe("getUrl", () => {
   let topSpy: MockInstance<() => unknown>
   let documentSpy: MockInstance<() => unknown>
 
+  function withChildFrameTop(top: object | null, fn: () => void): void {
+    const originalParent = window.parent
+    const originalTop = window.top
+    Object.defineProperty(window, "parent", {
+      value: {},
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(window, "top", {
+      value: top,
+      configurable: true,
+      writable: true,
+    })
+    try {
+      fn()
+    } finally {
+      Object.defineProperty(window, "parent", {
+        value: originalParent,
+        configurable: true,
+        writable: true,
+      })
+      Object.defineProperty(window, "top", {
+        value: originalTop,
+        configurable: true,
+        writable: true,
+      })
+    }
+  }
+
   beforeEach(() => {
     documentSpy = vi.spyOn(global, "document", "get")
     topSpy = vi.spyOn(global, "top", "get")
@@ -531,6 +591,51 @@ describe("getUrl", () => {
     }))
 
     expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should use window.top.location.href when in an iframe and top is accessible", () => {
+    const mockTop = {
+      location: {
+        href: "https://parent.example/app/page?param=value#section",
+      },
+    }
+    withChildFrameTop(mockTop, () => {
+      documentSpy.mockImplementation(() => ({
+        location: {
+          href: "http://child.example/embedded?x=1",
+        },
+      }))
+      expect(getUrl()).toBe("https://parent.example/app/page")
+    })
+  })
+
+  it("should use document.location when in an iframe but window.top is falsy", () => {
+    withChildFrameTop(null, () => {
+      documentSpy.mockImplementation(() => ({
+        location: {
+          href: "http://child.example/path?query=1",
+        },
+      }))
+      expect(getUrl()).toBe("http://child.example/path")
+    })
+  })
+
+  it("should fall back to document.location when top.location throws (e.g. cross-origin)", () => {
+    const mockTop = {}
+    Object.defineProperty(mockTop, "location", {
+      get() {
+        throw new Error("Access blocked")
+      },
+      configurable: true,
+    })
+    withChildFrameTop(mockTop, () => {
+      documentSpy.mockImplementation(() => ({
+        location: {
+          href: "http://fallback.example/page?x=1#y",
+        },
+      }))
+      expect(getUrl()).toBe("http://fallback.example/page")
+    })
   })
 
   it("should return document.location.href without query params when in an iframe but window.top access throws error", () => {
@@ -728,5 +833,698 @@ describe("getSelectPlaceholder", () => {
       expect(result.placeholder).toBe(" ")
       expect(result.shouldDisable).toBe(false)
     })
+  })
+})
+
+describe("getScreencastTimestamp", () => {
+  beforeEach(() => {
+    // Set timezone to UTC for consistent test results across all environments
+    process.env.TZ = "UTC"
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    delete process.env.TZ
+  })
+
+  it("should return a timestamp in the correct format", () => {
+    vi.setSystemTime(new Date("2025-11-18T12:00:00.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-11-18-12-00-00")
+  })
+
+  it("should handle single-digit months with proper padding", () => {
+    vi.setSystemTime(new Date("2025-01-05T08:03:07.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-01-05-08-03-07")
+  })
+
+  it("should handle single-digit days with proper padding", () => {
+    vi.setSystemTime(new Date("2025-12-09T14:30:45.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-12-09-14-30-45")
+  })
+
+  it("should handle single-digit hours with proper padding", () => {
+    vi.setSystemTime(new Date("2025-06-15T03:25:50.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-06-15-03-25-50")
+  })
+
+  it("should handle single-digit minutes with proper padding", () => {
+    vi.setSystemTime(new Date("2025-07-20T18:05:30.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-07-20-18-05-30")
+  })
+
+  it("should handle single-digit seconds with proper padding", () => {
+    vi.setSystemTime(new Date("2025-08-25T23:45:09.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-08-25-23-45-09")
+  })
+
+  it("should handle midnight correctly", () => {
+    vi.setSystemTime(new Date("2025-03-10T00:00:00.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-03-10-00-00-00")
+  })
+
+  it("should handle end of year correctly", () => {
+    vi.setSystemTime(new Date("2024-12-31T23:59:59.000Z"))
+    expect(getScreencastTimestamp()).toBe("2024-12-31-23-59-59")
+  })
+
+  it("should ignore milliseconds", () => {
+    vi.setSystemTime(new Date("2025-05-15T10:20:30.999Z"))
+    expect(getScreencastTimestamp()).toBe("2025-05-15-10-20-30")
+  })
+})
+
+describe("getQueryString", () => {
+  it.each([
+    {
+      queryStringOverride: undefined,
+      preservedQueryParams: "embed=true",
+      expected: "embed=true",
+      description:
+        "returns preservedQueryParams when queryStringOverride is undefined",
+    },
+    {
+      queryStringOverride: undefined,
+      preservedQueryParams: "",
+      expected: "",
+      description: "returns empty string when both are empty/undefined",
+    },
+    {
+      queryStringOverride: "foo=bar",
+      preservedQueryParams: "",
+      expected: "foo=bar",
+      description: "returns queryStringOverride when no preservedQueryParams",
+    },
+    {
+      queryStringOverride: "foo=bar",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true&foo=bar",
+      description: "combines preservedQueryParams and queryStringOverride",
+    },
+    {
+      queryStringOverride: "",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true",
+      description:
+        "returns only preservedQueryParams when queryStringOverride is empty string",
+    },
+    {
+      queryStringOverride: "page=1&sort=asc",
+      preservedQueryParams: "embed=true&embed_options=dark",
+      expected: "embed=true&embed_options=dark&page=1&sort=asc",
+      description: "handles complex query strings",
+    },
+  ])(
+    "$description",
+    ({ queryStringOverride, preservedQueryParams, expected }) => {
+      expect(getQueryString(queryStringOverride, preservedQueryParams)).toBe(
+        expected
+      )
+    }
+  )
+})
+
+describe("debounce", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("should call the function after the delay", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn()
+    expect(fn).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(100)
+    expect(fn).toHaveBeenCalledOnce()
+  })
+
+  it("should pass arguments to the debounced function", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn("arg1", "arg2")
+    vi.advanceTimersByTime(100)
+
+    expect(fn).toHaveBeenCalledWith("arg1", "arg2")
+  })
+
+  it("should only call the function once when called multiple times within delay", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn()
+    debouncedFn()
+    debouncedFn()
+
+    vi.advanceTimersByTime(100)
+    expect(fn).toHaveBeenCalledOnce()
+  })
+
+  it("should use the last call's arguments when called multiple times", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn("first")
+    debouncedFn("second")
+    debouncedFn("third")
+
+    vi.advanceTimersByTime(100)
+    expect(fn).toHaveBeenCalledWith("third")
+  })
+
+  it("should reset the timer when called again within delay", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn()
+    vi.advanceTimersByTime(50)
+    expect(fn).not.toHaveBeenCalled()
+
+    debouncedFn()
+    vi.advanceTimersByTime(50)
+    expect(fn).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(50)
+    expect(fn).toHaveBeenCalledOnce()
+  })
+})
+
+describe("hashString", () => {
+  it("should return a consistent hash for the same input", () => {
+    const hash1 = hashString("test")
+    const hash2 = hashString("test")
+    expect(hash1).toBe(hash2)
+  })
+
+  it("should return different hashes for different inputs", () => {
+    const hash1 = hashString("test1")
+    const hash2 = hashString("test2")
+    expect(hash1).not.toBe(hash2)
+  })
+
+  it("should return a hexadecimal string", () => {
+    const hash = hashString("test")
+    expect(hash).toMatch(/^[0-9a-f]+$/)
+  })
+
+  it("should handle empty strings", () => {
+    const hash = hashString("")
+    expect(hash).toMatch(/^[0-9a-f]+$/)
+  })
+})
+
+describe("notUndefined", () => {
+  it("should return true for defined values", () => {
+    expect(notUndefined("test")).toBe(true)
+    expect(notUndefined(0)).toBe(true)
+    expect(notUndefined(null)).toBe(true)
+    expect(notUndefined(false)).toBe(true)
+  })
+
+  it("should return false for undefined", () => {
+    expect(notUndefined(undefined)).toBe(false)
+  })
+})
+
+describe("isFromMac", () => {
+  let navigatorSpy: MockInstance
+
+  beforeEach(() => {
+    navigatorSpy = vi.spyOn(navigator, "platform", "get")
+  })
+
+  afterEach(() => {
+    navigatorSpy.mockRestore()
+  })
+
+  it("should return true on Mac platforms", () => {
+    navigatorSpy.mockReturnValue("MacIntel")
+    expect(isFromMac()).toBe(true)
+
+    navigatorSpy.mockReturnValue("MacPPC")
+    expect(isFromMac()).toBe(true)
+  })
+
+  it("should return false on non-Mac platforms", () => {
+    navigatorSpy.mockReturnValue("Win32")
+    expect(isFromMac()).toBe(false)
+
+    navigatorSpy.mockReturnValue("Linux x86_64")
+    expect(isFromMac()).toBe(false)
+  })
+})
+
+describe("isFromWindows", () => {
+  let navigatorSpy: MockInstance
+
+  beforeEach(() => {
+    navigatorSpy = vi.spyOn(navigator, "platform", "get")
+  })
+
+  afterEach(() => {
+    navigatorSpy.mockRestore()
+  })
+
+  it("should return true on Windows platforms", () => {
+    navigatorSpy.mockReturnValue("Win32")
+    expect(isFromWindows()).toBe(true)
+
+    navigatorSpy.mockReturnValue("Win64")
+    expect(isFromWindows()).toBe(true)
+  })
+
+  it("should return false on non-Windows platforms", () => {
+    navigatorSpy.mockReturnValue("MacIntel")
+    expect(isFromWindows()).toBe(false)
+
+    navigatorSpy.mockReturnValue("Linux x86_64")
+    expect(isFromWindows()).toBe(false)
+  })
+})
+
+describe("isValidElementId", () => {
+  it("should return true for valid element IDs", () => {
+    expect(isValidElementId("$$ID-abc123-userKey")).toBe(true)
+    expect(isValidElementId("$$ID-hash-key-extra")).toBe(true)
+  })
+
+  it("should return false for invalid element IDs", () => {
+    expect(isValidElementId("invalid-id")).toBe(false)
+    expect(isValidElementId("$$ID")).toBe(false)
+    expect(isValidElementId("$$ID-only")).toBe(false)
+    expect(isValidElementId("")).toBe(false)
+    expect(isValidElementId(null)).toBe(false)
+    expect(isValidElementId(undefined)).toBe(false)
+  })
+})
+
+describe("getElementId", () => {
+  it("should return undefined for element without valid ID", () => {
+    const element = new Element({
+      alert: { body: "test" },
+    })
+    expect(getElementId(element)).toBeUndefined()
+  })
+
+  it("should return the id when the widget has a valid generated element id", () => {
+    const validId = "$$ID-abc123-userKey"
+    const element = new Element({
+      chatInput: { id: validId, placeholder: "" },
+    })
+    expect(getElementId(element)).toBe(validId)
+  })
+
+  it("should return undefined when id is present but not a valid generated id", () => {
+    const element = new Element({
+      chatInput: { id: "plain-id", placeholder: "" },
+    })
+    expect(getElementId(element)).toBeUndefined()
+  })
+
+  it("throws when element type is null or undefined", () => {
+    expect(() =>
+      getElementId({ type: undefined } as unknown as Element)
+    ).toThrow("value is null")
+    expect(() => getElementId({ type: null } as unknown as Element)).toThrow(
+      "value is null"
+    )
+  })
+})
+
+describe("isValidFormId", () => {
+  it("should return true for valid form IDs", () => {
+    expect(isValidFormId("form-id")).toBe(true)
+    expect(isValidFormId("a")).toBe(true)
+  })
+
+  it("should return false for invalid form IDs", () => {
+    expect(isValidFormId("")).toBe(false)
+    expect(isValidFormId(undefined)).toBe(false)
+  })
+})
+
+describe("isInForm", () => {
+  it("should return true when widget has valid formId", () => {
+    expect(isInForm({ formId: "my-form" })).toBe(true)
+  })
+
+  it("should return false when widget has no formId", () => {
+    expect(isInForm({})).toBe(false)
+    expect(isInForm({ formId: "" })).toBe(false)
+  })
+})
+
+describe("labelVisibilityProtoValueToEnum", () => {
+  it("should convert VISIBLE to LabelVisibilityOptions.Visible", () => {
+    expect(
+      labelVisibilityProtoValueToEnum(
+        LabelVisibilityProto.LabelVisibilityOptions.VISIBLE
+      )
+    ).toBe(LabelVisibilityOptions.Visible)
+  })
+
+  it("should convert HIDDEN to LabelVisibilityOptions.Hidden", () => {
+    expect(
+      labelVisibilityProtoValueToEnum(
+        LabelVisibilityProto.LabelVisibilityOptions.HIDDEN
+      )
+    ).toBe(LabelVisibilityOptions.Hidden)
+  })
+
+  it("should convert COLLAPSED to LabelVisibilityOptions.Collapsed", () => {
+    expect(
+      labelVisibilityProtoValueToEnum(
+        LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED
+      )
+    ).toBe(LabelVisibilityOptions.Collapsed)
+  })
+
+  it("should default to Visible for null or undefined", () => {
+    expect(labelVisibilityProtoValueToEnum(null)).toBe(
+      LabelVisibilityOptions.Visible
+    )
+    expect(labelVisibilityProtoValueToEnum(undefined)).toBe(
+      LabelVisibilityOptions.Visible
+    )
+  })
+})
+
+describe("chatInputAcceptFileProtoValueToEnum", () => {
+  it("should convert NONE to AcceptFileValue.None", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.NONE)
+    ).toBe(AcceptFileValue.None)
+  })
+
+  it("should convert SINGLE to AcceptFileValue.Single", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.SINGLE)
+    ).toBe(AcceptFileValue.Single)
+  })
+
+  it("should convert MULTIPLE to AcceptFileValue.Multiple", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.MULTIPLE)
+    ).toBe(AcceptFileValue.Multiple)
+  })
+
+  it("should convert DIRECTORY to AcceptFileValue.Directory", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.DIRECTORY)
+    ).toBe(AcceptFileValue.Directory)
+  })
+
+  it("throws when the proto value is not a known AcceptFile enum member", () => {
+    expect(() =>
+      chatInputAcceptFileProtoValueToEnum(999 as ChatInputProto.AcceptFile)
+    ).toThrow(/non-exhaustive/)
+  })
+})
+
+describe("generateUID", () => {
+  it("should generate a string", () => {
+    const uid = generateUID()
+    expect(typeof uid).toBe("string")
+  })
+
+  it("should generate unique IDs", () => {
+    const uid1 = generateUID()
+    const uid2 = generateUID()
+    expect(uid1).not.toBe(uid2)
+  })
+})
+
+describe("getEmbeddingIdClassName", () => {
+  it("should return correct class name format", () => {
+    expect(getEmbeddingIdClassName("abc123")).toBe("stAppEmbeddingId-abc123")
+  })
+})
+
+describe("extractPageNameFromPathName", () => {
+  it("should extract page name from pathname", () => {
+    expect(extractPageNameFromPathName("/app/mypage", "/app")).toBe("mypage")
+  })
+
+  it("should handle trailing slashes", () => {
+    expect(extractPageNameFromPathName("/app/mypage/", "/app")).toBe("mypage")
+  })
+
+  it("should handle basePath with trailing slash", () => {
+    expect(extractPageNameFromPathName("/app/mypage", "/app/")).toBe("mypage")
+  })
+
+  it("should return empty string when pathname equals basePath", () => {
+    expect(extractPageNameFromPathName("/app", "/app")).toBe("")
+  })
+
+  it("should decode URL encoded page names", () => {
+    expect(extractPageNameFromPathName("/app/my%20page", "/app")).toBe(
+      "my page"
+    )
+  })
+})
+
+describe("makeElementWithInfoText", () => {
+  it("should create an info alert element", () => {
+    const element = makeElementWithInfoText("Info message")
+    expect(element.alert).toBeDefined()
+    expect(element.alert?.body).toBe("Info message")
+  })
+})
+
+describe("makeElementWithErrorText", () => {
+  it("should create an error alert element", () => {
+    const element = makeElementWithErrorText("Error message")
+    expect(element.alert).toBeDefined()
+    expect(element.alert?.body).toBe("Error message")
+  })
+})
+
+describe("makeAppSkeletonElement", () => {
+  it("should create an app skeleton element", () => {
+    const element = makeAppSkeletonElement()
+    expect(element.skeleton).toBeDefined()
+  })
+})
+
+describe("getIFrameEnclosingApp", () => {
+  let originalParent: typeof window.parent
+
+  function setWindowParent(fakeParent: typeof window.parent): void {
+    Object.defineProperty(window, "parent", {
+      value: fakeParent,
+      writable: true,
+      configurable: true,
+    })
+  }
+
+  function makeIframeWithEmbeddingClass(
+    doc: Document,
+    embeddingId: string,
+    options: { title?: string; contentWindow?: Window | null } = {}
+  ): HTMLIFrameElement {
+    const iframe = doc.createElement("iframe")
+    if (options.title !== undefined) {
+      iframe.setAttribute("title", options.title)
+    }
+    const innerDoc = document.implementation.createHTMLDocument("inner")
+    const marker = innerDoc.createElement("div")
+    marker.className = getEmbeddingIdClassName(embeddingId)
+    innerDoc.body.appendChild(marker)
+    Object.defineProperty(iframe, "contentDocument", {
+      value: innerDoc,
+      configurable: true,
+    })
+    Object.defineProperty(iframe, "contentWindow", {
+      value:
+        options.contentWindow === undefined
+          ? { document: innerDoc }
+          : options.contentWindow,
+      configurable: true,
+    })
+    doc.body.appendChild(iframe)
+    return iframe
+  }
+
+  beforeEach(() => {
+    originalParent = window.parent
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, "parent", {
+      value: originalParent,
+      writable: true,
+      configurable: true,
+    })
+    document.body.replaceChildren()
+  })
+
+  it("returns null when the app is not running in a child frame", () => {
+    expect(window.parent).toBe(window)
+    expect(getIFrameEnclosingApp("any")).toBeNull()
+  })
+
+  it("returns a titled iframe when it contains the embedding id class and is accessible", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    const iframe = makeIframeWithEmbeddingClass(document, "cloud-1", {
+      title: "streamlitApp",
+    })
+
+    expect(getIFrameEnclosingApp("cloud-1")).toBe(iframe)
+  })
+
+  it("returns null when a matching iframe exists but cannot be accessed", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    makeIframeWithEmbeddingClass(document, "blocked", {
+      title: "streamlitApp",
+      contentWindow: null,
+    })
+
+    expect(getIFrameEnclosingApp("blocked")).toBeNull()
+  })
+
+  it("finds an iframe without streamlitApp title via getElementsByTagName fallback", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    const iframe = makeIframeWithEmbeddingClass(document, "untitled", {})
+
+    expect(getIFrameEnclosingApp("untitled")).toBe(iframe)
+  })
+
+  it("finds the iframe on the parent document when missing from the current document", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    const iframe = makeIframeWithEmbeddingClass(
+      parentDocument,
+      "parent-only",
+      {
+        title: "streamlitApp",
+      }
+    )
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-only")).toBe(iframe)
+  })
+
+  it("treats an iframe as inaccessible when reading contentWindow throws", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    const iframe = makeIframeWithEmbeddingClass(document, "throws", {
+      title: "streamlitApp",
+    })
+    Object.defineProperty(iframe, "contentWindow", {
+      get() {
+        throw new Error("cross-origin access denied")
+      },
+      configurable: true,
+    })
+
+    expect(getIFrameEnclosingApp("throws")).toBeNull()
+  })
+
+  it("returns null when a titled iframe on the parent document is inaccessible", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    makeIframeWithEmbeddingClass(parentDocument, "parent-blocked", {
+      title: "streamlitApp",
+      contentWindow: null,
+    })
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-blocked")).toBeNull()
+  })
+
+  it("returns null when an untitled iframe in the current document is inaccessible", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    makeIframeWithEmbeddingClass(document, "current-blocked", {
+      contentWindow: null,
+    })
+
+    expect(getIFrameEnclosingApp("current-blocked")).toBeNull()
+  })
+
+  it("finds an untitled iframe on the parent document via getElementsByTagName", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    const iframe = makeIframeWithEmbeddingClass(
+      parentDocument,
+      "parent-tag",
+      {}
+    )
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-tag")).toBe(iframe)
+  })
+
+  it("returns null when the only parent iframe found by tag name is inaccessible", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    makeIframeWithEmbeddingClass(parentDocument, "parent-tag-blocked", {
+      contentWindow: null,
+    })
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-tag-blocked")).toBeNull()
+  })
+})
+
+describe("getTimezone", () => {
+  it("returns the Intl timezone", () => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    expect(getTimezone()).toBe(tz)
+  })
+})
+
+describe("getTimezoneOffset", () => {
+  it("returns the Date timezone offset", () => {
+    expect(getTimezoneOffset()).toBe(new Date().getTimezoneOffset())
+  })
+})
+
+describe("getLocaleLanguage", () => {
+  let languageSpy: MockInstance
+
+  beforeEach(() => {
+    languageSpy = vi.spyOn(navigator, "language", "get")
+  })
+
+  afterEach(() => {
+    languageSpy.mockRestore()
+  })
+
+  it("returns navigator.language", () => {
+    languageSpy.mockReturnValue("fr-CA")
+    expect(getLocaleLanguage()).toBe("fr-CA")
   })
 })

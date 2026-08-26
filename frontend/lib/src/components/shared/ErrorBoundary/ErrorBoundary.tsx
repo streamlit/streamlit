@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import { PureComponent } from "react"
 
 import { getLogger } from "loglevel"
 
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import ErrorElement from "~lib/components/shared/ErrorElement"
+import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 
-export interface Props {
+interface Props {
   width?: number
 }
 
-export interface State {
+interface State {
   error?: Error | null
 }
 

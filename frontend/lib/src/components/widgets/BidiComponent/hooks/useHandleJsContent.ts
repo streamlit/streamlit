@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import { v4 as uuidv4 } from "uuid"
 
 import {
-  ComponentArgs,
-  ComponentState,
-  OptionalComponentCleanupFunction,
+  CleanupFunction,
+  FrontendRendererArgs,
+  FrontendState,
 } from "@streamlit/component-v2-lib"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
@@ -47,7 +47,7 @@ import type { WidgetStateManager } from "~lib/WidgetStateManager"
  * If you need to handle untrusted input, do not use this function without your
  * own sanitization/defense-in-depth strategy.
  */
-const loadAndRunModule = async <T extends ComponentState>({
+const loadAndRunModule = async <T extends FrontendState>({
   componentId,
   componentIdForWidgetMgr,
   componentName,
@@ -69,7 +69,7 @@ const loadAndRunModule = async <T extends ComponentState>({
   moduleUrl: string
   parentElement: HTMLElement | ShadowRoot
   widgetMgr: WidgetStateManager
-}): Promise<OptionalComponentCleanupFunction> => {
+}): Promise<CleanupFunction | void> => {
   const module = await import(/* @vite-ignore */ moduleUrl)
 
   if (!module) {
@@ -80,11 +80,11 @@ const loadAndRunModule = async <T extends ComponentState>({
     throw new Error("JS module does not have a default export function.")
   }
 
-  const setStateValue = <T extends ComponentState>(
+  const setStateValue = <T extends FrontendState>(
     name: string,
     value: T[keyof T]
   ): void => {
-    let newValue: T = {} as T
+    let newValue: T
 
     try {
       const existingValue = getWidgetValue()
@@ -95,15 +95,14 @@ const loadAndRunModule = async <T extends ComponentState>({
       newValue = { [name]: value } as T
     }
 
-    void widgetMgr.setJsonValue(
-      { id: componentIdForWidgetMgr, formId },
-      newValue,
-      { fromUi: true },
-      fragmentId
-    )
+    void widgetMgr.setJsonValue(componentIdForWidgetMgr, newValue, {
+      formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 
-  const setTriggerValue = <T extends ComponentState>(
+  const setTriggerValue = <T extends FrontendState>(
     name: string,
     value: T[keyof T]
   ): void => {
@@ -121,9 +120,8 @@ const loadAndRunModule = async <T extends ComponentState>({
     }
     const triggerId = makeTriggerAggregatorId(componentIdForWidgetMgr)
     void widgetMgr.setTriggerValue(
-      { id: triggerId, formId },
-      { fromUi: true },
-      fragmentId,
+      triggerId,
+      { formId, fragmentId, fromUser: true },
       { event: name, value }
     )
   }
@@ -135,7 +133,7 @@ const loadAndRunModule = async <T extends ComponentState>({
     parentElement,
     setStateValue,
     setTriggerValue,
-  } satisfies ComponentArgs)
+  } satisfies FrontendRendererArgs)
 }
 
 /**
@@ -207,7 +205,7 @@ export const useHandleJsContent = ({
 
   // Lifecycle refs to ensure we only run the user-written JS cleanup function
   // when the component is unmounted by Streamlit.
-  const cleanupRef = useRef<OptionalComponentCleanupFunction>()
+  const cleanupRef = useRef<CleanupFunction | void>()
   const scriptElementRef = useRef<HTMLScriptElement>()
   const unmountedRef = useRef(false)
 

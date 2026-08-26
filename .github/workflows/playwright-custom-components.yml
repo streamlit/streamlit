@@ -7,10 +7,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
+      # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
-      # Don't run CI if changes are only in the agent-knowledge folder:
-      - "agent-knowledge/**"
+      - "wiki/**"
 
   # Allows workflow to be called from other workflows
   workflow_call:
@@ -33,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -41,12 +40,10 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Install playwright
         uses: ./.github/actions/playwright_install
       - name: Run make frontend-fast
@@ -61,14 +58,13 @@ jobs:
           fi
       - name: Run custom component playwright tests
         run: |
-          source venv/bin/activate
           cd e2e_playwright
           echo "Installing custom components"
           uv pip install -r ./custom_components/components-e2e-requirements.txt
           rm -rf ./test-results
-          pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
+          uv run pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 --tracing retain-on-failure
       - name: Upload failed test results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}

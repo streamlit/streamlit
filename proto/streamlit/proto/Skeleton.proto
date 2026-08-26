@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "SkeletonProto";
-
 // An empty-like element that displays an app skeleton.
 message Skeleton {
   enum SkeletonStyle {
@@ -28,6 +25,9 @@ message Skeleton {
   // Skeleton visual style
   SkeletonStyle style = 1;
 
-  // Height in pixels
-  optional int32 height = 2;
+  // Deprecated: no longer used. The public st.skeleton() API sizes the skeleton
+  // via the element's layout config, and the deprecated internal _skeleton()
+  // always renders at the default element height. Retained for wire
+  // compatibility; do not reuse this field number.
+  optional int32 height = 2 [deprecated = true];
 }

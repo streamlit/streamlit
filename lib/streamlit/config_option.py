@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -226,17 +226,15 @@ class ConfigOption:
             Returns self, which makes testing easier. See config_test.py.
 
         """
-        if get_val_func.__doc__ is None:
-            raise RuntimeError(
-                "Complex config options require doc strings for their description."
-            )
-        self.description = get_val_func.__doc__
+        # Handle PYTHONOPTIMIZE=2 case where docstrings are stripped.
+        # Fall back to empty string instead of raising an error.
+        self.description = get_val_func.__doc__ or ""
         self._get_val_func = get_val_func
         return self
 
     @property
     def value(self) -> Any:
-        """Get the value of this config option."""
+        """The value of this config option."""
         if self._get_val_func is None:
             return None
         return self._get_val_func()
@@ -309,7 +307,7 @@ class ConfigOption:
 
     @property
     def env_var(self) -> str:
-        """Get the name of the environment variable that can be used to set the option."""
+        """The name of the environment variable that can be used to set the option."""
         name = self.key.replace(".", "_")
         return f"STREAMLIT_{to_snake_case(name).upper()}"
 

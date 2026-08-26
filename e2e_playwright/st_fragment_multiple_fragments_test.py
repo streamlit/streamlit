@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,11 +33,11 @@ def _get_uuids(app: Page, expected_markdown_count: int = 2) -> tuple[str, str]:
 
 
 def _get_fragment_checkbox(app: Page) -> Locator:
-    return app.get_by_test_id("stCheckbox").nth(1).locator("span").first
+    return app.get_by_test_id("stCheckbox").nth(1).locator("label").first
 
 
 def _get_app_raise_exception_checkbox(app: Page) -> Locator:
-    return app.get_by_test_id("stCheckbox").nth(0).locator("span").first
+    return app.get_by_test_id("stCheckbox").nth(0).locator("label").first
 
 
 def test_fragments_run_independently(app: Page):

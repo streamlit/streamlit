@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-
+import type { Theme as GlideTheme } from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
@@ -27,7 +26,7 @@ const mockTheme = {
   bgCell: "#ffffff",
   fontFamily: "Arial",
   baseFontStyle: "14px",
-}
+} as GlideTheme
 
 describe("JsonViewer", () => {
   it("renders valid JSON object correctly", () => {

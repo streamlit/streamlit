@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -26,12 +27,12 @@ import React, {
 import { Video } from "@emotion-icons/open-iconic"
 import Webcam from "react-webcam"
 
-import Icon from "~lib/components/shared/Icon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "~lib/urls"
 import { isMobile } from "~lib/util/isMobile"
-import { debounce } from "~lib/util/utils"
+import { debounce, isNullOrUndefined } from "~lib/util/utils"
 
 import CameraInputButton from "./CameraInputButton"
 import {
@@ -50,6 +51,7 @@ export interface Props {
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
   facingMode: FacingMode
   setFacingMode: () => void
+  resolutionHeight?: number
   // Allow for unit testing
   testOverride?: WebcamPermission
 }
@@ -64,7 +66,7 @@ interface AskForCameraPermissionProps {
   width: number
 }
 
-export const AskForCameraPermission = ({
+const AskForCameraPermission = ({
   width,
 }: AskForCameraPermissionProps): ReactElement => {
   return (
@@ -92,6 +94,7 @@ const WebcamComponent = ({
   setClearPhotoInProgress,
   facingMode,
   setFacingMode,
+  resolutionHeight,
   testOverride,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamPermissionState] = useState(
@@ -101,8 +104,9 @@ const WebcamComponent = ({
 
   const [debouncedWidth, setDebouncedWidth] = useState(width)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce returns a function; stable across renders
   const memoizedSetDebouncedCallback = useCallback(
+    // eslint-disable-next-line react-hooks/use-memo -- debounce factory pattern
     debounce(1000, setDebouncedWidth),
     []
   )
@@ -119,6 +123,24 @@ const WebcamComponent = ({
   }
 
   const theme = useEmotionTheme()
+
+  // When a resolution is requested we constrain only height so the camera's
+  // native aspect ratio determines width; otherwise we hint the display width.
+  // Each branch is memoized separately so the selected reference only changes
+  // with the inputs it actually uses. This keeps react-webcam (which treats
+  // videoConstraints as a useEffect dependency) from renegotiating the stream
+  // on resize while a resolution preset is active, where debouncedWidth is unused.
+  const heightConstraints: MediaTrackConstraints = useMemo(
+    () => ({ height: { ideal: resolutionHeight }, facingMode }),
+    [resolutionHeight, facingMode]
+  )
+  const widthConstraints: MediaTrackConstraints = useMemo(
+    () => ({ width: { ideal: debouncedWidth }, facingMode }),
+    [debouncedWidth, facingMode]
+  )
+  const videoConstraints = isNullOrUndefined(resolutionHeight)
+    ? widthConstraints
+    : heightConstraints
 
   return (
     <StyledCameraInput data-testid="stCameraInputWebcamComponent">
@@ -146,6 +168,8 @@ const WebcamComponent = ({
             ref={videoRef}
             screenshotFormat="image/jpeg"
             screenshotQuality={1}
+            // width/height size the on-screen preview only; the captured image size is
+            // governed by videoConstraints + forceScreenshotSourceSize.
             width={debouncedWidth}
             // We keep Aspect ratio of container always equal 16 / 9.
             // The aspect ration of video stream may be different depending on a camera.
@@ -160,10 +184,8 @@ const WebcamComponent = ({
               setWebcamPermissionState(WebcamPermission.SUCCESS)
               setClearPhotoInProgress(false)
             }}
-            videoConstraints={{
-              width: { ideal: debouncedWidth },
-              facingMode,
-            }}
+            videoConstraints={videoConstraints}
+            forceScreenshotSourceSize={!isNullOrUndefined(resolutionHeight)}
           />
         )}
       </StyledBox>

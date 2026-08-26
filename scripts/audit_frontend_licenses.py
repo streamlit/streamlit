@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,6 +107,12 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         "splaytree-ts@npm:1.0.2",
         "BDS-3-Clause",
     ),
+    (
+        # MIT license: https://github.com/fabiospampinato/khroma/blob/master/license
+        # (npm metadata incorrectly shows "Proprietary")
+        "khroma@npm:2.1.0",
+        "UNKNOWN",
+    ),
 }
 
 
@@ -166,7 +172,7 @@ def main() -> NoReturn:
     )
 
     # Run `yarn licenses` for app.
-    licenses_output = licenses_output + (
+    licenses_output += (
         subprocess.check_output(
             ["yarn", "licenses", "list", "--json", "--production", "--recursive"],
             cwd=str(FRONTEND_DIR_APP),

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,12 @@ def convert_data_to_bytes_and_infer_mime(
     elif isinstance(data, io.TextIOWrapper):
         string_data = data.read()
         data_as_bytes = string_data.encode()
+        inferred_mime_type = "text/plain"
+    elif isinstance(data, io.StringIO):
+        # Use getvalue() so the full buffer is captured regardless of cursor
+        # position (mirrors io.BytesIO). StringIO is a sibling of TextIOWrapper
+        # under io.TextIOBase, so it needs its own branch.
+        data_as_bytes = data.getvalue().encode()
         inferred_mime_type = "text/plain"
     # Assume bytes; try methods until we run out.
     elif isinstance(data, bytes):

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import inspect
 import os
 import sys
 from collections.abc import Callable
@@ -176,13 +177,119 @@ def main_version() -> None:
     main()
 
 
-@main.command("docs")
-def main_docs() -> None:
-    """Show help in browser."""
-    click.echo("Showing help page in browser...")
-    from streamlit import cli_util
+def _resolve_streamlit_command(command_name: str) -> tuple[str, Any] | None:
+    """Resolve a public Streamlit command name to its object.
 
-    cli_util.open_browser("https://docs.streamlit.io")
+    Supports the notations ``st.number_input``, ``number_input``, and
+    ``streamlit.number_input``, as well as dotted namespace members such as
+    ``st.column_config.NumberColumn``.
+
+    Returns a tuple of the normalized display name (e.g. ``st.number_input``)
+    and the resolved object, or ``None`` if no matching public command exists.
+    """
+    import streamlit as st
+
+    name = command_name.strip()
+    # Strip a single leading "st." or "streamlit." prefix (exclusively).
+    if name.startswith("streamlit."):
+        name = name.removeprefix("streamlit.")
+    elif name.startswith("st."):
+        name = name.removeprefix("st.")
+    if not name:
+        return None
+
+    obj: Any = st
+    parts = name.split(".")
+    for index, part in enumerate(parts):
+        # Only resolve genuine public attributes. The ``part in dir(obj)`` check
+        # guards against objects (e.g. ``DeltaGenerator``) whose ``__getattr__``
+        # synthesizes placeholder callables for unknown names, which would
+        # otherwise resolve falsely.
+        if not part or part.startswith("_") or part not in dir(obj):
+            return None
+        try:
+            # Resolve the attribute statically so computed attributes (e.g. the
+            # ``st.context.headers`` property) are not evaluated.
+            static_obj = inspect.getattr_static(obj, part)
+        except AttributeError:
+            # Some public container members are exposed dynamically through
+            # ``__getattr__``. They are already filtered through ``dir(obj)``.
+            try:
+                obj = getattr(obj, part)
+            except Exception:
+                return None
+            continue
+        except Exception:
+            return None
+
+        # Computed attributes (properties and getset descriptors, mirroring
+        # ``help._is_computed_property``) can only be the final part, since
+        # traversing into them would require evaluating them. Keep the
+        # descriptor itself so its docstring can be displayed without invoking
+        # it.
+        if isinstance(static_obj, property) or inspect.isgetsetdescriptor(static_obj):
+            if index != len(parts) - 1:
+                return None
+            obj = static_obj
+        else:
+            try:
+                obj = getattr(obj, part)
+            except Exception:
+                return None
+
+    return f"st.{name}", obj
+
+
+def _format_command_docs(display_name: str, obj: Any) -> str:
+    """Format the signature and docstring of a resolved command as plain text."""
+    from streamlit.elements import help as help_utils
+
+    signature = help_utils._get_signature(obj)
+    docstring = help_utils._get_docstring(obj)
+
+    header = f"{display_name}{signature}" if signature else display_name
+    if docstring:
+        return f"{header}\n\n{docstring}"
+    return header
+
+
+@main.command("docs")
+@click.argument("command", required=False)
+def main_docs(command: str | None = None) -> None:
+    r"""Look up a Streamlit command, or open the docs in your browser.
+
+    If COMMAND is omitted, the documentation website is opened in your browser.
+
+    If COMMAND is provided, the signature and docstring of the matching public
+    Streamlit command are printed. COMMAND can be written with or without the
+    ``st.`` (or ``streamlit.``) prefix, and can reference namespace members
+    such as ``st.column_config.NumberColumn``.
+
+    \b
+    Examples:
+        $ streamlit docs                              # Open docs in browser
+        $ streamlit docs st.number_input
+        $ streamlit docs number_input
+        $ streamlit docs streamlit.number_input
+        $ streamlit docs st.column_config.NumberColumn
+    """
+    if command is None:
+        click.echo("Showing help page in browser...")
+        from streamlit import cli_util
+
+        cli_util.open_browser("https://docs.streamlit.io")
+        return
+
+    resolved = _resolve_streamlit_command(command)
+    if resolved is None:
+        raise click.BadArgumentUsage(
+            f"No public Streamlit command found matching {command!r}.\n"
+            "Provide a command such as 'st.number_input', 'number_input', or "
+            "'st.column_config.NumberColumn'."
+        )
+
+    display_name, obj = resolved
+    click.echo(_format_command_docs(display_name, obj))
 
 
 @main.command("hello")
@@ -267,7 +374,7 @@ def _check_extension_or_raise(path_str: str) -> None:
 
 
 def _get_command_line_as_string() -> str | None:
-    import subprocess
+    import subprocess  # noqa: S404
 
     parent = click.get_current_context().parent
     if parent is None:
@@ -292,7 +399,8 @@ def _main_run(
     # Set the main script path to use it for config & secret files
     # While its a bit suboptimal, we need to store this into a module-level
     # variable before we load the config options via `load_config_options`
-    _config._main_script_path = os.path.abspath(file)
+    main_script_path = os.path.abspath(file)
+    _config._main_script_path = main_script_path
 
     bootstrap.load_config_options(flag_options=flag_options or {})
     if args is None:
@@ -301,11 +409,31 @@ def _main_run(
     if flag_options is None:
         flag_options = {}
 
-    is_hello = _get_command_line_as_string() == "streamlit hello"
-
     check_credentials()
 
-    bootstrap.run(file, is_hello, args, flag_options)
+    # Check if the script contains an ASGI app instance (st.App, FastAPI, Starlette).
+    # This intentionally supports non-Streamlit ASGI frameworks to enable `streamlit run`
+    # as a unified entry point for projects that combine Streamlit with other frameworks.
+    from streamlit.web.server.app_discovery import discover_asgi_app
+
+    discovery_result = discover_asgi_app(Path(main_script_path))
+
+    if discovery_result.is_asgi_app:
+        app_import_string = discovery_result.import_string
+        if app_import_string is None:  # pragma: no cover - defensive
+            raise RuntimeError("ASGI app discovery did not return an import string")
+
+        # Run as ASGI app with uvicorn
+        bootstrap.run_asgi_app(
+            main_script_path,
+            app_import_string,
+            args,
+            flag_options,
+        )
+    else:
+        # Run as traditional Streamlit app
+        is_hello = _get_command_line_as_string() == "streamlit hello"
+        bootstrap.run(main_script_path, is_hello, args, flag_options)
 
 
 # SUBCOMMAND cache
@@ -314,7 +442,6 @@ def _main_run(
 @main.group("cache")
 def cache() -> None:
     """Manage the Streamlit cache."""
-    pass
 
 
 @cache.command("clear")
@@ -337,7 +464,6 @@ def cache_clear() -> None:
 @main.group("config")
 def config() -> None:
     """Manage Streamlit's config settings."""
-    pass
 
 
 @config.command("show")
@@ -376,7 +502,6 @@ def test() -> None:
 
     These commands are not included in the output of `streamlit help`.
     """
-    pass
 
 
 @test.command("prog_name")
@@ -393,13 +518,55 @@ def test_prog_name() -> None:
 
     parent = click.get_current_context().parent
 
-    if parent is None:
+    if parent is None:  # pragma: no cover - defensive
         raise AssertionError("parent is None")
 
-    if parent.command_path != "streamlit test":
+    if parent.command_path != "streamlit test":  # pragma: no cover - defensive
         raise AssertionError(
             f"Parent command path is {parent.command_path} not streamlit test."
         )
+
+
+@main.command("skills")
+@click.option(
+    "-g",
+    "--global",
+    "global_mode",
+    is_flag=True,
+    help="Install globally (in user directory).",
+)
+@click.option("-y", "--yes", is_flag=True, help="Skip confirmation prompts.")
+def main_skills(global_mode: bool, yes: bool) -> None:
+    r"""Install Streamlit AI-agent skills.
+
+    Installs bundled Streamlit skills to help AI agents build better Streamlit apps.
+
+    \b
+    Project mode (default):
+        Creates symlinks from .agents/skills/ and .claude/skills/ to the
+        bundled skills in your Streamlit installation. Skills stay in sync
+        when Streamlit is upgraded.
+
+    \b
+    Global mode (--global):
+        Installs a version-agnostic meta skill into your user directory. It
+        discovers each project's installed Streamlit at runtime, so a single
+        global install works across all projects and Streamlit versions.
+
+    \b
+    Examples:
+        $ streamlit skills              # Interactive project install
+        $ streamlit skills --global     # Interactive global install
+        $ streamlit skills --yes        # Non-interactive project install
+        $ streamlit skills -g -y        # Non-interactive global install
+    """
+    from streamlit.web.skills import install_skills
+
+    try:
+        install_skills(global_mode=global_mode, yes=yes)
+    except click.Abort:
+        click.echo("Aborted.")
+        raise click.exceptions.Exit(1) from None
 
 
 @main.command("init")

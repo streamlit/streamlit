@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,16 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   overflowX: "auto",
   margin: 0,
   borderRadius: theme.radii.default,
+  /**
+   * The inner `StyledCode` is rendered with `wrapLines={false}`, so
+   * `codeBlockStyle` puts the right gutter on the `<code>` (`inline-block` +
+   * `padding-right`) rather than here. Browsers drop a scroll container's
+   * own right padding from its scrollable overflow region, so keeping the
+   * gutter on the inner element preserves it at max horizontal scroll.
+   * See issue #8206.
+   */
   padding: theme.spacing.lg,
+  paddingRight: 0,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))
 

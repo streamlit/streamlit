@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,6 +57,13 @@ class DummyCacheStorageManagerTest(unittest.TestCase):
         self.storage.set("some-key", b"some-value")
         assert self.storage.get("some-key") == b"some-value"
 
+    def test_in_memory_wrapped_dummy_cache_storage_has(self):
+        assert self.storage.has("some-key") is False
+        self.storage.set("some-key", b"some-value")
+        assert self.storage.has("some-key") is True
+        self.storage.delete("some-key")
+        assert self.storage.has("some-key") is False
+
     def test_in_memory_wrapped_dummy_cache_storage_storage_set(self):
         """
         Test that storage.set() sets the value correctly.
@@ -97,6 +104,11 @@ class DummyCacheStorageTest(unittest.TestCase):
 
         with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("some-key")
+
+    def test_dummy_storage_has_always_false(self):
+        assert self.storage.has("some-key") is False
+        self.storage.set("some-key", b"some-value")
+        assert self.storage.has("some-key") is False
 
     def test_storage_set(self):
         """

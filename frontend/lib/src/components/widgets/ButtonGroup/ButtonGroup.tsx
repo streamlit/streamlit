@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,42 +14,40 @@
  * limitations under the License.
  */
 
-import React, {
-  forwardRef,
+import {
   memo,
   ReactElement,
-  Ref,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
 } from "react"
 
-import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
+import { Selection } from "react-aria-components"
 
 import {
   ButtonGroup as ButtonGroupProto,
-  LabelVisibilityMessage,
+  LabelVisibility,
   streamlit,
 } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
-import BaseButton, {
-  BaseButtonKind,
-  BaseButtonSize,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
-import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import {
-  StyledWidgetLabelHelpInline,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
+  StyledButtonGroup,
+  StyledPillsToggleButton,
+  StyledSegmentedControlToggleButton,
+  StyledToggleButtonGroup,
+} from "~lib/components/shared/BaseButton/styled-components"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme } from "~lib/theme"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -61,271 +59,126 @@ export interface Props {
   widthConfig: streamlit.IWidthConfig | undefined | null
 }
 
-function handleMultiSelection(
-  index: number,
-  currentSelection: number[]
-): number[] {
-  if (!currentSelection.includes(index)) {
-    return [...currentSelection, index]
-  }
-  return currentSelection.filter(value => value !== index)
+/**
+ * Get the base content string for an option.
+ */
+function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
+  const icon = option.contentIcon
+  const content = option.content ?? ""
+  return icon ? `${icon} ${content}`.trim() : content
 }
 
-function handleSelection(
-  mode: ButtonGroupProto.ClickMode,
-  index: number,
-  currentSelection?: number[]
-): number[] {
-  if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    return handleMultiSelection(index, currentSelection ?? [])
-  }
+/**
+ * Scroll `option` into `group` horizontally without moving ancestor
+ * scrollports (`scrollIntoView` would also pan `stMain`). Honors CSS
+ * `scroll-padding-inline` so the option lands outside the overflow fade.
+ */
+function scrollOptionIntoGroup(group: HTMLElement, option: Element): void {
+  if (!(option instanceof HTMLElement)) return
 
-  // unselect if item is already selected
-  return currentSelection?.includes(index) ? [] : [index]
+  /* eslint-disable streamlit-custom/no-force-reflow-access -- Batched reads to align the option inside this group only */
+  const groupRect = group.getBoundingClientRect()
+  const optionRect = option.getBoundingClientRect()
+  const style = getComputedStyle(group)
+  const padStart = Number.parseFloat(style.scrollPaddingInlineStart) || 0
+  const padEnd = Number.parseFloat(style.scrollPaddingInlineEnd) || 0
+  const overflowStart = optionRect.left - (groupRect.left + padStart)
+  const overflowEnd = optionRect.right - (groupRect.right - padEnd)
+  if (overflowStart >= 0 && overflowEnd <= 0) return
+
+  // Assign scrollLeft instead of scrollIntoView/scrollTo: it stays local to
+  // this group (no ancestor pan) and applies synchronously so layout tests
+  // don't wait on smooth-scroll animation.
+  group.scrollLeft += overflowStart < 0 ? overflowStart : overflowEnd
+  /* eslint-enable streamlit-custom/no-force-reflow-access */
 }
 
-function getSingleSelection(currentSelection: number[]): number {
-  if (currentSelection.length === 0) {
-    return -1
+/**
+ * Find the index of an option by its content string.
+ * Returns the last matching index (to match backend "last wins" behavior
+ * for duplicate labels), or -1 if not found.
+ */
+function findOptionIndex(
+  options: ButtonGroupProto.IOption[],
+  content: string
+): number {
+  for (let i = options.length - 1; i >= 0; i--) {
+    if (getOptionBaseContent(options[i]) === content) {
+      return i
+    }
   }
-  return currentSelection[0]
+  return -1
+}
+
+/**
+ * Convert content strings to indices based on current options.
+ */
+function contentStringsToIndices(
+  options: ButtonGroupProto.IOption[],
+  contentStrings: string[]
+): number[] {
+  const indices: number[] = []
+  for (const content of contentStrings) {
+    const index = findOptionIndex(options, content)
+    if (index >= 0) {
+      indices.push(index)
+    }
+  }
+  return indices
+}
+
+/** The value stored in React state: array of content strings. */
+type ButtonGroupValue = string[]
+
+function getInitialValue(
+  widgetMgr: WidgetStateManager,
+  element: ButtonGroupProto
+): ButtonGroupValue | undefined {
+  return widgetMgr.getStringArrayValue(element)
+}
+
+function getDefaultStateFromProto(
+  element: ButtonGroupProto
+): ButtonGroupValue {
+  const defaultIndices = element.default ?? []
+  return defaultIndices
+    .map(index => {
+      const option = element.options[index]
+      return option ? getOptionBaseContent(option) : ""
+    })
+    .filter(s => s !== "")
+}
+
+function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
+  return element.rawValues ?? []
 }
 
 function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ButtonGroupValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
-  widgetMgr.setIntArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
-}
-
-export function getContentElement(
-  content: string,
-  icon?: string,
-  style?: ButtonGroupProto.Style
-): { element: ReactElement; kind: BaseButtonKind; size: BaseButtonSize } {
-  const kind =
-    style === ButtonGroupProto.Style.PILLS
-      ? BaseButtonKind.PILLS
-      : style === ButtonGroupProto.Style.BORDERLESS
-        ? BaseButtonKind.BORDERLESS_ICON
-        : BaseButtonKind.SEGMENTED_CONTROL
-  const size =
-    style === ButtonGroupProto.Style.BORDERLESS
-      ? BaseButtonSize.XSMALL
-      : BaseButtonSize.MEDIUM
-
-  // Use smaller font if kind is pills or segmented control
-  const useSmallerFont =
-    kind === BaseButtonKind.PILLS || kind === BaseButtonKind.SEGMENTED_CONTROL
-
-  const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
-
-  return {
-    element: (
-      <DynamicButtonLabel
-        icon={icon}
-        label={content}
-        iconSize={iconSize}
-        useSmallerFont={useSmallerFont}
-      />
-    ),
-    kind: kind,
-    size: size,
-  }
-}
-
-/**
- * Returns true if the element should be shown as selected (even though its technically not).
- * This is used, for example, to show all elements as selected that come before the actually selected element.
- *
- * @param selectionVisualization sets the visualization mode
- * @param clickMode either SINGLE_SELECT or MULTI_SELECT
- * @param selected list of selected indices. Since only SINGLE_SELECT is considered, this list will always have a length of 1.
- * @param index of the current element
- * @returns true if the element is the selected one, or if click_mode is SINGLE_SELECT and selectionVisualization is set to
- *  ALL_UP_TO_SELECTED and the index of the element is smaller than the index of the selected element, false otherwise.
- */
-function showAsSelected(
-  selectionVisualization: ButtonGroupProto.SelectionVisualization,
-  clickMode: ButtonGroupProto.ClickMode,
-  selected: number[],
-  index: number
-): boolean {
-  if (selected.indexOf(index) > -1) {
-    return true
-  }
-
-  if (
-    clickMode !== ButtonGroupProto.ClickMode.SINGLE_SELECT ||
-    selectionVisualization !==
-      ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
-  ) {
-    return false
-  }
-
-  return selected.length > 0 && index < selected[0]
-}
-
-function getButtonKindAndSize(
-  isVisuallySelected: boolean,
-  buttonKind: BaseButtonKind
-): BaseButtonKind {
-  if (isVisuallySelected) {
-    buttonKind = `${buttonKind}Active` as BaseButtonKind
-  }
-
-  return buttonKind
-}
-
-function getButtonGroupOverridesStyle(
-  style: ButtonGroupProto.Style,
-  spacing: EmotionTheme["spacing"],
-  containerWidth: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> {
-  const baseStyle = {
-    flexWrap: "wrap",
-    // maxWidth must be conditional:
-    // - "100%" for stretch width: allows buttons to fill container
-    // - "fit-content" for content width: prevents flexbox calculation errors
-    //   that cause the last button to wrap incorrectly (gh-12067)
-    maxWidth: containerWidth ? "100%" : "fit-content",
-    // This ensures that the button group does not overflow the container
-    // due to the negative margins that BaseWeb adds.
-    margin: "0 0",
-  }
-  const width = containerWidth ? "100%" : "auto"
-  const segmentedControlNoStretch = containerWidth
-    ? {}
-    : {
-        content: "''",
-        flex: 10000,
-      }
-
-  switch (style) {
-    case ButtonGroupProto.Style.BORDERLESS:
-      return {
-        ...baseStyle,
-        columnGap: spacing.threeXS,
-        rowGap: spacing.threeXS,
-      }
-    case ButtonGroupProto.Style.PILLS:
-      return {
-        ...baseStyle,
-        columnGap: spacing.twoXS,
-        rowGap: spacing.twoXS,
-        width,
-      }
-    case ButtonGroupProto.Style.SEGMENTED_CONTROL:
-      return {
-        ...baseStyle,
-        columnGap: spacing.none,
-        rowGap: spacing.twoXS,
-        // Adding an empty pseudo-element after the last button in the group.
-        // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
-        // This is only needed if the button group has content width.
-        "::after": segmentedControlNoStretch,
-        width,
-      }
-    default:
-      return baseStyle
-  }
-}
-
-function createOptionChild(
-  option: ButtonGroupProto.IOption,
-  index: number,
-  selectionVisualization: ButtonGroupProto.SelectionVisualization,
-  clickMode: ButtonGroupProto.ClickMode,
-  selected: number[],
-  style: ButtonGroupProto.Style,
-  containerWidth: boolean
-): React.FunctionComponent {
-  const isVisuallySelected = showAsSelected(
-    selectionVisualization,
-    clickMode,
-    selected,
-    index
-  )
-
-  let content = option.content
-  let icon = option.contentIcon
-  if (isVisuallySelected) {
-    content = option.selectedContent ? option.selectedContent : content
-    icon = option.selectedContentIcon ? option.selectedContentIcon : icon
-  }
-
-  // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
-  // and we see a console.error otherwise
-  return forwardRef(function BaseButtonGroup(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    props: any,
-    _: Ref<BasewebButtonGroup>
-  ): ReactElement {
-    const { element, kind, size } = getContentElement(
-      content ?? "",
-      icon ?? undefined,
-      style
-    )
-    const buttonKind = getButtonKindAndSize(
-      !!(
-        isVisuallySelected &&
-        !option.selectedContent &&
-        !option.selectedContentIcon
-      ),
-      kind
-    )
-    return (
-      <BaseButton
-        {...props}
-        size={size}
-        kind={buttonKind}
-        containerWidth={containerWidth}
-      >
-        {element}
-      </BaseButton>
-    )
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
   })
-}
-
-type ButtonGroupValue = number[]
-
-function getInitialValue(
-  widgetMgr: WidgetStateManager,
-  element: ButtonGroupProto
-): ButtonGroupValue | undefined {
-  return widgetMgr.getIntArrayValue(element)
-}
-
-function getDefaultStateFromProto(
-  element: ButtonGroupProto
-): ButtonGroupValue {
-  return element.default ?? null
-}
-
-function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.value ?? null
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
-  const {
-    clickMode,
-    options,
-    selectionVisualization,
-    style,
-    label,
-    labelVisibility,
-    help,
-  } = element
-  const theme = useEmotionTheme()
+  const { clickMode, options, style, label, labelVisibility, help, required } =
+    element
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: true,
+        urlFormat: "repeated" as const,
+      }
+    : undefined
 
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
@@ -338,43 +191,154 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)
+  const wrap = useResolvedWrap(element.wrap)
 
-  const onClick = (
-    _event: React.SyntheticEvent<HTMLButtonElement>,
-    index: number
-  ): void => {
-    const newSelected = handleSelection(clickMode, index, value)
-    setValueWithSource({ value: newSelected, fromUi: true })
-  }
+  /** The option group scrollport: overflow tracking, scroll-into-view, and aria-required. */
+  const groupRef = useRef<HTMLDivElement>(null)
 
-  let mode = undefined
-  if (clickMode === ButtonGroupProto.ClickMode.SINGLE_SELECT) {
-    mode = MODE.radio
-  } else if (clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    mode = MODE.checkbox
-  }
-
-  const optionElements = useMemo(
-    () =>
-      options.map((option, index) => {
-        const Element = createOptionChild(
-          option,
-          index,
-          selectionVisualization,
-          clickMode,
-          value,
-          style,
-          containerWidth
-        )
-        // TODO: Update to match React best practices
-        // eslint-disable-next-line @eslint-react/no-array-index-key
-        return <Element key={`${option.content}-${index}`} />
-      }),
-    [clickMode, options, selectionVisualization, style, value, containerWidth]
+  const overflowLayoutKey = useMemo(
+    () => options.map(getOptionBaseContent).join("\0"),
+    [options]
   )
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: groupRef,
+    enabled: !wrap,
+    layoutKey: overflowLayoutKey,
+  })
+  // React Aria's ToggleButtonGroup does not forward aria-required to the DOM
+  // element. Imperatively set it on the group root so screen readers can
+  // announce that the field is mandatory.
+  useEffect(() => {
+    if (!groupRef.current) return
+    if (required) {
+      groupRef.current.setAttribute("aria-required", "true")
+    } else {
+      groupRef.current.removeAttribute("aria-required")
+    }
+  }, [required])
+
+  // Keep a selected option visible when wrap is false.
+  // Defaults are never focused, so native focus scrolling is not enough.
+  // Assign scrollLeft instead of scrollIntoView so ancestors like stMain do not pan.
+  //
+  // - Prefer the focused selected option so multi-select clicks do not jump
+  //   to the leftmost selection.
+  // - If focus is on a just-deselected option, skip scrolling so remaining
+  //   selections do not yank the viewport.
+  // - Depend on overflowLayoutKey (not the options array reference) so a
+  //   reorder still scrolls, but unrelated reruns do not.
+  useEffect(() => {
+    if (wrap || !groupRef.current || value.length === 0) return
+    const group = groupRef.current
+    const active = document.activeElement
+    const focusIsInGroup = active instanceof Element && group.contains(active)
+    if (focusIsInGroup && !active.hasAttribute("data-selected")) return
+    const selectedOption = focusIsInGroup
+      ? active
+      : group.querySelector("[data-selected]")
+    if (!selectedOption) return
+    scrollOptionIntoGroup(group, selectedOption)
+  }, [wrap, value, overflowLayoutKey])
+
+  // When options change and the currently stored value no longer matches any
+  // option (e.g. because format_func changed dynamically due to a language
+  // switch, making the stored formatted strings stale), reset the widget so
+  // it stays visually consistent. An explicit user deselection always produces
+  // value=[], which short-circuits this guard immediately.
+  //
+  // Reset target priority:
+  //   1. element.rawValues (non-empty) — the backend detected the stale wire
+  //      value via session_state_fallback and sent back the correct
+  //      serialization with set_value=True (e.g. "naranja" for option "B" in
+  //      ES mode). Using rawValues ensures non-default selections are preserved
+  //      and the widgetMgr stores the fresh label for the next rerun.
+  //   2. getDefaultStateFromProto — fallback for the brief window before the
+  //      first backend response, where only the proto default is known.
+  useEffect(() => {
+    if (value.length === 0) return
+    const validIndices = contentStringsToIndices(options, value)
+    if (validIndices.length > 0) return
+    const backendValue = getCurrStateFromProto(element)
+    setValueWithSource({
+      value:
+        backendValue.length > 0
+          ? backendValue
+          : getDefaultStateFromProto(element),
+      fromUser: false,
+    })
+  }, [options, value, setValueWithSource, element])
+
+  const selectionMode =
+    clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
+      ? "multiple"
+      : "single"
+
+  // Each ToggleButton's `id` doubles as its React Aria selection key.
+  // Namespace with element.id so identical-index keys from sibling widgets
+  // are never the same DOM `id`, which would violate the HTML uniqueness spec.
+  const buttonId = useCallback(
+    (index: number) => `${element.id}-${index}`,
+    [element.id]
+  )
+
+  const selectedKeys = useMemo(
+    () =>
+      new Set(contentStringsToIndices(options, value).map(i => buttonId(i))),
+    [options, value, buttonId]
+  )
+
+  const handleSelectionChange = useCallback(
+    (keys: Selection): void => {
+      if (keys === "all") return
+      const idPrefix = `${element.id}-`
+      const newSelection = [...keys].map(k =>
+        getOptionBaseContent(options[Number(String(k).slice(idPrefix.length))])
+      )
+      // Avoid redundant state updates (e.g., when disallowEmptySelection blocks
+      // deselection of the last item, React Aria still fires onSelectionChange
+      // with the unchanged selection set). Use set-equality so insertion-order
+      // differences in the React Aria Set do not cause spurious updates.
+      const valueSet = new Set(value)
+      if (
+        newSelection.length === value.length &&
+        newSelection.every(v => valueSet.has(v))
+      ) {
+        return
+      }
+      setValueWithSource({ value: newSelection, fromUser: true })
+    },
+    [options, value, setValueWithSource, element.id]
+  )
+
+  const isPills = style === ButtonGroupProto.Style.PILLS
+
+  const optionElements = useMemo(() => {
+    const ButtonEl = isPills
+      ? StyledPillsToggleButton
+      : StyledSegmentedControlToggleButton
+    const dataVariant = isPills ? "pills" : "segmented_control"
+    return options.map((option, index) => (
+      <ButtonEl
+        // eslint-disable-next-line @eslint-react/no-array-index-key
+        key={`${getOptionBaseContent(option)}-${index}`}
+        id={buttonId(index)}
+        data-variant={dataVariant}
+        $containerWidth={containerWidth}
+        $wrap={wrap}
+      >
+        <DynamicButtonLabel
+          icon={option.contentIcon ?? undefined}
+          label={option.content ?? ""}
+          iconSize="base"
+        />
+      </ButtonEl>
+    ))
+  }, [options, isPills, containerWidth, wrap, buttonId])
 
   return (
     <StyledButtonGroup
@@ -387,40 +351,33 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         disabled={disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
           labelVisibility?.value ??
-            LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
+            LabelVisibility.LabelVisibilityOptions.COLLAPSED
         )}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP}
+            label={label}
+          />
         )}
       </WidgetLabel>
-      <BasewebButtonGroup
-        disabled={disabled}
-        mode={mode}
-        onClick={onClick}
-        selected={
-          clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-            ? value
-            : getSingleSelection(value)
-        }
-        overrides={{
-          Root: {
-            style: useCallback(
-              () =>
-                getButtonGroupOverridesStyle(
-                  style,
-                  theme.spacing,
-                  containerWidth
-                ),
-              [style, theme.spacing, containerWidth]
-            ),
-          },
-        }}
+      <StyledToggleButtonGroup
+        ref={groupRef}
+        selectionMode={selectionMode}
+        selectedKeys={selectedKeys}
+        onSelectionChange={handleSelectionChange}
+        isDisabled={disabled}
+        disallowEmptySelection={required && selectionMode === "single"}
+        aria-label={element.label}
+        $isPills={isPills}
+        $containerWidth={containerWidth}
+        $wrap={wrap}
+        data-can-scroll-start={canScrollLeft ? "" : undefined}
+        data-can-scroll-end={canScrollRight ? "" : undefined}
       >
         {optionElements}
-      </BasewebButtonGroup>
+      </StyledToggleButtonGroup>
     </StyledButtonGroup>
   )
 }

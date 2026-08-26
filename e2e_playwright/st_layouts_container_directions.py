@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,3 +87,29 @@ with st.container(
         st.write("Fixed 500px height container")
     with st.container(border=True):
         st.write("Default height container")
+
+_TOOLBAR_LABELS = ("Edit", "Duplicate", "Archive", "Delete", "Export", "Share")
+
+# Horizontal no-wrap container: elements stay in a single row and the container
+# scrolls horizontally when they don't fit (fixed width forces the overflow).
+with st.container(
+    horizontal=True,
+    wrap=False,
+    border=True,
+    width=300,
+    key="container-horizontal-no-wrap",
+):
+    for label in _TOOLBAR_LABELS:
+        st.button(label, key=f"no-wrap-{label}")
+
+# Horizontal wrapping container with the same content for comparison: elements
+# wrap onto additional rows instead of scrolling.
+with st.container(
+    horizontal=True,
+    wrap=True,
+    border=True,
+    width=300,
+    key="container-horizontal-wrap",
+):
+    for label in _TOOLBAR_LABELS:
+        st.button(label, key=f"wrap-{label}")

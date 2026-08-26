@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 export interface AppNodeVisitor<T> {
   visitBlockNode(node: BlockNode): T
   visitElementNode(node: ElementNode): T
+  visitTransientNode(node: TransientNode): T
 }

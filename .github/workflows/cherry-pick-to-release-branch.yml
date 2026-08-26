@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       cherry_pick_sha:
-        description: "Commit SHA to cherry-pick"
+        description: "Full 40-character commit SHA to cherry-pick"
         required: true
         type: string
       dry_run:
@@ -30,73 +30,81 @@ jobs:
     if: ${{ github.repository == 'streamlit/streamlit' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
+      # Shallow checkout of the workflow ref only. A full clone (fetch-depth: 0)
+      # has taken 15–30+ minutes on this repo when runners are slow.
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: true
 
-      - name: Set Python version vars
-        uses: ./.github/actions/build_info
-
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install Python deps for slack notifications
-        run: |
-          uv pip install --system requests
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
       - name: Configure Git
+        env:
+          GIT_ACTOR: ${{ github.actor }}
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "$GIT_ACTOR"
+          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
 
       - name: Define variables
         id: vars
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
         run: |
           set -euo pipefail
 
-          REL_VER='${{ inputs.release_version }}'
-          # Validate release version format before use
+          REL_VER="$RELEASE_VERSION"
           if ! echo "${REL_VER}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error::release_version must be full semver (i.j.k). Got '${REL_VER}'" >&2
             exit 1
           fi
 
           REL_BRANCH="release/${REL_VER}"
-          SHA='${{ inputs.cherry_pick_sha }}'
-          if ! echo "${SHA}" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
-            echo "::error::cherry_pick_sha must be a valid Git commit SHA. Got '${SHA}'" >&2
+          SHA="$CHERRY_PICK_SHA"
+          # Require the full 40-character SHA: the targeted `git fetch origin <sha>`
+          # below needs it verbatim and does not resolve abbreviated SHAs.
+          if ! echo "${SHA}" | grep -Eq '^[0-9a-fA-F]{40}$'; then
+            echo "::error::cherry_pick_sha must be the full 40-character Git commit SHA. Got '${SHA}'" >&2
             exit 1
           fi
 
           echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
 
-      - name: Validate inputs and repository state
+      - name: Checkout release branch
+        env:
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
           set -euo pipefail
-          # Ensure target branch exists on origin by attempting a shallow fetch of that branch
-          if ! git fetch --no-tags --depth=1 origin "${{ steps.vars.outputs.release_branch }}"; then
-            echo "::error::Branch '${{ steps.vars.outputs.release_branch }}' does not exist on origin" >&2
+          # Explicit refspec destination so the remote-tracking ref is created even
+          # though the initial checkout (fetch-depth: 1) only fetched the workflow ref.
+          if ! git fetch --no-tags --depth=1 origin "$RELEASE_BRANCH:refs/remotes/origin/$RELEASE_BRANCH"; then
+            echo "::error::Branch '$RELEASE_BRANCH' does not exist on origin" >&2
+            exit 1
+          fi
+          git checkout -B "$RELEASE_BRANCH" "origin/$RELEASE_BRANCH"
+          echo "Checked out '$RELEASE_BRANCH'"
+
+      - name: Fetch commit to cherry-pick
+        env:
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
+        run: |
+          set -euo pipefail
+          # Include the parent commit so cherry-pick can build the patch (depth=2).
+          if ! git fetch --no-tags --depth=2 origin "$CHERRY_PICK_SHA"; then
+            echo "::error::Commit '$CHERRY_PICK_SHA' not found on origin" >&2
             exit 1
           fi
 
-      - name: Checkout release branch
-        run: |
-          set -euo pipefail
-          git checkout -B "${{ steps.vars.outputs.release_branch }}" "origin/${{ steps.vars.outputs.release_branch }}"
-          echo "Checked out '${{ steps.vars.outputs.release_branch }}'"
-
       - name: Attempt cherry-pick
         id: cp
+        env:
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
         run: |
           set +e
-          git cherry-pick "${{ inputs.cherry_pick_sha }}"
+          git cherry-pick "$CHERRY_PICK_SHA"
           status=$?
           set -e
           if [ $status -ne 0 ]; then
@@ -117,9 +125,11 @@ jobs:
 
       - name: Push release branch
         if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true }}
+        env:
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
           set -euo pipefail
-          git push origin "${{ steps.vars.outputs.release_branch }}:${{ steps.vars.outputs.release_branch }}"
+          git push origin "$RELEASE_BRANCH:$RELEASE_BRANCH"
 
       - name: Write step summary
         env:
@@ -158,7 +168,7 @@ jobs:
           CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
+          uv run --no-sync python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
 
       - name: Slack notification - failure
         if: ${{ steps.cp.outputs.status == 'failed' && inputs.dry_run != true }}
@@ -171,10 +181,12 @@ jobs:
           ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
-          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_failed
+          uv run --no-sync python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_failed
 
       - name: Fail job if cherry-pick failed
         if: ${{ steps.cp.outputs.status == 'failed' }}
+        env:
+          ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
         run: |
-          echo "Cherry-pick failed: ${{ steps.cp.outputs.error_reason }}" >&2
+          echo "Cherry-pick failed: $ERROR_REASON" >&2
           exit 1

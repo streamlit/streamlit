@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ def _check_expected_elements_disabled(app: Page):
     expect(app.get_by_test_id("stCheckbox").locator("input")).to_have_attribute(
         "disabled", ""
     )
-    # Slider - Baseweb uses a div with role="slider"
+    # Slider
     slider = app.get_by_test_id("stSlider").get_by_role("slider")
     expect(slider).to_have_attribute("disabled", "")
 
@@ -60,10 +60,10 @@ def _check_expected_elements_disabled(app: Page):
     expect(app.get_by_test_id("stTimeInput").locator("input")).to_have_attribute(
         "disabled", ""
     )
-    # Date input
-    expect(app.get_by_test_id("stDateInput").locator("input")).to_have_attribute(
-        "disabled", ""
-    )
+    # Date input (React Aria DateField uses spinbutton segments, not <input>)
+    expect(
+        app.get_by_test_id("stDateInput").get_by_role("spinbutton").first
+    ).to_have_attribute("aria-disabled", "true")
 
     # Non-widget elements:
     # Link button
@@ -72,8 +72,15 @@ def _check_expected_elements_disabled(app: Page):
     tabs = app.get_by_test_id("stTabs")
     tab_button = app.get_by_test_id("stTab").nth(1)
     expect(tab_button).to_contain_text("Tab 2")
-    tab_button.click()
-    tab_panel = tabs.get_by_test_id("stElementContainer").nth(1)
+    # focus() + press("Enter") is reliable across all browsers including webkit,
+    # where synthetic pointer clicks on div[role=tab] can fail during reconnect.
+    tab_button.focus()
+    tab_button.press("Enter")
+    expect(tab_button).to_have_attribute("aria-selected", "true")
+    # With shouldForceMount all panels stay in the DOM; inactive panels become inert
+    # and lose their role="tabpanel". Scope to the active panel to avoid matching
+    # inert sibling panels.
+    tab_panel = tabs.get_by_role("tabpanel").get_by_test_id("stElementContainer")
     expect(tab_panel).to_be_visible()
     expect(tab_panel).to_have_text("World")
     # Expander

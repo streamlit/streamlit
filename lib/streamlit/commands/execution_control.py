@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,24 +15,40 @@
 from __future__ import annotations
 
 import os
+import time
+from collections.abc import Iterable, Mapping
 from itertools import dropwhile
 from pathlib import Path
-from typing import Literal, NoReturn
+from typing import TYPE_CHECKING, Literal, NoReturn
 
 import streamlit as st
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page, _validate_registered_page
+from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+)
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.query_params import QueryParams, QueryParamsInput
 
 
 @gather_metrics("stop")
-def stop() -> NoReturn:  # type: ignore[misc]
+def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
@@ -90,13 +106,40 @@ def _new_fragment_id_queue(
             "functions during fragment reruns."
         )
 
-    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
-    if not new_queue:
+    new_queue = list(
+        dropwhile(lambda x: x != ThreadState.get().fragment_id, curr_queue)
+    )
+    if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
         )
 
     return new_queue
+
+
+def _set_query_params_for_switch(
+    query_params_state: QueryParams,
+    new_query_params: QueryParamsInput | None,
+) -> None:
+    """Set query params for a switch page."""
+
+    if new_query_params is None:
+        query_params_state.clear()
+        return
+
+    if isinstance(new_query_params, Mapping) or (
+        isinstance(new_query_params, Iterable)
+        and not isinstance(
+            new_query_params,  # type: ignore[unreachable]
+            (str, bytes),
+        )
+    ):
+        query_params_state.from_dict(new_query_params)
+        return
+
+    raise StreamlitAPIException(
+        f"`query_params` must be a mapping or an iterable of (key, value) pairs not a `{type(new_query_params)}`."
+    )
 
 
 @gather_metrics("rerun")
@@ -128,10 +171,8 @@ def rerun(  # type: ignore[misc]
 
     """
 
-    if scope not in ["app", "fragment"]:
-        raise StreamlitAPIException(
-            f"'{scope}'is not a valid rerun scope. Valid scopes are 'app' and 'fragment'."
-        )
+    if scope not in {"app", "fragment"}:
+        raise StreamlitValueError("scope", ["'app'", "'fragment'"])
 
     ctx = get_script_run_ctx()
 
@@ -155,31 +196,61 @@ def rerun(  # type: ignore[misc]
 
 
 @gather_metrics("switch_page")
-def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[misc]
+def switch_page(  # type: ignore[misc]
+    page: str | Path | Page,
+    *,
+    query_params: QueryParamsInput | None = None,
+) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
-    the specified page runs as if the user clicked on it in the sidebar
-    navigation. The specified page must be recognized by Streamlit's multipage
-    architecture (your main Python file or a Python file in a ``pages/``
-    folder). Arbitrary Python scripts cannot be passed to ``st.switch_page``.
+    the specified page runs as if the user clicked on it in the navigation
+    menu. The specified page must be recognized by Streamlit's multipage
+    architecture. Arbitrary Python scripts and URLs can't be passed to
+    ``st.switch_page``.
 
     Parameters
     ----------
-    page: str, Path, or st.Page
-        The file path (relative to the main script) or an st.Page indicating
-        the page to switch to.
+    page : str, Path, or Page
+        The page to switch to. This can be one of the following values:
 
+        - Path to a Python file: The path can be a string or ``pathlib.Path``
+          object. It can be absolute or relative to the entrypoint file. The
+          Python file must be the source of a page in ``st.navigation``.
 
-    Example
-    -------
-    Consider the following example given this file structure:
+          If you are using the ``pages/`` directory instead of
+          ``st.navigation``, the Python file must be your entrypoint file or
+          a file in the ``pages/`` directory.
 
-    >>> your-repository/
-    >>> ├── pages/
-    >>> │   ├── page_1.py
-    >>> │   └── page_2.py
-    >>> └── your_app.py
+        - ``Page``: The source of the ``Page`` and its
+          ``url_path`` must match a page defined in ``st.navigation``. The
+          ``Page`` must be internal and can't be defined by a URL.
+          Use ``st.Page`` to create a ``Page`` object.
+
+        To switch to a page defined by a ``callable``, you must use a
+        ``Page`` object.
+
+    query_params : dict, list of tuples, or None
+        Query parameters to apply when navigating to the target page.
+        This can be a dictionary or an iterable of key-value tuples. Values can
+        be strings or iterables of strings (for repeated keys). When this is
+        ``None`` (default), all non-embed query parameters are cleared during
+        navigation.
+
+    Examples
+    --------
+    **Example 1: Basic usage**
+
+    The following example shows how to switch to a different page in a
+    multipage app that uses the ``pages/`` directory:
+
+    .. code-block:: text
+
+        your-repository/
+        ├── pages/
+        │   ├── page_1.py
+        │   └── page_2.py
+        └── your_app.py
 
     >>> import streamlit as st
     >>>
@@ -190,11 +261,37 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
     >>> if st.button("Page 2"):
     >>>     st.switch_page("pages/page_2.py")
 
-    .. output ::
+    .. output::
         https://doc-switch-page.streamlit.app/
         height: 350px
 
+    **Example 2: Passing query parameters**
+
+    The following example shows how to pass query parameters when switching to a
+    different page. This example uses ``st.navigation`` to create a multipage app.
+
+    .. code-block:: text
+
+        your-repository/
+        ├── page_2.py
+        └── your_app.py
+
+    >>> import streamlit as st
+    >>>
+    >>> def page_1():
+    >>>     st.title("Page 1")
+    >>>     if st.button("Switch to Page 2"):
+    >>>         st.switch_page("page_2.py", query_params={"utm_source": "page_1"})
+    >>>
+    >>> pg = st.navigation([page_1, "page_2.py"])
+    >>> pg.run()
+
+    .. output::
+        https://doc-switch-page-query-params.streamlit.app/
+        height: 350px
+
     """
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 
@@ -203,7 +300,13 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
         raise NoSessionContext()
 
     page_script_hash = ""
-    if isinstance(page, StreamlitPage):
+    if isinstance(page, Page):
+        if page.is_external:
+            raise StreamlitAPIException(
+                "Cannot use st.switch_page with external URL pages. "
+                "Use st.page_link instead to create a link to external pages."
+            )
+        _validate_registered_page(page)
         page_script_hash = page._script_hash
     else:
         # Convert Path to string if necessary
@@ -219,17 +322,23 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
         matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
 
         if len(matched_pages) == 0:
-            raise StreamlitAPIException(
-                f"Could not find page: `{page}`. Must be the file path relative to the main script, "
-                f"from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file "
-                "and files in the `pages/` directory are supported."
+            raise StreamlitPageNotFoundError(
+                page=page,
+                main_script_directory=main_script_directory,
+                uses_pages_directory=bool(PagesManager.uses_pages_directory),
             )
 
         page_script_hash = matched_pages[0]["page_script_hash"]
 
-    # We want to reset query params (with exception of embed) when switching pages
+    # Reset query params (with exception of embed) and optionally apply overrides.
     with ctx.session_state.query_params() as qp:
-        qp.clear()
+        _set_query_params_for_switch(qp, query_params)
+
+    # Safeguard: sleep longer than the flush interval to ensure at least one
+    # complete flush cycle delivers the query params before the rerun clears
+    # outstanding messages. Sleep is placed after the with block to release
+    # the session state lock first.
+    time.sleep(2 * MESSAGE_FLUSH_INTERVAL_SECS)
 
     ctx.script_requests.request_rerun(
         RerunData(

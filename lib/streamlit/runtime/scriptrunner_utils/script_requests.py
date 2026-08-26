@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class RerunData:
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
     # Hashes of messages that are cached in the client browser:
-    cached_message_hashes: set[str] = field(default_factory=set)
+    cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
     context_info: ContextInfo | None = None
 
@@ -81,6 +81,15 @@ class ScriptRequest:
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+
+def _is_full_app_rerun(rerun_data: RerunData) -> bool:
+    """Whether ``rerun_data`` reruns the whole app rather than specific fragments."""
+    return (
+        not rerun_data.fragment_id
+        and not rerun_data.fragment_id_queue
+        and not rerun_data.is_fragment_scoped_rerun
+    )
 
 
 def _fragment_run_should_not_preempt_script(
@@ -213,22 +222,37 @@ class ScriptRequests:
                     self._rerun_data.widget_states, new_data.widget_states
                 )
 
+                # Fold a bare fragment_id into fragment_id_queue so the coalescing
+                # below only has to read one field.
                 if new_data.fragment_id:
-                    # This RERUN request corresponds to a new fragment run. We append
-                    # the new fragment ID to the end of the current fragment_id_queue if
-                    # it isn't already contained in it.
-                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                    new_data = replace(
+                        new_data,
+                        fragment_id=None,
+                        fragment_id_queue=[
+                            new_data.fragment_id,
+                            *new_data.fragment_id_queue,
+                        ],
+                    )
 
-                    if new_data.fragment_id not in fragment_id_queue:
-                        fragment_id_queue.append(new_data.fragment_id)
-                elif new_data.fragment_id_queue:
-                    # new_data contains a new fragment_id_queue, so we just use it.
-                    fragment_id_queue = new_data.fragment_id_queue
+                if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
+                    # A full-app rerun anywhere in the interaction trumps every
+                    # fragment-targeted one, since it reruns those fragments too.
+                    # Collapse to a single full-app rerun, whichever arrived first.
+                    fragment_id_queue: list[str] = []
+                    is_fragment_scoped_rerun = False
                 else:
-                    # Otherwise, this is a request to rerun the full script, so we want
-                    # to clear out any fragments we have queued to run since they'll all
-                    # be run with the full script anyway.
-                    fragment_id_queue = []
+                    # Both requests still need their fragments to run, so take the
+                    # union (deduped, order-preserving). Stay fragment-scoped if either
+                    # request was, since that is what lets the coalesced rerun preempt
+                    # the run in progress.
+                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                    for fragment_id in new_data.fragment_id_queue:
+                        if fragment_id not in fragment_id_queue:
+                            fragment_id_queue.append(fragment_id)
+                    is_fragment_scoped_rerun = (
+                        self._rerun_data.is_fragment_scoped_rerun
+                        or new_data.is_fragment_scoped_rerun
+                    )
 
                 self._rerun_data = RerunData(
                     query_string=new_data.query_string,
@@ -237,7 +261,7 @@ class ScriptRequests:
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
                     cached_message_hashes=new_data.cached_message_hashes,
-                    is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
+                    is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,
                     context_info=new_data.context_info,
                 )
@@ -284,7 +308,7 @@ class ScriptRequests:
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 
-            if self._state != ScriptRequestType.STOP:
+            if self._state != ScriptRequestType.STOP:  # pragma: no cover - defensive
                 raise RuntimeError(
                     f"Unrecognized ScriptRunnerState: {self._state}. This should never happen."
                 )

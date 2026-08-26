@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Keep Attributes before Examples in API docstrings.
+
 from __future__ import annotations
 
 import json
+import weakref
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -22,7 +25,6 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypedDict,
     cast,
     overload,
 )
@@ -35,14 +37,12 @@ from streamlit.deprecation_util import (
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
-    LayoutConfig,
     WidthWithoutContent,
-    validate_height,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -50,7 +50,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
 )
-from streamlit.util import AttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -90,12 +90,14 @@ def parse_selection_mode(
         )
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
-    if selection_mode_set.issuperset({"single-object", "multi-object"}):
+    if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
+        {"single-object", "multi-object"}
+    ):
         raise StreamlitAPIException(
             "Only one of `single-object` or `multi-object` can be selected as selection mode."
         )
@@ -109,12 +111,12 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
-class PydeckSelectionState(TypedDict, total=False):
+class PydeckSelectionState(ReadOnlyAttributeDictionary):
     r"""
     The schema for the PyDeck chart selection state.
 
-    The selection state is stored in a dictionary-like object that supports
-    both key and attribute notation. Selection states cannot be
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
     programmatically changed or set through Session State.
 
     You must define ``id`` in ``pydeck.Layer`` to ensure statefulness when
@@ -182,7 +184,7 @@ class PydeckSelectionState(TypedDict, total=False):
     >>>
     >>> event.selection
 
-    .. output ::
+    .. output::
         https://doc-pydeck-event-state-selections.streamlit.app/
         height: 700px
 
@@ -215,14 +217,30 @@ class PydeckSelectionState(TypedDict, total=False):
     indices: dict[str, list[int]]
     objects: dict[str, list[dict[str, Any]]]
 
+    @overload
+    def __getitem__(self, key: Literal["indices"]) -> dict[str, list[int]]: ...
 
-class PydeckState(TypedDict, total=False):
+    @overload
+    def __getitem__(
+        self, key: Literal["objects"]
+    ) -> dict[str, list[dict[str, Any]]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
+
+
+class PydeckState(ReadOnlyAttributeDictionary):
     """
     The schema for the PyDeck event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically changed
-    or set through Session State.
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -231,12 +249,31 @@ class PydeckState(TypedDict, total=False):
     selection : dict
         The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
-        The attributes are described by the ``PydeckSelectionState``
-        dictionary schema.
+        The attributes are described by ``PydeckSelectionState``.
 
     """
 
     selection: PydeckSelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed as
+    # PydeckSelectionState. Use dict.__getitem__ for the selection key so the
+    # read-only base class does not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> PydeckSelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, PydeckSelectionState):
+                item = PydeckSelectionState(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -244,24 +281,33 @@ class PydeckSelectionSerde:
     """PydeckSelectionSerde is used to serialize and deserialize the Pydeck selection state."""
 
     def deserialize(self, ui_value: str | None) -> PydeckState:
-        empty_selection_state: PydeckState = {
-            "selection": {
-                "indices": {},
-                "objects": {},
+        empty_selection_state = PydeckState(
+            {
+                "selection": PydeckSelectionState(
+                    {
+                        "indices": {},
+                        "objects": {},
+                    }
+                )
             }
-        }
-
-        selection_state = (
-            empty_selection_state if ui_value is None else json.loads(ui_value)
         )
 
+        if ui_value is None:
+            return empty_selection_state
+
+        selection_state = json.loads(ui_value)
         # We have seen some situations where the ui_value was just an empty
         # dict, so we want to ensure that it always returns the empty state in
         # case this happens.
         if "selection" not in selection_state:
-            selection_state = empty_selection_state
+            return empty_selection_state
 
-        return cast("PydeckState", AttributeDictionary(selection_state))
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        selection_state["selection"] = PydeckSelectionState(
+            selection_state["selection"]
+        )
+        return PydeckState(selection_state)
 
     def serialize(self, selection_state: PydeckState) -> str:
         return json.dumps(selection_state, default=str)
@@ -414,26 +460,31 @@ class PydeckMixin:
               a time.
             - ``"multi-object"``: Multiple objects can be selected at a time.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         Returns
         -------
-        element or dict
+        element or PydeckState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this method
-            returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``PydeckState`` dictionary schema.
+            returns a ``PydeckState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
-        Example
-        -------
+        Examples
+        --------
         Here's a chart using a HexagonLayer and a ScatterplotLayer. It uses either the
         light or dark map style, based on which Streamlit theme is currently active:
 
@@ -503,12 +554,18 @@ class PydeckMixin:
                 width = "stretch"
             # Otherwise keep the provided width.
 
-        validate_width(width, allow_content=False)
-        validate_height(height, allow_content=False)
+        layout_config = create_layout_config(width=width, height=height)
 
         pydeck_proto = PydeckProto()
 
         ctx = get_script_run_ctx()
+
+        # Workaround for pandas 3.x compatibility issue in pydeck's serialization.
+        # See: https://github.com/visgl/deck.gl/issues/9986
+        from streamlit.dataframe_util import is_pandas_version_less_than
+
+        if not is_pandas_version_less_than("3.0.0"):
+            _prepare_pydeck_for_json(pydeck_obj)
 
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
@@ -531,10 +588,9 @@ class PydeckMixin:
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. "
-                "But only 'ignore', 'rerun', or a callable is supported."
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         if is_selection_activated:
@@ -546,7 +602,9 @@ class PydeckMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -556,7 +614,11 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                key_as_main_identity=False,
+                # When a key is provided, only selection_mode affects the element ID.
+                # This allows selection state to persist across data/spec changes.
+                # Note: This can lead to orphaned selections if data length shrinks,
+                # but the frontend handles this by sanitizing invalid indices.
+                key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,
@@ -575,21 +637,19 @@ class PydeckMixin:
                 value_type="string_value",
             )
 
-            layout_config = LayoutConfig(width=width, height=height)
             self.dg._enqueue(
                 "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
             )
 
             return widget_state.value
 
-        layout_config = LayoutConfig(width=width, height=height)
         return self.dg._enqueue(
             "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
         )
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
@@ -621,3 +681,44 @@ def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:
         return cast("dict[str, str]", tooltip)
 
     return None
+
+
+def _prepare_pydeck_for_json(pydeck_obj: Deck | None) -> None:
+    """Prepare a pydeck Deck object for JSON serialization.
+
+    This function converts pandas DataFrames in pydeck layers to lists of dicts
+    to work around a pandas 3.x compatibility issue in pydeck's serialization.
+    In pandas 3.x, DataFrames no longer have a __dict__ attribute that vars()
+    can access, which breaks pydeck's default_serialize function.
+
+    This function modifies the pydeck object in place. If the same Deck object
+    is passed to multiple st.pydeck_chart calls within a single script run,
+    subsequent calls will see the converted list[dict] data instead of DataFrames.
+    In Streamlit's rerun-based execution model, this is typically not an issue
+    since Deck objects are usually recreated on each run.
+
+    For the upstream pydeck issue, see: https://github.com/visgl/deck.gl/issues/9986
+    """
+    if pydeck_obj is None:
+        return
+
+    import pandas as pd
+
+    layers = getattr(pydeck_obj, "layers", None)
+    if layers is None:
+        return
+
+    for layer in layers:
+        data = getattr(layer, "data", None)
+        if data is None:
+            continue
+
+        # Handle weakref to DataFrame (pydeck wraps DataFrames in weakrefs)
+        if isinstance(data, weakref.ref):
+            data = data()
+            if data is None:
+                continue
+
+        # Convert pandas DataFrame to list of dicts for JSON serialization
+        if isinstance(data, pd.DataFrame):
+            layer.data = data.to_dict(orient="records")

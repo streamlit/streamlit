@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,14 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
+from numbers import Integral
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    EXPANDABLE_TYPE_TO_PROTO_MAPPING,
+    ExpandableType,
     Gap,
     Height,
     HorizontalAlignment,
@@ -26,7 +30,7 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     WidthWithoutContent,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -35,24 +39,69 @@ from streamlit.elements.lib.layout_utils import (
     validate_vertical_alignment,
     validate_width,
 )
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidColumnSpecError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidVerticalAlignmentError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import register_widget
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
+    from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
-    from streamlit.runtime.state import WidgetCallback
+    from streamlit.elements.lib.mutable_tab_container import TabContainer
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 SpecType: TypeAlias = int | Sequence[int | float]
+
+
+@dataclass
+class _ExpanderSerde:
+    """Serializer/deserializer for expander widget state."""
+
+    expanded: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else self.expanded
+
+
+@dataclass
+class _PopoverSerde:
+    """Serializer/deserializer for popover widget state."""
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else False
+
+
+@dataclass
+class _TabsSerde:
+    """Serializer/deserializer for tabs widget state (active tab label)."""
+
+    default_label: str
+
+    def serialize(self, v: str) -> str:
+        return str(v)
+
+    def deserialize(self, ui_value: str | None) -> str:
+        return ui_value if ui_value is not None else self.default_label
 
 
 class LayoutsMixin:
@@ -65,9 +114,11 @@ class LayoutsMixin:
         width: Width = "stretch",
         height: Height = "content",
         horizontal: bool = False,
+        wrap: bool = True,
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
+        autoscroll: bool | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -87,10 +138,12 @@ class LayoutsMixin:
             shown otherwise.
 
         key : str or None
-            An optional string to give this container a stable identity.
+            An optional string to give this element a stable identity. If
+            this is ``None`` (default), the element's identity will be
+            determined based on the values of the other parameters.
 
-            Additionally, if ``key`` is provided, it will be used as CSS
-            class name prefixed with ``st-key-``.
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         width : "stretch", "content", or int
             The width of the container. This can be one of the following:
@@ -128,8 +181,24 @@ class LayoutsMixin:
             Whether to use horizontal flexbox layout. If this is ``False``
             (default), the container's elements are laid out vertically. If
             this is ``True``, the container's elements are laid out
-            horizontally and will overflow to the next line if they don't fit
-            within the container's width.
+            horizontally and, by default, wrap onto additional rows if they
+            don't fit within the container's width. Use ``wrap`` to instead
+            keep the elements in a single, horizontally scrolling row.
+
+        wrap : bool
+            Whether the elements in a horizontal container can wrap onto
+            additional rows. This only applies when ``horizontal`` is ``True``.
+            This can be one of the following:
+
+            - ``True`` (default): The elements wrap onto additional rows when
+              they don't fit within the container's width.
+            - ``False``: The elements stay in a single row. If they don't fit
+              within the container's width, the container scrolls horizontally
+              instead of wrapping.
+
+            Setting ``wrap=False`` with ``horizontal=False`` raises an
+            exception, since there is no horizontal row of elements to keep in a
+            single, scrolling row.
 
         horizontal_alignment : "left", "center", "right", or "distribute"
             The horizontal alignment of the elements inside the container. This
@@ -167,13 +236,19 @@ class LayoutsMixin:
               When ``horizontal`` is ``True``, ``"distribute"`` aligns the
               elements the same as ``"top"``.
 
-        gap : "small", "medium", "large", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
             This can be one of the following:
 
+            - ``"xxsmall"``: 0.25rem gap between the elements.
+            - ``"xsmall"``: 0.5rem gap between the elements.
             - ``"small"`` (default): 1rem gap between the elements.
             - ``"medium"``: 2rem gap between the elements.
             - ``"large"``: 4rem gap between the elements.
+            - ``"xlarge"``: 6rem gap between the elements.
+            - ``"xxlarge"``: 8rem gap between the elements.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the elements.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -183,6 +258,18 @@ class LayoutsMixin:
             between the elements. Elements may have larger gaps in one
             direction if you use a distributed horizontal alignment or fixed
             height.
+
+        autoscroll : bool or None
+            Whether to automatically scroll to the bottom when new content is
+            added. This only has an effect when the container has a fixed
+            height (scrolling enabled). If this is ``None`` (default),
+            auto-scroll is enabled when the container has a fixed height and
+            contains |st.chat_message|_ elements. If this is ``True``,
+            auto-scroll is always enabled for containers with fixed height.
+            If this is ``False``, auto-scroll is always disabled.
+
+            .. |st.chat_message| replace:: ``st.chat_message``
+            .. _st.chat_message: https://docs.streamlit.io/develop/api-reference/chat/st.chat_message
 
         Examples
         --------
@@ -201,7 +288,7 @@ class LayoutsMixin:
         >>>
         >>> st.write("This is outside the container")
 
-        .. output ::
+        .. output::
             https://doc-container1.streamlit.app/
             height: 520px
 
@@ -220,7 +307,7 @@ class LayoutsMixin:
         >>>
         >>> container.write("This is inside too")
 
-        .. output ::
+        .. output::
             https://doc-container2.streamlit.app/
             height: 300px
 
@@ -238,7 +325,7 @@ class LayoutsMixin:
         >>>     tile = col.container(height=120)
         >>>     tile.title(":balloon:")
 
-        .. output ::
+        .. output::
             https://doc-container3.streamlit.app/
             height: 350px
 
@@ -254,7 +341,7 @@ class LayoutsMixin:
         >>> with st.container(height=300):
         >>>     st.markdown(long_text)
 
-        .. output ::
+        .. output::
             https://doc-container4.streamlit.app/
             height: 400px
 
@@ -270,23 +357,49 @@ class LayoutsMixin:
         >>> for card in range(3):
         >>>     flex.button(f"Button {card + 1}")
 
-        .. output ::
+        .. output::
             https://doc-container5.streamlit.app/
             height: 250px
+
+        **Example 6: No-wrap horizontal container (toolbar)**
+
+        Use ``wrap=False`` to keep a horizontal container's elements in a single
+        row. When the elements don't fit, the container scrolls horizontally
+        instead of wrapping onto additional rows.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(horizontal=True, wrap=False):
+        ...     for label in ("Edit", "Duplicate", "Archive", "Delete"):
+        ...         st.button(label)
+
+        .. output::
+            https://doc-container6.streamlit.app/
+            height: 200px
 
         """
         key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.gap_size = get_gap_size(
-            gap, "st.container"
+        block_proto.flex_container.gap_config.CopyFrom(
+            get_gap_config(gap, "st.container")
         )
 
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
+        if wrap is False and not horizontal:
+            raise StreamlitAPIException(
+                "`wrap=False` can only be used with `horizontal=True`. "
+                "A vertical container has no horizontal row of elements to keep "
+                "in a single, scrolling row. Set `horizontal=True` to use "
+                "`wrap=False`, or remove the `wrap` argument."
+            )
         if horizontal:
-            block_proto.flex_container.wrap = True
+            # `wrap=True` (default) keeps the default horizontal behavior of
+            # wrapping onto additional rows. `wrap=False` keeps the elements in
+            # a single, horizontally scrollable row.
+            block_proto.flex_container.wrap = wrap
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.HORIZONTAL
             )
@@ -326,6 +439,9 @@ class LayoutsMixin:
                 "container", user_key=key, dg=None, key_as_main_identity=False
             )
 
+        if autoscroll is not None:
+            block_proto.autoscroll = autoscroll
+
         return self.dg._block(block_proto)
 
     @gather_metrics("columns")
@@ -337,6 +453,7 @@ class LayoutsMixin:
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -364,13 +481,19 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "small", "medium", "large", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The size of the gap between the columns. This can be one of the
             following:
 
+            - ``"xxsmall"``: 0.25rem gap between the columns.
+            - ``"xsmall"``: 0.5rem gap between the columns.
             - ``"small"`` (default): 1rem gap between the columns.
             - ``"medium"``: 2rem gap between the columns.
             - ``"large"``: 4rem gap between the columns.
+            - ``"xlarge"``: 6rem gap between the columns.
+            - ``"xxlarge"``: 8rem gap between the columns.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
             - ``None``: No gap between the columns.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -394,6 +517,14 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the column group matches the
               width of the parent container.
+
+        wrap : bool
+            Whether columns may stack vertically on narrow viewports. If this
+            is ``True`` (default), columns stack when the viewport is at most
+            ``640px`` wide. If this is ``False``, stacking is disabled and
+            columns stay in a single row. Columns shrink until a usable
+            minimum width, then the column group scrolls horizontally instead
+            of overflowing the page.
 
         Returns
         -------
@@ -422,7 +553,7 @@ class LayoutsMixin:
         ...     st.header("An owl")
         ...     st.image("https://static.streamlit.io/examples/owl.jpg")
 
-        .. output ::
+        .. output::
             https://doc-columns1.streamlit.app/
             height: 620px
 
@@ -443,7 +574,7 @@ class LayoutsMixin:
         >>> col2.subheader("A narrow column with the data")
         >>> col2.write(df)
 
-        .. output ::
+        .. output::
             https://doc-columns2.streamlit.app/
             height: 550px
 
@@ -459,7 +590,7 @@ class LayoutsMixin:
         >>> middle.button("Click me", use_container_width=True)
         >>> right.checkbox("Check me")
 
-        .. output ::
+        .. output::
             https://doc-columns-bottom-widgets.streamlit.app/
             height: 200px
 
@@ -478,7 +609,7 @@ class LayoutsMixin:
         >>> middle.image("https://static.streamlit.io/examples/dog.jpg")
         >>> right.image("https://static.streamlit.io/examples/owl.jpg")
 
-        .. output ::
+        .. output::
             https://doc-columns-vertical-alignment.streamlit.app/
             height: 600px
 
@@ -495,20 +626,61 @@ class LayoutsMixin:
         >>> middle.markdown("Lorem ipsum " * 5)
         >>> right.markdown("Lorem ipsum ")
 
-        .. output ::
+        .. output::
             https://doc-columns-borders.streamlit.app/
             height: 250px
 
+        **Example 6: Disable wrapping for a thumbnail row**
+
+        Use ``wrap=False`` to keep columns in one row and scroll horizontally
+        when they do not fit.
+
+        >>> import streamlit as st
+        >>>
+        >>> images = [
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ... ]
+        >>> thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
+        >>> for column, image in zip(thumbnail_columns, images):
+        ...     column.image(image)
+
+        .. output::
+            https://doc-columns-wrap-false.streamlit.app/
+            height: 250px
+
         """
-        weights = spec
-        if isinstance(weights, int):
+        # Check `int` before `Integral` so ty can narrow `SpecType` (`int` is not
+        # treated as `numbers.Integral`). numpy integers (e.g. np.int64) are
+        # Integral but not int.
+        if isinstance(spec, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. (1,) * 3 => (1, 1, 1)
             # NOTE: A negative/zero spec will expand into an empty tuple.
-            weights = (1,) * weights
+            weights: Sequence[int | float] = (1,) * spec
+        elif isinstance(spec, Integral):
+            weights = (1,) * int(spec)
+        else:
+            weights = spec
 
-        if len(weights) == 0 or any(weight <= 0 for weight in weights):
+        try:
+            invalid_spec = len(weights) == 0 or any(weight <= 0 for weight in weights)
+        except TypeError as ex:
+            raise StreamlitInvalidParameterTypeError(
+                "spec",
+                type(spec).__name__,
+                ["int", "sequence of numbers"],
+            ) from ex
+
+        if invalid_spec:
             raise StreamlitInvalidColumnSpecError()
+
+        if not isinstance(wrap, bool):
+            raise StreamlitValueError("wrap", ["True", "False"])
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -524,9 +696,7 @@ class LayoutsMixin:
                 element_type="st.columns",
             )
 
-        gap_size = get_gap_size(gap, "st.columns")
-        gap_config = GapConfig()
-        gap_config.gap_size = gap_size
+        gap_config = get_gap_config(gap, "st.columns")
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
@@ -543,7 +713,7 @@ class LayoutsMixin:
         block_proto.flex_container.direction = (
             BlockProto.FlexContainer.Direction.HORIZONTAL
         )
-        block_proto.flex_container.wrap = True
+        block_proto.flex_container.wrap = wrap
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
         block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH
@@ -561,8 +731,13 @@ class LayoutsMixin:
         tabs: Sequence[str],
         *,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
         default: str | None = None,
-    ) -> Sequence[DeltaGenerator]:
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+    ) -> Sequence[TabContainer]:
         r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
@@ -573,12 +748,12 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         the examples below.
 
-        .. note::
-            All content within every tab is computed and sent to the frontend,
-            regardless of which tab is selected. Tabs do not currently support
-            conditional rendering. If you have a slow-loading tab, consider
-            using a widget like ``st.segmented_control`` to conditionally
-            render content instead.
+        By default, all tab content is computed and sent to the frontend
+        regardless of which tab is selected. To enable lazy execution where
+        only the selected tab's content runs, use ``on_change="rerun"`` or
+        pass a callable to ``on_change``. Each tab's ``.open`` property
+        indicates whether it is the currently selected tab, letting you
+        conditionally render expensive content.
 
         Parameters
         ----------
@@ -591,9 +766,9 @@ class LayoutsMixin:
             height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -611,16 +786,84 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
+        height : "content", "stretch", or int
+            The height of the tab container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container matches the height
+              of the parent container, and content that overflows scrolls
+              inside the active tab panel. If the container is not in a
+              fixed-height parent, the height of the container matches the
+              height of its content.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled inside the active tab panel.
+
+            .. note::
+                Use scrolling tab panels sparingly. If you use scrolling tab
+                panels, avoid heights that exceed 500 pixels. Otherwise, the
+                scroll surface of the tab panel might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
+
         default : str or None
             The default tab to select. If this is ``None`` (default), the first
             tab is selected. If this is a string, it must be one of the tab
             labels. If two tabs have the same label as ``default``, the first
             one is selected.
 
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
+
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the active tab label via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
+        on_change : "ignore", "rerun", callable, or None
+            How the tabs should respond when the user switches tabs. This
+            controls whether tabs track state and trigger reruns. ``on_change``
+            can be one of the following values:
+
+            - ``"ignore"`` (default): The tabs don't track state. All tab content
+              runs regardless of which tab is selected. The ``.open`` attribute
+              of each tab container returns ``None`` for all tabs.
+
+            - ``"rerun"``: The tabs track state. Streamlit reruns the app when
+              the user switches tabs. The ``.open`` attribute of each tab
+              container returns its current state, which is ``True`` if it is
+              selected and ``False`` if it isn't selected. This lets you skip
+              expensive work in hidden tabs.
+
+            - A callable: The tabs track state. Streamlit executes the callable
+              as a callback function and reruns the app when the user switches
+              tabs. The ``.open`` attribute of each tab container returns its
+              state like when ``on_change="rerun"``. If you need to access
+              label of the current tab inside your callback, fetch it through
+              Session State.
+
+            When the tabs track state, they can't be used inside
+            Streamlit cache-decorated functions.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change`` callback.
+
         Returns
         -------
-        list of containers
-            A list of container objects.
+        Sequence of TabContainers
+            A sequence of ``TabContainer`` objects with ``.open`` properties to
+            return the current state of the tabs if the tabs track state.
 
         Examples
         --------
@@ -628,21 +871,24 @@ class LayoutsMixin:
 
         You can use ``with`` notation to insert any element into a tab:
 
-        >>> import streamlit as st
-        >>>
-        >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
-        >>>
-        >>> with tab1:
-        ...     st.header("A cat")
-        ...     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
-        >>> with tab2:
-        ...     st.header("A dog")
-        ...     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
-        >>> with tab3:
-        ...     st.header("An owl")
-        ...     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+        .. code-block:: python
+            :filename: streamlit_app.py
 
-        .. output ::
+            import streamlit as st
+
+            tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
+
+            with tab1:
+                st.header("A cat")
+                st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+            with tab2:
+                st.header("A dog")
+                st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+            with tab3:
+                st.header("An owl")
+                st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+
+        .. output::
             https://doc-tabs1.streamlit.app/
             height: 620px
 
@@ -650,20 +896,23 @@ class LayoutsMixin:
 
         You can call methods directly on the returned objects:
 
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
-        >>>
-        >>> df = rng(0).standard_normal((10, 1))
-        >>>
-        >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
-        >>>
-        >>> tab1.subheader("A tab with a chart")
-        >>> tab1.line_chart(df)
-        >>>
-        >>> tab2.subheader("A tab with the data")
-        >>> tab2.write(df)
+        .. code-block:: python
+            :filename: streamlit_app.py
 
-        .. output ::
+            import streamlit as st
+            from numpy.random import default_rng as rng
+
+            df = rng(0).standard_normal((10, 1))
+
+            tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
+
+            tab1.subheader("A tab with a chart")
+            tab1.line_chart(df)
+
+            tab2.subheader("A tab with the data")
+            tab2.write(df)
+
+        .. output::
             https://doc-tabs2.streamlit.app/
             height: 700px
 
@@ -672,25 +921,71 @@ class LayoutsMixin:
         Use the ``default`` parameter to set the default tab. You can also use
         Markdown in the tab labels.
 
-        >>> import streamlit as st
-        >>>
-        >>> tab1, tab2, tab3 = st.tabs(
-        ...     [":cat: Cat", ":dog: Dog", ":rainbow[Owl]"], default=":rainbow[Owl]"
-        ... )
-        >>>
-        >>> with tab1:
-        >>>     st.header("A cat")
-        >>>     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
-        >>> with tab2:
-        >>>     st.header("A dog")
-        >>>     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
-        >>> with tab3:
-        >>>     st.header("An owl")
-        >>>     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+        .. code-block:: python
+            :filename: streamlit_app.py
 
-        .. output ::
+            import streamlit as st
+
+            tab1, tab2, tab3 = st.tabs(
+                [":cat: Cat", ":dog: Dog", ":rainbow[Owl]"], default=":rainbow[Owl]"
+            )
+
+            with tab1:
+                st.header("A cat")
+                st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+            with tab2:
+                st.header("A dog")
+                st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+            with tab3:
+                st.header("An owl")
+                st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+
+        .. output::
             https://doc-tabs3.streamlit.app/
             height: 620px
+
+        **Example 4: Programmatically control the tab state**
+
+        You can use a key to programmatically control the tab state or access
+        the state in callbacks. You must set the ``on_change`` parameter for
+        the tabs to track state.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def switch_tab(tab):
+                st.session_state.animal = tab
+
+
+            def on_tab_change():
+                st.toast(f"You opened the {st.session_state.animal} tab.")
+
+
+            cat, dog, owl = st.tabs(
+                ["Cat", "Dog", "Owl"], on_change=on_tab_change, key="animal"
+            )
+
+            if cat.open:
+                with cat:
+                    st.write("This is the cat")
+            if dog.open:
+                with dog:
+                    st.write("This is the dog")
+            if owl.open:
+                with owl:
+                    st.write("This is the owl")
+
+            with st.container(horizontal=True):
+                st.button("Cat", on_click=switch_tab, args=("Cat",))
+                st.button("Dog", on_click=switch_tab, args=("Dog",))
+                st.button("Owl", on_click=switch_tab, args=("Owl",))
+
+        .. output::
+            https://doc-tabs-callback.streamlit.app/
+            height: 300px
 
         """
         if not tabs:
@@ -708,6 +1003,71 @@ class LayoutsMixin:
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
 
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError(
+                "on_change",
+                ["'rerun'", "'ignore'", "a callback function"],
+            )
+
+        key = to_key(key)
+        default_index = tabs.index(default) if default else 0
+        is_stateful = on_change != "ignore"
+
+        element_id: str | None = None
+        block_id: str | None = None
+        current_tab_label = tabs[default_index]
+
+        if is_stateful:
+            is_callback = callable(on_change)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=is_callback,
+            )
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                tabs=tuple(tabs),
+                width=width,
+                height=height,
+                default=default,
+            )
+            block_id = element_id
+
+            serde = _TabsSerde(default_label=tabs[default_index])
+
+            tabs_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="string_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
+            )
+
+            current_tab_label = tabs_state.value
+            if current_tab_label not in tabs:
+                current_tab_label = tabs[default_index]
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
+
         def tab_proto(label: str) -> BlockProto:
             tab_proto = BlockProto()
             tab_proto.tab.label = label
@@ -719,13 +1079,41 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        default_index = tabs.index(default) if default else 0
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
+        if isinstance(height, int):
+            # Ensure the fixed-height tab container renders even when the
+            # active tab is empty, so the reserved space is preserved.
+            block_proto.allow_empty = True
 
-        block_proto.tab_container.default_tab_index = default_index
+        # Compute the current tab index from the label
+        try:
+            current_tab_index = tabs.index(current_tab_label)
+        except ValueError:
+            current_tab_index = default_index
 
+        block_proto.tab_container.default_tab_index = current_tab_index
+
+        if is_stateful and element_id is not None:
+            block_proto.tab_container.id = element_id
+
+        if block_id is not None:
+            block_proto.id = block_id
+
+        tab_cls = get_dg_singleton_instance().tab_container_cls
         tab_container = self.dg._block(block_proto)
 
-        return tuple(tab_container._block(tab_proto(tab)) for tab in tabs)
+        tab_dgs: list[TabContainer] = []
+        for tab_label in tabs:
+            tab_dg = cast(
+                "TabContainer",
+                tab_container._block(tab_proto(tab_label), dg_type=tab_cls),
+            )
+            if is_stateful:
+                tab_dg.open = tab_label == current_tab_label
+            tab_dgs.append(tab_dg)
+
+        return tuple(tab_dgs)
 
     @gather_metrics("expander")
     def expander(
@@ -733,9 +1121,14 @@ class LayoutsMixin:
         label: str,
         expanded: bool = False,
         *,
+        key: Key | None = None,
         icon: str | None = None,
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
-    ) -> DeltaGenerator:
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+    ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -746,9 +1139,14 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        By default, all content within the expander is computed and sent to the
+        frontend, even if the expander is closed. To enable lazy execution
+        where content only runs when the expander is open, use
+        ``on_change="rerun"`` or pass a callable to ``on_change``. The ``.open``
+        property indicates whether the expander is currently open, letting you
+        conditionally render expensive content.
+
         .. note::
-            All content within the expander is computed and sent to the
-            frontend, even if the expander is closed.
 
             To follow best design practices and maintain a good appearance on
             all screen sizes, don't nest expanders.
@@ -762,9 +1160,9 @@ class LayoutsMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -776,10 +1174,25 @@ class LayoutsMixin:
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
+
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the expanded state via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), no icon is displayed, except with
+            ``type="step"``, which falls back to a faded circle placeholder. If
+            ``icon`` is a string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -795,6 +1208,22 @@ class LayoutsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        type : "default", "compact", or "step"
+            The visual style of the expander. This can be one of the following:
+
+            - ``"default"`` (default): The expander is displayed with a border
+              and background.
+            - ``"compact"``: The expander is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning, thoughts, or
+              collapsible metadata without visual clutter.
+            - ``"step"``: The expander is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
+
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
 
@@ -805,53 +1234,228 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
+        on_change : "ignore", "rerun", or callable
+            How the expander should respond when the user expands or
+            collapses it. This controls whether the expander tracks state
+            and triggers reruns. ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): The expander doesn't track state. All
+              expander content runs regardless of whether the expander is open
+              or closed. The ``.open`` attribute of the expander container
+              returns ``None``.
+
+            - ``"rerun"``: The expander tracks state. Streamlit reruns the app
+              when the user expands or collapses the expander. The ``.open``
+              attribute of the expander container returns the current state,
+              which is ``True`` if the expander is open and ``False`` if it's
+              closed. This lets you skip expensive work when the expander is
+              closed.
+
+            - A callable: The expander tracks state. Streamlit executes the
+              callable as a callback function and reruns the app when the user
+              expands or collapses the expander. The ``.open`` attribute of the
+              expander container returns its state like when
+              ``on_change="rerun"``. If you need to access the current state
+              inside your callback, fetch it through Session State.
+
+            When the expander tracks state, it can't be used inside Streamlit
+            cache-decorated functions.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change``
+            callback.
+
+        Returns
+        -------
+        ExpanderContainer
+            An ``ExpanderContainer`` object with an ``.open`` property to return
+            the current state of the expander if the expander tracks state.
+
         Examples
         --------
+        **Example 1: Use context management**
         You can use the ``with`` notation to insert any element into an expander
 
-        >>> import streamlit as st
-        >>>
-        >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
-        >>>
-        >>> with st.expander("See explanation"):
-        ...     st.write('''
-        ...         The chart above shows some numbers I picked for you.
-        ...         I rolled actual dice for these, so they're *guaranteed* to
-        ...         be random.
-        ...     ''')
-        ...     st.image("https://static.streamlit.io/examples/dice.jpg")
+        .. code-block:: python
+            :filename: streamlit_app.py
 
-        .. output ::
+            import streamlit as st
+
+            st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
+
+            with st.expander("See explanation"):
+                st.write('''
+                    The chart above shows some numbers I picked for you.
+                    I rolled actual dice for these, so they're *guaranteed* to
+                    be random.
+                ''')
+                st.image("https://static.streamlit.io/examples/dice.jpg")
+
+        .. output::
             https://doc-expander.streamlit.app/
             height: 750px
 
-        Or you can just call methods directly on the returned objects:
+        **Example 2: Call methods directly**
 
-        >>> import streamlit as st
-        >>>
-        >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
-        >>>
-        >>> expander = st.expander("See explanation")
-        >>> expander.write('''
-        ...     The chart above shows some numbers I picked for you.
-        ...     I rolled actual dice for these, so they're *guaranteed* to
-        ...     be random.
-        ... ''')
-        >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
+        You can call methods directly on the returned object:
 
-        .. output ::
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
+
+            expander = st.expander("See explanation")
+            expander.write('''
+                The chart above shows some numbers I picked for you.
+                I rolled actual dice for these, so they're *guaranteed* to
+                be random.
+            ''')
+            expander.image("https://static.streamlit.io/examples/dice.jpg")
+
+        .. output::
             https://doc-expander.streamlit.app/
             height: 750px
+
+        **Example 3: Programmatically control the expander state**
+
+        You can use a key to programmatically control the expander state or
+        access the state in callbacks. You must set the ``on_change`` parameter
+        for the expander to track state.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def toggle_expander():
+                st.session_state.summary = not st.session_state.summary
+
+            def on_expander_change():
+                if st.session_state.summary:
+                    st.toast("You opened the expander.")
+                else:
+                    st.toast("You closed the expander.")
+
+
+            with st.expander("Open expander", on_change=on_expander_change, key="summary"):
+                st.write("This is the expander")
+
+            st.button("Toggle expander", on_click=toggle_expander)
+
+        .. output::
+            https://doc-expander-callback.streamlit.app/
+            height: 300px
+
+        **Example 4: Display a timeline of steps**
+
+        Use ``type="step"`` to turn consecutive expanders into a connected
+        timeline. The last step is empty, so it terminates the timeline.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            with st.expander("Understanding the question", type="step"):
+                st.write("Parsed: 'What is the weather in NYC?'")
+
+            with st.expander("Searching for information", type="step"):
+                st.json({"sources": ["weather.gov", "accuweather.com"]})
+
+            # A step with no content terminates the timeline.
+            st.expander("Generating response", type="step")
+
+        .. output::
+            https://doc-expander-step.streamlit.app/
+            height: 300px
 
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for an expander")
+            raise StreamlitMissingRequiredParameterError("st.expander", "label")
 
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError(
+                "on_change", ["'rerun'", "'ignore'", "a callback function"]
+            )
+
+        if type not in EXPANDABLE_TYPE_TO_PROTO_MAPPING:
+            raise StreamlitValueError(
+                "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
+            )
+
+        key = to_key(key)
+        is_stateful = on_change != "ignore"
+
+        current_expanded = expanded
+        element_id: str | None = None
+        block_id: str | None = None
+
+        if is_stateful:
+            is_callback = callable(on_change)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=is_callback,
+            )
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                label=label,
+                expanded=expanded,
+                icon=icon,
+                width=width,
+                type=type,
+            )
+            block_id = element_id
+
+            serde = _ExpanderSerde(expanded=expanded)
+
+            expander_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
+            )
+
+            current_expanded = expander_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                type=type,
+            )
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = expanded
+        expandable_proto.expanded = current_expanded
         expandable_proto.label = label
+        expandable_proto.type = EXPANDABLE_TYPE_TO_PROTO_MAPPING[type]
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
+
+        if is_stateful and element_id is not None:
+            expandable_proto.id = element_id
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -859,7 +1463,21 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        if block_id is not None:
+            block_proto.id = block_id
+
+        expander_dg = cast(
+            "ExpanderContainer",
+            self.dg._block(
+                block_proto=block_proto,
+                dg_type=get_dg_singleton_instance().expander_container_cls,
+            ),
+        )
+
+        if is_stateful:
+            expander_dg.open = current_expanded
+
+        return expander_dg
 
     @gather_metrics("popover")
     def popover(
@@ -872,19 +1490,31 @@ class LayoutsMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
-    ) -> DeltaGenerator:
+        wrap: bool | None = None,
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+    ) -> PopoverContainer:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
         element and a container that opens when the button is clicked.
 
-        Opening and closing the popover will not trigger a rerun. Interacting
-        with widgets inside of an open popover will rerun the app while keeping
-        the popover open. Clicking outside of the popover will close it.
-
         To add elements to the returned container, you can use the "with"
         notation (preferred) or just call methods directly on the returned object.
         See examples below.
+
+        Interacting with widgets inside of an open popover will rerun the app
+        while keeping the popover open. Clicking outside of the popover will
+        close it.
+
+        By default, all content within the popover is computed and sent to the
+        frontend, and the app doesn't rerun when the popover is opened or
+        closed. To enable lazy execution where content only runs when the
+        popover is open, use ``on_change="rerun"`` or pass a callable to
+        ``on_change``. The ``.open`` property indicates whether the popover is
+        currently open, letting you conditionally render expensive content.
 
         .. note::
             To follow best design practices, don't nest popovers.
@@ -899,9 +1529,9 @@ class LayoutsMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -987,61 +1617,243 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's contents.
 
+        wrap : bool or None
+            Whether the popover button's label can wrap onto multiple lines.
+            This can be one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. The icon and chevron remain
+            visible.
+
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
+
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the open/closed state via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
+        on_change : "ignore", "rerun", or callable
+            How the popover should respond when the user opens or closes it.
+            This controls whether the popover tracks state and triggers
+            reruns. ``on_change`` can be one of the following values:
+
+            - ``"ignore"`` (default): The popover doesn't track state. All
+              popover content runs regardless of whether the popover is open or
+              closed. The ``.open`` attribute of the popover container returns
+              ``None``.
+
+            - ``"rerun"``: The popover tracks state. Streamlit reruns the app
+              when the user opens or closes the popover. The ``.open``
+              attribute of the popover container returns the current state,
+              which is ``True`` if the popover is open and ``False`` if it's
+              closed. This lets you skip expensive work when the popover is
+              closed.
+
+            - A callable: The popover tracks state. Streamlit executes the
+              callable as a callback function and reruns the app when the user
+              opens or closes the popover. The ``.open`` attribute of the
+              popover container returns its state like when
+              ``on_change="rerun"``. If you need to access the current state
+              inside your callback, fetch it through Session State.
+
+            When the popover tracks state, it can't be used inside Streamlit
+            cache-decorated functions.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change`` callback.
+
+        Returns
+        -------
+        PopoverContainer
+            A ``PopoverContainer`` object with an ``.open`` property to return
+            the current state of the popover if the popover tracks state.
+
         Examples
         --------
+        **Example 1: Use context management**
         You can use the ``with`` notation to insert any element into a popover:
 
-        >>> import streamlit as st
-        >>>
-        >>> with st.popover("Open popover"):
-        >>>     st.markdown("Hello World 👋")
-        >>>     name = st.text_input("What's your name?")
-        >>>
-        >>> st.write("Your name:", name)
+        .. code-block:: python
+            :filename: streamlit_app.py
 
-        .. output ::
+            import streamlit as st
+
+            with st.popover("Open popover"):
+                st.markdown("Hello World 👋")
+                name = st.text_input("What's your name?")
+
+            st.write("Your name:", name)
+
+        .. output::
             https://doc-popover.streamlit.app/
             height: 400px
 
-        Or you can just call methods directly on the returned objects:
+        **Example 2: Call methods directly**
 
-        >>> import streamlit as st
-        >>>
-        >>> popover = st.popover("Filter items")
-        >>> red = popover.checkbox("Show red items.", True)
-        >>> blue = popover.checkbox("Show blue items.", True)
-        >>>
-        >>> if red:
-        ...     st.write(":red[This is a red item.]")
-        >>> if blue:
-        ...     st.write(":blue[This is a blue item.]")
+        You can call methods directly on the returned object:
 
-        .. output ::
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            popover = st.popover("Filter items")
+            red = popover.checkbox("Show red items.", True)
+            blue = popover.checkbox("Show blue items.", True)
+
+            if red:
+                st.write(":red[This is a red item.]")
+            if blue:
+                st.write(":blue[This is a blue item.]")
+
+        .. output::
             https://doc-popover2.streamlit.app/
             height: 400px
 
+        **Example 3: Programmatically control the popover state**
+
+        You can use a key to programmatically control the popover state or
+        access the state in callbacks. You must set the ``on_change`` parameter
+        for the popover to track state.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def toggle_popover():
+                st.session_state.drawer = not st.session_state.drawer
+
+            def on_popover_change():
+                if st.session_state.drawer:
+                    st.toast("You opened the popover.")
+                else:
+                    st.toast("You closed the popover.")
+
+
+            with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
+                st.write("This is the popover")
+                st.button("Close popover", on_click=toggle_popover)
+
+            st.button("Open popover", on_click=toggle_popover)
+
+        .. output::
+            https://doc-popover-callback.streamlit.app/
+            height: 300px
+
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for a popover")
+            raise StreamlitMissingRequiredParameterError("st.popover", "label")
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
-            raise StreamlitAPIException(
-                'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+        if type not in {"primary", "secondary", "tertiary"}:
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
+            )
+
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError(
+                "on_change", ["'rerun'", "'ignore'", "a callback function"]
+            )
+
+        key = to_key(key)
+        is_stateful = on_change != "ignore"
+
+        current_open = False
+        element_id: str | None = None
+        block_id: str | None = None
+
+        if is_stateful:
+            is_callback = callable(on_change)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=is_callback,
+            )
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                label=label,
+                type=type,
+                help=help,
+                icon=icon,
+                disabled=disabled,
+                width=width,
+            )
+            block_id = element_id
+
+            serde = _PopoverSerde()
+
+            popover_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
+                disabled=disabled,
+            )
+
+            current_open = popover_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
             )
 
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.disabled = disabled
         popover_proto.type = type
+        popover_proto.open = current_open
+        if wrap is not None:
+            popover_proto.wrap = wrap
         if help:
             popover_proto.help = str(help)
         if icon is not None:
             popover_proto.icon = validate_icon_or_emoji(icon)
+
+        if is_stateful and element_id is not None:
+            popover_proto.id = element_id
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -1050,7 +1862,21 @@ class LayoutsMixin:
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        if block_id is not None:
+            block_proto.id = block_id
+
+        popover_dg = cast(
+            "PopoverContainer",
+            self.dg._block(
+                block_proto=block_proto,
+                dg_type=get_dg_singleton_instance().popover_container_cls,
+            ),
+        )
+
+        if is_stateful:
+            popover_dg.open = current_open
+
+        return popover_dg
 
     @gather_metrics("status")
     def status(
@@ -1059,6 +1885,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
@@ -1093,9 +1920,9 @@ class LayoutsMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -1114,6 +1941,23 @@ class LayoutsMixin:
             - ``running`` (default): A spinner icon is shown.
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
+
+        type : "default", "compact", or "step"
+            The visual style of the status container. This can be one of the
+            following:
+
+            - ``"default"`` (default): The container is displayed with a border
+              and background.
+            - ``"compact"``: The container is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning or task progress
+              without visual clutter.
+            - ``"step"``: The container is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
@@ -1148,7 +1992,7 @@ class LayoutsMixin:
         >>>
         >>> st.button("Rerun")
 
-        .. output ::
+        .. output::
             https://doc-status.streamlit.app/
             height: 300px
 
@@ -1171,13 +2015,38 @@ class LayoutsMixin:
         >>>
         >>> st.button("Rerun")
 
-        .. output ::
+        .. output::
             https://doc-status-update.streamlit.app/
+            height: 300px
+
+        With ``type="step"``, consecutive status containers form a connected
+        timeline. The last step is empty, so it terminates the timeline:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import time
+
+            import streamlit as st
+
+            with st.status("Loading data", type="step"):
+                time.sleep(1)
+                st.write("Loaded 1,234 records.")
+
+            with st.status("Analyzing data", type="step"):
+                time.sleep(1)
+                st.write("Found 3 anomalies.")
+
+            # A step with no content terminates the timeline.
+            st.status("Report ready", state="complete", type="step")
+
+        .. output::
+            https://doc-status-step.streamlit.app/
             height: 300px
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state, width=width
+            self.dg, label, expanded=expanded, state=state, type=type, width=width
         )
 
     def _dialog(
@@ -1186,6 +2055,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large", "medium"] = "small",
+        icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.
@@ -1194,10 +2064,15 @@ class LayoutsMixin:
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
         return get_dg_singleton_instance().dialog_container_cls._create(
-            self.dg, title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
+            self.dg,
+            title,
+            dismissible=dismissible,
+            width=width,
+            icon=icon,
+            on_dismiss=on_dismiss,
         )
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { render } from "~lib/test_util"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -48,8 +47,7 @@ describe("ColorPicker widget", () => {
   it("should render a label in the title", () => {
     const props = getProps()
     render(<BaseColorPicker {...props} />)
-    const widgetLabel = screen.queryByText(`${props.label}`)
-    expect(widgetLabel).toBeInTheDocument()
+    expect(screen.getByText(props.label)).toBeVisible()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -70,6 +68,135 @@ describe("ColorPicker widget", () => {
     render(<BaseColorPicker {...props} />)
 
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
+  })
+
+  it("renders trigger as a button with correct aria attributes", () => {
+    const props = getProps()
+    render(<BaseColorPicker {...props} />)
+
+    const trigger = screen.getByRole("button", { name: /label color picker/i })
+    expect(trigger).toBeVisible()
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog")
+  })
+
+  it("popover is not shown before trigger is clicked", () => {
+    render(<BaseColorPicker {...getProps()} />)
+    expect(
+      screen.queryByTestId("stColorPickerPopover")
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens popover when trigger is clicked", async () => {
+    const user = userEvent.setup()
+    render(<BaseColorPicker {...getProps()} />)
+
+    await user.click(
+      screen.getByRole("button", { name: /label color picker/i })
+    )
+
+    expect(screen.getByTestId("stColorPickerPopover")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: /label color picker/i })
+    ).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("mounts the popover in the shared floating overlay portal", async () => {
+    const user = userEvent.setup()
+    render(<BaseColorPicker {...getProps()} />)
+
+    await user.click(
+      screen.getByRole("button", { name: /label color picker/i })
+    )
+
+    const portalHost = document.getElementById(FLOATING_OVERLAY_PORTAL_ID)
+    expect(portalHost).toContainElement(
+      screen.getByTestId("stColorPickerPopover")
+    )
+  })
+
+  it("closes popover and calls onChange when trigger is clicked again", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<BaseColorPicker {...getProps({ onChange })} />)
+
+    const trigger = screen.getByRole("button", { name: /label color picker/i })
+    await user.click(trigger)
+    expect(screen.getByTestId("stColorPickerPopover")).toBeVisible()
+
+    await user.click(trigger)
+    expect(
+      screen.queryByTestId("stColorPickerPopover")
+    ).not.toBeInTheDocument()
+    expect(onChange).toHaveBeenCalledWith("#000000")
+  })
+
+  it("closes popover and calls onChange on outside click", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <div>
+        <BaseColorPicker {...getProps({ onChange })} />
+        <button>outside</button>
+      </div>
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /label color picker/i })
+    )
+    expect(screen.getByTestId("stColorPickerPopover")).toBeVisible()
+
+    // Advance Date.now() past the 50ms timestamp guard used to prevent the
+    // same click that opens the popover from immediately closing it.
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 100)
+    await user.click(screen.getByRole("button", { name: "outside" }))
+    nowSpy.mockRestore()
+
+    expect(
+      screen.queryByTestId("stColorPickerPopover")
+    ).not.toBeInTheDocument()
+    expect(onChange).toHaveBeenCalledWith("#000000")
+  })
+
+  it("closes popover and calls onChange on Tab key", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<BaseColorPicker {...getProps({ onChange })} />)
+
+    await user.click(
+      screen.getByRole("button", { name: /label color picker/i })
+    )
+    expect(screen.getByTestId("stColorPickerPopover")).toBeVisible()
+
+    // Simulate the realistic flow: user focuses an input inside the picker
+    // (e.g. the hex field), then Tabs away. We click the hex input explicitly
+    // because FloatingFocusManager's initial autofocus uses requestAnimationFrame,
+    // which JSDOM does not run, so focus stays on the trigger after the click.
+    const hexInput = screen.getByRole("textbox")
+    await user.click(hexInput)
+
+    await user.keyboard("{Tab}")
+    expect(
+      screen.queryByTestId("stColorPickerPopover")
+    ).not.toBeInTheDocument()
+    expect(onChange).toHaveBeenCalledWith("#000000")
+  })
+
+  it("closes popover and calls onChange on Escape key", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<BaseColorPicker {...getProps({ onChange })} />)
+
+    await user.click(
+      screen.getByRole("button", { name: /label color picker/i })
+    )
+    expect(screen.getByTestId("stColorPickerPopover")).toBeVisible()
+
+    await user.keyboard("{Escape}")
+    expect(
+      screen.queryByTestId("stColorPickerPopover")
+    ).not.toBeInTheDocument()
+    expect(onChange).toHaveBeenCalledWith("#000000")
   })
 
   it("should render a default color in the preview and the color picker", async () => {
@@ -128,8 +255,7 @@ describe("ColorPicker widget", () => {
     it("renders with showValue", () => {
       const props = getProps({ showValue: true })
       render(<BaseColorPicker {...props} />)
-      const colorLabel = screen.getByText("#000000")
-      expect(colorLabel).toBeInTheDocument()
+      expect(screen.getByText("#000000")).toBeVisible()
     })
 
     it("renders without showValue", () => {
@@ -144,6 +270,19 @@ describe("ColorPicker widget", () => {
       render(<BaseColorPicker {...props} />)
       const tooltipIcon = screen.getByTestId("stTooltipIcon")
       expect(tooltipIcon).toBeInTheDocument()
+    })
+
+    it("does not open popover when disabled", async () => {
+      const user = userEvent.setup()
+      render(<BaseColorPicker {...getProps({ disabled: true })} />)
+
+      const trigger = screen.getByRole("button", {
+        name: /label color picker/i,
+      })
+      await user.click(trigger)
+      expect(
+        screen.queryByTestId("stColorPickerPopover")
+      ).not.toBeInTheDocument()
     })
   })
 })

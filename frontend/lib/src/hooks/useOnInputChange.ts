@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ export default function useOnInputChange({
       // is submitted, so this won't cause the script to re-run.
       if (isInForm({ formId })) {
         // Make sure dirty is true so that enter to submit form text shows
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
       }
       // If the TextInput is *not* part of a form, we mark it dirty but don't
       // update its value in the WidgetMgr. This means that individual keypresses

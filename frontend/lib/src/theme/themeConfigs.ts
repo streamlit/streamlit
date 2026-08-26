@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-import { darkThemePrimitives, lightThemePrimitives } from "baseui"
-
-import { baseuiDarkTheme, baseuiLightTheme } from "./baseui"
 import emotionBaseTheme from "./emotionBaseTheme"
 import emotionDarkTheme from "./emotionDarkTheme"
 import emotionLightTheme from "./emotionLightTheme"
@@ -25,27 +22,19 @@ import { ThemeConfig } from "./types"
 export const baseTheme: ThemeConfig = {
   name: "base",
   emotion: emotionBaseTheme,
-  basewebTheme: baseuiLightTheme,
-  primitives: lightThemePrimitives,
 }
 
 export const darkTheme: ThemeConfig = {
   name: "Dark",
   emotion: emotionDarkTheme,
-  basewebTheme: baseuiDarkTheme,
-  primitives: darkThemePrimitives,
 }
 
 export const lightTheme: ThemeConfig = {
   name: "Light",
   emotion: emotionLightTheme,
-  basewebTheme: baseuiLightTheme,
-  primitives: lightThemePrimitives,
 }
 
 export const customTheme: ThemeConfig = {
   name: "Custom Theme",
   emotion: emotionLightTheme,
-  basewebTheme: baseuiLightTheme,
-  primitives: lightThemePrimitives,
 }

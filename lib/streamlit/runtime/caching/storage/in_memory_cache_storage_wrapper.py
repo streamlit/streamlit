@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@ from __future__ import annotations
 
 import math
 import threading
-
-from cachetools import TTLCache
+from typing import TYPE_CHECKING
 
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
@@ -25,7 +24,11 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageContext,
     CacheStorageKeyNotFoundError,
 )
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.caching.ttl_cache import TTLCache
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 _LOGGER = get_logger(__name__)
 
@@ -80,6 +83,17 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     def max_entries(self) -> float:
         return float(self._max_entries) if self._max_entries is not None else math.inf
 
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
+
+    def has(self, key: str) -> bool:
+        """Return whether the key is in memory or the underlying storage."""
+        with self._mem_cache_lock:
+            if key in self._mem_cache:
+                return True
+        return self._persist_storage.has(key)
+
     def get(self, key: str) -> bytes:
         """
         Returns the stored value for the key or raise CacheStorageKeyNotFoundError if
@@ -108,10 +122,12 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             self._mem_cache.clear()
         self._persist_storage.clear()
 
-    def get_stats(self) -> list[CacheStat]:
-        """Returns a list of stats in bytes for the cache memory storage per item."""
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
+        """Returns stats in bytes for the cache memory storage per item."""
         with self._mem_cache_lock:
-            return [
+            stats = [
                 CacheStat(
                     category_name="st_cache_data",
                     cache_name=self.function_display_name,
@@ -119,6 +135,12 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 )
                 for item in self._mem_cache.values()
             ]
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: stats}
 
     def close(self) -> None:
         """Closes the cache storage."""

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import classNames from "classnames"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 import {
   StyledSpinner,
@@ -70,9 +70,22 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
       cache={cache}
     >
       <StyledSpinnerContainer>
+        {/* `DynamicIcon` marks the spinner icon aria-hidden; the label below
+            carries the accessible name. */}
         <DynamicIcon size="lg" iconValue="spinner" />
         <StyledSpinnerText>
-          <StreamlitMarkdown source={element.text} allowHTML={false} />
+          {/* Scope the live region to the label. `role="status"` implies
+              `aria-atomic="true"`, and the elapsed time is rewritten every
+              100ms, so a region spanning both would re-read the label on every
+              tick. Outside the region, the time is still reachable on demand.
+
+              This region mounts already populated, which many screen readers
+              do not announce — the same trade-off as `SkillsInstallCallout`.
+              Accepted here: the label is in the accessibility tree, where
+              previously nothing was exposed. */}
+          <div role="status">
+            <StreamlitMarkdown source={element.text} allowHTML={false} />
+          </div>
           {showTime && (
             <StyledSpinnerTimeText>
               {formatTime(elapsedTime)}

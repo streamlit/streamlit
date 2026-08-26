@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
@@ -19,10 +21,13 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expand_sidebar,
+    expect_font,
     expect_help_tooltip,
     get_caption,
     get_element_by_key,
     get_markdown,
+    reset_hovering,
+    tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
 
@@ -141,6 +146,49 @@ def test_header_attributes(app: Page):
     expect(h6).to_have_count(7)
 
 
+def test_markdown_anchors_hides_anchor_icons(app: Page):
+    """anchors=False hides the anchor link icon but keeps heading IDs for
+    URL fragment deep-linking.
+    """
+    default_block = get_element_by_key(app, "markdown_anchors_default")
+    disabled_block = get_element_by_key(app, "markdown_anchors_disabled")
+
+    # IDs are present in both cases so deep-linking still works.
+    expect(default_block.locator("h1#anchors-default-heading")).to_have_count(1)
+    expect(default_block.locator("h2#anchors-default-subheading")).to_have_count(1)
+    expect(disabled_block.locator("h1#anchors-disabled-heading")).to_have_count(1)
+    expect(disabled_block.locator("h2#anchors-disabled-subheading")).to_have_count(1)
+
+    # The anchor link is rendered (hover-revealed) by default, but absent when
+    # anchors=False.
+    expect(default_block.get_by_role("link", name="Link to heading")).to_have_count(2)
+    expect(disabled_block.get_by_role("link", name="Link to heading")).to_have_count(0)
+
+
+def test_markdown_anchors_visual(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the hovered heading state: the anchor icon appears next to the
+    default heading but not when anchors=False.
+    """
+    default_heading = themed_app.locator("h1#anchors-default-heading")
+    disabled_heading = themed_app.locator("h1#anchors-disabled-heading")
+
+    reset_hovering(themed_app)
+    default_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_default"),
+        name="st_markdown-anchors_default_hovered",
+    )
+
+    reset_hovering(themed_app)
+    disabled_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_disabled"),
+        name="st_markdown-anchors_disabled_hovered",
+    )
+
+
 def test_match_snapshot_for_headers_in_sidebar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -230,6 +278,11 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that LaTeX elements are rendered correctly.
+
+    Uses themed_app for formula rendering which may have theme-dependent colors.
+    Width tests are in test_latex_width_examples.
+    """
     latex_elements = get_element_by_key(themed_app, "latex_elements").get_by_test_id(
         "stMarkdown"
     )
@@ -248,6 +301,16 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
 
     expect(latex_elements.nth(4)).to_contain_text("this is a very long formula")
     assert_snapshot(latex_elements.nth(4), name="st_latex-long-help")
+
+
+def test_latex_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test LaTeX elements with different width configurations.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
+    latex_elements = get_element_by_key(app, "latex_elements").get_by_test_id(
+        "stMarkdown"
+    )
 
     assert_snapshot(latex_elements.nth(5), name="st_latex-width_pixels")
     assert_snapshot(latex_elements.nth(6), name="st_latex-width_stretch")
@@ -270,6 +333,59 @@ def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
 
     # Take a snapshot of all badges together
     assert_snapshot(badge_container, name="st_badge-examples")
+
+
+def test_shimmer_directive(app: Page):
+    """Test that shimmer directive renders text with the shimmer animation class."""
+    shimmer_container = get_element_by_key(app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_have_count(1)
+    expect(shimmer_element).to_contain_text("Please wait...")
+
+    # Normal text should NOT have shimmer class
+    normal_text = shimmer_container.get_by_text("Normal text before")
+    expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
+
+    # :red[:shimmer[...]] — inherit the surrounding color rather than pinning
+    # fadedText60, so the mask peak can reach the parent color.
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
+
+
+def test_shimmer_directive_reduced_motion(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test shimmer directive appearance with prefers-reduced-motion enabled.
+
+    Uses emulate_media to enable reduced motion, which disables the animation
+    and shows the static fallback style. This allows for reliable snapshot testing
+    in both light and dark themes.
+    """
+    # Enable reduced motion to disable animation for stable snapshots
+    themed_app.emulate_media(reduced_motion="reduce")
+
+    shimmer_container = get_element_by_key(themed_app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+    shimmer_container.scroll_into_view_if_needed()
+
+    # Verify shimmer element is present and animation is disabled
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_be_visible()
+
+    # In reduced motion mode, the shimmer should have no animation.
+    # Color still inherits from the surrounding :red[] directive.
+    expect(shimmer_element).to_have_css("animation-duration", "0s")
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
+
+    # Take snapshot with reduced motion to verify visual appearance
+    assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")
 
 
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
@@ -295,9 +411,37 @@ def test_check_top_level_class(app: Page):
 @pytest.mark.app_hash("bold-header1")
 def test_anchor_scrolling(app: Page):
     """Test that anchor scrolling works correctly."""
-    # The app fixture navigates to http://localhost:{app_port}/#bold-header1
+    # The app fixture navigates with the requested hash fragment (#bold-header1),
     # which should scroll to the header.
     expect(app.get_by_text("Bold header1")).to_be_in_viewport()
+
+
+def test_markdown_heading_anchor_icon_is_keyboard_focusable_and_visible(app: Page):
+    """Test that st.markdown headings expose a keyboard-focusable anchor icon.
+
+    The anchor icon is hidden by default to reduce visual noise, but it must be
+    reachable by tabbing. When focused, it should become visible and be
+    activatable using the keyboard.
+    """
+    heading = app.locator("h1#bold-header1")
+    heading.scroll_into_view_if_needed()
+
+    link = heading.get_by_role("link", name="Link to heading")
+    expect(link).to_have_attribute("href", "#bold-header1")
+    expect(link).to_have_css("opacity", "0")
+
+    # Start tabbing from a deterministic, nearby focusable element that appears before
+    # this heading in the document.
+    app.get_by_test_id("stMainBlockContainer").get_by_role(
+        "textbox", name="This is a label"
+    ).click()
+    tab_until_focused(app, link)
+
+    expect(link).to_be_focused()
+    expect(link).to_have_css("opacity", "1")
+
+    app.keyboard.press("Enter")
+    expect(app).to_have_url(re.compile(r".*#bold-header1"))
 
 
 @pytest.mark.performance
@@ -314,60 +458,65 @@ def test_markdown_rendering_performance(app: Page):
     expect(app.get_by_text("DONE")).to_be_attached()
 
 
-def test_markdown_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that markdown elements with different width configurations are displayed correctly."""
+def test_markdown_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that markdown elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width
-    markdown_content = get_markdown(themed_app, r"Content width:")
+    markdown_content = get_markdown(app, r"Content width:")
     markdown_content.scroll_into_view_if_needed()
     assert_snapshot(markdown_content, name="st_markdown-width_content")
 
     # Test fixed width (200px)
-    markdown_200px = get_markdown(themed_app, r"Fixed width \(200px\):")
+    markdown_200px = get_markdown(app, r"Fixed width \(200px\):")
     markdown_200px.scroll_into_view_if_needed()
     assert_snapshot(markdown_200px, name="st_markdown-width_200px")
 
     # Test stretch width
-    markdown_stretch = get_markdown(themed_app, r"Stretch width:")
+    markdown_stretch = get_markdown(app, r"Stretch width:")
     markdown_stretch.scroll_into_view_if_needed()
     assert_snapshot(markdown_stretch, name="st_markdown-width_stretch")
 
 
-def test_caption_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that caption elements with different width configurations are displayed correctly."""
+def test_caption_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that caption elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width
-    caption_content = get_caption(themed_app, r"caption with content-based width")
+    caption_content = get_caption(app, r"caption with content-based width")
     caption_content.scroll_into_view_if_needed()
     assert_snapshot(caption_content, name="st_caption-width_content")
 
     # Test fixed width (300px)
-    caption_300px = get_caption(themed_app, r"caption with a fixed width of 300 pixels")
+    caption_300px = get_caption(app, r"caption with a fixed width of 300 pixels")
     caption_300px.scroll_into_view_if_needed()
     assert_snapshot(caption_300px, name="st_caption-width_300px")
 
     # Test stretch width
-    caption_stretch = get_caption(themed_app, r"caption that stretches to fill")
+    caption_stretch = get_caption(app, r"caption that stretches to fill")
     caption_stretch.scroll_into_view_if_needed()
     assert_snapshot(caption_stretch, name="st_caption-width_stretch")
 
 
-def test_badge_width_examples(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that badge elements with different width configurations are displayed correctly."""
+def test_badge_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that badge elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width (default)
-    badge_content = get_markdown(themed_app, r"Default badge")
+    badge_content = get_markdown(app, r"Default badge")
     badge_content.scroll_into_view_if_needed()
     assert_snapshot(badge_content, name="st_badge-width_content")
 
     # Test fixed width (100px)
-    badge_100px = get_markdown(themed_app, r"Fixed 100px badge")
+    badge_100px = get_markdown(app, r"Fixed 100px badge")
     badge_100px.scroll_into_view_if_needed()
     assert_snapshot(badge_100px, name="st_badge-width_100px")
 
     # Test stretch width
-    badge_stretch = get_markdown(themed_app, r"Stretch badge")
+    badge_stretch = get_markdown(app, r"Stretch badge")
     badge_stretch.scroll_into_view_if_needed()
     assert_snapshot(badge_stretch, name="st_badge-width_stretch")
 
@@ -378,8 +527,325 @@ def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
 
 
+def test_unsafe_allow_html_with_help(app: Page, assert_snapshot: ImageCompareFunction):
+    """Regression test for gh-15211: help icon must render next to single-line HTML.
+
+    CommonMark's HTML-block rule consumes single-line block-level HTML as a raw
+    HTML block, swallowing any trailing ``:help[]`` directive. The fix renders
+    the tooltip icon directly instead of relying on the directive.
+    """
+    container = get_element_by_key(app, "markdown_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+    assert_snapshot(container, name="st_markdown-unsafe_allow_html_with_help")
+
+
+def test_unsafe_allow_html_multiline_with_help(app: Page):
+    """Regression test for gh-15211: help icon also renders for multi-line HTML."""
+    container = get_element_by_key(app, "markdown_multiline_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+
 def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a long word in a container is displayed correctly (doesn't overflow the container)."""
     container = get_element_by_key(app, "long_word")
     expect(container).to_be_visible()
     assert_snapshot(container, name="st_markdown-long_word_in_container")
+
+
+def test_long_word_in_list_does_not_overflow_container(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Regression test for gh-16618: a list item wider than its container wraps
+    instead of spilling out of it.
+
+    Element screenshots clip to the container, so the overflow is cropped out of
+    the snapshot. The geometry assertions catch the overflow; the snapshot guards
+    the wrapped rendering.
+    """
+    container = get_element_by_key(app, "long_word_in_list")
+    expect(container).to_be_visible()
+
+    # Text measurements need the real body font. Gate on the font, not on the
+    # wrapping itself, so a genuine regression fails an assertion instead of
+    # timing out.
+    expect_font(app, "Source Sans")
+
+    # The single-line item is the reference height for "did not wrap".
+    short_box = (
+        container.get_by_role("listitem").filter(has_text="short item").bounding_box()
+    )
+    assert short_box is not None
+
+    # These two need CSS selectors to tell the unordered and ordered lists apart.
+    for long_item in (
+        container.locator("ul li").filter(has_text="bucket1/"),
+        container.locator("ol li").filter(has_text="bucket2/"),
+    ):
+        long_box = long_item.bounding_box()
+        assert long_box is not None
+        # 1.5x the single-line height means at least two lines, with slack for
+        # line-height rounding.
+        assert long_box["height"] > short_box["height"] * 1.5, (
+            "Long list item did not wrap onto a second line"
+        )
+
+    markdown_box = container.get_by_test_id("stMarkdownContainer").bounding_box()
+    assert markdown_box is not None
+    right_edge = markdown_box["x"] + markdown_box["width"]
+
+    for list_locator in (container.locator("ul"), container.locator("ol")):
+        list_box = list_locator.bounding_box()
+        assert list_box is not None
+        # Checked by hand rather than with `is_child_bounding_box_inside_parent`,
+        # which has no tolerance for the fractional layout widths involved here.
+        assert list_box["x"] + list_box["width"] <= right_edge + 1, (
+            "List overflows the right edge of its markdown container"
+        )
+
+    # Must NOT happen: any descendant, not just the list, escaping the container.
+    assert container.evaluate("el => el.scrollWidth <= el.clientWidth + 1"), (
+        "Content overflows the container horizontally (scrollWidth exceeds clientWidth)"
+    )
+
+    assert_snapshot(container, name="st_markdown-long_word_in_list")
+
+
+@pytest.mark.parametrize(
+    ("alignment_value", "text_content"),
+    [
+        ("left", "Left aligned text is the default behavior"),
+        ("center", "Center aligned text with some content"),
+        ("right", "Right aligned text content demonstrates"),
+        ("justify", "Justified text alignment"),
+    ],
+)
+def test_markdown_text_alignment(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    alignment_value: str,
+    text_content: str,
+):
+    """Test st.markdown text alignment for all alignment types.
+
+    This test verifies that text, tables, and nested lists all respond correctly
+    to text-align CSS for each alignment value.
+    """
+    markdown_element = get_markdown(app, text_content)
+    markdown_element.scroll_into_view_if_needed()
+
+    assert_snapshot(
+        markdown_element, name=f"st_markdown-text_alignment_{alignment_value}"
+    )
+
+
+def test_markdown_short_text_alignment_with_help(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test short centered markdown with help tooltip to verify icon alignment."""
+    short_centered = get_markdown(app, "Short text")
+    short_centered.scroll_into_view_if_needed()
+
+    expect_help_tooltip(app, short_centered, "This is a help tooltip!")
+
+    assert_snapshot(short_centered, name="st_markdown-short_text_center_with_help")
+
+
+def test_caption_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.caption with text alignment."""
+    # Test center alignment
+    caption_center = get_caption(app, "Centered caption text")
+    caption_center.scroll_into_view_if_needed()
+    assert_snapshot(caption_center, name="st_caption-text_alignment_center")
+
+    # Test right alignment
+    caption_right = get_caption(app, "Right aligned caption")
+    caption_right.scroll_into_view_if_needed()
+    assert_snapshot(caption_right, name="st_caption-text_alignment_right")
+
+    # Test justify alignment
+    caption_justify = get_caption(app, "Justified caption text")
+    caption_justify.scroll_into_view_if_needed()
+    assert_snapshot(caption_justify, name="st_caption-text_alignment_justify")
+
+
+@pytest.mark.parametrize(
+    ("element_key", "expected_text", "element_test_id"),
+    [
+        (
+            "markdown_newlines_tooltip",
+            "Markdown with newlines in tooltip",
+            "stMarkdownContainer",
+        ),
+        (
+            "caption_newlines_tooltip",
+            "Caption with newlines in tooltip",
+            "stCaptionContainer",
+        ),
+        (
+            "markdown_center_newlines_tooltip",
+            "Center aligned with newlines in tooltip",
+            "stMarkdownContainer",
+        ),
+        (
+            "markdown_spaces_around_newlines",
+            "Markdown with spaces around newlines",
+            "stMarkdownContainer",
+        ),
+        (
+            "markdown_bracket_in_tooltip",
+            "Markdown with closing bracket in tooltip",
+            "stMarkdownContainer",
+        ),
+    ],
+)
+def test_tooltip_with_newlines_gh_13339(
+    app: Page,
+    element_key: str,
+    expected_text: str,
+    element_test_id: str,
+):
+    r"""Test that tooltips with newlines render correctly inside the tooltip (gh-13339).
+
+    This regression test verifies that when help text contains double newlines (\n\n),
+    the text renders inside the tooltip box with proper paragraph breaks rather than
+    outside of it.
+
+    The bug caused the directive syntax to break, leaking the help text into the
+    markdown container itself instead of keeping it in the tooltip popup.
+    """
+    element_container = get_element_by_key(app, element_key)
+    element_container.scroll_into_view_if_needed()
+    expect(element_container).to_be_visible()
+
+    # Get the actual markdown/caption element inside the container
+    element = element_container.get_by_test_id(element_test_id)
+
+    # CRITICAL: Verify the help text is NOT leaked into the element content
+    # In the bug condition, "Line 2" and "Line 3" would appear in the visible text
+    expect(element).to_have_text(expected_text)
+    expect(element).not_to_contain_text("Line 2")
+    expect(element).not_to_contain_text("Line 3")
+
+    # Hover to show tooltip.
+    # reset_hovering primes the interaction modality to 'pointer' first — React Aria
+    # requires a document-level pointermove before pointerenter to register hover
+    # intent; Playwright teleports the cursor when the mouse starts "off-page".
+    hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
+    hover_target.hover()
+
+    # Verify tooltip is visible and contains the multiline content
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+
+    # All test cases now use consistent "Line 1/2/3" format for simplicity
+    expect(tooltip_content).to_contain_text("Line 1")
+    expect(tooltip_content).to_contain_text("Line 2")
+    expect(tooltip_content).to_contain_text("Line 3")
+
+
+def test_tooltip_with_complex_markdown_gh_13339(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that tooltips with complex markdown features render correctly.
+
+    Comprehensive test verifying that help tooltips support:
+    - Bold, italic, and other text formatting
+    - Inline code and code blocks
+    - Links
+    - Color directives
+    - Brackets [ and ]
+    - Emojis
+
+    Uses snapshot testing to verify the markdown is rendered correctly.
+    """
+    element_container = get_element_by_key(app, "markdown_complex_tooltip")
+    element_container.scroll_into_view_if_needed()
+    expect(element_container).to_be_visible()
+
+    element = element_container.get_by_test_id("stMarkdownContainer")
+
+    # Verify the help text is NOT leaked into the markdown content
+    expect(element).to_have_text("Tooltip with complex markdown")
+    expect(element).not_to_contain_text("Bold")
+    expect(element).not_to_contain_text("italic")
+    expect(element).not_to_contain_text("array[index]")
+    expect(element).not_to_contain_text("Streamlit")
+
+    # reset_hovering primes interaction modality to 'pointer' before hover.
+    hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
+    hover_target.hover()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+
+    expect(tooltip_content).to_contain_text("Bold")
+    expect(tooltip_content).to_contain_text("italic")
+    expect(tooltip_content).to_contain_text("code")
+    expect(tooltip_content).to_contain_text("brackets [x]")
+    expect(tooltip_content).to_contain_text("Streamlit")
+    expect(tooltip_content).to_contain_text("array[index]")
+    expect(tooltip_content).to_contain_text("🎉")
+
+    expect(tooltip_content.locator("code")).to_have_count(1)
+
+    expect(tooltip_content.locator("a")).to_have_attribute(
+        "href", "https://streamlit.io"
+    )
+
+    assert_snapshot(
+        tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
+    )
+
+
+# Mermaid chart tests
+
+
+def test_mermaid_charts_render(app: Page):
+    """Test that mermaid charts are rendered correctly within markdown."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    expect(mermaid_charts).to_have_count(3)
+    # Negative assertion: only 1 error element should exist (from the invalid syntax block)
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_have_count(1)
+
+
+def test_mermaid_charts_contain_rendered_image(app: Page):
+    """Test that rendered mermaid charts contain rendered image content.
+
+    MermaidChart renders diagrams as <img> tags with blob URLs for security
+    sandboxing, rather than inline SVG elements.
+    """
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+
+    # Check that the first 2 valid diagrams contain img elements with blob URLs
+    for i in range(2):
+        img = mermaid_charts.nth(i).locator("img")
+        expect(img).to_be_visible()
+        # Verify the img has a blob URL src (security sandboxing)
+        expect(img).to_have_attribute("src", re.compile(r"^blob:"))
+
+
+def test_mermaid_invalid_syntax_shows_error(app: Page):
+    """Test that invalid mermaid syntax shows an error message."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_be_visible()
+    expect(error).to_contain_text("Mermaid diagram error")
+    # Negative assertion: error chart should not contain an img element
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    # The error chart is the 3rd one (index 2)
+    error_chart = mermaid_charts.nth(2)
+    expect(error_chart.locator("img")).to_have_count(0)

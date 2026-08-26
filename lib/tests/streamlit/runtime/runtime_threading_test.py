@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,17 +49,17 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                 # so that the main thread can retrieve it safely. If Runtime
                 # creation fails, we'll stick an Exception in the queue instead.
                 config = RuntimeConfig(
-                    "mock/script/path.py",
-                    "",
-                    component_registry=MagicMock(),
+                    script_path="mock/script/path.py",
                     media_file_storage=MagicMock(),
                     uploaded_file_manager=MagicMock(),
+                    component_registry=MagicMock(),
+                    bidi_component_registry=MagicMock(),
                     session_manager_class=MagicMock,
                     session_storage=MagicMock(),
                     cache_storage_manager=MagicMock(),
                 )
                 queue.put(Runtime(config))
-            except BaseException as e:
+            except Exception as e:
                 queue.put(e)
 
         thread = threading.Thread(target=create_runtime_on_another_thread)
@@ -69,7 +69,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
             raise RuntimeError("Thread.join timed out!")
 
         runtime = queue.get(block=True, timeout=1)
-        if isinstance(runtime, BaseException):
+        if isinstance(runtime, Exception):
             raise runtime
 
         # Ensure we can start and stop the Runtime

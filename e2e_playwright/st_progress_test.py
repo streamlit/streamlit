@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,9 +23,10 @@ def test_progress_renders_properly(
 ):
     progress_bars = themed_app.get_by_test_id("stProgress")
     expect(progress_bars).to_have_count(5)
-    expect(progress_bars.get_by_role("progressbar").nth(0)).to_have_attribute(
-        "aria-valuenow", "50"
-    )
+    first_bar = progress_bars.get_by_role("progressbar").nth(0)
+    expect(first_bar).to_have_attribute("aria-valuenow", "50")
+    expect(first_bar).to_have_attribute("aria-valuemin", "0")
+    expect(first_bar).to_have_attribute("aria-valuemax", "100")
 
     # Use descriptive names for each progress bar snapshot
     assert_snapshot(progress_bars.nth(0), name="st_progress-default")

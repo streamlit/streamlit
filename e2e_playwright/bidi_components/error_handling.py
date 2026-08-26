@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,6 +39,6 @@ with st.container():
     _incorrect_css = st.components.v2.component(
         "incorrectCssPathComponent",
         html="""<h1>The CSS path is incorrect</h1>""",
-        css=Path(__file__).parent / "incorrect_css_path.css",  # type: ignore[arg-type]
+        css=Path(__file__).parent / "incorrect_css_path.css",  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
     )
     _incorrect_css()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,12 @@ const initializeHeightGuidance = (
   if (textareaRef.current && heightGuidance.current) {
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const { offsetHeight } = textareaRef.current
+    // A hidden textarea (e.g. inside an inactive tab) reports offsetHeight 0.
+    // Bail out instead of caching bogus 0 min/max heights; minHeight stays 0 as a
+    // "not yet measured" marker that updateScrollHeight re-initializes once visible.
+    if (offsetHeight === 0) {
+      return
+    }
     heightGuidance.current.minHeight = offsetHeight
     heightGuidance.current.maxHeight = offsetHeight * MAX_VISIBLE_NUM_LINES
   }
@@ -104,7 +110,7 @@ const calculateMaxHeight = (maxHeight: number): string => {
   return maxHeight ? `${maxHeight}px` : ""
 }
 
-export interface UseTextInputAutoExpandResult {
+interface UseTextInputAutoExpandResult {
   /** Whether the textarea is currently in extended state */
   isExtended: boolean
   /** Calculated height style for the textarea */
@@ -117,7 +123,7 @@ export interface UseTextInputAutoExpandResult {
   clearScrollHeight: () => void
 }
 
-export interface UseTextInputAutoExpandOptions {
+interface UseTextInputAutoExpandOptions {
   /** Ref to the textarea element */
   textareaRef: RefObject<HTMLTextAreaElement>
   /** Dependencies that should trigger scroll height recalculation */
@@ -133,12 +139,20 @@ export const useTextInputAutoExpand = ({
   dependencies = [],
 }: UseTextInputAutoExpandOptions): UseTextInputAutoExpandResult => {
   const theme = useEmotionTheme()
-  const heightGuidance = useRef<HeightGuidance>({ minHeight: 0, maxHeight: 0 })
+  const heightGuidanceRef = useRef<HeightGuidance>({
+    minHeight: 0,
+    maxHeight: 0,
+  })
 
   const [scrollHeight, setScrollHeight] = useState(0)
   const [isExtended, setIsExtended] = useState(false)
 
   const updateScrollHeight = useCallback((): void => {
+    // minHeight is still 0 if the textarea was hidden at mount (see
+    // initializeHeightGuidance). Re-measure now that it may have become visible.
+    if (heightGuidanceRef.current.minHeight === 0) {
+      initializeHeightGuidance(textareaRef, heightGuidanceRef)
+    }
     setScrollHeight(getScrollHeight(textareaRef))
   }, [textareaRef, setScrollHeight])
 
@@ -149,13 +163,13 @@ export const useTextInputAutoExpand = ({
   // Initialize height guidance
   useLayoutEffect(() => {
     if (textareaRef.current) {
-      initializeHeightGuidance(textareaRef, heightGuidance)
+      initializeHeightGuidance(textareaRef, heightGuidanceRef)
     }
   }, [textareaRef])
 
   // Update extended state when scroll height changes
   useLayoutEffect(() => {
-    const { minHeight } = heightGuidance.current
+    const { minHeight } = heightGuidanceRef.current
     setIsExtended(calculateIsExtended(scrollHeight, minHeight, textareaRef))
   }, [scrollHeight, textareaRef])
 
@@ -164,7 +178,7 @@ export const useTextInputAutoExpand = ({
     updateScrollHeight()
   }, [textareaRef, updateScrollHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { maxHeight: maxHeightValue } = heightGuidance.current
+  const { maxHeight: maxHeightValue } = heightGuidanceRef.current
 
   // Calculate height values using theme default
   const defaultHeight = theme.sizes.minElementHeight
@@ -173,7 +187,7 @@ export const useTextInputAutoExpand = ({
     scrollHeight,
     defaultHeight
   )
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   const calculatedMaxHeight = calculateMaxHeight(maxHeightValue)
 
   return {

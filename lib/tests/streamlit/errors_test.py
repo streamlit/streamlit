@@ -1,0 +1,292 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for streamlit.errors - focused on classes with non-trivial logic."""
+
+from __future__ import annotations
+
+import pytest
+
+from streamlit import errors
+
+# LocalizableStreamlitException tests
+
+
+def test_localizable_exception_message_formatting() -> None:
+    """Test that message is properly formatted with kwargs."""
+    exc = errors.LocalizableStreamlitException(
+        "Value {value} is invalid for {param}",
+        value=42,
+        param="test_param",
+    )
+    assert str(exc) == "Value 42 is invalid for test_param"
+
+
+def test_localizable_exception_exec_kwargs_property() -> None:
+    """Test that exec_kwargs stores the kwargs for localization."""
+    exc = errors.LocalizableStreamlitException(
+        "Error with {key}",
+        key="test_value",
+        extra="data",
+    )
+    assert exc.exec_kwargs == {"key": "test_value", "extra": "data"}
+
+
+def test_localizable_exception_exec_kwargs_empty() -> None:
+    """Test exec_kwargs is empty when no kwargs provided."""
+    exc = errors.LocalizableStreamlitException("Simple message")
+    assert exc.exec_kwargs == {}
+
+
+# StreamlitAPIWarning tests
+
+
+def test_api_warning_captures_stack_trace() -> None:
+    """Test that tacked_on_stack is captured on creation."""
+    warning = errors.StreamlitAPIWarning("Test warning")
+    assert warning.tacked_on_stack is not None
+    assert len(warning.tacked_on_stack) > 0
+    # Stack should include this test file
+    filenames = [frame.filename for frame in warning.tacked_on_stack]
+    assert any("errors_test.py" in f for f in filenames)
+
+
+def test_api_warning_repr() -> None:
+    """Test __repr__ returns expected format."""
+    warning = errors.StreamlitAPIWarning("Test message")
+    assert "StreamlitAPIWarning" in repr(warning)
+
+
+# StreamlitMixedNumericTypesError tests
+
+
+def test_mixed_numeric_types_error_all_types() -> None:
+    """Test message when all numeric args have different types."""
+    exc = errors.StreamlitMixedNumericTypesError(
+        value=1.0,
+        min_value=1,
+        max_value=10.0,
+        step=2,
+    )
+    msg = str(exc)
+    assert "float" in msg
+    assert "int" in msg
+    assert "`value`" in msg
+    assert "`min_value`" in msg
+
+
+def test_mixed_numeric_types_error_zero_values() -> None:
+    """Test that zero values are included in the message (not treated as falsy)."""
+    exc = errors.StreamlitMixedNumericTypesError(
+        value=0,
+        min_value=0,
+        max_value=0.0,
+        step=0,
+    )
+    msg = str(exc)
+    # All parameters should be included even though they are zero
+    assert "`value`" in msg
+    assert "`min_value`" in msg
+    assert "`max_value`" in msg
+    assert "`step`" in msg
+
+
+def test_mixed_numeric_types_error_partial() -> None:
+    """Test message when only some args are provided."""
+    exc = errors.StreamlitMixedNumericTypesError(
+        value=1.0,
+        min_value=None,
+        max_value=10,
+        step=None,
+    )
+    msg = str(exc)
+    assert "`value`" in msg
+    assert "`max_value`" in msg
+    assert "`min_value`" not in msg
+    assert "`step`" not in msg
+
+
+# StreamlitPageNotFoundError tests
+
+
+def test_page_not_found_with_pages_directory() -> None:
+    """Test message when using pages/ directory pattern."""
+    exc = errors.StreamlitPageNotFoundError(
+        page="missing_page.py",
+        main_script_directory="/app/my_app",
+        uses_pages_directory=True,
+    )
+    msg = str(exc)
+    assert "pages/" in msg
+    assert "my_app" in msg
+
+
+def test_page_not_found_without_pages_directory() -> None:
+    """Test message when using st.navigation pattern."""
+    exc = errors.StreamlitPageNotFoundError(
+        page="missing_page.py",
+        main_script_directory="/app/my_app",
+        uses_pages_directory=False,
+    )
+    msg = str(exc)
+    assert "st.Page" in msg
+    assert "st.navigation" in msg
+
+
+def test_page_not_found_during_construction() -> None:
+    """st.Page file-not-found uses a construction-specific message."""
+    exc = errors.StreamlitPageNotFoundError("nonexistent.py")
+    assert (
+        str(exc)
+        == "Unable to create Page. The file `nonexistent.py` could not be found."
+    )
+
+
+def test_invalid_parameter_type_error_message() -> None:
+    """The parameter, expected types, and provided type form one stable message."""
+    exc = errors.StreamlitInvalidParameterTypeError("index", "str", ["int", "None"])
+    assert (
+        str(exc)
+        == "Invalid `index` type. Expected one of: int, None. Provided type: str."
+    )
+    assert exc.exec_kwargs == {
+        "parameter": "index",
+        "expected_types": "int, None",
+        "provided_type": "str",
+    }
+
+
+def test_widget_already_instantiated_error_message() -> None:
+    """Session-state assignment after widget creation names the key."""
+    exc = errors.StreamlitWidgetAlreadyInstantiatedError("my_key")
+    assert "`st.session_state.my_key`" in str(exc)
+    assert "instantiated" in str(exc)
+
+
+def test_default_not_in_options_error_message() -> None:
+    """Default-not-in-options names the missing value."""
+    exc = errors.StreamlitDefaultNotInOptionsError("c")
+    assert "The default value 'c' is not part of the options." in str(exc)
+    assert "every default value also exists in the options." in str(exc)
+
+
+# StreamlitSelectionCountExceedsMaxError tests
+
+
+@pytest.mark.parametrize(
+    ("current", "max_sel", "expected_current_noun", "expected_options_noun"),
+    [
+        (1, 1, "option", "option"),
+        (2, 1, "options", "option"),
+        (1, 3, "option", "options"),
+        (5, 3, "options", "options"),
+    ],
+)
+def test_selection_count_exceeds_max_pluralization(
+    current: int, max_sel: int, expected_current_noun: str, expected_options_noun: str
+):
+    """Test that singular/plural nouns are used correctly."""
+    exc = errors.StreamlitSelectionCountExceedsMaxError(
+        current_selections_count=current,
+        max_selections_count=max_sel,
+    )
+    msg = str(exc)
+    assert f"{current} {expected_current_noun}" in msg
+    assert f"{max_sel} {expected_options_noun}" in msg
+
+
+# StreamlitInvalidMaxError tests
+
+
+def test_invalid_max_error_without_corrective_action() -> None:
+    """Test message without corrective action."""
+    exc = errors.StreamlitInvalidMaxError(
+        widget_name="st.multiselect",
+        parameter_name="max_selections",
+        value=-1,
+    )
+    msg = str(exc)
+    assert "st.multiselect" in msg
+    assert "max_selections" in msg
+    assert "-1" in msg
+
+
+def test_invalid_max_error_with_corrective_action() -> None:
+    """Test message includes corrective action when provided."""
+    exc = errors.StreamlitInvalidMaxError(
+        widget_name="st.text_input",
+        parameter_name="max_chars",
+        value=0,
+        corrective_action="Set it to None to allow unlimited characters.",
+    )
+    msg = str(exc)
+    assert "Set it to None" in msg
+
+
+# StreamlitMissingRequiredParameterError tests
+
+
+def test_missing_required_parameter_error_message() -> None:
+    """Default message includes command and parameter."""
+    exc = errors.StreamlitMissingRequiredParameterError("st.expander", "label")
+    assert str(exc) == "The `label` parameter is required for `st.expander`."
+
+
+def test_missing_required_parameter_error_with_detail() -> None:
+    """Optional detail is appended to the default message."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "st.toast",
+        "body",
+        detail="It cannot be blank.",
+    )
+    assert str(exc) == (
+        "The `body` parameter is required for `st.toast`. It cannot be blank."
+    )
+
+
+def test_missing_required_parameter_error_detail_with_braces() -> None:
+    """Detail text with braces does not break message formatting."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "st.dialog",
+        "title",
+        detail="Example: use {value}.",
+    )
+    assert str(exc) == (
+        "The `title` parameter is required for `st.dialog`. Example: use {value}."
+    )
+
+
+@pytest.mark.parametrize(
+    ("alias", "shared"),
+    [
+        ("StreamlitInvalidPageLayoutError", "StreamlitValueError"),
+        ("StreamlitInvalidTextAlignmentError", "StreamlitValueError"),
+        ("StreamlitInvalidBindValueError", "StreamlitValueError"),
+        ("StreamlitInvalidPersistStateError", "StreamlitValueError"),
+        ("StreamlitMissingPageLabelError", "StreamlitMissingRequiredParameterError"),
+    ],
+)
+def test_deprecated_exception_aliases(alias: str, shared: str) -> None:
+    """Deprecated exception names remain aliases of the shared types."""
+    assert getattr(errors, alias) is getattr(errors, shared)
+
+
+# StreamlitModuleNotFoundError tests
+
+
+def test_module_not_found_error_message() -> None:
+    """Test that message includes the missing module name."""
+    exc = errors.StreamlitModuleNotFoundError("pandas")
+    assert "pandas" in str(exc)
+    assert "requires module" in str(exc)

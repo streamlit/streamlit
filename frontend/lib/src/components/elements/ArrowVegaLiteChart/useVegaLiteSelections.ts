@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { useCallback } from "react"
 
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { SignalValue, View as VegaView } from "vega"
 
@@ -35,12 +35,11 @@ const DEBOUNCE_TIME_MS = 150
  * This needs to be the same structure that is also defined
  * in the Python code.
  */
-export interface VegaLiteState {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  selection: Record<string, any>
+interface VegaLiteState {
+  selection: Record<string, unknown>
 }
 
-export interface UseVegaLiteSelectionsOutput {
+interface UseVegaLiteSelectionsOutput {
   maybeConfigureSelections: (view: VegaView) => VegaView
   onFormCleared: () => void
 }
@@ -113,7 +112,7 @@ export const useVegaLiteSelections = (
             // Update the component-internal selection state
             const updatedSelections = {
               selection: {
-                ...(currentWidgetState?.selection || {}),
+                ...currentWidgetState?.selection,
                 [name]: processedSelection || {},
               } as VegaLiteState,
             }
@@ -123,12 +122,13 @@ export const useVegaLiteSelections = (
             // with the backend.
             if (!isEqual(currentWidgetState, updatedSelections)) {
               widgetMgr.setStringValue(
-                widgetInfo,
+                widgetInfo.id,
                 JSON.stringify(updatedSelections),
                 {
-                  fromUi: true,
-                },
-                fragmentId
+                  formId: widgetInfo.formId,
+                  fragmentId,
+                  fromUser: true,
+                }
               )
             }
           })
@@ -138,7 +138,10 @@ export const useVegaLiteSelections = (
       // Try to load the previous state of the chart from the element state.
       // This is useful to restore the selection state when the component is re-mounted
       // or when its put into fullscreen mode.
-      const viewState = widgetMgr.getElementState(chartId, "viewState")
+      const viewState = widgetMgr.getElementState<{
+        signals?: unknown
+        data?: unknown
+      }>(chartId, "viewState")
       if (notNullOrUndefined(viewState)) {
         try {
           return vegaView.setState(viewState)
@@ -170,12 +173,13 @@ export const useVegaLiteSelections = (
 
     if (!isEqual(currentWidgetState, emptySelectionState)) {
       widgetMgr.setStringValue(
-        widgetInfo,
+        widgetInfo.id,
         JSON.stringify(emptySelectionState),
         {
-          fromUi: true,
-        },
-        fragmentId
+          formId: widgetInfo.formId,
+          fragmentId,
+          fromUser: true,
+        }
       )
     }
   }, [chartId, formId, fragmentId, selectionMode, widgetMgr])

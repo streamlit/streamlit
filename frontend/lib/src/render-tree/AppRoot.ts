@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,33 +15,55 @@
  */
 
 import {
-  ArrowNamedDataSet,
   Block as BlockProto,
   Delta,
   Element,
   ForwardMsgMetadata,
   Logo,
+  Transient as TransientProto,
 } from "@streamlit/protobuf"
 
-import { ensureError } from "~lib/util/ErrorHandling"
 import {
   getLoadingScreenType,
   isNullOrUndefined,
   LoadingScreenType,
   makeAppSkeletonElement,
-  makeElementWithErrorText,
   makeElementWithInfoText,
 } from "~lib/util/utils"
 
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
+import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
+
+/**
+ * Determine if we can reuse the element payload from an existing node.
+ * Returns true only when:
+ * - elementHash is non-empty and matches the existing node's hash
+ * - The element type matches
+ * - The element doesn't have a one-shot effect flag set by the backend
+ */
+function canReuseElementPayload(
+  existingNode: AppNode | undefined,
+  elementHash: string | undefined,
+  nextElement: Element
+): existingNode is ElementNode {
+  return (
+    Boolean(elementHash) &&
+    nextElement.type !== undefined &&
+    existingNode instanceof ElementNode &&
+    existingNode.elementHash === elementHash &&
+    existingNode.element.type === nextElement.type &&
+    !nextElement.hasOneShotEffect
+  )
+}
 
 interface LogoMetadata {
   // Associated scriptHash that created the logo
@@ -64,7 +86,7 @@ export class AppRoot {
   readonly mainScriptHash: string
 
   /* The app logo, if it exists. */
-  private appLogo: AppLogo | null
+  private readonly appLogo: AppLogo | null
 
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
@@ -100,6 +122,7 @@ export class AppRoot {
 
       default:
         waitElement = makeAppSkeletonElement()
+        break
     }
 
     if (waitElement) {
@@ -177,8 +200,7 @@ export class AppRoot {
       isNullOrUndefined(this.event) ||
       isNullOrUndefined(this.bottom)
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      throw new Error(`Invalid root node children! ${root}`)
+      throw new Error(`Invalid root node children! ${root.debug()}`)
     }
   }
 
@@ -216,21 +238,35 @@ export class AppRoot {
   public applyDelta(
     scriptRunId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    elementHash?: string
   ): AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
     switch (delta.type) {
       case "newElement": {
-        const element = delta.newElement as Element
+        const nextElement = delta.newElement as Element
+        const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          this.root,
+          deltaPath
+        )
+
+        // Check if we can reuse the payload from an existing node
+        const canReuse = canReuseElementPayload(
+          existingNode,
+          elementHash,
+          nextElement
+        )
+
         return this.addElement(
           deltaPath,
           scriptRunId,
-          element,
+          canReuse ? existingNode.element : nextElement,
           metadata,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          elementHash
         )
       }
 
@@ -246,25 +282,16 @@ export class AppRoot {
         )
       }
 
-      case "arrowAddRows": {
-        try {
-          return this.arrowAddRows(
-            deltaPath,
-            delta.arrowAddRows as ArrowNamedDataSet,
-            scriptRunId
-          )
-        } catch (error) {
-          const errorElement = makeElementWithErrorText(
-            ensureError(error).message
-          )
-          return this.addElement(
-            deltaPath,
-            scriptRunId,
-            errorElement,
-            metadata,
-            activeScriptHash
-          )
-        }
+      case "newTransient": {
+        const transient = delta.newTransient as TransientProto
+        return this.addTransient(
+          deltaPath,
+          scriptRunId,
+          transient,
+          metadata,
+          activeScriptHash,
+          delta.fragmentId
+        )
       }
 
       default: {
@@ -341,17 +368,47 @@ export class AppRoot {
     )
   }
 
+  public clearTransientNodes(fragmentIdsThisRun?: Array<string>): AppRoot {
+    const visitor = new ClearTransientNodesVisitor(fragmentIdsThisRun)
+    const newChildren = this.root.children.map(node =>
+      this.ensureBlockNode(node.accept(visitor))
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      new BlockNode(
+        this.mainScriptHash,
+        newChildren,
+        new BlockProto({ allowEmpty: true }),
+        this.main.scriptRunId
+      ),
+      this.appLogo
+    )
+  }
+
   /** Return a Set containing all Elements in the tree. */
   public getElements(): Set<Element> {
+    return this.getActiveIds().elements
+  }
+
+  /**
+   * Return all active element IDs and block IDs in the tree.
+   * Block IDs are collected from blocks that have a stable identity
+   * (e.g. keyed layout containers), and are needed to prevent
+   * elementStates entries from being garbage-collected.
+   */
+  public getActiveIds(): {
+    elements: Set<Element>
+    blockIds: Set<string>
+  } {
     const visitor = new ElementsSetVisitor()
 
-    // Visit each major section of the app
     this.main.accept(visitor)
     this.sidebar.accept(visitor)
     this.event.accept(visitor)
     this.bottom.accept(visitor)
 
-    return visitor.elements
+    return { elements: visitor.elements, blockIds: visitor.blockIds }
   }
 
   private addElement(
@@ -360,14 +417,16 @@ export class AppRoot {
     element: Element,
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    elementHash?: string
   ): AppRoot {
     const elementNode = new ElementNode(
       element,
       metadata,
       scriptRunId,
       activeScriptHash,
-      fragmentId
+      fragmentId,
+      elementHash
     )
     return new AppRoot(
       this.mainScriptHash,
@@ -389,10 +448,16 @@ export class AppRoot {
     fragmentId?: string,
     deltaMsgReceivedAt?: number
   ): AppRoot {
-    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+    const existingNodeAtPath = GetNodeByDeltaPathVisitor.getNodeAtPath(
       this.root,
       deltaPath
     )
+    // Transient nodes are transport wrappers. For child inheritance, operate on
+    // the underlying anchor node when available.
+    const existingNode =
+      existingNodeAtPath instanceof TransientNode
+        ? (existingNodeAtPath.anchor ?? existingNodeAtPath)
+        : existingNodeAtPath
 
     // If we're replacing an existing Block of the same type, this new Block
     // inherits the existing Block's children. This preserves two things:
@@ -403,7 +468,18 @@ export class AppRoot {
       existingNode instanceof BlockNode &&
       existingNode.deltaBlock.type === block.type
     ) {
-      children = existingNode.children
+      // For dialog blocks, don't inherit children if the dialog identity is different.
+      // The identity is computed from the dialog's attributes.
+      // This prevents showing stale elements from a previous
+      // dialog when switching between different dialogs (see issue #10907).
+      const isDialogWithDifferentIdentity =
+        block.dialog &&
+        existingNode.deltaBlock.dialog &&
+        block.id !== existingNode.deltaBlock.id
+
+      if (!isDialogWithDifferentIdentity) {
+        children = existingNode.children
+      }
     }
 
     const blockNode = new BlockNode(
@@ -426,30 +502,37 @@ export class AppRoot {
     )
   }
 
-  private arrowAddRows(
+  addTransient(
     deltaPath: number[],
-    namedDataSet: ArrowNamedDataSet,
-    scriptRunId: string
+    scriptRunId: string,
+    transient: TransientProto,
+    metadata: ForwardMsgMetadata,
+    activeScriptHash: string,
+    fragmentId?: string,
+    deltaMsgReceivedAt?: number
   ): AppRoot {
-    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
-      this.root,
-      deltaPath
+    const transientNode = new TransientNode(
+      scriptRunId,
+      undefined, // We do not have an anchor yet
+      transient.elements.map(
+        element =>
+          new ElementNode(
+            element as Element,
+            metadata,
+            scriptRunId,
+            activeScriptHash,
+            fragmentId
+          )
+      ),
+      deltaMsgReceivedAt
     )
-    if (
-      isNullOrUndefined(existingNode) ||
-      !(existingNode instanceof ElementNode)
-    ) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
-    }
 
-    const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(
         this.root,
         deltaPath,
-        elementNode,
+        transientNode,
         scriptRunId
       ) as BlockNode,
       this.appLogo

@@ -2,37 +2,15 @@
 
 Protobuf messages are used for communication between the Streamlit backend and frontend via WebSocket connections.
 
-**Note**: Messages are "released" once shipped in any Streamlit version.
-
-## Protobuf Compatibility
-
-Always keep protobuf messages backwards compatible. New versions must work with older Streamlit versions.
-
-**Incompatible changes to avoid:**
-
-- Removing a field → Add `// DEPRECATED` comment and mark `[deprecated=true]`
-- Renaming a field → Deprecate old field, add new field with next available number
-- Changing field numbers → Keep all existing numbers unchanged
-- Adding/removing `optional` → Deprecate and create new field
-- Changing field types incompatibly → Use new field with compatible type
-
-**Compatible changes (safe to make):**
-
-- Adding new optional fields
-- Adding comments
-- Marking fields as deprecated
-- Modifying/removing unreleased fields
-
 ## Compile Protobuf
 
 Changes requiring compilation:
 
-- Adding a field
-- **Unreleased messages only:** Modifying/removing fields
+- Adding, modifying, or removing fields
 
 Changes not requiring compilation:
 
-- Comments and `[deprecated=true]` notation
+- Comments
 
 Run this command to recompile the protobufs:
 

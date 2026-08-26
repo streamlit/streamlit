@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,15 @@ y = st.camera_input("Label2", help="help2", disabled=True)
 # Add camera inputs with different widths
 st.camera_input("Width Stretch", width="stretch", key="camera_stretch", disabled=True)
 st.camera_input("Width 300px", width=300, key="camera_300px", disabled=True)
+
+camera_720p_value = st.camera_input(
+    "720p Resolution", resolution="720p", key="camera_720p"
+)
+if camera_720p_value is not None:
+    from PIL import Image
+
+    captured = Image.open(camera_720p_value)
+    st.markdown(f"720p captured height: {captured.height}")
 
 if st.toggle("Update camera input props"):
     cam_val = st.camera_input(

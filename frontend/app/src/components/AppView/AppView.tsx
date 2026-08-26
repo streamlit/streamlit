@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,39 +14,46 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   ReactElement,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react"
 
-import EventContainer from "@streamlit/app/src/components/EventContainer"
-import Header from "@streamlit/app/src/components/Header"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
+import Header from "@streamlit/app/src/components/Header/Header"
+import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
+import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
+import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
+import ThemedSidebar from "@streamlit/app/src/components/Sidebar/ThemedSidebar"
 import {
-  shouldShowNavigation,
-  TopNav,
-} from "@streamlit/app/src/components/Navigation"
-import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
-import {
+  calculateMaxBreakpoint,
   getSavedSidebarState,
   saveSidebarState,
   shouldCollapse,
 } from "@streamlit/app/src/components/Sidebar/utils"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
+  AppNode,
   AppRoot,
   BlockNode,
   ComponentRegistry,
   ContainerContentsWrapper,
+  ElementNode,
   FileUploadClient,
   IGuestToHostMessage,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
+  StreamlitToastItem,
+  StyledToastRegion,
   ThemeContext,
+  toastQueue,
+  TransientNode,
+  useEmotionTheme,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
   WidgetStateManager,
@@ -65,8 +72,36 @@ import {
   StyledInnerBottomContainer,
   StyledMainContent,
   StyledSidebarBlockContainer,
+  StyledSkillsNudgeAnchor,
   StyledStickyBottomContainer,
 } from "./styled-components"
+
+/**
+ * Recursively checks if the given node contains a chat input element.
+ */
+function containsChatInput(node: AppNode): boolean {
+  if (node instanceof ElementNode) {
+    return node.element.type === "chatInput"
+  }
+
+  if (node instanceof BlockNode) {
+    return node.children.some(containsChatInput)
+  }
+
+  if (node instanceof TransientNode) {
+    const anchorHasChatInput = node.anchor
+      ? containsChatInput(node.anchor)
+      : false
+    const transientHasChatInput = node.transientNodes.some(
+      el => el.element.type === "chatInput"
+    )
+    return anchorHasChatInput || transientHasChatInput
+  }
+
+  // Unknown AppNode subtypes are assumed to not contain a chat input.
+  // Update this function if a new node type is added that could contain one.
+  return false
+}
 
 export interface AppViewProps {
   elements: AppRoot
@@ -102,6 +137,14 @@ export interface AppViewProps {
   disableFullscreenMode?: boolean
 
   componentRegistry: ComponentRegistry
+
+  /**
+   * The framework "install skills" nudge, when it should be shown. Rendered
+   * pinned above the toast region so it dominates and outlives app toasts. The
+   * owner (App) builds the element and controls its visibility; AppView only
+   * positions it.
+   */
+  skillsNudge?: React.ReactNode
 }
 
 /**
@@ -126,7 +169,32 @@ function AppView(props: AppViewProps): ReactElement {
     showToolbar,
     disableFullscreenMode,
     componentRegistry,
+    skillsNudge,
   } = props
+
+  const theme = useEmotionTheme()
+
+  // The skills nudge is a standalone fixed card pinned top-right (above the
+  // toast region). react-aria's ToastRegion portals its toasts to the document
+  // body and positions itself, so we can't nest them; instead we measure the
+  // nudge's height and push the toast region down by it, so app toasts stack
+  // beneath the persistent nudge instead of overlapping it. Zero when no nudge.
+  const skillsNudgeRef = useRef<HTMLDivElement>(null)
+  const [skillsNudgeHeight, setSkillsNudgeHeight] = useState(0)
+  const hasSkillsNudge = Boolean(skillsNudge)
+
+  useEffect(() => {
+    const el = skillsNudgeRef.current
+    if (!el) {
+      setSkillsNudgeHeight(0)
+      return undefined
+    }
+    const observer = new ResizeObserver(entries => {
+      setSkillsNudgeHeight(entries[0]?.contentRect.height ?? 0)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasSkillsNudge])
 
   useEffect(() => {
     const listener = (): void => {
@@ -141,14 +209,21 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { activeTheme } = useContext(ThemeContext)
 
-  const { appPages, navSections, pageLinkBaseUrl } =
-    useContext(NavigationContext)
+  const { appPages, pageLinkBaseUrl } = useContext(NavigationContext)
 
-  const { initialSidebarState, appLogo, hideSidebarNav } = useContext(
-    SidebarConfigContext
-  )
+  const { initialSidebarState, appLogo, hideSidebarNav, isSidebarLocked } =
+    useContext(SidebarConfigContext)
 
   const { innerWidth } = useWindowDimensionsContext()
+
+  // LOCKED is desktop-only: on mobile the sidebar renders as an overlay that
+  // covers the main content, so the lock degrades gracefully — users can still
+  // collapse it to access the page. innerWidth > 0 guards against the
+  // unmeasured initial state before dimensions have been read from the DOM.
+  const isMobileViewport =
+    innerWidth > 0 &&
+    innerWidth <= calculateMaxBreakpoint(activeTheme.emotion.breakpoints.md)
+  const isEffectivelyLocked = isSidebarLocked && !isMobileViewport
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
@@ -162,13 +237,12 @@ function AppView(props: AppViewProps): ReactElement {
     (hasSidebarElements ||
       (navigationPosition === Navigation.Position.SIDEBAR &&
         !hideSidebarNav &&
-        appPages.length > 1) ||
+        shouldShowNavigation(appPages)) ||
       showSidebarOverride)
 
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
     if (showSidebar && hideSidebarNav && !showSidebarOverride) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setShowSidebarOverride(true)
     }
   }, [showSidebar, hideSidebarNav, showSidebarOverride])
@@ -191,8 +265,12 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // Activate scroll to bottom whenever there are bottom elements:
-  const Component = hasBottomElements
+  // Activate scroll to bottom only when there's a chat input in the bottom container:
+  const hasBottomChatInput = useMemo(
+    () => hasBottomElements && containsChatInput(elements.bottom),
+    [hasBottomElements, elements.bottom]
+  )
+  const Component = hasBottomChatInput
     ? ScrollToBottomContainer
     : StyledAppViewMain
 
@@ -211,6 +289,11 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() => {
+    // Locked sidebar (desktop only) always starts open; ignore saved preference.
+    if (isEffectivelyLocked) {
+      return false
+    }
+
     const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
     if (savedSidebarState !== null) {
       // User has adjusted the sidebar, respect it
@@ -227,6 +310,12 @@ function AppView(props: AppViewProps): ReactElement {
 
   useExecuteWhenChanged(() => {
     if (innerWidth > 0 && showSidebar) {
+      // Locked sidebar (desktop only) always stays open; skip saved preference.
+      if (isEffectivelyLocked) {
+        setSidebarIsCollapsed(false)
+        return
+      }
+
       const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
 
       if (savedSidebarState !== null) {
@@ -248,16 +337,21 @@ function AppView(props: AppViewProps): ReactElement {
     initialSidebarState,
     activeTheme.emotion.breakpoints.md,
     pageLinkBaseUrl,
+    isEffectivelyLocked,
   ])
 
   const setSidebarCollapsedWithOptionalPersistence = useCallback(
     (isCollapsed: boolean, shouldPersist: boolean = true) => {
+      // Locked sidebar (desktop only) cannot be collapsed; skip localStorage writes.
+      if (isEffectivelyLocked) {
+        return
+      }
       setSidebarIsCollapsed(isCollapsed)
       if (shouldPersist) {
         saveSidebarState(pageLinkBaseUrl, isCollapsed)
       }
     },
-    [pageLinkBaseUrl]
+    [isEffectivelyLocked, pageLinkBaseUrl]
   )
 
   const toggleSidebar = useCallback(() => {
@@ -281,125 +375,147 @@ function AppView(props: AppViewProps): ReactElement {
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
   const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
-    shouldShowNavigation(appPages, navSections)
+    shouldShowNavigation(appPages)
 
   const hasHeaderUserContent =
     shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
-    <>
-      <StyledAppViewContainer
-        className="stAppViewContainer appview-container"
-        data-testid="stAppViewContainer"
-        data-layout={layout}
-      >
-        {showSidebar && (
-          <Profiler id="Sidebar">
-            <ThemedSidebar
-              endpoints={endpoints}
-              hasElements={hasSidebarElements}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
-              widgetsDisabled={widgetsDisabled}
-            >
-              <StyledSidebarBlockContainer>
-                {renderBlock(elements.sidebar)}
-              </StyledSidebarBlockContainer>
-            </ThemedSidebar>
-          </Profiler>
-        )}
-        <StyledMainContent>
-          <Header
-            hasSidebar={showSidebar}
-            isSidebarOpen={showSidebar && !isSidebarCollapsed}
-            onToggleSidebar={toggleSidebar}
-            navigation={
-              navigationPosition === Navigation.Position.TOP &&
-              shouldShowNavigation(appPages, navSections) ? (
-                <TopNav
-                  endpoints={endpoints}
-                  widgetsDisabled={widgetsDisabled}
-                />
-              ) : null
-            }
-            rightContent={topRightContent}
-            logoComponent={logoElement}
-            showToolbar={showToolbar}
-          />
-          <Component
-            tabIndex={0}
-            isEmbedded={embedded}
-            disableScrolling={disableScrolling}
-            className="stMain"
-            data-testid="stMain"
+    <StyledAppViewContainer
+      className="stAppViewContainer appview-container"
+      data-testid="stAppViewContainer"
+      data-layout={layout}
+    >
+      {showSidebar && (
+        <Profiler id="Sidebar">
+          <ThemedSidebar
+            endpoints={endpoints}
+            hasElements={hasSidebarElements}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
+            widgetsDisabled={widgetsDisabled}
           >
-            <Profiler id="Main">
-              <StyledAppViewBlockContainer
-                className="stMainBlockContainer block-container"
-                data-testid="stMainBlockContainer"
-                isWideMode={wideMode}
-                showPadding={showPadding}
-                hasBottom={hasBottomElements}
-                hasHeader={hasHeaderUserContent}
-                hasSidebar={showSidebar}
-                showToolbar={showToolbar}
-                hasTopNav={shouldShowTopNav}
-                embedded={embedded}
-              >
-                {renderBlock(elements.main)}
-              </StyledAppViewBlockContainer>
-            </Profiler>
-            {/* Anchor indicates to the iframe resizer that this is the lowest
+            <StyledSidebarBlockContainer>
+              {renderBlock(elements.sidebar)}
+            </StyledSidebarBlockContainer>
+          </ThemedSidebar>
+        </Profiler>
+      )}
+      <StyledMainContent>
+        <Header
+          hasSidebar={showSidebar}
+          isSidebarOpen={showSidebar && !isSidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
+          navigation={
+            navigationPosition === Navigation.Position.TOP &&
+            shouldShowNavigation(appPages) ? (
+              <TopNav
+                endpoints={endpoints}
+                widgetsDisabled={widgetsDisabled}
+              />
+            ) : null
+          }
+          rightContent={topRightContent}
+          logoComponent={logoElement}
+          showToolbar={showToolbar}
+        />
+        <Component
+          tabIndex={0}
+          isEmbedded={embedded}
+          disableScrolling={disableScrolling}
+          className="stMain"
+          data-testid="stMain"
+        >
+          <Profiler id="Main">
+            <StyledAppViewBlockContainer
+              className="stMainBlockContainer block-container"
+              data-testid="stMainBlockContainer"
+              isWideMode={wideMode}
+              showPadding={showPadding}
+              hasBottom={hasBottomElements}
+              hasHeader={hasHeaderUserContent}
+              hasSidebar={showSidebar}
+              showToolbar={showToolbar}
+              hasTopNav={shouldShowTopNav}
+              embedded={embedded}
+            >
+              {renderBlock(elements.main)}
+            </StyledAppViewBlockContainer>
+          </Profiler>
+          {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height. But we don't add an anchor if there is
         a bottom container in the app, since those two aspects don't work
         well together. */}
-            {!hasBottomElements && (
-              <StyledIFrameResizerAnchor
-                data-testid="stAppIframeResizerAnchor"
-                data-iframe-height
-              />
-            )}
-            {hasBottomElements && (
-              <Profiler id="Bottom">
-                {/* We add spacing here to make sure that the sticky bottom is
+          {!hasBottomElements && (
+            <StyledIFrameResizerAnchor
+              data-testid="stAppIframeResizerAnchor"
+              data-iframe-height
+            />
+          )}
+          {hasBottomElements && (
+            <Profiler id="Bottom">
+              {/* We add spacing here to make sure that the sticky bottom is
            always pinned the bottom. Using sticky layout here instead of
            absolute / fixed is a trick to automatically account for the bottom
            height in the scroll area. Thereby, the bottom container will never
            cover something if you scroll to the end.*/}
-                <StyledAppViewBlockSpacer />
-                <StyledStickyBottomContainer
-                  className="stBottom"
-                  data-testid="stBottom"
-                >
-                  <StyledInnerBottomContainer>
-                    <StyledBottomBlockContainer
-                      data-testid="stBottomBlockContainer"
-                      isWideMode={wideMode}
-                      showPadding={showPadding}
-                    >
-                      {renderBlock(elements.bottom)}
-                    </StyledBottomBlockContainer>
-                  </StyledInnerBottomContainer>
-                </StyledStickyBottomContainer>
-              </Profiler>
-            )}
-          </Component>
-        </StyledMainContent>
-        {hasEventElements && (
-          <Profiler id="Event">
-            <EventContainer>
-              <StyledEventBlockContainer
-                className="stEvent"
-                data-testid="stEvent"
+              <StyledAppViewBlockSpacer />
+              <StyledStickyBottomContainer
+                className="stBottom"
+                data-testid="stBottom"
               >
-                {renderBlock(elements.event)}
-              </StyledEventBlockContainer>
-            </EventContainer>
-          </Profiler>
-        )}
-      </StyledAppViewContainer>
-    </>
+                <StyledInnerBottomContainer>
+                  <StyledBottomBlockContainer
+                    data-testid="stBottomBlockContainer"
+                    isWideMode={wideMode}
+                    showPadding={showPadding}
+                  >
+                    {renderBlock(elements.bottom)}
+                  </StyledBottomBlockContainer>
+                </StyledInnerBottomContainer>
+              </StyledStickyBottomContainer>
+            </Profiler>
+          )}
+        </Component>
+      </StyledMainContent>
+      {hasSkillsNudge && (
+        <StyledSkillsNudgeAnchor
+          ref={skillsNudgeRef}
+          data-testid="stSkillsNudgeAnchor"
+        >
+          {skillsNudge}
+        </StyledSkillsNudgeAnchor>
+      )}
+      <StyledToastRegion
+        queue={toastQueue}
+        aria-label="Notifications"
+        data-testid="stToastContainer"
+        className="stToastContainer"
+        // Push the toast region below the pinned nudge so app toasts stack
+        // beneath it. The region is otherwise positioned by its own styles
+        // (top = header height); the inline override wins only while a nudge is
+        // shown. It must be an inline style rather than a styled-component prop
+        // because the offset is a runtime ResizeObserver measurement
+        // (skillsNudgeHeight), not a static value.
+        style={
+          skillsNudgeHeight > 0
+            ? {
+                top: `calc(${theme.sizes.headerHeight} + ${skillsNudgeHeight}px + ${theme.spacing.sm})`,
+              }
+            : undefined
+        }
+      >
+        {({ toast }) => <StreamlitToastItem toast={toast} />}
+      </StyledToastRegion>
+      {hasEventElements && (
+        <Profiler id="Event">
+          <StyledEventBlockContainer className="stEvent" data-testid="stEvent">
+            {renderBlock(elements.event)}
+          </StyledEventBlockContainer>
+        </Profiler>
+      )}
+    </StyledAppViewContainer>
   )
 }
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from streamlit import dataframe_util
 from streamlit.elements.lib import pandas_styler_utils
 
 if TYPE_CHECKING:
-    from pandas import DataFrame, Index, Series
+    from pandas import DataFrame, Index
 
     from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 
@@ -32,6 +32,20 @@ if TYPE_CHECKING:
 def _maybe_tuple_to_list(item: Any) -> Any:
     """Convert a tuple to a list. Leave as is if it's not a tuple."""
     return list(item) if isinstance(item, tuple) else item
+
+
+def _convert_df_to_component_arrow_bytes(df: DataFrame) -> bytes:
+    """Convert a DataFrame to Arrow IPC bytes for custom component v1.
+
+    Uses ``convert_pandas_df_to_arrow_bytes`` with large-type downcasting
+    enabled for pandas >= 3.0, where ``StringDtype`` is backed by
+    ``large_string`` in Arrow. Third-party custom components bundling
+    older Arrow JS libraries cannot decode these large type codes.
+    """
+    return dataframe_util.convert_pandas_df_to_arrow_bytes(
+        df,
+        downcast_large_types=not dataframe_util.is_pandas_version_less_than("3.0.0"),
+    )
 
 
 def marshall(
@@ -57,7 +71,7 @@ def marshall(
     _marshall_data(proto, df)
 
 
-def _marshall_index(proto: ArrowTableProto, index: Index) -> None:
+def _marshall_index(proto: ArrowTableProto, index: Index[Any]) -> None:
     """Marshall pandas.DataFrame index into an ArrowTable proto.
 
     Parameters
@@ -72,12 +86,12 @@ def _marshall_index(proto: ArrowTableProto, index: Index) -> None:
     """
     import pandas as pd
 
-    index_values = map(_maybe_tuple_to_list, index.values)
+    index_values = list(map(_maybe_tuple_to_list, index.values))
     index_df = pd.DataFrame(index_values)
-    proto.index = dataframe_util.convert_pandas_df_to_arrow_bytes(index_df)
+    proto.index = _convert_df_to_component_arrow_bytes(index_df)
 
 
-def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
+def _marshall_columns(proto: ArrowTableProto, columns: Index[Any]) -> None:
     """Marshall pandas.DataFrame columns into an ArrowTable proto.
 
     Parameters
@@ -85,16 +99,16 @@ def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
     proto : proto.ArrowTable
         Output. The protobuf for a Streamlit ArrowTable proto.
 
-    columns : Series
+    columns : Index
         Column labels to use for resulting frame.
         Will default to RangeIndex (0, 1, 2, ..., n) if no column labels are provided.
 
     """
     import pandas as pd
 
-    values = map(_maybe_tuple_to_list, columns.values)
-    columns_df = pd.DataFrame(values)
-    proto.columns = dataframe_util.convert_pandas_df_to_arrow_bytes(columns_df)
+    column_values = list(map(_maybe_tuple_to_list, columns.values))
+    columns_df = pd.DataFrame(column_values)
+    proto.columns = _convert_df_to_component_arrow_bytes(columns_df)
 
 
 def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
@@ -109,7 +123,7 @@ def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
         A dataframe to marshall.
 
     """
-    proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+    proto.data = _convert_df_to_component_arrow_bytes(df)
 
 
 def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,22 +18,28 @@ import asyncio
 import gc
 import threading
 import unittest
-from asyncio import AbstractEventLoop
 from typing import TYPE_CHECKING, Any, cast
-from unittest import IsolatedAsyncioTestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit import config
+from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import FontFace, FontSource
-from streamlit.runtime import Runtime, app_session
+from streamlit.proto.GitInfo_pb2 import GitInfo
+from streamlit.proto.NewSession_pb2 import (
+    Config,
+    CustomThemeConfig,
+    FontFace,
+    FontSource,
+)
+from streamlit.runtime import Runtime, app_session, caching
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -53,6 +59,10 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SessionState
+from streamlit.runtime.state.query_params import (
+    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+)
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadFileUrlInfo,
@@ -63,6 +73,8 @@ from tests.testutil import patch_config_options
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
+
 
 @pytest.fixture
 def del_path(monkeypatch):
@@ -70,8 +82,9 @@ def del_path(monkeypatch):
 
 
 def _create_test_session(
-    event_loop: AbstractEventLoop | None = None,
+    event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
+    is_hello: bool = False,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -88,7 +101,7 @@ def _create_test_session(
         ),
     ):
         return AppSession(
-            script_data=ScriptData("/fake/script_path.py", is_hello=False),
+            script_data=ScriptData("/fake/script_path.py", is_hello=is_hello),
             uploaded_file_manager=MagicMock(spec=UploadedFileManager),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
@@ -129,21 +142,33 @@ class AppSessionTest(unittest.TestCase):
     )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
-        session = _create_test_session()
+        with (
+            patch.object(
+                caching, "clear_session_data_cache"
+            ) as mock_clear_session_data,
+            patch.object(
+                caching, "clear_session_resource_cache"
+            ) as mock_clear_session_resource,
+        ):
+            session = _create_test_session()
 
-        mock_file_mgr = MagicMock(spec=UploadedFileManager)
-        session._uploaded_file_mgr = mock_file_mgr
+            mock_file_mgr = MagicMock(spec=UploadedFileManager)
+            session._uploaded_file_mgr = mock_file_mgr
 
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
-        patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
+            patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
 
-        # A 2nd shutdown call should have no effect.
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            # A 2nd shutdown call should have no effect.
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
 
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
 
     def test_shutdown_with_running_scriptrunner(self):
         """If we have a running ScriptRunner, shutting down should stop it."""
@@ -292,7 +317,7 @@ class AppSessionTest(unittest.TestCase):
     ):
         session = _create_test_session()
         fragment_id = "my_fragment_id"
-        session._fragment_storage.set(fragment_id, lambda: None)
+        session._fragment_storage.register(fragment_id, lambda: None)
 
         mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_active_scriptrunner
@@ -319,7 +344,7 @@ class AppSessionTest(unittest.TestCase):
 
         # leaving the following code line in to show that the fragment id
         # is not set in the fragment storage!
-        # session._fragment_storage.set(fragment_id, lambda: None)  # noqa: ERA001
+        # session._fragment_storage.register(fragment_id, lambda: None)  # noqa: ERA001
 
         mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_active_scriptrunner
@@ -352,6 +377,8 @@ class AppSessionTest(unittest.TestCase):
             user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
             pages_manager=session._pages_manager,
+            on_script_error=None,
+            local_sources_watcher=session._local_sources_watcher,
         )
 
         assert session._scriptrunner is not None
@@ -658,6 +685,34 @@ class AppSessionTest(unittest.TestCase):
         assert rerun_data.page_script_hash == "test_hash"
         assert rerun_data.is_auto_rerun is False
 
+    @parameterized.expand(
+        [
+            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            (
+                "too_many_fields",
+                "&".join(
+                    f"key_{idx}=value"
+                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                ),
+            ),
+        ]
+    )
+    def test_manual_rerun_ignores_unsafe_query_string(
+        self, _name: str, query_string: str
+    ):
+        """Test manual reruns drop query strings that exceed safe limits."""
+        session = _create_test_session()
+        self.addCleanup(session.shutdown)
+
+        client_state = ClientState()
+        client_state.query_string = query_string
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+        assert rerun_data.query_string == ""
+
     def test_context_info_preserved_in_client_state_on_shutdown(self):
         """Test that context_info is preserved in client_state during SHUTDOWN event."""
         session = _create_test_session()
@@ -694,6 +749,17 @@ class AppSessionTest(unittest.TestCase):
         assert session._client_state.context_info.locale == "en-GB"
         assert session._client_state.query_string == "shutdown_query"
         assert session._client_state.page_script_hash == "shutdown_hash"
+
+    def test_clear_session_caches(self) -> None:
+        """Tests clear_session_caches."""
+
+        test_session = _create_test_session()
+
+        with patch.object(app_session, "caching") as mock_caching:
+            test_session.clear_session_caches()
+
+        mock_caching.clear_session_data_cache.assert_called_with(test_session.id)
+        mock_caching.clear_session_resource_cache.assert_called_with(test_session.id)
 
 
 def _mock_get_options_for_section(
@@ -795,12 +861,12 @@ def _mock_get_options_for_section(
             {
                 "family": "Inter",
                 "url": "https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",
-                "weight": 400,
+                "weight_range": "400",
             },
             {
                 "family": "Monaspace Argon",
-                "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
-                "weight": 400,
+                "url": "https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
+                "weight_range": "400",
             },
         ],
         "headingFont": "Inter Bold",
@@ -835,6 +901,18 @@ def _mock_get_options_for_section(
             "#09ab3b",
             "#158237",
             "#177233",
+        ],
+        "chartDivergingColors": [
+            "#7d353b",
+            "#bd4043",
+            "#ff4b4b",
+            "#ff8c8c",
+            "#ffc7c7",
+            "#a6dcff",
+            "#60b4ff",
+            "#1c83e1",
+            "#0054a3",
+            "#004280",
         ],
         "redColor": "#7d353b",
         "orangeColor": "#d95a00",
@@ -908,7 +986,7 @@ def _mock_get_options_for_section(
     return get_options_for_section
 
 
-class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
+class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
     """Tests for AppSession's ScriptRunner event handling."""
 
     @patch(
@@ -1146,8 +1224,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda msg: forward_msg_queue_events.append(msg)
         )
         mock_queue.clear = MagicMock(
-            side_effect=lambda retain_lifecycle_msgs,
-            fragment_ids_this_run: forward_msg_queue_events.append(CLEAR_QUEUE)
+            side_effect=lambda retain_lifecycle_msgs, fragment_ids_this_run: (
+                forward_msg_queue_events.append(CLEAR_QUEUE)
+            )
         )
 
         session._browser_queue = mock_queue
@@ -1215,6 +1294,69 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             handle_clear_cache_request.assert_called_once()
             handle_backmsg_exception.assert_called_once_with(error)
 
+    @parameterized.expand(
+        [
+            ("full", "boom", "RuntimeError", True),
+            (True, "boom", "RuntimeError", True),
+            ("true", "boom", "RuntimeError", True),
+            ("stacktrace", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", True),
+            (False, _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", True),
+            ("type", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", False),
+            ("none", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "", False),
+        ]
+    )
+    async def test_handle_backmsg_exception_redacts_per_show_error_details(
+        self,
+        show_error_details: str | bool,
+        expected_message: str,
+        expected_type: str,
+        expect_stack_trace: bool,
+    ):
+        """Test that client.showErrorDetails redacts the Exception ForwardMsg
+        that a BackMsg failure produces.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+
+        enqueued_msgs: list[ForwardMsg] = []
+        mock_queue = MagicMock(spec=ForwardMsgQueue)
+        mock_queue.enqueue = MagicMock(side_effect=enqueued_msgs.append)
+        session._browser_queue = mock_queue
+
+        with patch_config_options({"client.showErrorDetails": show_error_details}):
+            # Raise the error inside handle_backmsg. The traceback then contains
+            # Streamlit-internal frames, as it does in production.
+            with patch.object(
+                session,
+                "_handle_clear_cache_request",
+                side_effect=RuntimeError("boom"),
+            ):
+                msg = BackMsg()
+                msg.clear_cache = True
+                session.handle_backmsg(msg)
+
+            # An eventloop callback enqueues the Exception ForwardMsg.
+            await asyncio.sleep(0)
+
+        exception_msgs = [
+            msg
+            for msg in enqueued_msgs
+            if msg.WhichOneof("type") == "delta"
+            and msg.delta.new_element.WhichOneof("type") == "exception"
+        ]
+        assert len(exception_msgs) == 1
+        exception_proto = exception_msgs[0].delta.new_element.exception
+
+        assert exception_proto.message == expected_message
+        assert exception_proto.type == expected_type
+        assert bool(exception_proto.stack_trace) == expect_stack_trace
+
+        # No other field of the payload leaks the error.
+        serialized = exception_msgs[0].SerializeToString()
+        if expected_message != "boom":
+            assert b"boom" not in serialized
+        if not expect_stack_trace:
+            assert b"app_session.py" not in serialized
+
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner", MagicMock())
     async def test_handle_backmsg_handles_debug_ids(self):
         session = _create_test_session(asyncio.get_running_loop())
@@ -1242,6 +1384,20 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             handle_app_heartbeat_request.assert_called_once()
             handle_backmsg_exception.assert_not_called()
             patched_logger.warning.assert_not_called()
+
+    async def test_app_heartbeat_sends_ack(self) -> None:
+        """Test that _handle_app_heartbeat_request sends a heartbeat_ack ForwardMsg."""
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+            session._handle_app_heartbeat_request()
+
+            # Verify that a ForwardMsg with heartbeat_ack was enqueued
+            enqueue_mock.assert_called_once()
+            msg = enqueue_mock.call_args[0][0]
+            assert isinstance(msg, ForwardMsg)
+            assert msg.heartbeat_ack is True
+            # Verify it's not some other message type
+            assert msg.WhichOneof("type") == "heartbeat_ack"
 
     async def test_event_handler_raises_error_if_page_hash_none_on_script_started(
         self,
@@ -1359,6 +1515,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1424,6 +1581,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1489,6 +1647,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1604,6 +1763,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.heading_font_weights
         assert not new_session_msg.custom_theme.chart_categorical_colors
         assert not new_session_msg.custom_theme.chart_sequential_colors
+        assert not new_session_msg.custom_theme.chart_diverging_colors
 
         app_session._populate_theme_msg(
             new_session_msg.custom_theme.sidebar,
@@ -1651,6 +1811,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.heading_font_weights
         assert not new_session_msg.custom_theme.sidebar.chart_categorical_colors
         assert not new_session_msg.custom_theme.sidebar.chart_sequential_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_diverging_colors
 
     @patch("streamlit.runtime.app_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -1752,6 +1913,18 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "#158237",
             "#177233",
         ]
+        assert list(new_session_msg.custom_theme.chart_diverging_colors) == [
+            "#7d353b",
+            "#bd4043",
+            "#ff4b4b",
+            "#ff8c8c",
+            "#ffc7c7",
+            "#a6dcff",
+            "#60b4ff",
+            "#1c83e1",
+            "#0054a3",
+            "#004280",
+        ]
         assert list(new_session_msg.custom_theme.font_faces) == [
             FontFace(
                 family="Inter Bold",
@@ -1764,7 +1937,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             ),
             FontFace(
                 family="Monaspace Argon",
-                url="https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
+                url="https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
                 weight_range="400",
             ),
         ]
@@ -1890,6 +2063,62 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.dark.body_font == "monospace"
 
     @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_chart_colors_in_theme_sections(self, patched_config):
+        """Chart color options can be set on light, dark, and sidebar sections."""
+        light_colors = ["#111111", "#222222"]
+        dark_colors = ["#333333", "#444444"]
+        sidebar_colors = ["#555555", "#666666"]
+        sequential = [f"#{i:02x}0000" for i in range(10)]
+        diverging = [f"#00{i:02x}00" for i in range(10)]
+
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "light": {
+                        "chartCategoricalColors": light_colors,
+                        "chartSequentialColors": sequential,
+                        "chartDivergingColors": diverging,
+                    },
+                    "dark": {
+                        "chartCategoricalColors": dark_colors,
+                    },
+                    "sidebar": {
+                        "chartCategoricalColors": sidebar_colors,
+                    },
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.light, "theme.light"
+        )
+        app_session._populate_theme_msg(new_session_msg.custom_theme.dark, "theme.dark")
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.sidebar, "theme.sidebar"
+        )
+
+        assert list(new_session_msg.custom_theme.light.chart_categorical_colors) == (
+            light_colors
+        )
+        assert list(new_session_msg.custom_theme.light.chart_sequential_colors) == (
+            sequential
+        )
+        assert list(new_session_msg.custom_theme.light.chart_diverging_colors) == (
+            diverging
+        )
+        assert list(new_session_msg.custom_theme.dark.chart_categorical_colors) == (
+            dark_colors
+        )
+        assert list(new_session_msg.custom_theme.sidebar.chart_categorical_colors) == (
+            sidebar_colors
+        )
+        # Dark/sidebar did not set sequential/diverging; leave empty for frontend inheritance
+        assert not new_session_msg.custom_theme.dark.chart_sequential_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_diverging_colors
+
+    @patch("streamlit.runtime.app_session.config")
     def test_can_specify_light_sidebar_theme_options(self, patched_config):
         """Test that theme.light.sidebar section options are populated correctly."""
         patched_config.get_options_for_section.side_effect = (
@@ -2009,6 +2238,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config")
     def test_new_theme_sections_support_all_color_options(self, patched_config):
         """Test that new theme sections support all color palette options."""
+        chart_categorical = ["#111111", "#222222", "#333333"]
+        chart_sequential = [f"#{i:02x}0000" for i in range(10)]
+        chart_diverging = [f"#00{i:02x}00" for i in range(10)]
         color_overrides = {
             "redColor": "#ff0000",
             "orangeColor": "#ffa500",
@@ -2031,6 +2263,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "greenTextColor": "#00ff00",
             "violetTextColor": "#8a2be2",
             "grayTextColor": "#808080",
+            "chartCategoricalColors": chart_categorical,
+            "chartSequentialColors": chart_sequential,
+            "chartDivergingColors": chart_diverging,
         }
 
         patched_config.get_options_for_section.side_effect = (
@@ -2085,6 +2320,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                 assert theme_obj.green_text_color == "#00ff00"
                 assert theme_obj.violet_text_color == "#8a2be2"
                 assert theme_obj.gray_text_color == "#808080"
+                assert list(theme_obj.chart_categorical_colors) == chart_categorical
+                assert list(theme_obj.chart_sequential_colors) == chart_sequential
+                assert list(theme_obj.chart_diverging_colors) == chart_diverging
 
     @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
@@ -2219,152 +2457,673 @@ class ShouldRerunOnFileChangeTest(unittest.TestCase):
         assert not session._should_rerun_on_file_change("page1.py")
 
 
-class DeferredFileRequestTest(unittest.TestCase):
-    """Tests for deferred file request handling in AppSession."""
+class BackendOperationRequestTest(unittest.TestCase):
+    """Tests for backend operation request handling in AppSession."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
-        # Create a test session
-        self.event_loop = MagicMock()
-        with (
-            patch(
-                "streamlit.runtime.app_session.asyncio.get_running_loop",
-                return_value=self.event_loop,
-            ),
-            patch(
-                "streamlit.runtime.app_session.LocalSourcesWatcher",
-                MagicMock(spec=LocalSourcesWatcher),
-            ),
+        self.session = _create_test_session(session_id_override="session-id")
+
+    def _create_request(
+        self, *, session_id: str = "session-id"
+    ) -> BackendOperationRequest:
+        from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
+
+        request = BackendOperationRequest()
+        request.request_id = "request-id"
+        request.session_id = session_id
+        request.deferred_file.file_id = "file-id"
+        return request
+
+    def test_handle_backend_operation_request_dispatches_valid_session(self) -> None:
+        """Test that matching session IDs are dispatched."""
+        from streamlit.proto.ForwardMsg_pb2 import (
+            BackendOperationResponse,
+            DeferredFileResponsePayload,
+        )
+
+        request = self._create_request()
+        response = BackendOperationResponse(
+            request_id="request-id",
+            deferred_file=DeferredFileResponsePayload(url="/media/generated"),
+        )
+        mock_dispatch = AsyncMock(return_value=response)
+
+        with patch.object(
+            self.session._backend_operation_dispatcher,
+            "dispatch",
+            mock_dispatch,
         ):
-            self.session = AppSession(
-                script_data=ScriptData("/fake/script_path.py", is_hello=False),
-                uploaded_file_manager=MagicMock(spec=UploadedFileManager),
-                script_cache=MagicMock(),
-                message_enqueued_callback=None,
-                user_info={"email": "test@example.com"},
-            )
+            asyncio.run(self.session._handle_backend_operation_request(request))
 
-    @patch("streamlit.runtime.app_session.runtime.get_instance")
-    def test_handle_deferred_file_request_success(self, mock_get_runtime):
-        """Test successful deferred file request handling."""
-        # Mock the runtime and media file manager
-        mock_media_mgr = MagicMock()
-        mock_media_mgr.execute_deferred.return_value = "/media/test_file_url"
-        mock_runtime = MagicMock()
-        mock_runtime.media_file_mgr = mock_media_mgr
-        mock_get_runtime.return_value = mock_runtime
-
-        # Create the request
-        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
-
-        request = DeferredFileRequest()
-        request.file_id = "test_file_id"
-        request.session_id = self.session.id
-
-        # Handle the request (now async)
-        asyncio.run(self.session._handle_deferred_file_request(request))
-
-        # Verify execute_deferred was called
-        mock_media_mgr.execute_deferred.assert_called_once_with("test_file_id")
-
-        # Check that a response was enqueued
+        mock_dispatch.assert_awaited_once_with(request, "session-id")
         msg = self.session._browser_queue._queue[-1]
-        assert msg.HasField("deferred_file_response")
-        assert msg.deferred_file_response.file_id == "test_file_id"
-        assert msg.deferred_file_response.url == "/media/test_file_url"
-        assert msg.deferred_file_response.error_msg == ""
+        assert msg.HasField("backend_operation_response")
+        assert msg.backend_operation_response.request_id == "request-id"
+        assert msg.backend_operation_response.deferred_file.url == "/media/generated"
+        assert msg.backend_operation_response.error_msg == ""
 
-    @patch("streamlit.runtime.app_session.runtime.get_instance")
-    def test_handle_deferred_file_request_error(self, mock_get_runtime):
-        """Test deferred file request handling when callable fails."""
-        # Mock the runtime and media file manager
-        mock_media_mgr = MagicMock()
-        from streamlit.runtime.media_file_storage import MediaFileStorageError
+    def test_handle_backend_operation_request_rejects_invalid_session(self) -> None:
+        """Test that mismatched session IDs are rejected before dispatch."""
+        request = self._create_request(session_id="other-session")
+        mock_dispatch = AsyncMock()
 
-        mock_media_mgr.execute_deferred.side_effect = MediaFileStorageError(
-            "Callable execution failed: Test error"
+        with patch.object(
+            self.session._backend_operation_dispatcher,
+            "dispatch",
+            mock_dispatch,
+        ):
+            asyncio.run(self.session._handle_backend_operation_request(request))
+
+        mock_dispatch.assert_not_awaited()
+        msg = self.session._browser_queue._queue[-1]
+        assert msg.HasField("backend_operation_response")
+        assert msg.backend_operation_response.request_id == "request-id"
+        assert (
+            msg.backend_operation_response.error_msg
+            == "Invalid session ID for backend operation request"
         )
-        mock_runtime = MagicMock()
-        mock_runtime.media_file_mgr = mock_media_mgr
-        mock_get_runtime.return_value = mock_runtime
+        assert not msg.backend_operation_response.HasField("deferred_file")
 
-        # Create the request
-        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
+    def test_handle_backmsg_routes_backend_operation_request(self) -> None:
+        """Test that handle_backmsg routes backend_operation_request."""
 
-        request = DeferredFileRequest()
-        request.file_id = "test_file_id"
-        request.session_id = self.session.id
-
-        # Handle the request (now async)
-        asyncio.run(self.session._handle_deferred_file_request(request))
-
-        # Check that an error response was enqueued
-        msg = self.session._browser_queue._queue[-1]
-        assert msg.HasField("deferred_file_response")
-        assert msg.deferred_file_response.file_id == "test_file_id"
-        assert msg.deferred_file_response.url == ""
-        assert "Callable execution failed" in msg.deferred_file_response.error_msg
-
-    @patch("streamlit.runtime.app_session.runtime.get_instance")
-    def test_handle_deferred_file_request_file_not_found(self, mock_get_runtime):
-        """Test deferred file request handling when file_id doesn't exist."""
-        # Mock the runtime and media file manager
-        mock_media_mgr = MagicMock()
-        from streamlit.runtime.media_file_storage import MediaFileStorageError
-
-        mock_media_mgr.execute_deferred.side_effect = MediaFileStorageError(
-            "Deferred file nonexistent_id not found"
-        )
-        mock_runtime = MagicMock()
-        mock_runtime.media_file_mgr = mock_media_mgr
-        mock_get_runtime.return_value = mock_runtime
-
-        # Create request for non-existent file
-        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
-
-        request = DeferredFileRequest()
-        request.file_id = "nonexistent_id"
-        request.session_id = self.session.id
-
-        # Handle the request (now async)
-        asyncio.run(self.session._handle_deferred_file_request(request))
-
-        # Check that an error response was enqueued
-        msg = self.session._browser_queue._queue[-1]
-        assert msg.HasField("deferred_file_response")
-        assert msg.deferred_file_response.file_id == "nonexistent_id"
-        assert msg.deferred_file_response.url == ""
-        assert "not found" in msg.deferred_file_response.error_msg
-
-    def test_handle_backmsg_routes_deferred_file_request(self):
-        """Test that handle_backmsg routes deferred_file_request correctly."""
-
-        # Create a mock async handler that returns a coroutine
-        async def mock_async_handler(request):
+        async def mock_async_handler(_request: BackendOperationRequest) -> None:
             pass
 
-        # Create a BackMsg with deferred_file_request
-        from streamlit.proto.BackMsg_pb2 import BackMsg
-
         msg = BackMsg()
-        msg.deferred_file_request.file_id = "test_id"
-        msg.deferred_file_request.session_id = self.session.id
+        msg.backend_operation_request.request_id = "request-id"
+        msg.backend_operation_request.session_id = self.session.id
+        msg.backend_operation_request.deferred_file.file_id = "file-id"
 
-        # Mock the async handler and asyncio.create_task
         with (
             patch.object(
                 self.session,
-                "_handle_deferred_file_request",
+                "_handle_backend_operation_request",
                 side_effect=mock_async_handler,
             ),
             patch(
                 "streamlit.runtime.app_session.asyncio.create_task"
             ) as mock_create_task,
         ):
-            # Handle the message
             self.session.handle_backmsg(msg)
 
-            # Verify create_task was called with a coroutine
-            mock_create_task.assert_called_once()
-            # The argument to create_task should be a coroutine
-            assert asyncio.iscoroutine(mock_create_task.call_args[0][0])
+        mock_create_task.assert_called_once()
+        created_coroutine = mock_create_task.call_args[0][0]
+        assert asyncio.iscoroutine(created_coroutine)
+        created_coroutine.close()
+        mock_create_task.return_value.set_name.assert_called_once_with(
+            "backend_op_request-id"
+        )
+
+
+class GetShowErrorLinksTest(unittest.TestCase):
+    @patch_config_options({"client.showErrorLinks": "auto"})
+    def test_auto(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO
+
+    @patch_config_options({"client.showErrorLinks": "true"})
+    def test_true(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": "false"})
+    def test_false(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    @patch_config_options({"client.showErrorLinks": True})
+    def test_bool_true(self):
+        """Test that boolean True is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": False})
+    def test_bool_false(self):
+        """Test that boolean False is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    @patch_config_options({"client.showErrorLinks": "invalid"})
+    def test_invalid_raises(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        with pytest.raises(ValueError, match="auto, true, false"):
+            _get_show_error_links()
+
+
+def test_create_new_session_message_recommends_skills_install() -> None:
+    """The new-session Initialize carries the skills-nudge recommendation,
+    computed from the directory of the app's main script (the same key the
+    page-profile telemetry uses, so both share the cached detection). Recommend
+    only when the browser is on a direct-loopback connection."""
+    session = _create_test_session()
+
+    with (
+        patch(
+            "streamlit.web.skills.nudge_suppression_reason", return_value=""
+        ) as mock_reason,
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="loopback",
+        ),
+    ):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is True
+    # No suppression telemetry when the nudge is actually recommended.
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
+    mock_reason.assert_called_once_with("/fake")
+
+
+def test_create_new_session_message_skips_skills_install_when_not_recommended() -> None:
+    """When detection declines, the recommendation flag stays False so the
+    frontend does not show the nudge."""
+    session = _create_test_session()
+
+    with patch(
+        "streamlit.web.skills.nudge_suppression_reason", return_value="installed"
+    ):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    # "installed" is an uninteresting reason, so it is not reported.
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
+
+
+def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
+    """An otherwise-eligible nudge is NOT recommended when the browser is not on
+    a direct-loopback connection (Docker/VM/tunnel). The connection class is
+    surfaced for telemetry instead, so we can measure the excluded audience."""
+    session = _create_test_session()
+
+    with (
+        patch("streamlit.web.skills.nudge_suppression_reason", return_value=""),
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="private",
+        ),
+    ):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert (
+        msg.new_session.initialize.skills_nudge_suppressed_reason
+        == "non_loopback_private"
+    )
+
+
+@pytest.mark.parametrize("reason", ["conflict", "check_failed"])
+def test_create_new_session_message_reports_informative_suppression(
+    reason: str,
+) -> None:
+    """A withheld nudge that tells us something actionable is reported, so
+    suppression is measurable rather than silent. ``conflict`` shares the
+    install-failure reason name for the same cause, so "we withheld the nudge"
+    and "we nudged and the install conflicted anyway" compare in one query."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == reason
+
+
+@pytest.mark.parametrize(
+    "reason", ["headless", "welcome_hidden", "dismissed", "no_agent", "installed"]
+)
+def test_create_new_session_message_drops_high_volume_suppression(
+    reason: str,
+) -> None:
+    """The uninteresting reasons are deliberately NOT reported. ``headless``
+    especially: it fires for every deployed app, so reporting it would swamp the
+    metric with sessions that were never nudge candidates."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
+
+
+def test_create_new_session_message_recomputes_skills_recommendation() -> None:
+    """The skills-nudge recommendation is recomputed on each NewSession, not
+    memoized for the session's lifetime.
+
+    The heavy filesystem detection is cached in ``skills`` (and that cache is
+    invalidated when skills are installed in-app), so recomputing here is cheap
+    and lets a later NewSession reflect a post-install change instead of a stale
+    "recommend" value.
+    """
+    session = _create_test_session()
+
+    with (
+        patch(
+            "streamlit.web.skills.nudge_suppression_reason",
+            side_effect=["", "installed"],
+        ) as mock_reason,
+        patch(
+            "streamlit.runtime.backend_operation_handler.connection_locality",
+            return_value="loopback",
+        ),
+    ):
+        first = session._create_new_session_message(page_script_hash="")
+        second = session._create_new_session_message(page_script_hash="")
+
+    assert mock_reason.call_count == 2
+    assert first.new_session.initialize.recommend_skills_install is True
+    # The second NewSession reflects the updated detection (e.g. post-install),
+    # not a stale memoized True.
+    assert second.new_session.initialize.recommend_skills_install is False
+
+
+def test_create_new_session_message_skips_skills_install_for_hello_app() -> None:
+    """The skills nudge is never recommended for the bundled ``streamlit hello``
+    demo: its script lives inside the Streamlit package, so a one-click install
+    would write into the install tree. The recommendation short-circuits on
+    ``is_hello`` before the detection is consulted."""
+    session = _create_test_session(is_hello=True)
+
+    with patch(
+        "streamlit.web.skills.nudge_suppression_reason", return_value=""
+    ) as mock_reason:
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    # Short-circuited on is_hello before the (would-recommend) detection ran.
+    mock_reason.assert_not_called()
+
+
+# ---- Tests for _handle_git_information_request ----
+
+
+@patch("streamlit.git_util.GitRepo")
+def test_handle_git_information_request_no_repo_info(mock_git_repo: MagicMock) -> None:
+    """No ForwardMsg is enqueued when the repo info cannot be determined."""
+    mock_git_repo.return_value.get_repo_info.return_value = None
+    session = _create_test_session()
+
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_git_information_request()
+
+    enqueue_mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("is_head_detached", "ahead_commits", "expected_state"),
+    [
+        (True, [], GitInfo.GitStates.HEAD_DETACHED),
+        (False, ["abc123"], GitInfo.GitStates.AHEAD_OF_REMOTE),
+        (False, [], GitInfo.GitStates.DEFAULT),
+    ],
+)
+@patch("streamlit.git_util.GitRepo")
+def test_handle_git_information_request_populates_message(
+    mock_git_repo: MagicMock,
+    is_head_detached: bool,
+    ahead_commits: list[str],
+    expected_state: GitInfo.GitStates.ValueType,
+) -> None:
+    """Git metadata and repository state are populated into the enqueued ForwardMsg."""
+    repo = mock_git_repo.return_value
+    repo.get_repo_info.return_value = ("streamlit/streamlit.git", "develop", "app.py")
+    repo.untracked_files = ["untracked.py"]
+    repo.uncommitted_files = ["uncommitted.py"]
+    repo.is_head_detached = is_head_detached
+    repo.ahead_commits = ahead_commits
+
+    session = _create_test_session()
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_git_information_request()
+
+    enqueue_mock.assert_called_once()
+    git_info = enqueue_mock.call_args[0][0].git_info_changed
+    # The ".git" suffix is stripped from the repository name.
+    assert git_info.repository == "streamlit/streamlit"
+    assert git_info.branch == "develop"
+    assert git_info.module == "app.py"
+    assert list(git_info.untracked_files) == ["untracked.py"]
+    assert list(git_info.uncommitted_files) == ["uncommitted.py"]
+    assert git_info.state == expected_state
+
+
+@patch("streamlit.git_util.GitRepo")
+def test_handle_git_information_request_swallows_errors(
+    mock_git_repo: MagicMock,
+) -> None:
+    """Errors while gathering git info are swallowed and nothing is enqueued."""
+    mock_git_repo.side_effect = Exception("git is not installed")
+    session = _create_test_session()
+
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_git_information_request()
+
+    enqueue_mock.assert_not_called()
+
+
+# ---- Tests for _populate_theme_msg parsing of stringified / edge-case configs ----
+
+
+def _populate_theme_with_overrides(
+    overrides: dict[str, Any],
+) -> CustomThemeConfig:
+    """Run _populate_theme_msg with mocked config overrides and return the theme msg."""
+    with patch("streamlit.runtime.app_session.config") as patched_config:
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(overrides)
+        )
+        msg = ForwardMsg()
+        app_session._populate_theme_msg(msg.new_session.custom_theme)
+        return msg.new_session.custom_theme
+
+
+@pytest.mark.parametrize(
+    ("config_key", "theme_attr"),
+    [
+        ("chartCategoricalColors", "chart_categorical_colors"),
+        ("fontFaces", "font_faces"),
+        ("headingFontSizes", "heading_font_sizes"),
+        ("headingFontWeights", "heading_font_weights"),
+    ],
+    ids=["chart_colors", "font_faces", "heading_font_sizes", "heading_font_weights"],
+)
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_ignores_invalid_json(
+    patched_logger: MagicMock, config_key: str, theme_attr: str
+) -> None:
+    """An invalid JSON string for a list-valued theme option is skipped with a warning."""
+    theme = _populate_theme_with_overrides({config_key: "not-valid-json"})
+    assert not getattr(theme, theme_attr)
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_parses_chart_colors_from_json_string() -> None:
+    """Chart colors provided as a JSON string (e.g. via env var) are parsed."""
+    theme = _populate_theme_with_overrides(
+        {"chartCategoricalColors": '["#111111", "#222222"]'}
+    )
+    assert list(theme.chart_categorical_colors) == ["#111111", "#222222"]
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_rejects_chart_colors_with_wrong_length(
+    patched_logger: MagicMock,
+) -> None:
+    """Sequential chart colors with the wrong number of values are rejected."""
+    # chartSequentialColors requires exactly 10 values.
+    theme = _populate_theme_with_overrides(
+        {"chartSequentialColors": ["#111111", "#222222"]}
+    )
+    assert not theme.chart_sequential_colors
+    patched_logger.error.assert_called_once()
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_chart_color_value(
+    patched_logger: MagicMock,
+) -> None:
+    """A chart color value that cannot be appended is skipped with a warning."""
+    theme = _populate_theme_with_overrides(
+        {"chartCategoricalColors": ["#123456", 12345]}
+    )
+    assert list(theme.chart_categorical_colors) == ["#123456"]
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_parses_font_faces_from_json_string() -> None:
+    """fontFaces provided as a JSON string are parsed into FontFace protos."""
+    theme = _populate_theme_with_overrides(
+        {"fontFaces": '[{"family": "Foo", "url": "https://example.com/foo.woff2"}]'}
+    )
+    assert list(theme.font_faces) == [
+        FontFace(family="Foo", url="https://example.com/foo.woff2")
+    ]
+
+
+def test_populate_theme_msg_handles_legacy_font_face_weight() -> None:
+    """Legacy 'weight' keys are migrated to 'weight_range' and stringified."""
+    theme = _populate_theme_with_overrides(
+        {
+            "fontFaces": [
+                {"family": "A", "url": "https://x/a.woff2", "weight": 700},
+                {"family": "B", "url": "https://x/b.woff2", "weight_range": 400},
+                {
+                    "family": "C",
+                    "url": "https://x/c.woff2",
+                    "weight": 300,
+                    "weight_range": "500",
+                },
+            ]
+        }
+    )
+    assert list(theme.font_faces) == [
+        FontFace(family="A", url="https://x/a.woff2", weight_range="700"),
+        FontFace(family="B", url="https://x/b.woff2", weight_range="400"),
+        # When both keys are present, the existing weight_range wins.
+        FontFace(family="C", url="https://x/c.woff2", weight_range="500"),
+    ]
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_font_face_entry(
+    patched_logger: MagicMock,
+) -> None:
+    """A font face entry that cannot be parsed is skipped with a warning."""
+    theme = _populate_theme_with_overrides({"fontFaces": ["not-a-dict"]})
+    assert not theme.font_faces
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_expands_single_heading_font_size() -> None:
+    """A single rem/px headingFontSizes value is applied to all six headings."""
+    theme = _populate_theme_with_overrides({"headingFontSizes": "2rem"})
+    assert list(theme.heading_font_sizes) == ["2rem"] * 6
+
+
+def test_populate_theme_msg_parses_heading_font_sizes_json_string() -> None:
+    """headingFontSizes provided as a JSON list string are parsed."""
+    theme = _populate_theme_with_overrides(
+        {"headingFontSizes": '["1rem", "2rem", "3rem"]'}
+    )
+    assert list(theme.heading_font_sizes) == ["1rem", "2rem", "3rem"]
+
+
+@pytest.mark.parametrize(
+    "value", [[], ["1rem", "2rem", "3rem", "4rem", "5rem", "6rem", "7rem"]]
+)
+def test_populate_theme_msg_rejects_invalid_heading_font_sizes_length(
+    value: list[str],
+) -> None:
+    """headingFontSizes must have between 1 and 6 values."""
+    with pytest.raises(ValueError, match="headingFontSizes should have 1-6 values"):
+        _populate_theme_with_overrides({"headingFontSizes": value})
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_heading_font_size_value(
+    patched_logger: MagicMock,
+) -> None:
+    """A heading font size value that cannot be appended is skipped with a warning."""
+    theme = _populate_theme_with_overrides({"headingFontSizes": [123]})
+    assert not theme.heading_font_sizes
+    patched_logger.warning.assert_called_once()
+
+
+def test_populate_theme_msg_parses_heading_font_weights_json_string() -> None:
+    """headingFontWeights provided as a JSON list string are parsed and padded."""
+    theme = _populate_theme_with_overrides({"headingFontWeights": "[700, 600]"})
+    assert list(theme.heading_font_weights) == [700, 600, 600, 600, 600, 600]
+
+
+def test_populate_theme_msg_expands_single_heading_font_weight() -> None:
+    """A single integer headingFontWeights value is applied to all six headings."""
+    theme = _populate_theme_with_overrides({"headingFontWeights": 500})
+    assert list(theme.heading_font_weights) == [500] * 6
+
+
+@pytest.mark.parametrize("value", [[], [700, 700, 700, 700, 700, 700, 700]])
+def test_populate_theme_msg_rejects_invalid_heading_font_weights_length(
+    value: list[int],
+) -> None:
+    """headingFontWeights must have between 1 and 6 values."""
+    with pytest.raises(ValueError, match="headingFontWeights should have 1-6 values"):
+        _populate_theme_with_overrides({"headingFontWeights": value})
+
+
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_skips_invalid_heading_font_weight_value(
+    patched_logger: MagicMock,
+) -> None:
+    """A heading font weight value that cannot be appended is skipped with a warning."""
+    theme = _populate_theme_with_overrides({"headingFontWeights": ["bad"]})
+    # The invalid first value is skipped; the remaining slots use the 600 default.
+    assert list(theme.heading_font_weights) == [600, 600, 600, 600, 600]
+    patched_logger.warning.assert_called_once()
+
+
+# ---- Tests for _handle_set_run_on_save_request and _populate_config_msg ----
+
+
+@pytest.mark.parametrize("new_value", [True, False])
+def test_handle_set_run_on_save_request_updates_flag(new_value: bool) -> None:
+    """Setting run_on_save updates the flag and notifies the browser."""
+    session = _create_test_session()
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session._handle_set_run_on_save_request(new_value)
+
+    assert session._run_on_save is new_value
+    enqueue_mock.assert_called_once()
+    msg = enqueue_mock.call_args[0][0]
+    assert msg.session_status_changed.run_on_save is new_value
+
+
+@pytest.mark.parametrize(
+    ("show_sidebar_navigation", "expected_hide_sidebar_nav"),
+    [(False, True), (True, False)],
+    ids=["hidden", "visible"],
+)
+def test_populate_config_msg_sidebar_navigation(
+    show_sidebar_navigation: bool, expected_hide_sidebar_nav: bool
+) -> None:
+    """hide_sidebar_nav is set only when client.showSidebarNavigation is disabled."""
+    with patch_config_options(
+        {"client.showSidebarNavigation": show_sidebar_navigation}
+    ):
+        msg = Config()
+        app_session._populate_config_msg(msg)
+
+    assert msg.hide_sidebar_nav is expected_hide_sidebar_nav
+
+
+@pytest.mark.parametrize("disable_data_export", [True, False])
+def test_populate_config_msg_disable_data_export(disable_data_export: bool) -> None:
+    """disable_data_export mirrors client.disableDataExport."""
+    with patch_config_options({"client.disableDataExport": disable_data_export}):
+        msg = Config()
+        app_session._populate_config_msg(msg)
+
+    assert msg.disable_data_export is disable_data_export
+
+
+# ---- Tests for handle_backmsg dispatch and small handlers ----
+
+
+@pytest.mark.parametrize(
+    ("field", "handler_name"),
+    [
+        ("load_git_info", "_handle_git_information_request"),
+        ("set_run_on_save", "_handle_set_run_on_save_request"),
+        ("stop_script", "_handle_stop_script_request"),
+    ],
+)
+def test_handle_backmsg_dispatches_bool_requests(field: str, handler_name: str) -> None:
+    """Test that handle_backmsg routes each boolean BackMsg to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    setattr(msg, field, True)
+
+    with patch.object(session, handler_name) as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_dispatches_file_urls_request() -> None:
+    """Test that handle_backmsg routes a file_urls_request to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    msg.file_urls_request.request_id = "some_request_id"
+
+    with patch.object(session, "_handle_file_urls_request") as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_unknown_type_logs_warning() -> None:
+    """Test that an unrecognized BackMsg type logs a warning instead of raising."""
+    session = _create_test_session()
+
+    with patch.object(app_session, "_LOGGER") as patched_logger:
+        # An empty BackMsg has no oneof "type" set, so no handler matches.
+        session.handle_backmsg(BackMsg())
+
+    patched_logger.warning.assert_called_once()
+
+
+def test_handle_stop_script_request_forwards_to_scriptrunner() -> None:
+    """Test that _handle_stop_script_request delegates to request_script_stop."""
+    session = _create_test_session()
+
+    with patch.object(session, "request_script_stop") as request_stop:
+        session._handle_stop_script_request()
+
+    request_stop.assert_called_once()
+
+
+def test_request_rerun_after_shutdown_is_discarded() -> None:
+    """Test that a rerun request is ignored once shutdown has been requested."""
+    session = _create_test_session()
+    session._state = AppSessionState.SHUTDOWN_REQUESTED
+
+    with patch.object(session, "_create_scriptrunner") as create_scriptrunner:
+        session.request_rerun(None)
+
+    create_scriptrunner.assert_not_called()
+
+
+def test_clear_user_info_empties_user_info() -> None:
+    """Test that clear_user_info removes all stored user info."""
+    session = _create_test_session()
+    assert session._user_info != {}
+
+    session.clear_user_info()
+
+    assert session._user_info == {}
+
+
+def test_on_secrets_file_changed_triggers_source_change() -> None:
+    """Test that a secrets file change is handled like a source file change."""
+    session = _create_test_session()
+
+    with patch.object(session, "_on_source_file_changed") as on_source_changed:
+        session._on_secrets_file_changed(None)
+
+    on_source_changed.assert_called_once_with()
+
+
+def test_create_file_change_message_marks_script_changed() -> None:
+    """Test that _create_file_change_message flags a script change on disk."""
+    session = _create_test_session()
+
+    msg = session._create_file_change_message()
+
+    assert msg.session_event.script_changed_on_disk is True

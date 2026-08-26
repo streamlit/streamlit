@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cachetools import TTLCache
-
+from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
 
 if TYPE_CHECKING:
@@ -28,7 +27,7 @@ class MemorySessionStorage(SessionStorage):
     """A SessionStorage that stores sessions in memory.
 
     At most maxsize sessions are stored with a TTL of ttl seconds. This class is really
-    just a thin wrapper around cachetools.TTLCache that complies with the SessionStorage
+    just a thin wrapper around a TTLCache that complies with the SessionStorage
     protocol.
     """
 
@@ -73,5 +72,5 @@ class MemorySessionStorage(SessionStorage):
     def delete(self, session_id: str) -> None:
         del self._cache[session_id]
 
-    def list(self) -> list[SessionInfo]:
+    def list(self) -> list[SessionInfo]:  # ty: ignore[invalid-type-form]
         return list(self._cache.values())

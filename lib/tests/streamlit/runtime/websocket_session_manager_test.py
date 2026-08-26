@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ import pytest
 
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.session_manager import SessionStorage
+from streamlit.runtime.stats import CounterStat, GaugeStat, Stat
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
+from streamlit.testing.v1.util import patch_config_options
 
 
 class MockSessionStorage(SessionStorage):
@@ -63,11 +65,17 @@ class WebsocketSessionManagerTests(unittest.TestCase):
             message_enqueued_callback=MagicMock(),
         )
 
-    def connect_session(self, existing_session_id=None, session_id_override=None):
+    def connect_session(
+        self,
+        existing_session_id=None,
+        session_id_override=None,
+        client=None,
+        user_info=None,
+    ):
         return self.session_mgr.connect_session(
-            client=MagicMock(),
+            client=client or MagicMock(),
             script_data=ScriptData("/fake/script_path.py", is_hello=False),
-            user_info={},
+            user_info={} if user_info is None else user_info,
             existing_session_id=existing_session_id,
             session_id_override=session_id_override,
         )
@@ -103,16 +111,114 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert session_info.session.id == session_id
         assert session_info.session.id != "not a valid session"
 
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
     @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
-    def test_connect_session_connects_new_session_if_already_connected(
-        self, patched_warning
-    ):
-        session_id = self.connect_session()
-        new_session_id = self.connect_session(existing_session_id=session_id)
-        assert session_id != new_session_id
+    def test_connect_session_reconnects_if_already_connected(self, patched_warning):
+        original_client = MagicMock()
+        session_id = self.connect_session(client=original_client)
+        active_session_info = self.session_mgr._active_session_info_by_id[session_id]
+        original_session = active_session_info.session
+        # Simulate some runs so we can verify state is preserved across the handoff.
+        active_session_info.script_run_count = 5
+
+        new_client = MagicMock()
+        reconnected_session_id = self.connect_session(
+            existing_session_id=session_id, client=new_client
+        )
+        reconnected_session_info = self.session_mgr.get_session_info(
+            reconnected_session_id
+        )
+
+        assert reconnected_session_id == session_id
+        assert reconnected_session_info.session == original_session
+        assert reconnected_session_info.client == new_client
+        # The still-active session is reused, so its state (e.g. run count) is
+        # preserved rather than discarded for a brand-new session.
+        assert reconnected_session_info.script_run_count == 5
+        # The stale connection's script is stopped during the handoff.
+        original_session.request_script_stop.assert_called_once()
+        # The session is moved back out of storage into the active pool.
+        assert session_id in self.session_mgr._active_session_info_by_id
+        assert session_id not in self.session_mgr._session_storage._cache
 
         patched_warning.assert_called_with(
-            "Session with id %s is already connected! Connecting to a new session.",
+            "Session with id %s is already connected! Reconnecting to existing session.",
+            session_id,
+        )
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
+    def test_connect_session_ignores_active_reconnect_on_identity_mismatch(
+        self, patched_warning
+    ):
+        """A reconnect to a still-active session owned by a different user is ignored.
+
+        The reconnecting connection must get a brand-new session while the
+        original session and its client are left completely untouched, so a
+        different user cannot take over an active session by presenting its id.
+        """
+        original_client = MagicMock()
+        session_id = self.connect_session(
+            client=original_client, user_info={"email": "alice@example.com"}
+        )
+        original_session_info = self.session_mgr._active_session_info_by_id[session_id]
+        original_session = original_session_info.session
+
+        new_client = MagicMock()
+        new_session_id = self.connect_session(
+            existing_session_id=session_id,
+            client=new_client,
+            user_info={"email": "bob@example.com"},
+        )
+
+        # A new session ID is returned to the reconnecting client.
+        assert new_session_id != session_id
+        new_session_info = self.session_mgr.get_session_info(new_session_id)
+        assert new_session_info.client == new_client
+
+        # The original session remains active, with its original client attached.
+        assert session_id in self.session_mgr._active_session_info_by_id
+        assert (
+            self.session_mgr._active_session_info_by_id[session_id]
+            is original_session_info
+        )
+        assert original_session_info.client == original_client
+
+        # The original session is never torn down: request_script_stop and
+        # disconnect_file_watchers are not called, and it is not moved to storage.
+        original_session.request_script_stop.assert_not_called()
+        original_session.disconnect_file_watchers.assert_not_called()
+        assert self.session_mgr._session_storage.get(session_id) is None
+
+        # The event is counted as a new connection, not a reconnect.
+        assert self.session_mgr._connect_count == 2
+        assert self.session_mgr._reconnect_count == 0
+
+        patched_warning.assert_called_with(
+            "Ignoring reconnect to active session id %s: user identity "
+            "mismatch. Connecting to a new session instead.",
             session_id,
         )
 
@@ -299,3 +405,579 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert {s.session.id for s in self.session_mgr.list_sessions()} == set(
             session_ids
         )
+
+
+@patch(
+    "streamlit.runtime.app_session.asyncio.get_running_loop",
+    new=MagicMock(),
+)
+@patch("streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock())
+@patch("streamlit.runtime.app_session.ScriptRunner", new=MagicMock())
+class WebsocketSessionManagerMetricsTests(unittest.TestCase):
+    """Tests for session metrics collection in WebsocketSessionManager."""
+
+    def setUp(self) -> None:
+        self.session_mgr = WebsocketSessionManager(
+            session_storage=MockSessionStorage(),
+            uploaded_file_manager=MagicMock(),
+            script_cache=MagicMock(),
+            message_enqueued_callback=MagicMock(),
+        )
+
+    def connect_session(
+        self,
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
+    ) -> str:
+        return self.session_mgr.connect_session(
+            client=MagicMock(),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
+            user_info={},
+            existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
+        )
+
+    def _get_stat_value(
+        self,
+        stats_dict: dict[str, list[Stat]],
+        family_name: str,
+        label_type: str | None = None,
+    ) -> int:
+        """Helper to extract a stat value from the stats dict."""
+        if family_name not in stats_dict:
+            raise ValueError(f"Family not found: {family_name}")
+        for stat in stats_dict[family_name]:
+            if label_type is None:
+                # For GaugeStat or CounterStat without labels
+                if isinstance(stat, (GaugeStat, CounterStat)) and not stat.labels:
+                    return stat.value
+            # For CounterStat with labels
+            elif (
+                isinstance(stat, CounterStat)
+                and stat.labels
+                and stat.labels.get("type") == label_type
+            ):
+                return stat.value
+        raise ValueError(f"Stat not found: {family_name}, {label_type}")
+
+    def test_initial_stats_are_zero(self) -> None:
+        """Stats should all be zero initially."""
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 0
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 0
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 0
+        assert self._get_stat_value(stats, "session_duration_seconds") == 0
+        assert self._get_stat_value(stats, "active_sessions") == 0
+
+    def test_new_connection_increments_counter(self) -> None:
+        """Creating a new session should increment connection counter."""
+        self.connect_session()
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 0
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 0
+        assert self._get_stat_value(stats, "active_sessions") == 1
+
+    def test_multiple_connections(self) -> None:
+        """Multiple new sessions should increment connection counter."""
+        self.connect_session()
+        self.connect_session()
+        self.connect_session()
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 3
+        assert self._get_stat_value(stats, "active_sessions") == 3
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_reconnection_increments_counter(self) -> None:
+        """Reconnecting an existing session should increment reconnection counter."""
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        self.connect_session(existing_session_id=session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 1
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_still_active_reconnect_emits_disconnect_and_reconnect(self) -> None:
+        """Reconnecting to a still-active session emits a disconnect + reconnect pair.
+
+        When a new connection reuses an ``existing_session_id`` that is still active
+        (the previous connection's cleanup has not run yet), the handoff disconnects
+        the stale connection and reconnects the new client, so both a disconnect and
+        a reconnect event are recorded while the session stays active.
+        """
+        session_id = self.connect_session()
+        self.connect_session(existing_session_id=session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 1
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 1
+
+    def test_disconnect_session_increments_disconnection(self) -> None:
+        """Disconnecting a session should increment disconnection counter."""
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 0
+
+    def test_disconnect_session_on_invalid_session_does_not_increment(self) -> None:
+        """Disconnecting an invalid session should not increment disconnection counter."""
+        self.session_mgr.disconnect_session("nonexistent_session")
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 0
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    def test_close_active_session_increments_disconnection(self) -> None:
+        """Closing an active session should increment disconnection counter."""
+        session_id = self.connect_session()
+        self.session_mgr.close_session(session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 0
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    def test_close_stored_session_does_not_increment_disconnection(self) -> None:
+        """Closing a session from storage should not increment disconnection counter.
+
+        The disconnect was already counted when disconnect_session was called.
+        """
+        session_id = self.connect_session()
+        # Disconnect moves session to storage and increments counter
+        self.session_mgr.disconnect_session(session_id)
+        stats_after_disconnect = self.session_mgr.get_stats()
+        disconnect_count = self._get_stat_value(
+            stats_after_disconnect, "session_events", "disconnect"
+        )
+
+        # Close the stored session - should not increment counter again
+        self.session_mgr.close_session(session_id)
+        stats_after_close = self.session_mgr.get_stats()
+
+        assert (
+            self._get_stat_value(stats_after_close, "session_events", "disconnect")
+            == disconnect_count
+        )
+
+    def test_get_stats_returns_correct_format(self) -> None:
+        """get_stats should return stats in the correct format."""
+        self.connect_session()
+        stats_dict = self.session_mgr.get_stats()
+
+        assert len(stats_dict) == 3
+        assert "session_events" in stats_dict
+        assert "session_duration_seconds" in stats_dict
+        assert "active_sessions" in stats_dict
+
+        # Check session_events counters
+        session_events = stats_dict["session_events"]
+        assert len(session_events) == 3
+        for stat in session_events:
+            assert isinstance(stat, CounterStat)
+            assert stat.family_name == "session_events"
+            assert stat.type == "counter"
+            assert stat.labels is not None
+            assert "type" in stat.labels
+            assert stat.to_metric_str().startswith("session_events_total")
+
+        # Check session_duration_seconds counter
+        session_duration = stats_dict["session_duration_seconds"]
+        assert len(session_duration) == 1
+        assert isinstance(session_duration[0], CounterStat)
+        assert session_duration[0].family_name == "session_duration_seconds"
+        assert session_duration[0].type == "counter"
+        assert session_duration[0].unit == "seconds"
+        assert session_duration[0].to_metric_str() == "session_duration_seconds_total 0"
+
+        # Check active_sessions gauge
+        active_sessions = stats_dict["active_sessions"]
+        assert len(active_sessions) == 1
+        assert isinstance(active_sessions[0], GaugeStat)
+        assert active_sessions[0].family_name == "active_sessions"
+        assert active_sessions[0].type == "gauge"
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_accumulated_on_close(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Session duration should be accumulated when a session is closed."""
+        # Simulate 10 seconds of session time
+        mock_monotonic.side_effect = [0.0, 10.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        assert self._get_stat_value(stats, "session_duration_seconds") == 10
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_accumulated_from_multiple_sessions(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Session duration should accumulate across multiple closed sessions."""
+        # Session 1 length: 10 seconds, Session 2 length: 20 seconds
+        mock_monotonic.side_effect = [0.0, 10.0, 11.0, 31.0]
+
+        session_id_1 = self.connect_session()
+        self.session_mgr.close_session(session_id_1)
+        session_id_2 = self.connect_session()
+        self.session_mgr.close_session(session_id_2)
+
+        stats = self.session_mgr.get_stats()
+        assert self._get_stat_value(stats, "session_duration_seconds") == 30
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_accumulated_on_disconnect(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Session duration should be accumulated when a session disconnects."""
+        # Connect at 0, disconnect at 10
+        mock_monotonic.side_effect = [0.0, 10.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        assert self._get_stat_value(stats, "session_duration_seconds") == 10
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_not_double_counted_on_close_from_storage(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Duration accumulated on disconnect should not be double-counted on close."""
+        # Connect at 0, disconnect at 5, close at 15
+        mock_monotonic.side_effect = [0.0, 5.0, 15.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        # Duration from connect (0) to disconnect (5) = 5 seconds
+        # The time before the session was closed should not add more duration
+        # since no reconnect happened in between.
+        assert self._get_stat_value(stats, "session_duration_seconds") == 5
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_with_reconnect(self, mock_monotonic: MagicMock) -> None:
+        """Session duration should accumulate across disconnect and reconnect cycles."""
+        # Connect at 0, disconnect at 5, reconnect at 6, close at 16
+        mock_monotonic.side_effect = [0.0, 5.0, 6.0, 16.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        session_id = self.connect_session(session_id)
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        # Duration from connect (0) to disconnect (5) = 5 seconds
+        # Duration from reconnect (6) to close (16) = 10 seconds
+        assert self._get_stat_value(stats, "session_duration_seconds") == 15
+
+
+_USER_ATTRS = {"server.unsafeMetricsUserAttributes": ["email"]}
+
+
+@patch(
+    "streamlit.runtime.app_session.asyncio.get_running_loop",
+    new=MagicMock(),
+)
+@patch("streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock())
+@patch("streamlit.runtime.app_session.ScriptRunner", new=MagicMock())
+@patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+@patch(
+    "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+    new=MagicMock(),
+)
+@patch("streamlit.runtime.app_session.AppSession.request_script_stop", new=MagicMock())
+@patch(
+    "streamlit.runtime.app_session.AppSession.register_file_watchers", new=MagicMock()
+)
+class WebsocketSessionManagerUserMetricsTests(unittest.TestCase):
+    """Tests for per-user session-event metrics in WebsocketSessionManager."""
+
+    def setUp(self) -> None:
+        self.session_mgr = WebsocketSessionManager(
+            session_storage=MockSessionStorage(),
+            uploaded_file_manager=MagicMock(),
+            script_cache=MagicMock(),
+            message_enqueued_callback=MagicMock(),
+        )
+
+    def connect_session(
+        self,
+        user_info: dict[str, str | bool | None] | None = None,
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
+    ) -> str:
+        return self.session_mgr.connect_session(
+            client=MagicMock(),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
+            user_info={} if user_info is None else user_info,
+            existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
+        )
+
+    @staticmethod
+    def _user_event_series(
+        stats: dict[str, list[Stat]],
+    ) -> dict[frozenset[tuple[str, str]], int]:
+        """Map each user_session_events series to {frozenset(labels): value}."""
+        series: dict[frozenset[tuple[str, str]], int] = {}
+        for stat in stats.get("user_session_events", []):
+            assert isinstance(stat, CounterStat)
+            assert stat.labels is not None
+            series[frozenset(stat.labels.items())] = stat.value
+        return series
+
+    def test_disabled_default_emits_no_user_family(self) -> None:
+        """With the default empty option, no user_session_events family is emitted."""
+        session_id = self.connect_session(user_info={"email": "alice@example.com"})
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        assert "user_session_events" not in stats
+        # The default endpoint shape is unchanged (still the original 3 families).
+        assert len(stats) == 3
+
+    def test_enabled_records_connect(self) -> None:
+        """A fresh connect records a connect event labeled with the user's email."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={"email": "alice@example.com"})
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert series == {
+            frozenset({("email", "alice@example.com"), ("type", "connect")}): 1
+        }
+
+    def test_enabled_records_full_lifecycle(self) -> None:
+        """connect -> disconnect -> reconnect -> close records each event type."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            self.session_mgr.disconnect_session(session_id)
+            self.connect_session(
+                user_info={"email": "alice@example.com"},
+                existing_session_id=session_id,
+            )
+            self.session_mgr.close_session(session_id)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        email = ("email", "alice@example.com")
+        assert series[frozenset({email, ("type", "connect")})] == 1
+        assert series[frozenset({email, ("type", "disconnect")})] == 1
+        assert series[frozenset({email, ("type", "reconnect")})] == 1
+        assert series[frozenset({email, ("type", "close")})] == 1
+
+    def test_missing_attribute_becomes_empty_string(self) -> None:
+        """A configured attribute absent from user_info yields an empty-string label."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={})
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert series == {frozenset({("email", ""), ("type", "connect")}): 1}
+
+    def test_multiple_users_tracked_independently(self) -> None:
+        """Distinct users produce distinct labeled series."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={"email": "alice@example.com"})
+            self.connect_session(user_info={"email": "bob@example.com"})
+            self.connect_session(user_info={"email": "alice@example.com"})
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert (
+            series[frozenset({("email", "alice@example.com"), ("type", "connect")})]
+            == 2
+        )
+        assert (
+            series[frozenset({("email", "bob@example.com"), ("type", "connect")})] == 1
+        )
+
+    def test_reordered_config_attributes_share_series(self) -> None:
+        """Same label set with config attrs reordered must not emit duplicate series."""
+        user_info = {"email": "alice@example.com", "user_name": "alice"}
+        with patch_config_options(
+            {"server.unsafeMetricsUserAttributes": ["email", "user_name"]}
+        ):
+            self.connect_session(user_info=user_info)
+
+        with patch_config_options(
+            {"server.unsafeMetricsUserAttributes": ["user_name", "email"]}
+        ):
+            self.connect_session(user_info=user_info)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        assert series == {
+            frozenset(
+                {
+                    ("email", "alice@example.com"),
+                    ("user_name", "alice"),
+                    ("type", "connect"),
+                }
+            ): 2
+        }
+
+    def test_families_filter_returns_only_user_family(self) -> None:
+        """Requesting only user_session_events returns just that family."""
+        with patch_config_options(_USER_ATTRS):
+            self.connect_session(user_info={"email": "alice@example.com"})
+            stats = self.session_mgr.get_stats(family_names=["user_session_events"])
+
+        assert set(stats.keys()) == {"user_session_events"}
+
+    def test_active_close_records_close_not_disconnect(self) -> None:
+        """Closing an active session (no prior disconnect) records close, not disconnect."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            self.session_mgr.close_session(session_id)
+            stats = self.session_mgr.get_stats()
+
+        series = self._user_event_series(stats)
+        email = ("email", "alice@example.com")
+        assert series[frozenset({email, ("type", "connect")})] == 1
+        assert series[frozenset({email, ("type", "close")})] == 1
+        assert frozenset({email, ("type", "disconnect")}) not in series
+
+    def test_runtime_disable_stops_emission_but_pops_cache(self) -> None:
+        """Disabling at runtime stops new events but the identity cache is still popped."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            assert session_id in self.session_mgr._session_user_labels
+
+        # Now disabled (default empty option). Disconnect + close should not record
+        # new per-user events, but must still pop the cached identity.
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.close_session(session_id)
+        assert session_id not in self.session_mgr._session_user_labels
+
+        with patch_config_options(_USER_ATTRS):
+            stats = self.session_mgr.get_stats()
+        series = self._user_event_series(stats)
+        email = ("email", "alice@example.com")
+        assert series.get(frozenset({email, ("type", "connect")})) == 1
+        assert frozenset({email, ("type", "disconnect")}) not in series
+        assert frozenset({email, ("type", "close")}) not in series
+
+    def test_identity_mismatch_on_stored_reconnect_creates_new_session(self) -> None:
+        """A reconnect id whose identity differs from the stored session is ignored.
+
+        Reconnects are bound to the identity that originally owned the session,
+        so a different user presenting the id gets a fresh session (counted as a
+        connect, not a reconnect) and the stored session is left untouched.
+        """
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            self.session_mgr.disconnect_session(session_id)
+            new_session_id = self.connect_session(
+                user_info={"email": "bob@example.com"},
+                existing_session_id=session_id,
+            )
+            stats = self.session_mgr.get_stats()
+
+        # Bob did not reconnect to Alice's session; he got a brand-new one.
+        assert new_session_id != session_id
+
+        series = self._user_event_series(stats)
+        alice = ("email", "alice@example.com")
+        bob = ("email", "bob@example.com")
+        # Bob's connection is a fresh connect, not a reconnect to Alice's session.
+        assert series[frozenset({bob, ("type", "connect")})] == 1
+        assert frozenset({bob, ("type", "reconnect")}) not in series
+        # Alice's own lifecycle events are unaffected and never attributed to Bob.
+        assert series[frozenset({alice, ("type", "connect")})] == 1
+        assert series[frozenset({alice, ("type", "disconnect")})] == 1
+        assert frozenset({bob, ("type", "disconnect")}) not in series
+
+    def test_fail_open_on_malformed_user_info(self) -> None:
+        """A user_info whose .get raises must not break the session lifecycle."""
+
+        class BadUserInfo(dict):
+            def get(self, *args: object, **kwargs: object) -> object:
+                raise ValueError("boom")
+
+        with patch_config_options(_USER_ATTRS):
+            # connect_session must not raise despite the malformed user_info.
+            session_id = self.connect_session(user_info=BadUserInfo())
+            self.session_mgr.disconnect_session(session_id)
+            self.session_mgr.close_session(session_id)
+
+            # No event was recorded since label resolution failed.
+            stats = self.session_mgr.get_stats()
+        assert self._user_event_series(stats) == {}
+
+    def test_disconnect_does_not_leak_identity_cache(self) -> None:
+        """A disconnect without reconnect/close must drop the cached identity.
+
+        Disconnected sessions can be silently evicted from storage without an
+        explicit close, so retaining the identity past disconnect would leak.
+        """
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            assert session_id in self.session_mgr._session_user_labels
+            self.session_mgr.disconnect_session(session_id)
+            # The identity cache is bounded: the entry is gone after disconnect.
+            assert session_id not in self.session_mgr._session_user_labels
+
+            # The disconnect was still attributed to the connect-time user.
+            series = self._user_event_series(self.session_mgr.get_stats())
+        email = ("email", "alice@example.com")
+        assert series[frozenset({email, ("type", "disconnect")})] == 1

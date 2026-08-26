@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,8 @@ export const fontSizes = {
   h4FontSize: "1.5rem",
   h5FontSize: "1.25rem",
   h6FontSize: "1rem",
+
+  metricValueFontSize: "2.25rem",
 }
 
 export const fontWeights = {
@@ -72,6 +74,7 @@ export const fontWeights = {
   h4FontWeight: 600,
   h5FontWeight: 600,
   h6FontWeight: 600,
+  metricValueFontWeight: 400,
 }
 
 export const lineHeights = {

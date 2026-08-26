@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -20,8 +22,12 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_prefixed_markdown,
     get_element_by_key,
+    reset_hovering,
+    select_selectbox_option,
+    type_time,
 )
 
 
@@ -42,26 +48,27 @@ def change_widget_values(app: Page):
     click_checkbox(app, "Checkbox")
 
     # Change the date input value.
-    form_1.get_by_test_id("stDateInput").locator("input").click()
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 17th 2019."]'
+    form_1.get_by_test_id("stDateInput").get_by_test_id("stDateInputField").get_by_role(
+        "spinbutton"
     ).first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Wednesday, July 17, 2019"
+    ).click()
 
     # Change the multiselect value.
     form_1.get_by_test_id("stMultiSelect").locator("input").click()
-    app.locator("[data-baseweb='popover'] >> li").nth(0).click()
+    app.get_by_role("option").first.click()
 
     # Change the number input value.
     form_1.get_by_test_id("stNumberInput").locator("input").fill("42")
 
     # Change the radio value.
-    form_1.get_by_test_id("stRadio").locator('label[data-baseweb="radio"]').nth(
-        1
-    ).click(force=True)
+    form_1.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1).click(
+        force=True
+    )
 
     # Change the selectbox value.
-    form_1.get_by_test_id("stSelectbox").locator("input").click()
-    app.locator("[data-baseweb='popover']").locator("li").nth(1).click()
+    select_selectbox_option(app, "Selectbox", "bar")
 
     # Change the select slider value.
     form_1.get_by_test_id("stSlider").nth(0).get_by_role("slider").press("ArrowRight")
@@ -76,8 +83,10 @@ def change_widget_values(app: Page):
     form_1.get_by_test_id("stTextInput").locator("input").fill("bar")
 
     # Change the time input value.
-    form_1.get_by_test_id("stTimeInput").locator("input").click()
-    app.locator('[data-baseweb="popover"]').locator("li").nth(0).click()
+    time_display = form_1.get_by_test_id("stTimeInput").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    type_time(time_display, "00", "00")
 
     # Change the toggle value.
     click_toggle(app, "Toggle Input")
@@ -143,6 +152,7 @@ def test_form_with_stretched_button(
     expect(submit_buttons).to_have_count(2)
 
     submit_button = submit_buttons.nth(0)
+    reset_hovering(themed_app)
     submit_button.hover()
     expect(themed_app.get_by_test_id("stTooltipContent")).to_have_text(
         "Submit by clicking"
@@ -367,6 +377,38 @@ def test_submit_button_with_key(app: Page):
 # Firefox has some issues with sub-pixel flakiness
 # but functional everything is working fine with firefox.
 @pytest.mark.skip_browser("firefox")
+def test_form_submit_button_displays_shortcut(app: Page):
+    """Ensure shortcut labels are rendered for form submit buttons."""
+    shortcut_button = get_element_by_key(app, "shortcut_submit_button")
+    # Use regex to accept both Windows (Ctrl + Alt) and macOS (⌘ + ⌥) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|⌥) \+ S")
+    )
+
+
+# Firefox has some issues with sub-pixel flakiness
+# but functional everything is working fine with firefox.
+# Webkit keyboard shortcuts are unreliable with Playwright 1.59+
+@pytest.mark.skip_browser("firefox")
+@pytest.mark.skip_browser("webkit")
+def test_form_submit_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut activates the form submit button."""
+    shortcut_button = get_element_by_key(app, "shortcut_submit_button")
+    expect(shortcut_button).to_be_visible()
+    # Use regex to accept both Windows (Ctrl + Alt) and macOS (⌘ + ⌥) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|⌥) \+ S")
+    )
+
+    # Press hotkey to trigger the button:
+    app.keyboard.press("ControlOrMeta+Alt+KeyS")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Shortcut form submitted!")).to_be_visible()
+
+
+# Firefox has some issues with sub-pixel flakiness
+# but functional everything is working fine with firefox.
+@pytest.mark.skip_browser("firefox")
 def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the submit button can be updated dynamically."""
     submit_button = get_element_by_key(app, "dynamic_button_with_key")
@@ -386,3 +428,16 @@ def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction)
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_wrap_false_submit_button_truncates_and_sets_native_title(app: Page):
+    """wrap=False ellipsizes the submit-button label and exposes the full label
+    via a native title.
+    """
+    container = get_element_by_key(app, "wrap_false_submit_button")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()

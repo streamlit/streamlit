@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
     from datetime import timedelta
+    from uuid import UUID
 
     from pandas import DataFrame
     from sqlalchemy.engine import Connection as SQLAlchemyConnection
@@ -218,7 +219,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
         if autocommit:
             return cast("Engine", eng.execution_options(isolation_level="AUTOCOMMIT"))
-        return cast("Engine", eng)  # ty: ignore[redundant-cast]
+        return cast("Engine", eng)
 
     def query(
         self,
@@ -294,23 +295,20 @@ class SQLConnection(BaseConnection["Engine"]):
 
         from sqlalchemy import text
         from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
-        from tenacity import (
-            retry,
-            retry_if_exception_type,
-            stop_after_attempt,
-            wait_fixed,
-        )
 
-        @retry(
-            after=lambda _: self.reset(),
-            stop=stop_after_attempt(3),
-            reraise=True,
-            retry=retry_if_exception_type(
-                (DatabaseError, InternalError, OperationalError)
+        from streamlit.connections import retry_util
+
+        @retry_util.retry(
+            max_attempts=3,
+            wait_seconds=1,
+            retry_on_exception=lambda exc: isinstance(
+                exc, (DatabaseError, InternalError, OperationalError)
             ),
-            wait=wait_fixed(1),
+            after=self.reset,
         )
         def _query(
+            # Dummy parameter to retain per-instance caching.
+            instance_id: UUID,  # noqa: ARG001
             sql: str,
             index_col: str | list[str] | None = None,
             chunksize: int | None = None,
@@ -340,12 +338,13 @@ class SQLConnection(BaseConnection["Engine"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
-        _query = cache_data(
+        cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
         )(_query)
 
-        return _query(
+        return cached_query(
+            self._connection_instance_id,
             sql,
             index_col=index_col,
             chunksize=chunksize,
@@ -397,7 +396,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
     @property
     def session(self) -> Session:
-        """Return a SQLAlchemy Session.
+        """A SQLAlchemy Session.
 
         Users of this connection should use the contextmanager pattern for writes,
         transactions, and anything more complex than simple read queries.

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -41,14 +39,27 @@ from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+# Compiled regex for validating hex colors (#RGB or #RRGGBB format)
+_HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
+
+
+def _normalize_hex_color(color: str) -> str:
+    """Normalize a hex color to include the # prefix."""
+    if not color.startswith("#"):
+        return f"#{color}"
+    return color
 
 
 @dataclass
@@ -59,7 +70,14 @@ class ColorPickerSerde:
         return str(v)
 
     def deserialize(self, ui_value: str | None) -> str:
-        return str(ui_value if ui_value is not None else self.value)
+        # None or empty string means use default
+        if ui_value is None or ui_value == "":
+            return self.value
+        # Normalize first (add # prefix if missing), then validate
+        normalized = _normalize_hex_color(ui_value)
+        if not _HEX_COLOR_RE.match(normalized):
+            return self.value
+        return normalized
 
 
 class ColorPickerMixin:
@@ -77,6 +95,8 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         r"""Display a color picker widget.
 
@@ -90,9 +110,9 @@ class ColorPickerMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -108,10 +128,20 @@ class ColorPickerMixin:
             The hex value of this widget when it first renders. If None,
             defaults to black.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -156,13 +186,43 @@ class ColorPickerMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         str
             The selected color as a hex string.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> color = st.color_picker("Pick A Color", "#00f900")
@@ -185,6 +245,8 @@ class ColorPickerMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -201,6 +263,8 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
@@ -211,7 +275,7 @@ class ColorPickerMixin:
             on_change,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         # Enforce minimum width of 40px to match the color block's intrinsic size.
         # The color block is always 40x40px, so the widget should never be smaller.
@@ -219,9 +283,7 @@ class ColorPickerMixin:
         if isinstance(width, int) and width < min_width_px:
             width = min_width_px
 
-        validate_width(width, allow_content=True)
-
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         element_id = compute_and_register_element_id(
             "color_picker",
@@ -246,9 +308,7 @@ like '#00FFAA' or '#000'.
 """)
 
         # validate the value and expects a hex string
-        match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", value)
-
-        if not match:
+        if not _HEX_COLOR_RE.match(value):
             raise StreamlitAPIException(f"""
 '{value}' is not a valid hex code for colors. Valid ones are like
 '#00FFAA' or '#000'.
@@ -265,7 +325,11 @@ like '#00FFAA' or '#000'.
         )
 
         if help is not None:
-            color_picker_proto.help = dedent(help)
+            color_picker_proto.help = to_help_str(help)
+
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            color_picker_proto.query_param_key = str(key)
 
         serde = ColorPickerSerde(value)
 
@@ -278,6 +342,11 @@ like '#00FFAA' or '#000'.
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
+            bind=bind,
+            persist_state=persist_state,
+            # Color picker is not clearable (defaults to black)
+            clearable=False,
         )
 
         if widget_state.value_changed:
@@ -285,11 +354,14 @@ like '#00FFAA' or '#000'.
             color_picker_proto.set_value = True
 
         self.dg._enqueue(
-            "color_picker", color_picker_proto, layout_config=layout_config
+            "color_picker",
+            color_picker_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
         )
         return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

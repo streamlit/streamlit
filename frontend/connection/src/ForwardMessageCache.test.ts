@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { getLogger } from "loglevel"
 
 import { ForwardMsg } from "@streamlit/protobuf"
 
@@ -69,7 +71,7 @@ function createRefMsg(msg: ForwardMsg): ForwardMsg {
   })
 }
 
-test("caches messages correctly", async () => {
+it("caches messages correctly", async () => {
   const { cache, getCachedMessage } = createCache()
 
   // Cacheable messages should be cached
@@ -99,7 +101,7 @@ test("caches messages correctly", async () => {
   expect(unreferenced).not.toBe(msg3)
 })
 
-test("caches messages as a deep copy", async () => {
+it("caches messages as a deep copy", async () => {
   const { cache, getCachedMessage } = createCache()
 
   const msg = ForwardMsg.fromObject({
@@ -130,7 +132,7 @@ test("caches messages as a deep copy", async () => {
   expect(getCachedMessage("Cacheable")).not.toEqual(msg)
 })
 
-test("throws an error message on cache miss", async () => {
+it("throws an error message on cache miss", async () => {
   // Create a reference message to a non-existent cache entry
   const msg = createForwardMsg("non-existent-hash", true)
   const refMsg = createRefMsg(msg)
@@ -143,7 +145,7 @@ test("throws an error message on cache miss", async () => {
   ).rejects.toThrow("Cached ForwardMsg MISS [hash=non-existent-hash]")
 })
 
-test("removes expired messages", () => {
+it("removes expired messages", () => {
   const { cache, getCachedMessage } = createCache()
   const msg = createForwardMsg("Cacheable", true)
   const encodedMsg = ForwardMsg.encode(msg).finish()
@@ -162,7 +164,7 @@ test("removes expired messages", () => {
   expect(getCachedMessage(msg.hash)).toBeUndefined()
 })
 
-test("only expires messages with matching fragment IDs", () => {
+it("only expires messages with matching fragment IDs", () => {
   const { cache, getCachedMessage } = createCache()
 
   // Create messages with different fragment IDs
@@ -212,7 +214,7 @@ test("only expires messages with matching fragment IDs", () => {
   expect(getCachedMessage("msg3")).toBeUndefined()
 })
 
-test("throws error when reference message has no metadata", async () => {
+it("throws error when reference message has no metadata", async () => {
   const { cache } = createCache()
   const msg1 = createForwardMsg("msg1")
   const encodedMsg1 = ForwardMsg.encode(msg1).finish()
@@ -232,4 +234,95 @@ test("throws error when reference message has no metadata", async () => {
   await expect(
     cache.processMessagePayload(refMsg, encodedRefMsg)
   ).rejects.toThrow("Reference ForwardMsg has no metadata")
+})
+
+it("getCachedMessageHashes returns an empty array when nothing is cached", () => {
+  const { cache } = createCache()
+
+  expect(cache.getCachedMessageHashes()).toEqual([])
+})
+
+it("getCachedMessageHashes returns all hashes of cached messages", async () => {
+  const { cache } = createCache()
+
+  const msg1 = createForwardMsg("hash-1", true)
+  const msg2 = createForwardMsg("hash-2", true)
+  // Uncacheable message should NOT appear in returned hashes.
+  const msg3 = createForwardMsg("hash-3", false)
+
+  await cache.processMessagePayload(msg1, ForwardMsg.encode(msg1).finish())
+  await cache.processMessagePayload(msg2, ForwardMsg.encode(msg2).finish())
+  await cache.processMessagePayload(msg3, ForwardMsg.encode(msg3).finish())
+
+  const hashes = cache.getCachedMessageHashes()
+  expect(hashes).toEqual(expect.arrayContaining(["hash-1", "hash-2"]))
+  expect(hashes).toHaveLength(2)
+})
+
+it("does not cache cacheable messages without a hash and logs an error", async () => {
+  const { cache, getCachedMessage } = createCache()
+  const errorSpy = vi
+    .spyOn(getLogger("ForwardMessageCache"), "error")
+    .mockImplementation(() => {})
+
+  try {
+    /** The protobuf default for a missing string field is "", which triggers
+     * the `!msg.hash` branch. */
+    const msgWithoutHash = ForwardMsg.fromObject({
+      metadata: { cacheable: true, deltaId: 0 },
+    })
+    const encodedMsg = ForwardMsg.encode(msgWithoutHash).finish()
+
+    await cache.processMessagePayload(msgWithoutHash, encodedMsg)
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("ForwardMsg has no hash"),
+      expect.anything()
+    )
+    expect(getCachedMessage("")).toBeUndefined()
+    expect(cache.getCachedMessageHashes()).toEqual([])
+  } finally {
+    errorSpy.mockRestore()
+  }
+})
+
+it("does not re-cache an already-cached message", () => {
+  const { cache, getCachedMessage } = createCache()
+
+  const msg = createForwardMsg("dup-hash", true)
+  const encodedMsg = ForwardMsg.encode(msg).finish()
+
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg, encodedMsg)
+  expect(getCachedMessage("dup-hash")).toEqual(msg)
+  expect(cache.getCachedMessageHashes()).toEqual(["dup-hash"])
+
+  // Caching the same hash again must hit the early-return branch and leave
+  // the cache untouched (no duplicates).
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg, encodedMsg)
+  expect(getCachedMessage("dup-hash")).toEqual(msg)
+  expect(cache.getCachedMessageHashes()).toEqual(["dup-hash"])
+})
+
+it("re-caching an existing message refreshes its scriptRunCount", () => {
+  const { cache, getCachedMessage } = createCache()
+
+  const msg = createForwardMsg("refresh-hash", true)
+  const encodedMsg = ForwardMsg.encode(msg).finish()
+
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg, encodedMsg)
+
+  // Bump the script run count once; the entry should still exist (age = 1).
+  cache.incrementRunCount(1, [])
+  expect(getCachedMessage("refresh-hash")).toEqual(msg)
+
+  // Re-caching hits the "already cached" branch which refreshes scriptRunCount.
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg, encodedMsg)
+
+  // Without the refresh the entry would have expired here (age > 1).
+  cache.incrementRunCount(1, [])
+  expect(getCachedMessage("refresh-hash")).toEqual(msg)
 })

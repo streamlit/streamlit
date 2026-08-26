@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
-import hashlib
 import inspect
 import io
 import os
-import pickle
+import pickle  # noqa: S403
+import re
 import sys
 import tempfile
 import threading
@@ -33,7 +33,6 @@ import uuid
 import weakref
 from collections.abc import Callable
 from enum import Enum
-from re import Pattern
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
 
@@ -57,6 +56,77 @@ _PANDAS_SAMPLE_SIZE: Final = 10_000
 # Similar to dataframes, we also sample large numpy arrays.
 _NP_SIZE_LARGE: Final = 500_000
 _NP_SAMPLE_SIZE: Final = 100_000
+
+# Largest seed accepted by all sampling backends below. numpy's RandomState (and
+# pandas' `random_state=`, which defers to it) rejects anything outside
+# [0, 2**32 - 1]; polars' `seed=` takes a u64, so this bound satisfies both.
+_MAX_SAMPLE_SEED: Final = 2**32 - 1
+
+# Seed values already warned about. `_sample_seed` runs on every large-object
+# hash, so warning unconditionally would flood the log for one misconfiguration.
+_warned_sample_seeds: Final[set[str]] = set()
+
+
+def _warn_unusable_sample_seed(configured: object) -> None:
+    """Warn that ``runner.cacheHashSeed`` is being ignored, once per distinct value.
+
+    Keyed on the repr so a quoted and an unquoted TOML value are reported as the
+    user wrote them, and so an unhashable value cannot raise from here.
+    """
+    key = repr(configured)
+    if key in _warned_sample_seeds:
+        return
+    _warned_sample_seeds.add(key)
+    _LOGGER.warning(
+        "Ignoring runner.cacheHashSeed=%s: it must be a whole number from 0 to %s. "
+        "Falling back to the default seed of 0.",
+        key,
+        _MAX_SAMPLE_SEED,
+    )
+
+
+def _sample_seed() -> int:
+    """Return the RNG seed used when sampling large objects for cache hashing.
+
+    Reads ``runner.cacheHashSeed``, converting to an int so a quoted TOML value
+    works the same as an unquoted one. A value that cannot be converted, or that
+    falls outside ``[0, _MAX_SAMPLE_SEED]``, falls back to ``0`` -- the seed used
+    before the option existed -- so a malformed value reverts to the historical
+    sample positions instead of raising from the hashing path.
+
+    Two TOML values need handling that ``int()`` alone does not give: ``true`` is a
+    ``bool``, which is an ``int`` subclass and would convert to a usable ``1``; and
+    ``inf`` raises ``OverflowError``, which is not a ``ValueError``.
+
+    Out-of-range values are rejected rather than wrapped into range: wrapping
+    would silently sample by a seed the user never chose, which is harder to
+    debug than falling back to the documented default. The fallback warns rather
+    than passing silently, since this option exists precisely to diagnose cache
+    hits that are already silent.
+
+    Read per call rather than cached at import so the value stays correct after
+    ``config`` is (re)parsed, and so tests can vary it.
+    """
+    from streamlit import config
+
+    configured = config.get_option("runner.cacheHashSeed")
+    # `bool` is an `int` subclass, so `cacheHashSeed = true` would otherwise convert
+    # to a seed of 1 and silently invalidate every large-object cache key.
+    if isinstance(configured, bool):
+        _warn_unusable_sample_seed(configured)
+        return 0
+    try:
+        seed = int(configured)
+    except (TypeError, ValueError, OverflowError):
+        # `OverflowError` is not a `ValueError` subclass and comes from
+        # `int(float("inf"))`, which TOML can produce as `cacheHashSeed = inf`.
+        _warn_unusable_sample_seed(configured)
+        return 0
+    if not 0 <= seed <= _MAX_SAMPLE_SEED:
+        _warn_unusable_sample_seed(configured)
+        return 0
+    return seed
+
 
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 
@@ -256,10 +326,9 @@ def _key(obj: Any | None) -> Any:
         return None
 
     def is_simple(obj: Any) -> bool:
-        return (
-            isinstance(obj, (bytes, bytearray, str, float, int, bool, uuid.UUID))
-            or obj is None
-        )
+        # Note: bytearray is excluded because it's unhashable and cannot be
+        # used as a dictionary key for memoization
+        return isinstance(obj, (bytes, str, float, int, bool, uuid.UUID)) or obj is None
 
     if is_simple(obj):
         return obj
@@ -352,7 +421,7 @@ class _CacheFuncHasher:
         runs.
         """
 
-        h = hashlib.new("md5", usedforsecurity=False)
+        h = util.create_fast_hasher()
 
         if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
             obj, "unittest.mock.MagicMock"
@@ -361,8 +430,11 @@ class _CacheFuncHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        if isinstance(obj, (bytes, bytearray)):
+        if isinstance(obj, bytes):
             return obj
+
+        if isinstance(obj, bytearray):
+            return bytes(obj)
 
         if type_util.get_fqn_type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
@@ -403,49 +475,57 @@ class _CacheFuncHasher:
         if obj is None:
             return b"0"
 
-        if obj is True:
+        if obj is True:  # pragma: no cover - unreachable; bool subclasses int
             return b"1"
 
-        if obj is False:
+        if obj is False:  # pragma: no cover - unreachable; bool subclasses int
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
-            return self.to_bytes(dataclasses.asdict(obj))
+            # mypy 2.x narrows to DataclassInstance | type[DataclassInstance]
+            # which doesn't satisfy asdict's expected DataclassInstance type.
+            return self.to_bytes(dataclasses.asdict(cast("Any", obj)))
 
         if isinstance(obj, Enum):
             return str(obj).encode()
 
-        if type_util.is_type(obj, "pandas.core.series.Series"):
+        # pandas 3.x changed __module__ from pandas.core.* to pandas.*
+        if type_util.is_type(obj, re.compile(r"^pandas(\.core\.series)?\.Series$")):
             from pandas.util import hash_pandas_object
 
-            series_obj: pd.Series = cast("pd.Series", obj)
+            series_obj = cast("pd.Series[Any]", obj)
             self.update(h, series_obj.size)
             self.update(h, series_obj.dtype.name)
 
             if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                series_obj = series_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE, random_state=_sample_seed()
+                )
 
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
                 return h.digest()
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Pandas Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a pandas Series, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(series_obj, pickle.HIGHEST_PROTOCOL)
 
-        elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
+        elif type_util.is_type(obj, re.compile(r"^pandas(\.core\.frame)?\.DataFrame$")):
             from pandas.util import hash_pandas_object
 
             df_obj: pd.DataFrame = cast("pd.DataFrame", obj)
             self.update(h, df_obj.shape)
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                df_obj = df_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE, random_state=_sample_seed()
+                )
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
@@ -454,10 +534,11 @@ class _CacheFuncHasher:
                 self.update(h, values_hash_bytes)
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Pandas DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a pandas DataFrame, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if pandas cannot hash the object for example if
@@ -465,23 +546,24 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.series.series.Series"):
-            import polars as pl  # type: ignore[import-not-found]
+            import polars as pl
 
             obj = cast("pl.Series", obj)
             self.update(h, str(obj.dtype).encode())
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=_sample_seed())
 
             try:
                 self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Polars Series hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a polars Series, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if polars cannot hash the object for example if
@@ -495,7 +577,7 @@ class _CacheFuncHasher:
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=_sample_seed())
             try:
                 for c, t in obj.schema.items():
                     self.update(h, c.encode())
@@ -508,10 +590,11 @@ class _CacheFuncHasher:
                 self.update(h, values_hash_bytes)
                 return h.digest()
 
-            except TypeError:
+            except TypeError as ex:
                 _LOGGER.warning(
-                    "Polars DataFrame hash failed. Falling back to pickling the object.",
-                    exc_info=True,
+                    "Streamlit's default hashing method failed for a polars DataFrame, "
+                    "so it is falling back to pickling the object. Original error: %s",
+                    ex,
                 )
 
                 # Use pickle if polars cannot hash the object for example if
@@ -526,7 +609,7 @@ class _CacheFuncHasher:
             if np_obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
-                state = np.random.RandomState(0)
+                state = np.random.RandomState(_sample_seed())
                 np_obj = state.choice(np_obj.flat, size=_NP_SAMPLE_SIZE)
 
             self.update(h, np_obj.tobytes())
@@ -537,9 +620,18 @@ class _CacheFuncHasher:
 
             pil_obj: Image = cast("Image", obj)
 
-            # we don't just hash the results of obj.tobytes() because we want to use
-            # the sampling logic for numpy data
-            np_array = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
+            # We don't just hash the results of obj.tobytes() because we want to use
+            # the sampling logic for numpy data.
+            pixel_bytes = pil_obj.tobytes()
+
+            # P-mode (palette-indexed) images need the palette included in the hash,
+            # since tobytes() only returns palette indices, not the color table.
+            if pil_obj.mode == "P":
+                palette_data = pil_obj.getpalette()
+                if palette_data is not None:
+                    pixel_bytes = bytes(palette_data) + pixel_bytes
+
+            np_array = np.frombuffer(pixel_bytes, dtype="uint8")
             return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):
@@ -576,7 +668,7 @@ class _CacheFuncHasher:
             self.update(h, obj.tell())
             return h.digest()
 
-        elif isinstance(obj, Pattern):
+        elif isinstance(obj, re.Pattern):
             return self.to_bytes([obj.pattern, obj.flags])
 
         elif isinstance(obj, (io.StringIO, io.BytesIO)):
@@ -653,5 +745,3 @@ class _CacheFuncHasher:
 
 class NoResult:
     """Placeholder class for return values when None is meaningful."""
-
-    pass

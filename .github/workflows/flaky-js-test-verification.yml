@@ -1,0 +1,104 @@
+name: Flaky JS Unit Test Verification
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to verify
+        required: false
+        type: string
+      runs:
+        description: Number of times to run Vitest
+        required: false
+        default: "25"
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  verify:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify-js')
+    # ubuntu-latest is sufficient for this lightweight coordination job.
+    # The actual JS unit tests execute in the called workflow (js-unit-tests.yml) below.
+    runs-on: ubuntu-latest
+    outputs:
+      runs: ${{ steps.compute.outputs.runs }}
+      pr-number: ${{ steps.compute.outputs.pr_number }}
+      matrix: ${{ steps.compute.outputs.matrix }}
+    steps:
+      - name: Remove flaky-verify-js label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/flaky-verify-js \
+            --method DELETE || true
+
+      - name: Compute inputs and matrix
+        id: compute
+        shell: bash
+        env:
+          INPUT_RUNS: ${{ inputs.runs }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Resolve runs
+          runs_input="$INPUT_RUNS"
+          if [[ -z "$runs_input" ]]; then
+            runs_input="25"
+          fi
+          if [[ ! "$runs_input" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::runs must be a positive integer (>= 1), got: $runs_input"
+            exit 1
+          fi
+          echo "runs=$runs_input" >> "$GITHUB_OUTPUT"
+
+          # Resolve PR number from input or event
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ -n "$INPUT_PR_NUMBER" ]]; then
+              pr_number="$INPUT_PR_NUMBER"
+            else
+              echo "::error::No PR number provided. When using workflow_dispatch, the pr_number input is required."
+              exit 1
+            fi
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+            pr_number="$EVENT_PR_NUMBER"
+          else
+            echo "::error::Unsupported event type: $EVENT_NAME"
+            exit 1
+          fi
+
+          # Validate pr_number is a positive integer
+          if [[ ! "$pr_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::PR number must be a positive integer (>= 1), got: $pr_number"
+            exit 1
+          fi
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+
+          # Build JSON array for matrix
+          json="["
+          for i in $(seq 1 "$runs_input"); do
+            if [[ $i -gt 1 ]]; then json+=", "; fi
+            json+="$i"
+          done
+          json+="]"
+          echo "matrix=$json" >> "$GITHUB_OUTPUT"
+
+  vitest-matrix:
+    needs: verify
+    if: needs.verify.outputs.pr-number != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJson(needs.verify.outputs.matrix) }}
+    uses: ./.github/workflows/js-unit-tests.yml
+    with:
+      ref: refs/pull/${{ needs.verify.outputs.pr-number }}/head
+    secrets: inherit

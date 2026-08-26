@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,6 @@ function generateNewSession(changes = {}): NewSession {
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
-      mapboxToken: "mapboxToken",
       allowRunOnSave: false,
       hideSidebarNav: false,
       hideTopBar: false,
@@ -97,7 +96,9 @@ describe("AppNavigation", () => {
       stopScript: () => {},
       rerunScript: () => {},
       clearCache: () => {},
-      sendAppHeartbeat: () => {},
+      sendAppHeartbeat: () => {
+        // Accept ackTimeoutMilliseconds parameter but do nothing
+      },
       setInputsDisabled: () => {},
       themeChanged: () => {},
       pageChanged: () => {},
@@ -111,6 +112,7 @@ describe("AppNavigation", () => {
       deployedAppMetadataChanged: () => {},
       restartWebsocketConnection: () => {},
       terminateWebsocketConnection: () => {},
+      printApp: () => {},
       streamlitExecutionStartedAt: 0,
       fileUploadClientConfigChanged: () => {},
     })
@@ -134,6 +136,19 @@ describe("AppNavigation", () => {
     const [newState] = maybeState!
     expect(newState.currentPageScriptHash).toEqual("page_script_hash")
     expect(newState.hideSidebarNav).toEqual(false)
+  })
+
+  it("does not reset the document title on new session", () => {
+    const previousTitle = document.title
+    document.title = "Callback Test"
+
+    try {
+      appNavigation.handleNewSession(generateNewSession())
+
+      expect(document.title).toBe("Callback Test")
+    } finally {
+      document.title = previousTitle
+    }
   })
 
   it("continues to set hideSidebarNav on new session", () => {
@@ -233,7 +248,10 @@ describe("AppNavigation", () => {
       pageScriptHash: "page_script_hash2",
       expanded: false,
     })
-    appNavigation.handleNavigation(navigation)
+    const maybeState = appNavigation.handleNavigation(navigation)
+    // onUpdatePageUrl is called in the setState callback
+    const callback = maybeState![1]
+    callback()
     expect(onUpdatePageUrl).toHaveBeenCalledWith(
       "streamlit_app",
       "streamlit_app2",
@@ -299,6 +317,60 @@ describe("AppNavigation", () => {
     expect(page!.pageName).toEqual("streamlit app")
   })
 
+  it("finds page when pathname contains URL-encoded non-ASCII characters", () => {
+    const navigation = new Navigation({
+      sections: [],
+      appPages: [
+        new AppPage({
+          pageName: "Home",
+          pageScriptHash: "home_hash",
+          isDefault: true,
+          urlPathname: "home",
+        }),
+        new AppPage({
+          pageName: "Págé_Wíth_Spêcîãl_Chäracters",
+          pageScriptHash: "special_hash",
+          isDefault: false,
+          urlPathname: "Págé_Wíth_Spêcîãl_Chäracters",
+        }),
+      ],
+      position: Navigation.Position.SIDEBAR,
+      pageScriptHash: "home_hash",
+      expanded: false,
+    })
+    appNavigation.handleNavigation(navigation)
+
+    // Browsers URL-encode Unicode during Back/Forward navigation (popstate).
+    const encodedPathname =
+      "/P%C3%A1g%C3%A9_W%C3%ADth_Sp%C3%AAc%C3%AE%C3%A3l_Ch%C3%A4racters"
+    const page = appNavigation.findPageByUrlPath(encodedPathname)
+
+    expect(page!.pageScriptHash).toEqual("special_hash")
+    expect(page!.pageName).toEqual("Págé_Wíth_Spêcîãl_Chäracters")
+  })
+
+  it("falls back to main page for malformed URL-encoded pathnames", () => {
+    const navigation = new Navigation({
+      sections: [],
+      appPages: [
+        new AppPage({
+          pageName: "Home",
+          pageScriptHash: "home_hash",
+          isDefault: true,
+          urlPathname: "home",
+        }),
+      ],
+      position: Navigation.Position.SIDEBAR,
+      pageScriptHash: "home_hash",
+      expanded: false,
+    })
+    appNavigation.handleNavigation(navigation)
+
+    // Incomplete percent encoding should not throw
+    const page = appNavigation.findPageByUrlPath("/test%E0%A4")
+    expect(page!.pageScriptHash).toEqual("home_hash")
+  })
+
   it("sets navigation state to hidden on navigation", () => {
     const appPages = [
       new AppPage({
@@ -329,6 +401,7 @@ describe("AppNavigation", () => {
       appPages,
       hideSidebarNav: true,
       expandSidebarNav: false,
+      sidebarNavVisibleItems: undefined,
       currentPageScriptHash: "page_script_hash",
       navSections: ["section1", "section2"],
     })
@@ -364,6 +437,44 @@ describe("AppNavigation", () => {
       appPages,
       hideSidebarNav: false,
       expandSidebarNav: true,
+      sidebarNavVisibleItems: undefined,
+      currentPageScriptHash: "page_script_hash",
+      navSections: ["section1", "section2"],
+    })
+  })
+
+  it("sets sidebarNavVisibleItems when visibleItems is provided", () => {
+    const appPages = [
+      new AppPage({
+        pageName: "streamlit_app",
+        pageScriptHash: "page_script_hash",
+        isDefault: true,
+        sectionHeader: "section1",
+      }),
+      new AppPage({
+        pageName: "streamlit_app2",
+        pageScriptHash: "page_script_hash2",
+        isDefault: false,
+        sectionHeader: "section2",
+      }),
+    ]
+    const navigation = new Navigation({
+      sections: ["section1", "section2"],
+      appPages,
+      position: Navigation.Position.SIDEBAR,
+      pageScriptHash: "page_script_hash",
+      expanded: false,
+      visibleItems: 5,
+    })
+    const maybeState = appNavigation.handleNavigation(navigation)
+    expect(maybeState).not.toBeUndefined()
+
+    const [newState] = maybeState!
+    expect(newState).toEqual({
+      appPages,
+      hideSidebarNav: false,
+      expandSidebarNav: false,
+      sidebarNavVisibleItems: 5,
       currentPageScriptHash: "page_script_hash",
       navSections: ["section1", "section2"],
     })
@@ -459,5 +570,78 @@ describe("AppNavigation", () => {
       false
     )
     expect(onPageIconChange).not.toBeCalled()
+  })
+
+  describe("hasSetDefaultFavicon flag", () => {
+    it("resets hasSetDefaultFavicon when mainScriptHash changes", () => {
+      // Initialize with a script hash
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+
+      // Simulate setting the default favicon
+      appNavigation.hasSetDefaultFavicon = true
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+
+      // Handle new session with different script hash - should reset
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash2" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+    })
+
+    it("does not reset hasSetDefaultFavicon when mainScriptHash stays the same", () => {
+      // Initialize with a script hash
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+
+      // Simulate setting the default favicon
+      appNavigation.hasSetDefaultFavicon = true
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+
+      // Handle new session with same script hash - should NOT reset
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+    })
+
+    it("resets isPageTitleSet and isPageIconSet along with hasSetDefaultFavicon", () => {
+      // Initialize with a script hash
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+
+      // Set all flags
+      appNavigation.hasSetDefaultFavicon = true
+      appNavigation.isPageTitleSet = true
+      appNavigation.isPageIconSet = true
+
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+      expect(appNavigation.isPageTitleSet).toBe(true)
+      expect(appNavigation.isPageIconSet).toBe(true)
+
+      // Handle new session with different script hash - should reset all flags
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash2" })
+      )
+
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+      expect(appNavigation.isPageTitleSet).toBe(false)
+      expect(appNavigation.isPageIconSet).toBe(false)
+    })
+
+    it("initializes hasSetDefaultFavicon to false", () => {
+      const cleanAppNavigation = new AppNavigation(
+        hostCommunicationMgr,
+        onUpdatePageUrl,
+        onPageNotFound,
+        onPageIconChange
+      )
+      expect(cleanAppNavigation.hasSetDefaultFavicon).toBe(false)
+    })
   })
 })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import copy
 import datetime
 import json
 import unittest
@@ -41,16 +42,19 @@ from streamlit.elements.lib.column_config_utils import (
     determine_dataframe_schema,
 )
 from streamlit.elements.widgets.data_editor import (
+    DataEditorSerde,
+    DataEditorState,
     _apply_cell_edits,
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
     _check_column_names,
     _check_type_compatibilities,
+    _compute_data_editor_signature,
     _parse_value,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import (
@@ -65,6 +69,27 @@ if TYPE_CHECKING:
 def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
     """Get the Arrow schema for a DataFrame."""
     return pa.Table.from_pandas(df).schema
+
+
+def _get_data_editor_signature(
+    df: pd.DataFrame,
+    *,
+    data_format: DataFormat = DataFormat.PANDAS_DATAFRAME,
+    disabled: bool | list[str | int] = False,
+    include_row_count: bool = True,
+    disabled_columns: tuple[str | int, ...] = (),
+) -> str:
+    """Get the data editor schema signature for tests."""
+    arrow_schema = _get_arrow_schema(df)
+    return _compute_data_editor_signature(
+        data_df=df,
+        data_format=data_format,
+        arrow_schema=arrow_schema,
+        dataframe_schema=determine_dataframe_schema(df, arrow_schema),
+        disabled=disabled,
+        include_row_count=include_row_count,
+        disabled_columns=disabled_columns,
+    )
 
 
 class DataEditorUtilTest(unittest.TestCase):
@@ -158,6 +183,38 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.EMPTY,
                 ["foo"],
             ),
+            # Scalar values with EMPTY data kind should remain scalars (fix for #13305, #13307)
+            (
+                None,
+                ColumnDataKind.EMPTY,
+                None,
+            ),
+            (
+                42,
+                ColumnDataKind.EMPTY,
+                42,
+            ),
+            (
+                "text",
+                ColumnDataKind.EMPTY,
+                "text",
+            ),
+            (
+                3.14,
+                ColumnDataKind.EMPTY,
+                3.14,
+            ),
+            (
+                True,
+                ColumnDataKind.EMPTY,
+                True,
+            ),
+            # Invalid / edge-case inputs that should normalize to None or pass through.
+            ("not_a_number", ColumnDataKind.INTEGER, None),
+            ("not-a-date", ColumnDataKind.DATETIME, None),
+            (float("nan"), ColumnDataKind.DATETIME, None),
+            ("anything", ColumnDataKind.UNKNOWN, "anything"),
+            ([1, 2, 3], ColumnDataKind.INTEGER, None),
         ]
     )
     def test_parse_value(
@@ -169,6 +226,90 @@ class DataEditorUtilTest(unittest.TestCase):
         """Test that _parse_value parses the input to the correct type."""
         result = _parse_value(value, column_data_kind)
         assert result == expected
+
+    def test_data_editor_serde_serialize_round_trips(self):
+        """``DataEditorSerde.serialize`` produces JSON containing all editing-state keys."""
+        state = DataEditorState(
+            {
+                "edited_rows": {0: {"col1": 1}},
+                "added_rows": [],
+                "deleted_rows": [],
+            }
+        )
+        decoded = json.loads(DataEditorSerde().serialize(state))
+        assert decoded == {
+            "edited_rows": {"0": {"col1": 1}},
+            "added_rows": [],
+            "deleted_rows": [],
+        }
+
+    def test_data_editor_serde_deserialize_none_returns_empty_state(self):
+        """A None ui_value should produce an empty editing state."""
+        result = DataEditorSerde().deserialize(None)
+        assert isinstance(result, DataEditorState)
+        assert result == {
+            "edited_rows": {},
+            "added_rows": [],
+            "deleted_rows": [],
+        }
+
+    def test_data_editor_serde_deserialize_partial_payload_fills_defaults(self):
+        """Missing payload keys are filled with empty defaults and row keys become ints."""
+        payload = json.dumps({"edited_rows": {"0": {"col1": 1}}})
+        assert DataEditorSerde().deserialize(payload) == {
+            "edited_rows": {0: {"col1": 1}},
+            "added_rows": [],
+            "deleted_rows": [],
+        }
+
+    def test_data_editor_serde_converts_string_keys_to_int(self):
+        """String row position keys from JSON are converted to ints."""
+        payload = json.dumps(
+            {
+                "edited_rows": {"5": {"col1": 1}, "10": {"col1": 2}},
+                "added_rows": [],
+                "deleted_rows": [],
+            }
+        )
+        result = DataEditorSerde().deserialize(payload)
+        assert result["edited_rows"] == {5: {"col1": 1}, 10: {"col1": 2}}
+
+    def test_data_editor_serde_returns_typed_state_class(self):
+        """``deserialize`` returns a typed ``DataEditorState`` with attribute access."""
+        result = DataEditorSerde().deserialize(
+            json.dumps(
+                {
+                    "edited_rows": {"0": {"col1": 1}},
+                    "added_rows": [{"col1": 2}],
+                    "deleted_rows": [1],
+                }
+            )
+        )
+
+        assert isinstance(result, DataEditorState)
+        assert result.edited_rows == {0: {"col1": 1}}
+        assert result["added_rows"] == [{"col1": 2}]
+        assert result.deleted_rows == [1]
+
+    def test_data_editor_state_is_read_only(self):
+        """Pending edit state rejects top-level and nested-dict mutation.
+
+        It also keeps its typed class through deepcopy, since Session State
+        deep-copies widget values. List fields are ordinary lists and are not
+        frozen (same as other list-bearing widget states).
+        """
+        result = DataEditorSerde().deserialize(None)
+
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["edited_rows"] = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result.edited_rows = {}  # type: ignore[misc]
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["edited_rows"][0] = {"col1": 1}
+
+        # Read access still works, and deepcopy preserves the concrete type.
+        assert result.edited_rows == {}
+        assert isinstance(copy.deepcopy(result), DataEditorState)
 
     def test_apply_cell_edits(self):
         """Test applying cell edits to a DataFrame."""
@@ -207,10 +348,51 @@ class DataEditorUtilTest(unittest.TestCase):
 
         assert df.iat[0, 0] == 10
         assert df.iat[0, 1] == "foo"
-        assert df.iat[1, 1] is None
+        # pandas 3.x uses NA instead of None for missing values in string columns
+        assert pd.isna(df.iat[1, 1])
         assert not df.iat[0, 2]
         assert df.iat[0, 3] == pd.Timestamp("2020-03-20T14:28:23")
         assert df.iat[0, 4] == Decimal("2.3")
+
+    def test_apply_cell_edits_empty_columns(self):
+        """Test applying cell edits to empty (None-only) columns.
+
+        Regression test for issues #13305 and #13307 where scalar values
+        were incorrectly wrapped in lists when editing empty columns.
+        """
+        # Create DataFrame with None values in all columns
+        df = pd.DataFrame(
+            {
+                "number_col": [None],
+                "text_col": [None],
+                "list_col": [None],
+            }
+        )
+
+        edited_rows: Mapping[
+            int, Mapping[str, str | int | float | bool | list[str] | None]
+        ] = {
+            0: {
+                "number_col": 42,
+                "text_col": "hello",
+                "list_col": ["a", "b"],
+            },
+        }
+
+        _apply_cell_edits(
+            df, edited_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        # Scalar values should remain scalars, not be wrapped in lists
+        assert df.iat[0, 0] == 42
+        assert not isinstance(df.iat[0, 0], list)
+
+        assert df.iat[0, 1] == "hello"
+        assert not isinstance(df.iat[0, 1], list)
+
+        # List values should remain lists
+        assert df.iat[0, 2] == ["a", "b"]
+        assert isinstance(df.iat[0, 2], list)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
@@ -295,11 +477,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -327,11 +511,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -427,6 +613,104 @@ class DataEditorUtilTest(unittest.TestCase):
         expected_df = pd.DataFrame({"col1": [1, 2, 10]}, index=expected_index)
         pd.testing.assert_frame_equal(df, expected_df, check_dtype=False)
 
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_apply_row_additions_existing_index_is_skipped(self, mock_logger):
+        """Test that an added row cannot overwrite an existing index value."""
+        df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer"],
+                "balance": [100, 200],
+            },
+            index=["victim@corp.com", "other@corp.com"],
+        )
+        original_df = df.copy()
+        added_rows: list[dict[str, Any]] = [
+            {
+                "_index": "victim@corp.com",
+                "role": "admin",
+                "balance": 0,
+            },
+        ]
+
+        _apply_row_additions(
+            df, added_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        pd.testing.assert_frame_equal(df, original_df)
+        mock_logger.warning.assert_called_once_with(
+            "Cannot add row because its index value already exists. "
+            "Row addition skipped."
+        )
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_apply_row_additions_skips_only_duplicate_in_batch(self, mock_logger):
+        """Test that a duplicate index is skipped while other additions still apply."""
+        df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer"],
+                "balance": [100, 200],
+            },
+            index=["victim@corp.com", "other@corp.com"],
+        )
+        added_rows: list[dict[str, Any]] = [
+            {"_index": "victim@corp.com", "role": "admin", "balance": 0},
+            {"_index": "new@corp.com", "role": "viewer", "balance": 300},
+        ]
+
+        _apply_row_additions(
+            df, added_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        # The colliding row is skipped, but the unique row is still added.
+        expected_df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer", "viewer"],
+                "balance": [100, 200, 300],
+            },
+            index=["victim@corp.com", "other@corp.com", "new@corp.com"],
+        )
+        pd.testing.assert_frame_equal(df, expected_df, check_dtype=False)
+        mock_logger.warning.assert_called_once_with(
+            "Cannot add row because its index value already exists. "
+            "Row addition skipped."
+        )
+
+    def test_apply_dataframe_edits_delete_then_re_add_same_index(self):
+        """Test re-adding a deleted index value succeeds (deletions run first)."""
+        df = pd.DataFrame(
+            {
+                "role": ["viewer", "viewer"],
+                "balance": [100, 200],
+            },
+            index=["victim@corp.com", "other@corp.com"],
+        )
+
+        # Delete the first row and re-add a row reusing its index value in the
+        # same batch. Deletions run before additions, so the re-added label is
+        # no longer present and the addition must not be rejected as a duplicate.
+        _apply_dataframe_edits(
+            df,
+            DataEditorState(
+                {
+                    "deleted_rows": [0],
+                    "added_rows": [
+                        {"_index": "victim@corp.com", "role": "admin", "balance": 0},
+                    ],
+                    "edited_rows": {},
+                }
+            ),
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
+        )
+
+        expected_df = pd.DataFrame(
+            {
+                "role": ["viewer", "admin"],
+                "balance": [200, 0],
+            },
+            index=["other@corp.com", "victim@corp.com"],
+        )
+        pd.testing.assert_frame_equal(df, expected_df, check_dtype=False)
+
     def test_apply_row_additions_range_index_with_value(self):
         r"""Test adding row to RangeIndex with explicit _index provided
         (should still auto-increment)."""
@@ -470,11 +754,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -505,11 +791,13 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_dataframe_edits(
             df,
-            {
-                "deleted_rows": deleted_rows,
-                "added_rows": added_rows,
-                "edited_rows": edited_rows,
-            },
+            DataEditorState(
+                {
+                    "deleted_rows": deleted_rows,
+                    "added_rows": added_rows,
+                    "edited_rows": edited_rows,
+                }
+            ),
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
@@ -535,6 +823,202 @@ class DataEditorUtilTest(unittest.TestCase):
         assert df["col2"].tolist() == expected_col2_values
 
 
+class DataEditorSignatureTest(unittest.TestCase):
+    def test_signature_stable_when_only_values_change(self):
+        df1 = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+        df2 = pd.DataFrame({"a": [10, 20], "b": ["foo", "bar"]})
+
+        assert _get_data_editor_signature(df1) == _get_data_editor_signature(df2)
+
+    @parameterized.expand(
+        [
+            ("column_name", pd.DataFrame({"renamed": [1, 2]})),
+            ("arrow_type", pd.DataFrame({"a": [1.0, 2.5]})),
+            ("index_type", pd.DataFrame({"a": [1, 2]}, index=["x", "y"])),
+            ("row_count", pd.DataFrame({"a": [1, 2, 3]})),
+        ]
+    )
+    def test_signature_changes_for_schema_changes(
+        self, _name: str, changed_df: pd.DataFrame
+    ):
+        df = pd.DataFrame({"a": [1, 2]})
+
+        assert _get_data_editor_signature(df) != _get_data_editor_signature(changed_df)
+
+    @parameterized.expand(
+        [
+            (False, True),
+            (False, ["a"]),
+            (["a"], ["b"]),
+        ]
+    )
+    def test_signature_changes_for_disabled_config(
+        self, disabled1: bool | list[str], disabled2: bool | list[str]
+    ):
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(
+            df, disabled=disabled1
+        ) != _get_data_editor_signature(df, disabled=disabled2)
+
+    def test_signature_stable_for_disabled_false_and_empty_list(self):
+        """An empty ``disabled`` list means the same as ``disabled=False``
+        (nothing disabled), so both must produce the same signature to avoid
+        needless widget resets when toggling between them."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(
+            df, disabled=False
+        ) == _get_data_editor_signature(df, disabled=[])
+
+    def test_signature_changes_when_column_disabled_via_config(self):
+        """A column disabled via column_config must change the signature even
+        when the top-level ``disabled`` argument is unchanged."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(df) != _get_data_editor_signature(
+            df, disabled_columns=("a",)
+        )
+
+    def test_signature_changes_when_disabled_column_set_changes(self):
+        """Changing which columns are disabled via config must change the
+        signature."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        assert _get_data_editor_signature(
+            df, disabled_columns=("a",)
+        ) != _get_data_editor_signature(df, disabled_columns=("b",))
+
+    def test_signature_can_exclude_row_count(self):
+        df1 = pd.DataFrame({"a": [1, 2]})
+        df2 = pd.DataFrame({"a": [1, 2, 3]})
+
+        assert _get_data_editor_signature(
+            df1, include_row_count=False
+        ) == _get_data_editor_signature(df2, include_row_count=False)
+
+    def test_signature_hashes_meaningful_index_values(self):
+        df = pd.DataFrame({"a": [1, 2, 3]}, index=["x", "y", "z"])
+        reordered_df = df.iloc[::-1]
+
+        assert _get_data_editor_signature(df) != _get_data_editor_signature(
+            reordered_df
+        )
+
+    def test_signature_ignores_default_range_index_values(self):
+        df1 = pd.DataFrame({"a": [1, 2]})
+        df2 = pd.DataFrame({"a": [10, 20]})
+
+        assert _get_data_editor_signature(df1) == _get_data_editor_signature(df2)
+
+    def test_signature_distinguishes_column_name_boundaries(self):
+        """Column names that concatenate to the same characters but are split
+        differently must yield different signatures, so adjacent names cannot be
+        silently merged across their boundary."""
+        df1 = pd.DataFrame([[1, 2]], columns=["a", "bc"])
+        df2 = pd.DataFrame([[1, 2]], columns=["ab", "c"])
+
+        assert _get_data_editor_signature(df1) != _get_data_editor_signature(df2)
+
+
+class DataEditorStableIdTest(DeltaGeneratorTestCase):
+    def _get_id(self, df: pd.DataFrame, **kwargs: Any) -> str:
+        # Patch element ID registration so the same key can be reused across
+        # multiple calls within a single test without raising a duplicate error.
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.data_editor(df, **kwargs)
+        return self.get_delta_from_queue().new_element.dataframe.id
+
+    def test_keyed_fixed_editor_id_stable_when_only_values_change(self):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2], "b": ["x", "y"]}), key="editor")
+        id2 = self._get_id(
+            pd.DataFrame({"a": [10, 20], "b": ["foo", "bar"]}), key="editor"
+        )
+
+        assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("columns", pd.DataFrame({"renamed": [1, 2]})),
+            ("dtypes", pd.DataFrame({"a": [1.0, 2.0]})),
+            ("row_count", pd.DataFrame({"a": [1, 2, 3]})),
+        ]
+    )
+    def test_keyed_fixed_editor_id_changes_for_schema_changes(
+        self, _name: str, changed_df: pd.DataFrame
+    ):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2]}), key="editor")
+        id2 = self._get_id(changed_df, key="editor")
+
+        assert id1 != id2
+
+    def test_keyed_fixed_editor_id_changes_when_column_config_disables_column(self):
+        """Disabling a column via column_config must reset the widget identity
+        so pending edits to the now read-only column do not survive."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        id1 = self._get_id(df, key="editor")
+        id2 = self._get_id(
+            df,
+            key="editor",
+            column_config={"a": st.column_config.Column(disabled=True)},
+        )
+
+        assert id1 != id2
+
+    def test_keyed_fixed_editor_id_ignores_cosmetic_params(self):
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        id1 = self._get_id(
+            df,
+            key="editor",
+            width=300,
+            height=200,
+            column_order=["a", "b"],
+            column_config={"a": "A"},
+            row_height=25,
+            placeholder="Empty",
+        )
+        id2 = self._get_id(
+            df,
+            key="editor",
+            width=500,
+            height=400,
+            column_order=["b", "a"],
+            column_config={"a": "Renamed A"},
+            row_height=35,
+            placeholder="Nothing here",
+        )
+
+        assert id1 == id2
+
+    def test_unkeyed_editor_id_changes_when_values_change(self):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2]}))
+        id2 = self._get_id(pd.DataFrame({"a": [10, 20]}))
+
+        assert id1 != id2
+
+    @parameterized.expand(["dynamic", "add", "delete"])
+    def test_keyed_non_fixed_editor_id_changes_when_values_change(self, num_rows: str):
+        id1 = self._get_id(pd.DataFrame({"a": [1, 2]}), key="editor", num_rows=num_rows)
+        id2 = self._get_id(
+            pd.DataFrame({"a": [10, 20]}), key="editor", num_rows=num_rows
+        )
+
+        assert id1 != id2
+
+    def test_keyed_editor_id_changes_when_num_rows_mode_changes(self):
+        df = pd.DataFrame({"a": [1, 2]})
+
+        id1 = self._get_id(df, key="editor", num_rows="fixed")
+        id2 = self._get_id(df, key="editor", num_rows="dynamic")
+
+        assert id1 != id2
+
+
 class DataEditorTest(DeltaGeneratorTestCase):
     def test_default_params(self):
         """Test that it can be called with a dataframe."""
@@ -543,8 +1027,10 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         # Get the element from the queue
         el = self.get_delta_from_queue().new_element
-        proto = el.arrow_data_frame
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        proto = el.dataframe
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )
 
         # Test default width configuration (should be 'stretch')
         assert (
@@ -554,8 +1040,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert el.width_config.use_stretch is True
 
         # Test other default values
-        assert proto.height == 0
-        assert proto.editing_mode == ArrowProto.EditingMode.FIXED
+        assert proto.editing_mode == DataframeProto.EditingMode.FIXED
         assert proto.selection_mode == []
         assert not proto.disabled
         assert proto.column_order == []
@@ -572,14 +1057,14 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that it can be called with disabled=True param."""
         st.data_editor(pd.DataFrame(), disabled=True)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.disabled
 
     def test_just_disabled_false(self):
         """Test that it can be called with disabled=False param."""
         st.data_editor(pd.DataFrame(), disabled=False)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert not proto.disabled
 
     def test_just_width_height(self):
@@ -599,39 +1084,40 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert el.height_config.WhichOneof("height_spec") == "pixel_height"
         assert el.height_config.pixel_height == 400
 
-    def test_num_rows_fixed(self):
-        """Test that it can be called with num_rows fixed."""
-        st.data_editor(pd.DataFrame(), num_rows="fixed")
+    @parameterized.expand(
+        [
+            ("fixed", DataframeProto.EditingMode.FIXED),
+            ("dynamic", DataframeProto.EditingMode.DYNAMIC),
+            ("add", DataframeProto.EditingMode.ADD_ONLY),
+            ("delete", DataframeProto.EditingMode.DELETE_ONLY),
+        ]
+    )
+    def test_num_rows_parameter(self, num_rows_value: str, expected_mode: int):
+        """Test that it can be called with the given num_rows value."""
+        st.data_editor(pd.DataFrame(), num_rows=num_rows_value)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.editing_mode == ArrowProto.EditingMode.FIXED
-
-    def test_num_rows_dynamic(self):
-        """Test that it can be called with num_rows dynamic."""
-        st.data_editor(pd.DataFrame(), num_rows="dynamic")
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.editing_mode == ArrowProto.EditingMode.DYNAMIC
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.editing_mode == expected_mode
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
         st.data_editor(pd.DataFrame(), column_order=["a", "b"])
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.column_order == ["a", "b"]
 
     def test_row_height_parameter(self):
         """Test that it can be called with row_height."""
         st.data_editor(pd.DataFrame(), row_height=100)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.row_height == 100
 
     def test_placeholder_parameter(self):
         """Test that it can be called with placeholder."""
         st.data_editor(pd.DataFrame(), placeholder="N/A")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "N/A"
 
     def test_just_use_container_width(self):
@@ -697,7 +1183,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         st.data_editor(data_df, disabled=["a", "b"])
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert not proto.disabled
         assert proto.columns == json.dumps(
             {"a": {"disabled": True}, "b": {"disabled": True}}
@@ -707,7 +1193,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that form id is marshalled correctly outside of a form."""
         st.data_editor(pd.DataFrame())
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.form_id == ""
 
     def test_hide_index_true(self):
@@ -721,7 +1207,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         st.data_editor(data_df, hide_index=True)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
 
     def test_hide_index_false(self):
@@ -735,7 +1221,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         st.data_editor(data_df, hide_index=False)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": False}})
 
     @patch("streamlit.elements.widgets.data_editor._LOGGER")
@@ -750,7 +1236,37 @@ class DataEditorTest(DeltaGeneratorTestCase):
         mock_logger.warning.assert_called_once()
         warning_message = mock_logger.warning.call_args[0][0]
         assert "hide_index=True" in warning_message
-        assert "num_rows='dynamic'" in warning_message
+        # The warning message includes the mode via a format placeholder
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_add_only_non_range_index_logs_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with add-only rows and non-range index logs a warning."""
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="add")
+
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "hide_index=True" in warning_message
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_delete_only_non_range_index_no_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with delete-only mode does not log a warning.
+
+        Unlike dynamic and add modes, delete-only mode doesn't need index values
+        for adding rows, so hiding the index should work without issues.
+        """
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="delete")
+
+        mock_logger.warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -762,7 +1278,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
-        dataframe_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
+        dataframe_proto = self.get_delta_from_queue(1).new_element.dataframe
         assert dataframe_proto.form_id == form_proto.form.form_id
 
     def test_with_dataframe_data(self):
@@ -777,8 +1293,10 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         return_df = st.data_editor(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        proto = self.get_delta_from_queue().new_element.dataframe
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )
         pd.testing.assert_frame_equal(return_df, df)
 
     @parameterized.expand(SHARED_TEST_CASES)
@@ -796,16 +1314,24 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         return_data = st.data_editor(input_data)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.data)
+        proto = self.get_delta_from_queue().new_element.dataframe
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
         assert reconstructed_df.shape[0] == metadata.expected_rows
         assert reconstructed_df.shape[1] == metadata.expected_cols
 
-        assert type(return_data) is (
+        expected_type = (
             type(input_data)
             if metadata.expected_type is None
             else metadata.expected_type
         )
+        # For pyarrow arrays, use isinstance check since pandas 3.x may return
+        # LargeStringArray instead of StringArray for string columns
+        if metadata.expected_data_format == DataFormat.PYARROW_ARRAY:
+            import pyarrow as pa
+
+            assert isinstance(return_data, pa.Array)
+        else:
+            assert type(return_data) is expected_type
 
         if isinstance(return_data, pd.DataFrame):
             assert return_data.shape[0] == metadata.expected_rows
@@ -843,7 +1369,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         )
         st.data_editor(data_df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         columns_config = json.loads(proto.columns)
 
         assert "a" not in columns_config
@@ -975,9 +1501,9 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         return_df = st.data_editor(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.data), return_df
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), return_df
         )
         assert return_df.columns.to_list() == ["2_c1", "3_c2", "4_c3"]
 
@@ -992,27 +1518,27 @@ class DataEditorTest(DeltaGeneratorTestCase):
         styler.highlight_max(axis=None)
         st.data_editor(styler, key="styler_editor")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert (
-            proto.styler.styles
-            == "#T_29028a0632_row1_col2 { background-color: yellow }"
+            proto.arrow_data.styler.styles
+            == "#T_be55047acf_row1_col2 { background-color: yellow }"
         )
 
         # Check that different delta paths lead to different element ids
         st.container().data_editor(styler, width=99)
         # delta path is: [0, 1, 0]
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert (
-            proto.styler.styles
-            == "#T_e94cd2b42e_row1_col2 { background-color: yellow }"
+            proto.arrow_data.styler.styles
+            == "#T_f74f894054_row1_col2 { background-color: yellow }"
         )
 
         st.container().container().data_editor(styler, width=100)
         # delta path is: [0, 2, 0, 0]
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert (
-            proto.styler.styles
-            == "#T_9e33af1e69_row1_col2 { background-color: yellow }"
+            proto.arrow_data.styler.styles
+            == "#T_8b1f1a9d3a_row1_col2 { background-color: yellow }"
         )
 
     def test_duplicate_column_names_raise_exception(self):
@@ -1055,7 +1581,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.data_editor(pd.DataFrame()))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

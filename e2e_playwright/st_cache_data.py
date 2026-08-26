@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -99,3 +99,41 @@ def image():
 
 if st.checkbox("Show image", True):
     image()
+
+
+# Keep the background-refresh scenario opt-in so its warning and display output don't
+# interfere with the other cache_data tests in this app.
+_BACKGROUND_REFRESH_TTL_SECONDS = 8
+
+
+@st.cache_resource(show_spinner=False)
+def background_refresh_execution_counter() -> dict[str, int]:
+    return {"count": 0}
+
+
+@st.cache_data(
+    ttl=_BACKGROUND_REFRESH_TTL_SECONDS,
+    refresh_mode="background",
+    show_spinner=False,
+)
+def background_refresh_value() -> int:
+    counter = background_refresh_execution_counter()
+    counter["count"] += 1
+    return counter["count"]
+
+
+@st.cache_data(
+    ttl=_BACKGROUND_REFRESH_TTL_SECONDS,
+    refresh_mode="background",
+    show_spinner=False,
+)
+def background_refresh_with_display() -> None:
+    st.markdown("Inside background cache_data function")
+
+
+if st.button("Run cache_data background refresh test"):
+    st.session_state.run_cache_data_background_refresh_test = True
+
+if st.session_state.get("run_cache_data_background_refresh_test", False):
+    st.markdown(f"Background refresh value: {background_refresh_value()}")
+    background_refresh_with_display()

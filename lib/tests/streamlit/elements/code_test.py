@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -216,6 +216,19 @@ class CodeElement(DeltaGeneratorTestCase):
         """Test st.code with content height."""
         code = "print('My string = %d' % my_value)"
         st.code(code, height="content")
+
+        element = self.get_delta_from_queue().new_element
+        assert element.code.code_text == code
+        assert (
+            element.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert element.height_config.use_content
+
+    def test_st_code_with_height_none_defaults_to_content(self):
+        """Test st.code with an explicit height=None falls back to content height."""
+        code = "print('My string = %d' % my_value)"
+        st.code(code, height=None)
 
         element = self.get_delta_from_queue().new_element
         assert element.code.code_text == code

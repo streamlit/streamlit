@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -29,14 +28,15 @@ from typing_extensions import Never
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
+    SelectWidgetFilterMode,
     create_mappings,
-    index_,
     maybe_coerce_enum,
+    resolve_value_against_options,
+    validate_select_widget_filter_mode,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -50,20 +50,21 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     get_session_state,
     register_widget,
 )
-from streamlit.type_util import (
-    check_python_comparable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -78,6 +79,7 @@ class SelectboxSerde(Generic[T]):
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
@@ -86,13 +88,13 @@ class SelectboxSerde(Generic[T]):
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         """Initialize the SelectboxSerde.
 
         We do not store an option_to_formatted_option mapping because the generic
         options might not be hashable, which would raise a RuntimeError. So we do
         two lookups: option -> index -> formatted_option[index].
-
 
         Parameters
         ----------
@@ -107,33 +109,53 @@ class SelectboxSerde(Generic[T]):
         default_option_index : int or None, optional
             The index of the default option to use when no selection is made.
             If None, no default option is selected.
+        format_func : Callable[[Any], str], optional
+            Function to format options for comparison. Used to compare values by their
+            string representation instead of using == directly. This is necessary because
+            widget values are deepcopied, and for custom classes without __eq__, the
+            deepcopied instances would fail identity comparison.
         """
 
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
+        self.format_func = format_func
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
             return None
-        if len(self.options) == 0:
-            return ""
+        # Note: We don't short-circuit for empty options here because
+        # accept_new_options=True allows user-entered values even with no options.
+        # The normal flow below handles this correctly.
 
-        # we don't check for isinstance(v, str) because this could lead to wrong
-        # results if v is a string that is part of the options itself as it would
-        # skip formatting in that case
+        # Use format_func to find the formatted option instead of using
+        # index_(self.options, v) which relies on == comparison. This is necessary
+        # because widget values are deepcopied, and for custom classes without
+        # __eq__, the deepcopied instances would fail identity comparison.
         try:
-            option_index = index_(self.options, v)
-            return self.formatted_options[option_index]
-        except ValueError:
-            # we know that v is a string, otherwise it would have been found in the
-            # options
-            return cast("str", v)
+            formatted_value = self.format_func(v)
+        except Exception:
+            # format_func failed (e.g., v is a string but format_func expects
+            # an object with specific attributes). Use str(v) to ensure we return
+            # a proper string, not the original object. This handles both cases:
+            # - v is already a string -> str(v) returns it unchanged
+            # - v is a custom object -> str(v) gives its string representation
+            return str(v)
+
+        if formatted_value in self.formatted_option_to_option_index:
+            return formatted_value
+        # Value not found in options - return the formatted string (not the original
+        # object) to maintain type consistency since serialize() must return str|None
+        return formatted_value
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
-        # check if the option is pointing to a generic option type T,
-        # otherwise return the option itself
+        # Note: We don't short-circuit for empty options here because
+        # accept_new_options=True allows user-entered values even with no options.
+        # The normal flow below handles this: ui_value not in options -> return ui_value.
+
+        # Check if the option is pointing to a generic option type T,
+        # otherwise return the option itself.
         if ui_value is None:
             return (
                 self.options[self.default_option_index]
@@ -163,7 +185,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
 
     @overload
@@ -183,7 +208,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @overload
@@ -203,7 +231,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str: ...
 
     @overload
@@ -223,7 +254,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None: ...
 
     @overload
@@ -243,7 +277,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
     @overload
@@ -263,7 +300,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
     @gather_metrics("selectbox")
@@ -283,7 +323,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | str | None:
         r"""Display a select widget.
 
@@ -297,9 +340,9 @@ class SelectboxMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -328,10 +371,24 @@ class SelectboxMixin:
             shown for that option. This has no impact on the return value of
             the command.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``accept_new_options`` resets the widget even when
+               a key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -387,6 +444,18 @@ class SelectboxMixin:
             Streamlit will use a case-insensitive match from ``options`` before
             adding a new item.
 
+        filter_mode : "fuzzy", "contains", "prefix", or None
+            The matching mode used to filter options while the user types.
+            If this is ``"fuzzy"`` (default), options are matched by in-order
+            subsequence and sorted by match score. If this is ``"contains"``,
+            options are matched by case-insensitive substring. If this is
+            ``"prefix"``, options are matched by case-insensitive prefix. If
+            this is ``None``, typing is disabled and the options are not
+            filtered.
+
+            ``filter_mode=None`` is incompatible with
+            ``accept_new_options=True``.
+
         width : "stretch" or int
             The width of the selectbox widget. This can be one of the
             following:
@@ -397,6 +466,40 @@ class SelectboxMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. If ``index`` is ``None``, an empty query
+            parameter (e.g., ``?my_key=``) clears the widget.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -481,7 +584,10 @@ class SelectboxMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
+            bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -501,7 +607,10 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)
@@ -512,14 +621,16 @@ class SelectboxMixin:
             on_change,
             default_value=None if index == 0 else index,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if not isinstance(index, int) and index is not None:
-            raise StreamlitAPIException(
-                f"Selectbox Value has invalid type: {type(index).__name__}"
+            raise StreamlitInvalidParameterTypeError(
+                "index",
+                type(index).__name__,
+                ["int", "None"],
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
@@ -535,6 +646,12 @@ class SelectboxMixin:
         if placeholder == "":
             placeholder = " "
 
+        proto_filter_mode = validate_select_widget_filter_mode(
+            filter_mode,
+            accept_new_options=accept_new_options,
+            command="st.selectbox",
+        )
+
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
         )
@@ -543,11 +660,9 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             # Treat the provided key as the main identity. Only include
-            # the options and accept_new_options in the identity computation
-            # as those can invalidate the current selection.
-            # Changes to format_func also invalidate the current selection,
-            # but this is already handled via the `options` parameter below:
-            key_as_main_identity={"options", "accept_new_options"},
+            # accept_new_options in the identity computation because it can
+            # invalidate the current selection and is complex to support.
+            key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
             options=formatted_options,
@@ -555,6 +670,7 @@ class SelectboxMixin:
             help=help,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
         )
 
@@ -575,15 +691,21 @@ class SelectboxMixin:
             label_visibility
         )
         selectbox_proto.accept_new_options = accept_new_options
+        selectbox_proto.filter_mode = proto_filter_mode
 
         if help is not None:
-            selectbox_proto.help = dedent(help)
+            selectbox_proto.help = to_help_str(help)
+
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            selectbox_proto.query_param_key = str(key)
 
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
+            format_func=format_func,
         )
         widget_state = register_widget(
             selectbox_proto.id,
@@ -594,24 +716,55 @@ class SelectboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
+            bind=bind,
+            persist_state=persist_state,
+            # Clearable when index=None: the widget can be in an empty state,
+            # so ?key= (empty URL param) should clear the widget to None.
+            clearable=(index is None),
+            # Pass formatted_options so _seed_widget_from_url can reject
+            # invalid option strings from URLs. Not passed when
+            # accept_new_options=True since any string is valid.
+            formatted_options=None if accept_new_options else formatted_options,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
-        if widget_state.value_changed:
-            serialized_value = serde.serialize(widget_state.value)
+        if accept_new_options:
+            current_value = widget_state.value
+            value_needs_reset = False
+        else:
+            # Reset the selection only if the stored value no longer matches any
+            # option; see resolve_value_against_options for the format_func and
+            # wire-label fallback logic.
+            current_value, value_needs_reset = resolve_value_against_options(
+                widget_state.value,
+                opt,
+                formatted_option_to_option_index,
+                index,
+                key,
+                format_func,
+                widget_state.incoming_serialized_value,
+            )
+
+        if value_needs_reset or widget_state.value_changed:
+            serialized_value = serde.serialize(current_value)
             if serialized_value is not None:
                 selectbox_proto.raw_value = serialized_value
             selectbox_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
-        self.dg._enqueue("selectbox", selectbox_proto, layout_config=layout_config)
-        return widget_state.value
+        self.dg._enqueue(
+            "selectbox",
+            selectbox_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

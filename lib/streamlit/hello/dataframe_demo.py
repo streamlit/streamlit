@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ def data_frame_demo() -> None:
     def get_un_data() -> pd.DataFrame:
         aws_bucket_url = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
         df = pd.read_csv(aws_bucket_url + "/agri.csv.gz")
-        return df.set_index("Region")
+        return df.set_index("Region")  # type: ignore[no-any-return, unused-ignore]
 
     try:
         df = get_un_data()
@@ -54,7 +54,7 @@ def data_frame_demo() -> None:
                     color="Region:N",
                 )
             )
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width="stretch")
     except URLError as e:
         st.error(f"This demo requires internet access. Connection error: {e.reason}")
 

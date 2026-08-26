@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,25 @@
  */
 
 import { Quiver } from "~lib/dataframes/Quiver"
-import {
-  CATEGORICAL,
-  DATE,
-  DATETIME,
-  DATETIMETZ,
-  FLOAT64,
-  INT64,
-  RANGE,
-  UINT64,
-  UNICODE,
-} from "~lib/mocks/arrow"
+import { CATEGORICAL } from "~lib/mocks/arrow/types/categorical"
+import { DATE, DATETIME, DATETIMETZ } from "~lib/mocks/arrow/types/datetime"
+import { FLOAT64 } from "~lib/mocks/arrow/types/float64"
+import { INT64 } from "~lib/mocks/arrow/types/int64"
+import { RANGE } from "~lib/mocks/arrow/types/range"
+import { UINT64 } from "~lib/mocks/arrow/types/uint64"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
-import { getDataArray } from "./arrowUtils"
+import {
+  getDataArray,
+  getDataArrays,
+  getDataSets,
+  getInlineData,
+  WrappedNamedDataset,
+} from "./arrowUtils"
 
 describe("Types of dataframe indexes as x axis", () => {
   describe("Supported", () => {
-    test("datetimetz", () => {
+    it("datetimetz", () => {
       const mockElement = { data: DATETIMETZ }
       const q = new Quiver(mockElement)
 
@@ -57,7 +59,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("date", () => {
+    it("date", () => {
       const mockElement = { data: DATE }
       const q = new Quiver(mockElement)
 
@@ -75,7 +77,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("datetime", () => {
+    it("datetime", () => {
       const mockElement = { data: DATETIME }
       const q = new Quiver(mockElement)
 
@@ -93,7 +95,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("float64", () => {
+    it("float64", () => {
       const mockElement = { data: FLOAT64 }
       const q = new Quiver(mockElement)
 
@@ -103,7 +105,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("int64", () => {
+    it("int64", () => {
       const mockElement = { data: INT64 }
       const q = new Quiver(mockElement)
       expect(getDataArray(q)).toEqual([
@@ -120,7 +122,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("range", () => {
+    it("range", () => {
       const mockElement = { data: RANGE }
       const q = new Quiver(mockElement)
 
@@ -130,7 +132,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("uint64", () => {
+    it("uint64", () => {
       const mockElement = { data: UINT64 }
       const q = new Quiver(mockElement)
       expect(getDataArray(q)).toEqual([
@@ -149,7 +151,7 @@ describe("Types of dataframe indexes as x axis", () => {
   })
 
   describe("Unsupported", () => {
-    test("categorical", () => {
+    it("categorical", () => {
       const mockElement = { data: CATEGORICAL }
       const q = new Quiver(mockElement)
       expect(getDataArray(q)).toEqual([
@@ -158,7 +160,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("unicode", () => {
+    it("unicode", () => {
       const mockElement = { data: UNICODE }
       const q = new Quiver(mockElement)
 
@@ -167,5 +169,75 @@ describe("Types of dataframe indexes as x axis", () => {
         { c1: "bar", c2: "2" },
       ])
     })
+  })
+})
+
+describe("getInlineData", () => {
+  it("returns data array for valid Quiver data", () => {
+    const mockElement = { data: UNICODE }
+    const q = new Quiver(mockElement)
+
+    expect(getInlineData(q)).toEqual([
+      { c1: "foo", c2: "1" },
+      { c1: "bar", c2: "2" },
+    ])
+  })
+
+  it("returns null when quiverData is null", () => {
+    expect(getInlineData(null)).toBeNull()
+  })
+})
+
+describe("getDataSets", () => {
+  it("returns null for empty datasets array", () => {
+    expect(getDataSets([])).toBeNull()
+  })
+
+  it("returns mapping of named datasets", () => {
+    const q1 = new Quiver({ data: UNICODE })
+    const q2 = new Quiver({ data: INT64 })
+
+    const datasets: WrappedNamedDataset[] = [
+      { name: "dataset1", hasName: true, data: q1 },
+      { name: "dataset2", hasName: true, data: q2 },
+    ]
+
+    const result = getDataSets(datasets)
+    expect(result).not.toBeNull()
+    expect(result?.dataset1).toBe(q1)
+    expect(result?.dataset2).toBe(q2)
+  })
+
+  it("handles datasets without explicit names", () => {
+    const q = new Quiver({ data: UNICODE })
+
+    const datasets: WrappedNamedDataset[] = [
+      { name: null, hasName: false, data: q },
+    ]
+
+    const result = getDataSets(datasets)
+    expect(result).not.toBeNull()
+    expect(result?.null).toBe(q)
+  })
+})
+
+describe("getDataArrays", () => {
+  it("returns null for empty datasets", () => {
+    expect(getDataArrays([])).toBeNull()
+  })
+
+  it("returns data arrays for named datasets", () => {
+    const q = new Quiver({ data: UNICODE })
+
+    const datasets: WrappedNamedDataset[] = [
+      { name: "myData", hasName: true, data: q },
+    ]
+
+    const result = getDataArrays(datasets)
+    expect(result).not.toBeNull()
+    expect(result?.myData).toEqual([
+      { c1: "foo", c2: "1" },
+      { c1: "bar", c2: "2" },
+    ])
   })
 })

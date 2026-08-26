@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { Mock, Mocked } from "vitest"
 
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -47,7 +47,7 @@ vi.mock("./useVegaLiteSelections", () => ({
 }))
 
 // Mock "useFormClearHelper" to ensure it is called:
-vi.mock("~lib/components/widgets/Form", () => ({
+vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
   __esModule: true,
   useFormClearHelper: vi.fn(),
 }))
@@ -82,8 +82,7 @@ describe("useVegaEmbed hook", () => {
   let mockWidgetMgr: Mocked<WidgetStateManager>
   let mockVegaView: Mocked<VegaView>
   let mockEmbedReturn: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    vgSpec: any
+    vgSpec: Record<string, unknown>
     view: Mocked<VegaView>
     finalize: () => void
   }
@@ -99,6 +98,9 @@ describe("useVegaEmbed hook", () => {
       setState: vi.fn().mockReturnThis(),
       data: vi.fn().mockReturnThis(),
       remove: vi.fn().mockReturnThis(),
+      width: vi.fn().mockReturnThis(),
+      height: vi.fn().mockReturnThis(),
+      toImageURL: vi.fn().mockResolvedValue("data:image/png;base64,mock"),
     } as unknown as Mocked<VegaView>
 
     // vega-embed returns { vgSpec, view, finalize }
@@ -115,8 +117,7 @@ describe("useVegaEmbed hook", () => {
     ;(useVegaLiteSelections as Mock).mockReturnValue({
       maybeConfigureSelections: vi
         .fn()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        .mockImplementation((view: any) => view),
+        .mockImplementation((view: VegaView) => view),
       onFormCleared: vi.fn(),
     })
 
@@ -133,12 +134,16 @@ describe("useVegaEmbed hook", () => {
 
   it("creates a new Vega view via embed, finalizes existing view, inserts data, and returns a VegaView", async () => {
     const containerRef = { current: null }
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     // mount hook
     const { result } = renderHook(() =>
@@ -168,7 +173,7 @@ describe("useVegaEmbed hook", () => {
         expr: expressionInterpreter,
         tooltip: { disableDefaultStyle: true },
         defaultStyle: false,
-        forceActionsMenu: true,
+        actions: false,
       }
     )
 
@@ -193,12 +198,16 @@ describe("useVegaEmbed hook", () => {
 
   it("finalizes old view if one exists before creating a new one", async () => {
     const containerRef = { current: null }
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     // mount hook
     const { result } = renderHook(() =>
@@ -233,12 +242,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("throws an error if containerRef is missing", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
@@ -252,12 +265,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("finalizeView finalizes and clears references", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
     )
@@ -289,12 +306,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("updateView returns null if no vegaView is present", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
     )
@@ -307,12 +328,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("updateView updates data and datasets, then runs async", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
@@ -332,8 +357,7 @@ describe("useVegaEmbed hook", () => {
       dimensions: { dataRows: 5, dataCols: 2 },
       isEmpty: () => false,
       columnTypes: { index: ["int"], data: ["int"] },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+    } as unknown as Quiver
 
     await act(async () => {
       await result.current.updateView(quiverData, [])
@@ -490,5 +514,281 @@ describe("useVegaEmbed hook", () => {
       "old",
       expect.any(Function)
     )
+  })
+
+  describe("resizeView", () => {
+    it("returns false when view is not ready", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      // View hasn't been created yet
+      const resizeResult = await result.current.resizeView(800, 600)
+      expect(resizeResult).toBe(false)
+    })
+
+    it("calls view.width(), view.height(), and view.resize().runAsync() on resize", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Clear mocks after createView to ensure we only assert resizeView calls
+      mockVegaView.width.mockClear()
+      mockVegaView.height.mockClear()
+      mockVegaView.resize.mockClear()
+      mockVegaView.runAsync.mockClear()
+
+      // Now resize
+      let resizeResult: boolean = false
+      await act(async () => {
+        resizeResult = await result.current.resizeView(800, 600)
+      })
+
+      expect(resizeResult).toBe(true)
+      expect(mockVegaView.width).toHaveBeenCalledWith(800)
+      expect(mockVegaView.height).toHaveBeenCalledWith(600)
+      expect(mockVegaView.resize).toHaveBeenCalled()
+    })
+
+    it("skips width/height calls for non-positive values", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Reset mocks
+      mockVegaView.width.mockClear()
+      mockVegaView.height.mockClear()
+
+      // Resize with 0 values - should skip width/height calls
+      await act(async () => {
+        await result.current.resizeView(0, 0)
+      })
+
+      expect(mockVegaView.width).not.toHaveBeenCalled()
+      expect(mockVegaView.height).not.toHaveBeenCalled()
+      expect(mockVegaView.resize).toHaveBeenCalled()
+    })
+
+    it("returns false and logs warning when resize throws an error", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Clear mocks after createView
+      mockVegaView.width.mockClear()
+      mockVegaView.height.mockClear()
+      mockVegaView.resize.mockClear()
+      mockVegaView.runAsync.mockClear()
+
+      // Make resize throw an error
+      const resizeError = new Error("Resize failed")
+      mockVegaView.resize.mockImplementation(() => {
+        throw resizeError
+      })
+
+      let resizeResult: boolean = true
+      await act(async () => {
+        resizeResult = await result.current.resizeView(800, 600)
+      })
+
+      // Verify resizeView catches the error and returns false
+      expect(resizeResult).toBe(false)
+      // The width was set before resize threw
+      expect(mockVegaView.width).toHaveBeenCalledWith(800)
+    })
+  })
+
+  describe("isViewReady", () => {
+    it("is false before view is created", () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      expect(result.current.isViewReady).toBe(false)
+    })
+
+    it("is true after view is created", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result, rerender } = renderHook(() =>
+        useVegaEmbed(element, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Force a re-render to pick up the state change from setIsCreatingView(false)
+      rerender()
+
+      expect(result.current.isViewReady).toBe(true)
+    })
+  })
+
+  describe("exportToPng", () => {
+    it("returns null if no vegaView is present", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      await expect(result.current.exportToPng()).resolves.toBeNull()
+    })
+
+    it("exports the vega view as a PNG with at least 2x scale", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const originalDpr = window.devicePixelRatio
+      Object.defineProperty(window, "devicePixelRatio", {
+        value: 1,
+        configurable: true,
+      })
+
+      try {
+        const { result } = renderHook(() =>
+          useVegaEmbed(element, mockWidgetMgr)
+        )
+
+        const containerRef = { current: document.createElement("div") }
+        await act(async () => {
+          await result.current.createView(containerRef, {})
+        })
+
+        await expect(result.current.exportToPng()).resolves.toBe(
+          "data:image/png;base64,mock"
+        )
+        expect(mockVegaView.toImageURL).toHaveBeenCalledWith("png", 2)
+      } finally {
+        Object.defineProperty(window, "devicePixelRatio", {
+          value: originalDpr,
+          configurable: true,
+        })
+      }
+    })
+
+    it("uses window.devicePixelRatio when it exceeds 2x", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const originalDpr = window.devicePixelRatio
+      Object.defineProperty(window, "devicePixelRatio", {
+        value: 3,
+        configurable: true,
+      })
+
+      try {
+        const { result } = renderHook(() =>
+          useVegaEmbed(element, mockWidgetMgr)
+        )
+
+        const containerRef = { current: document.createElement("div") }
+        await act(async () => {
+          await result.current.createView(containerRef, {})
+        })
+
+        await result.current.exportToPng()
+        expect(mockVegaView.toImageURL).toHaveBeenCalledWith("png", 3)
+      } finally {
+        Object.defineProperty(window, "devicePixelRatio", {
+          value: originalDpr,
+          configurable: true,
+        })
+      }
+    })
   })
 })

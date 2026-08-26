@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,18 +15,16 @@
 import time
 from pathlib import Path
 
-import requests
-
 import streamlit as st
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
+CAT_AUDIO = STATIC_DIR / "cat-purr.mp3"
 
 st.header("Audio from bytes")
-url1 = "https://www.w3schools.com/html/horse.ogg"
-file = requests.get(url1).content
-st.audio(file)
+# Use a local asset so the app script does not depend on an external URL.
+st.audio(CAT_AUDIO.read_bytes(), format="audio/mpeg")
 
 st.header("Audio from URL")
 url2 = "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-and-audio-content/viper.mp3"
@@ -34,7 +32,6 @@ st.audio(url2, start_time=10, end_time=13)
 st.audio(url2, start_time=15, end_time=19, loop=True)
 
 st.header("Audio from mp3 file (str and Path)")
-CAT_AUDIO = TEST_ASSETS_DIR / "cat-purr.mp3"
 st.audio(str(CAT_AUDIO))
 st.audio(CAT_AUDIO)
 

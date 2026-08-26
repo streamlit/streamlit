@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,15 +16,45 @@ from __future__ import annotations
 
 import platform
 import re
-from re import Pattern
-from typing import Literal, cast
+from typing import Literal, Protocol, cast
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run, wait_until
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
+
+
+class LocatorContext(Protocol):
+    """A minimal DOM-query context for Playwright tests.
+
+    This is intentionally structural (duck-typed) so helpers can accept:
+    - `Page` (local mode)
+    - `FrameLocator` (external host mode; DOM is inside an iframe)
+    - `AppTarget` (our stable abstraction that forwards to `dom`)
+    - `Locator` (occasionally useful for scoped queries)
+    """
+
+    def get_by_test_id(self, test_id: str) -> Locator: ...
+
+
+def _resolve_app_root_context(locator: LocatorContext) -> LocatorContext:
+    """Resolve a context suitable for querying the app root.
+
+    If callers pass a `Locator`, we want to reset hover/focus relative to the
+    owning page rather than within the locator subtree.
+
+    Notes
+    -----
+    For iframe-hosted apps, prefer passing a `FrameLocator` (or `AppTarget`)
+    instead of a `Locator`, since a locator only provides access to the top-level
+    `Page` and cannot reliably target the iframe DOM.
+    """
+    if isinstance(locator, Locator):
+        return locator.page
+    return locator
 
 
 def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -48,7 +78,7 @@ def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
-def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a time input with the given label.
 
     Parameters
@@ -69,7 +99,49 @@ def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
-def get_datetime_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def type_time(
+    time_display: Locator, hour: str, minute: str, second: str | None = None
+) -> None:
+    """Type a time into a TimeInput's spinbutton segments.
+
+    Uses press_sequentially (key events per character) rather than fill() to
+    exercise the real keystroke handling path through React Aria's digit
+    buffering logic.
+
+    After typing, blurs the last segment so the widget commits the value
+    to the backend (commit is deferred to blur, matching st.number_input
+    semantics).
+
+    Parameters
+    ----------
+    time_display : Locator
+        The stTimeInputTimeDisplay locator containing the spinbuttons.
+
+    hour : str
+        Two-digit hour string (e.g. "08").
+
+    minute : str
+        Two-digit minute string (e.g. "45").
+
+    second : str or None
+        Two-digit second string (e.g. "30"). Only applicable when the widget
+        has sub-minute step (seconds granularity). If None, the seconds segment
+        is not interacted with.
+    """
+    spinbuttons = time_display.get_by_role("spinbutton")
+    spinbuttons.first.press_sequentially(hour)
+    spinbuttons.nth(1).press_sequentially(minute)
+    if second is not None:
+        spinbuttons.nth(2).press_sequentially(second)
+        spinbuttons.nth(2).blur()
+    else:
+        spinbuttons.nth(1).blur()
+    # Blur triggers the deferred commit to the backend.
+
+
+def get_datetime_input(
+    locator: Locator | Page, label: str | re.Pattern[str]
+) -> Locator:
     """Get a datetime input with the given label.
 
     Parameters
@@ -90,7 +162,7 @@ def get_datetime_input(locator: Locator | Page, label: str | Pattern[str]) -> Lo
     return element
 
 
-def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_camera_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a camera input with the given label.
 
     Parameters
@@ -98,7 +170,7 @@ def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     locator : Locator | Page
         The locator to search for the element.
 
-    label : str | Pattern[str]
+    label : str | re.Pattern[str]
         The label of the element to get.
 
     Returns
@@ -111,7 +183,7 @@ def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     return element
 
 
-def get_color_picker(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_color_picker(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a color picker with the given label.
 
     Parameters
@@ -132,7 +204,7 @@ def get_color_picker(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     return element
 
 
-def get_text_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_text_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a text input with the given label.
 
     Parameters
@@ -153,7 +225,7 @@ def get_text_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
-def get_text_area(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_text_area(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a text area with the given label.
 
     Parameters
@@ -174,7 +246,7 @@ def get_text_area(locator: Locator | Page, label: str | Pattern[str]) -> Locator
     return element
 
 
-def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_selectbox(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a selectbox with the given label.
 
     Parameters
@@ -195,7 +267,59 @@ def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator
     return element
 
 
-def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def select_selectbox_option(
+    locator: Locator | Page,
+    label: str | re.Pattern[str],
+    option: str,
+) -> None:
+    """Select an option from a selectbox dropdown by exact text match.
+
+    Parameters
+    ----------
+    locator : Locator or Page
+        The locator or page containing the selectbox.
+
+    label : str or Pattern[str]
+        The label of the selectbox.
+
+    option : str
+        The exact text of the option to select.
+    """
+    page = locator.page if isinstance(locator, Locator) else locator
+
+    # Wait for at least one selectbox to be visible before trying to find ours
+    page.get_by_test_id("stSelectbox").first.wait_for(state="visible")
+    selectbox = get_selectbox(locator, label)
+
+    # Type to filter the dropdown (handles virtualized lists where options
+    # may not be rendered until scrolled into view)
+    selectbox_input = selectbox.locator("input")
+
+    # Wait for the React component to be fully initialized before interacting
+    selectbox_input.wait_for(state="visible")
+    selectbox_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    # Note: this shifts focus to the first option, so the initially-selected item
+    # will not be highlighted when the dropdown first opens.
+    selectbox_input.press("ArrowDown")
+
+    # Wait for dropdown to be visible before typing
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+
+    selectbox_input.fill(option)
+
+    # Select the option by role from the filtered virtual dropdown
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    dropdown.get_by_role("option", name=option, exact=True).click()
+
+    wait_for_app_run(page)
+
+    # Verify the selection was applied (value is in the input's value attribute)
+    expect(selectbox.locator("input")).to_have_value(option)
+
+
+def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a multiselect with the given label.
 
     Parameters
@@ -213,7 +337,7 @@ def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locat
     """
     # Prefer matching the widget label exactly to avoid substring collisions
     # like "multiselect 1" also matching "multiselect 11".
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -225,7 +349,7 @@ def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locat
     return element
 
 
-def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a date input with the given label.
 
     Parameters
@@ -241,7 +365,7 @@ def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     Locator
         The element.
     """
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -253,7 +377,45 @@ def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
-def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> None:
+    """Type digits into a DateInput's segments and optionally commit.
+
+    For React Aria segmented ``st.date_input`` fields (single and range),
+    values are typed segment-by-segment into ``role="spinbutton"`` segments
+    rather than a single free-text ``<input>``.
+
+    Segment edits are buffered locally until the popover closes (the
+    commit-on-close pattern). By default this helper closes the popover via
+    Escape after typing so the value is committed to widget state — matching
+    ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
+    the popover open (e.g. for error-state tests that inspect UI before commit).
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The ``stDateInputField`` locator (the segmented field container).
+
+    *parts : str
+        Digit strings for each segment, in the same left-to-right order the
+        segments are rendered in (which follows the widget's ``format``).
+        Pass 3 parts for a single-date field, 6 for a range field (start +
+        end segments), e.g.
+        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+
+    commit : bool
+        If True (default), press Escape after typing to close the popover and
+        commit the buffered value to widget state. Set to False when you need
+        the popover to remain open (e.g. to test real-time error feedback
+        during editing).
+    """
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i, part in enumerate(parts):
+        spinbuttons.nth(i).press_sequentially(part)
+    if commit:
+        date_input_field.page.keyboard.press("Escape")
+
+
+def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a slider with the given label.
 
     Parameters
@@ -270,7 +432,7 @@ def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
         The element.
     """
     # Prefer matching the widget label exactly to avoid substring collisions
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -282,7 +444,7 @@ def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_checkbox(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 
     Parameters
@@ -303,7 +465,7 @@ def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_toggle(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_toggle(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a toggle widget with the given label.
 
     Parameters
@@ -324,7 +486,7 @@ def get_toggle(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_radio_option(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a radio button widget with the given label.
 
     Parameters
@@ -340,12 +502,12 @@ def get_radio_option(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     Locator
         The element.
     """
-    element = locator.locator('[data-baseweb="radio"]').filter(has_text=label)
+    element = locator.get_by_test_id("stRadioOption").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
 
-def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_radio(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a radio widget with the given label.
 
     Parameters
@@ -358,7 +520,7 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """
     # Prefer matching the widget label exactly to avoid substring collisions
     # similar to multiselect/date input helpers.
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -370,7 +532,7 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_image(locator: Locator | Page, caption: str | Pattern[str]) -> Locator:
+def get_image(locator: Locator | Page, caption: str | re.Pattern[str]) -> Locator:
     """Get an image element with the given caption.
 
     Parameters
@@ -394,7 +556,7 @@ def get_image(locator: Locator | Page, caption: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_button(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_button(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a button widget with the given label.
 
     Parameters
@@ -417,7 +579,7 @@ def get_button(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_popover(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a popover with the given label.
 
     Parameters
@@ -438,7 +600,7 @@ def get_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def open_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def open_popover(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Open a popover with the given label and return the popover container.
 
     Parameters
@@ -461,7 +623,7 @@ def open_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
 
 
 def get_form_submit_button(
-    locator: Locator | Page, label: str | Pattern[str]
+    locator: Locator | Page, label: str | re.Pattern[str]
 ) -> Locator:
     """Get a form submit button with the given label.
 
@@ -487,7 +649,7 @@ def get_form_submit_button(
     return element
 
 
-def get_expander(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_expander(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a expander container with the given label.
 
     Parameters
@@ -510,7 +672,7 @@ def get_expander(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_number_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_number_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a number input with the given label.
 
     Parameters
@@ -532,7 +694,7 @@ def get_number_input(locator: Locator | Page, label: str | Pattern[str]) -> Loca
 
 
 def get_markdown(
-    locator: Locator | Page, text_inside_markdown: str | Pattern[str]
+    locator: Locator | Page, text_inside_markdown: str | re.Pattern[str]
 ) -> Locator:
     """Get a markdown element with the given text inside.
 
@@ -560,7 +722,7 @@ def get_markdown(
     return markdown_element
 
 
-def get_text(locator: Locator | Page, text: str | Pattern[str]) -> Locator:
+def get_text(locator: Locator | Page, text: str | re.Pattern[str]) -> Locator:
     """Get a text element with the given text."""
     if isinstance(text, str):
         text = re.compile(text)
@@ -572,7 +734,7 @@ def get_text(locator: Locator | Page, text: str | Pattern[str]) -> Locator:
 
 
 def get_caption(
-    locator: Locator | Page, text_inside_caption: str | Pattern[str]
+    locator: Locator | Page, text_inside_caption: str | re.Pattern[str]
 ) -> Locator:
     """Get a caption element with the given text inside.
 
@@ -601,7 +763,7 @@ def get_caption(
 
 
 def get_heading(
-    locator: Locator | Page, text_inside_heading: str | Pattern[str]
+    locator: Locator | Page, text_inside_heading: str | re.Pattern[str]
 ) -> Locator:
     """Get a heading element with the given text inside.
 
@@ -635,7 +797,7 @@ def get_heading(
 def expect_prefixed_markdown(
     locator: FrameLocator | Locator | Page,
     expected_prefix: str,
-    expected_markdown: str | Pattern[str],
+    expected_markdown: str | re.Pattern[str],
     exact_match: bool = False,
 ) -> None:
     """Find the markdown with the prefix and then ensure that the
@@ -668,8 +830,8 @@ def expect_prefixed_markdown(
         has_text=expected_prefix
     )
     if exact_match:
-        text_to_match: str | Pattern[str]
-        if isinstance(expected_markdown, Pattern):
+        text_to_match: str | re.Pattern[str]
+        if isinstance(expected_markdown, re.Pattern):
             # Recompile the pattern with the prefix:
             text_to_match = re.compile(f"{expected_prefix} {expected_markdown.pattern}")
         else:
@@ -682,7 +844,7 @@ def expect_prefixed_markdown(
 
 def expect_markdown(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | re.Pattern[str],
 ) -> None:
     """Expect markdown with the given message to be displayed in the app.
 
@@ -704,7 +866,7 @@ def expect_markdown(
 
 def expect_text(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | re.Pattern[str],
 ) -> None:
     """Expect a st.text element with the given message to be visible.
 
@@ -722,7 +884,7 @@ def expect_text(
 
 def expect_exception(
     locator: Locator | Page,
-    expected_message: str | Pattern[str] | None = None,
+    expected_message: str | re.Pattern[str] | None = None,
 ) -> None:
     """Expect an exception to be displayed in the app.
 
@@ -751,7 +913,7 @@ def expect_no_exception(locator: Locator | Page) -> None:
 
 def expect_warning(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | re.Pattern[str],
 ) -> None:
     """Expect a warning to be displayed in the app.
 
@@ -769,7 +931,7 @@ def expect_warning(
 
 def click_checkbox(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a checkbox with the given label
     and wait for the app to run.
@@ -783,14 +945,16 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    # Click the checkbox label to be more reliable:
-    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
+    checkbox_element.locator("label").first.click()
     wait_for_app_run(page)
+    # Blur the active element after the app run so that focus rings from this
+    # interaction don't bleed into subsequent snapshot assertions.
+    page.evaluate("document.activeElement?.blur()")
 
 
 def click_toggle(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a toggle with the given label
     and wait for the app to run.
@@ -808,7 +972,7 @@ def click_toggle(
 
 def fill_number_input(
     locator: Locator | Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
     value: int,
 ) -> None:
     """Set the value of a number input.
@@ -834,8 +998,8 @@ def fill_number_input(
 
 def select_radio_option(
     page: Page,
-    option: str | Pattern[str],
-    label: str | Pattern[str] | None = None,
+    option: str | re.Pattern[str],
+    label: str | re.Pattern[str] | None = None,
 ) -> None:
     """Click a radio option with the given option label
     and wait for the app to run.
@@ -864,7 +1028,7 @@ def select_radio_option(
 
 def click_button(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a button with the given label
     and wait for the app to run.
@@ -884,7 +1048,7 @@ def click_button(
 
 def click_form_button(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a form submit button with the given label
     and wait for the app to run.
@@ -903,9 +1067,9 @@ def click_form_button(
 
 
 def expect_help_tooltip(
-    app: Locator | Page,
+    app: LocatorContext,
     element_with_help_tooltip: Locator,
-    tooltip_text: str | Pattern[str],
+    tooltip_text: str | re.Pattern[str],
 ) -> None:
     """Expect a tooltip to be displayed when hovering over the help symbol of an element.
 
@@ -916,8 +1080,9 @@ def expect_help_tooltip(
 
     Parameters
     ----------
-    app : Page
-        The page to search for the tooltip.
+    app : LocatorContext
+        The Playwright context to search for the tooltip (page, frame, or
+        `AppTarget`).
 
     element_with_help_tooltip : Locator
         The locator of the element with the help tooltip.
@@ -944,23 +1109,98 @@ def expect_help_tooltip(
     expect(tooltip_content).not_to_be_attached()
 
 
-def reset_hovering(locator: Locator | Page) -> None:
+def expect_label_truncated(element: Locator) -> None:
+    """Expect the markdown label inside ``element`` to be ellipsized.
+
+    Verifies the rendered label is actually clipped (its content is wider than the
+    space available for it), rather than only checking that a ``wrap``/``title``
+    attribute was set. Use this together with a fixed width narrower than the
+    label so the truncation is deterministic.
+
+    Parameters
+    ----------
+    element : Locator
+        A locator whose subtree contains a single label markdown container
+        (e.g. a button, popover trigger, or menu-button trigger).
+    """
+    label = element.get_by_test_id("stMarkdownContainer").locator("p").first
+    expect(label).to_be_visible()
+    # Retry until layout is stable — a one-shot evaluate can race with flex
+    # sizing even after the label is visible.
+    wait_until(
+        element.page,
+        lambda: label.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
+
+
+def reset_hovering(locator: LocatorContext) -> None:
     """Reset the hovering of the app.
 
     This can be used to ensure that there aren't unexpected UI elements visible
     based on the current mouse position.
     """
-    page = locator.page if isinstance(locator, Locator) else locator
-
-    page.get_by_test_id("stApp").hover(
+    app_root = _resolve_app_root_context(locator)
+    app_root.get_by_test_id("stApp").hover(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
 
 
-def reset_focus(locator: Locator | Page) -> None:
+def reset_focus(locator: LocatorContext) -> None:
     """Reset the focus of the app."""
-    page = locator.page if isinstance(locator, Locator) else locator
-    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+    app_root = _resolve_app_root_context(locator)
+    app_root.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+
+
+def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
+    """Tab through the page until the given locator is focused.
+
+    This is a small utility to make keyboard navigation tests resilient.
+    Hard-coding an exact number of <Tab> presses tends to be brittle because tab
+    order can change when unrelated UI gains/removes focusable elements.
+
+    Parameters
+    ----------
+    page : Page
+        The Playwright page to send Tab key presses to.
+
+    locator : Locator
+        The locator of the element that should eventually receive focus.
+
+    max_tabs : int
+        The maximum number of Tab presses before failing the test.
+
+    Notes
+    -----
+    This helper assumes the page already has a reasonable starting focus state
+    (for example, by clicking in the app first or calling `reset_focus()`). If
+    nothing in the document is focused, initial <Tab> behavior can vary and the
+    test may become flaky.
+    """
+    expect(locator).to_be_attached()
+
+    consecutive_eval_errors = 0
+    for _ in range(max_tabs):
+        page.keyboard.press("Tab")
+        try:
+            if locator.evaluate("el => el.matches(':focus')"):
+                return
+            consecutive_eval_errors = 0
+        except PlaywrightError:
+            # Locator may detach during rerenders triggered by focus/hover changes.
+            # Keep tabbing until things stabilize (bounded by max_tabs).
+            consecutive_eval_errors += 1
+            # If the locator stays detached for several iterations, it's likely
+            # not a transient re-render anymore. Fail fast with a clearer error.
+            if consecutive_eval_errors >= 5:
+                raise AssertionError(
+                    "Locator became detached repeatedly while tabbing to focus. "
+                    "Ensure the element is present and stable in the DOM."
+                )
+
+    raise AssertionError(
+        "Element did not receive focus after tabbing. "
+        f"Attempted {max_tabs} Tab presses."
+    )
 
 
 def expect_script_state(
@@ -1293,6 +1533,121 @@ def get_button_group(app: Page, key: str) -> Locator:
     return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
 
 
+def get_button_group_options(app: Page, key: str) -> Locator:
+    """Get the option list inside a button group (pills / segmented control).
+
+    This is the horizontal scrollport when ``wrap`` is false.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the button group.
+
+    key : str
+        The key of the button group.
+
+    Returns
+    -------
+    Locator
+        The option list (``group`` or ``radiogroup`` role).
+    """
+    button_group = get_button_group(app, key)
+    return (
+        button_group.get_by_role("group")
+        .or_(button_group.get_by_role("radiogroup"))
+        .first
+    )
+
+
+def expect_button_group_overflows(options: Locator) -> None:
+    """Wait until the option list has local horizontal overflow and an edge fade.
+
+    The fade attributes (``data-can-scroll-start`` / ``data-can-scroll-end``)
+    prove the group itself is the scrollport, not the page.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              if (el.scrollWidth <= el.clientWidth) return false
+              return (
+                el.hasAttribute("data-can-scroll-start")
+                || el.hasAttribute("data-can-scroll-end")
+              )
+            }"""
+            )
+            is True
+        ),
+    )
+
+
+def expect_selected_option_in_view(options: Locator) -> None:
+    """Wait until the selected option is fully visible in the option list.
+
+    When an edge is fading (``data-can-scroll-start`` / ``end``), honors
+    ``scroll-padding-inline`` so an option sitting in that fade is not
+    treated as in view. First/last options can sit flush with a non-fading
+    edge because max scroll cannot inset them.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    expect(options.locator("button[data-selected]").first).to_be_visible()
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              const selected = el.querySelector('[data-selected]');
+              if (!selected) return false;
+              const group = el.getBoundingClientRect();
+              const sel = selected.getBoundingClientRect();
+              const cs = getComputedStyle(el);
+              const padStart = el.hasAttribute('data-can-scroll-start')
+                ? parseFloat(cs.scrollPaddingInlineStart) || 0
+                : 0;
+              const padEnd = el.hasAttribute('data-can-scroll-end')
+                ? parseFloat(cs.scrollPaddingInlineEnd) || 0
+                : 0;
+              // ±1px absorbs sub-pixel rounding across browsers.
+              return (
+                sel.left >= group.left + padStart - 1 &&
+                sel.right <= group.right - padEnd + 1
+              );
+            }"""
+            )
+            is True
+        ),
+    )
+
+
+def get_feedback(app: Page, key: str) -> Locator:
+    """Get a feedback widget with the given key.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the feedback widget.
+
+    key : str
+        The key of the feedback widget to get.
+
+    Returns
+    -------
+    Locator
+        The feedback widget.
+    """
+    return get_element_by_key(app, key).get_by_test_id("stFeedback").first
+
+
 def get_segment_button(locator: Locator, text: str) -> Locator:
     """Get a segment button with the given button group.
 
@@ -1309,9 +1664,9 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     Locator
         The segment button.
     """
-    return locator.get_by_test_id(
-        re.compile("stBaseButton-segmented_control(Active)?")
-    ).filter(has_text=text)
+    return locator.locator("button[data-variant='segmented_control']").filter(
+        has_text=text
+    )
 
 
 def goto_app(page: Page, url: str) -> None:
@@ -1329,7 +1684,7 @@ def goto_app(page: Page, url: str) -> None:
     wait_for_app_loaded(page)
 
 
-def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a metric element with the given label.
 
     Parameters
@@ -1337,7 +1692,7 @@ def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     locator : Locator | Page
         The locator to search for the metric element.
 
-    label : str | Pattern[str]
+    label : str | re.Pattern[str]
         The label of the metric element to get.
 
     Returns
@@ -1348,3 +1703,66 @@ def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     element = locator.get_by_test_id("stMetric").filter(has_text=label)
     expect(element).to_be_visible()
     return element
+
+
+def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
+    """Wait for all images within a locator to be fully loaded and decoded.
+
+    This is useful for stabilizing snapshot tests that include images,
+    especially in browsers like webkit that may have timing variations
+    in image loading/decoding.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator containing the images to wait for.
+
+    timeout : int
+        Maximum time to wait in milliseconds. Defaults to 5000ms.
+    """
+    locator.evaluate(
+        """(element) => {
+            const images = element.querySelectorAll('img');
+            return Promise.all(
+                Array.from(images).map(async img => {
+                    // Wait for image to load if not complete yet
+                    if (!img.complete) {
+                        await new Promise((resolve, reject) => {
+                            img.addEventListener('load', resolve, { once: true });
+                            img.addEventListener('error', reject, { once: true });
+                        });
+                    }
+                    // Check for already-failed images (complete but no content)
+                    if (img.naturalWidth === 0) {
+                        throw new Error('Image failed to load: ' + img.src);
+                    }
+                    // Wait for the image to be decoded (ready for rendering)
+                    // This is important for webkit which may have timing variations
+                    // between load and decode completion
+                    await img.decode();
+                })
+            );
+        }""",
+        timeout=timeout,
+    )
+
+
+def open_json_path_tooltip(page: Page, json_element: Locator) -> Locator:
+    """Click a JSON string value and wait for the path tooltip.
+
+    react-json-view puts a collapse-toggle on ``.string-value`` and the
+    path-select handler on the parent ``.variable-value``. On webkit, the
+    child re-render can swallow the bubbled click so the tooltip never
+    opens. If that happens, click the parent to fire ``onSelect`` directly.
+    """
+    string_value = json_element.locator(".string-value").first
+    expect(string_value).to_be_visible()
+    string_value.click()
+
+    tooltip = page.get_by_test_id("stJsonPathTooltip")
+    try:
+        expect(tooltip).to_be_visible(timeout=1000)
+    except AssertionError:
+        json_element.locator(".variable-value").first.evaluate("el => el.click()")
+        expect(tooltip).to_be_visible()
+    return tooltip

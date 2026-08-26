@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.v2.component_manager import BidiComponentManager
@@ -34,8 +34,10 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
+from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
@@ -49,7 +51,10 @@ from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
-from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.stats import (
+    StatsManager,
+    StatsProvider,
+)
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 if TYPE_CHECKING:
@@ -59,6 +64,10 @@ if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.caching.storage import CacheStorageManager
     from streamlit.runtime.media_file_storage import MediaFileStorage
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
@@ -81,10 +90,6 @@ class RuntimeConfig:
 
     # The filesystem path of the Streamlit script to run.
     script_path: str
-
-    # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
-    # longer use this anywhere.
-    command_line: str | None
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
@@ -115,6 +120,9 @@ class RuntimeConfig:
 
     # True if the command used to start Streamlit was `streamlit hello`.
     is_hello: bool = False
+
+    # Callback to invoke when an uncaught exception occurs in user script code.
+    on_script_error: OnScriptErrorHandler | None = None
 
     # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code
     # creating a new Streamlit Runtime to configure the FragmentStorage instances
@@ -210,24 +218,40 @@ class Runtime:
         self._bidi_component_registry = config.bidi_component_registry
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
+        self._dataframe_source_mgr = DataframeSourceManager()
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
 
         # Discover and register components for CCv2 from installed packages
         self._bidi_component_registry.discover_and_register_components()
 
-        self._session_mgr = config.session_manager_class(
-            session_storage=config.session_storage,
-            uploaded_file_manager=self._uploaded_file_mgr,
-            script_cache=self._script_cache,
-            message_enqueued_callback=self._enqueued_some_message,
-        )
+        # Build kwargs, only including on_script_error when set to maintain
+        # backwards compatibility with custom SessionManager subclasses that
+        # may not accept this parameter yet.
+        session_mgr_kwargs: dict[str, Any] = {
+            "session_storage": config.session_storage,
+            "uploaded_file_manager": self._uploaded_file_mgr,
+            "script_cache": self._script_cache,
+            "message_enqueued_callback": self._enqueued_some_message,
+        }
+        if config.on_script_error is not None:
+            session_mgr_kwargs["on_script_error"] = config.on_script_error
+
+        self._session_mgr = config.session_manager_class(**session_mgr_kwargs)
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        if self._uploaded_file_mgr is not None:
+            self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        # Register media file storage for stats if it implements StatsProvider
+        if isinstance(config.media_file_storage, StatsProvider):
+            self._stats_mgr.register_provider(config.media_file_storage)
         self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
+
+        # Register session manager for session event metrics if it implements StatsProvider
+        if isinstance(self._session_mgr, StatsProvider):
+            self._stats_mgr.register_provider(self._session_mgr)
 
     @property
     def state(self) -> RuntimeState:
@@ -252,6 +276,10 @@ class Runtime:
     @property
     def media_file_mgr(self) -> MediaFileManager:
         return self._media_file_mgr
+
+    @property
+    def dataframe_source_mgr(self) -> DataframeSourceManager:
+        return self._dataframe_source_mgr
 
     @property
     def stats_mgr(self) -> StatsManager:
@@ -333,7 +361,7 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         def stop_on_eventloop() -> None:
-            if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+            if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
                 return
 
             _LOGGER.debug("Runtime stopping...")
@@ -354,7 +382,7 @@ class Runtime:
     def connect_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -393,13 +421,13 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if existing_session_id and session_id_override:
+        if existing_session_id and session_id_override:  # pragma: no cover - defensive
             raise RuntimeError(
                 "Only one of existing_session_id and session_id_override should be set. "
                 "This should never happen."
             )
 
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
         session_id = self._session_mgr.connect_session(
@@ -417,7 +445,7 @@ class Runtime:
     def create_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -460,7 +488,9 @@ class Runtime:
             self._session_mgr.close_session(session_id)
         self._on_session_disconnected()
 
-    def disconnect_session(self, session_id: str) -> None:
+    def disconnect_session(
+        self, session_id: str, *, client: SessionClient | None = None
+    ) -> None:
         """Disconnect a session. It will stop producing ForwardMsgs.
 
         Differs from close_session because disconnected sessions can be reconnected to
@@ -474,17 +504,21 @@ class Runtime:
         ----------
         session_id
             The session's unique ID.
+        client
+            If set, only disconnect the session if it is still connected to this client.
 
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session_info = self._session_mgr.get_active_session_info(session_id)
-        if session_info:
+        if session_info and (client is None or session_info.client is client):
             self._session_mgr.disconnect_session(session_id)
         self._on_session_disconnected()
 
-    def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
+    def handle_backmsg(
+        self, session_id: str, msg: BackMsg, *, client: SessionClient | None = None
+    ) -> None:
         """Send a BackMsg to an active session.
 
         Parameters
@@ -493,12 +527,15 @@ class Runtime:
             The session's unique ID.
         msg
             The BackMsg to deliver to the session.
+        client
+            If set, only handle the message if the session is still connected to this
+            client.
 
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't handle_backmsg (state={self._state})")
 
         session_info = self._session_mgr.get_active_session_info(session_id)
@@ -508,12 +545,29 @@ class Runtime:
             )
             return
 
+        if client is not None and session_info.client is not client:
+            _LOGGER.debug(
+                "Discarding BackMsg for session with stale client (id=%s)", session_id
+            )
+            return
+
         session_info.session.handle_backmsg(msg)
 
     def handle_backmsg_deserialization_exception(
-        self, session_id: str, exc: BaseException
+        self,
+        session_id: str,
+        exc: BaseException,
+        *,
+        client: SessionClient | None = None,
     ) -> None:
         """Handle an Exception raised during deserialization of a BackMsg.
+
+        The bundled Starlette server does not call this method. A frame that
+        fails to parse is a protocol violation. That server closes the
+        connection instead. This entry point remains for other hosts. It reports
+        the failure through `AppSession`, which applies the
+        `client.showErrorDetails` redaction before it sends anything to the
+        browser.
 
         Parameters
         ----------
@@ -521,12 +575,15 @@ class Runtime:
             The session's unique ID.
         exc
             The Exception.
+        client
+            If set, only handle the exception if the session is still connected to this
+            client.
 
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(
                 f"Can't handle_backmsg_deserialization_exception (state={self._state})"
             )
@@ -539,15 +596,22 @@ class Runtime:
             )
             return
 
+        if client is not None and session_info.client is not client:
+            _LOGGER.debug(
+                "Discarding BackMsg Exception for session with stale client (id=%s)",
+                session_id,
+            )
+            return
+
         session_info.session.handle_backmsg_exception(exc)
 
     @property
     async def is_ready_for_browser_connection(self) -> tuple[bool, str]:
-        if self._state not in (
+        if self._state not in {
             RuntimeState.INITIAL,
             RuntimeState.STOPPING,
             RuntimeState.STOPPED,
-        ):
+        }:
             return True, "ok"
 
         return False, "unavailable"
@@ -653,16 +717,21 @@ class Runtime:
                             try:
                                 self._send_message(active_session_info, msg)
                             except SessionClientDisconnectedError:
-                                self._session_mgr.disconnect_session(
-                                    active_session_info.session.id
+                                # Only disconnect if the session is still bound to
+                                # this (now-disconnected) client. A reconnect during
+                                # the flush loop can swap in a new client for the same
+                                # session id, and we must not tear that freshly
+                                # reconnected session down.
+                                self.disconnect_session(
+                                    active_session_info.session.id,
+                                    client=active_session_info.client,
                                 )
 
                             # Yield for a tick after sending a message.
                             await asyncio.sleep(0)
 
-                    # Yield for a few milliseconds between session message
-                    # flushing.
-                    await asyncio.sleep(0.01)
+                    # Yield briefly between session message flushing cycles.
+                    await asyncio.sleep(MESSAGE_FLUSH_INTERVAL_SECS)
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,22 +14,35 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+import pytest
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_button,
     get_element_by_key,
     get_expander,
+    reset_hovering,
 )
 
-TOTAL_BUTTONS = 28
+TOTAL_BUTTONS = 40
+
+WRAP_LABEL = "Regenerate the complete quarterly report now"
+
+# Minimum height difference (px) that distinguishes a wrapped two-line control
+# from a single-row one; absorbs sub-pixel rounding.
+WRAPPED_HEIGHT_MARGIN = 4
 
 
 def test_button_widget_rendering(
@@ -85,6 +98,14 @@ def test_button_widget_rendering(
     assert_snapshot(
         get_element_by_key(themed_app, "material_icon_digit_in_label_button"),
         name="st_button-material_icon_1k_markdown",
+    )
+    assert_snapshot(
+        get_button(themed_app, "Shortcut Button"),
+        name="st_button-shortcut_button",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "icon_right_material"),
+        name="st_button-icon_position_right_material",
     )
 
     # The rest is tested in one screenshot in the following test
@@ -164,48 +185,49 @@ def test_colored_text_hover(app: Page):
     """Test that the colored text is correctly rendered and changes color on hover."""
     # Check hover behavior for colored text in primary button
     primary_button_container = get_element_by_key(app, "colored_text_primary")
-    expect(primary_button_container.locator("span")).to_have_class(
-        "stMarkdownColoredText"
-    )
-    expect(primary_button_container.locator("span")).to_have_css(
+    primary_text = primary_button_container.locator("span.stMarkdownColoredText").first
+    expect(primary_text).to_have_class("stMarkdownColoredText")
+    expect(primary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
     primary_button_container.locator("button").hover()
     # For primary buttons, the colored text should stay blue on hover (no color inheritance)
-    expect(primary_button_container.locator("span")).to_have_css(
+    expect(primary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
 
     # Check hover behavior for colored text in secondary button
     secondary_button_container = get_element_by_key(app, "colored_text_secondary")
-    expect(secondary_button_container.locator("span")).to_have_class(
-        "stMarkdownColoredText"
-    )
-    expect(secondary_button_container.locator("span")).to_have_css(
+    secondary_text = secondary_button_container.locator(
+        "span.stMarkdownColoredText"
+    ).first
+    expect(secondary_text).to_have_class("stMarkdownColoredText")
+    expect(secondary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
     secondary_button_container.locator("button").hover()
     # For secondary buttons, the colored text should stay blue on hover (no color inheritance)
-    expect(secondary_button_container.locator("span")).to_have_css(
+    expect(secondary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
 
     # Check hover behavior for colored text in tertiary button
     tertiary_button_container = get_element_by_key(app, "colored_text_tertiary")
-    expect(tertiary_button_container.locator("span")).to_have_class(
-        "stMarkdownColoredText"
-    )
-    expect(tertiary_button_container.locator("span")).to_have_css(
+    tertiary_text = tertiary_button_container.locator(
+        "span.stMarkdownColoredText"
+    ).first
+    expect(tertiary_text).to_have_class("stMarkdownColoredText")
+    expect(tertiary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
     tertiary_button_container.locator("button").hover()
     # For tertiary buttons, the colored text should be red on hover to match the rest of the text
-    expect(tertiary_button_container.locator("span")).to_have_css(
+    expect(tertiary_text).to_have_css(
         "color",
         "rgb(255, 75, 75)",
     )
@@ -214,6 +236,8 @@ def test_colored_text_hover(app: Page):
 def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
     help_button_container = get_element_by_key(themed_app, "help_button_container")
     help_button = get_element_by_key(help_button_container, "help_button_key")
+    # Prime the interaction modality to 'pointer' before hovering.
+    reset_hovering(themed_app)
     help_button.hover()
     expect(themed_app.get_by_text("help text")).to_be_visible()
     assert_snapshot(help_button_container, name="st_button-help_button")
@@ -258,8 +282,134 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
+@pytest.mark.skip_browser("webkit")
+def test_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut activates the button."""
+    shortcut_button = get_element_by_key(app, "shortcut_button")
+    expect(shortcut_button).to_be_visible()
+
+    # Ensure shortcut labels are rendered for buttons.
+    # Use regex to accept both Windows (Ctrl) and macOS (⌘) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(re.compile(r"(Ctrl|⌘) \+ J"))
+
+    # Press hotkey to trigger the button:
+    app.keyboard.press("ControlOrMeta+J")
+    wait_for_app_run(app)
+    expect_markdown(app, "Shortcut button pressed!")
+
+
 def test_button_with_spinner_icon(app: Page):
     """Test that the button with spinner icon is rendered."""
     button = get_button(app, "Button with spinner icon")
     # Check that the spinner icon is visible:
     expect(button.get_by_test_id("stSpinnerIcon")).to_be_visible()
+
+
+def test_markdown_syntax_in_labels(app: Page):
+    """Test that markdown syntax characters in labels are displayed literally (issue #7359)."""
+    # Test that "+" is not parsed as a list marker
+    plus_button = get_element_by_key(app, "markdown_plus_label")
+    expect(plus_button).to_contain_text("+")
+
+    # Test that "1." is not parsed as an ordered list marker
+    numbered_button = get_element_by_key(app, "markdown_numbered_label")
+    expect(numbered_button).to_contain_text("1. Something")
+
+
+def test_wrap_false_keeps_single_row_and_sets_title(app: Page):
+    """wrap=False keeps the button on one row and exposes the full label via a
+    native title, while the auto default (``wrap=None``) in a vertical layout
+    wraps, grows taller, and adds no title.
+    """
+    wrap_false = get_element_by_key(app, "wrap_false_button")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
+
+    # wrap=False exposes the full label via a native title; auto vertical does not.
+    expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    # Same long label: auto vertical wraps onto another line and is clearly taller.
+    false_box = wrap_false.locator("button").bounding_box()
+    auto_box = wrap_auto_vertical.locator("button").bounding_box()
+    assert false_box is not None
+    assert auto_box is not None
+    assert auto_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+
+
+def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
+    """With the default (auto) wrap, a button inside a horizontal container keeps
+    its single-row height and exposes the full label via a native title, whereas
+    the same default in a vertical container wraps and adds no title.
+    """
+    auto_horizontal = get_element_by_key(app, "wrap_auto_button")
+    # The label is actually ellipsized (not just given a title attribute).
+    expect_label_truncated(auto_horizontal)
+    expect(auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+    # Same default (auto) in a vertical container wraps and gets no title.
+    auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
+    expect(auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+
+def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
+    """Direct column children keep auto no-wrap, including after columns stack.
+
+    Nested containers and a form placed in a column wrap; wrap=True still wraps.
+    """
+    auto_direct = get_element_by_key(app, "wrap_auto_direct_column_button")
+    explicit_true = get_element_by_key(app, "wrap_true_direct_column_button")
+    auto_nested = get_element_by_key(app, "wrap_auto_nested_column_button")
+    form_submit = get_element_by_key(app, "wrap_auto_form_submit_in_column")
+
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(explicit_true.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(auto_nested.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(form_submit.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    def button_height(element: Locator) -> float:
+        box = element.locator("button").bounding_box()
+        assert box is not None
+        return box["height"]
+
+    direct_height = button_height(auto_direct)
+    assert button_height(explicit_true) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(auto_nested) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(form_submit) > direct_height + WRAPPED_HEIGHT_MARGIN
+
+    app.set_viewport_size({"width": 390, "height": 844})
+    auto_direct.scroll_into_view_if_needed()
+
+    def columns_are_stacked() -> bool:
+        auto_box = auto_direct.locator("button").bounding_box()
+        explicit_box = explicit_true.locator("button").bounding_box()
+        return (
+            auto_box is not None
+            and explicit_box is not None
+            and explicit_box["y"] > auto_box["y"]
+        )
+
+    wait_until(app, columns_are_stacked)
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_wrap_false_help_takes_precedence_over_title(app: Page):
+    """When help is set, no native title is added (the help tooltip takes over)."""
+    container = get_element_by_key(app, "wrap_help_button")
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    # Prime the interaction modality to 'pointer' before hovering so React Aria
+    # reliably opens the help tooltip (the cursor starts off-page otherwise).
+    reset_hovering(app)
+    container.hover()
+    expect(app.get_by_text("wrap help text")).to_be_visible()
+
+
+def test_wrap_false_keeps_icon_and_shortcut_visible(app: Page):
+    """Icons and keyboard shortcuts stay visible when the label ellipsizes."""
+    container = get_element_by_key(app, "wrap_icon_button")
+    expect(container.get_by_test_id("stIconMaterial")).to_be_visible()
+    expect(container.locator("kbd")).to_be_visible()
+    # The full label is still exposed via the native title.
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()

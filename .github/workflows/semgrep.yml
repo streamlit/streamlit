@@ -4,17 +4,12 @@ name: Run Semgrep Checks
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
-      - "specs/**"
-      # Don't run CI if changes are only in the agent-knowledge folder:
-      - "agent-knowledge/**"
 
 permissions:
   contents: read
 
 jobs:
   run-semgrep-reusable-workflow:
-    uses: snowflakedb/reusable-workflows/.github/workflows/semgrep-v2.yml@main
+    uses: snowflakedb/reusable-workflows/.github/workflows/semgrep-v2.yml@863ab71d1133652ae3e7d1480ca7a4cb0b4f240c # main
     secrets:
       token: ${{ secrets.SEMGREP_APP_TOKEN }}

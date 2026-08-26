@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ export const StyledAppViewContainer = styled.div({
   },
 })
 
-export interface StyledAppViewMainProps {
+interface StyledAppViewMainProps {
   isEmbedded: boolean
   disableScrolling: boolean
 }
@@ -118,7 +118,7 @@ const applyWideModePadding = (theme: EmotionTheme): CSSObject => {
   }
 }
 
-export interface StyledAppViewBlockContainerProps {
+interface StyledAppViewBlockContainerProps {
   isWideMode: boolean
   hasBottom: boolean
   showPadding: boolean
@@ -187,7 +187,7 @@ export const StyledEventBlockContainer = styled.div({
   display: "none",
 })
 
-export interface StyledBottomBlockContainerProps {
+interface StyledBottomBlockContainerProps {
   isWideMode: boolean
   showPadding: boolean
 }
@@ -237,4 +237,23 @@ export const StyledMainContent = styled.div(({ theme }) => ({
   [`@media (min-width: ${theme.breakpoints.md})`]: {
     position: "relative",
   },
+}))
+
+/**
+ * Fixed top-right anchor for the framework "install skills" nudge, pinned just
+ * below the header at the same right edge as the toast region. The toast region
+ * (which portals to the document body and is positioned independently) is
+ * pushed down by this nudge's measured height in ``AppView`` so app toasts
+ * stack beneath the persistent nudge rather than overlapping it.
+ */
+export const StyledSkillsNudgeAnchor = styled.div(({ theme }) => ({
+  position: "fixed",
+  top: theme.sizes.headerHeight,
+  right: 0,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  zIndex: theme.zIndices.toast,
+  marginLeft: theme.spacing.lg,
+  marginRight: theme.spacing.lg,
 }))

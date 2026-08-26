@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,43 +19,41 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react"
 
-import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
-import type DatepickerClass from "baseui/datepicker/datepicker"
-import moment from "moment"
+import {
+  CalendarDate,
+  CalendarDateTime,
+  getLocalTimeZone,
+  today,
+} from "@internationalized/date"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
-import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { createDateTimePickerOverrides } from "./createDateTimePickerOverrides"
 import {
-  combineDateAndTime,
-  DATE_TIME_FORMAT,
+  calendarDateTimeToIso,
+  createDateTimeErrorMessage,
+  DateTimeValidationErrorType,
+  formatCalendarDateTime,
   getCurrStateFromProto,
   getDefaultStateFromProto,
   getStateFromWidgetMgr,
-  isSameDay,
-  normalizeDateValue,
-  stringToDate,
+  isoToCalendarDateTime,
   updateWidgetMgrState,
+  validateDateTime,
 } from "./dateTimeInputUtils"
+import SingleDateTimeInput from "./SingleDateTimeInput"
 
 export interface Props {
   disabled: boolean
@@ -70,9 +68,26 @@ function DateTimeInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-  const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [formResetKey, setFormResetKey] = useState(0)
+
+  const resetError = useCallback(() => {
+    setError(null)
+  }, [])
+
+  const handleFormCleared = useCallback(() => {
+    resetError()
+    setFormResetKey(k => k + 1)
+  }, [resetError])
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+      }
+    : undefined
 
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
@@ -85,126 +100,158 @@ function DateTimeInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
+    onFormCleared: handleFormCleared,
   })
 
   const { locale } = useContext(LibConfigContext)
-  const loadedLocale = useIntlLocale(locale)
 
   const step = element.step ? Number(element.step) : 900
 
-  const minDateTime = useMemo(() => stringToDate(element.min), [element.min])
-  const maxDateTime = useMemo(() => stringToDate(element.max), [element.max])
-
-  // committedDate is the value from the widget manager
-  const committedDate = useMemo(() => stringToDate(value), [value])
-
-  // pendingDate is the temporary value while the user is selecting
-  const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
-
-  // Store the previous committedDate to detect changes from the widget manager
-  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
-    committedDate
+  const minDateTime = useMemo(
+    () => isoToCalendarDateTime(element.min),
+    [element.min]
+  )
+  const maxDateTime = useMemo(
+    () => isoToCalendarDateTime(element.max),
+    [element.max]
   )
 
-  // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
-  if (committedDate !== prevCommittedDate) {
-    setPendingDate(committedDate)
-    setPrevCommittedDate(committedDate)
-  }
+  const currentValue = useMemo(() => isoToCalendarDateTime(value), [value])
 
-  const minDate = minDateTime ?? undefined
-  const maxDate = maxDateTime ?? undefined
+  const clearable = element.default.length === 0 && !disabled
 
-  const minTimeForSelection = useMemo(() => {
-    if (!pendingDate || !minDateTime) {
-      return undefined
-    }
+  const minDateString = useMemo(
+    () =>
+      minDateTime ? formatCalendarDateTime(minDateTime, element.format) : "",
+    [minDateTime, element.format]
+  )
+  const maxDateString = useMemo(
+    () =>
+      maxDateTime ? formatCalendarDateTime(maxDateTime, element.format) : "",
+    [maxDateTime, element.format]
+  )
 
-    return isSameDay(pendingDate, minDateTime)
-      ? combineDateAndTime(pendingDate, minDateTime)
-      : undefined
-  }, [pendingDate, minDateTime])
-
-  const maxTimeForSelection = useMemo(() => {
-    if (!pendingDate || !maxDateTime) {
-      return undefined
-    }
-
-    return isSameDay(pendingDate, maxDateTime)
-      ? combineDateAndTime(pendingDate, maxDateTime)
-      : undefined
-  }, [pendingDate, maxDateTime])
-
-  const dateMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
-
-  const dateFormat = element.format.replaceAll("Y", "y").replaceAll("D", "d")
-
-  const formatString = `${dateFormat}, HH:mm`
-
-  const mask = `${dateMask}, 99:99`
-
-  const placeholder = `${element.format}, HH:MM`
-
-  const defaultValue =
-    element.default && element.default.length > 0 ? element.default[0] : ""
-  const clearable = defaultValue.length === 0 && !disabled
-
-  const error = useMemo(() => {
-    if (!pendingDate) {
-      return null
-    }
-
-    if (
-      (minDateTime && pendingDate < minDateTime) ||
-      (maxDateTime && pendingDate > maxDateTime)
-    ) {
-      const minStr = moment(minDateTime).format(formatString)
-      const maxStr = moment(maxDateTime).format(formatString)
-      return `**Error**: Date and time set outside allowed range. Please select a date and time between ${minStr} and ${maxStr}.`
-    }
-
-    return null
-  }, [pendingDate, minDateTime, maxDateTime, formatString])
+  const buildErrorMessage = useCallback(
+    (errorType: DateTimeValidationErrorType): string | null =>
+      createDateTimeErrorMessage(errorType, minDateString, maxDateString),
+    [minDateString, maxDateString]
+  )
 
   const handleChange = useCallback(
-    ({
-      date,
-    }: {
-      date: Date | (Date | null | undefined)[] | null | undefined
-    }): void => {
-      const normalizedDate = normalizeDateValue(date)
+    (dt: CalendarDateTime | null): void => {
+      resetError()
 
-      // Update pending state only - don't commit to widget manager yet
-      setPendingDate(normalizedDate)
+      if (!dt) {
+        setValueWithSource({ value: null, fromUser: true })
+        return
+      }
 
-      // Keep the modal open so the user can continue selecting
-      datepickerRef.current?.open?.()
+      const errorType = validateDateTime(dt, minDateTime, maxDateTime)
+      if (errorType) {
+        setError(buildErrorMessage(errorType))
+        return
+      }
+      setValueWithSource({ value: calendarDateTimeToIso(dt), fromUser: true })
     },
-    []
+    [
+      buildErrorMessage,
+      maxDateTime,
+      minDateTime,
+      resetError,
+      setValueWithSource,
+    ]
   )
 
-  const handleClose = useCallback((): void => {
-    // Only commit to widget manager when the modal closes
-    const newValue = pendingDate
-      ? moment(pendingDate).format(DATE_TIME_FORMAT)
-      : null
-    const hasChanged = newValue !== value
+  const handleValidate = useCallback(
+    (dt: CalendarDateTime | null): void => {
+      resetError()
+      if (!dt) return
+      const errorType = validateDateTime(dt, minDateTime, maxDateTime)
+      if (errorType) {
+        setError(buildErrorMessage(errorType))
+      }
+    },
+    [buildErrorMessage, maxDateTime, minDateTime, resetError]
+  )
 
-    if (hasChanged) {
-      setValueWithSource({ value: newValue, fromUi: true })
+  const handleClose = useCallback(
+    (shouldClearError?: boolean): void => {
+      if (!shouldClearError) return
+      resetError()
+    },
+    [resetError]
+  )
+
+  const inForm = isInForm({ formId: element.formId })
+  const handleFormCommit = useCallback(
+    (dt: CalendarDateTime | null): void => {
+      if (!inForm) return
+      const isoValue = dt ? calendarDateTimeToIso(dt) : null
+      updateWidgetMgrState(
+        element,
+        widgetMgr,
+        { value: isoValue, fromUser: true },
+        fragmentId
+      )
+    },
+    [inForm, element, widgetMgr, fragmentId]
+  )
+
+  const handleFormSubmit = useCallback((): void => {
+    widgetMgr.submitForm(element.formId, fragmentId)
+  }, [element.formId, widgetMgr, fragmentId])
+
+  const allowEnterToSubmit = inForm
+    ? widgetMgr.allowFormEnterToSubmit(element.formId)
+    : false
+
+  // Seed the calendar's focused date from the current value or today.
+  const [focusedValue, setFocusedValue] = useState<CalendarDate>(() => {
+    if (currentValue) {
+      return new CalendarDate(
+        currentValue.year,
+        currentValue.month,
+        currentValue.day
+      )
     }
-  }, [pendingDate, value, setValueWithSource])
-
-  const inputOverrides = createDateTimePickerOverrides({
-    theme,
-    isInSidebar,
-    step,
-    minTime: minTimeForSelection,
-    maxTime: maxTimeForSelection,
-    disabled,
-    clearable,
-    error,
+    const now = today(getLocalTimeZone())
+    if (minDateTime) {
+      const minDate = new CalendarDate(
+        minDateTime.year,
+        minDateTime.month,
+        minDateTime.day
+      )
+      return now.compare(minDate) < 0 ? minDate : now
+    }
+    return now
   })
+
+  // Sync focused date when committed value changes externally.
+  useEffect(() => {
+    if (currentValue) {
+      setFocusedValue(
+        new CalendarDate(
+          currentValue.year,
+          currentValue.month,
+          currentValue.day
+        )
+      )
+    } else {
+      const now = today(getLocalTimeZone())
+      if (minDateTime) {
+        const minDate = new CalendarDate(
+          minDateTime.year,
+          minDateTime.month,
+          minDateTime.day
+        )
+        setFocusedValue(now.compare(minDate) < 0 ? minDate : now)
+      } else {
+        setFocusedValue(now)
+      }
+    }
+  }, [currentValue, minDateTime])
 
   return (
     <div className="stDateTimeInput" data-testid="stDateTimeInput">
@@ -216,31 +263,29 @@ function DateTimeInput({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <UIDatePicker
-        ref={datepickerRef}
-        locale={loadedLocale}
-        density={DENSITY.high}
-        value={pendingDate}
+      <SingleDateTimeInput
+        value={currentValue}
         onChange={handleChange}
-        onClose={handleClose}
-        minDate={minDate}
-        maxDate={maxDate}
+        minDateTime={minDateTime}
+        maxDateTime={maxDateTime}
+        format={element.format}
+        step={step}
         disabled={disabled}
-        timeSelectStart
-        formatString={formatString}
-        mask={mask}
-        placeholder={placeholder}
         clearable={clearable}
-        overrides={inputOverrides}
-        aria-label={element.label}
+        label={element.label}
+        error={error}
+        locale={locale}
+        isInSidebar={isInSidebar}
+        focusedValue={focusedValue}
+        onFocusChange={setFocusedValue}
+        onValidate={handleValidate}
+        onClose={handleClose}
+        formCommit={inForm ? handleFormCommit : undefined}
+        formSubmit={allowEnterToSubmit ? handleFormSubmit : undefined}
+        formResetKey={formResetKey}
       />
     </div>
   )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-// md, default, xl, xxl can be changed based on the baseRadius theme config.
+// sm, md2, default, xl, xxl can be changed based on the baseRadius theme config.
 // chatInput, full, and maxCheckboxRadius are not impacted by this config.
 export const radii = {
-  md: "0.25rem",
+  sm: "0.25rem",
+  // Used for dropdown item highlights:
+  md2: "0.375rem",
   // This is the default radius used in most elements:
   default: "0.5rem",
   xl: "0.75rem",

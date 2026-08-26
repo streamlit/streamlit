@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,11 @@
 // Private members use _.
 
 import { Field, Vector } from "apache-arrow"
-import { immerable, produce } from "immer"
 
-import { IArrow, Styler as StylerProto } from "@streamlit/protobuf"
+import { ArrowData, IArrowData } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
-import { concat } from "./arrowConcatUtils"
 import {
   ColumnNames,
   Data,
@@ -102,27 +100,22 @@ export interface DataFrameCell {
 /**
  * Parses data from an Arrow table, and stores it in a row-major format
  * (which is more useful for our frontend display code than Arrow's columnar format).
+ *
+ * Quiver instances are immutable. Do not pass them to Immer's `produce()` function
+ * as they are not marked as draftable.
  */
 export class Quiver {
-  /**
-   * Plain objects (objects without a prototype), arrays, Maps and Sets are always drafted by Immer.
-   * Every other object must use the immerable symbol to mark itself as compatible with Immer.
-   * When one of these objects is mutated within a producer, its prototype is preserved between copies.
-   * Source: https://immerjs.github.io/immer/complex-objects/
-   */
-  [immerable] = true
-
   /** Index & data column names (matrix of column names to support multi-level headers). */
-  private _columnNames: ColumnNames
+  private readonly _columnNames: ColumnNames
 
   /** Column type information for the (Pandas) index columns.
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
-  private _pandasIndexColumnTypes: ArrowType[]
+  private readonly _pandasIndexColumnTypes: ArrowType[]
 
   /** Column type information for the data columns. */
-  private _dataColumnTypes: ArrowType[]
+  private readonly _dataColumnTypes: ArrowType[]
 
   /** Column type information for all columns.
    *
@@ -130,35 +123,35 @@ export class Quiver {
    * and needs to be updated whenever the index or data columns
    * change.
    */
-  private _columnTypes: ArrowType[]
+  private readonly _columnTypes: ArrowType[]
 
   /** Cell values of the (Pandas) index columns.
    *
    *  Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
-  private _pandasIndexData: IndexData
+  private readonly _pandasIndexData: IndexData
 
   /** Cell values of the data columns. */
-  private _data: Data
+  private readonly _data: Data
 
   /** [optional] Pandas Styler data. This will be defined if the user styled the dataframe. */
   private readonly _styler?: PandasStylerData
 
   /** Number of bytes in the Arrow IPC bytes. */
-  private _num_bytes: number
+  private readonly _num_bytes: number
 
-  constructor(element: IArrow) {
+  constructor(arrowData: IArrowData) {
     const {
       pandasIndexData,
       columnNames,
       data,
       dataColumnTypes,
       pandasIndexColumnTypes,
-    } = parseArrowIpcBytes(element.data)
+    } = parseArrowIpcBytes(arrowData.data)
 
     // Load styler data (if provided):
-    const styler = element.styler
-      ? parseStyler(element.styler as StylerProto)
+    const styler = arrowData.styler
+      ? parseStyler(arrowData.styler as ArrowData.PandasStyler)
       : undefined
 
     // The assignment is done below to avoid partially populating the instance
@@ -169,7 +162,7 @@ export class Quiver {
     this._dataColumnTypes = dataColumnTypes
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
-    this._num_bytes = element.data?.length ?? 0
+    this._num_bytes = arrowData.data?.length ?? 0
     this._columnTypes = this._pandasIndexColumnTypes.concat(
       this._dataColumnTypes
     )
@@ -223,9 +216,7 @@ export class Quiver {
    * but is not 100% guaranteed to be unique.
    */
   public get hash(): string {
-    // Its important to calculate this at runtime
-    // since some of the data can change when `add_rows` is
-    // used.
+    // Calculate this at runtime for the eventual case that the underlying data changes.
     const valuesToHash = [
       this.dimensions.numColumns,
       this.dimensions.numDataColumns,
@@ -285,8 +276,7 @@ export class Quiver {
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private getIndexValue(rowIndex: number, columnIndex: number): any {
+  private getIndexValue(rowIndex: number, columnIndex: number): DataType {
     const index = this._pandasIndexData[columnIndex]
     const value =
       index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
@@ -294,70 +284,13 @@ export class Quiver {
   }
 
   /** Get the raw value of a data cell. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private getDataValue(rowIndex: number, columnIndex: number): any {
+  private getDataValue(rowIndex: number, columnIndex: number): DataType {
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
-  }
-
-  /**
-   * Add the contents of another table (data + indexes) to this table.
-   * Extra columns will not be created.
-   */
-  public addRows(other: Quiver): Quiver {
-    if (this.styler || other.styler) {
-      throw new Error(`
-Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
-
-If you do not need the Styler's styles, try passing the \`.data\` attribute of
-the Styler object instead to concatenate just the underlying dataframe.
-
-For example:
-\`\`\`
-st.add_rows(my_styler.data)
-\`\`\`
-`)
-    }
-
-    // Don't do anything if the incoming DataFrame is empty.
-    if (other.dimensions.numDataRows === 0) {
-      return produce(this, (draft: Quiver) => draft)
-    }
-
-    // We need to handle this separately, as columns need to be reassigned.
-    // We don't concatenate columns in the general case.
-    if (this.dimensions.numDataRows === 0) {
-      return produce(other, (draft: Quiver) => draft)
-    }
-
-    const {
-      index: newIndex,
-      data: newData,
-      indexTypes: newIndexTypes,
-      dataTypes: newDataTypes,
-    } = concat(
-      this._dataColumnTypes,
-      this._pandasIndexColumnTypes,
-      this._pandasIndexData,
-      this._data,
-      other._dataColumnTypes,
-      other._pandasIndexColumnTypes,
-      other._pandasIndexData,
-      other._data
-    )
-
-    // If we get here, then we had no concatenation errors.
-    return produce(this, (draft: Quiver) => {
-      draft._pandasIndexData = newIndex
-      draft._data = newData
-      draft._pandasIndexColumnTypes = newIndexTypes
-      draft._dataColumnTypes = newDataTypes
-      draft._columnTypes = newIndexTypes.concat(newDataTypes)
-    })
   }
 }
 
 /** Parse Pandas styler information from proto. */
-function parseStyler(pandasStyler: StylerProto): PandasStylerData {
+function parseStyler(pandasStyler: ArrowData.PandasStyler): PandasStylerData {
   return {
     uuid: pandasStyler.uuid,
     caption: pandasStyler.caption,

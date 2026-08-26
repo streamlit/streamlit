@@ -1,0 +1,511 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# =============================================================================
+# Root pyproject.toml - Development environment configuration
+# =============================================================================
+# This file defines:
+# - Tool configurations (ruff, mypy, ty)
+# - Development dependency groups
+#
+# The streamlit package itself is defined in lib/pyproject.toml.
+# Test-specific configs are in lib/pyproject.toml and e2e_playwright/pytest.ini.
+# =============================================================================
+
+[project]
+name = "streamlit-dev"
+version = "0.0.0"
+description = "Development environment for Streamlit"
+requires-python = ">=3.10"
+# The published package metadata remains in lib/pyproject.toml. This requirement
+# makes its runtime dependencies part of the development lock graph, while the
+# source mapping below keeps the package editable.
+dependencies = ["streamlit"]
+
+[tool.uv]
+# The development toolchain is the default local environment.
+default-groups = ["dev"]
+# Keep this floor low enough for Dependabot's bundled uv.
+# Raise it when Dependabot ships a newer uv and we want a tighter floor.
+required-version = ">=0.11.8"
+# Resolve the development lock only for the currently supported Python range.
+environments = ["python_version < '3.15'"]
+# Exclude packages published in the last 24 hours to lower risk from supply chain attacks
+exclude-newer = "24 hours"
+# Explicit pandas version constraints by Python version:
+# - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
+# - Python 3.11+: use pandas 3.x
+override-dependencies = [
+  "pandas>=1.4.0,<3; python_version < '3.11'",
+  "pandas>=3.0.0,<4; python_version >= '3.11'",
+]
+
+[tool.uv.sources]
+streamlit = { path = "lib", editable = true }
+
+# =============================================================================
+# Dependency Groups (PEP 735)
+# =============================================================================
+# These are development/CI-only dependencies (this package is never published).
+# uv.lock is the source of truth for the exact versions that get installed, so we
+# use bare package names by default and let the lock own the versions. We only add
+# a version constraint when it is functionally required:
+#   - Exact pins (==) for tools we deliberately hold back and let Dependabot bump on
+#     its own PRs (ty, mypy, ruff, playwright).
+#   - Upper caps (<) for versions known to break us (numpy, pytest, pandas-stubs);
+#     these are mirrored by `ignore` entries in .github/dependabot.yml.
+#   - `!=` exclusions of a single known-broken release (pytest-rerunfailures,
+#     pytest-github-actions-annotate-failures); these need no dependabot.yml entry,
+#     since Dependabot targets the latest allowed version and never proposes the
+#     excluded release.
+# Avoid lower-bound floors here: they don't affect what gets installed (the lock
+# does), and Dependabot ratchets them up on every update, creating pointless
+# manifest churn. NOTE: This does NOT apply to lib/pyproject.toml, whose ranges are
+# the published package's contract with users and feed the min-version CI job.
+
+[dependency-groups]
+# Dependencies used by lightweight CI and release automation scripts.
+# Keep this group small so those workflows do not need the complete dev environment.
+automation = [
+  "packaging",
+  "requests",
+  "semver",
+]
+
+# Development dependencies - includes test group
+dev = [
+  { include-group = "test" },
+  "pre-commit",
+  # We fix ty to a version since its still in beta and likely breaks our CI on updates:
+  "ty==0.0.73",
+  # We fix ruff to a version to be in sync with the pre-commit hook:
+  "ruff==0.16.4",
+  # We fix mypy to a version to avoid breaking our CI on updates,
+  # and have dependabot handle the updates instead.
+  "mypy==2.3.1",
+  # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
+  # Streamlit still type-checks as Python 3.10.
+  "numpy<2.5",
+  "mypy-protobuf",
+  "semver",
+  "setuptools",
+  "build",
+  "twine",
+  "wheel",
+  "pytz",
+  # Used for updating emojis via: scripts/update_emojis.py
+  "emoji",
+  # mypy type stubs
+  "types-protobuf",
+  "types-pytz",
+  "types-requests",
+  "types-setuptools",
+  "types-toml",
+  "types-Authlib",
+  # Cap pandas-stubs below 3.0.0: mypy/ty check against the installed stubs, and 2.x
+  # vs 3.x disagree, so a `# type: ignore` needed on one major is flagged unused on the
+  # other -- no single source state passes the whole type-check matrix (Python 3.10 ->
+  # 3.14). 3.0.0+ also require Python >= 3.11 (we still support 3.10). Mirrored by an
+  # `ignore` in dependabot.yml so Dependabot doesn't try to widen past the cap.
+  "pandas-stubs<3.0.0",
+]
+
+# Test dependencies
+test = [
+  # Testing infrastructure dependencies:
+  # pytest >= 9.1.0 is causing issues and is not yet supported.
+  "pytest<9.1.0",
+  "pytest-cov",
+  "hypothesis",
+  "parameterized",
+  "requests-mock",
+  "testfixtures",
+  # tomli is the backport of tomllib for Python <3.11:
+  "tomli; python_version < '3.11'",
+  # Install the same optional dependency sets users get from these extras, so tests
+  # exercise the real extra dependency graphs instead of a hand-maintained copy:
+  #   - auth -> Authlib, httpx
+  #   - charts -> matplotlib, graphviz, plotly, orjson
+  #   - pdf -> streamlit-pdf
+  #   - performance -> orjson, uvloop
+  "streamlit[auth,charts,pdf,performance]",
+  # Test-only packages not provided by any extra:
+  "seaborn",
+  # watchdog is skipped on macOS by the core deps; install it here so CI also
+  # exercises the watchdog-based file watcher on macOS.
+  "watchdog",
+  # Improved exception formatting (only bundled in the `all` extra):
+  "rich",
+  # Used by vega-lite / altair e2e tests:
+  "vega_datasets",
+  # httpx2 is used by starlette's TestClient (>=1.2); httpx (from the auth extra
+  # above) is still required by authlib's httpx_client integration used in the auth
+  # route tests.
+  "httpx2",
+  # Playwright and E2E test dependencies:
+  # We pin playwright to an exact version to avoid new browser versions breaking our CI.
+  "playwright==1.62.0",
+  "pytest-playwright",
+  "pixelmatch",
+  "pytest-xdist",
+  # pytest-rerunfailures 16.0 is breaking our CI:
+  # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
+  "pytest-rerunfailures!=16.0",
+  # 0.4.0 regressed annotation behavior with pytest-rerunfailures (only the final
+  # failure of a flaky test was annotated); fixed in 0.4.1, which also dedupes
+  # annotations under pytest-xdist. So we only exclude the broken 0.4.0 release.
+  # See https://github.com/pytest-dev/pytest-github-actions-annotate-failures/issues/132
+  "pytest-github-actions-annotate-failures!=0.4.0",
+  "pytest-benchmark",
+  "pytest-repeat",
+  "pytest-timeout",
+  # Used for memory tracking in E2E test statistics:
+  "psutil",
+  "types-psutil",
+]
+
+# Integration test dependencies
+integration = [
+  { include-group = "test" },
+  # Snowflake dependencies (matches the `snowflake` extra users install):
+  "streamlit[snowflake]",
+  # Additional dataframe formats for testing:
+  "polars",
+  "xarray",
+  "dask",
+  "duckdb",
+  # Used for testing of st.connection:
+  "sqlalchemy[mypy]",
+  # Used by audio test:
+  "scipy",
+  # Used to ensure pydantic is supported:
+  "pydantic",
+  # Used by type_util tests:
+  "sympy",
+]
+
+# =============================================================================
+# Ruff Configuration
+# =============================================================================
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+extend-exclude = [
+  # Autogenerated files:
+  "lib/streamlit/proto",
+  "lib/streamlit/emojis.py",
+  "lib/streamlit/material_icon_names.py",
+  # File with an expected compilation error:
+  "e2e_playwright/compilation_error_dialog.py",
+  # Ignore frontend directory:
+  "frontend/**",
+]
+exclude = [
+  # pympler is a vendored dependency that doesn't conform to our linting rules:
+  "lib/streamlit/vendor/**",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+line-ending = "lf"
+
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = false
+# We activate all rules and only ignore the rules that we don't want to enforce
+# or that are not relevant for our codebase.
+select = ["ALL"]
+ignore = [
+  # Rules planned to be supported in the future:
+  "EM101",  # Checks for the use of string literals in exception constructors.
+  "EM102",  # Checks for the use of f-strings in exception constructors.
+  "TRY003", # Checks for exception messages that are not defined in the exception class itself.
+  # Ignored rule sets:
+  "DTZ", # Checks for usage of unsafe naive datetime class.
+  "PTH", # Enforces usage of pathlib.
+  "C90", # Checks for McCabe complexity.
+  "FBT", # Forbids boolean positional arguments.
+  "SLF", # Checks unexpected for private member access.
+  "BLE", # Checks for blind except statements.
+  "CPY", # Checks for copyright statement.
+  # DOC rules for enforcing docstring completeness (too noisy):
+  "DOC201", # Checks for missing return documentation.
+  "DOC402", # Checks for missing yield documentation.
+  "DOC501", # Checks for missing exception documentation.
+  "DOC502", # Checks for extraneous exception documentation.
+  # Ignored rules:
+  "A002",    # Checks if function argument shadows a Python builtin.
+  "ANN401",  # Checks that `any` is not used as an annotation.
+  "B904",    # Checks for raise statements in exception handlers that lack a from clause.
+  "COM812",  # Checks for absence of trailing commas. Not recommended with formatter.
+  "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
+  "D100",    # Checks for missing docstring in public module.
+  "D101",    # Checks for missing docstring in public class.
+  "D102",    # Checks for missing docstring in public method.
+  "D103",    # Checks for missing docstring in public function.
+  "D104",    # Checks for missing docstring in public package.
+  "D105",    # Checks for missing docstring in magic method.
+  "D106",    # Checks for missing docstring in public nested class.
+  "D107",    # Checks for missing docstring in __init__.
+  "D202",    # Checks for no-blank line after docstring.
+  "D205",    # Checks for missing blank line after docstring summary.
+  "D401",    # Checks for docstring to start with imperative mood.
+  "E266",    # Checks for multiple leading hashes in block comments.
+  "FIX002",  # Checks todo comments (which we want to allow).
+  "FURB101", # Checks for open and read calls that can be replaced by pathlib.
+  "FURB103", # Checks for open and write calls that can be replaced by pathlib.
+  "FURB113", # Checks for repeated append calls that can be replaced by extend.
+  "FURB152", # Checks for math constants that could use math module.
+  "PD009",   # Checks for usage of pd.DataFrame.iat.
+  "PGH003",  # Checks for blanket type ignore.
+  "PLC0415", # Enforces imports to be at the top-level of the file.
+  "PLC1901", # Checks for comparisons to empty string.
+  "PLC2701", # Checks for imports of private names.
+  "PLR0904", # Checks for classes with too many public methods.
+  "PLR0911", # Checks for functions with too many return statements.
+  "PLR0912", # Checks for functions with too many branches.
+  "PLR0913", # Checks for functions with too many arguments.
+  "PLR0914", # Checks for functions with too many local variables.
+  "PLR0915", # Checks for functions with too many statements.
+  "PLR0916", # Checks for too many boolean expressions in if statements.
+  "PLR0917", # Checks for functions with too many positional arguments.
+  "PLR1702", # Checks for functions with too many nested blocks.
+  "PLR2004", # Checks for numerical values that could be put into a constant.
+  "PLR6301", # Checks for methods that do not use self.
+  "PLW0108", # Checks for lambdas that can be replaced by existing functions.
+  "PLW0717", # Checks for try clauses with too many statements (new in ruff 0.15.14).
+  "PLW3201", # Checks for bad dunder method names.
+  "PT012",   # Checks for pytest.raises context managers with multiple statements.
+  "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
+  "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
+  "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
+  "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
+  "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
+  "RUF052",  # Checks for dummy variables that are used.
+  "RUF067",  # Checks for non empty __init__ modules.
+  "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
+  "SIM105",  # Enforces use of contextlib.suppress.
+  "SIM108",  # Enforces ternary operators instead of if-else.
+  "SIM115",  # Enforces context manager for opening files.
+  "SIM117",  # Enforces single with statement with multiple contexts.
+  "SIM905",  # Enforces list instead of st.split.
+  "TD002",   # Checks for missing author in TODO comment.
+  "TD003",   # Checks for missing issue link in TODO comment.
+  "TRY300",  # Checks for return statements in try blocks.
+  # New preview rules in ruff 0.15.22 that would migrate our existing
+  # `# noqa` comments and rule codes to the unstable `ruff:ignore` syntax and
+  # human-readable names. We keep the established conventions for now.
+  "RUF105",  # Checks for legacy `# noqa` comments (migrates them to `# ruff:ignore`).
+  "RUF106",  # Checks for rule codes in suppression comments (migrates to human-readable names).
+  "RUF201",  # Checks for rule codes in config selectors (migrates to human-readable names).
+]
+extend-safe-fixes = ["TC002", "TC003"]
+
+[tool.ruff.lint.per-file-ignores]
+# Only add ignores for entire folders here. To ignore rules in individual
+# files, use the noqa ignore comment on top of the given file.
+"e2e_playwright/**" = [
+  "B018",   # Allow useless expressions (e.g., for side effects in tests).
+  "DOC",    # Ignore docstring correctness rules.
+  "N999",   # Allow invalid module names (test files use descriptive names).
+  "NPY002", # Allow legacy numpy random generation.
+  "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",   # Ignore performance rules (clarity over speed in tests).
+  "RUF029", # Allow async functions without await (intentional for testing async behavior).
+  "S",      # Ignore bandit security rules (test code doesn't need security hardening).
+  "T20",    # Allow print statements (useful for test debugging).
+  "TRY",    # Ignore tryceratops rules (simpler exception handling in tests).
+]
+"lib/tests/**" = [
+  "ANN",     # Ignore annotation rules (test functions don't need full typing).
+  "ARG",     # Allow unused arguments (common in test fixtures and mocks).
+  "D",       # Ignore docstring rules.
+  "DOC",     # Ignore docstring correctness rules.
+  "FURB118", # Allow all operators (tests may use operator module intentionally).
+  "FURB189", # Allow subclassing of builtin types (for test mocking).
+  "INP",     # Allow implicit namespace packages (test directories).
+  "N",       # Ignore naming conventions (test names can be descriptive/long).
+  "NPY002",  # Allow legacy numpy random generation.
+  "PD",      # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",    # Ignore performance rules (clarity over speed in tests).
+  "PLC2801", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
+  "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
+  "RUF069",  # Allow float equality checks in test assertions.
+  "S",       # Ignore bandit security rules (test code doesn't need security hardening).
+  "TID251",  # Allow direct hash constructors in test fixtures and FIPS policy probes.
+  "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
+]
+"scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
+"lib/streamlit/.agents/**" = [
+  # Each template is a standalone app, not a package. Adding __init__.py would
+  # misrepresent them as importable modules.
+  "INP",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"hashlib.md5".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.sha1".msg = "Use an approved constructor or streamlit.util.create_fast_hasher; only use SHA-1 directly when a protocol requires it."
+"hashlib.blake2b".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.blake2s".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.new".msg = "Use a named approved constructor or streamlit.util.create_fast_hasher."
+
+[tool.ruff.lint.isort]
+known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.pydoclint]
+ignore-one-line-docstrings = true
+
+[tool.ruff.lint.pycodestyle]
+# Allow lines (e.g. comments) up to 120 characters instead of 88,
+# which works well with Github.
+max-line-length = 120
+
+[tool.ruff.lint.flake8-comprehensions]
+# Allow dict calls that make use of keyword arguments (e.g., dict(a=1, b=2)).
+allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.lint.flake8-unused-arguments]
+# Ignore unused variadic argument, like *args and **kwargs.
+ignore-variadic-names = true
+
+[tool.ruff.lint.flake8-annotations]
+# Allow missing return annotation on functions that return None:
+suppress-none-returning = true
+
+# =============================================================================
+# Mypy Configuration
+# =============================================================================
+
+[tool.mypy]
+python_version = "3.10"
+cache_dir = ".mypy_cache"
+incremental = true
+files = [
+  "lib/streamlit/",
+  "lib/tests/streamlit/typing/",
+  "scripts/",
+  "e2e_playwright/",
+]
+exclude = [
+  # The compilation error test file breaks mypy because of the syntax error.
+  "^e2e_playwright/compilation_error_dialog\\.py$",
+]
+
+# Strict mode settings:
+warn_unused_configs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true
+
+# Other settings:
+allow_redefinition = false
+no_implicit_optional = true
+strict_optional = true
+warn_unreachable = true
+warn_no_return = true
+scripts_are_modules = true
+namespace_packages = true
+show_error_context = true
+show_column_numbers = true
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = "e2e_playwright.*"
+# We don't want to enforce return types for test functions
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+# Ignore all errors in unit tests
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "tests.streamlit.typing.*"
+# Explicitly enable type checking for the typing tests
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+  "shared.*",
+  "vega_datasets.*",
+  "sympy.*",
+  "plotly.*",
+  "pydeck.*",
+  "pyarrow.*",
+  "graphviz.*",
+  "authlib.*",
+  "uvloop.*",
+  "polars.*",
+  # yfinance is a template-only dependency (used by dashboard-stock-peers) and has no stubs.
+  "yfinance.*",
+  # SQLAlchemy is optional and its stubs are only installed with integration extras
+  "sqlalchemy.*",
+  # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10
+  "tomllib",
+  "tomli",
+]
+ignore_missing_imports = true
+
+# =============================================================================
+# ty Configuration
+# =============================================================================
+
+# Point the module-resolution root at ./lib (the real parent of the `streamlit`
+# package) rather than ./lib/streamlit. This ensures files resolve under their
+# true dotted paths (e.g. `streamlit.typing`), which is required so that
+# `lib/streamlit/typing.py` does NOT shadow the standard-library `typing` module
+# (a first-party top-level `typing` corrupts stdlib type resolution and panics ty).
+[tool.ty.environment]
+root = ["./lib"]
+
+[tool.ty.src]
+include = ["lib/streamlit", "e2e_playwright", "scripts"]
+exclude = [
+  "e2e_playwright/compilation_error_dialog.py",
+  "lib/streamlit/vendor/**",
+]
+
+[tool.ty.analysis]
+# Altair mark_* methods annotate return type as Self. ty currently resolves
+# those as T@__call__, which falsely flags .encode/.add_params/etc. Treat
+# Altair as Any until ty correctly binds Self on Altair's MarkMethodMixin.
+replace-imports-with-any = ["altair.**"]
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+possibly-unresolved-reference = "error"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,14 @@
 // Timestamp when the Streamlit execution started for GUEST_READY message
 const streamlitExecutionStartedAt = Date.now()
 
-import React, { StrictMode } from "react"
+import { StrictMode } from "react"
 
 import log from "loglevel"
 import { createRoot } from "react-dom/client"
 import { HelmetProvider } from "react-helmet-async"
-import { Client as Styletron } from "styletron-engine-atomic"
-import { Provider as StyletronProvider } from "styletron-react"
 
 import ThemedApp from "./ThemedApp"
 
-const engine = new Styletron({ prefix: "st-" })
 if (process.env.NODE_ENV === "development") {
   // By default, loglevel only shows warnings and errors.
   log.setLevel(log.levels.DEBUG)
@@ -44,9 +41,7 @@ const reactRoot = createRoot(rootDomNode)
 reactRoot.render(
   <StrictMode>
     <HelmetProvider>
-      <StyletronProvider value={engine}>
-        <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
-      </StyletronProvider>
+      <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
     </HelmetProvider>
   </StrictMode>
 )

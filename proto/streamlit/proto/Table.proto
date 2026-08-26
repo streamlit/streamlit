@@ -1,0 +1,41 @@
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+import "streamlit/proto/ArrowData.proto";
+
+// Proto message for st.table element.
+message Table {
+  // The Arrow data to display
+  ArrowData arrow_data = 1;
+
+  // How to show borders around the table and between cells.
+  BorderMode border_mode = 2;
+
+  // Available border modes:
+  enum BorderMode {
+    ALL = 0; // Show borders around the table and between cells.
+    NONE = 1; // Show no borders.
+    HORIZONTAL = 2; // Show only horizontal borders between rows.
+  }
+
+  // Whether to hide the index column(s).
+  bool hide_index = 3;
+
+  // Whether to hide the column header row(s).
+  bool hide_header = 4;
+}

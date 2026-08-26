@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, MouseEvent, ReactElement } from "react"
+import { memo, MouseEvent, ReactElement, useCallback, useRef } from "react"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
@@ -22,18 +22,33 @@ import { Box } from "~lib/components/shared/Base/styled-components"
 import {
   BaseButtonKind,
   BaseButtonSize,
-  BaseButtonTooltip,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BaseLinkButton from "./BaseLinkButton"
 
 export interface Props {
   element: LinkButtonProto
+  widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
-  const { element } = props
+  const { element, widgetMgr, fragmentId } = props
+  const shortcut = element.shortcut || undefined
+  const isLinkBlocked = isDangerousLinkUri(element.url)
+  const href = isLinkBlocked ? BLOCKED_LINK_URI : element.url
+
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -42,12 +57,42 @@ function LinkButton(props: Readonly<Props>): ReactElement {
     kind = BaseButtonKind.TERTIARY
   }
 
-  const handleClick = (e: MouseEvent<HTMLAnchorElement>): void => {
-    // Prevent the link from being followed if the button is disabled.
-    if (element.disabled) {
-      e.preventDefault()
+  const anchorRef = useRef<HTMLAnchorElement | null>(null)
+
+  const handleShortcut = useCallback((): void => {
+    if (element.disabled || isLinkBlocked) {
+      return
     }
-  }
+
+    anchorRef.current?.click()
+  }, [element.disabled, isLinkBlocked])
+
+  const handleClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>): void => {
+      if (element.disabled || isLinkBlocked) {
+        // Prevent the link from being followed if the button is disabled or
+        // if its URI uses a dangerous scheme.
+        event.preventDefault()
+        return
+      }
+
+      if (!element.ignoreRerun && element.id) {
+        void widgetMgr.setTriggerValue(element.id, {
+          // Link buttons cannot be placed inside a form.
+          formId: undefined,
+          fragmentId,
+          fromUser: true,
+        })
+      }
+    },
+    [element, fragmentId, isLinkBlocked, widgetMgr]
+  )
+
+  useRegisterShortcut({
+    shortcut,
+    disabled: element.disabled,
+    onActivate: handleShortcut,
+  })
 
   return (
     <Box className="stLinkButton" data-testid="stLinkButton">
@@ -59,16 +104,24 @@ function LinkButton(props: Readonly<Props>): ReactElement {
         {/* We use separate BaseLinkButton instead of BaseButton here, because
         link behavior requires tag <a> instead of <button>.*/}
         <BaseLinkButton
+          ref={anchorRef}
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={element.disabled}
           onClick={handleClick}
-          href={element.url}
-          target="_blank"
+          href={href}
+          target={isLinkBlocked ? "_self" : "_blank"}
           rel="noreferrer"
           aria-disabled={element.disabled}
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel
+            icon={element.icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
+            label={element.label}
+            shortcut={shortcut}
+            wrap={wrap}
+            addTitleTooltip={addTitleTooltip}
+          />
         </BaseLinkButton>
       </BaseButtonTooltip>
     </Box>

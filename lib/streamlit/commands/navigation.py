@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.navigation.page import Page
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -32,28 +32,29 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.string_util import is_emoji
 
 if TYPE_CHECKING:
+    from streamlit.proto.AppPage_pb2 import AppPage as AppPageProto
     from streamlit.source_util import PageHash, PageInfo
 
 SectionHeader: TypeAlias = str
-PageType: TypeAlias = str | Path | Callable[[], None] | StreamlitPage
+PageType: TypeAlias = str | Path | Callable[[], None] | Page
 
 
 def convert_to_streamlit_page(
     page_input: PageType,
-) -> StreamlitPage:
-    """Convert various input types to StreamlitPage objects."""
-    if isinstance(page_input, StreamlitPage):
+) -> Page:
+    """Convert various input types to Page objects."""
+    if isinstance(page_input, Page):
         return page_input
 
     if isinstance(page_input, str):
-        return StreamlitPage(page_input)
+        return Page(page_input)
 
     if isinstance(page_input, Path):
-        return StreamlitPage(page_input)
+        return Page(page_input)
 
     if callable(page_input):
-        # Convert function to StreamlitPage
-        return StreamlitPage(page_input)
+        # Convert function to Page
+        return Page(page_input)
 
     raise StreamlitAPIException(
         f"Invalid page type: {type(page_input)}. Must be either a string path, "
@@ -62,8 +63,8 @@ def convert_to_streamlit_page(
 
 
 def pages_from_nav_sections(
-    nav_sections: dict[SectionHeader, list[StreamlitPage]],
-) -> list[StreamlitPage]:
+    nav_sections: dict[SectionHeader, list[Page]],
+) -> list[Page]:
     page_list = []
     for pages in nav_sections.values():
         page_list.extend(pages.copy())
@@ -77,13 +78,20 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
     ctx.enqueue(msg)
 
 
+def _set_external_url(page_proto: AppPageProto, page: Page) -> None:
+    """Set external_url on the AppPage proto when the page targets an external URL."""
+    external_url = page.external_url
+    if external_url is not None:
+        page_proto.external_url = external_url
+
+
 @gather_metrics("navigation")
 def navigation(
     pages: Sequence[PageType] | Mapping[SectionHeader, Sequence[PageType]],
     *,
     position: Literal["sidebar", "hidden", "top"] = "sidebar",
-    expanded: bool = False,
-) -> StreamlitPage:
+    expanded: bool | int = False,
+) -> Page:
     """
     Configure the available pages in a multipage app.
 
@@ -95,7 +103,7 @@ def navigation(
     ``streamlit run``) acts like a router or frame of common elements around
     each of your pages. Streamlit executes the entrypoint file with every app
     rerun. To execute the current page, you must call the ``.run()`` method on
-    the ``StreamlitPage`` object returned by ``st.navigation``.
+    the ``Page`` object returned by ``st.navigation``.
 
     The set of available pages can be updated with each rerun for dynamic
     navigation. By default, ``st.navigation`` displays the available pages in
@@ -112,7 +120,7 @@ def navigation(
 
         To create a navigation menu with no sections or page groupings,
         ``pages`` must be a list of page-like objects. Page-like objects are
-        anything that can be passed to ``st.Page`` or a ``StreamlitPage``
+        anything that can be passed to ``st.Page`` or a ``Page``
         object returned by ``st.Page``.
 
         To create labeled sections or page groupings within the navigation
@@ -122,9 +130,11 @@ def navigation(
         collapsible item in the navigation menu. For top navigation, if you use
         an empty string as a section header, the pages in that section will be
         displayed at the beginning of the menu before the collapsible sections.
+        Section labels support GitHub-flavored Markdown as described in the
+        ``title`` parameter of ``st.Page``.
 
         When you use a string or path as a page-like object, they are
-        internally passed to ``st.Page`` and converted to ``StreamlitPage``
+        internally passed to ``st.Page`` and converted to ``Page``
         objects. In this case, the page will have the default title, icon, and
         path inferred from its path or filename. To customize these attributes
         for your page, initialize your page with ``st.Page``.
@@ -138,22 +148,37 @@ def navigation(
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
 
-    expanded : bool
-        Whether the navigation menu should be expanded. If this is ``False``
-        (default), the navigation menu will be collapsed and will include a
-        button to view more options when there are too many pages to display.
-        If this is ``True``, the navigation menu will always be expanded; no
-        button to collapse the menu will be displayed.
+    expanded : bool or int
+        Controls whether the navigation menu is expanded and how many items
+        are visible when it's collapsed.
 
-        If ``st.navigation`` changes from ``expanded=True`` to
-        ``expanded=False`` on a rerun, the menu will stay expanded and a
-        collapse button will be displayed.
+        This parameter is only used when ``position="sidebar"`` and the sidebar
+        has other elements below the navigation menu. If the sidebar only
+        contains the navigation menu, it will always be fully expanded. The
+        following values are valid:
 
-        The parameter is only used when ``position="sidebar"``.
+        - ``False`` (default): The navigation menu shows a maximum
+          of ten pages when there are more than twelve pages. The menu is fully
+          expanded when there are twelve or fewer pages. A collapsed menu has a
+          "View X more" button at the bottom. An expanded menu that can be
+          collapsed has a "View less" button at the bottom.
+
+        - ``True``: The navigation menu will always be fully expanded, and no
+          "View less" button will be displayed.
+
+        - Positive integer: A positive integer specifies the maximum number of
+          pages to display when the menu is collapsed. When there are at least
+          three more pages than this integer, the menu will be collapsed.
+          Otherwise, the menu will be fully expanded. ``expanded=10`` is
+          equivalent to the default, ``expanded=False``.
+
+        If the value of ``expanded`` changes between reruns, an expanded menu
+        will stay expanded. If the change in value makes the menu newly
+        collapsible, Streamlit will only add a "View less" button at the bottom.
 
     Returns
     -------
-    StreamlitPage
+    Page
         The current page selected by the user. To run the page, you must use
         the ``.run()`` method on it.
 
@@ -167,7 +192,7 @@ def navigation(
 
     You can declare pages from callables or file paths. If you pass callables
     or paths to ``st.navigation`` as a page-like objects, they are internally
-    converted to ``StreamlitPage`` objects using ``st.Page``. In this case, the
+    converted to ``Page`` objects using ``st.Page``. In this case, the
     page titles, icons, and paths are inferred from the file or callable names.
 
     ``page_1.py`` (in the same directory as your entrypoint file):
@@ -292,11 +317,8 @@ def navigation(
 
     """
     # Validate position parameter
-    if not isinstance(position, str) or position not in ["sidebar", "hidden", "top"]:
-        raise StreamlitAPIException(
-            f'Invalid position "{position}". '
-            'The position parameter must be one of "sidebar", "hidden", or "top".'
-        )
+    if not isinstance(position, str) or position not in {"sidebar", "hidden", "top"}:
+        raise StreamlitValueError("position", ["'sidebar'", "'hidden'", "'top'"])
 
     # Disable the use of the pages feature (ie disregard v1 behavior of Multipage Apps)
     PagesManager.uses_pages_directory = False
@@ -308,8 +330,8 @@ def _navigation(
     pages: Sequence[PageType] | Mapping[SectionHeader, Sequence[PageType]],
     *,
     position: Literal["sidebar", "hidden", "top"],
-    expanded: bool,
-) -> StreamlitPage:
+    expanded: bool | int,
+) -> Page:
     if isinstance(pages, Sequence):
         converted_pages = [convert_to_streamlit_page(p) for p in pages]
         nav_sections = {"": converted_pages}
@@ -340,7 +362,13 @@ def _navigation(
                 default_page = page
 
     if default_page is None:
-        default_page = page_list[0]
+        non_external_pages = [p for p in page_list if not p.is_external]
+        if not non_external_pages:
+            raise StreamlitAPIException(
+                "At least one non-external page is required. "
+                "External URL pages cannot be the default page."
+            )
+        default_page = non_external_pages[0]
         default_page._default = True
 
     ctx = get_script_run_ctx()
@@ -386,7 +414,35 @@ def _navigation(
         else:
             msg.navigation.position = NavigationProto.Position.SIDEBAR
 
-    msg.navigation.expanded = expanded
+    # Handle expanded parameter: must be bool or non-negative int
+    if isinstance(expanded, bool):
+        if expanded:
+            msg.navigation.expanded = True
+            # Don't set visible_items - leave it unset to use default
+        else:
+            # expanded is False - use default collapsed behavior
+            msg.navigation.expanded = False
+            # Don't set visible_items - leave it unset to use default
+    elif isinstance(expanded, int):
+        if expanded < 0:
+            raise StreamlitAPIException(
+                f"Invalid value for expanded: {expanded!r}. "
+                "When using an int, expanded must be a non-negative integer."
+            )
+        if expanded == 0:
+            # Documented default behavior: collapsed, default visible_items
+            msg.navigation.expanded = False
+            # Don't set visible_items - leave it unset to use default
+        else:
+            # Positive int: collapsed with a limited number of visible items
+            msg.navigation.expanded = False
+            msg.navigation.visible_items = expanded
+    else:
+        raise StreamlitAPIException(
+            f"Invalid type for expanded: {type(expanded).__name__!s}. "
+            "expanded must be a bool or a non-negative integer."
+        )
+
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
@@ -397,11 +453,13 @@ def _navigation(
             p.is_default = page._default
             p.section_header = section_header
             p.url_pathname = page.url_path
+            p.is_hidden = page._visibility == "hidden"
+            _set_external_url(p, page)
 
-    # Inform our page manager about the set of pages we have
-    ctx.pages_manager.set_pages(pagehash_to_pageinfo)
-    found_page = ctx.pages_manager.get_page_script(
-        fallback_page_hash=default_page._script_hash
+    # Inform our page manager about the set of pages we have and resolve the page
+    found_page = ctx.pages_manager.set_pages_and_resolve(
+        pagehash_to_pageinfo,
+        fallback_page_hash=default_page._script_hash,
     )
 
     page_to_return = None
@@ -412,6 +470,10 @@ def _navigation(
         ]
         if len(matching_pages) > 0:
             page_to_return = matching_pages[0]
+
+    # External pages cannot be accessed directly by URL
+    if page_to_return and page_to_return.is_external:
+        page_to_return = None
 
     if not page_to_return:
         send_page_not_found(ctx)

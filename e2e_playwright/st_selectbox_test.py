@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,16 @@
 from __future__ import annotations
 
 import re
-from re import Pattern
 from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
+from e2e_playwright.conftest import (
+    rerun_app,
+    wait_for_app_loaded,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -27,16 +32,19 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_selectbox,
+    select_selectbox_option,
 )
 
 if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 20
+NUM_SELECTBOXES = 30
 
 
-def get_selectbox_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_selectbox_input(
+    locator: Locator | Page, label: str | re.Pattern[str]
+) -> Locator:
     """Get the input of a selectbox with the given label.
 
     Parameters
@@ -140,6 +148,10 @@ def test_selectbox_has_correct_initial_values(app: Page):
     expect_markdown(app, "value 15 (session_state): male")
     expect_markdown(app, "value 16: female")
     expect_markdown(app, "value 17: None")
+    expect_markdown(app, "value 21: None")
+    expect_markdown(app, "value 22: None")
+    expect_markdown(app, "value 23: None")
+    expect_markdown(app, "value 26: None")
 
 
 def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFunction):
@@ -147,20 +159,39 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     assert_snapshot(selection_dropdown, name="st_selectbox-selection_dropdown")
-    # Select last option:
-    selection_dropdown.locator("li").nth(1).click()
+    # Select second option:
+    selection_dropdown.get_by_role("option").nth(1).click()
     # Check that selection worked:
     expect_markdown(app, "value 4: e2e/scripts/st_warning.py")
+
+
+def test_keeps_selection_with_identity_dependent_format_func(app: Page):
+    """Test that custom-object selections persist with an identity-dependent format_func.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15618. The
+    option class is redefined every rerun, so a format_func that looks options up
+    in a dict used to raise on the stored value and revert the selection.
+    """
+    label = "selectbox 24 (custom objects with identity-dependent format_func)"
+    select_selectbox_option(app, label, "II (two)")
+
+    # The selection must reflect the second option, not revert to the first.
+    expect_markdown(app, "value 24: two")
+
+    # It must also survive a fresh rerun (where the bug originally triggered).
+    rerun_app(app)
+    expect_markdown(app, "value 24: two")
 
 
 def test_handles_option_selection_via_typing(app: Page):
     """Test that selection of an option via typing works correctly."""
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
-    # Type an option:
-    selectbox_input.type("e2e/scripts/st_warning.py")
+    # Click to open dropdown, then fill to filter by the desired option:
+    selectbox_input.click()
+    selectbox_input.fill("e2e/scripts/st_warning.py")
     selectbox_input.press("Enter")
 
     # Check that selection worked:
@@ -173,12 +204,72 @@ def test_shows_correct_options_via_fuzzy_search(
     """Test that the fuzzy matching of options via typing works correctly."""
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
-    # Start typing:
-    selectbox_input.type("exp")
+    # Click to open dropdown, then fill to filter:
+    selectbox_input.click()
+    selectbox_input.fill("exp")
 
     # Check filtered options
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
+
+
+def test_type_to_search_replaces_committed_value(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/15985.
+
+    With a value already committed, focusing the selectbox and typing must start
+    a fresh search (replacing the committed label) instead of appending the typed
+    characters behind it (which matched nothing).
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
+    expect(selectbox_input).to_have_value("male")
+
+    # Click to focus, then type character-by-character to exercise the
+    # append-vs-replace behavior (fill() would replace the value wholesale).
+    selectbox_input.click()
+    selectbox_input.press_sequentially("fem")
+
+    # The committed "male" must be replaced by the query, not become "malefem".
+    expect(selectbox_input).to_have_value("fem")
+
+    # The dropdown filters to the matching option and hides the previous one.
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_text("female")
+    expect(
+        selection_dropdown.get_by_role("option", name="male", exact=True)
+    ).to_have_count(0)
+
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 1: female")
+
+
+def test_escape_clears_typed_query_and_restores_committed_value(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/16004.
+
+    While the user is actively filtering, pressing Escape must discard the
+    typed query and restore the committed label. The committed value must not change.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
+    expect(selectbox_input).to_have_value("male")
+
+    selectbox_input.click()
+    selectbox_input.press_sequentially("fem")
+    # The query has replaced the committed label in the input.
+    expect(selectbox_input).to_have_value("fem")
+
+    # Verify the dropdown is filtering on the query before Escape.
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+
+    selectbox_input.press("Escape")
+
+    # The typed query is cleared and the committed label is restored.
+    expect(selectbox_input).to_have_value("male")
+    # The dropdown is closed after Escape.
+    expect(selection_dropdown).not_to_be_visible()
+    # The committed selection did not change — no rerun with a new value.
+    expect_markdown(app, "value 1: male")
 
 
 def test_empty_selectbox_behaves_correctly(
@@ -187,8 +278,9 @@ def test_empty_selectbox_behaves_correctly(
     """Test that st.selectbox behaves correctly when empty (no initial selection)."""
     empty_selectbox_input = get_selectbox_input(app, "selectbox 9 (empty selection)")
 
-    # Type an option:
-    empty_selectbox_input.type("male")
+    # Fill and commit the option:
+    empty_selectbox_input.click()
+    empty_selectbox_input.fill("male")
     empty_selectbox_input.press("Enter")
 
     expect_markdown(app, "value 9: male")
@@ -210,7 +302,7 @@ def test_keeps_value_on_selection_close(app: Page):
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
-    expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
 
     # Click outside to close the dropdown:
     app.get_by_test_id("stMarkdown").first.click()
@@ -225,11 +317,17 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect_markdown(app, "value 8: female")
     expect_markdown(app, "selectbox changed: False")
 
-    get_selectbox_input(app, "selectbox 8 (with callback, help)").click()
+    # Wait for the React component to be fully initialized before clicking
+    selectbox_input = get_selectbox_input(app, "selectbox 8 (with callback, help)")
+    expect(selectbox_input).to_have_value("female")
+    selectbox_input.click()
+    # ArrowDown ensures the dropdown opens (backup for focus-triggered open)
+    selectbox_input.press("ArrowDown")
 
-    # Select last option:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").first.click()
+    # Wait for dropdown and select first option:
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+    selection_dropdown.get_by_role("option").first.click()
 
     # Check that selection worked:
     expect_markdown(app, "value 8: male")
@@ -238,12 +336,10 @@ def test_handles_callback_on_change_correctly(app: Page):
         app.get_by_text("Selectbox widget callback triggered: x=1, y=2, z=3")
     ).to_be_visible()
 
-    # Change different input to trigger delta path change
-    empty_selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
+    # Change a different selectbox to trigger a delta-path change.
+    select_selectbox_option(app, "selectbox 1 (default)", "female")
 
-    # Type an option:
-    empty_selectbox_input.type("female")
-    empty_selectbox_input.press("Enter")
+    wait_for_app_run(app)
 
     expect_markdown(app, "value 1: female")
     expect_markdown(app, "value 8: male")
@@ -261,7 +357,17 @@ def test_custom_css_class_via_key(app: Page):
 
 
 def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the selectbox can be updated dynamically while keeping the state."""
+    """Test that the selectbox can be updated dynamically while keeping the state.
+
+    This tests that:
+    1. Options can be changed dynamically when a key is provided
+    2. Format function can be changed dynamically
+    3. Selection resets to default when selected value is removed from options
+    4. Selection is preserved when the selected value exists in new options
+
+    Initial options: [apple, banana, mango, orange] with format_func=capitalize, index=0 (default: apple)
+    Updated options: [mango, papaya, grape, apple] with format_func=upper, index=1 (default: papaya)
+    """
     dynamic_select = get_element_by_key(app, "dynamic_selectbox_with_key")
     expect(dynamic_select).to_be_visible()
 
@@ -273,20 +379,20 @@ def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunctio
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select, "initial help")
 
-    # Type something and submit
-    select_input = dynamic_select.locator("input").first
-    select_input.type("banana")
-    select_input.press("Enter")
+    # --- Test 1: Selection RESETS when value is removed from options ---
+    # Select "banana" (only exists in initial options, NOT in updated)
+    select_selectbox_option(app, "Initial dynamic selectbox", "Banana")
     expect_prefixed_markdown(app, "Initial selectbox value:", "banana")
 
-    # Toggle to update props
+    # Toggle to update props - options change from [apple, banana, mango, orange]
+    # to [mango, papaya, grape, apple]. "banana" is NOT in updated options.
     click_toggle(app, "Update selectbox props")
 
-    # new date input is visible:
+    # Updated selectbox is visible
     expect(dynamic_select).to_contain_text("Updated dynamic selectbox")
 
-    # Ensure new select is visible and previous value remains
-    expect_prefixed_markdown(app, "Updated selectbox value:", "banana")
+    # Selection should RESET to "papaya" (default at index=1) since "banana" is not in updated options
+    expect_prefixed_markdown(app, "Updated selectbox value:", "papaya")
 
     dynamic_select.scroll_into_view_if_needed()
     assert_snapshot(dynamic_select, name="st_selectbox-dynamic_updated")
@@ -294,10 +400,20 @@ def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunctio
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select, "updated help")
 
-    # Select a different option again:
-    select_input.type("orange")
-    select_input.press("Enter")
-    expect_prefixed_markdown(app, "Updated selectbox value:", "orange")
+    # --- Test 2: Selection PRESERVED when value exists in both option sets ---
+    # Select "mango" - it exists in BOTH option sets at different indices:
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "MANGO")
+    # Neither is the default. This ensures we're testing true preservation.
+    select_selectbox_option(app, "Updated dynamic selectbox", "MANGO")
+    expect_prefixed_markdown(app, "Updated selectbox value:", "mango")
+
+    # Toggle back to initial options - "mango" exists in initial too
+    click_toggle(app, "Update selectbox props")
+    expect(dynamic_select).to_contain_text("Initial dynamic selectbox")
+
+    # Selection should be PRESERVED since "mango" is in both option sets
+    # If this was reset, it would show "apple" (initial default), not "mango"
+    expect_prefixed_markdown(app, "Initial selectbox value:", "mango")
 
 
 def test_dismiss_change_by_clicking_away(app: Page):
@@ -326,8 +442,7 @@ def test_dismiss_change_by_clicking_away(app: Page):
     ).click()
 
     # Verify original value is restored
-    # We use contain_text because the selectbox_element's text also includes the label
-    expect(selectbox_element).to_contain_text("male")
+    expect(selectbox_input).to_have_value("male")
     expect_markdown(app, "value 14: male")
 
 
@@ -341,8 +456,7 @@ def test_accept_new_options_feature(app: Page):
 
     # Type a new option that doesn't exist in the original options
     selectbox_input.click()
-    selectbox_input.fill("")  # Clear the input
-    selectbox_input.type("new_custom_option")
+    selectbox_input.fill("new_custom_option")
     selectbox_input.press("Enter")
 
     # Check that the new option was accepted and selected
@@ -361,8 +475,7 @@ def test_does_not_accept_new_options_feature(app: Page):
 
     # Type a new option that doesn't exist in the original options
     selectbox_input.click()
-    selectbox_input.fill("")  # Clear the input
-    selectbox_input.type("new_custom_option")
+    selectbox_input.fill("new_custom_option")
     selectbox_input.press("Enter")
 
     expect_markdown(app, "value 1: male")
@@ -372,7 +485,7 @@ def test_selectbox_preset_session_state(app: Page):
     """Should display values from session_state."""
     expect_markdown(app, "value 16: female")
     selectbox = get_selectbox(app, "selectbox 16 - session_state values")
-    expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("female")
 
 
 def test_selectbox_empty_options_with_accept_new_options(app: Page):
@@ -386,7 +499,7 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
     selectbox_input = selectbox_elem.locator("input")
 
     # Verify the initial placeholder shows a message about adding an option
-    expect(selectbox_elem).to_contain_text("Add an option")
+    expect(selectbox_input).to_have_attribute("placeholder", "Add an option")
 
     # Click to focus the input field
     selectbox_input.click()
@@ -399,7 +512,7 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
     expect_markdown(app, "value 17: new_option")
 
     # Verify the new option is visible in the input field
-    expect(selectbox_elem.get_by_text("new_option", exact=True)).to_be_visible()
+    expect(selectbox_input).to_have_value("new_option")
 
     # Add another option to replace the first one
     selectbox_input.click()
@@ -408,9 +521,335 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
 
     # Verify the new option replaced the previous one
     expect_markdown(app, "value 17: another_option")
-    expect(selectbox_elem.get_by_text("another_option", exact=True)).to_be_visible()
+    expect(selectbox_input).to_have_value("another_option")
 
 
 def test_help_tooltip_works(app: Page):
     element_with_help = get_selectbox(app, "selectbox 8 (with callback, help)")
     expect_help_tooltip(app, element_with_help, "Help text")
+
+
+def test_selectbox_session_state_sync_after_open_close(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/13435.
+
+    When value is set via session_state and user opens/closes dropdown without
+    selecting, the UI should remain in sync with the actual value.
+    """
+    # Initial state should show "male" (default at index 0)
+    selectbox = get_selectbox(app, "selectbox 20 - session_state sync test")
+    expect(selectbox.locator("input")).to_have_value("male")
+    expect_markdown(app, "value 20: male")
+
+    # Click button to set value to "female" via session_state
+    app.get_by_role("button", name="Set female").click()
+    expect_markdown(app, "value 20: female")
+    expect(selectbox.locator("input")).to_have_value("female")
+
+    # Open the dropdown
+    selectbox_input = get_selectbox_input(app, "selectbox 20 - session_state sync test")
+    selectbox_input.click()
+
+    # Verify dropdown is open
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
+
+    # Close by pressing Escape without making a selection
+    app.keyboard.press("Escape")
+
+    # The selectbox should still display "female" (not revert to initial "male")
+    expect(selectbox.locator("input")).to_have_value("female")
+    expect_markdown(app, "value 20: female")
+
+
+def test_selectbox_prefix_filter_mode_matches_prefix_only(app: Page):
+    """Test that prefix mode only shows prefix matches and preserves option order."""
+    selectbox_input = get_selectbox_input(app, "selectbox 21 (filter_mode='prefix')")
+    selectbox_input.click()
+    selectbox_input.fill("A123")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("A123")
+    expect(options.nth(1)).to_have_text("A1234")
+    expect(
+        selection_dropdown.get_by_role("option", name="BA123", exact=True)
+    ).to_have_count(0)
+
+
+def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
+    """Test that contains mode matches case-insensitive substrings without reordering."""
+    selectbox_input = get_selectbox_input(app, "selectbox 22 (filter_mode='contains')")
+    selectbox_input.click()
+    selectbox_input.fill("EXAMPLE")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("alice@example.com")
+    expect(options.nth(1)).to_have_text("carol@example.com")
+    expect(
+        selection_dropdown.get_by_role("option", name="bob@company.com", exact=True)
+    ).to_have_count(0)
+
+
+def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
+    """Test that filter_mode=None blocks typing while keeping the dropdown and
+    keyboard navigation usable.
+
+    The input uses inputmode="none" (not readonly) so the mobile software
+    keyboard stays hidden while the input remains focusable: clicking opens the
+    dropdown and Arrow/Enter navigation keeps working right afterwards.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 23 (filter_mode=None)")
+    # inputmode="none" suppresses the mobile software keyboard. readonly is NOT
+    # used because it breaks focus-on-click and React Aria keyboard navigation.
+    expect(selectbox_input).to_have_attribute("inputmode", "none")
+    expect(selectbox_input).not_to_have_attribute("readonly", "")
+    # The text caret is hidden so the input looks non-editable (like a plain
+    # select) even though it stays focusable for keyboard navigation.
+    expect(selectbox_input).to_have_css("caret-color", "rgba(0, 0, 0, 0)")
+
+    # Clicking must focus the input. An earlier readonly + preventDefault approach
+    # dropped focus and broke the click-then-keyboard flow; this assertion guards
+    # that regression.
+    selectbox_input.click()
+    expect(selectbox_input).to_be_focused()
+
+    # ArrowDown reliably opens the dropdown (backup for pointer-triggered open,
+    # matching select_selectbox_option) and highlights the first option.
+    selectbox_input.press("ArrowDown")
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(3)
+
+    # Typing must NOT filter the list: character input is blocked, so all
+    # options stay visible.
+    selectbox_input.press("n")
+    selectbox_input.press("o")
+    expect(options).to_have_count(3)
+    # The count above stays 3 even without blocking, since filter_mode=None
+    # disables filtering regardless. The real regression guard is that the
+    # blocked keystrokes entered no visible text (mirrors the unit test's
+    # toHaveValue("")).
+    expect(selectbox_input).to_have_value("")
+
+    # Keyboard navigation still selects: a second ArrowDown reaches "No" and
+    # Enter commits it, proving Arrow/Enter work after focusing via click.
+    selectbox_input.press("ArrowDown")
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 23: No")
+
+
+def test_selectbox_virtualizes_large_option_list(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a selectbox with many options only renders a small window of
+    option rows (virtualization) while keeping far-down options selectable, and
+    that filtering to an unmatched value shows the styled "No results" empty
+    state.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 25 (large virtualized list)")
+    selectbox_input.click()
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    selectbox_input.press("ArrowDown")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+
+    options = selection_dropdown.get_by_role("option")
+    # The top of the list is rendered when the dropdown opens.
+    expect(options.first).to_be_visible()
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 0", exact=True)
+    ).to_be_visible()
+
+    # Virtualization: only a small window of the 1000 options is in the DOM, so a
+    # far-down option is NOT rendered even though it exists in the collection.
+    # Use wait_until (auto-retrying) rather than a bare assert on a snapshot
+    # count to avoid flakiness while the virtualizer settles its window.
+    wait_until(app, lambda: options.count() < 100)
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 999", exact=True)
+    ).to_have_count(0)
+
+    # Filtering to an unmatched value shows the styled empty-state popover.
+    selectbox_input.fill("No matching option")
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_be_visible()
+    expect(
+        selection_dropdown.get_by_role("option", name="Option 0", exact=True)
+    ).to_have_count(0)
+    assert_snapshot(selection_dropdown, name="st_selectbox-no_results_popover")
+
+    # A far-down option can still be selected by typing to filter for it.
+    selectbox_input.fill("Option 987")
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 25: Option 987")
+
+
+def test_selectbox_fuzzy_filter_mode_keeps_non_contiguous_matches(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/16003.
+
+    Fuzzy (default) filtering must keep non-contiguous matches. The react-aria
+    ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+    result, dropping matches whose query is not a contiguous substring.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 26 (fuzzy filter mode)")
+    selectbox_input.click()
+    selectbox_input.fill("ape")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    # "Grape" (contains "ape") and "Apple" (fuzzy A-p-...-e) both match; the
+    # contiguous match ranks first in the fuzzy-sorted result.
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("Grape")
+    expect(options.nth(1)).to_have_text("Apple")
+    # Non-matching options must NOT be shown, and there must be no empty state.
+    expect(
+        selection_dropdown.get_by_role("option", name="Banana", exact=True)
+    ).to_have_count(0)
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_have_count(0)
+
+    # A query that is not a contiguous substring of any option must still
+    # fuzzy-match: "aple" -> "Apple" only (A-p-l-e), without falling back to the
+    # "No results" empty state.
+    selectbox_input.fill("aple")
+    expect(options).to_have_count(1)
+    expect(options.nth(0)).to_have_text("Apple")
+
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 26: Apple")
+
+
+# --- Query param binding tests ---
+
+
+def test_selectbox_query_param_seeding(page: Page, app_port: int):
+    """Test that selectbox value can be seeded from URL query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=dog")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound select value:", "dog")
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select_clear="))
+
+
+def test_selectbox_query_param_updates_url(app: Page):
+    """Test that changing a bound selectbox updates the URL."""
+    select_selectbox_option(app, option="dog", label="Bound selectbox")
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]bound_select=dog"))
+    expect_prefixed_markdown(app, "bound select value:", "dog")
+
+
+def test_selectbox_query_param_default_override(page: Page, app_port: int):
+    """Test selectbox with query param: seed then revert to default clears param."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=bird")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound select value:", "bird")
+
+    # Change back to default ("cat", index 0)
+    select_selectbox_option(page, option="cat", label="Bound selectbox")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+    expect_prefixed_markdown(page, "bound select value:", "cat")
+
+
+def test_selectbox_query_param_invalid_value(page: Page, app_port: int):
+    """Test that invalid URL values are cleared and widget uses default."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=invalid_option")
+    wait_for_app_loaded(page)
+
+    # Widget should show default value ("cat"), invalid param should be cleared
+    expect_prefixed_markdown(page, "bound select value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select_clear="))
+
+
+def test_selectbox_query_param_clearable(page: Page, app_port: int):
+    """Test that clearable selectbox can be seeded from URL."""
+    page.goto(f"http://localhost:{app_port}/?bound_select_clear=green")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound select clear value:", "green")
+
+
+def test_selectbox_query_param_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value clears a clearable selectbox to None."""
+    page.goto(f"http://localhost:{app_port}/?bound_select_clear=")
+    wait_for_app_loaded(page)
+
+    # Clearable selectbox should accept the empty value and show None
+    expect_prefixed_markdown(page, "bound select clear value:", "None")
+
+
+def test_selectbox_query_param_clearable_invalid_value(page: Page, app_port: int):
+    """Test that invalid value on clearable selectbox resets to None default."""
+    page.goto(f"http://localhost:{app_port}/?bound_select_clear=invalid")
+    wait_for_app_loaded(page)
+
+    # Invalid value should reset to default (None for clearable widget)
+    expect_prefixed_markdown(page, "bound select clear value:", "None")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select_clear="))
+
+
+def test_selectbox_query_param_non_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value is rejected for non-clearable selectbox."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=")
+    wait_for_app_loaded(page)
+
+    # Non-clearable selectbox should reject empty value, show default "cat"
+    expect_prefixed_markdown(page, "bound select value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+
+
+def test_selectbox_in_sidebar_flips_up_within_viewport(app: Page):
+    """A selectbox near the bottom of the sidebar must flip its dropdown up and
+    stay within the viewport instead of opening downward and overflowing past
+    the bottom.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16181,
+    where flip was disabled inside the sidebar so the dropdown always opened
+    downward and got clipped.
+    """
+    app.set_viewport_size({"width": 1280, "height": 720})
+
+    selectbox = get_element_by_key(app, "sidebar_bottom_select")
+    selectbox.scroll_into_view_if_needed()
+
+    trigger_box = selectbox.bounding_box()
+    assert trigger_box is not None, "selectbox trigger must have a bounding box"
+
+    selectbox.locator("input").click()
+
+    dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    expect(dropdown.get_by_role("option")).to_have_count(7)
+
+    dropdown_box = dropdown.bounding_box()
+    assert dropdown_box is not None, "dropdown must have a bounding box"
+
+    viewport = app.viewport_size
+    assert viewport is not None
+
+    # Primary regression check: the dropdown must not overflow past the bottom
+    # of the viewport. A 1px epsilon guards against subpixel layout differences.
+    epsilon = 1
+    assert dropdown_box["y"] + dropdown_box["height"] <= viewport["height"] + epsilon, (
+        f"dropdown overflows the viewport bottom: {dropdown_box}, viewport={viewport}"
+    )
+
+    # The dropdown must open above the trigger (flip up), not below it.
+    assert dropdown_box["y"] < trigger_box["y"], (
+        f"dropdown did not flip up: dropdown={dropdown_box}, trigger={trigger_box}"
+    )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import { jsonConverter } from "./jsonConverter"
  * Note that this mapping is not exhaustive and only includes the layers that we
  * can actually change the color of.
  */
-export const LAYER_TYPE_TO_FILL_FUNCTION = {
+export const LAYER_TYPE_TO_FILL_FUNCTION: Record<string, readonly string[]> = {
   [geoLayers.GeohashLayer.layerName]: ["getFillColor"],
   [geoLayers.H3ClusterLayer.layerName]: ["getFillColor"],
   [geoLayers.H3HexagonLayer.layerName]: ["getFillColor"],
@@ -106,9 +106,10 @@ const getOriginalColor = ({
   if (typeof originalColor === "string" && originalColor.startsWith("@@=")) {
     // @see https://deck.gl/docs/api-reference/json/conversion-reference#functions-and-using-the--prefix
 
-    const evaluated = jsonConverter
-      .convert({ originalColor })
-      .originalColor(object)
+    const converted = jsonConverter.convert({ originalColor }) as {
+      originalColor: (obj: unknown) => number[]
+    }
+    const evaluated = converted.originalColor(object)
 
     return [
       evaluated[0] || 0,
@@ -154,26 +155,22 @@ const getOriginalColorWithAppliedOpacity = ({
     return null
   }
 
-  let calculatedOpacity = 0
-
-  if (isSelected) {
-    // Some layers will have objects where the opacity is lower than the default
-    // selected opacity In this case, we want to use the higher opacity so that
-    // the differentiation between selected and unselected objects is more
-    // pronounced
-    calculatedOpacity = Math.max(
-      typeof originalColor[3] === "number" ? originalColor[3] : opacity,
-      opacity
-    )
-  } else {
-    // Some layers will have objects where the opacity is lower than the default
-    // unselected opacity In this case, we want to use the lower opacity so that
-    // we aren't raising the visibility of objects unnecessarily
-    calculatedOpacity = Math.min(
-      typeof originalColor[3] === "number" ? originalColor[3] : opacity,
-      opacity
-    )
-  }
+  const calculatedOpacity = isSelected
+    ? // Some layers will have objects where the opacity is lower than the default
+      // selected opacity In this case, we want to use the higher opacity so that
+      // the differentiation between selected and unselected objects is more
+      // pronounced
+      Math.max(
+        typeof originalColor[3] === "number" ? originalColor[3] : opacity,
+        opacity
+      )
+    : // Some layers will have objects where the opacity is lower than the default
+      // unselected opacity In this case, we want to use the lower opacity so that
+      // we aren't raising the visibility of objects unnecessarily
+      Math.min(
+        typeof originalColor[3] === "number" ? originalColor[3] : opacity,
+        opacity
+      )
 
   return [
     originalColor[0] || 0,

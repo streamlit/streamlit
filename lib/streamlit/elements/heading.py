@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
+from streamlit.string_util import clean_text, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -105,8 +105,14 @@ class HeadingMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
 
         Examples
         --------
@@ -125,8 +131,11 @@ class HeadingMixin:
            height: 600px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -205,8 +214,14 @@ class HeadingMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
 
         Examples
         --------
@@ -225,8 +240,11 @@ class HeadingMixin:
            height: 500px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -299,8 +317,14 @@ class HeadingMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
 
         Examples
         --------
@@ -314,8 +338,11 @@ class HeadingMixin:
            height: 220px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -330,7 +357,7 @@ class HeadingMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
     @staticmethod
@@ -349,9 +376,10 @@ class HeadingMixin:
             "rainbow",
         ]
         if divider in valid_colors:
-            return cast("str", divider)
-        raise StreamlitAPIException(
-            f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
+            return divider
+        raise StreamlitValueError(
+            "divider",
+            ["True"] + [f"'{c}'" for c in valid_colors],
         )
 
     @staticmethod
@@ -384,6 +412,6 @@ class HeadingMixin:
                 )
 
         if help:
-            proto.help = help
+            proto.help = to_help_str(help)
 
         return proto

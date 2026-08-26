@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useState } from "react"
+import { FC, memo, useState } from "react"
+
+import useTimeout from "~lib/hooks/useTimeout"
 
 import {
   ParagraphSkeleton,
@@ -29,20 +31,18 @@ const SHOW_DELAY_MS = 500
 const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
   const [visible, setVisible] = useState(false)
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(true)
-    }, SHOW_DELAY_MS)
-
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [])
+  useTimeout(() => {
+    setVisible(true)
+  }, SHOW_DELAY_MS)
 
   if (!visible) return <></>
 
   return (
-    <StyledSkeleton className="stAppSkeleton" data-testid="stAppSkeleton">
+    <StyledSkeleton
+      className="stAppSkeleton"
+      data-testid="stAppSkeleton"
+      aria-hidden="true"
+    >
       <TitleSkeleton />
       <ParagraphSkeleton>
         <TextLineSkeleton width="98%" />

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,17 @@
 
 from __future__ import annotations
 
+import functools
 import os
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Final, TypeAlias
 
-import streamlit.watcher
 from streamlit import cli_util, config, env_util
-from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
+    from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 
 # local_sources_watcher.py caches the return value of
@@ -49,9 +51,12 @@ class NoOpPathWatcher:
 # implementation if its import failed (due to missing watchdog module),
 # so we can't reference it directly in this type.
 PathWatcherType: TypeAlias = (
-    type["streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher"]
-    | type[PollingPathWatcher]
-    | type[NoOpPathWatcher]
+    type["EventBasedPathWatcher"] | type["PollingPathWatcher"] | type[NoOpPathWatcher]
+)
+
+_WSL_POLLING_INFO: Final = (
+    "  Detected WSL. Using poll-based file watching for better compatibility. "
+    'To force watchdog, set server.fileWatcherType = "watchdog".'
 )
 
 
@@ -61,15 +66,24 @@ def _is_watchdog_available() -> bool:
         import watchdog  # noqa: F401
 
         return True
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return False
 
 
+@functools.cache
+def _report_wsl_polling_once() -> None:
+    """Inform the user that WSL uses poll-based file watching."""
+    cli_util.print_to_cli(_WSL_POLLING_INFO, fg="blue")
+
+
 def report_watchdog_availability() -> None:
-    if (
-        config.get_option("server.fileWatcherType") not in ["poll", "none"]
-        and not _is_watchdog_available()
-    ):
+    watcher_type = config.get_option("server.fileWatcherType")
+
+    if watcher_type == "auto" and env_util.IS_WSL:
+        _report_wsl_polling_once()
+        return
+
+    if watcher_type not in {"poll", "none"} and not _is_watchdog_available():
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
         cli_util.print_to_cli(
@@ -138,8 +152,37 @@ def watch_file(
     path: str,
     on_file_changed: Callable[[str], None],
     watcher_type: str | None = None,
+    *,  # keyword-only arguments:
+    allow_nonexistent: bool = False,
 ) -> bool:
-    return _watch_path(path, on_file_changed, watcher_type)
+    """Watch a file for changes.
+
+    The callback is invoked when the file's content changes (detected via hash).
+    If allow_nonexistent is True, the watcher will also detect when the file
+    is created.
+
+    Parameters
+    ----------
+    path
+        Path to the file to watch.
+    on_file_changed
+        Callback invoked with the file path when changes are detected.
+    watcher_type
+        Optional watcher type ('watchdog', 'poll', 'auto', or 'none').
+    allow_nonexistent
+        If True, watch for file creation even if the file doesn't exist yet.
+        Note: The file's parent directory must exist for watching to work.
+        If the parent directory doesn't exist, the watcher silently skips
+        watching (the file can't be created without its parent directory).
+
+    Returns
+    -------
+    bool
+        True if the watcher was successfully created.
+    """
+    return _watch_path(
+        path, on_file_changed, watcher_type, allow_nonexistent=allow_nonexistent
+    )
 
 
 def watch_dir(
@@ -150,6 +193,36 @@ def watch_dir(
     glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> bool:
+    """Watch a directory for file changes.
+
+    The callback is invoked for any file activity within the directory,
+    including file creation, deletion, and content modifications. The callback
+    receives the path of the actual changed file (not the directory path).
+
+    Note: The glob_pattern parameter only affects the initial state detection
+    (which files are counted when determining if the directory changed). It does
+    NOT filter which file events trigger the callback - all file events in the
+    directory will invoke the callback regardless of glob_pattern.
+
+    Parameters
+    ----------
+    path
+        Path to the directory to watch.
+    on_dir_changed
+        Callback invoked with the changed file path when changes are detected.
+    watcher_type
+        Optional watcher type ('watchdog', 'poll', 'auto', or 'none').
+    glob_pattern
+        Glob pattern for initial state detection (e.g., "*.py"). Does not
+        filter runtime events.
+    allow_nonexistent
+        If True, watch for directory creation even if it doesn't exist yet.
+
+    Returns
+    -------
+    bool
+        True if the watcher was successfully created.
+    """
     # Add a trailing slash to the path to ensure
     # that its interpreted as a directory.
     path = os.path.join(path, "")
@@ -174,11 +247,22 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
     """Return the PathWatcher class that corresponds to the given watcher_type
     string. Acceptable values are 'auto', 'watchdog', 'poll' and 'none'.
     """
+    # In WSL, "auto" always uses polling. inotify works for files on the native
+    # WSL filesystem but is unreliable for files on mounted Windows drives
+    # (/mnt/...). Since we can't cheaply distinguish the two per watched path, we
+    # conservatively poll for all paths to avoid silently missing file changes.
+    if watcher_type == "auto" and env_util.IS_WSL:
+        from streamlit.watcher.polling_path_watcher import PollingPathWatcher
+
+        return PollingPathWatcher
+
     if watcher_type in {"watchdog", "auto"} and _is_watchdog_available():
         # Lazy-import this module to prevent unnecessary imports of the watchdog package.
         from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
 
         return EventBasedPathWatcher
     if watcher_type in {"auto", "poll"}:
+        from streamlit.watcher.polling_path_watcher import PollingPathWatcher
+
         return PollingPathWatcher
     return NoOpPathWatcher

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": ["-lintignore"],
+  "ignoreBinaries": ["streamlit"],
+  "ignoreUnresolved": ["^\\./proto(?:\\.js)?$"],
+  "ignoreIssues": {
+    "component-lib/src/ArrowTable.ts": ["exports", "types"]
+  },
+  "ignoreDependencies": [
+    "@bufbuild/buf",
+    "@deck.gl/extensions",
+    "@deck.gl/widgets",
+    "@playwright/cli",
+    "@swc/plugin-emotion",
+    "eslint-plugin-streamlit-custom",
+    "oxfmt",
+    "protobufjs",
+    "protobufjs-cli",
+    "react-responsive-carousel",
+    "typescript-v7"
+  ],
+  "workspaces": {
+    ".": {
+      "entry": ["vitest.setup.ts"]
+    }
+  }
+}

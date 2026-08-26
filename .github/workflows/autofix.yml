@@ -27,23 +27,38 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.head_ref }}
           persist-credentials: true
           submodules: "recursive"
           fetch-depth: 2
 
+      - name: Remove 'autofix' label to prevent re-triggers
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "autofix"
+
       - name: Set Python version vars
         uses: ./.github/actions/build_info
 
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+          enforce_lock: false
+
+      - name: Deduplicate frontend yarn.lock
+        run: |
+          cd frontend
+          yarn dedupe
 
       - name: Run make frontend-fast
         run: make frontend-fast
@@ -73,6 +88,7 @@ jobs:
         if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
           PR_BODY: |
             ## Describe your changes
 
@@ -82,16 +98,9 @@ jobs:
         run: |
           gh pr create \
             --head "autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
-            --base "${{ github.head_ref }}" \
+            --base "$HEAD_REF" \
             --title "[autofix] Automated fixes for #${{ github.event.pull_request.number }}" \
             --body "$PR_BODY"
-
-      - name: Remove 'autofix' label from source PR
-        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "autofix"
 
       - name: Show notices for fork PRs
         if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,4 +47,16 @@ export const StyledCaption = styled.div(({ theme }) => ({
   marginTop: theme.spacing.xs,
   wordWrap: "break-word",
   padding: theme.spacing.threeXS,
+}))
+
+export const StyledImageLink = styled.a(({ theme }) => ({
+  display: "block",
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+  "&:hover": {
+    opacity: 0.85,
+  },
+  "&:focus-visible": {
+    boxShadow: theme.shadows.focusRing,
+  },
 }))

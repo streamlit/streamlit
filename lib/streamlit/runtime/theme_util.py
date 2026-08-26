@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,16 +107,16 @@ def parse_fonts_with_source(
             "<heading_font_family_name_here>:<source_url_here>".
         section: The section of the config.toml file to parse the fonts from.
 
+    Returns
+    -------
+        Updated CustomThemeConfig message with the font, codeFont, and headingFont fields set.
+        Also sets sources in font_sources field to be added to the html (only when source URLs are provided).
+
     Examples
     --------
     body_font_config: "Inter" (just font name)
     code_font_config: "Tagesschrift:https://fonts.googleapis.com/css2?family=Tagesschrift&display=swap" (with source)
     heading_font_config: "playwrite-cc-za:https://use.typekit.net/xxs7euo.css"
-
-    Returns
-    -------
-        Updated CustomThemeConfig message with the font, codeFont, and headingFont fields set.
-        Also sets sources in font_sources field to be added to the html (only when source URLs are provided).
     """
 
     # Parse body font config

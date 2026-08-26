@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,10 @@ import unittest
 import pytest
 
 from streamlit.elements.lib.column_types import (
+    AudioColumn,
     BarChartColumn,
+    ButtonColumn,
+    ButtonColumnResult,
     CheckboxColumn,
     Column,
     DateColumn,
@@ -28,12 +31,14 @@ from streamlit.elements.lib.column_types import (
     LineChartColumn,
     LinkColumn,
     ListColumn,
+    MarkdownColumn,
     MultiselectColumn,
     NumberColumn,
     ProgressColumn,
     SelectboxColumn,
     TextColumn,
     TimeColumn,
+    VideoColumn,
     _validate_chart_color,
 )
 from streamlit.elements.lib.dicttools import remove_none_values
@@ -470,6 +475,40 @@ class ColumnTypesTest(unittest.TestCase):
             "type_config": {"type": "image"},
         }, "Should have all the properties defined."
 
+    def test_audio_column(self):
+        """Test AudioColumn creation."""
+
+        assert remove_none_values(AudioColumn()) == {
+            "type_config": {"type": "audio"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            AudioColumn("Col1", width="small", help="Help text", pinned=True)
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "pinned": True,
+            "type_config": {"type": "audio"},
+        }, "Should have all the properties defined."
+
+    def test_video_column(self):
+        """Test VideoColumn creation."""
+
+        assert remove_none_values(VideoColumn()) == {
+            "type_config": {"type": "video"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            VideoColumn("Col1", width="small", help="Help text", pinned=True)
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "pinned": True,
+            "type_config": {"type": "video"},
+        }, "Should have all the properties defined."
+
     def test_json_column(self):
         """Test JsonColumn creation."""
 
@@ -572,6 +611,34 @@ class ColumnTypesTest(unittest.TestCase):
             }
         }, "Colors should cycle through the provided iterable."
 
+    def test_markdown_column(self):
+        """Test MarkdownColumn creation."""
+
+        assert remove_none_values(MarkdownColumn()) == {
+            "type_config": {"type": "markdown"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            MarkdownColumn(
+                "Col1",
+                width="large",
+                help="Help text",
+                disabled=False,
+                required=True,
+                pinned=True,
+                default="# Default",
+            )
+        ) == {
+            "label": "Col1",
+            "width": "large",
+            "help": "Help text",
+            "disabled": False,
+            "required": True,
+            "pinned": True,
+            "default": "# Default",
+            "type_config": {"type": "markdown"},
+        }, "Should have all the properties defined."
+
 
 @pytest.mark.parametrize(
     "color",
@@ -621,3 +688,128 @@ def test__validate_chart_color_invalid(color: str) -> None:
     """Validate that unsupported names and non CSS-like strings raise StreamlitValueError."""
     with pytest.raises(StreamlitValueError):
         _validate_chart_color(color)
+
+
+@pytest.mark.parametrize(
+    "alignment",
+    ["left", "center", "right"],
+)
+def test_column_alignment(alignment: str) -> None:
+    """Test that alignment parameter is correctly set on columns that support it."""
+    # Test generic Column
+    result = Column(alignment=alignment)
+    assert result["alignment"] == alignment
+
+    # Test typed columns that support alignment
+    assert TextColumn(alignment=alignment)["alignment"] == alignment
+    assert NumberColumn(alignment=alignment)["alignment"] == alignment
+    assert CheckboxColumn(alignment=alignment)["alignment"] == alignment
+    assert DateColumn(alignment=alignment)["alignment"] == alignment
+    assert TimeColumn(alignment=alignment)["alignment"] == alignment
+    assert DatetimeColumn(alignment=alignment)["alignment"] == alignment
+    assert LinkColumn(alignment=alignment)["alignment"] == alignment
+    assert ImageColumn(alignment=alignment)["alignment"] == alignment
+    assert AudioColumn(alignment=alignment)["alignment"] == alignment
+    assert VideoColumn(alignment=alignment)["alignment"] == alignment
+    assert JsonColumn(alignment=alignment)["alignment"] == alignment
+    assert MarkdownColumn(alignment=alignment)["alignment"] == alignment
+
+
+def test_column_alignment_none_by_default() -> None:
+    """Test that alignment is None by default and not included in output."""
+    # When alignment is None (default), it should not appear in the result
+    result = remove_none_values(Column())
+    assert "alignment" not in result
+
+    result = remove_none_values(TextColumn())
+    assert "alignment" not in result
+
+
+def test_button_column_basic() -> None:
+    """Test ButtonColumn creation with default parameters."""
+
+    result = remove_none_values(ButtonColumn())
+    assert result == {
+        "disabled": True,
+        "type_config": {"type": "button", "button_type": "secondary"},
+    }, "Should have disabled=True and type_config with button type."
+
+
+def test_button_column_full() -> None:
+    """Test ButtonColumn creation with all common parameters."""
+
+    result = remove_none_values(
+        ButtonColumn(
+            "Actions",
+            width="small",
+            help="Click to perform action",
+            pinned=True,
+            alignment="center",
+            type="primary",
+        )
+    )
+    assert result == {
+        "label": "Actions",
+        "width": "small",
+        "help": "Click to perform action",
+        "pinned": True,
+        "alignment": "center",
+        "disabled": True,
+        "type_config": {"type": "button", "button_type": "primary"},
+    }, "Should have all properties defined."
+
+
+def test_button_column_with_key_returns_wrapper() -> None:
+    """Test ButtonColumn returns ButtonColumnResult when key is provided."""
+
+    def my_callback():
+        pass
+
+    result = ButtonColumn(
+        "Click",
+        type="tertiary",
+        on_click=my_callback,
+        args=(1, 2),
+        kwargs={"a": "b"},
+        key="test_key",
+    )
+
+    assert isinstance(result, ButtonColumnResult), (
+        "Should return ButtonColumnResult when key is provided."
+    )
+    assert result.key == "test_key"
+    assert result.on_click is my_callback
+    assert result.args == (1, 2)
+    assert result.kwargs == {"a": "b"}
+    assert result.config["type_config"]["button_type"] == "tertiary"
+
+
+def test_button_column_without_key_returns_config() -> None:
+    """Test ButtonColumn returns ColumnConfig (dict) when no key is provided."""
+
+    result = ButtonColumn("Click", type="primary")
+
+    assert not isinstance(result, ButtonColumnResult), (
+        "Should return ColumnConfig dict when no key is provided."
+    )
+    assert isinstance(result, dict)
+    assert result["type_config"]["type"] == "button"
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"on_click": lambda: None},
+        {"args": (1, 2)},
+        {"kwargs": {"foo": "bar"}},
+    ],
+    ids=["on_click", "args", "kwargs"],
+)
+def test_button_column_raises_error_for_callback_without_key(
+    kwargs: dict[str, object],
+) -> None:
+    """Test ButtonColumn raises error when callbacks provided without key."""
+    from streamlit.errors import StreamlitAPIException
+
+    with pytest.raises(StreamlitAPIException, match=r"key.*parameter is required"):
+        ButtonColumn("Click", **kwargs)

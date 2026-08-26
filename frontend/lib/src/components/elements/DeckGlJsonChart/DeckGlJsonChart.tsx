@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-import React, {
-  FC,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
+
+import "./patchLumaCanvasContext"
 
 import { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"
@@ -35,16 +30,17 @@ import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { assertNever } from "~lib/util/assertNever"
 
 import { MapBoxCss } from "./MapBoxCss"
 import {
   StyledDeckGlChart,
+  StyledMapContainer,
   StyledNavigationControlContainer,
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
@@ -64,6 +60,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     fragmentId,
     heightConfig,
     widgetMgr,
+    widthConfig,
   } = props
   const { mapboxToken: contextMapboxToken } = useContext(LibConfigContext)
   const theme = useEmotionTheme()
@@ -91,6 +88,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     isLightTheme: hasLightBackgroundColor(theme),
     theme,
     widgetMgr,
+    widthConfig,
   })
 
   const mapboxToken = element.mapboxToken || contextMapboxToken
@@ -160,10 +158,8 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
             if (selectionMap.size === 0) {
               // If the layer has nothing selected, remove the layer from the returned value
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: _, ...restIndices } =
                 currState.selection.indices
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: __, ...restObjects } =
                 currState.selection.objects
 
@@ -201,7 +197,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       }
 
       setSelection({
-        fromUi: true,
+        fromUser: true,
         value: { selection: newSelection },
       })
     },
@@ -211,7 +207,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const handleClearSelectionClick = useCallback(() => {
     setSelection({
       value: { selection: EMPTY_SELECTION },
-      fromUi: true,
+      fromUser: true,
     })
   }, [setSelection])
 
@@ -241,34 +237,36 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       {/* Only render the DeckGL component if the viewState is not null,
       or else we'll get a runtime assertion error from deck.gl and the map will not render. */}
       {viewState && (
-        <DeckGL
-          viewState={viewState}
-          onViewStateChange={onViewStateChange}
-          layers={isInitialized ? deck.layers : EMPTY_LAYERS}
-          getTooltip={createTooltip}
-          // @ts-expect-error There is a type mismatch due to our versions of the libraries
-          ContextProvider={MapContext.Provider}
-          controller
-          onClick={
-            isSelectionModeActivated && !disabled ? handleClick : undefined
-          }
-        >
-          <StaticMap
-            mapStyle={
-              deck.mapStyle &&
-              (typeof deck.mapStyle === "string"
-                ? deck.mapStyle
-                : deck.mapStyle[0])
+        <StyledMapContainer>
+          <DeckGL
+            viewState={viewState}
+            onViewStateChange={onViewStateChange}
+            layers={isInitialized ? deck.layers : EMPTY_LAYERS}
+            getTooltip={createTooltip}
+            // @ts-expect-error There is a type mismatch due to our versions of the libraries
+            ContextProvider={MapContext.Provider}
+            controller
+            onClick={
+              isSelectionModeActivated && !disabled ? handleClick : undefined
             }
-            mapboxApiAccessToken={mapboxToken}
-          />
-          <StyledNavigationControlContainer>
-            <NavigationControl
-              data-testid="stDeckGlJsonChartZoomButton"
-              showCompass={false}
+          >
+            <StaticMap
+              mapStyle={
+                deck.mapStyle &&
+                (typeof deck.mapStyle === "string"
+                  ? deck.mapStyle
+                  : deck.mapStyle[0])
+              }
+              mapboxApiAccessToken={mapboxToken}
             />
-          </StyledNavigationControlContainer>
-        </DeckGL>
+            <StyledNavigationControlContainer>
+              <NavigationControl
+                data-testid="stDeckGlJsonChartZoomButton"
+                showCompass={false}
+              />
+            </StyledNavigationControlContainer>
+          </DeckGL>
+        </StyledMapContainer>
       )}
     </StyledDeckGlChart>
   )

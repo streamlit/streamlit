@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -95,6 +95,12 @@ class GraphvizTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
         assert "grenade" in c.spec
+
+    def test_unhandled_type_raises(self):
+        """Test that an unsupported figure type raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.graphviz_chart(123)  # type: ignore[arg-type]
+        assert "Unhandled type for graphviz chart" in str(e.value)
 
     @parameterized.expand(
         [

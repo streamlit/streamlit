@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
+
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { BlockNode } from "src/render-tree/BlockNode"
 import { ElementNode } from "src/render-tree/ElementNode"
@@ -42,6 +44,44 @@ describe("ClearStaleNodeVisitor", () => {
       const result = visitor.visitElementNode(staleElement)
 
       expect(result).toBeUndefined()
+    })
+
+    it("preserves a stale toast node instead of pruning it (issue #7740)", () => {
+      // Toasts emitted right before st.rerun() carry the interrupted run's
+      // scriptRunId. They must not be pruned as stale, otherwise the toast node
+      // can be removed before its component mounts and registers the toast.
+      const currentRunId = "current_run"
+      const staleToast = new ElementNode(
+        makeProto(Element, { toast: { body: "Toast survives rerun" } }),
+        ForwardMsgMetadata.create(),
+        "old_run",
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitElementNode(staleToast)
+
+      expect(result).toBe(staleToast)
+    })
+
+    it("preserves a stale toast node during a fragment run", () => {
+      const currentRunId = "current_run"
+      const staleToast = new ElementNode(
+        makeProto(Element, { toast: { body: "Toast survives rerun" } }),
+        ForwardMsgMetadata.create(),
+        "old_run",
+        "script_hash",
+        "fragment1"
+      )
+      const visitor = new ClearStaleNodeVisitor(
+        currentRunId,
+        ["fragment1"],
+        "fragment1"
+      )
+
+      const result = visitor.visitElementNode(staleToast)
+
+      expect(result).toBe(staleToast)
     })
 
     describe("when running fragments", () => {
@@ -261,6 +301,94 @@ describe("ClearStaleNodeVisitor", () => {
         // and we're not in a fragment context yet (fragmentIdOfBlock is not set)
         expect(result.children).toHaveLength(1)
       })
+    })
+  })
+
+  describe("visitTransientNode", () => {
+    it("restores anchor for transient cleared in current run when anchor is current", () => {
+      const currentRunId = "current"
+      const anchor = text("anchor", currentRunId)
+      const clearedTransient = new TransientNode(currentRunId, anchor, [], 1)
+
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+      const result = visitor.visitTransientNode(clearedTransient)
+
+      expect(result).toBe(anchor)
+    })
+
+    it("returns undefined for transient cleared in current run when anchor is stale", () => {
+      const currentRunId = "current"
+      const staleAnchor = text("anchor", "old_run")
+      const clearedTransient = new TransientNode(
+        currentRunId,
+        staleAnchor,
+        [],
+        1
+      )
+
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+      const result = visitor.visitTransientNode(clearedTransient)
+
+      expect(result).toBeUndefined()
+    })
+
+    it("preserves stale anchor without fragmentId during fragment run when transient is cleared", () => {
+      // Scenario: A transient cleared in the current run has an anchor from a
+      // previous run that has no fragmentId. During a fragment run, elements
+      // without fragmentId should be preserved (not cleared as stale).
+      const currentRunId = "current"
+      const staleAnchorNoFragment = text("anchor", "old_run") // no fragmentId
+      const clearedTransient = new TransientNode(
+        currentRunId,
+        staleAnchorNoFragment,
+        [],
+        1
+      )
+
+      const visitor = new ClearStaleNodeVisitor(currentRunId, ["fragment1"])
+      const result = visitor.visitTransientNode(clearedTransient)
+
+      // The anchor should be preserved because it doesn't have a fragmentId
+      // and we're in a fragment run (visitElementNode preserves such elements)
+      expect(result).toBe(staleAnchorNoFragment)
+    })
+
+    it("returns undefined when both anchor and transients are stale", () => {
+      const t = new TransientNode(
+        "runA",
+        text("a", "old"),
+        [text("t1", "old")],
+        1
+      )
+      const visitor = new ClearStaleNodeVisitor("current")
+      const result = visitor.visitTransientNode(t)
+      expect(result).toBeUndefined()
+    })
+
+    it("returns anchor when only anchor is current and all transients are stale", () => {
+      const anchor = text("a", "current")
+      const t = new TransientNode(
+        "runA",
+        anchor,
+        [text("t1", "old"), text("t2", "old")],
+        1
+      )
+      const visitor = new ClearStaleNodeVisitor("current")
+      const result = visitor.visitTransientNode(t)
+      expect(result).toBe(anchor)
+    })
+
+    it("returns new TransientNode when some transients remain current", () => {
+      const anchor = text("a", "old")
+      const keep = text("keep", "cur")
+      const drop = text("drop", "old")
+      const t = new TransientNode("runA", anchor, [keep, drop], 7)
+      const visitor = new ClearStaleNodeVisitor("cur")
+      const result = visitor.visitTransientNode(t) as TransientNode
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(result.anchor).toBeUndefined() // anchor was stale
+      expect(result.transientNodes).toEqual([keep])
+      expect(result.deltaMsgReceivedAt).toBe(7)
     })
   })
 

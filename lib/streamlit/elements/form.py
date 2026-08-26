@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import textwrap
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
@@ -30,7 +29,15 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import Key, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.widgets.button import (
+    IconPosition,
+    _normalize_icon_position,
+)
+from streamlit.errors import (
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
+    StreamlitValueError,
+)
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -38,33 +45,6 @@ from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
-
-
-def _build_duplicate_form_message(user_key: str | None = None) -> str:
-    if user_key is not None:
-        message = textwrap.dedent(
-            f"""
-            There are multiple identical forms with `key='{user_key}'`.
-
-            To fix this, please make sure that the `key` argument is unique for
-            each `st.form` you create.
-            """
-        )
-    else:
-        message = textwrap.dedent(
-            """
-            There are multiple identical forms with the same generated key.
-
-            When a form is created, it's assigned an internal key based on
-            its structure. Multiple forms with an identical structure will
-            result in the same internal key, which causes this error.
-
-            To fix this error, please pass a unique `key` argument to
-            `st.form`.
-            """
-        )
-
-    return message.strip("\n")
 
 
 class FormMixin:
@@ -92,7 +72,10 @@ class FormMixin:
 
         Forms have a few constraints:
 
-        - Every form must contain a ``st.form_submit_button``.
+        - Every form must contain at least one ``st.form_submit_button``.
+          Without a submit button, there is no way to submit the form, so the
+          values of the widgets inside it are never sent to your app and the
+          form is non-functional.
         - ``st.button`` and ``st.download_button`` cannot be added to a form.
         - Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
@@ -104,6 +87,10 @@ class FormMixin:
         key : str
             A string that identifies the form. Each form must have its own
             key. (This key is not displayed to the user in the interface.)
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
         clear_on_submit : bool
             If True, all widgets inside the form will be reset to their default
             values after the user presses the Submit button. Defaults to False.
@@ -203,7 +190,9 @@ class FormMixin:
 
         """
         if is_in_form(self.dg):
-            raise StreamlitAPIException("Forms cannot be nested in other forms.")
+            raise StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            )
 
         check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -212,12 +201,8 @@ class FormMixin:
         form_id = key
 
         ctx = get_script_run_ctx()
-        if ctx is not None:
-            new_form_id = form_id not in ctx.form_ids_this_run
-            if new_form_id:
-                ctx.form_ids_this_run.add(form_id)
-            else:
-                raise StreamlitAPIException(_build_duplicate_form_message(key))
+        if ctx is not None and not ctx.shared.form_ids_this_run.check_and_add(form_id):
+            raise StreamlitDuplicateElementKey(key)
 
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
@@ -247,16 +232,21 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         r"""Display a form submit button.
 
         When this button is clicked, all widget values inside the form will be
         sent from the user's browser to your Streamlit server in a batch.
 
-        Every form must have at least one ``st.form_submit_button``. An
+        Every form must have at least one ``st.form_submit_button``. It is the
+        only way to submit a form: without it, the widget values inside the
+        form are never sent to your app, so the form is non-functional. An
         ``st.form_submit_button`` cannot exist outside of a form.
 
         For more information about forms, check out our `docs
@@ -272,9 +262,9 @@ class FormMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -299,10 +289,21 @@ class FormMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
@@ -333,6 +334,10 @@ class FormMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
@@ -371,6 +376,51 @@ class FormMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
+
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
+
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported. Some combinations such as
+                ``"Ctrl+T"``, ``"Ctrl+W"``, ``"Ctrl+PageUp"``,
+                ``"Ctrl+PageDown"``, and ``"F11"`` are reserved by the browser
+                or operating system and may never reach Streamlit.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
+
+        wrap : bool or None
+            Whether the button label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when the button is a
+              direct child of an ``st.columns`` column, the button keeps its
+              standard, single-row height and truncates an overflowing label
+              with an ellipsis; in other layouts, the label wraps onto
+              additional lines. A form is a layout boundary, so placing the
+              form itself in a column does not make the submit button a
+              direct column child.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the button keeps a single-row label and no ``help`` is set,
+            hovering reveals the full label. Icons and keyboard shortcuts
+            remain visible.
+
         Returns
         -------
         bool
@@ -382,11 +432,12 @@ class FormMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
-            raise StreamlitAPIException(
-                'The type argument to st.form_submit_button must be "primary", "secondary", or "tertiary". \n'
-                f'The argument passed was "{type}".'
+        if type not in {"primary", "secondary", "tertiary"}:
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
+
+        normalized_icon_position = _normalize_icon_position(icon_position)
 
         return self._form_submit_button(
             label=label,
@@ -396,10 +447,13 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
             key=key,
+            shortcut=shortcut,
+            wrap=wrap,
         )
 
     def _form_submit_button(
@@ -413,9 +467,12 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
+        wrap: bool | None = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = to_key(key) or f"FormSubmitter:{form_id}-{label}"
@@ -429,12 +486,15 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
+            wrap=wrap,
         )
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

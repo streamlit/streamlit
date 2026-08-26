@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitInvalidWidthError
+from streamlit.user_info import UserInfoProxy
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -116,3 +120,80 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidWidthError) as e:
             st.json('{"some": "json"}', width=width)
         assert "Invalid width" in str(e.value)
+
+    def test_st_json_masks_user_info_tokens(self):
+        """Test that st.json masks token values when displaying UserInfoProxy."""
+        with patch(
+            "streamlit.user_info._get_user_info",
+            return_value={
+                "email": "test@example.com",
+                "name": "Test User",
+                "tokens": {
+                    "id": "secret_id_token_value",
+                    "access": "secret_access_token_value",
+                },
+            },
+        ):
+            user = UserInfoProxy()
+
+            st.json(user)
+
+            el = self.get_delta_from_queue().new_element
+            body = json.loads(el.json.body)
+            assert body["email"] == "test@example.com"
+            assert body["name"] == "Test User"
+            assert body["tokens"]["id"] == "***"
+            assert body["tokens"]["access"] == "***"
+
+    def test_st_json_with_namedtuple(self):
+        """Test st.json converts namedtuple to dict via _asdict."""
+        from typing import NamedTuple
+
+        class Point(NamedTuple):
+            x: int
+            y: int
+
+        p = Point(1, 2)
+        st.json(p)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == {"x": 1, "y": 2}
+
+    def test_st_json_with_mapping_proxy(self):
+        """Test st.json converts MappingProxyType to dict."""
+        import types
+
+        d = types.MappingProxyType({"a": 1, "b": 2})
+        st.json(d)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == {"a": 1, "b": 2}
+
+    def test_st_json_with_list_like(self):
+        """Test st.json converts list-like (tuple, set) to list."""
+        st.json((1, 2, 3))
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == [1, 2, 3]
+
+    def test_st_json_user_info_without_tokens(self):
+        """Test that st.json handles UserInfoProxy without tokens correctly."""
+        with patch(
+            "streamlit.user_info._get_user_info",
+            return_value={
+                "email": "test@example.com",
+                "name": "Test User",
+            },
+        ):
+            user = UserInfoProxy()
+
+            st.json(user)
+
+            el = self.get_delta_from_queue().new_element
+            body = json.loads(el.json.body)
+            assert body["email"] == "test@example.com"
+            assert body["name"] == "Test User"
+            assert "tokens" not in body

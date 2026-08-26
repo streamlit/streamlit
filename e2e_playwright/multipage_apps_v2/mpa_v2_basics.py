@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ SMALL_LOGO = Image.open(str(PARENT_DIR / "small-streamlit.png"))
 
 LOGO = Image.open(str(PARENT_DIR / "full-streamlit.png"))
 
-st.logo(LOGO, link="https://www.example.com", icon_image=SMALL_LOGO)
+st.logo(LOGO, icon_image=SMALL_LOGO)
 
 st.header("Main Page")
 x = st.slider("x")
@@ -34,10 +34,10 @@ st.write(f"x is {x}")
 set_default = bool(st.query_params.get("default", False))
 
 page2 = st.Page("page_2.py")
-page3 = st.Page("page_3.py", title="Different Title")
+page3 = st.Page("page_3.py", title="**Different** Title")
 page4 = st.Page("🦒_page_4.py")
 page5 = st.Page(Path("page_5.py"), icon=":material/settings:")
-page6 = st.Page("page_6_slow_page.py", title="slow page")
+page6 = st.Page("page_6_slow_page.py", title="*slow* page")
 
 
 def page_7():
@@ -63,6 +63,13 @@ def page_10():
         if st.button("Submit"):
             st.rerun()
 
+        # On a fragment widget: the interaction is fragment-scoped, the navigation
+        # app-wide.
+        st.button(
+            "callback nav from fragment",
+            on_click=lambda: st.switch_page("page_5.py"),
+        )
+
     get_input()
 
 
@@ -77,13 +84,21 @@ def page_14() -> None:
     fragment_number_input()
 
 
+def unicode_page() -> None:
+    st.header("Págé_Wíth_Spêcîãl_Chäracters")
+
+
 page7 = st.Page(page_7, default=set_default)
 page8 = st.Page(page_8, url_path="my_url_path")
 page9 = st.Page(page_9)
 page10 = st.Page(page_10)
-page11 = st.Page(page_8, title="page 11", url_path="page_11")
-page12 = st.Page(page_9, title="page 12", url_path="page_12")
-page13 = st.Page(page_8, title="page 13", url_path="page_13")
+page11 = st.Page(page_8, title="page `11`", url_path="page_11")
+page12 = st.Page(page_9, title=":blue[page] 12", url_path="page_12")
+page13 = st.Page(
+    unicode_page,
+    title="Págé_Wíth_Spêcîãl_Chäracters",
+    url_path="Págé_Wíth_Spêcîãl_Chäracters",
+)
 page14 = st.Page(page_14, title="page 14")
 
 hide_sidebar = st.checkbox("Hide sidebar")
@@ -91,9 +106,17 @@ dynamic_nav = st.checkbox("Change navigation dynamically")
 expanded = st.checkbox("Expand navigation")
 test_mixed_sections = st.checkbox("Test Mixed Empty/Named Sections")
 test_empty_middle = st.checkbox("Test Empty Section in Middle")
+test_markdown_sections = st.checkbox("Test Markdown Section Headers")
 
 # Configure pages based on test mode
-if test_mixed_sections:
+if test_markdown_sections:
+    # Markdown in section headers
+    pages_config = {
+        "**Bold** Section": [page2, page3],
+        "*Italic* Section": [page4, page5],
+        ":material/settings: Icon Section": [page6],
+    }
+elif test_mixed_sections:
     # Mixed empty and named sections
     pages_config = {
         "": [page2, page3],
@@ -129,8 +152,33 @@ pg = st.navigation(
 if st.button("page 5"):
     st.switch_page("page_5.py")
 
+if st.button("Navigate with query params"):
+    st.switch_page("page_5.py", query_params={"team": "streamlit"})
+
 if st.button("page 9"):
     st.switch_page(page9)
+
+
+def switch_to_page_5() -> None:
+    st.switch_page("page_5.py")
+
+
+def switch_to_page_5_with_query_params() -> None:
+    st.switch_page("page_5.py", query_params={"team": "streamlit"})
+
+
+def switch_to_page_9() -> None:
+    st.switch_page(page9)
+
+
+# Callback twins of the three buttons above, so the tests can compare navigating from a
+# callback against navigating from the script body.
+#
+# These labels must not contain the labels above: get_button() matches by substring and
+# would otherwise resolve to two elements.
+st.button("callback nav by path", on_click=switch_to_page_5)
+st.button("callback nav with params", on_click=switch_to_page_5_with_query_params)
+st.button("callback nav by object", on_click=switch_to_page_9)
 
 if st.checkbox("Show sidebar elements"):
     st.sidebar.write("Sidebar content")
@@ -141,6 +189,14 @@ st.page_link("page_5.py", label="page 5 page link")
 
 st.page_link(page9, label="page 9 page link")
 
+st.page_link(
+    page9,
+    label="page 9 with query params",
+    query_params={"foo": "bar", "baz": ["1", "2"]},
+)
+
 st.write("Context URL:", st.context.url)
 
 st.write("End of Script")
+
+st.write("Query Params:", str(st.query_params))

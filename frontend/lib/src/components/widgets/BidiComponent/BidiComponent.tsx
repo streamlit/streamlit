@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import { BidiComponentContextProvider } from "~lib/components/widgets/BidiCompon
 import { IsolatedComponent } from "~lib/components/widgets/BidiComponent/IsolatedComponent"
 import { NonIsolatedComponent } from "~lib/components/widgets/BidiComponent/NonIsolatedComponent"
 import { ThemeCssProvider } from "~lib/components/widgets/BidiComponent/ThemeCssProvider"
-import type { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import type { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledBidiComponentWrapper } from "./styled-components"

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ const LOG = getLogger("useCopyToClipboard")
 /**
  * Result returned by `useCopyToClipboard`.
  */
-export type UseCopyToClipboardResult = {
+type UseCopyToClipboardResult = {
   /**
    * Whether the last copy action has recently succeeded. This
    * flag automatically resets to false after the timeout elapses.

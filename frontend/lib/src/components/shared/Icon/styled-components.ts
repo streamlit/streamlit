@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,25 @@
  */
 
 import isPropValid from "@emotion/is-prop-valid"
+import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
-import { Spinner } from "baseui/spinner"
 
-import { computeSpacingStyle, IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
+import { computeSpacingStyle } from "~lib/theme/utils"
 
-export interface StyledSpinnerIconProps {
+const spinKeyframe = keyframes({
+  from: { transform: "rotate(0deg)" },
+  to: { transform: "rotate(360deg)" },
+})
+
+interface StyledSpinnerIconProps {
   size?: IconSize
   margin?: string
   padding?: string
 }
 
-export const StyledSpinnerIcon = styled(Spinner, {
+export const StyledSpinnerIcon = styled("span", {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size"].includes(prop),
 })<StyledSpinnerIconProps>(({
@@ -40,10 +46,16 @@ export const StyledSpinnerIcon = styled(Spinner, {
   const adjustedSpinnerSize = `calc(${theme.iconSizes[size]} * 0.80)`
 
   return {
+    display: "block",
+    animationName: spinKeyframe,
+    animationDuration: "1000ms",
+    animationIterationCount: "infinite",
+    animationTimingFunction: "linear",
+    borderStyle: "solid",
+    borderRadius: "50%",
+    cursor: "wait",
     width: adjustedSpinnerSize,
     height: adjustedSpinnerSize,
-    fontSize: adjustedSpinnerSize,
-    justifyContents: "center",
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
     borderColor: theme.colors.fadedText10,
@@ -51,6 +63,11 @@ export const StyledSpinnerIcon = styled(Spinner, {
     borderWidth: theme.sizes.spinnerThickness,
     flexGrow: 0,
     flexShrink: 0,
+    // Slow the spin rather than stopping it: the rotation is the only cue that
+    // work is still in progress, and a parked ring reads as a hung app.
+    "@media (prefers-reduced-motion: reduce)": {
+      animationDuration: "1800ms",
+    },
   }
 })
 
@@ -71,7 +88,7 @@ export const StyledIcon = styled("span", {
     fill: "currentColor",
     display: "inline-flex",
     alignItems: "center",
-    justifyContents: "center",
+    justifyContent: "center",
     fontSize: theme.iconSizes[size],
     width: theme.iconSizes[size],
     height: theme.iconSizes[size],
@@ -81,7 +98,7 @@ export const StyledIcon = styled("span", {
   }
 })
 
-export interface StyledDynamicIconProps {
+interface StyledDynamicIconProps {
   size?: IconSize
   margin?: string
   padding?: string
@@ -93,7 +110,7 @@ export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
       fill: "currentColor",
       display: "inline-flex",
       alignItems: "center",
-      justifyContents: "center",
+      justifyContent: "center",
       fontSize: theme.iconSizes[size],
       width: theme.iconSizes[size],
       height: theme.iconSizes[size],
@@ -123,7 +140,7 @@ export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
     return {
       display: "inline-flex",
       alignItems: "center",
-      justifyContents: "center",
+      justifyContent: "center",
       fontSize: adjustedIconSize,
       width: adjustedIconSize,
       height: adjustedIconSize,
