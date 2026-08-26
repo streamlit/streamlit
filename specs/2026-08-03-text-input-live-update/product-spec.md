@@ -25,8 +25,9 @@ Enter or leaves the field (blur). This limitation prevents several common use ca
    instantly without requiring Enter or Tab.
 
    ```python
-   # Desired behavior: Filter updates as the user types (after a short pause)
-   query = st.text_input("Search products")
+   # Desired behavior: filter updates as the user types (after a short pause),
+   # using the proposed live=True (see the Proposal section below)
+   query = st.text_input("Search products", live=True)
    filtered = [p for p in products if query.lower() in p.lower()]
    st.write(filtered)
    ```
@@ -108,6 +109,11 @@ most roughly once per 300ms pause, not once per keystroke). `live="0ms"` is the 
 removes this bound (one rerun per keystroke) and therefore carries the performance warning above. The
 default (`False`) fully preserves one-rerun-per-interaction behavior, so existing apps are unaffected.
 
+**Focus & caret preservation:** A live rerun must never interrupt the user while they are still
+typing. The input keeps focus and preserves its caret/selection position across every live-triggered
+rerun, so typing is not disrupted and the cursor does not jump. (An implementation that remounted the
+input or reset the cursor on each rerun would make live updates unusable and inaccessible.)
+
 ### Recommended Usage
 
 - `live=True` is the simplest option for most live search/validation use cases
@@ -175,7 +181,12 @@ if email:
 3. **Interaction with `st.form`**: Inside a form, `live` has no effect — form widgets only
    commit their value on form submission, never while typing. This is a deterministic, documented
    no-op (no warning is logged), consistent with how `st.form` already overrides the
-   rerun-on-interaction behavior of every widget it contains.
+   rerun-on-interaction behavior of every widget it contains. This is intentionally *not* treated
+   like an `on_change` callback inside a form, which raises `StreamlitInvalidFormCallbackError`: a
+   callback is explicit user code whose silent omission would be a surprising failure (Principle 23),
+   whereas `live` is only a rerun-timing flag. Silently suppressing it is exactly how forms already
+   defer every widget's interaction rerun, so raising or warning would be inconsistent with that
+   established form behavior.
 
 4. **Interaction with `max_chars`**: Both features work independently. `max_chars` is enforced
    on the frontend — the native `maxlength` attribute prevents typing past the limit, and the
@@ -197,7 +208,10 @@ if email:
    "hang" until the timer elapses. This ensures a rerun always occurs when the user leaves or submits
    the field, providing consistent behavior with the non-live case. The one exception is
    `on_change="ignore"` (see edge case 2), which suppresses this blur/Enter-triggered rerun as well —
-   the value is only synced to frontend state.
+   the value is only synced to frontend state. Inside an `st.form` this flush logic does not apply at
+   all: because `live` has no effect there (see edge case 3), no timer ever starts, so there is
+   nothing to flush — blur and Enter follow the normal form rules (the value is committed only on
+   form submission, with no mid-edit rerun).
 
 8. **IME / composition input**: For input methods that build a character over multiple keystrokes
    (e.g., CJK languages, or accented characters via dead keys), the timer must not fire on
