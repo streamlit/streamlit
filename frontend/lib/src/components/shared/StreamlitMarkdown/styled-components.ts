@@ -458,15 +458,14 @@ export const StyledStreamlitMarkdown =
           fontSize: "inherit",
         },
 
+        // Lists take their width from the markdown container so a long unbreakable
+        // token (e.g. a file path) can wrap. `width: fit-content` floors at
+        // min-content, which the inherited `overflow-wrap: break-word` cannot
+        // shrink (gh-16618).
         "& > ul, & > ol": {
-          display: "block",
-          width: "fit-content",
+          // Keep list text left-aligned even when `text_alignment` centers,
+          // right-aligns, or justifies the surrounding markdown.
           textAlign: "left",
-        },
-
-        // Ensure nested lists stay as block elements
-        "li > ul, li > ol": {
-          display: "block",
         },
 
         // Allow long Latex formulas that are not inline (i.e. either from `st.latex`
