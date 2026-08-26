@@ -24,9 +24,9 @@ from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
     StreamlitInvalidMenuItemKeyError,
-    StreamlitInvalidPageLayoutError,
     StreamlitInvalidSidebarStateError,
     StreamlitInvalidURLError,
+    StreamlitValueError,
 )
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
@@ -253,7 +253,7 @@ def set_page_config(
         pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidPageLayoutError("layout", ["'centered'", "'wide'"])
+        raise StreamlitValueError("layout", ["'centered'", "'wide'"])
 
     msg.page_config_changed.layout = pb_layout
 
