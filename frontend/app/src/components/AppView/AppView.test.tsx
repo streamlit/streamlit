@@ -136,7 +136,7 @@ function renderAppView(
   })
 }
 
-function emptyAllowEmptyBlock(
+function createAllowEmptyBlock(
   children: Array<BlockNode | ElementNode | TransientNode> = []
 ): BlockNode {
   return new BlockNode(
@@ -146,7 +146,7 @@ function emptyAllowEmptyBlock(
   )
 }
 
-function chatInputElement(id: string): ElementNode {
+function createChatInputNode(id: string): ElementNode {
   return new ElementNode(
     new Element({
       chatInput: {
@@ -168,10 +168,10 @@ function appRootWithBottom(
   return new AppRoot(
     FAKE_SCRIPT_HASH,
     new BlockNode(FAKE_SCRIPT_HASH, [
-      emptyAllowEmptyBlock(),
-      emptyAllowEmptyBlock(),
-      emptyAllowEmptyBlock(),
-      emptyAllowEmptyBlock(children),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(children),
     ])
   )
 }
@@ -970,7 +970,7 @@ describe("AppView element", () => {
 
   it("renders a Scroll To Bottom container if there is an element in the bottom container.", () => {
     const props = getProps({
-      elements: appRootWithBottom([chatInputElement("123")]),
+      elements: appRootWithBottom([createChatInputNode("123")]),
     })
 
     render(<AppView {...props} />)
@@ -983,7 +983,7 @@ describe("AppView element", () => {
       name: "a transient node in the bottom holds a chat input",
       transient: () =>
         new TransientNode("no script run id", undefined, [
-          chatInputElement("transient-chat"),
+          createChatInputNode("transient-chat"),
         ]),
     },
     {
@@ -991,7 +991,7 @@ describe("AppView element", () => {
       transient: () =>
         new TransientNode(
           "no script run id",
-          chatInputElement("anchor-chat"),
+          createChatInputNode("anchor-chat"),
           []
         ),
     },

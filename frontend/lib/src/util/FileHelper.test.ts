@@ -63,7 +63,7 @@ describe("getSizeDisplay", () => {
     )
   })
 
-  it("defaults to bytes when no unit is provided", () => {
+  it("falls back to bytes for an empty unit", () => {
     expect(getSizeDisplay(10, "" as FileSize)).toEqual("10.0B")
   })
 

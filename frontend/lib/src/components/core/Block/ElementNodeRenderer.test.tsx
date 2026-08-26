@@ -67,6 +67,10 @@ vi.mock("~lib/components/elements/ImageList/ImageList", () => ({
   default: () => null,
 }))
 
+// These tests only assert the ElementContainer config that ElementNodeRenderer
+// picks per element type, so the lazily-loaded element components are stubbed
+// out to keep rendering cheap and independent of their internals. Button and
+// FormSubmitContent render markers because a test distinguishes between them.
 const mockNullDefault = vi.hoisted(() => () => ({ default: () => null }))
 
 vi.mock("~lib/components/elements/Table/Table", mockNullDefault)
@@ -778,17 +782,19 @@ describe("ElementNodeRenderer Block Component", () => {
       elementOverrides
     )
     const props = getProps({ node })
-    if (flexContext) {
-      render(
+    const renderer = <ElementNodeRenderer {...props} />
+    renderWithContexts(
+      flexContext ? (
         <FlexContext.Provider value={flexContext}>
-          <ElementNodeRenderer {...props} />
+          {renderer}
         </FlexContext.Provider>
-      )
-    } else {
-      renderWithContexts(<ElementNodeRenderer {...props} />, {
+      ) : (
+        renderer
+      ),
+      {
         scriptRunContext: { scriptRunId },
-      })
-    }
+      }
+    )
 
     await waitFor(() => expect(screen.queryByTestId("stSkeleton")).toBeNull())
     expect(screen.getByTestId("stElementContainer")).toBeVisible()

@@ -2992,13 +2992,14 @@ describe("DateInput month/year picker escape handling", () => {
     const yearTrigger = within(calendar).getByRole("button", {
       name: "year",
     })
-    await user.click(yearTrigger)
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    expect(yearTrigger).toHaveTextContent("1970")
+    expect(monthTrigger).toHaveTextContent("January")
 
-    const unselected = (await screen.findAllByRole("option")).find(
-      option => option.getAttribute("aria-selected") !== "true"
-    )
-    expect(unselected).toBeDefined()
-    await user.click(unselected as HTMLElement)
+    await user.click(yearTrigger)
+    await user.click(await screen.findByRole("option", { name: "1971" }))
 
     await waitFor(() => {
       expect(
@@ -3006,6 +3007,8 @@ describe("DateInput month/year picker escape handling", () => {
       ).not.toBeInTheDocument()
     })
     expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+    expect(yearTrigger).toHaveTextContent("1971")
+    expect(monthTrigger).toHaveTextContent("January")
   })
 })
 

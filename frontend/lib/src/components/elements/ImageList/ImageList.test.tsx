@@ -65,6 +65,10 @@ describe("ImageList Element", () => {
     })
   })
 
+  afterEach(() => {
+    document.body.style.overflow = ""
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<ImageList {...props} />)
@@ -296,6 +300,9 @@ describe("ImageList Element", () => {
     screen.getAllByRole("img").forEach(image => {
       expect(image).toHaveStyle({ width: "100%", objectFit: "contain" })
     })
+
+    await user.click(screen.getByLabelText("Close fullscreen"))
+    expect(document.body.style.overflow).toBe("unset")
   })
 
   describe("crossOrigin attribute", () => {

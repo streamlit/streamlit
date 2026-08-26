@@ -36,7 +36,9 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 
-// JSDOM has no getAnimations(); SelectionIndicator calls it after unmount and throws.
+// SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
+// async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
+// Mocking it here prevents the animation machinery from running in unit tests.
 vi.mock("react-aria-components", async importOriginal => {
   const actual = await importOriginal<typeof import("react-aria-components")>()
   return { ...actual, SelectionIndicator: () => null }
@@ -744,6 +746,10 @@ describe("BlockNodeRenderer container types", () => {
     formsDataChanged: vi.fn(),
   })
   const endpoints = mockEndpoints()
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
 
   function makeBlockNodeComponent(node: BlockNode): ReactElement {
     return (

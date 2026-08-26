@@ -14,17 +14,32 @@
  * limitations under the License.
  */
 
+import { PropsWithChildren, ReactElement } from "react"
+
 import { act, renderHook, RenderHookResult } from "@testing-library/react"
 
+import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { TestAppWrapper } from "~lib/test_util"
 
 import { useFullscreen } from "./useFullscreen"
 
-function renderUseFullscreen(): RenderHookResult<
-  ReturnType<typeof useFullscreen>,
-  unknown
-> {
-  return renderHook(() => useFullscreen(), { wrapper: TestAppWrapper })
+function renderUseFullscreen(): {
+  result: RenderHookResult<ReturnType<typeof useFullscreen>, unknown>["result"]
+  setFullScreen: ReturnType<typeof vi.fn>
+} {
+  const setFullScreen = vi.fn()
+  const viewState = { isFullScreen: false, setFullScreen }
+
+  const Wrapper = ({ children }: PropsWithChildren): ReactElement => (
+    <TestAppWrapper>
+      <ViewStateContext.Provider value={viewState}>
+        {children}
+      </ViewStateContext.Provider>
+    </TestAppWrapper>
+  )
+
+  const { result } = renderHook(() => useFullscreen(), { wrapper: Wrapper })
+  return { result, setFullScreen }
 }
 
 /** useFullscreen listens for keyCode 27 rather than event.key. */
@@ -40,7 +55,7 @@ describe("useFullscreen", () => {
   })
 
   it("zooms in and out and updates document overflow", () => {
-    const { result } = renderUseFullscreen()
+    const { result, setFullScreen } = renderUseFullscreen()
 
     expect(result.current.expanded).toBe(false)
 
@@ -50,6 +65,7 @@ describe("useFullscreen", () => {
 
     expect(result.current.expanded).toBe(true)
     expect(document.body.style.overflow).toBe("hidden")
+    expect(setFullScreen).toHaveBeenCalledWith(true)
 
     act(() => {
       result.current.zoomOut()
@@ -57,10 +73,11 @@ describe("useFullscreen", () => {
 
     expect(result.current.expanded).toBe(false)
     expect(document.body.style.overflow).toBe("unset")
+    expect(setFullScreen).toHaveBeenLastCalledWith(false)
   })
 
   it("exits fullscreen when Escape is pressed while expanded", () => {
-    const { result } = renderUseFullscreen()
+    const { result, setFullScreen } = renderUseFullscreen()
 
     act(() => {
       result.current.zoomIn()
@@ -73,15 +90,18 @@ describe("useFullscreen", () => {
 
     expect(result.current.expanded).toBe(false)
     expect(document.body.style.overflow).toBe("unset")
+    expect(setFullScreen).toHaveBeenLastCalledWith(false)
   })
 
   it("does not change state when Escape is pressed while collapsed", () => {
-    const { result } = renderUseFullscreen()
+    const { result, setFullScreen } = renderUseFullscreen()
 
     act(() => {
       dispatchEscapeKey()
     })
 
     expect(result.current.expanded).toBe(false)
+    expect(document.body.style.overflow).toBe("")
+    expect(setFullScreen).not.toHaveBeenCalled()
   })
 })
