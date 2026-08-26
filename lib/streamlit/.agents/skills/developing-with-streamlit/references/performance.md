@@ -141,6 +141,8 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
 
+Put live search (`st.text_input(..., type="search", live=True)`) inside a `@st.fragment` so typing does not rerun the rest of the app. Avoid `live="0ms"` and very short delays; they can hammer the server with a rerun on every keystroke.
+
 ### Parallel fragments
 
 Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.

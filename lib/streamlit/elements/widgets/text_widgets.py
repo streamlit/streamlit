@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -34,7 +35,11 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -51,6 +56,7 @@ from streamlit.runtime.state import (
     validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str, validate_icon_or_emoji
+from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -107,6 +113,56 @@ def _parse_text_input_validate(
         "The `validate` parameter must be `None`, a regex string, or a "
         "`(regex, message)` tuple of strings."
     )
+
+
+# Default pause used when ``live=True``.
+_DEFAULT_LIVE_DELAY_MS: Final = 300
+# Cap at 1 minute so a unit mix-up like ``"60s"`` vs ``"60ms"`` fails loudly
+# rather than creating an unusable debounce.
+_MAX_LIVE_DELAY_MS: Final = 60_000
+
+
+def _parse_text_input_live(live: object) -> int | None:
+    """Normalize ``live`` to a debounce delay in milliseconds.
+
+    Returns ``None`` when live is off so the proto field stays unset (existing
+    widget IDs stay stable). ``0`` commits on every accepted change.
+    """
+    if live is False:
+        return None
+    if live is True:
+        return _DEFAULT_LIVE_DELAY_MS
+
+    # bool is a subclass of int — True/False must be handled before this.
+    if isinstance(live, (int, float, timedelta)):
+        raise StreamlitAPIException(
+            "The `live` parameter does not accept a number or "
+            "`datetime.timedelta`. Use `True` for a 300ms pause, "
+            "or a duration string like `'300ms'` or `'0.5s'`. "
+            "`live=300` is not milliseconds (and `live=0.3` is not "
+            "seconds); duration units must be explicit."
+        )
+
+    if not isinstance(live, str):
+        raise StreamlitInvalidParameterTypeError(
+            "live",
+            type(live).__name__,
+            ["bool", "str"],
+        )
+
+    # Duration strings always parse to a finite number of seconds.
+    seconds = time_to_seconds(live)
+    if seconds < 0:
+        raise StreamlitAPIException(
+            f"The `live` parameter cannot be a negative duration. Got: `{live}`."
+        )
+
+    delay_ms = round(seconds * 1000.0)
+    if delay_ms > _MAX_LIVE_DELAY_MS:
+        raise StreamlitAPIException(
+            f"The `live` duration must be between 0 and 1 minute. Got: `{live}`."
+        )
+    return delay_ms
 
 
 # Default (regex, message) validation rules for the specialized text input types.
@@ -207,6 +263,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -234,6 +291,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -261,6 +319,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -383,8 +442,9 @@ class TextWidgetsMixin:
             with the text input. ``on_change`` can be one of the following:
 
             - ``"rerun"`` (default): Streamlit will rerun the app when the
-              user commits a new value (pressing Enter, blurring the field, or
-              clearing a search input).
+              user commits a new value (pressing Enter, blurring the field,
+              clearing a search input, or, when ``live`` is set, after a
+              typing pause).
 
             - ``"ignore"``: Streamlit will not rerun the app when the user
               commits a new value. The text input still updates in the UI.
@@ -471,8 +531,9 @@ class TextWidgetsMixin:
             match (same semantics as ``st.column_config.TextColumn``).
 
             Validation runs when the user tries to submit a value: on blur or
-            Enter outside a form, and on form submission inside a form. Invalid
-            values are not submitted, and empty inputs bypass validation.
+            Enter outside a form, after a typing pause when ``live`` is set,
+            and on form submission inside a form. Invalid values are not
+            submitted, and empty inputs bypass validation.
 
             Inside a form with ``bind="query-params"``, keystrokes still stage
             the value into widget state (and therefore the URL) before
@@ -484,6 +545,27 @@ class TextWidgetsMixin:
                If the validation is security-relevant, you must also validate
                the value on the server (in your app code) after it is
                submitted.
+
+        live : bool or str
+            Whether the widget commits while the user types, after a pause.
+            Defaults to ``False``.
+
+            - ``False`` (default): Commit on blur, Enter, or clearing a
+              ``type="search"`` input.
+            - ``True``: Commit after 300ms of inactivity following an
+              accepted user-originated value change.
+            - A duration string (same format as ``ttl`` in
+              ``st.cache_data``, for example ``"300ms"`` or ``"0.5s"``):
+              Commit after that pause. Must be between 0 and 1 minute.
+              ``"0ms"``, ``"0s"``, and ``"0"`` commit on every accepted
+              user-originated value change.
+
+            Inside ``st.form``, ``live`` has no effect: form widgets only
+            commit on submit. ``on_change="ignore"`` still wins: each pause
+            stages the value without triggering a rerun. Prefer wrapping
+            live search UI in ``@st.fragment`` so typing does not rerun the
+            rest of the app. Zero-length and very short delays can cause
+            many reruns; use them sparingly.
 
         width : "stretch" or int
             The width of the text input widget. This can be one of the
@@ -515,8 +597,9 @@ class TextWidgetsMixin:
             query parameter (e.g., ``?my_key=``) clears the widget.
 
             When ``on_change="ignore"``, the URL is updated as soon as the
-            value is committed (Enter, blur, or search-clear); typing alone
-            does not update it. As with widgets inside a form, the URL can
+            value is committed (Enter, blur, search-clear, or a live pause
+            when ``live`` is set); typing alone does not update it unless
+            ``live`` is set. As with widgets inside a form, the URL can
             show a value that Python hasn't received yet. Python receives
             the new value on the next rerun, so a page load or share uses
             the updated URL value.
@@ -565,6 +648,22 @@ class TextWidgetsMixin:
         >>> if email:
         ...     st.write("We'll reach you at", email)
 
+        Use ``live=True`` with ``type="search"`` for live search. Prefer a
+        fragment around the live UI so typing does not rerun the rest of
+        the app:
+
+        >>> import streamlit as st
+        >>>
+        >>> products = ["Apple", "Banana", "Cherry", "Date"]
+        >>>
+        >>> @st.fragment
+        >>> def product_search():
+        ...     query = st.text_input("Search products", type="search", live=True)
+        ...     matches = [p for p in products if query.lower() in p.lower()]
+        ...     st.write(matches)
+        >>>
+        >>> product_search()
+
         """
         ctx = get_script_run_ctx()
         return self._text_input(
@@ -583,6 +682,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             icon=icon,
             validate=validate,
+            live=live,
             width=width,
             bind=bind,
             persist_state=persist_state,
@@ -607,6 +707,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -615,6 +716,7 @@ class TextWidgetsMixin:
         key = to_key(key)
 
         validate_on_change_mode(on_change)
+        live_delay_ms = _parse_text_input_live(live)
 
         on_change_callback: WidgetCallback | None = (
             on_change if callable(on_change) else None
@@ -658,6 +760,12 @@ class TextWidgetsMixin:
         validate_identity_kwarg = (
             {"validate": identity_validate_regex} if identity_validate_regex else {}
         )
+        # Hash normalized milliseconds so `True` and `"300ms"` share an ID.
+        # Omitted / False is not hashed, so existing unkeyed inputs keep their
+        # state on upgrade. `"0ms"` is a real live mode and is hashed.
+        live_identity_kwarg = (
+            {"live": live_delay_ms} if live_delay_ms is not None else {}
+        )
 
         element_id = compute_and_register_element_id(
             "text_input",
@@ -666,6 +774,8 @@ class TextWidgetsMixin:
             # they change, since the widget value might become invalid based on a
             # different max_chars or validation regex. Only the regex (not the
             # message) is used for identity, since the message is purely cosmetic.
+            # `live` is a timing flag and is intentionally not in this set:
+            # enabling live on a keyed widget keeps its value.
             key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,
@@ -678,6 +788,7 @@ class TextWidgetsMixin:
             icon=icon,
             width=width,
             **validate_identity_kwarg,
+            **live_identity_kwarg,
         )
 
         # Resolve the effective values from the type defaults now that the
@@ -756,6 +867,9 @@ class TextWidgetsMixin:
 
         if isinstance(on_change, str) and on_change == "ignore":
             text_input_proto.ignore_rerun = True
+
+        if live_delay_ms is not None:
+            text_input_proto.live_delay_ms = live_delay_ms
 
         serde = TextInputSerde(value, max_chars)
 

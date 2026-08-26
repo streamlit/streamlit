@@ -32,19 +32,13 @@ Custom components can break when Streamlit updates, so prefer core features when
 
 ### streamlit-keyup
 
-Text input that fires on every keystroke instead of waiting for enter/blur. Useful for live search.
+Prefer `st.text_input(..., type="search", live=True)` for as-you-type search (put it in a `@st.fragment` when the rest of the app is expensive). Use this component only if you need behavior the core widget does not provide.
 
 - **Repo:** https://github.com/blackary/streamlit-keyup
 - **Docs:** https://pypi.org/project/streamlit-keyup/
 
-```bash
-uv add streamlit-keyup
-```
-
 ```python
-from st_keyup import st_keyup
-
-query = st_keyup("Search", debounce=300)  # 300ms debounce
+query = st.text_input("Search", type="search", live=True)
 filtered = df[df["name"].str.contains(query, case=False)]
 st.dataframe(filtered)
 ```

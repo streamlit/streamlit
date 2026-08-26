@@ -33,10 +33,10 @@ interface OnInputChangeProps {
   setValueWithSource: Dispatch<
     SetStateAction<ValueWithSource<string | null> | null>
   >
-  /** Optional additional function to run after input change
-   * Use useCallback to prevent unnecessary re-renders.
+  /** Called after an input change that passed the max_chars gate.
+   * Receives the new value. Keep this callback stable with useCallback.
    */
-  additionalAction?: () => void
+  additionalAction?: (newValue: string) => void
 }
 
 /**
@@ -86,7 +86,7 @@ export default function useOnInputChange({
 
       // Run additional action after the main logic
       if (additionalAction) {
-        additionalAction()
+        additionalAction(newValue)
       }
     },
     [

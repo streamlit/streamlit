@@ -474,6 +474,9 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         # widget without `validate`, it isn't passed to the ID computation.
         if widget_func == st.text_input:
             del expected_sig["validate"]
+            # `live` is omitted from the ID when live is off, and this test
+            # calls the widget without `live`.
+            del expected_sig["live"]
 
         # time_input excludes format from the ID because format is display-only
         # and does not require a widget reset.

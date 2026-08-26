@@ -225,6 +225,13 @@ interface UseBasicWidgetStateBaseArgs<
    * for URL query parameter synchronization.
    */
   queryParamBinding?: QueryParamBindingConfig
+  /**
+   * Optional gate for proto `setValue` updates (session_state / script-driven).
+   * Return false to keep the current value; `setValue` is still consumed so
+   * the event is not retried. Keep the callback referentially stable
+   * (`useCallback` + refs).
+   */
+  shouldApplyIncomingValue?: (incoming: T) => boolean
 }
 
 type UseBasicWidgetStateArgs<
@@ -267,6 +274,7 @@ export function useBasicWidgetState<
     widgetMgr,
     fragmentId,
     queryParamBinding,
+    shouldApplyIncomingValue,
   } = args
 
   // Convert the explicit behavior declaration into the optional callback shape
@@ -352,11 +360,21 @@ export function useBasicWidgetState<
     // eslint-disable-next-line react-hooks/immutability -- consuming setValue event from proto
     element.setValue = false // Clear "event".
 
+    const incoming = getCurrStateFromProto(element)
+    if (shouldApplyIncomingValue && !shouldApplyIncomingValue(incoming)) {
+      return
+    }
+
     setNextValueWithSource({
-      value: getCurrStateFromProto(element),
+      value: incoming,
       fromUser: false,
     })
-  }, [element, getCurrStateFromProto, setNextValueWithSource])
+  }, [
+    element,
+    getCurrStateFromProto,
+    setNextValueWithSource,
+    shouldApplyIncomingValue,
+  ])
 
   return [currentValue, setNextValueWithSource]
 }

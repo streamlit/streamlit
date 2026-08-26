@@ -21,9 +21,12 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_button,
+    click_form_button,
     click_toggle,
     expect_help_tooltip,
     expect_markdown,
@@ -36,7 +39,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 34
+TEXT_INPUT_ELEMENTS = 42
 
 
 def test_text_input_widget_rendering(
@@ -809,3 +812,85 @@ def test_text_input_on_change_ignore(app: Page):
         get_text_input(app, "Ignore change text input").locator("input").first
     ).to_have_value("blurred")
     expect_prefixed_markdown(app, "Ignore text value:", "blurred")
+
+
+def test_text_input_live_commits_while_typing(app: Page):
+    """Test live=True, custom delay, 0ms, Enter flush, focus, and instructions."""
+    live_default = get_text_input(app, "Live default input").locator("input").first
+    live_default.click()
+    live_default.type("hello")
+    expect(app.get_by_text("Press Enter to apply")).to_have_count(0)
+    wait_until(app, lambda: app.get_by_text("Live default value: hello").is_visible())
+    expect(live_default).to_be_focused()
+    live_default.type("!")
+    wait_until(app, lambda: app.get_by_text("Live default value: hello!").is_visible())
+    expect(live_default).to_have_value("hello!")
+
+    live_slow = get_text_input(app, "Live 1s input").locator("input").first
+    live_slow.type("slow")
+    expect(app.get_by_text("Live 1s value: slow")).to_have_count(0)
+    wait_until(
+        app,
+        lambda: app.get_by_text("Live 1s value: slow").is_visible(),
+        timeout=4000,
+    )
+    live_slow.fill("fast")
+    live_slow.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "Live 1s value: fast")
+
+    live_immediate = get_text_input(app, "Live 0ms input").locator("input").first
+    live_immediate.type("x")
+    wait_for_app_run(app)
+    expect_markdown(app, "Live 0ms value: x")
+
+
+def test_text_input_live_search_clear_and_form(app: Page):
+    """Test search-clear flushes immediately and form live is a no-op until submit."""
+    live_search = get_text_input(app, "Live search input").locator("input").first
+    live_search.type("query")
+    wait_until(app, lambda: app.get_by_text("Live search value: query").is_visible())
+    get_text_input(app, "Live search input").get_by_test_id(
+        "stTextInputClearButton"
+    ).click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Live search value: query")).to_have_count(0)
+    expect(live_search).to_have_value("")
+
+    live_form = get_text_input(app, "Live form input").locator("input").first
+    live_form.type("inside")
+    # Default live debounce is 300ms; wait past it to prove forms don't live-commit.
+    wait_for_app_run(app, initial_wait=600)
+    expect(app.get_by_text("Live form value: inside")).to_have_count(0)
+    click_form_button(app, "Submit live form")
+    expect_markdown(app, "Live form value: inside")
+
+
+def test_text_input_live_ignore_validate_and_fragment(app: Page):
+    """Test ignore staging, validate gating, and fragment-scoped reruns."""
+    expect_prefixed_markdown(app, "Outside fragment counter:", "1")
+
+    live_fragment = get_text_input(app, "Live fragment input").locator("input").first
+    live_fragment.type("frag")
+    wait_until(app, lambda: app.get_by_text("Live fragment value: frag").is_visible())
+    expect_prefixed_markdown(app, "Outside fragment counter:", "1")
+
+    live_ignore = get_text_input(app, "Live ignore input").locator("input").first
+    live_ignore.type("staged")
+    # Wait past the 300ms default debounce to prove ignore does not rerun.
+    wait_for_app_run(app, initial_wait=600)
+    expect(app.get_by_text("Live ignore value: staged")).to_have_count(0)
+    expect_prefixed_markdown(app, "Outside fragment counter:", "1")
+    click_button(app, "Reveal live ignore")
+    expect(
+        app.get_by_text("Revealed live ignore value: staged", exact=True)
+    ).to_be_visible()
+    expect(app.get_by_text("Live ignore value: staged", exact=True)).to_be_visible()
+
+    live_validate = get_text_input(app, "Live validate input").locator("input").first
+    live_validate.type("123")
+    # Wait past the debounce to prove invalid input is not committed.
+    wait_for_app_run(app, initial_wait=600)
+    expect(app.get_by_text("Live validate value: 123")).to_have_count(0)
+    live_validate.fill("abc")
+    wait_until(app, lambda: app.get_by_text("Live validate value: abc").is_visible())

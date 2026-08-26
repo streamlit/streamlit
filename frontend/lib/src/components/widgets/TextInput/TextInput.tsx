@@ -15,6 +15,7 @@
  */
 
 import {
+  CompositionEvent,
   FocusEvent,
   memo,
   MouseEvent,
@@ -48,12 +49,17 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
-import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import {
+  isInForm,
+  labelVisibilityProtoValueToEnum,
+  notNullOrUndefined,
+} from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -105,6 +111,37 @@ function TextInput({
    */
   const [dirty, setDirty] = useState(false)
 
+  /**
+   * Whether the input is currently focused.
+   */
+  const [focused, setFocused] = useState(false)
+
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  const focusedRef = useRef(focused)
+  focusedRef.current = focused
+  const uiValueRef = useRef(uiValue)
+  uiValueRef.current = uiValue
+  const lastCommittedValueRef = useRef<string | null>(
+    getStateFromWidgetMgr(widgetMgr, element) ?? null
+  )
+  // Prevents a one-frame flash of the previous committed value after a live
+  // commit. useBasicWidgetState updates `value` in an effect, so the commit
+  // render still has the old widget-manager string; useUpdateUiValue would
+  // copy it into the input without this flag.
+  const commitEchoPendingRef = useRef(false)
+  const isComposingRef = useRef(false)
+
+  const setDirtyAndRef = useCallback((nextDirty: boolean): void => {
+    dirtyRef.current = nextDirty
+    setDirty(nextDirty)
+  }, [])
+
+  const setUiValueAndRef = useCallback((nextValue: string): void => {
+    uiValueRef.current = nextValue
+    setUiValue(nextValue)
+  }, [])
+
   /** Controls visibility of the password plain-text toggle. */
   const [showPassword, setShowPassword] = useState(false)
 
@@ -116,10 +153,11 @@ function TextInput({
   const [hasUserError, setHasUserError] = useState(false)
 
   const onFormCleared = useCallback(() => {
+    uiValueRef.current = element.default ?? null
     setUiValue(element.default ?? null)
-    setDirty(true)
+    setDirtyAndRef(true)
     setHasUserError(false)
-  }, [element.default])
+  }, [element.default, setDirtyAndRef])
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -129,6 +167,33 @@ function TextInput({
         clearable: true,
       }
     : undefined
+
+  const { placeholder, formId, icon, maxChars } = element
+  const inForm = isInForm({ formId })
+  // protobufjs optional uint32 is `null` when unset (prototype default), not
+  // `undefined`. `0` is a live-on immediate commit and must not be treated as off.
+  const isLive = notNullOrUndefined(element.liveDelayMs)
+  const liveDelayMs = element.liveDelayMs ?? 0
+  const liveEnabled = isLive && !inForm
+
+  // Skip script-driven setValue while the user is still editing in live mode:
+  // - dirty: keystrokes not yet committed
+  // - focused with a different incoming string: a live rerun echoing an
+  //   older committed value
+  // Non-live inputs omit this gate so on_change / session_state writes still
+  // apply while the field is focused after Enter.
+  const shouldApplyIncomingValue = useCallback(
+    (incoming: string | null): boolean => {
+      if (dirtyRef.current) {
+        return false
+      }
+      if (focusedRef.current && incoming !== uiValueRef.current) {
+        return false
+      }
+      return true
+    },
+    []
+  )
 
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
@@ -144,20 +209,33 @@ function TextInput({
     formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
     queryParamBinding,
+    shouldApplyIncomingValue: liveEnabled
+      ? shouldApplyIncomingValue
+      : undefined,
   })
 
-  useUpdateUiValue(value, uiValue, setUiValue, dirty)
+  // Run during render so useUpdateUiValue on this pass still treats the
+  // in-flight commit as dirty. An effect would run too late to prevent the flash.
+  if (commitEchoPendingRef.current) {
+    if (value === lastCommittedValueRef.current) {
+      commitEchoPendingRef.current = false
+    }
+  } else if (!dirtyRef.current) {
+    lastCommittedValueRef.current = value
+  }
 
-  /**
-   * Whether the input is currently focused.
-   */
-  const [focused, setFocused] = useState(false)
+  // Treat an in-flight commit as dirty so useUpdateUiValue does not copy the
+  // previous widget-manager value into the input. See commitEchoPendingRef.
+  useUpdateUiValue(
+    value,
+    uiValue,
+    setUiValue,
+    dirty || commitEchoPendingRef.current
+  )
 
   const theme = useEmotionTheme()
   const id = useId()
   const errorId = `${id}-error`
-  const { placeholder, formId, icon, maxChars } = element
-  const inForm = isInForm({ formId })
 
   const isPassword = element.type === TextInputProto.Type.PASSWORD
   const isSearch = element.type === TextInputProto.Type.SEARCH
@@ -193,14 +271,15 @@ function TextInput({
     ? (configError ?? userError)
     : null
 
-  const commitWidgetValue = useCallback((): void => {
-    setDirty(false)
-    setValueWithSource({ value: uiValue, fromUser: true })
-  }, [uiValue, setValueWithSource])
-
-  const clearUserValidationError = useCallback((): void => {
-    setHasUserError(false)
-  }, [])
+  const commitWidgetValue = useCallback(
+    (valueToCommit: string | null = uiValueRef.current): void => {
+      lastCommittedValueRef.current = valueToCommit
+      commitEchoPendingRef.current = true
+      setDirtyAndRef(false)
+      setValueWithSource({ value: valueToCommit, fromUser: true })
+    },
+    [setDirtyAndRef, setValueWithSource]
+  )
 
   const isUserValueInvalid = useCallback(
     (nextValue: string | null): boolean => {
@@ -213,61 +292,104 @@ function TextInput({
     [validateRegex]
   )
 
-  // Runs validation for the current value, updates the displayed user error,
+  // Runs validation for the given value, updates the displayed user error,
   // and returns whether the value may be committed.
-  const validateBeforeCommit = useCallback((): boolean => {
-    // Empty values always bypass validation — including when the regex config
-    // itself is broken — so users can still clear the field or submit an empty
-    // form input. The config error remains visible via `displayedError`.
-    if (uiValue === null || uiValue === "") {
+  const validateBeforeCommit = useCallback(
+    (valueToValidate: string | null = uiValueRef.current): boolean => {
+      // Empty values always bypass validation — including when the regex config
+      // itself is broken — so users can still clear the field or submit an empty
+      // form input. The config error remains visible via `displayedError`.
+      if (valueToValidate === null || valueToValidate === "") {
+        setHasUserError(false)
+        return true
+      }
+
+      if (configError) {
+        return false
+      }
+
+      const invalid = isUserValueInvalid(valueToValidate)
+      setHasUserError(invalid)
+      return !invalid
+    },
+    [configError, isUserValueInvalid]
+  )
+
+  const tryCommitOutsideForm = useCallback(
+    (valueToCommit: string | null = uiValueRef.current): boolean => {
+      if (!dirtyRef.current) {
+        return true
+      }
+
+      // Skip a second commit of the same value (e.g. a trailing input event
+      // after compositionend already committed).
+      if (valueToCommit === lastCommittedValueRef.current) {
+        setDirtyAndRef(false)
+        return true
+      }
+
+      if (!validateBeforeCommit(valueToCommit)) {
+        return false
+      }
+
+      commitWidgetValue(valueToCommit)
+      return true
+    },
+    [commitWidgetValue, setDirtyAndRef, validateBeforeCommit]
+  )
+
+  const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
+    useDebouncedCallback(() => {
+      tryCommitOutsideForm()
+    }, liveDelayMs)
+
+  const commitOrScheduleLive = useCallback(
+    (valueToCommit: string | null = uiValueRef.current): void => {
+      if (!liveEnabled || isComposingRef.current) {
+        return
+      }
+      if (liveDelayMs === 0) {
+        tryCommitOutsideForm(valueToCommit)
+        return
+      }
+      // Delay > 0: fire with uiValueRef at timer time, not this keystroke.
+      scheduleLiveCommit()
+    },
+    [liveDelayMs, liveEnabled, scheduleLiveCommit, tryCommitOutsideForm]
+  )
+
+  const handleAcceptedChange = useCallback(
+    (newValue: string): void => {
       setHasUserError(false)
-      return true
-    }
-
-    if (configError) {
-      return false
-    }
-
-    const invalid = isUserValueInvalid(uiValue)
-    setHasUserError(invalid)
-    return !invalid
-  }, [configError, isUserValueInvalid, uiValue])
-
-  const tryCommitOutsideForm = useCallback((): boolean => {
-    if (!dirty) {
-      return true
-    }
-
-    if (!validateBeforeCommit()) {
-      return false
-    }
-
-    commitWidgetValue()
-    return true
-  }, [commitWidgetValue, dirty, validateBeforeCommit])
+      commitOrScheduleLive(newValue)
+    },
+    [commitOrScheduleLive]
+  )
 
   const formSubmitValidatorRef = useRef<() => boolean>(() => true)
   formSubmitValidatorRef.current = () => {
-    if (!validateBeforeCommit()) {
+    if (!validateBeforeCommit(uiValueRef.current)) {
       return false
     }
 
-    if (dirty) {
-      widgetMgr.setStringValue(element.id, uiValue, {
+    if (dirtyRef.current) {
+      widgetMgr.setStringValue(element.id, uiValueRef.current, {
         formId: element.formId,
         fragmentId,
         fromUser: true,
       })
-      setDirty(false)
+      lastCommittedValueRef.current = uiValueRef.current
+      setDirtyAndRef(false)
     }
 
     return true
   }
 
-  // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
+  // Show "Please enter" instructions if in a form & allowed, or not in form
+  // and dirty. Hide "Press Enter to apply" when live updates are on.
   const allowEnterToSubmit = inForm
     ? widgetMgr.allowFormEnterToSubmit(formId)
-    : dirty
+    : dirty && !isLive
 
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
@@ -292,16 +414,23 @@ function TextInput({
         // registered form submit validator gates the entire form. Deferring
         // field-level errors to submit time is the intended form UX, so don't
         // run the regex check here.
-        if (dirty) {
+        if (dirtyRef.current) {
           commitWidgetValue()
         }
       } else {
+        cancelLiveCommit()
         tryCommitOutsideForm()
       }
 
       setFocused(false)
     },
-    [commitWidgetValue, dirty, elementRef, inForm, tryCommitOutsideForm]
+    [
+      cancelLiveCommit,
+      commitWidgetValue,
+      elementRef,
+      inForm,
+      tryCommitOutsideForm,
+    ]
   )
 
   const handleToggleShowPassword = useCallback((): void => {
@@ -311,20 +440,33 @@ function TextInput({
   // Clear the search input and commit the empty value so results update
   // immediately (empty values bypass validation).
   const handleClear = useCallback((): void => {
-    setDirty(false)
-    setUiValue("")
+    cancelLiveCommit()
+    setUiValueAndRef("")
     setHasUserError(false)
-    setValueWithSource({ value: "", fromUser: true })
-  }, [setValueWithSource])
+    commitWidgetValue("")
+  }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
 
   const onChange = useOnInputChange({
     formId,
     maxChars,
-    setDirty,
-    setUiValue,
+    setDirty: setDirtyAndRef,
+    setUiValue: setUiValueAndRef,
     setValueWithSource,
-    additionalAction: clearUserValidationError,
+    additionalAction: handleAcceptedChange,
   })
+
+  const handleCompositionStart = useCallback((): void => {
+    isComposingRef.current = true
+    cancelLiveCommit()
+  }, [cancelLiveCommit])
+
+  const handleCompositionEnd = useCallback(
+    (e: CompositionEvent<HTMLInputElement>): void => {
+      isComposingRef.current = false
+      commitOrScheduleLive(e.currentTarget.value)
+    },
+    [commitOrScheduleLive]
+  )
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -344,28 +486,30 @@ function TextInput({
           // script-driven value changes (e.g. session_state updates in a
           // callback). On validation failure, dirty stays true.
           if (widgetMgr.submitForm(formId, fragmentId)) {
-            setDirty(false)
+            setDirtyAndRef(false)
           }
           return
         }
 
         // See `handleBlur`: in-form commits intentionally defer validation to
         // form submit, so the staged value is committed without the regex check.
-        if (dirty) {
+        if (dirtyRef.current) {
           commitWidgetValue()
         }
         return
       }
 
+      cancelLiveCommit()
       tryCommitOutsideForm()
     },
     [
       allowEnterToSubmit,
+      cancelLiveCommit,
       commitWidgetValue,
-      dirty,
       formId,
       fragmentId,
       inForm,
+      setDirtyAndRef,
       tryCommitOutsideForm,
       widgetMgr,
     ]
@@ -456,6 +600,8 @@ function TextInput({
             onBlur={handleBlur}
             onChange={onChange}
             onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
           />
           <StyledEndEnhancers>
             {displayedError && (

@@ -64,5 +64,9 @@ message TextInput {
   // committed. Inside a form, this flag has no effect because the form batches
   // values until submit.
   bool ignore_rerun = 18;
-  // Next: 19
+
+  // Unset = live off. 0 = commit on every accepted change.
+  // Positive = debounce delay in milliseconds (`True` maps to 300).
+  optional uint32 live_delay_ms = 19;
+  // Next: 20
 }

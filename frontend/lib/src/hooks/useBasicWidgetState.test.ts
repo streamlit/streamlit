@@ -670,3 +670,98 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
     })
   })
 })
+
+describe("useBasicWidgetState - shouldApplyIncomingValue", () => {
+  let widgetMgr: WidgetStateManager
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    widgetMgr = new WidgetStateManager({
+      formsDataChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+    })
+  })
+
+  it("skips updateWidgetMgrState when the predicate returns false", () => {
+    const element: MockProto = {
+      formId: "",
+      setValue: false,
+      id: "widget-skip",
+      value: "initial",
+      default: "default-value",
+    }
+    const shouldApplyIncomingValue = vi.fn(() => false)
+
+    const { rerender } = renderHook(
+      ({ el }: { el: MockProto }) =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element: el,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+          shouldApplyIncomingValue,
+        }),
+      { initialProps: { el: element } }
+    )
+
+    updateWidgetMgrState.mockClear()
+    const incoming = {
+      ...element,
+      setValue: true,
+      value: "stale",
+    }
+    rerender({ el: incoming })
+
+    expect(shouldApplyIncomingValue).toHaveBeenCalledWith("stale")
+    expect(updateWidgetMgrState).not.toHaveBeenCalled()
+    expect(incoming.setValue).toBe(false)
+  })
+
+  it("applies incoming values when the predicate returns true", () => {
+    const element: MockProto = {
+      formId: "",
+      setValue: false,
+      id: "widget-apply",
+      value: "initial",
+      default: "default-value",
+    }
+    const shouldApplyIncomingValue = vi.fn(() => true)
+
+    const { rerender } = renderHook(
+      ({ el }: { el: MockProto }) =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element: el,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+          shouldApplyIncomingValue,
+        }),
+      { initialProps: { el: element } }
+    )
+
+    updateWidgetMgrState.mockClear()
+    const incoming = {
+      ...element,
+      setValue: true,
+      value: "fresh",
+    }
+    rerender({ el: incoming })
+
+    expect(shouldApplyIncomingValue).toHaveBeenCalledWith("fresh")
+    expect(updateWidgetMgrState).toHaveBeenCalledWith(
+      incoming,
+      widgetMgr,
+      { value: "fresh", fromUser: false },
+      undefined
+    )
+    expect(incoming.setValue).toBe(false)
+  })
+})
