@@ -620,14 +620,25 @@ class StreamlitInvalidParameterTypeError(LocalizableStreamlitException):
     """Raised when a parameter has an unsupported type."""
 
     def __init__(
-        self, parameter: str, provided_type: str, expected_types: list[str]
+        self,
+        parameter: str,
+        provided_type: str,
+        expected_types: list[str],
+        *,
+        detail: str | None = None,
     ) -> None:
-        super().__init__(
+        message = (
             "Invalid `{parameter}` type. Expected one of: {expected_types}. "
-            "Provided type: {provided_type}.",
+            "Provided type: {provided_type}."
+        )
+        if detail:
+            message += " {detail}"
+        super().__init__(
+            message,
             parameter=parameter,
             expected_types=", ".join(expected_types),
             provided_type=provided_type,
+            detail=detail,
         )
 
 

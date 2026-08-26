@@ -280,6 +280,7 @@ def set_page_config(
             raise StreamlitValueError(
                 "initial_sidebar_state",
                 _VALID_SIDEBAR_STATE_VALUES,
+                detail=f"Got {initial_sidebar_state}.",
             )
         pb_sidebar_state = PageConfigProto.AUTO
         msg.page_config_changed.initial_sidebar_width.pixel_width = (

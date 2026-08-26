@@ -42,7 +42,6 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
-    StreamlitDefaultNotInOptionsError,
     StreamlitIncompatibleParametersError,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidParameterTypeError,
@@ -991,10 +990,12 @@ class LayoutsMixin:
 
         """
         if not tabs:
-            raise StreamlitMissingRequiredParameterError("tabs")
+            raise StreamlitMissingRequiredParameterError(
+                "tabs", detail="Provide at least one tab label."
+            )
 
         if default and default not in tabs:
-            raise StreamlitDefaultNotInOptionsError(default)
+            raise StreamlitValueError("default", [f"'{tab}'" for tab in tabs])
 
         for tab in tabs:
             if not isinstance(tab, str):
@@ -1002,6 +1003,7 @@ class LayoutsMixin:
                     "tabs",
                     type(tab).__name__,
                     ["str"],
+                    detail="Each tab label must be a string.",
                 )
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:

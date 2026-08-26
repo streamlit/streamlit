@@ -24,7 +24,6 @@ from streamlit.elements.dialog_decorator import dialog_decorator
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
-    StreamlitDefaultNotInOptionsError,
     StreamlitDuplicateElementId,
     StreamlitIncompatibleParametersError,
     StreamlitInvalidFormCallbackError,
@@ -931,7 +930,10 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     def test_container_wrap_false_without_horizontal_raises(self) -> None:
         """Test that st.container raises for wrap=False without horizontal=True."""
-        with pytest.raises(StreamlitIncompatibleParametersError):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"`wrap=False` can only be used with `horizontal=True`",
+        ):
             st.container(horizontal=False, wrap=False)
 
     def test_container_wrap_true_without_horizontal_allowed(self) -> None:
@@ -1777,15 +1779,24 @@ class TabsTest(DeltaGeneratorTestCase):
         with pytest.raises(TypeError):
             st.tabs()
 
-        with pytest.raises(StreamlitMissingRequiredParameterError):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match="Provide at least one tab label",
+        ):
             st.tabs([])
 
     def test_only_label_strings_allowed(self):
         """Test that only strings are allowed as tab labels."""
-        with pytest.raises(StreamlitInvalidParameterTypeError):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match="Each tab label must be a string",
+        ):
             st.tabs(["tab1", True])
 
-        with pytest.raises(StreamlitInvalidParameterTypeError):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match="Each tab label must be a string",
+        ):
             st.tabs(["tab1", 10])
 
     def test_returns_all_expected_tabs(self):
@@ -1821,7 +1832,7 @@ class TabsTest(DeltaGeneratorTestCase):
         tabs = ["Tab 1", "Tab 2", "Tab 3"]
         default_tab = "Tab 4"
 
-        with pytest.raises(StreamlitDefaultNotInOptionsError):
+        with pytest.raises(StreamlitValueError, match=r"`default`"):
             st.tabs(tabs, default=default_tab)
 
     def test_valid_default_tab(self):

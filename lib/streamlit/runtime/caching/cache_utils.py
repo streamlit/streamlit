@@ -141,7 +141,10 @@ def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
     if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
         raise StreamlitMissingRequiredParameterError(
             "ttl",
-            detail="Background refresh requires a positive `ttl`.",
+            detail=(
+                'Set a positive `ttl` (for example `ttl="1h"`) or use '
+                '`refresh_mode="foreground"`.'
+            ),
         )
 
 

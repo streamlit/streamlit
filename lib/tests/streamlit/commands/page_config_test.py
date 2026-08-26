@@ -137,7 +137,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
 
     @parameterized.expand([param(0), param(-100)])
     def test_set_page_config_sidebar_width_invalid(self, invalid_value: int):
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=rf"Got {invalid_value}\."):
             st.set_page_config(initial_sidebar_state=invalid_value)
 
     def test_set_page_config_menu_items_about(self):

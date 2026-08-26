@@ -337,21 +337,29 @@ def get_gap_config(gap: Gap | None) -> GapConfig:
     raise StreamlitValueError("gap", _VALID_GAP_VALUES)
 
 
+_VALID_HORIZONTAL_ALIGNMENTS: Final = ["left", "center", "right", "distribute"]
+_VALID_HORIZONTAL_ALIGNMENT_VALUES: Final = [
+    f"'{alignment}'" for alignment in _VALID_HORIZONTAL_ALIGNMENTS
+]
+_VALID_VERTICAL_ALIGNMENTS: Final = ["top", "center", "bottom", "distribute"]
+_VALID_VERTICAL_ALIGNMENT_VALUES: Final = [
+    f"'{alignment}'" for alignment in _VALID_VERTICAL_ALIGNMENTS
+]
+
+
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:
-    valid_horizontal_alignments = ["left", "center", "right", "distribute"]
-    if horizontal_alignment not in valid_horizontal_alignments:
+    if horizontal_alignment not in _VALID_HORIZONTAL_ALIGNMENTS:
         raise StreamlitValueError(
             "horizontal_alignment",
-            [f"'{alignment}'" for alignment in valid_horizontal_alignments],
+            _VALID_HORIZONTAL_ALIGNMENT_VALUES,
         )
 
 
 def validate_vertical_alignment(vertical_alignment: VerticalAlignment) -> None:
-    valid_vertical_alignments = ["top", "center", "bottom", "distribute"]
-    if vertical_alignment not in valid_vertical_alignments:
+    if vertical_alignment not in _VALID_VERTICAL_ALIGNMENTS:
         raise StreamlitValueError(
             "vertical_alignment",
-            [f"'{alignment}'" for alignment in valid_vertical_alignments],
+            _VALID_VERTICAL_ALIGNMENT_VALUES,
         )
 
 

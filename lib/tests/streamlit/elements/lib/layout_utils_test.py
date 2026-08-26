@@ -236,20 +236,20 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_get_gap_config_negative_int_raises(self):
         """get_gap_config raises for negative integer inputs."""
 
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
             get_gap_config(-1)
 
     @parameterized.expand([(True,), (False,)])
     def test_get_gap_config_bool_raises(self, gap: bool):
         """get_gap_config rejects boolean inputs even though ``bool`` is a subclass of ``int``."""
 
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
             get_gap_config(gap)  # type: ignore[arg-type]
 
     def test_get_gap_config_invalid_string_raises(self):
         """get_gap_config raises for unknown gap strings."""
 
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
             get_gap_config("tiny")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -268,7 +268,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_horizontal_alignment_invalid(self):
         """validate_horizontal_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`horizontal_alignment`"):
             validate_horizontal_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -287,7 +287,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_vertical_alignment_invalid(self):
         """validate_vertical_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`vertical_alignment`"):
             validate_vertical_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -352,7 +352,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_size_invalid(self, size: any):
         """validate_size raises for invalid size values."""
 
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`size`"):
             validate_space_size(size)  # type: ignore[arg-type]
 
     @parameterized.expand(

@@ -164,7 +164,24 @@ def test_invalid_parameter_type_error_message() -> None:
         "parameter": "index",
         "expected_types": "int, None",
         "provided_type": "str",
+        "detail": None,
     }
+
+
+def test_invalid_parameter_type_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitInvalidParameterTypeError(
+        "tabs",
+        "bool",
+        ["str"],
+        detail="Each tab label must be a string.",
+    )
+    assert str(exc) == (
+        "Invalid `tabs` type. Expected one of: str. Provided type: bool. "
+        "Each tab label must be a string."
+    )
+    assert exc.exec_kwargs["parameter"] == "tabs"
+    assert exc.exec_kwargs["detail"] == "Each tab label must be a string."
 
 
 def test_value_error_with_detail() -> None:
