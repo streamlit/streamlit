@@ -625,8 +625,6 @@ with st.container(key="wrap_false_markdown", width=200):
     st.markdown(_WRAP_TEXT, wrap=False)
 with st.container(key="wrap_true_markdown", width=200):
     st.markdown(_WRAP_TEXT, wrap=True)
-with st.container(key="wrap_false_markdown_help", width=200):
-    st.markdown(_WRAP_TEXT, wrap=False, help="wrap help text")
 with st.container(key="badge_help", width=200):
     st.badge(_WRAP_TEXT, width="stretch", help="wrap help text")
 with st.container(
@@ -652,3 +650,6 @@ code block
 
 with st.container(key="wrap_false_block_markdown", width=200):
     st.markdown(_WRAP_BLOCK_MD, wrap=False)
+
+with st.container(key="wrap_false_markdown_help", width=200):
+    st.markdown(_WRAP_TEXT, wrap=False, help="wrap help text")
