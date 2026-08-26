@@ -23,6 +23,7 @@ from streamlit.elements.lib.layout_utils import (
     create_layout_config,
     validate_wrap,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, to_help_str, validate_icon_or_emoji
@@ -34,6 +35,19 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
+
+_WRAP_FALSE_WITH_HTML_ERROR: Final = (
+    "`wrap=False` cannot be used with `unsafe_allow_html=True`. "
+    "One-line markdown cannot ellipsize raw HTML. Pass `wrap=True` "
+    "to render HTML, or omit `unsafe_allow_html` to truncate."
+)
+
+
+def _validate_markdown_wrap(*, wrap: bool, unsafe_allow_html: bool) -> None:
+    """Reject invalid wrap values and the wrap=False + HTML combination."""
+    validate_wrap(wrap)
+    if wrap is False and unsafe_allow_html:
+        raise StreamlitAPIException(_WRAP_FALSE_WITH_HTML_ERROR)
 
 
 class MarkdownMixin:
@@ -50,7 +64,7 @@ class MarkdownMixin:
         wrap: bool = True,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
-        validate_wrap(wrap)
+        _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         markdown_proto = MarkdownProto()
 
         markdown_proto.body = clean_text(body)
@@ -167,6 +181,8 @@ class MarkdownMixin:
             Adding custom HTML to your app impacts safety, styling, and
             maintainability.
 
+            ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
+
             .. note::
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
@@ -230,7 +246,8 @@ class MarkdownMixin:
               wraps onto additional lines.
             - ``False``: The text stays on one line. Overflow is truncated
               with an ellipsis. Markdown is limited to inline formatting
-              (the same subset used in widget labels). Truncation only
+              (the same subset used in widget labels). This cannot be
+              combined with ``unsafe_allow_html=True``. Truncation only
               appears when the element is narrower than its text. In a
               horizontal container, the default ``width="auto"`` sizes to
               the content, so pass ``width="stretch"`` or a pixel width.
@@ -305,6 +322,8 @@ class MarkdownMixin:
             Adding custom HTML to your app impacts safety, styling, and
             maintainability.
 
+            ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
+
             .. note::
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
@@ -353,7 +372,8 @@ class MarkdownMixin:
               it wraps onto additional lines.
             - ``False``: The caption stays on one line. Overflow is truncated
               with an ellipsis. Markdown is limited to inline formatting
-              (the same subset used in widget labels).
+              (the same subset used in widget labels). This cannot be
+              combined with ``unsafe_allow_html=True``.
 
         Examples
         --------
@@ -363,7 +383,7 @@ class MarkdownMixin:
         >>> st.caption("A caption with _italics_ :blue[colors] and emojis :sunglasses:")
 
         """
-        validate_wrap(wrap)
+        _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         caption_proto = MarkdownProto()
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html

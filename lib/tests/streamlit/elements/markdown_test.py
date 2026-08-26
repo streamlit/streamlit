@@ -110,6 +110,21 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.markdown.wrap is True
 
+    def test_st_markdown_wrap_false_rejects_unsafe_html(self):
+        """wrap=False cannot be combined with unsafe_allow_html=True."""
+        with pytest.raises(StreamlitAPIException, match="unsafe_allow_html"):
+            st.markdown("<b>html</b>", wrap=False, unsafe_allow_html=True)
+
+        st.markdown("<b>html</b>", wrap=True, unsafe_allow_html=True)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is True
+        assert el.markdown.allow_html is True
+
+        st.markdown("<b>html</b>", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is False
+        assert el.markdown.allow_html is False
+
     def test_st_markdown_invalid_wrap(self):
         """Test that a non-bool wrap value raises StreamlitValueError."""
         with pytest.raises(StreamlitValueError):
@@ -245,6 +260,16 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
         st.caption("some caption", wrap=False)
         el = self.get_delta_from_queue().new_element
         assert el.markdown.wrap is False
+
+    def test_st_caption_wrap_false_rejects_unsafe_html(self):
+        """wrap=False cannot be combined with unsafe_allow_html=True."""
+        with pytest.raises(StreamlitAPIException, match="unsafe_allow_html"):
+            st.caption("<b>html</b>", wrap=False, unsafe_allow_html=True)
+
+        st.caption("<b>html</b>", wrap=True, unsafe_allow_html=True)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.wrap is True
+        assert el.markdown.allow_html is True
 
     def test_st_caption_invalid_wrap(self):
         """Test that a non-bool wrap value raises StreamlitValueError."""

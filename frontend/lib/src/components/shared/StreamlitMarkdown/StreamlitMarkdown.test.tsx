@@ -898,37 +898,22 @@ describe("StreamlitMarkdown", () => {
     expect(container).toHaveTextContent(/code block/)
   })
 
-  it("inlines leftover HTML block elements when truncating", async () => {
+  it("inlines leftover paragraphs when truncating", () => {
     render(
       <StreamlitMarkdown
-        source="<section>One</section><dl><dt>Term</dt><dd>Def</dd></dl><form><fieldset><legend>Q</legend></fieldset></form>"
-        allowHTML
+        source={"one\n\ntwo"}
+        allowHTML={false}
+        isLabel
         truncate
       />
     )
-    expect(await screen.findByText("One")).toBeVisible()
     const container = screen.getByTestId("stMarkdownContainer")
-    expect(container.querySelector("section")).toHaveStyle("display: inline")
-    expect(container.querySelector("dl")).toHaveStyle("display: inline")
-    expect(container.querySelector("form")).toHaveStyle("display: inline")
-    expect(container.querySelector("fieldset")).toHaveStyle("display: inline")
-  })
-
-  it("inlines leftover HTML tables when truncating", async () => {
-    render(
-      <StreamlitMarkdown
-        source="<table><thead><tr><th>H</th></tr></thead><tbody><tr><td>cell</td></tr></tbody></table>"
-        allowHTML
-        truncate
-      />
-    )
-    expect(await screen.findByText("cell")).toBeVisible()
-    const container = screen.getByTestId("stMarkdownContainer")
-    expect(container.querySelector("table")).toHaveStyle("display: inline")
-    expect(container.querySelector("thead")).toHaveStyle("display: inline")
-    expect(container.querySelector("tbody")).toHaveStyle("display: inline")
-    expect(container.querySelector("tr")).toHaveStyle("display: inline")
-    expect(container.querySelector("td")).toHaveStyle("display: inline")
+    const paragraphs = container.querySelectorAll("p")
+    expect(paragraphs.length).toBeGreaterThan(0)
+    for (const paragraph of paragraphs) {
+      expect(paragraph).toHaveStyle("display: inline")
+    }
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
   })
 
   it("hides hard breaks when truncating", () => {

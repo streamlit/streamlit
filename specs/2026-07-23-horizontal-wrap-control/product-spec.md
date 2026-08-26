@@ -218,7 +218,7 @@ st.markdown(
 | --- | --- | --- | --- |
 | `None` (default for controls) | Multi-item controls use auto: `False` inside a horizontal container or when directly placed in a column, and `True` in any other layout. Not used by layout containers or text. | Auto: behaves like `False` inside a horizontal container or when directly placed in a column, and `True` in any other layout. | Not used. |
 | `True` (default for `st.container` / `st.columns` / text) | Items move to additional rows when they cannot fit (or, for `st.columns`, stack at the responsive breakpoint). | The label can wrap and increase the control height. | The text wraps onto additional lines (today's behavior). |
-| `False` | Items remain in one row and the element scrolls horizontally if needed. | The control keeps its standard height and ellipsizes an overflowing label. | The text stays on one line and ellipsizes. Markdown is limited to inline formatting. |
+| `False` | Items remain in one row and the element scrolls horizontally if needed. | The control keeps its standard height and ellipsizes an overflowing label. | The text stays on one line and ellipsizes. Markdown is limited to inline formatting and cannot be combined with `unsafe_allow_html=True`. |
 
 The auto default applies to controls placed inside a layout — the single-label controls and
 the multi-item controls (`st.multiselect`, `st.pills`, `st.segmented_control`). Each
@@ -282,7 +282,7 @@ in one row when `wrap=False`.
 | `st.menu_button` | Label inside the menu trigger | Ellipsize the label; keep the expansion icon visible |
 | `st.checkbox` | Label beside the checkbox | Ellipsize the label; keep the indicator visible |
 | `st.toggle` | Label beside the switch | Ellipsize the label; keep the switch visible |
-| `st.markdown`, `st.caption` | Rendered markdown body | Ellipsize on one line; restrict markdown to the inline label subset |
+| `st.markdown`, `st.caption` | Rendered markdown body | Ellipsize on one line; restrict markdown to the inline label subset. Incompatible with `unsafe_allow_html=True`. |
 | `st.title`, `st.header`, `st.subheader` | Heading text | Ellipsize on one line; keep the anchor and help icon visible |
 | `st.text` | Plain text body | Ellipsize on one line |
 
@@ -324,6 +324,7 @@ When `wrap=False` on a text command:
 - Markdown commands (`st.markdown`, `st.caption`) render in label mode so
   only inline formatting is shown (no headings, lists, tables, block quotes, or
   horizontal rules). Font size and heading chrome are unchanged.
+  `wrap=False` cannot be combined with `unsafe_allow_html=True`.
 - Heading commands (`st.title`, `st.header`, `st.subheader`) ellipsize the heading
   line. Extra body lines after the first newline are not shown. Anchor and help icons
   remain visible.
@@ -587,7 +588,8 @@ with st.container(horizontal=True, wrap=False):
   (bold, italics, links, code, emoji, colored text, badges). Block constructs such
   as headings, lists, tables, and code blocks are unwrapped or omitted. Font size
   stays the command's normal size; label mode does not shrink markdown to widget-label
-  size.
+  size. `wrap=False` cannot be combined with `unsafe_allow_html=True`: truncated
+  markdown cannot ellipsize raw HTML, so that combination raises.
 - `st.title`, `st.header`, and `st.subheader` ellipsize the heading line. Additional
   body lines after the first newline are not shown. The heading tag, divider, and
   anchor/help icons are unchanged.
@@ -759,6 +761,8 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
   headings/lists/tables omitted), heading extra-line suppression, help-icon visibility,
   native `title` on the truncated text (kept when `help` is set, since the
   icon is a sibling), and help/anchor icons remaining untitled.
+- Add tests that `st.markdown` / `st.caption` raise when `wrap=False` is combined
+  with `unsafe_allow_html=True`.
 - Add E2E coverage at desktop, intermediate, and phone widths in Chromium, Firefox, and
   WebKit.
 - Test touch-style horizontal scrolling and keyboard navigation.

@@ -48,11 +48,6 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
-// Leftover block boxes after label-mode unwrap. :where() keeps specificity
-// below heading flex styles so st.header wrap=False still ellipsizes.
-const TRUNCATE_BLOCK_SELECTOR =
-  "& :where(p, pre, ul, ol, li, blockquote, table, thead, tbody, tr, th, td, hr, div, section, article, aside, nav, header, footer, main, figure, figcaption, dl, dt, dd, address, details, summary, form, fieldset, legend, menu, dialog)"
-
 function sharedMarkdownStyle(theme: Theme): Record<string, unknown> {
   return {
     a: {
@@ -263,19 +258,6 @@ export const StyledStreamlitMarkdown =
           // parent so the ellipsis can appear.
           minWidth: 0,
 
-          // Label mode unwraps most blocks; leftover siblings (including
-          // raw HTML) would still stack. Keep them inline so wrap=False
-          // stays one ellipsized line. Headings are omitted: st.header
-          // needs display:flex for truncation next to help/anchor icons.
-          [TRUNCATE_BLOCK_SELECTOR]: {
-            display: "inline",
-            margin: 0,
-            padding: 0,
-            border: "none",
-            whiteSpace: "nowrap",
-            verticalAlign: "bottom",
-          },
-
           // CommonMark hard breaks (`<br>` from trailing spaces or `\`) are
           // not suppressed by nowrap; hide them so wrap=False stays one line.
           "& br": {
@@ -283,9 +265,17 @@ export const StyledStreamlitMarkdown =
           },
 
           "& p": {
-            // Ellipsis stays on the markdown container. overflow/maxWidth
-            // on an inlined <p> computes as inline-block and can clip
-            // content-width wrap=auto labels (menu/popover in columns).
+            // Label mode unwraps headings, lists, and tables. Leftover
+            // paragraphs would still stack, so inline them. Ellipsis stays
+            // on the markdown container: overflow/maxWidth on an inlined
+            // <p> computes as inline-block and can clip content-width
+            // wrap=auto labels (menu/popover in columns).
+            display: "inline",
+            margin: 0,
+            padding: 0,
+            border: "none",
+            whiteSpace: "nowrap",
+            verticalAlign: "bottom",
             lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
           },
 
@@ -395,19 +385,6 @@ export const StyledStreamlitMarkdown =
           padding: `${theme.spacing.xs} ${theme.spacing.md}`,
           border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
-
-        // table { display: table } above beats :where(table) in the flatten
-        // rule. Re-assert inline layout for leftover raw HTML tables.
-        ...(truncate && {
-          "table, thead, tbody, tr, th, td": {
-            display: "inline",
-            margin: 0,
-            padding: 0,
-            border: "none",
-            whiteSpace: "nowrap",
-            verticalAlign: "bottom",
-          },
-        }),
 
         "span.stMarkdownColoredBackground": {
           borderRadius: theme.radii.sm,
