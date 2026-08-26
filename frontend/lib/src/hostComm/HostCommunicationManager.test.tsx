@@ -421,6 +421,34 @@ describe("HostCommunicationManager messaging", () => {
       })
     })
 
+    it("still echoes when posting to the parent throws", async () => {
+      await withEmbeddedWindow(() => {
+        postMessageSpy.mockClear()
+        vi.mocked(window.parent.postMessage).mockImplementation(() => {
+          throw new SyntaxError(
+            "Failed to execute 'postMessage' on 'Window': Invalid target origin 'null'"
+          )
+        })
+
+        expect(() => {
+          hostCommunicationMgr.sendMessageToSameOriginHost({
+            type: "REDIRECT_TO_URL",
+            url: "https://example.com/next",
+          })
+        }).toThrow(SyntaxError)
+
+        expect(postMessageSpy).toHaveBeenCalledWith(
+          {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "REDIRECT_TO_URL",
+            url: "https://example.com/next",
+            [IS_GUEST_TO_HOST_ECHO]: true,
+          },
+          "/"
+        )
+      })
+    })
+
     it("does not execute an echoed UPDATE_HASH as a host command", async () => {
       await withEmbeddedWindow(() => {
         window.location.hash = "#unchanged"

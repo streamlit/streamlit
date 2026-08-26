@@ -45,13 +45,10 @@ export const HOST_COMM_VERSION = 1
 export const IS_GUEST_TO_HOST_ECHO = "isGuestToHostEcho"
 
 /**
- * True when this payload is our same-window guest→host echo, not an inbound
- * host command. Requires an own property whose value is boolean `true`, so
- * inherited or truthy values cannot suppress host commands.
- *
- * Uses `Object.prototype.hasOwnProperty` rather than `Object.hasOwn` so this
- * message-routing path does not throw in browsers that lack that ES2022
- * built-in (it is not in `frontend/utils/src/polyfills`).
+ * True when `data`'s own `isGuestToHostEcho` is boolean `true`. Inherited or
+ * merely truthy values do not count, so they cannot suppress host commands.
+ * Callers must still require a same-window self-post; this helper does not
+ * inspect `event.source`.
  */
 function isGuestToHostEchoPayload(data: unknown): boolean {
   return (
@@ -216,24 +213,23 @@ export default class HostCommunicationManager {
   /**
    * Post `message` to `window.parent`. When embedded, also post a tagged copy
    * to this window so an in-iframe host can observe guest messages even if
-   * the parent is a third-party page. The copy sets `isGuestToHostEcho: true`
-   * so `receiveHostMessage` can ignore it. Posting to `window` already limits
-   * delivery to this window's listeners. The echo uses `"/"`, `postMessage`'s
-   * special same-origin target, so it matches the sender's effective origin.
-   * This also works in opaque-origin documents, where `location.origin` can be
-   * `"null"` (causing a `SyntaxError`) or differ from the effective origin
-   * (causing the browser to silently drop the message).
+   * the parent is a third-party page.
    *
-   * Do not echo at top level: `isSelfPost` is false when
-   * `window === window.parent`, so an unignored top-level echo could run as a
-   * host command (e.g. UPDATE_HASH).
+   * - The copy sets `isGuestToHostEcho: true` so `receiveHostMessage` ignores it.
+   * - Target `"/"` is `postMessage`'s same-origin shortcut: it matches the
+   *   sender's effective origin and does not throw when `location.origin` is
+   *   `"null"`.
+   * - Echo before the parent post so an opaque-origin parent target (`"null"`)
+   *   cannot skip the in-window host.
+   * - Do not echo at top level: `isSelfPost` is false when
+   *   `window === window.parent`, so an unignored echo could run as a host
+   *   command (e.g. UPDATE_HASH).
    */
   private postMessageToParentAndEcho(
     message: IGuestToHostMessage,
     parentTargetOrigin: string
   ): void {
     const versionedMessage = this.buildVersionedMessage(message)
-    window.parent.postMessage(versionedMessage, parentTargetOrigin)
     if (window !== window.parent) {
       const echo: GuestToHostEnvelope = {
         ...versionedMessage,
@@ -241,6 +237,7 @@ export default class HostCommunicationManager {
       }
       window.postMessage(echo, "/")
     }
+    window.parent.postMessage(versionedMessage, parentTargetOrigin)
   }
 
   /**
@@ -288,7 +285,7 @@ export default class HostCommunicationManager {
       // receives. This helps diagnose cases where a legitimate host's messages
       // are unexpectedly dropped -- including a dropped same-window self-post
       // from an in-iframe embed preamble (e.g. a SET_AUTH_TOKEN whose origin is
-      // not allow-listed), which the earlier blanket self-post skip hid.
+      // not allow-listed).
       if (isHostMessage) {
         LOG.debug(
           "Ignoring host message: isTrusted=%s, sourceIsParent=%s, selfPost=%s, allowedOrigin=%s, origin=%s",
