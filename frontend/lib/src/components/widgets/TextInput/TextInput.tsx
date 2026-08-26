@@ -90,6 +90,21 @@ export interface Props {
 
 const LOG = getLogger("TextInput")
 
+// Bound how many live-committed strings we remember for stale-echo detection.
+const MAX_RECENT_LIVE_COMMITS = 32
+
+function pushRecentLiveCommit(
+  recent: (string | null)[],
+  committed: string | null
+): (string | null)[] {
+  const next = recent.filter(value => value !== committed)
+  next.push(committed)
+  if (next.length > MAX_RECENT_LIVE_COMMITS) {
+    next.shift()
+  }
+  return next
+}
+
 function TextInput({
   disabled,
   element,
@@ -118,13 +133,14 @@ function TextInput({
 
   const dirtyRef = useRef(dirty)
   dirtyRef.current = dirty
-  const focusedRef = useRef(focused)
-  focusedRef.current = focused
   const uiValueRef = useRef(uiValue)
   uiValueRef.current = uiValue
   const lastCommittedValueRef = useRef<string | null>(
     getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
+  // Recent live-committed strings, newest last. Used to recognize stale
+  // setValue echoes of older in-flight reruns after dirty has been cleared.
+  const recentLiveCommitsRef = useRef<(string | null)[]>([])
   // Prevents a one-frame flash of the previous committed value after a live
   // commit. useBasicWidgetState updates `value` in an effect, so the commit
   // render still has the old widget-manager string; useUpdateUiValue would
@@ -176,21 +192,24 @@ function TextInput({
   const liveDelayMs = element.liveDelayMs ?? 0
   const liveEnabled = isLive && !inForm
 
-  // Skip script-driven setValue while the user is still editing in live mode:
+  // Skip script-driven setValue that would clobber live edits:
   // - dirty: keystrokes not yet committed
-  // - focused with a different incoming string: a live rerun echoing an
-  //   older committed value
-  // Non-live inputs omit this gate so on_change / session_state writes still
-  // apply while the field is focused after Enter.
+  // - a recently live-committed string that is not the latest: a stale echo
+  //   of an older in-flight rerun, including after blur
+  // Incoming values that were never live-committed (on_change / session_state
+  // writes) still apply, including while the field is focused.
   const shouldApplyIncomingValue = useCallback(
     (incoming: string | null): boolean => {
       if (dirtyRef.current) {
         return false
       }
-      if (focusedRef.current && incoming !== uiValueRef.current) {
-        return false
+      if (
+        incoming === lastCommittedValueRef.current ||
+        incoming === uiValueRef.current
+      ) {
+        return true
       }
-      return true
+      return !recentLiveCommitsRef.current.includes(incoming)
     },
     []
   )
@@ -217,6 +236,11 @@ function TextInput({
   // Run during render so useUpdateUiValue on this pass still treats the
   // in-flight commit as dirty. An effect would run too late to prevent the flash.
   if (commitEchoPendingRef.current) {
+    // A session_state / callback write can replace the echoed commit before
+    // widget state catches up; accept that value as the new baseline.
+    if (value !== lastCommittedValueRef.current && !dirtyRef.current) {
+      lastCommittedValueRef.current = value
+    }
     if (value === lastCommittedValueRef.current) {
       commitEchoPendingRef.current = false
     }
@@ -274,6 +298,10 @@ function TextInput({
   const commitWidgetValue = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
       lastCommittedValueRef.current = valueToCommit
+      recentLiveCommitsRef.current = pushRecentLiveCommit(
+        recentLiveCommitsRef.current,
+        valueToCommit
+      )
       commitEchoPendingRef.current = true
       setDirtyAndRef(false)
       setValueWithSource({ value: valueToCommit, fromUser: true })

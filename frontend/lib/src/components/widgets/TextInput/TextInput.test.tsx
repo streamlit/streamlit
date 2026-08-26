@@ -1621,6 +1621,45 @@ describe("TextInput live updates", () => {
     expect(input).toHaveValue("abc")
   })
 
+  it("does not apply a stale setValue after blur", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDelayMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+    await user.tab()
+
+    const staleElement = TextInputProto.create({
+      ...props.element,
+      setValue: true,
+      value: "a",
+    })
+    rerender(<TextInput {...props} element={staleElement} />)
+    expect(input).toHaveValue("abc")
+  })
+
+  it("applies a focused session_state setValue that is not a live echo", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDelayMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+
+    const formattedElement = TextInputProto.create({
+      ...props.element,
+      setValue: true,
+      value: "ABC",
+    })
+    rerender(<TextInput {...props} element={formattedElement} />)
+    expect(input).toHaveValue("ABC")
+  })
+
   it("commits live values for password inputs", async () => {
     const { user, props, setStringValueSpy } = renderLive({
       type: TextInputProto.Type.PASSWORD,
