@@ -97,7 +97,7 @@ with st.container(border=True):
 
 ## Navigation and pages
 
-Use `st.navigation` with an `app_pages/` directory, and give every `st.Page` a context-appropriate Material Symbol icon. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
+Use `st.navigation` with an `app_pages/` directory. Give every `st.Page` a context-appropriate Material Symbols icon. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
 
 ```python
 # GOOD: streamlit_app.py

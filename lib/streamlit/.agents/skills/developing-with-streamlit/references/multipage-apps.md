@@ -15,9 +15,9 @@ app_pages/
 
 **Important:** Name your pages directory `app_pages/` (not `pages/`). Using `pages/` conflicts with Streamlit's old auto-discovery API and can cause unexpected behavior.
 
-Give every `st.Page` a context-appropriate Material Symbol icon using the `:material/icon_name:` syntax so navigation is easy to scan.
-
 ## Main module
+
+Give every `st.Page` a context-appropriate Material Symbols icon so navigation is easy to scan.
 
 ```python
 # streamlit_app.py
