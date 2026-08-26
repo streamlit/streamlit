@@ -111,6 +111,20 @@ describe("Tooltip element", () => {
     expect(screen.getByText("Child Element")).toBeInTheDocument()
   })
 
+  it("does not constrain trigger width by default", () => {
+    renderTooltip()
+
+    expect(screen.getByTestId("stTooltipHoverTarget").style.maxWidth).toBe("")
+  })
+
+  it("constrains trigger width when containerWidth is set", () => {
+    renderTooltip({ containerWidth: true })
+
+    const trigger = screen.getByTestId("stTooltipHoverTarget")
+    expect(trigger.style.maxWidth).toBe("100%")
+    expect(trigger.style.minWidth).toBe("0")
+  })
+
   it("sets the same content", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const content = <span>Help Text</span>

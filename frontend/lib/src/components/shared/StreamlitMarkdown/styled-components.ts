@@ -259,9 +259,14 @@ export const StyledStreamlitMarkdown =
           minWidth: 0,
 
           // CommonMark hard breaks (`<br>` from trailing spaces or `\`) are
-          // not suppressed by nowrap; hide them so wrap=False stays one line.
+          // not suppressed by nowrap. Replace the break with a gap so
+          // wrap=False stays one line without concatenating words.
           "& br": {
-            display: "none",
+            display: "inline-block",
+            width: "0.25em",
+            height: 0,
+            overflow: "hidden",
+            verticalAlign: "bottom",
           },
 
           "& p": {
@@ -277,6 +282,20 @@ export const StyledStreamlitMarkdown =
             whiteSpace: "nowrap",
             verticalAlign: "bottom",
             lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
+          },
+
+          // Adjacent leftover paragraphs would otherwise render as `onetwo`.
+          "& p + p::before": {
+            content: '" "',
+          },
+
+          // Display math stays block-level and horizontally scrollable under
+          // the shared markdown styles. Inline it so wrap=False is one row.
+          "& .katex-display": {
+            display: "inline",
+            margin: 0,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
           },
 
           // Inline code uses pre-wrap; nowrap so a fenced block's trailing
@@ -467,8 +486,9 @@ export const StyledStreamlitMarkdown =
 
         // Allow long Latex formulas that are not inline (i.e. either from `st.latex`
         // or in their own paragraph inside `st.markdown`) to scroll horizontally.
+        // Truncation inlines display math above so it cannot become a second row.
         ".katex-display": {
-          overflowX: "auto",
+          overflowX: truncate ? "hidden" : "auto",
           overflowY: "hidden",
         },
 

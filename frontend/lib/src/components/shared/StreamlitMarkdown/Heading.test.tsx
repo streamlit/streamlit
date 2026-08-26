@@ -92,6 +92,33 @@ describe("Heading", () => {
     expect(screen.getByTestId("stTooltipIcon").closest("[title]")).toBeNull()
   })
 
+  it("clears the native title when wrap becomes true", async () => {
+    const { rerender } = render(
+      <Heading
+        {...getHeadingProps({
+          body: "hello world",
+          wrap: false,
+          help: "help text",
+        })}
+      />
+    )
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+
+    rerender(
+      <Heading
+        {...getHeadingProps({
+          body: "hello world",
+          wrap: true,
+          help: "help text",
+        })}
+      />
+    )
+
+    expect(screen.queryByTitle("hello world")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
+  })
+
   it.each([
     ["sidebar", IsSidebarContext],
     ["dialog", IsDialogContext],

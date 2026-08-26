@@ -40,6 +40,7 @@ import StreamlitMarkdown, {
   isValidCssColor,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
+import { StyledStreamlitMarkdown } from "./styled-components"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -916,13 +917,22 @@ describe("StreamlitMarkdown", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
   })
 
-  it("hides hard breaks when truncating", () => {
+  it("replaces hard breaks with a gap when truncating", () => {
     render(
       <StreamlitMarkdown source={"one  \ntwo"} allowHTML={false} truncate />
     )
     const container = screen.getByTestId("stMarkdownContainer")
-    expect(container.querySelector("br")).toHaveStyle("display: none")
+    expect(container.querySelector("br")).toHaveStyle("display: inline-block")
     expect(container).toHaveStyle("white-space: nowrap")
+  })
+
+  it("inlines display math when truncating", () => {
+    render(
+      <StyledStreamlitMarkdown isCaption={false} isInDialog={false} truncate>
+        <div className="katex-display">x + y</div>
+      </StyledStreamlitMarkdown>
+    )
+    expect(screen.getByText("x + y")).toHaveStyle("display: inline")
   })
 
   it("doesn't render links when disableLinks is true", () => {

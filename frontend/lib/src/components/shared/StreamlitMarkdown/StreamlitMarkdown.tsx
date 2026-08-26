@@ -449,11 +449,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const Tag = tag
   const needsHeadingTextSpan = Boolean(headingTextId) || truncate
   const headingText = needsHeadingTextSpan ? (
-    <StyledHeadingText
-      id={headingTextId}
-      ref={truncate ? titleRef : undefined}
-      $truncate={truncate}
-    >
+    <StyledHeadingText id={headingTextId} ref={titleRef} $truncate={truncate}>
       {truncate ? (
         <span ref={labelTextRef} style={{ display: "contents" }}>
           {children}
@@ -513,12 +509,6 @@ StreamingContext.displayName = "StreamingContext"
  */
 const HideAnchorsContext = createContext<boolean>(false)
 HideAnchorsContext.displayName = "HideAnchorsContext"
-
-/**
- * True when markdown is rendered as a widget label or wrap=False text.
- */
-const IsLabelContext = createContext(false)
-IsLabelContext.displayName = "IsLabelContext"
 
 /**
  * True when markdown is truncated to one line. Fenced code must stay inline
@@ -1396,27 +1386,33 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     )
   }
 
+  const markdown = (
+    <ReactMarkdown
+      remarkPlugins={remarkPlugins}
+      rehypePlugins={rehypePlugins}
+      components={renderers}
+      urlTransform={transformLinkUri}
+      disallowedElements={disallowed}
+      // unwrap and render children from invalid markdown
+      unwrapDisallowed={true}
+    >
+      {processedSource}
+    </ReactMarkdown>
+  )
+
   return (
     <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
       <HelpTextContext.Provider value={helpText}>
         <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
-          <IsLabelContext.Provider value={Boolean(isLabel)}>
-            <TruncateContext.Provider value={Boolean(truncate)}>
-              <ErrorBoundary>
-                <ReactMarkdown
-                  remarkPlugins={remarkPlugins}
-                  rehypePlugins={rehypePlugins}
-                  components={renderers}
-                  urlTransform={transformLinkUri}
-                  disallowedElements={disallowed}
-                  // unwrap and render children from invalid markdown
-                  unwrapDisallowed={true}
-                >
-                  {processedSource}
-                </ReactMarkdown>
-              </ErrorBoundary>
-            </TruncateContext.Provider>
-          </IsLabelContext.Provider>
+          <ErrorBoundary>
+            {truncate ? (
+              <TruncateContext.Provider value={true}>
+                {markdown}
+              </TruncateContext.Provider>
+            ) : (
+              markdown
+            )}
+          </ErrorBoundary>
         </HideAnchorsContext.Provider>
       </HelpTextContext.Provider>
     </StreamingContext.Provider>

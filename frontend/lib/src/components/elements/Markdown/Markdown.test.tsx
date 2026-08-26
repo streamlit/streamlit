@@ -354,6 +354,16 @@ describe("Markdown wrap", () => {
     expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
   })
 
+  it("joins leftover paragraphs with spaces in the native title", async () => {
+    const props = getProps({
+      body: "one\n\ntwo",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByTitle("one two")).toBeVisible()
+  })
+
   it("sets a native title when wrap is false, including when help is set", async () => {
     const props = getProps({
       body: "Overflowing markdown",

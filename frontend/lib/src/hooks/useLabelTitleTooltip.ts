@@ -16,6 +16,24 @@
 
 import { RefObject, useEffect, useRef } from "react"
 
+/**
+ * Read plain text from a label, inserting a space where leftover block
+ * elements or hard breaks would otherwise concatenate (`onetwo`). CSS
+ * generated content is not included in `textContent`.
+ */
+function plainTextWithBlockGaps(root: HTMLElement): string {
+  const clone = root.cloneNode(true) as HTMLElement
+  clone.querySelectorAll("br").forEach(br => {
+    br.replaceWith(document.createTextNode(" "))
+  })
+  clone.querySelectorAll("p").forEach((paragraph, index) => {
+    if (index > 0) {
+      paragraph.prepend(document.createTextNode(" "))
+    }
+  })
+  return (clone.textContent ?? "").replace(/\s+/g, " ").trim()
+}
+
 interface LabelTitleTooltipRefs<
   ContainerElement extends HTMLElement,
   LabelElement extends HTMLElement,
@@ -69,7 +87,12 @@ export function useLabelTitleTooltip<
     }
 
     const syncTitle = (): void => {
-      const labelText = labelTextRef.current?.textContent ?? ""
+      const labelNode = labelTextRef.current
+      if (!labelNode) {
+        node.removeAttribute("title")
+        return
+      }
+      const labelText = plainTextWithBlockGaps(labelNode)
       if (labelText) {
         node.title = labelText
       } else {
