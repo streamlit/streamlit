@@ -52,8 +52,7 @@ def date_input(
     disabled_dates: Iterable[date | datetime | str] | None = None,
     disabled: bool = False,
     # Existing parameters...
-) -> DateWidgetReturn:
-    ...
+) -> DateWidgetReturn: ...
 ```
 
 Each iterable accepts:
