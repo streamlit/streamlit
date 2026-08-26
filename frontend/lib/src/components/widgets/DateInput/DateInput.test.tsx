@@ -176,12 +176,9 @@ describe("DateInput", () => {
 
     render(<DateInput {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [originalDateWire],
-      {
-        fromUi: false,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -191,12 +188,13 @@ describe("DateInput", () => {
 
     render(<DateInput {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [originalDateWire],
       {
-        fromUi: false,
-      },
-      "myFragmentId"
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -253,12 +251,9 @@ describe("DateInput", () => {
 
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [newDateWire],
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -486,12 +481,9 @@ describe("DateInput", () => {
 
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [newDateWire],
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -505,12 +497,9 @@ describe("DateInput", () => {
     expect(month).toHaveTextContent(originalDateWire.split("-")[1])
     expect(day).toHaveTextContent(originalDateWire.split("-")[2])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       [originalDateWire],
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -573,10 +562,9 @@ describe("DateInput", () => {
     // value synchronously so form submit reads the correct state.
     await user.tab()
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [newDateWire],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -609,12 +597,11 @@ describe("DateInput", () => {
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     // Pre-seed widget state so the widget starts with a committed value
-    props.widgetMgr.setStringArrayValue(
-      props.element,
-      [originalDateWire],
-      { fromUi: false },
-      undefined
-    )
+    props.widgetMgr.setStringArrayValue(props.element.id, [originalDateWire], {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: false,
+    })
 
     render(<DateInput {...props} />)
     vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
@@ -631,10 +618,9 @@ describe("DateInput", () => {
     // user intent, distinct from partially typed (mid-edit).
     await user.tab()
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -660,10 +646,9 @@ describe("DateInput", () => {
     // Blur commits the buffered value even outside a form.
     await user.tab()
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [newDateWire],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1020,8 +1005,7 @@ describe("DateInput", () => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
           expect.anything(),
           [],
-          expect.objectContaining({ fromUi: true }),
-          undefined
+          expect.objectContaining({ fromUser: true })
         )
       })
 
@@ -1070,7 +1054,6 @@ describe("DateInput", () => {
         ).not.toHaveBeenLastCalledWith(
           expect.anything(),
           [],
-          expect.anything(),
           expect.anything()
         )
       })
@@ -1129,6 +1112,9 @@ describe("DateInput", () => {
           name: /quick select/i,
         })
         await user.click(quickSelect)
+        expect(
+          screen.getByTestId("stDateInputQuickSelectPopover")
+        ).toHaveClass("stDateInputQuickSelectPopover")
         expect(
           screen.getByRole("listbox", { name: /quick select/i })
         ).toBeInTheDocument()
@@ -1268,10 +1254,13 @@ describe("DateInput", () => {
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           [],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
       expect(start.year).toHaveTextContent("yyyy")
@@ -1305,10 +1294,13 @@ describe("DateInput", () => {
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           [],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
 
@@ -1347,10 +1339,13 @@ describe("DateInput", () => {
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2019-07-06", "2019-07-10"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1383,10 +1378,13 @@ describe("DateInput", () => {
       // the second click, so this commit comes from the anchor-click path.
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2024-03-06"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
 
@@ -1397,10 +1395,13 @@ describe("DateInput", () => {
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2024-03-06", "2024-03-10"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1434,10 +1435,9 @@ describe("DateInput", () => {
       await user.click(clearButton)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -1465,10 +1465,13 @@ describe("DateInput", () => {
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2019-07-10"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
 
@@ -1480,10 +1483,13 @@ describe("DateInput", () => {
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2019-07-10", "2019-07-12"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
 
@@ -1505,10 +1511,9 @@ describe("DateInput", () => {
       await user.click(clearButton)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -1533,10 +1538,13 @@ describe("DateInput", () => {
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
+          props.element.id,
           ["2020-02-06"],
-          { fromUi: true },
-          undefined
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
         )
       })
     })
@@ -1694,10 +1702,9 @@ describe("DateInput single-mode keyboard navigation", () => {
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       ["1970-01-25"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1820,10 +1827,9 @@ describe("DateInput single-mode keyboard navigation", () => {
     })
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         ["1970-01-25"],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -2287,10 +2293,9 @@ describe("DateInput single-mode paste handling", () => {
 
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "1" }),
+        "1",
         ["2024-03-15"],
-        expect.objectContaining({ fromUi: true }),
-        undefined
+        expect.objectContaining({ fromUser: true })
       )
     })
   })
@@ -2370,10 +2375,9 @@ describe("DateInput range-mode paste handling", () => {
     // Sorted: pasted start (2024-03-15) > existing end (2019-07-08)
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "1" }),
+        "1",
         ["2019-07-08", "2024-03-15"],
-        expect.objectContaining({ fromUi: true }),
-        undefined
+        expect.objectContaining({ fromUser: true })
       )
     })
   })
@@ -2395,10 +2399,9 @@ describe("DateInput range-mode paste handling", () => {
 
     await waitFor(() => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "1" }),
+        "1",
         ["2019-07-06", "2024-12-25"],
-        expect.objectContaining({ fromUi: true }),
-        undefined
+        expect.objectContaining({ fromUser: true })
       )
     })
   })
@@ -2618,10 +2621,9 @@ describe("DateInput range-mode keyboard navigation", () => {
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       ["2024-03-06", "2024-03-10"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     vi.useRealTimers()
@@ -2668,10 +2670,9 @@ describe("DateInput range-mode keyboard navigation", () => {
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       ["2024-03-06", "2024-03-06"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     vi.useRealTimers()
@@ -2735,10 +2736,9 @@ describe("DateInput range-mode commit-on-blur", () => {
     // Sorted: typed start (2024-03-15) > existing end (2019-07-08), so
     // the normalization layer swaps them.
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       ["2019-07-08", "2024-03-15"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -2778,10 +2778,9 @@ describe("DateInput range-mode commit-on-blur", () => {
     // Sorted: typed start (2024-03-15) > existing end (2019-07-08), so
     // the normalization layer swaps them.
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       ["2019-07-08", "2024-03-15"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -2844,10 +2843,9 @@ describe("DateInput range-mode commit-on-blur", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -2876,10 +2874,9 @@ describe("DateInput range-mode commit-on-blur", () => {
     await user.click(document.body)
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       ["2019-07-06"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 })
@@ -2902,9 +2899,9 @@ describe("DateInput month/year picker escape handling", () => {
     await user.click(monthTrigger)
 
     // Month picker popover should be open
-    expect(
-      screen.getByTestId("stDateInputHeaderPickerPopover")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
+      "stDateInputHeaderPickerPopover"
+    )
 
     // Press Escape — should close the picker, NOT the calendar
     await user.keyboard("{Escape}")
@@ -2941,9 +2938,9 @@ describe("DateInput month/year picker escape handling", () => {
     })
     await user.click(monthTrigger)
 
-    expect(
-      screen.getByTestId("stDateInputHeaderPickerPopover")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
+      "stDateInputHeaderPickerPopover"
+    )
 
     await user.keyboard("{Escape}")
 

@@ -18,6 +18,7 @@ import { memo, ReactElement, useCallback } from "react"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
 
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
@@ -25,6 +26,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -33,6 +35,7 @@ import {
   StyledCheckboxIndicator,
   StyledCheckboxRoot,
   StyledContent,
+  StyledLabelText,
   StyledSwitchRoot,
   StyledToggleThumb,
   StyledToggleTrack,
@@ -76,7 +79,7 @@ function Checkbox({
 
   const handleChange = useCallback(
     (isSelected: boolean): void => {
-      setValueWithSource({ value: isSelected, fromUi: true })
+      setValueWithSource({ value: isSelected, fromUser: true })
     },
     [setValueWithSource]
   )
@@ -86,9 +89,37 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
+  // When wrap resolves to no-wrap, a native title on the label reveals the full
+  // label on hover. Unlike a button (whose help tooltip covers the whole control),
+  // help here lives on a separate icon, so the title and help never compete and
+  // both stay enabled.
+  const wrap = useResolvedWrap(element.wrap)
+  const truncate = !wrap
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(
+    truncate,
+    element.label
+  )
+
   const labelContent = (
-    <StyledContent visibility={labelVisibility} data-testid="stWidgetLabel">
-      <StreamlitMarkdown source={element.label} allowHTML={false} isLabel />
+    <StyledContent
+      visibility={labelVisibility}
+      $truncate={truncate}
+      data-testid="stWidgetLabel"
+    >
+      {/* The title is scoped to the label (not the help icon) so hovering the
+          help icon shows only its tooltip. The inner `display: contents` span
+          lets us read the label's plain text without adding a box. */}
+      <StyledLabelText ref={titleRef} $truncate={truncate}>
+        <span ref={labelTextRef} style={{ display: "contents" }}>
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isLabel
+            truncate={truncate}
+            inheritLineHeight
+          />
+        </span>
+      </StyledLabelText>
       {element.help && (
         <WidgetLabelHelpIconInline
           content={element.help}
@@ -110,6 +141,7 @@ function Checkbox({
           isDisabled={disabled}
           onChange={handleChange}
           aria-label={element.label}
+          $truncate={truncate}
         >
           {({ isSelected, isHovered, isDisabled: isDisab }) => (
             <>
@@ -138,6 +170,7 @@ function Checkbox({
         isDisabled={disabled}
         onChange={handleChange}
         aria-label={element.label}
+        $truncate={truncate}
       >
         {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
           <>
@@ -181,12 +214,11 @@ function updateWidgetMgrState(
   vws: ValueWithSource<boolean>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setBoolValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setBoolValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 export default memo(Checkbox)

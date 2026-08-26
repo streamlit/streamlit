@@ -30,7 +30,11 @@ from streamlit.elements.widgets.button_group import (
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
@@ -568,7 +572,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             (
                 st.pills,
                 ("label", ["a", "b", "c"]),
-                {"help": "Test help param"},
+                {"help": "    Test help param"},
                 ["a", "b", "c"],
                 "content",
                 ButtonGroupProto.Style.PILLS,
@@ -613,6 +617,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         if test_label:
             assert delta.label == command_args[0]
+            assert delta.help == "Test help param"
         assert (
             delta.label_visibility.value
             is LabelVisibility.LabelVisibilityOptions.VISIBLE
@@ -693,6 +698,31 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         button_group_2 = self.get_delta_from_queue().new_element.button_group
 
         assert button_group_1.id != button_group_2.id
+
+    def test_omitted_label_leaves_proto_label_unset(self) -> None:
+        """Omitted labels stay unset so the frontend collapses them."""
+        ButtonGroupMixin._internal_button_group(st._main, ["a", "b", "c"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == ""
+        assert not delta.HasField("label_visibility")
+
+    def test_omitted_label_invalid_visibility_raises(self) -> None:
+        """Omitted labels still validate ``label_visibility``."""
+        with pytest.raises(
+            StreamlitValueError, match=r"Invalid `label_visibility` value"
+        ):
+            ButtonGroupMixin._internal_button_group(
+                st._main,
+                ["a", "b"],
+                label_visibility="wrong_value",  # type: ignore[arg-type]
+            )
+
+    def test_non_string_label_is_coerced(self) -> None:
+        """Non-string labels are coerced without collapsing the proto label."""
+        st.pills(123, ["a", "b", "c"])  # type: ignore[arg-type]
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == "123"
+        assert delta.HasField("label_visibility")
 
     @parameterized.expand(
         get_command_matrix(
@@ -1112,6 +1142,38 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_wrap_default(self, command: Callable[..., None]):
+        """By default wrap is left unset (auto) so the frontend can resolve it
+        based on the layout."""
+        command(["a", "b", "c"])
+        proto = self.get_delta_from_queue().new_element.button_group
+        assert not proto.HasField("wrap")
+
+    @parameterized.expand(
+        [
+            (command, wrap_value)
+            for (command,) in get_command_matrix([])
+            for wrap_value in (True, False)
+        ]
+    )
+    def test_button_group_wrap(self, command: Callable[..., None], wrap_value: bool):
+        """The wrap parameter is forwarded to the button group proto."""
+        command(["a", "b", "c"], wrap=wrap_value)
+        proto = self.get_delta_from_queue().new_element.button_group
+        assert proto.wrap is wrap_value
+
+    def test_button_group_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the element id.
+
+        Two otherwise-identical pills that differ only in wrap collide on the
+        same auto-generated id, proving wrap is excluded from id computation and
+        so preserves widget state when toggled.
+        """
+        st.pills("same label", ["a", "b", "c"])
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.pills("same label", ["a", "b", "c"], wrap=False)
 
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""

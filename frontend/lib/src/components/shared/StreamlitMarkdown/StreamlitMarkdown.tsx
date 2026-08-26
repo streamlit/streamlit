@@ -176,6 +176,11 @@ export interface Props {
   inheritFont?: boolean
 
   /**
+   * Inherit line height from parent when truncating text
+   */
+  inheritLineHeight?: boolean
+
+  /**
    * Optional help text for inline help tooltips.
    * When present, :help[] markers in the source will use this text.
    */
@@ -767,7 +772,7 @@ function createRemarkColoringAndSmall(
         const data = node.data || (node.data = {})
         data.hName = "span"
         data.hProperties = data.hProperties || {}
-        data.hProperties.className = "stMarkdownShimmer"
+        data.hProperties.className = ["stMarkdownShimmer"]
         return
       }
 
@@ -807,7 +812,7 @@ function createRemarkColoringAndSmall(
             : "stMarkdownColoredText"
 
           data.hProperties.style = styles.join("; ")
-          data.hProperties.className = className
+          data.hProperties.className = [className]
         }
         // When both colors are invalid, render as plain span (no style)
         // to preserve the content text rather than falling through to
@@ -838,7 +843,7 @@ function createRemarkColoringAndSmall(
           const data = node.data || (node.data = {})
           data.hName = "span"
           data.hProperties = data.hProperties || {}
-          data.hProperties.className = "stMarkdownBadge"
+          data.hProperties.className = ["stMarkdownBadge"]
           data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
           return
         }
@@ -853,13 +858,13 @@ function createRemarkColoringAndSmall(
         data.hProperties.style = style
         // Add class name specific to colored text used for button hover selector
         // to override text color
-        data.hProperties.className = "stMarkdownColoredText"
+        data.hProperties.className = ["stMarkdownColoredText"]
         // Add class for background color for custom styling
         if (
           style &&
           (/background-color:/.test(style) || /background:/.test(style))
         ) {
-          data.hProperties.className = "stMarkdownColoredBackground"
+          data.hProperties.className = ["stMarkdownColoredBackground"]
         }
         return
       }
@@ -1349,6 +1354,7 @@ const StreamlitMarkdown: FC<Props> = ({
   disableLinks,
   isToast,
   inheritFont,
+  inheritLineHeight,
   helpText,
   truncate,
   unterminatedParsing,
@@ -1362,6 +1368,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isInDialog={isInDialog}
       isLabel={isLabel}
       inheritFont={inheritFont}
+      inheritLineHeight={inheritLineHeight}
       boldLabel={boldLabel}
       isToast={isToast}
       truncate={truncate}

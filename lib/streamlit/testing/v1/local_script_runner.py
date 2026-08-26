@@ -167,7 +167,8 @@ class LocalScriptRunner(ScriptRunner):
     ) -> None:
         if not premature_stop:
             self._session_state.on_script_finished(
-                ctx.shared.widget_ids_this_run.snapshot()
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=ctx.has_script_started,
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
@@ -175,8 +176,10 @@ class LocalScriptRunner(ScriptRunner):
         self.on_event.send(self, event=event)
 
         # Remove orphaned files now that the script has run and files in use
-        # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # are marked as active. Skipped for a run that never reached its body, which
+        # re-registered nothing and would look like everything is orphaned.
+        if ctx.has_script_started:
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
     def _new_module(self, name: str) -> types.ModuleType:
         module = types.ModuleType(name)

@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     assert_type(status("Test", state="complete"), StatusContainer)
     assert_type(status("Test", state="error"), StatusContainer)
 
-    # type parameter accepts "default" or "compact"
+    # type parameter accepts "default", "compact", or "step"
     assert_type(status("Test", type="default"), StatusContainer)
     assert_type(status("Test", type="compact"), StatusContainer)
+    assert_type(status("Test", type="step"), StatusContainer)

@@ -1120,8 +1120,7 @@ describe("StreamlitMarkdown", () => {
     )
     const shimmerElement = screen.getByText("Loading...")
     expect(shimmerElement).toHaveClass("stMarkdownShimmer")
-    // Verify the parent span has the color directive class (shimmer uses fadedText60,
-    // but the outer :red[] span still has its color class applied)
+    // Outer :red[] still applies; shimmer inherits that color.
     const parentSpan = shimmerElement.parentElement
     expect(parentSpan).not.toBeNull()
     expect(parentSpan).toHaveClass("stMarkdownColoredText")
@@ -1135,6 +1134,25 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)
     const container = screen.getByTestId("stMarkdownContainer")
     expect(container).toHaveStyle("overflow: hidden")
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveStyle("text-overflow: ellipsis")
+    expect(container).toHaveStyle("line-height: normal")
+    expect(screen.getByText(source)).toHaveStyle("line-height: normal")
+  })
+
+  it("inherits line height when truncating if requested", () => {
+    const source = "This text should preserve its parent's line height"
+    render(
+      <StreamlitMarkdown
+        source={source}
+        allowHTML={false}
+        truncate
+        inheritLineHeight
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle("line-height: inherit")
+    expect(screen.getByText(source)).toHaveStyle("line-height: inherit")
     expect(container).toHaveStyle("white-space: nowrap")
     expect(container).toHaveStyle("text-overflow: ellipsis")
   })

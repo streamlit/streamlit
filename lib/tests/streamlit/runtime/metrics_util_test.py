@@ -34,12 +34,15 @@ from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
+    StreamlitInvalidLayoutContextError,
+    StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
+from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
@@ -846,6 +849,22 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "TypeError:use_container_width",
         ),
         (
+            TypeError("button() missing 1 required positional argument: 'label'"),
+            "TypeError:missing:label",
+        ),
+        (
+            TypeError("button() takes 2 positional arguments but 3 were given"),
+            "TypeError",
+        ),
+        (
+            TypeError("bad argument type for built-in operation"),
+            "TypeError",
+        ),
+        (
+            TypeError("a bytes-like object is required, not 'Figure'"),
+            "TypeError",
+        ),
+        (
             StreamlitValueError("width", ["stretch", "content"]),
             "StreamlitValueError:width",
         ),
@@ -853,13 +872,94 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             StreamlitMissingRequiredParameterError("st.expander", "label"),
             "StreamlitMissingRequiredParameterError:label",
         ),
+        (
+            StreamlitInvalidParameterTypeError("spec", "str", ["int", "list"]),
+            "StreamlitInvalidParameterTypeError:spec",
+        ),
+        (
+            StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            ),
+            "StreamlitInvalidLayoutContextError",
+        ),
+        (
+            ModuleNotFoundError("No module named 'pyarrow'"),
+            "ModuleNotFoundError:pyarrow",
+        ),
+        (
+            ImportError("cannot import name 'Table' from 'pyarrow'"),
+            "ImportError:pyarrow",
+        ),
+        (
+            ModuleNotFoundError("No module named 'custom_pkg'"),
+            "ModuleNotFoundError",
+        ),
+        (
+            ModuleNotFoundError(
+                "No module named 'streamlit.runtime.missing'",
+                name="streamlit.runtime.missing",
+            ),
+            "ModuleNotFoundError:streamlit.runtime.missing",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Engine' from 'sqlalchemy.engine'",
+                name="sqlalchemy.engine",
+            ),
+            "ImportError:sqlalchemy.engine",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Widget' from 'custom_pkg'", name="custom_pkg"
+            ),
+            "ImportError",
+        ),
+        (
+            AttributeError(
+                "module 'streamlit' has no attribute 'foo'", name="foo", obj=st
+            ),
+            "AttributeError:foo",
+        ),
+        (
+            AttributeError("module 'streamlit' has no attribute 'bar'"),
+            "AttributeError:bar",
+        ),
+        (
+            AttributeError("Widget has no attribute 'foo'", name="foo", obj=object()),
+            "AttributeError",
+        ),
+        (
+            MediaFileStorageError("Error opening 'foo.png'"),
+            "MediaFileStorageError",
+        ),
+        (
+            MediaFileStorageError("Callable execution failed"),
+            "MediaFileStorageError",
+        ),
         (ValueError("boom"), "ValueError"),
         (TypeError("other"), "TypeError"),
     ],
     ids=[
         "unexpected-kwarg",
+        "missing-positional",
+        "unsupported-too-many-positional",
+        "unsupported-proto-type",
+        "unsupported-byteslike",
         "streamlit-value-error",
         "streamlit-missing-required-parameter",
+        "invalid-parameter-type",
+        "invalid-context-no-command-suffix",
+        "modulenotfound-message-fallback",
+        "import-error-message-fallback",
+        "modulenotfound-private-module",
+        "modulenotfound-streamlit-module",
+        "import-error-feature-dependency",
+        "import-error-private-module",
+        "streamlit-attribute-structured",
+        "streamlit-attribute-message-fallback",
+        "non-streamlit-attribute",
+        "media-file-storage",
+        "media-file-other",
         "plain-value-error",
         "other-type-error",
     ],
@@ -886,8 +986,6 @@ def test_format_uncaught_exception_swallows_enrichment_errors() -> None:
         == "BrokenTypeError"
     )
     # Bypass StreamlitValueError.__init__; only the type is needed for isinstance.
-    # Covers the shared StreamlitValueError /
-    # StreamlitMissingRequiredParameterError enrichment path.
     broken_value_error = BrokenStreamlitValueError.__new__(BrokenStreamlitValueError)
     assert (
         metrics_util.format_uncaught_exception(broken_value_error)

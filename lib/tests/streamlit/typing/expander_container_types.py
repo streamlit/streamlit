@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         ExpanderContainer,
     )
 
-    # type parameter accepts "default" or "compact"
+    # type parameter accepts "default", "compact", or "step"
     assert_type(expander("Test", type="default"), ExpanderContainer)
     assert_type(expander("Test", type="compact"), ExpanderContainer)
+    assert_type(expander("Test", type="step"), ExpanderContainer)

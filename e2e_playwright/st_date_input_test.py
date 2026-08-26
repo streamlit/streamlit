@@ -14,7 +14,7 @@
 
 
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from playwright.sync_api import Page, expect
 
@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 22
+NUM_DATE_INPUTS = 24
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -110,6 +110,25 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
         get_date_input(themed_app, "Date input 17 (width='stretch')"),
         name="st_date_input-width_stretch",
     )
+
+
+def test_date_input_narrow_rendering(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that date inputs render correctly in narrow containers."""
+    narrow_single = get_element_by_key(app, "narrow_single")
+    assert_snapshot(narrow_single, name="st_date_input-narrow_single")
+
+    narrow_range = get_element_by_key(app, "narrow_range")
+    assert_snapshot(narrow_range, name="st_date_input-narrow_range")
+
+    # Field must not overflow its container border
+    for key in ("narrow_single", "narrow_range"):
+        container = get_element_by_key(app, key).get_by_test_id("stDateInput")
+        field = container.get_by_test_id("stDateInputField")
+        container_box = container.bounding_box()
+        field_box = field.bounding_box()
+        assert container_box is not None
+        assert field_box is not None
+        assert field_box["width"] <= container_box["width"]
 
 
 def test_help_tooltip_works(app: Page):
@@ -200,10 +219,8 @@ def test_empty_date_input_behaves_correctly(
         image_threshold=0.035,
     )
 
-    # Click the clear button to clear the value. (React Aria's segmented
-    # DateField doesn't support BaseWeb's "Escape clears the whole value"
-    # shortcut on a focused input, so we use the explicit clear button
-    # instead, which achieves the same outcome.)
+    # Click the clear button because the segmented DateField does not clear the
+    # entire value when Escape is pressed on a focused input.
     empty_date_element.get_by_test_id("stDateInputClearButton").click()
     wait_for_app_run(app)
 
@@ -317,6 +334,21 @@ def test_range_date_calendar_picker_rendering(
     )
 
 
+def test_today_indicator_in_calendar(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that today's date is visually marked in the calendar popover."""
+    app.clock.set_fixed_time(datetime(2026, 3, 7, 12, 0, 0))
+    app.reload()
+    wait_for_app_loaded(app)
+
+    date_field = get_date_input(app, "Empty value").get_by_test_id("stDateInputField")
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    assert_snapshot(calendar, name="st_date_input-calendar_today_indicator")
+
+
 def test_single_value_reverts_to_committed_if_calendar_closed_empty(app: Page):
     """Non-clearable widget reverts to last committed value when closed empty."""
     date_input = get_date_input(app, "Single date")
@@ -330,10 +362,8 @@ def test_single_value_reverts_to_committed_if_calendar_closed_empty(app: Page):
 
     expect_markdown(app, "Value 1: 1970-01-02")
 
-    # Clear every segment via the keyboard (mirrors clearing BaseWeb's
-    # free-text input) without selecting a new date. Note: the clear button
-    # isn't used here since this widget isn't clearable (it has a non-empty
-    # default), so it has no rendered clear button.
+    # Clear every segment via the keyboard without selecting a new date. The clear
+    # button isn't used because a widget with a non-empty default isn't clearable.
     for segment in date_field.get_by_role("spinbutton").all():
         segment.click()
         # A handful of extra presses is a harmless no-op once the segment is
@@ -738,6 +768,8 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     first_segment.click()
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
+    # Wait until keyboard focus has moved into the calendar grid.
+    expect(calendar.locator(":focus")).to_be_visible()
 
     # Tab to the month picker trigger and activate it.
     # Note: prev-month button is disabled (min_value=1970-01-01, showing Jan 1970),
@@ -763,9 +795,14 @@ def test_single_date_active_calendar_keyboard_navigation(app: Page):
     second_segment.click()
     app.keyboard.press("Alt+ArrowDown")
     expect(calendar).to_be_visible()
+    # Wait until keyboard focus has moved into the calendar grid.
+    expect(calendar.locator(":focus")).to_be_visible()
 
-    # Navigate to a different date and select it with Enter
+    # Navigate to a different date and select it with Enter.
+    # Wait until React Aria has moved calendar focus to January 2 before Enter.
+    # Without this, Enter can fire before the internal focus state updates.
     app.keyboard.press("ArrowRight")
+    expect(calendar.locator("td [data-focused]")).to_have_text("2")
     app.keyboard.press("Enter")
 
     expect(calendar).not_to_be_visible()

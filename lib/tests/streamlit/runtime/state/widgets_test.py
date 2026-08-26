@@ -31,7 +31,10 @@ from streamlit.elements.lib.utils import (
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     ValueFieldName,
@@ -60,6 +63,11 @@ def identity(x):
 
 
 class WidgetManagerTests(unittest.TestCase):
+    def setUp(self) -> None:
+        # call_callback uses ThreadState.scoped(), which requires an initialized
+        # FragmentThreadState on this thread.
+        ThreadState.initialize()
+
     def test_get(self):
         states = WidgetStates()
 
@@ -467,9 +475,8 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         if widget_func == st.text_input:
             del expected_sig["validate"]
 
-        # time_input intentionally excludes format from ID computation because
-        # it's a display-only setting (React Aria handles format changes without
-        # needing a widget reset, unlike BaseWeb-based date_input).
+        # time_input excludes format from the ID because format is display-only
+        # and does not require a widget reset.
         if widget_func == st.time_input:
             del expected_sig["format"]
 

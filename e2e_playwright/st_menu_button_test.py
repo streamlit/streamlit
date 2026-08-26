@@ -16,7 +16,11 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
@@ -215,6 +219,17 @@ def test_menu_button_in_columns(app: Page, assert_snapshot: ImageCompareFunction
     """Test menu buttons in columns layout."""
     columns_container = get_element_by_key(app, "columns_container")
     expect(columns_container.get_by_test_id("stMenuButton")).to_have_count(2)
+
+    # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
+    content_width_label = (
+        get_element_by_key(app, "col2_menu")
+        .get_by_test_id("stMarkdownContainer")
+        .locator("p")
+    )
+    wait_until(
+        app,
+        lambda: content_width_label.evaluate("el => el.scrollWidth <= el.clientWidth"),
+    )
 
     assert_snapshot(columns_container, name="st_menu_button-in_columns")
 

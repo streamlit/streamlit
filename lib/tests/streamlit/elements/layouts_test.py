@@ -15,6 +15,7 @@
 from typing import Literal
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -27,6 +28,7 @@ from streamlit.errors import (
     StreamlitInvalidColumnGapError,
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -70,6 +72,19 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[0].add_block.column.weight == 1.0 / 3
         assert columns_blocks[1].add_block.column.weight == 1.0 / 3
         assert columns_blocks[2].add_block.column.weight == 1.0 / 3
+
+    def test_numpy_integer_spec(self):
+        """numpy integer specs are treated as a column count, like Python ints."""
+        columns = st.columns(np.int64(3))
+        assert len(columns) == 3
+
+    def test_float_spec_raises_invalid_parameter_type(self):
+        """A non-integer scalar spec is a type error, not a crash on ``len()``."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
+            st.columns(6.28)
+        assert exc.value.exec_kwargs["parameter"] == "spec"
+        assert "Expected one of: int, sequence of numbers" in str(exc.value)
+        assert "Provided type: float" in str(exc.value)
 
     @parameterized.expand(
         [
@@ -353,6 +368,39 @@ class ColumnsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.columns(3, width=invalid_width)
 
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+        ]
+    )
+    def test_columns_wrap(self, wrap: bool, expected_wrap: bool):
+        """Test that wrap maps correctly onto flex_container.wrap."""
+        st.columns(3, wrap=wrap)
+
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.flex_container.wrap is expected_wrap
+
+    def test_columns_wrap_default_omitted(self):
+        """Omitting wrap keeps today's responsive stacking (proto wrap=True)."""
+        st.columns(3)
+
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.flex_container.wrap is True
+
+    @parameterized.expand(
+        [
+            ("no",),
+            (1,),
+            ("true",),
+            (None,),
+        ]
+    )
+    def test_columns_with_invalid_wrap(self, invalid_wrap):
+        """Test that invalid wrap values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.columns(3, wrap=invalid_wrap)
+
 
 class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):
@@ -536,6 +584,7 @@ class ExpanderTest(DeltaGeneratorTestCase):
         [
             ("default", BlockProto.Expandable.Type.DEFAULT),
             ("compact", BlockProto.Expandable.Type.COMPACT),
+            ("step", BlockProto.Expandable.Type.STEP),
         ]
     )
     def test_type_parameter(self, type_param: str, expected_proto_type: int):
@@ -545,9 +594,25 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert expander_block.add_block.expandable.type == expected_proto_type
 
     def test_invalid_type(self):
-        """Test that invalid type values raise StreamlitValueError."""
-        with pytest.raises(StreamlitValueError):
+        """Test that invalid type values raise StreamlitValueError listing all types."""
+        with pytest.raises(StreamlitValueError) as e:
             st.expander("label", type="invalid")
+        assert "'default', 'compact', 'step'" in str(e.value)
+
+    def test_step_type_leaves_state_undefined(self):
+        """Test that an expander never sets the status-only state field."""
+        st.expander("label", type="step")
+        expander_block = self.get_delta_from_queue()
+        assert (
+            expander_block.add_block.expandable.state
+            == BlockProto.Expandable.State.STATE_UNDEFINED
+        )
+
+    def test_step_type_still_validates_icon(self):
+        """Test that icon validation also applies to step-type expanders."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.expander("label", type="step", icon="not-a-valid-icon")
+        assert "is not a valid emoji" in str(e.value)
 
     def test_on_change_callback_without_key_works(self):
         """Test that a callback works without an explicit key."""
@@ -841,15 +906,43 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
+            # Each case is horizontal, then the wrap argument, then the expected
+            # resolved wrap value on the proto.
+            # A vertical container always resolves proto wrap to False.
+            (False, True, False),
+            # A horizontal container keeps the default wrapping behavior for
+            # wrap=True and a single row for wrap=False.
+            (True, True, True),
+            (True, False, False),
         ],
     )
-    def test_container_wrap(self, direction: bool, wrap: bool) -> None:
+    def test_container_wrap(
+        self, horizontal: bool, wrap_arg: bool, expected_wrap: bool
+    ) -> None:
         """Test that st.container sets the wrap property correctly."""
-        st.container(horizontal=direction)
+        st.container(horizontal=horizontal, wrap=wrap_arg)
         container_block = self.get_delta_from_queue()
-        assert container_block.add_block.flex_container.wrap == wrap
+        assert container_block.add_block.flex_container.wrap == expected_wrap
+
+    def test_container_wrap_defaults_to_true_when_horizontal(self) -> None:
+        """Test that a horizontal container wraps by default (wrap omitted)."""
+        st.container(horizontal=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.wrap is True
+
+    def test_container_wrap_false_without_horizontal_raises(self) -> None:
+        """Test that st.container raises for wrap=False without horizontal=True."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.container(horizontal=False, wrap=False)
+        assert "horizontal=True" in str(exc.value)
+
+    def test_container_wrap_true_without_horizontal_allowed(self) -> None:
+        """Test that wrap=True on a vertical container is a no-op, not an error."""
+        st.container(horizontal=False, wrap=True)
+        container_block = self.get_delta_from_queue()
+        # wrap is layout-only and meaningless for a vertical container, so it
+        # resolves to False rather than raising.
+        assert container_block.add_block.flex_container.wrap is False
 
     @parameterized.expand(
         [
@@ -1464,6 +1557,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         [
             ("default", BlockProto.Expandable.Type.DEFAULT),
             ("compact", BlockProto.Expandable.Type.COMPACT),
+            ("step", BlockProto.Expandable.Type.STEP),
         ]
     )
     def test_type_parameter(self, type_param: str, expected_proto_type: int):
@@ -1473,9 +1567,58 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         assert status_block.add_block.expandable.type == expected_proto_type
 
     def test_invalid_type(self):
-        """Test that invalid type values raise StreamlitValueError."""
-        with pytest.raises(StreamlitValueError):
+        """Test that invalid type values raise StreamlitValueError listing all types."""
+        with pytest.raises(StreamlitValueError) as e:
             st.status("label", type="invalid")
+        assert "'default', 'compact', 'step'" in str(e.value)
+
+    @parameterized.expand(
+        [
+            ("running", BlockProto.Expandable.State.RUNNING),
+            ("complete", BlockProto.Expandable.State.COMPLETE),
+            ("error", BlockProto.Expandable.State.ERROR),
+        ]
+    )
+    def test_state_param_sets_proto_state(
+        self, state_param: str, expected_proto_state: int
+    ):
+        """Test that the state param sets the semantic state field on the proto."""
+        st.status("label", state=state_param)
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.expandable.state == expected_proto_state
+
+    def test_update_resends_icon_and_state(self):
+        """Test that update() keeps the icon and the state field in sync."""
+        status = st.status("label")
+        status.update(state="error")
+
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.expandable.icon == ":material/error:"
+        assert (
+            status_block.add_block.expandable.state == BlockProto.Expandable.State.ERROR
+        )
+
+    def test_update_with_invalid_state_enqueues_nothing(self):
+        """Test that an invalid state in update() raises before enqueuing a message."""
+        status = st.status("label")
+        message_count = len(self.forward_msg_queue._queue)
+
+        with pytest.raises(StreamlitValueError):
+            status.update(state="bogus")
+
+        assert len(self.forward_msg_queue._queue) == message_count
+
+    def test_step_type_is_preserved_when_status_auto_completes(self):
+        """Test that a step-type status auto-completes on exit and stays a step."""
+        with st.status("label", type="step"):
+            pass
+
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.expandable.type == BlockProto.Expandable.Type.STEP
+        assert (
+            status_block.add_block.expandable.state
+            == BlockProto.Expandable.State.COMPLETE
+        )
 
 
 class StatusContainerDeltaPathTest(DeltaGeneratorTestCase):

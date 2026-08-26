@@ -19,7 +19,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from numbers import Integral, Real
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -47,6 +46,8 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
 )
@@ -55,13 +56,16 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -123,6 +127,21 @@ SUPPORTED_TYPES: Final = {
 }
 TIMELIKE_TYPES: Final = (SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE)
 
+# Widest span of whole days the frontend can represent exactly. Timelike values are
+# serialized as microseconds since the epoch, and the frontend holds that in a
+# JavaScript number, which is only exact up to ``JSNumber.MAX_SAFE_INTEGER``.
+#
+# That limit lands mid-day -- 00:12 on the first day, 23:47 on the last -- so these
+# round *inward* to the first and last day that is usable at any time of day. Naming
+# the raw limit days instead would recommend values the check below then rejects.
+_SAFE_TIMELIKE_SPAN: Final = timedelta(microseconds=JSNumber.MAX_SAFE_INTEGER)
+_MIN_SAFE_DAY: Final = (datetime(1970, 1, 1) - _SAFE_TIMELIKE_SPAN).date() + timedelta(
+    days=1
+)
+_MAX_SAFE_DAY: Final = (datetime(1970, 1, 1) + _SAFE_TIMELIKE_SPAN).date() - timedelta(
+    days=1
+)
+
 
 def _time_to_datetime(time_: time) -> datetime:
     # Note, here we pick an arbitrary date well after Unix epoch.
@@ -135,6 +154,47 @@ def _time_to_datetime(time_: time) -> datetime:
 
 def _date_to_datetime(date_: date) -> datetime:
     return datetime.combine(date_, time())
+
+
+def _window_around(anchor: date, window: timedelta) -> tuple[date, date]:
+    """Return ``anchor`` -/+ ``window``, clamped to the representable range.
+
+    Used for the default ``min_value``/``max_value``, which are computed even when
+    the caller passed both explicitly, so this has to hold for any ``anchor``.
+
+    Clamping covers two failure modes:
+
+    - Arithmetic that overflows near ``date``/``datetime``'s own limits.
+    - A window that avoids overflow but still falls outside the frontend's
+      representable range, which would reject a bound the caller never set --
+      including for an ``anchor`` this module's own error message recommends.
+
+    A bound is never moved past ``anchor``, so an unrepresentable ``anchor`` still
+    reaches the range check below as itself rather than as an inverted window.
+    """
+    floor: date
+    ceiling: date
+    if isinstance(anchor, datetime):
+        # The limits carry ``anchor``'s tzinfo so the comparisons below are
+        # like-for-like, and ``_datetime_to_micros`` later reads wall-clock fields as
+        # UTC rather than converting -- so wall-clock is what has to land in range. For
+        # a zone whose offset varies by date the two can disagree, but only by that
+        # offset, and the day of slack these constants keep from the true limit
+        # (~23h48m at each end) is wider than any real-world offset.
+        floor = datetime.combine(_MIN_SAFE_DAY, time.min, tzinfo=anchor.tzinfo)
+        ceiling = datetime.combine(_MAX_SAFE_DAY, time.max, tzinfo=anchor.tzinfo)
+    else:
+        floor, ceiling = _MIN_SAFE_DAY, _MAX_SAFE_DAY
+
+    try:
+        low = min(anchor, max(anchor - window, floor))
+    except OverflowError:
+        low = anchor
+    try:
+        high = max(anchor, min(anchor + window, ceiling))
+    except OverflowError:
+        high = anchor
+    return low, high
 
 
 def _delta_to_micros(delta: timedelta) -> int:
@@ -257,7 +317,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -281,7 +341,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -306,7 +366,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -329,7 +389,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -353,7 +413,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -378,7 +438,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -401,7 +461,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -427,7 +487,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -451,7 +511,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -474,7 +534,7 @@ class SliderMixin:
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -501,6 +561,12 @@ class SliderMixin:
             stored or returned by the widget due to serialization constraints
             between the Python server and JavaScript client. You must handle
             such numbers as floats, leading to a loss in precision.
+
+            The same constraint bounds ``date`` and ``datetime`` values, which
+            are serialized as microseconds since the epoch: only values from
+            1684-07-29 to 2255-06-04 can be represented exactly. Streamlit
+            raises an error for a bound outside that range rather than
+            silently shifting it.
 
         Parameters
         ----------
@@ -633,8 +699,27 @@ class SliderMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this slider's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the slider should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the slider. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user changes the slider value.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              changes the slider value. The slider still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              changes are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``).
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -681,6 +766,11 @@ class SliderMixin:
             Invalid query parameter values are ignored and removed
             from the URL. Range sliders use repeated parameters (e.g.,
             ``?price=10&price=90``).
+
+            When ``on_change="ignore"``, slider interactions still update
+            the URL immediately, the same as widgets inside a form. Python
+            receives the new value on the next rerun. A page load or share
+            uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -775,7 +865,7 @@ class SliderMixin:
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -788,13 +878,19 @@ class SliderMixin:
     ) -> SliderReturn:
         key = to_key(key)
 
+        validate_on_change_mode(on_change)
+
+        on_change_callback: WidgetCallback | None = (
+            on_change if callable(on_change) else None
+        )
+
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "slider",
@@ -839,9 +935,18 @@ class SliderMixin:
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
         range_value = isinstance(value, (list, tuple)) and len(value) in {0, 1, 2}
         if not single_value and not range_value:
-            raise StreamlitAPIException(
-                "Slider value should either be an int/float/datetime or a list/tuple of "
-                "0 to 2 ints/floats/datetimes"
+            # A list/tuple of the wrong length is a value constraint, not a
+            # type mismatch — listing list/tuple as expected types would
+            # contradict the provided type.
+            if isinstance(value, (list, tuple)):
+                raise StreamlitAPIException(
+                    "Slider value should either be an int/float/datetime or a "
+                    "list/tuple of 0 to 2 ints/floats/datetimes"
+                )
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                type(value).__name__,
+                ["int", "float", "date", "time", "datetime", "list", "tuple"],
             )
 
         # Simplify future logic by always making value a list
@@ -858,9 +963,10 @@ class SliderMixin:
             return len(set(map(value_to_generic_type, items))) < 2
 
         if not all_same_type(prepared_value):
-            raise StreamlitAPIException(
-                "Slider tuple/list components must be of the same type.\n"
-                f"But were: {list(map(type, prepared_value))}"
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                ", ".join(type(item).__name__ for item in prepared_value),
+                ["list or tuple containing values of the same type"],
             )
 
         data_type = (
@@ -869,8 +975,10 @@ class SliderMixin:
             else value_to_generic_type(prepared_value[0])
         )
 
-        datetime_min: datetime | time = time.min
-        datetime_max: datetime | time = time.max
+        # `date` rather than `datetime`, because the DATE path still holds plain
+        # `date` values here -- they are not converted until further down.
+        datetime_min: date | time = time.min
+        datetime_max: date | time = time.max
         if data_type == SliderProto.TIME:
             prepared_value = cast("Sequence[time]", prepared_value)
 
@@ -879,8 +987,9 @@ class SliderMixin:
         if data_type in {SliderProto.DATETIME, SliderProto.DATE}:
             prepared_value = cast("Sequence[datetime]", prepared_value)
 
-            datetime_min = prepared_value[0] - timedelta(days=14)
-            datetime_max = prepared_value[0] + timedelta(days=14)
+            datetime_min, datetime_max = _window_around(
+                prepared_value[0], timedelta(days=14)
+            )
 
         defaults: Final[dict[SliderProto.DataType.ValueType, dict[str, Any]]] = {
             SliderProto.INT: {
@@ -948,13 +1057,12 @@ class SliderMixin:
         )
 
         if not int_args and not float_args and not timelike_args:
-            msg = (
-                "Slider value arguments must be of matching types."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                f"min_value={type(min_value).__name__}, "
+                f"max_value={type(max_value).__name__}, step={type(step).__name__}",
+                ["matching numeric types", "matching date/time types"],
             )
-            raise StreamlitAPIException(msg)
 
         # Ensure that the value matches arguments' types.
         all_ints = data_type == SliderProto.INT and int_args
@@ -962,13 +1070,13 @@ class SliderMixin:
         all_timelikes = data_type in TIMELIKE_TYPES and timelike_args
 
         if not all_ints and not all_floats and not all_timelikes:
-            msg = (
-                "Both value and arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                f"value={type(value).__name__}, "
+                f"min_value={type(min_value).__name__}, "
+                f"max_value={type(max_value).__name__}",
+                ["value and arguments with matching types"],
             )
-            raise StreamlitAPIException(msg)
 
         # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
         min_value = min(min_value, max_value)
@@ -992,6 +1100,8 @@ class SliderMixin:
         # we simply re-package as StreamlitAPIExceptions.
         # (We check `min_value` and `max_value` here; `value` and `step` are
         # already known to be in the [min_value, max_value] range.)
+        # Timelike bounds are checked further down instead, after the conversion to
+        # microseconds -- that integer is what the frontend has to represent.
         try:
             if all_ints:
                 JSNumber.validate_int_bounds(cast("int", min_value), "`min_value`")
@@ -999,11 +1109,8 @@ class SliderMixin:
             elif all_floats:
                 JSNumber.validate_float_bounds(cast("float", min_value), "`min_value`")
                 JSNumber.validate_float_bounds(cast("float", max_value), "`max_value`")
-            elif all_timelikes:
-                # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
-                pass
         except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
+            raise StreamlitJSNumberBoundsError(str(e))
 
         orig_tz = None
         # Convert dates or times into datetimes
@@ -1052,6 +1159,21 @@ class SliderMixin:
             max_value = _datetime_to_micros(max_value)
             step = _delta_to_micros(step)
 
+            # Beyond MAX_SAFE_INTEGER microseconds the frontend's JavaScript number
+            # cannot hold the value exactly, so the slider would silently round to a
+            # different instant rather than fail.
+            for name, micros in (
+                ("`min_value`", min_value),
+                ("`max_value`", max_value),
+            ):
+                if abs(micros) > JSNumber.MAX_SAFE_INTEGER:
+                    raise StreamlitAPIException(
+                        f"{name} is too far from 1970 for Streamlit to represent "
+                        "exactly. Use a value between "
+                        f"{_MIN_SAFE_DAY:%Y-%m-%d} and "
+                        f"{_MAX_SAFE_DAY:%Y-%m-%d}."
+                    )
+
         # At this point, prepared_value is expected to be a list of floats:
         prepared_value = cast("list[float]", prepared_value)
 
@@ -1078,10 +1200,13 @@ class SliderMixin:
         )
 
         if help is not None:
-            slider_proto.help = dedent(help)
+            slider_proto.help = to_help_str(help)
 
         if bind and key:
             slider_proto.query_param_key = str(key)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            slider_proto.ignore_rerun = True
 
         serde = SliderSerde(
             prepared_value,
@@ -1095,7 +1220,7 @@ class SliderMixin:
 
         widget_state = register_widget(
             slider_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1118,7 +1243,12 @@ class SliderMixin:
             if not isinstance(slider_min, (int, float)) or not isinstance(
                 slider_max, (int, float)
             ):
-                raise StreamlitAPIException("Slider bounds must be numeric.")
+                raise StreamlitInvalidParameterTypeError(
+                    "min_value",
+                    f"min_value={type(slider_min).__name__}, "
+                    f"max_value={type(slider_max).__name__}",
+                    ["int", "float"],
+                )
             for serialized_value in serialized_values:
                 # Use the deserialized values for more readable error messages for dates/times
                 deserialized_value = serde.deserialize_single_value(serialized_value)

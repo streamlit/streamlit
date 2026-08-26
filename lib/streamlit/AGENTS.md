@@ -23,6 +23,25 @@ from streamlit.logger import get_logger
 _LOGGER: Final = get_logger(__name__)
 ```
 
+## Metrics
+
+- Use `gather_metrics` only for public `st.*` APIs. Never use it for internal methods or functions.
+
+## Streamlit Backend Performance Hot Paths
+
+Changes to these high-fan-out internals can affect every command, message, session, or rerun. Keep work in them minimal, and add or extend performance coverage when modifying these areas:
+
+- **Element creation and enqueueing** (`delta_generator.py`, element-ID calculation, public-command metrics): Avoid extra validation, hashing, protobuf copies, or context work per `st.*` call.
+- **ForwardMsg hashing, caching, and serialization** (`runtime/forward_msg_cache.py`, protobuf transport): Messages can be serialized for hashing and again for transport. Avoid extra copies or passes over large payloads, including on cache hits.
+- **Delta queueing and WebSocket flushing** (`runtime/forward_msg_queue.py`, `runtime.py`, WebSocket handlers): Preserve delta coalescing, bounded queues, and event-loop responsiveness; message count and flush cadence directly affect throughput and backpressure.
+- **Script reruns and session/widget state** (`script_runner.py`, `runtime/state/session_state.py`): Avoid additional full-state scans, expensive equality checks, unstable widget IDs, or cleanup work repeated for every rerun and session.
+- **`st.cache_data` and `st.cache_resource`** (`runtime/caching/`): Hits still hash arguments; `st.cache_data` also copies and unpickles results. Be careful with large keys/results, serialization, validation, replayed messages, and lock scope.
+- **Dataframe/Arrow and streaming paths** (`dataframe_util.py`, `elements/arrow.py`, `elements/write.py`): Avoid dataframe conversions and copies, repeated Arrow serialization, per-cell styling work, and many tiny streaming updates that repeatedly rebuild growing payloads.
+
+## Embedded agent skills
+
+User-facing skills ship under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). Keep them current as features land; follow `lib/streamlit/.agents/skills/AGENTS.md`.
+
 ## Unit Tests
 
 We use the unit tests to cover internal behavior that can work without the web / backend
@@ -113,6 +132,11 @@ generic `StreamlitAPIException` with a one-off message.
 - `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
   use when a required parameter is missing, `None`, or empty. Example:
   `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
+- `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
+  use when a parameter has an unsupported type. `parameter` is appended in
+  uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
+  Pass concise type names as strings; for example,
+  `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
   - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
@@ -125,6 +149,14 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
+  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout
+    or form context)
+  - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
+  - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
+    widget with that key is instantiated this run)
+  - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
+  - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
+    `page_link`)
 - Do not raise the deprecated aliases kept for compatibility
   (`StreamlitMissingPageLabelError`, `StreamlitInvalidPageLayoutError`,
   `StreamlitInvalidTextAlignmentError`, `StreamlitInvalidBindValueError`,

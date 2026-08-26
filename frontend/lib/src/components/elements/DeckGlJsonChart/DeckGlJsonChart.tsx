@@ -197,7 +197,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       }
 
       setSelection({
-        fromUi: true,
+        fromUser: true,
         value: { selection: newSelection },
       })
     },
@@ -207,7 +207,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const handleClearSelectionClick = useCallback(() => {
     setSelection({
       value: { selection: EMPTY_SELECTION },
-      fromUi: true,
+      fromUser: true,
     })
   }, [setSelection])
 

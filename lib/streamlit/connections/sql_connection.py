@@ -295,21 +295,16 @@ class SQLConnection(BaseConnection["Engine"]):
 
         from sqlalchemy import text
         from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
-        from tenacity import (
-            retry,
-            retry_if_exception_type,
-            stop_after_attempt,
-            wait_fixed,
-        )
 
-        @retry(
-            after=lambda _: self.reset(),
-            stop=stop_after_attempt(3),
-            reraise=True,
-            retry=retry_if_exception_type(
-                (DatabaseError, InternalError, OperationalError)
+        from streamlit.connections import retry_util
+
+        @retry_util.retry(
+            max_attempts=3,
+            wait_seconds=1,
+            retry_on_exception=lambda exc: isinstance(
+                exc, (DatabaseError, InternalError, OperationalError)
             ),
-            wait=wait_fixed(1),
+            after=self.reset,
         )
         def _query(
             # Dummy parameter to retain per-instance caching.

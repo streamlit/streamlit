@@ -95,11 +95,12 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
 
     // Send widget event if on_dismiss is activated (indicated by presence of id)
     if (id && widgetMgr) {
-      void widgetMgr.setTriggerValue(
-        { id, formId: "" }, // WidgetInfo object - dialogs are not compatible with forms
-        { fromUi: true },
-        fragmentId
-      )
+      // Dialogs are not compatible with forms.
+      void widgetMgr.setTriggerValue(id, {
+        formId: "",
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [id, widgetMgr, fragmentId])
 

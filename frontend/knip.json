@@ -4,15 +4,24 @@
   "ignoreBinaries": ["streamlit"],
   "ignoreUnresolved": ["^\\./proto(?:\\.js)?$"],
   "ignoreIssues": {
-    "component-lib/src/ArrowTable.ts": ["exports", "types"],
-    "app/src/util/reactUidCompat.ts": ["files"]
+    "component-lib/src/ArrowTable.ts": ["exports", "types"]
   },
-  "rules": {
-    "devDependencies": "off",
-    "dependencies": "off",
-    "unlisted": "off"
-  },
+  "ignoreDependencies": [
+    "@bufbuild/buf",
+    "@deck.gl/extensions",
+    "@deck.gl/widgets",
+    "@playwright/cli",
+    "@swc/plugin-emotion",
+    "eslint-plugin-streamlit-custom",
+    "oxfmt",
+    "protobufjs",
+    "protobufjs-cli",
+    "react-responsive-carousel",
+    "typescript-v7"
+  ],
   "workspaces": {
-    ".": {}
+    ".": {
+      "entry": ["vitest.setup.ts"]
+    }
   }
 }

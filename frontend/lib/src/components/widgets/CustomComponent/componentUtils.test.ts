@@ -126,12 +126,9 @@ describe("test componentUtils", () => {
 
       expect(widgetMgr.setJsonValue).toBeCalledTimes(1)
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         jsonValue,
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -144,10 +141,9 @@ describe("test componentUtils", () => {
 
       expect(widgetMgr.setArrowValue).toBeCalledTimes(1)
       expect(widgetMgr.setArrowValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         dataframeValue,
-        { fromUi: true },
-        undefined
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(widgetMgr.setJsonValue).not.toBeCalled()
     })
@@ -161,10 +157,9 @@ describe("test componentUtils", () => {
 
       expect(widgetMgr.setBytesValue).toBeCalledTimes(1)
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         bytesValue,
-        { fromUi: true },
-        undefined
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(widgetMgr.setJsonValue).not.toBeCalled()
     })

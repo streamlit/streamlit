@@ -102,6 +102,10 @@ class StreamlitAPIException(MarkdownFormattedException):
         return util.repr_(self)
 
 
+class StreamlitDataframeConversionError(StreamlitAPIException):
+    """Raised when a value cannot be converted to a DataFrame or Arrow table."""
+
+
 class DuplicateWidgetID(StreamlitAPIException):  # pragma: no cover - trivial subclass
     pass
 
@@ -455,11 +459,21 @@ class StreamlitQueryParamDictValueError(LocalizableStreamlitException):
 
 
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
-    """Exception raised the linked page can not be found."""
+    """Raised when the linked page cannot be found."""
 
     def __init__(
-        self, page: str, main_script_directory: str, uses_pages_directory: bool
+        self,
+        page: str,
+        main_script_directory: str | None = None,
+        uses_pages_directory: bool = False,
     ) -> None:
+        if main_script_directory is None:
+            super().__init__(
+                "Unable to create Page. The file `{page}` could not be found.",
+                page=page,
+            )
+            return
+
         directory = os.path.basename(main_script_directory)
 
         message = (
@@ -545,12 +559,27 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidLayoutContextError(StreamlitAPIException):
+    """Raised when a command is used in a disallowed layout context."""
+
+
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
     """Exception raised when trying to set values where writes are not allowed."""
 
     def __init__(self, key: str) -> None:
         super().__init__(
             "Values for the widget with `key` '{key}' cannot be set using `st.session_state`.",
+            key=key,
+        )
+
+
+class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
+    """Raised when session state is assigned after the widget is created."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            "`st.session_state.{key}` cannot be modified after the widget"
+            " with key `{key}` is instantiated.",
             key=key,
         )
 
@@ -635,6 +664,32 @@ class StreamlitValueError(LocalizableStreamlitException):
             "Invalid `{parameter}` value. Supported values: {valid_values}.",
             parameter=parameter,
             valid_values=", ".join(valid_values),
+        )
+
+
+class StreamlitInvalidParameterTypeError(LocalizableStreamlitException):
+    """Raised when a parameter has an unsupported type."""
+
+    def __init__(
+        self, parameter: str, provided_type: str, expected_types: list[str]
+    ) -> None:
+        super().__init__(
+            "Invalid `{parameter}` type. Expected one of: {expected_types}. "
+            "Provided type: {provided_type}.",
+            parameter=parameter,
+            expected_types=", ".join(expected_types),
+            provided_type=provided_type,
+        )
+
+
+class StreamlitDefaultNotInOptionsError(LocalizableStreamlitException):
+    """Raised when a default value is not among the provided options."""
+
+    def __init__(self, value: Any) -> None:
+        super().__init__(
+            "The default value '{value}' is not part of the options. "
+            "Please make sure that every default value also exists in the options.",
+            value=value,
         )
 
 

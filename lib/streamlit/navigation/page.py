@@ -23,6 +23,7 @@ from streamlit import env_util
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingRequiredParameterError,
+    StreamlitPageNotFoundError,
     StreamlitValueError,
 )
 from streamlit.path_security import is_windows_unc_path
@@ -326,9 +327,7 @@ class Page:
             page = (main_path / page).resolve()
 
             if not page.is_file():
-                raise StreamlitAPIException(
-                    f"Unable to create Page. The file `{page.name}` could not be found."
-                )
+                raise StreamlitPageNotFoundError(page.name)
 
         inferred_name = ""
         inferred_icon = ""

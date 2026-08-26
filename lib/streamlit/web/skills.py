@@ -740,7 +740,12 @@ def _concise_install_paths(entries: list[str]) -> list[str]:
     """
     paths = []
     for entry in entries:
-        raw = entry.split(" (", 1)[0]
+        # Split from the RIGHT: the reason is always the last parenthetical, but a
+        # path component may legitimately contain " (" (e.g. "~/My App (old)/").
+        # Splitting from the left would truncate the path there, defeating the
+        # last-three-parts collapse below and leaking the leading directories —
+        # which on a real machine means the user's home dir and username.
+        raw = entry.rsplit(" (", 1)[0]
         parts = Path(raw).parts
         paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
     return paths

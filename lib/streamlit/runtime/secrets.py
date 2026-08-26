@@ -24,12 +24,11 @@ from typing import (
     NoReturn,
 )
 
-from blinker import Signal
-
 import streamlit.watcher.path_watcher
 from streamlit import config, runtime
 from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
+from streamlit.signal_util import Signal
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -256,9 +255,8 @@ class Secrets(Mapping[str, Any]):
         # Store programmatic secrets separately so they survive file-change reloads
         self._programmatic_secrets: Mapping[str, SecretsValue] | None = None
 
-        self.file_change_listener = Signal(
-            doc="Emitted when a `secrets.toml` file has been changed."
-        )
+        # Fires when a `secrets.toml` file has changed.
+        self.file_change_listener = Signal()
 
     def load_if_toml_exists(self) -> bool:
         """Load secrets.toml files from disk if they exists. If none exist,

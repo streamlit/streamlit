@@ -339,17 +339,11 @@ function useWidgetState({
 
     // Only update if there is actually a difference between editing and widget state
     if (currentEditingState !== currentWidgetState) {
-      widgetMgr.setStringValue(
-        {
-          id: element.id,
-          formId: element.formId ?? undefined,
-        },
-        currentEditingState,
-        {
-          fromUi: true,
-        },
-        fragmentId
-      )
+      widgetMgr.setStringValue(element.id, currentEditingState, {
+        formId: element.formId ?? undefined,
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
 
@@ -437,17 +431,11 @@ function useWidgetState({
           currentWidgetState === undefined ||
           currentWidgetState !== newWidgetState
         ) {
-          widgetMgr.setStringValue(
-            {
-              id: element.id,
-              formId: element.formId ?? undefined,
-            },
-            newWidgetState,
-            {
-              fromUi: true,
-            },
-            fragmentId
-          )
+          widgetMgr.setStringValue(element.id, newWidgetState, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: true,
+          })
         }
       }
     },
@@ -513,17 +501,11 @@ function useWidgetState({
         )
 
         if (defaultSelection !== undefined) {
-          widgetMgr.setStringValue(
-            {
-              id: element.id,
-              formId: element.formId ?? undefined,
-            },
-            element.selectionDefault,
-            {
-              fromUi: false,
-            },
-            fragmentId
-          )
+          widgetMgr.setStringValue(element.id, element.selectionDefault, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: false,
+          })
         }
 
         return defaultSelection
@@ -546,17 +528,11 @@ function useWidgetState({
             cells: [],
           },
         })
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId ?? undefined,
-          },
-          selectionState,
-          {
-            fromUi: false,
-          },
-          fragmentId
-        )
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
 
         return defaultRequiredSelection
       }
@@ -639,17 +615,11 @@ function useWidgetState({
       // This avoids overwriting a previously valid persisted selection with
       // malformed JSON.
       if (selection !== undefined) {
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId ?? undefined,
-          },
-          selectionState,
-          {
-            fromUi: false,
-          },
-          fragmentId
-        )
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
       }
 
       return selection

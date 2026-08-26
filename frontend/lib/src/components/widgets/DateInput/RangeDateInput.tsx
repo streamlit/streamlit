@@ -58,17 +58,21 @@ import {
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
 
-import { CalendarPopoverHeader } from "./CalendarPopoverHeader"
+import {
+  CalendarPopoverHeader,
+  DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
+} from "./CalendarPopoverHeader"
 import {
   datesEqual,
   getQuickSelectPresets,
+  getSafeLocale,
   isValidSegmentValue,
   noop,
   parsePartialSegmentPaste,
   parsePastedDate,
   validateDate,
 } from "./dateInputUtils"
-import { ReorderedDateSegments } from "./ReorderedDateSegments"
+import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarCell,
   StyledCalendarGrid,
@@ -91,7 +95,9 @@ import {
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { getSafeLocale } from "./weekInfo"
+
+/** Marks the quick-select popover so the calendar ignores nested clicks and Escape. */
+const DATE_INPUT_QUICK_SELECT_POPOVER_CLASS = "stDateInputQuickSelectPopover"
 
 interface RangeDateInputProps {
   startValue: CalendarDate | null
@@ -416,9 +422,11 @@ function RangeDateInput({
       floatingSetFn: refs.setFloating,
       referenceSetFn: refs.setReference,
       restoreFocusFn: restoreFocusToField,
+      // Exclude the month/year and quick-select popovers so clicks and Escape
+      // inside them do not dismiss the calendar.
       excludeSelectors: [
-        '[data-testid="stDateInputHeaderPickerPopover"]',
-        '[data-testid="stDateInputQuickSelectPopover"]',
+        `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+        `.${DATE_INPUT_QUICK_SELECT_POPOVER_CLASS}`,
       ],
       excludeEscape: true,
     })
@@ -825,7 +833,7 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} isRange />
+                <ReorderedSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>
@@ -843,7 +851,7 @@ function RangeDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedDateSegments format={format} isRange />
+                <ReorderedSegments format={format} isRange />
               </DateField>
             </div>
           </StyledDateField>
@@ -951,6 +959,7 @@ function RangeDateInput({
                   </StyledCalendarHeaderSelectChevron>
                 </StyledQuickSelectTrigger>
                 <StyledDropdownPopover
+                  className={DATE_INPUT_QUICK_SELECT_POPOVER_CLASS}
                   ref={setQuickSelectFloatingRef}
                   triggerRef={quickSelectTriggerRef}
                   isOpen={isQuickSelectOpen}

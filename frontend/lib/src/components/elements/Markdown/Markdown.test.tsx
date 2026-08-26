@@ -492,6 +492,7 @@ describe("Markdown auto width behavior", () => {
     const horizontalFlexContext: IFlexContext = {
       direction: Direction.HORIZONTAL,
       isInHorizontalLayout: true,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }
@@ -514,6 +515,7 @@ describe("Markdown auto width behavior", () => {
     const verticalFlexContext: IFlexContext = {
       direction: Direction.VERTICAL,
       isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }
@@ -537,6 +539,7 @@ describe("Markdown auto width behavior", () => {
     const horizontalFlexContext: IFlexContext = {
       direction: Direction.HORIZONTAL,
       isInHorizontalLayout: true,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }
@@ -560,6 +563,7 @@ describe("Markdown auto width behavior", () => {
     const verticalFlexContext: IFlexContext = {
       direction: Direction.VERTICAL,
       isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }
@@ -583,6 +587,7 @@ describe("Markdown auto width behavior", () => {
     const verticalFlexContext: IFlexContext = {
       direction: Direction.VERTICAL,
       isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
       isInRoot: false,
       isInContentWidthContainer: false,
     }
