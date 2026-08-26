@@ -8,8 +8,7 @@ created: 2026-08-03
 ## Summary
 
 Add a parameter to `st.text_input` that triggers reruns while the user is typing, enabling
-real-time feedback use cases like live search, instant validation, and character-by-character
-filtering.
+real-time feedback use cases like live search, instant validation, and as-you-type filtering.
 
 ## Problem
 
@@ -17,7 +16,8 @@ filtering.
 
 Users want to create apps with immediate responsiveness to text input, similar to Google's search
 field or IDE autocompletion. Currently, `st.text_input` only triggers reruns when the user presses
-Enter or leaves the field (blur). This limitation prevents several common use cases:
+Enter, leaves the field (blur), or clears a `type="search"` input. This limitation prevents several
+common use cases:
 
 ### Use Cases
 
@@ -27,7 +27,7 @@ Enter or leaves the field (blur). This limitation prevents several common use ca
    ```python
    # Desired behavior: filter updates as the user types (after a short pause),
    # using the proposed live=True (see the Proposal section below)
-   query = st.text_input("Search products", live=True)
+   query = st.text_input("Search products", type="search", live=True)
    filtered = [p for p in products if query.lower() in p.lower()]
    st.write(filtered)
    ```
@@ -63,9 +63,10 @@ value = st_keyup("Search", debounce=500)
 
 ## Proposal
 
-Add an opt-in `live` parameter to `st.text_input` that reruns the app while the user types, after a
-short pause in typing. The parameter name and value shape were chosen after weighing several
-alternatives (see [Alternatives Considered](#alternatives-considered) below).
+Add an opt-in `live` parameter to `st.text_input` that reruns in the widget's existing rerun scope
+(the app, or the enclosing `@st.fragment` / `st.dialog`) after a short pause in typing. The
+parameter name and value shape were chosen after weighing several alternatives (see
+[Alternatives Considered](#alternatives-considered) below).
 
 ### API Design
 
@@ -85,45 +86,86 @@ def text_input(
 
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
-| `live` | `str \| bool` | `False` | Enables live updates while the user types. When `True`, reruns after a sensible default pause (300ms). When a duration string (e.g. `"300ms"`, `"0.5s"`), reruns after that pause, using the same format as `ttl` in `st.cache_data`; `"0ms"` reruns on every keystroke. When `False` (default), reruns occur only on blur or Enter. A bare integer or a negative/unparseable duration raises a `StreamlitAPIException`. |
+| `live` | `str \| bool` | `False` | Whether the widget commits while the user types, after a pause. |
 
-The public parameter is `live`; internally the frontend implements the pause with a debounce timer.
+- `False` (default): current behavior — commit on blur, Enter, or clearing a search input.
+- `True`: live updates after a 300ms pause.
+- Duration string (same format as `ttl` in `st.cache_data`, e.g. `"300ms"`, `"0.5s"`): live
+  updates after that pause. Any zero-length duration (`"0ms"`, `"0s"`, `"0"`) commits on every
+  accepted user-originated value change.
+- Bare `int` / `float` (including positives like `300` or `0.3`) and `timedelta` raise a
+  `StreamlitAPIException`. Negative or unparseable duration strings also raise.
+
+The pause is a debounce (wait for quiet), not a throttle. Exact parsing, protobuf encoding, and
+timer details are deferred to the tech spec.
 
 ### Behavior
 
 | `live` value | Behavior |
 | ------------ | -------- |
-| `False` (default) | Rerun on blur or Enter (current behavior) |
-| `True` | Rerun after 300ms of typing inactivity (sensible default) |
-| `str` (e.g. `"300ms"`, `"0.5s"`, `"1s"`) | Rerun after the given pause in typing (same format as `ttl`) |
-| `"0ms"` (or any zero-length duration string) | Rerun on every keystroke (no pause). **Warning:** Use sparingly - can cause excessive reruns with expensive app logic. |
-| bare `int` / `float` (e.g. `300`) | Raises `StreamlitAPIException` - bare numbers are ambiguous (ms vs seconds, and `0 == False`); use `True` for the default, a duration string like `"300ms"` for custom timing, or `"0ms"` for every keystroke |
-| negative duration string (e.g. `"-1s"`) | Raises `StreamlitAPIException` - negative delays are invalid |
-| invalid string (e.g. `"soon"`) | Raises `StreamlitAPIException` (`StreamlitBadTimeStringError`) - same validation as `ttl` |
+| `False` (default) | Commit on blur, Enter, or clearing a `type="search"` input (current behavior) |
+| `True` | Commit after 300ms of inactivity following an accepted user-originated value change |
+| `str` (e.g. `"300ms"`, `"0.5s"`, `"1s"`) | Same, with the given pause (same format as `ttl`) |
+| zero-length duration (`"0ms"`, `"0s"`, `"0"`) | Commit on every accepted user-originated value change (no pause). **Warning:** Use sparingly — can cause excessive reruns with expensive app logic. |
+| bare `int` / `float` (e.g. `300`, `0.3`) | Raises `StreamlitAPIException` — unlike `ttl` / `run_every`, bare numbers are not accepted (those APIs treat numbers as seconds; `streamlit-keyup` users would read `300` as milliseconds). Use `True`, a duration string like `"300ms"`, or `"0ms"`. |
+| `timedelta` | Raises `StreamlitAPIException` in v1 (deferred; see Alternatives). |
+| negative duration string (e.g. `"-1s"`) | Raises `StreamlitAPIException` — `time_to_seconds` / `pd.Timedelta` parse negatives successfully, so the implementation must reject them explicitly rather than relying on `ttl` validation. |
+| invalid string (e.g. `"soon"`) | Raises `StreamlitAPIException` (`StreamlitBadTimeStringError`) — same unparseable-string path as `ttl` |
+
+**What starts the timer:** Accepted user-originated value changes (typing, paste, cut, drop,
+autofill, voice/assistive input). Programmatic updates (script-driven `value` / session-state
+writes) do not start the timer. IME composition is the exception in edge case 8. Clearing a
+`type="search"` input is an immediate commit path (edge case 7), not a timer start.
+
+`live="0ms"` vs `live=False` is conceptually “zero means the opposite of off,” but it is not the
+Python `0 == False` footgun: the values are a string and a bool. The duration string makes the
+unit explicit.
+
+**Rerun scope:** `live` does not invent a new rerun target. A live commit uses the same scope the
+widget already uses: the full app, or the enclosing `@st.fragment` / `st.dialog`. Putting live
+search UI in a fragment is the recommended way to keep typing from rerunning the rest of the app
+(Principle 37).
 
 **Rerun frequency (relation to API Principle 34):** Live updates intentionally relax Principle 34
 ("one rerun per interaction") — a single typing session can trigger multiple reruns. This exception
-is acceptable because it is the explicit purpose of the feature and the rerun rate is *bounded* by
-the delay: reruns fire at most once per period of typing inactivity (e.g., `live="300ms"` triggers at
-most roughly once per 300ms pause, not once per keystroke). `live="0ms"` is the only value that
-removes this bound (one rerun per keystroke) and therefore carries the performance warning above. The
-default (`False`) fully preserves one-rerun-per-interaction behavior, so existing apps are unaffected.
+is acceptable because it is the explicit purpose of the feature and, for `True` and positive
+durations, the rerun rate is *bounded* by the delay. Zero-length and very short durations remove
+or nearly remove that bound. Even the 300ms default can fire mid-word for slower or assistive
+typing (head-pointer, switch access, on-screen keyboard). The performance warning therefore applies
+to live mode in general, with stronger wording for zero and short custom delays. The default
+(`False`) fully preserves one-rerun-per-interaction behavior.
 
-**Focus & caret preservation:** A live rerun must never interrupt the user while they are still
-typing. The input keeps focus and preserves its caret/selection position across every live-triggered
-rerun, so typing is not disrupted and the cursor does not jump. (An implementation that remounted the
-input or reset the cursor on each rerun would make live updates unusable and inaccessible.)
+**Running / stale UI:** Live-triggered reruns use the same "Running" status and stale-element
+treatment as any other widget-triggered rerun. Suppressing that flicker for live commits is out of
+scope; authors who need a quieter page should keep the live input and its results in a fragment.
+
+**Focus & caret preservation:** While the user is still editing, a live rerun must not steal focus
+or jump the caret/selection — provided the same enabled widget is still rendered with the same
+identity. App code that removes, rekeys, disables, or replaces the widget during the rerun can
+still disrupt editing. A stale rerun response must never overwrite newer dirty edits (a live
+commit clears `dirty`, so the implementation must keep uncommitted keystrokes from being clobbered
+by an in-flight older run).
+
+**Input instructions:** When `live` is not `False` and the widget is outside a form, hide the
+"Press Enter to apply" hint (the value already commits after a pause). Character-count
+instructions from `max_chars` still show. Inside a form, `live` is a no-op, so "Press Enter to
+submit form" is unchanged.
 
 ### Recommended Usage
 
-- `live=True` is the simplest option for most live search/validation use cases
-- `live="0.5s"` (or `"300ms"`) when you need specific timing control — duration strings make the unit
-  explicit
-- `live="0ms"` should be used sparingly - triggers a rerun on every keystroke which can overload the
-  server for apps with expensive computations (ML inference, large data loads)
+- `live=True` is the simplest option for most live search/validation use cases. Prefer
+  `type="search"` with `live=True` for search fields. `type="search"` does **not** turn live
+  updates on by itself (opt-in, Principle 26); it is orthogonal to [#10744](https://github.com/streamlit/streamlit/issues/10744),
+  which shipped the search *chrome* (icon, clear control). This spec is the live *commit timing*.
+- `live="0.5s"` (or `"300ms"`) when you need specific timing control — duration strings make the
+  unit explicit
+- Any live value other than `False` increases rerun frequency. Zero-length and very short delays
+  can overload the server for apps with expensive computations (ML inference, large data loads).
+  Prefer a fragment around the live UI.
 
-The backend/frontend design (value parsing, debounce timer, commit path) is deferred to a separate
-tech spec.
+Python must expose and validate `live`, and the selected delay must reach the frontend through
+protobuf. Backend / protobuf / frontend design (parsing, identity hashing, debounce timer, commit
+path) is deferred to a separate tech spec.
 
 ### Examples
 
@@ -134,8 +176,9 @@ import streamlit as st
 
 st.title("Product Search")
 
-# live=True uses a sensible default pause (300ms)
-query = st.text_input("Search products", live=True)
+# live=True uses a sensible default pause (300ms).
+# type="search" is optional chrome; it does not enable live updates by itself.
+query = st.text_input("Search products", type="search", live=True)
 
 if query:
     products = ["Apple", "Banana", "Cherry", "Date", "Elderberry"]
@@ -165,18 +208,20 @@ if email:
 
 ### Edge Cases
 
-1. **Interaction with `on_change`**: When both `live` and `on_change` are set, the callback
-   fires after each live-update rerun. **Important:** Unlike the current blur-only behavior where
-   `on_change` fires at most once per complete interaction, with `live` the callback may fire
-   multiple times during a single typing session. Users should be aware of this frequency increase
-   when adding `live` to widgets that already have `on_change` callbacks performing write
-   operations (e.g., saving to database, calling APIs).
+1. **Interaction with `on_change`**: When `live` is not `False` and `on_change` is a callable, the
+   callback runs with the updated widget state at the start of the corresponding script or fragment
+   run, before the body (same as today's widget callbacks). Pending live rerun requests may
+   coalesce to the latest widget state, so one callback invocation per requested live update is not
+   guaranteed. Users should treat live callbacks as potentially frequent (saving to a database,
+   calling APIs) rather than "once per typing session."
 
-2. **Interaction with `on_change="ignore"`**: If the proposed `on_change="ignore"` mode (from
-   `specs/2026-04-14-on-change-modes/`) is combined with `live`, `on_change="ignore"` takes
-   precedence and prevents any reruns — including the live-update timer firing *and* the blur-triggered
-   rerun described in edge case 7. The widget value is still updated in frontend state and will be
-   available on the next rerun triggered by another widget.
+2. **Interaction with `on_change="ignore"`**: `on_change="ignore"` takes precedence over `live`.
+   Each accepted pause still *stages* the value into widget state with rerun and callback
+   suppressed (today's `setStringValue(..., triggerRerun: false)` path), including on blur, Enter,
+   and search-clear. The value is then available on the next rerun triggered by another widget —
+   it must not remain only in `TextInput` local React state. With `bind="query-params"`, that
+   staged commit updates the URL on each pause (history replacement, same as edge case 10)
+   without rerunning.
 
 3. **Interaction with `st.form`**: Inside a form, `live` has no effect — form widgets only
    commit their value on form submission, never while typing. This is a deterministic, documented
@@ -189,29 +234,34 @@ if email:
    established form behavior.
 
 4. **Interaction with `max_chars`**: Both features work independently. `max_chars` is enforced
-   on the frontend — the native `maxlength` attribute prevents typing past the limit, and the
-   input's change handler also drops any value longer than `max_chars` before the widget is
-   marked dirty. The live-update timer runs off that same change handler, so it only ever fires with
-   within-limit values and needs no extra client-side validation to gate it.
+   on the frontend by the input change handler (`useOnInputChange` early-returns when the new
+   value is longer than `max_chars` before the widget is marked dirty). The backend
+   (`TextInputSerde.deserialize`) also truncates defensively. The live-update timer runs off that
+   same change handler, so it only ever sees within-limit values and needs no extra client-side
+   validation to gate it. Do not rely on a native HTML `maxlength` attribute; `TextInput` does not
+   pass one to the input element (`maxLength` on `InputInstructions` is only the character-count
+   display).
 
-5. **Password inputs**: `live` works with `type="password"` - no special handling needed.
+5. **Password inputs**: `live` works with `type="password"` — no special handling needed. Values
+   still travel on the existing widget path; they are sent more often than on blur/Enter.
 
 6. **Very fast typing**: For `live=True` or a positive duration string, the timer resets on each
-   keystroke, so only the final value (after the user pauses) triggers a rerun. `live="0ms"` is the
-   exception: there is no pause window, so every keystroke triggers a rerun (see the behavior table
-   and its performance warning).
+   accepted value change, so only the final value (after the user pauses) triggers a rerun.
+   Zero-length durations have no pause window, so every accepted change triggers a rerun (see the
+   behavior table and its performance warning).
 
-7. **Blur or Enter while an update is pending**: If the user stops typing and either blurs the field
-   or presses Enter before the timer fires, the pending update should be flushed immediately
-   (commit + rerun) instead of waiting out the remaining delay. Blur and Enter are the two existing
-   commit paths for `st.text_input`, so both must flush the timer — otherwise Enter would appear to
-   "hang" until the timer elapses. This ensures a rerun always occurs when the user leaves or submits
-   the field, providing consistent behavior with the non-live case. The one exception is
-   `on_change="ignore"` (see edge case 2), which suppresses this blur/Enter-triggered rerun as well —
-   the value is only synced to frontend state. Inside an `st.form` this flush logic does not apply at
-   all: because `live` has no effect there (see edge case 3), no timer ever starts, so there is
-   nothing to flush — blur and Enter follow the normal form rules (the value is committed only on
-   form submission, with no mid-edit rerun).
+7. **Blur, Enter, or search-clear while an update is pending**: If the user stops typing and
+   blurs, presses Enter, or clicks the `type="search"` clear control before the timer fires, the
+   pending update should be flushed immediately (commit + rerun) instead of waiting out the
+   remaining delay. Blur, Enter, and search-clear are the existing commit paths for
+   `st.text_input`, so all three must flush the timer — otherwise search-clear (the headline live
+   search case) would wait out the pause after an explicit clear. This ensures a rerun always
+   occurs when the user leaves, submits, or clears the field, consistent with the non-live case.
+   The one exception is `on_change="ignore"` (see edge case 2), which still stages the value but
+   suppresses the rerun. Inside an `st.form` this flush logic does not apply at all: because
+   `live` has no effect there (see edge case 3), no timer ever starts, so there is nothing to
+   flush — blur, Enter, and search-clear follow the normal form rules (the value is committed
+   only on form submission, with no mid-edit rerun).
 
 8. **IME / composition input**: For input methods that build a character over multiple keystrokes
    (e.g., CJK languages, or accented characters via dead keys), the timer must not fire on
@@ -219,32 +269,32 @@ if email:
    only (re)start it on the `compositionend` event, so live updates never flush partial/garbled
    values mid-composition. Only completed characters trigger a rerun.
 
-9. **Interaction with `validate`**: The proposed `validate` parameter (from
-   `specs/2025-12-03-text-input-validation/`) gates *commits* — a value is only sent to the backend
-   (and a rerun triggered) once validation passes on blur/Enter/form submit. `live` only changes
-   *when* a commit is attempted, so the two compose cleanly: each typing pause becomes an
-   additional commit attempt that runs validation exactly like a blur/Enter commit would.
-   - **Client-side regex**: validated instantly in the browser on each pause. If the value
-     matches, the commit + rerun proceed; if it doesn't, the input shows its error state and no
-     rerun occurs — the user keeps typing until the value is valid. This makes live
-     validation feedback (a headline use case) work without any extra machinery.
-   - **Server-side callable**: each pause that produces a *valid-so-far* value fires a
-     validation request. This inherits the same frequency caveat as `on_change` (edge case 1): a
-     live server-side validator can run many times per typing session, so validators should be
-     cheap/idempotent. In-flight validations are cancelled and superseded when the user types again
-     (matching the validation spec's "concurrent validation" edge case).
-   - Empty strings still bypass validation (per the validation spec), so an empty live value
-     commits normally.
+9. **Interaction with `validate`**: Client-side `validate` (regex or `(regex, message)` tuple)
+   already ships on `st.text_input` and gates *commits* — a value is only sent to the backend
+   (and a rerun triggered) once validation passes on blur/Enter/search-clear/form submit. `live`
+   only changes *when* a commit is attempted, so the two compose cleanly: each typing pause
+   becomes an additional commit attempt that runs validation exactly like a blur/Enter commit
+   would. If the value matches, the commit + rerun proceed; if it doesn't, the input shows its
+   error state and no rerun occurs — the user keeps typing until the value is valid. Empty
+   strings still bypass validation, so an empty live value commits normally. A future
+   server-side callable `validate` (not shipped) would inherit the same frequency caveat as
+   `on_change` (edge case 1): validators should be cheap/idempotent, and in-flight validations
+   cancelled when the user types again.
 
-10. **Interaction with `bind="query-params"`**: The proposed `bind="query-params"` (from
-    `specs/2026-01-06-query-param-binding-state-persistence/`) syncs a widget's *committed* value
-    into the URL. Because `live` moves commits from blur/Enter to typing pauses, a bound
-    widget's query param updates after each pause rather than only when the field is left.
-    To avoid polluting browser history with every intermediate value, these live URL updates
-    should use history *replacement* (like `history.replaceState`, the same mechanism query-param
-    binding already uses for widget updates) rather than pushing a new history entry per pause — so
-    the Back button doesn't step through every partial query the user typed. A shared/reloaded URL
-    therefore reflects the value as of the last live commit.
+10. **Interaction with `bind="query-params"`**: `bind="query-params"` already ships and syncs a
+    widget's *committed* value into the URL. Because `live` moves commits from blur/Enter to
+    typing pauses, a bound widget's query param updates after each pause rather than only when
+    the field is left. To avoid polluting browser history with every intermediate value, these
+    live URL updates should use history *replacement* (like `history.replaceState`, the same
+    mechanism query-param binding already uses for widget updates) rather than pushing a new
+    history entry per pause — so the Back button doesn't step through every partial query the
+    user typed. A shared/reloaded URL therefore reflects the value as of the last live commit.
+
+11. **Widget identity**: An optional `False` default is not enough for compatibility. Unkeyed
+    `text_input` IDs hash kwargs passed to `compute_and_register_element_id`. `live` must be
+    identity-neutral when omitted or `False` (same pattern as unset `validate`), otherwise
+    upgrading Streamlit resets every existing text input's state. A non-default `live` value may
+    be part of identity so that toggling live mode can reset the widget.
 
 ## Alternatives Considered
 
@@ -255,8 +305,8 @@ the per-candidate trade-offs follow.
 
 > **Decision:** We use `live` as the parameter name, with the value shape `bool | str` (`True` = on
 > with a default pause, a duration string like `"300ms"` for custom timing, `"0ms"` for every
-> keystroke). Bare-integer milliseconds are intentionally **not** accepted (see the Behavior section
-> in the Proposal).
+> accepted input event). Bare integers, floats, and `timedelta` are intentionally **not** accepted
+> in v1 (see the Behavior section).
 
 The strongest naming precedents in the current API fall into a few groups:
 
@@ -272,8 +322,7 @@ The strongest naming precedents in the current API fall into a few groups:
 parity with `streamlit-keyup` is real but one-time and niche; the native name is permanent and is seen
 by every user, including non-web developers.
 
-**Ranked candidates** (all use the value shape `bool | str`, optionally `| timedelta`, default `False`,
-unless noted):
+**Ranked candidates** (all use the chosen value shape `bool | str`, default `False`, unless noted):
 
 | Rank | Name | Assessment |
 | --- | --- | --- |
@@ -296,165 +345,79 @@ with the terminal "submit" meaning in `st.form` and `st.chat_input`'s `submit_mo
 (`on_*` means a callback in Streamlit), `update_on` (good as a finite enum, poor at also carrying a
 duration), and `realtime` (over-promises — a 300ms-debounced server rerun isn't real-time).
 
-**Value shape — dropping bare integers:** `run_every`, `ttl`, and `toast(duration=...)` all treat a
-bare number as *seconds*, so `live=300` meaning *milliseconds* would be inconsistent, and `"300ms"` is
-more readable than either `300` or `0.3`. Using `bool | str` also avoids the `0 == False` ambiguity
-entirely, while `"0ms"` remains the explicit "every keystroke" opt-in. A bare integer (for example a
-`streamlit-keyup` user's habitual `live=300`) raises a `StreamlitAPIException` that points to `True` or
-a duration string like `"300ms"` (Principle 23).
+**Value shape:** `run_every`, `ttl`, and `toast(duration=...)` all treat a bare number as *seconds*,
+so `live=300` meaning *milliseconds* would be inconsistent (Principles 7 and 10), and `"300ms"` is
+more readable than either `300` or `0.3`. Rejecting positive bare numbers is therefore intentional,
+not only a `0 == False` concern — `streamlit-keyup` users who write `live=300` get a
+`StreamlitAPIException` that points to `True` or `"300ms"` (Principle 23). `timedelta` is deferred
+(Principle 4): every other duration API accepts it and `time_to_seconds` already handles it, but
+adding it later is backwards-compatible. v1 keeps `bool | str` so the on-ramp stays `live=True`.
 
 ### Detailed Trade-offs by Candidate
 
-The subsections below capture the full pros/cons weighed for each candidate, including the ones we
-rejected.
+Unique reasons we rejected or ranked each option. Shared ranking notes live in the table above.
 
-#### Option 1: `debounce` (bool, integer in milliseconds, or duration string)
+#### Option 1: `debounce` (bool, integer milliseconds, or duration string) — rejected
 
-```python
-st.text_input("Search", debounce=True)  # Rerun with sensible default (300ms)
-st.text_input("Search", debounce=300)  # Rerun after 300ms of inactivity
-st.text_input("Search", debounce="0.5s")  # Same, using a duration string
-st.text_input("Search", debounce="0ms")  # Rerun on every keystroke (no debounce)
-st.text_input("Name")  # Default: rerun on blur/enter only
-```
+Would have mirrored `streamlit-keyup`'s `debounce=` integer and accepted a mixed
+`int | str | bool` type.
 
-The parameter accepts a `bool` (on/off with a sensible default), an `int` (delay in milliseconds),
-or a duration string. Duration strings reuse the exact same parsing as `ttl` in
-`st.cache_data`/`st.cache_resource` (see `streamlit.time_util.time_to_seconds`, backed by
-`pandas.Timedelta`), so `"300ms"`, `"0.5s"`, and `"1s"` are all valid and behave consistently with
-the rest of the API.
+**Why not:** "Debounce" is frontend jargon (Principle 8). Bare integer milliseconds would also
+collide with Streamlit's "bare number = seconds" duration convention and with `0 == False`.
 
-**Pros:**
-- Familiar to web developers (standard term in JavaScript/frontend)
-- Simple `debounce=True` for most use cases, an explicit ms int or duration string when needed
-- Mirrors `streamlit-keyup` API (which uses an integer `debounce`) for easy migration
-- Duration strings make the unit explicit (`"300ms"` reads unambiguously, unlike a bare `300`) and
-  are consistent with `ttl` in `st.cache_data`/`st.cache_resource`, so users already know the format
-- Allows fine-grained control over debounce timing when needed
+#### Option 2: Dedicated on/off parameter (`keyup` / `live_update` boolean, or `update_on` string enum) — rejected as the sole surface
 
-**Cons:**
-- Term "debounce" may be unfamiliar to data scientists — a direct conflict with API Principle 8
-  (semantic names over geeky names). This is the main reason we did **not** choose it, despite the
-  migration parity with `streamlit-keyup` (which already popularized `debounce` among the exact users
-  we are targeting).
-- The `int | str | bool` type overloads a single parameter as both an on/off switch (`True`/`False`)
-  and a delay (numeric ms or duration string), which is in tension with API Principle 16 (prefer
-  enums over booleans). It mirrors the existing `st.json(expanded=...)` and `st.navigation(expanded=...)`
-  APIs (the `bool | int` "flag or number" shape) and the `ttl` parameter (the duration-string shape),
-  so the pattern is not novel — but the bare-`int` half is the part we ultimately dropped (see the
-  chosen values above).
-- **The `debounce=0` vs `debounce=False` footgun.** Because `0 == False` in Python, a bare integer `0`
-  is ambiguous with `False` even though they mean the *opposite* thing (`False` = off; every-keystroke
-  = the *most* aggressive setting). The `debounce` proposal mitigated this by raising a
-  `StreamlitAPIException` on bare `0`/negative ints and steering users to `False` or `"0ms"`. The
-  chosen `live` design avoids the footgun structurally by not accepting bare integers at all.
+A boolean or enum would turn live updates on with a fixed default pause and no timing control.
 
-#### Option 2: Dedicated on/off parameter (`keyup`/`live_update` boolean, or `update_on` string enum)
+**Why not:** Several `streamlit-keyup` use cases rely on tuning the delay. `update_on` as a string
+enum is the most principle-aligned of this group (Principle 16) but is a poor carrier for a
+duration. `live_update` remains the naming runner-up (see ranking above).
 
-```python
-# Using keyup=True (boolean)
-st.text_input("Search", keyup=True)
-
-# Using live_update=True (boolean)
-st.text_input("Search", live_update=True)
-
-# Using update_on="input" (string enum)
-st.text_input("Search", update_on="input")
-```
-
-These would use a sensible default debounce (e.g., 200-300ms) without exposing configuration.
-Note that `keyup` and `live_update` are booleans, whereas `update_on` is a **string enum** — not a
-boolean — so it is grouped here as the "on/off" alternative but sits closest to Principle 16 (prefer
-enums over booleans) and Principle 9 (matches the existing `on_change` / `on_click` vocabulary), and
-could later grow to carry timing/mode values (e.g. `update_on="blur"` vs `"input"`).
-
-**Pros:**
-- `keyup` mirrors the `streamlit-keyup` component name, familiar to existing users
-- `live_update` is self-documenting, clear intent
-- `update_on` follows existing `on_change`, `on_click` naming patterns and, as a string enum, is the
-  most future-proof of the three (can add new modes without adding more booleans)
-- Simpler API - no need to understand milliseconds
-
-**Cons:**
-- No control over the delay (may not suit all use cases), which is the main reason we prefer the
-  flag-or-duration shape — several `streamlit-keyup` use cases rely on tuning the delay
-- `keyup` is a technical DOM event name, less semantic
-- `update_on="input"` vs `"change"` distinction may be confusing (HTML semantics)
-
-#### Option 3: `on_input` callback (separate from `on_change`)
+#### Option 3: `on_input` callback (separate from `on_change`) — rejected
 
 ```python
 st.text_input("Search", on_input=handle_typing)  # Called per keystroke
 st.text_input("Search", on_change=handle_submit)  # Called on blur/enter
 ```
 
-**Pros:**
-- Consistent with callback pattern
-- Can have both behaviors simultaneously
-
-**Cons:**
-- Callbacks are less common in Streamlit (most users rely on return values)
-- Doesn't address the delay requirement
-- Adds API complexity
+**Why not:** Most Streamlit users rely on return values, not callbacks; a second callback does not
+address delay configuration and adds API surface.
 
 #### Option 4: Semantic rename keeping the flag-or-duration shape (`live` or `auto_submit`) — chosen (`live`)
 
-The flag-or-duration shape (`bool | str`: `True` for the default pause, a duration string like
-`"300ms"` for custom timing, `"0ms"` for every keystroke) — only the parameter name changes from the
-`debounce` jargon to a more semantic term. Bare-integer milliseconds are dropped (unlike Option 1),
-which removes the `0 == False` footgun. Unlike Option 2's boolean-only `live_update`, this keeps full
-timing control.
+The chosen shape (`bool | str`: `True` for the default pause, a duration string for custom timing,
+`"0ms"` for every accepted input event). Bare-integer milliseconds are dropped (unlike Option 1).
 
-```python
-# Using live (chosen)
-st.text_input("Search", live=True)  # On, sensible default delay (300ms)
-st.text_input("Search", live="300ms")  # Custom delay
-st.text_input("Search", live="0ms")  # Every keystroke
-
-# Using auto_submit (rejected)
-st.text_input("Search", auto_submit=True)
-st.text_input("Search", auto_submit="300ms")
-```
-
-**Pros:**
-- Semantic and understandable to data scientists without a web background (Principle 8), unlike the
-  `debounce` jargon
-- Keeps the full flag-or-duration flexibility of Option 1, so no timing use case is lost (the main
-  advantage over Option 2)
-- `live=True` / `auto_submit=True` reads naturally for the common on/off case
-- `auto_submit` has an intuitive mental model: a `text_input` already "submits" its value on
-  Enter/blur, so `auto_submit=True` reads as "submit automatically while typing"
-
-**Cons:**
-- Loses the `streamlit-keyup` migration parity that motivates `debounce` (those users already know
-  `debounce`). Bare-integer milliseconds are not accepted, so migrating users must switch
-  `debounce=500` → `live="500ms"` — guided by the exception message on a bare integer (Principle 23).
-- `live` alone is somewhat vague about *what* is going live (resolved by widget context and the
-  docstring).
-- `auto_submit` overloads "submit", which already carries a distinct, **terminal** meaning in
-  `st.form` (submit button) and `st.chat_input` (`submit_mode`). Using it for continuous,
-  intermediate updates introduces a second, conflicting sense of "submit" across the text widgets
-  (Principles 7 and 10: standardized vocabulary, same name / same behavior). It also makes the
-  in-form no-op (edge case 3) read as a contradiction ("I set `auto_submit=True`, why does it never
-  submit?"), whereas `live` describes typing responsiveness and degrades more gracefully inside a
-  form. This is why we chose `live` over `auto_submit`.
+**Why `live` over `auto_submit`:** `auto_submit` overloads "submit", which already has a terminal
+meaning in `st.form` and `st.chat_input` (`submit_mode`). Continuous intermediate updates would
+give "submit" a second sense (Principles 7 and 10) and make the in-form no-op read as a
+contradiction.
 
 ## Out of Scope (Future Work)
 
 - **`st.text_area` support**: Extend the `live` parameter to `st.text_area` with identical
   behavior. Note: Enter key inserts a newline in text_area (unlike text_input where it submits),
   so live updates would be the primary rerun trigger while typing.
+- **Other widgets**: This spec does not name a cross-widget `live=` vocabulary. `st.slider` /
+  `st.number_input` / similar would need their own specs if we want commit-while-interacting
+  there.
+- **`timedelta` values**: Accept `datetime.timedelta` later, matching `ttl` / `run_every`.
 - **Throttle mode**: Rate-limiting (e.g., "at most once per 500ms while typing") as opposed to the
   debounce behavior `live` uses (waiting for a pause). Could add a `throttle` parameter if needed.
 - **Cancel/abort pattern**: Mechanism to cancel in-flight computations when new input arrives.
   Users can implement this with `st.session_state` flags.
+- **Silent running / stale UI**: Special-casing the run indicator or stale-element opacity for
+  live-triggered reruns.
+- **Announcing live results to assistive tech**: Whether apps or Streamlit should wrap
+  live-updated result regions in `aria-live`. Implementation must not re-announce the whole page
+  on every pause.
 
 ## Checklist
 
 | Item                         | ✅ or comment |
 | ---------------------------- | ------------- |
-| Works on SiS, Cloud, etc?    | ✅ frontend-only live-update logic |
-| No breaking API changes      | ✅ new optional parameter with False default |
+| Works on SiS, Cloud, etc?    | ✅ coordinated Python + protobuf + frontend; live commits use the widget's existing rerun scope |
+| No breaking API changes      | ✅ new optional parameter; `live` omitted or `False` must be identity-neutral so existing unkeyed text inputs keep their state |
 | No new dependencies          | ✅ |
 | Metrics collected            | ✅ existing text_input metrics apply |
 | Any security/legal impact?   | ✅ None |
