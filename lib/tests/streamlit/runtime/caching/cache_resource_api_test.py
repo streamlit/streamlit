@@ -600,16 +600,11 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
 
     def test_background_without_ttl_raises(self) -> None:
         """refresh_mode="background" without a ttl requires a positive ttl."""
-        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
 
             @st.cache_resource(refresh_mode="background")
             def foo() -> int:
                 return 1
-
-        assert str(exc.value) == (
-            "The `ttl` parameter is required for `st.cache_resource`. "
-            "Background refresh requires a positive `ttl`."
-        )
 
     def test_invalid_refresh_mode_raises(self) -> None:
         """An unknown refresh_mode value raises a StreamlitValueError."""

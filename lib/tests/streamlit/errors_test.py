@@ -253,34 +253,28 @@ def test_invalid_max_error_with_corrective_action() -> None:
 
 
 def test_missing_required_parameter_error_message() -> None:
-    """Default message includes command and parameter."""
-    exc = errors.StreamlitMissingRequiredParameterError("st.expander", "label")
-    assert str(exc) == "The `label` parameter is required for `st.expander`."
+    """Default message includes the parameter."""
+    exc = errors.StreamlitMissingRequiredParameterError("label")
+    assert str(exc) == "The `label` parameter is required."
     assert exc.exec_kwargs["parameter"] == "label"
 
 
 def test_missing_required_parameter_error_with_detail() -> None:
     """Optional detail is appended to the default message."""
     exc = errors.StreamlitMissingRequiredParameterError(
-        "st.toast",
         "body",
         detail="It cannot be blank.",
     )
-    assert str(exc) == (
-        "The `body` parameter is required for `st.toast`. It cannot be blank."
-    )
+    assert str(exc) == ("The `body` parameter is required. It cannot be blank.")
 
 
 def test_missing_required_parameter_error_detail_with_braces() -> None:
     """Detail text with braces does not break message formatting."""
     exc = errors.StreamlitMissingRequiredParameterError(
-        "st.dialog",
         "title",
         detail="Example: use {value}.",
     )
-    assert str(exc) == (
-        "The `title` parameter is required for `st.dialog`. Example: use {value}."
-    )
+    assert str(exc) == ("The `title` parameter is required. Example: use {value}.")
 
 
 def test_incompatible_parameters_error_formats_uses() -> None:

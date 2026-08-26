@@ -878,7 +878,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitValueError:scope",
         ),
         (
-            StreamlitMissingRequiredParameterError("st.expander", "label"),
+            StreamlitMissingRequiredParameterError("label"),
             "StreamlitMissingRequiredParameterError:label",
         ),
         (

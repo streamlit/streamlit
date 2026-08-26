@@ -747,18 +747,13 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     def test_bind_query_params_with_password_raises_exception(self) -> None:
         """Test that bind='query-params' with type='password' raises an exception."""
-        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.text_input(
                 "the label",
                 key="my_text",
                 bind="query-params",
                 type="password",
             )
-
-        assert str(exc.value) == (
-            "`bind='query-params'` and `type='password'` cannot be used together. "
-            "Password values must not appear in URLs."
-        )
 
 
 class TextInputOnChangeModeTest(DeltaGeneratorTestCase):

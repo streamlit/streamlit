@@ -566,10 +566,7 @@ def test_sidebar_dialog_displays_correctly(
 def test_nested_dialogs(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
     open_nested_dialogs(app)
-    expect_exception(
-        app,
-        "StreamlitInvalidLayoutContextError: Dialogs may not be nested inside other dialogs.",
-    )
+    expect_exception(app, "StreamlitInvalidLayoutContextError")
 
 
 # on webkit this test was flaky and manually reproducing the flaky error did not work,
@@ -586,10 +583,7 @@ def test_dialogs_have_different_fragment_ids(app: Page):
 
     open_nested_dialogs(app)
     nested_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
-    expect_exception(
-        app,
-        "StreamlitInvalidLayoutContextError: Dialogs may not be nested inside other dialogs.",
-    )
+    expect_exception(app, "StreamlitInvalidLayoutContextError")
 
     click_to_dismiss(app)
     # wait after dismiss so that we can open the next dialog

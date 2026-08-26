@@ -118,9 +118,7 @@ class CacheReadResult(Generic[R]):
     is_stale: bool
 
 
-def validate_refresh_mode(
-    refresh_mode: str, ttl_seconds: float | None, *, command: str
-) -> None:
+def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
     """Validate the ``refresh_mode`` parameter shared by both cache decorators.
 
     Parameters
@@ -129,9 +127,6 @@ def validate_refresh_mode(
         The user-provided ``refresh_mode`` value.
     ttl_seconds : float or None
         The resolved ttl in seconds (``None`` if no ttl was provided).
-    command : str
-        The public command name used in missing-parameter errors
-        (``st.cache_data`` or ``st.cache_resource``).
 
     Raises
     ------
@@ -145,7 +140,6 @@ def validate_refresh_mode(
 
     if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
         raise StreamlitMissingRequiredParameterError(
-            command,
             "ttl",
             detail="Background refresh requires a positive `ttl`.",
         )

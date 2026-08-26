@@ -75,7 +75,6 @@ def _dialog_decorator(
 ) -> F:
     if title is None or title == "":
         raise StreamlitMissingRequiredParameterError(
-            "st.dialog",
             "title",
             detail='For example: `@st.dialog("Example Title")`.',
         )

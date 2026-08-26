@@ -991,7 +991,7 @@ class LayoutsMixin:
 
         """
         if not tabs:
-            raise StreamlitMissingRequiredParameterError("st.tabs", "tabs")
+            raise StreamlitMissingRequiredParameterError("tabs")
 
         if default and default not in tabs:
             raise StreamlitDefaultNotInOptionsError(default)
@@ -1379,7 +1379,7 @@ class LayoutsMixin:
 
         """
         if label is None:
-            raise StreamlitMissingRequiredParameterError("st.expander", "label")
+            raise StreamlitMissingRequiredParameterError("label")
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
@@ -1766,7 +1766,7 @@ class LayoutsMixin:
 
         """
         if label is None:
-            raise StreamlitMissingRequiredParameterError("st.popover", "label")
+            raise StreamlitMissingRequiredParameterError("label")
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"

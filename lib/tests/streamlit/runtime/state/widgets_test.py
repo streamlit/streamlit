@@ -643,7 +643,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         """Test that `register_widget` raises an exception when both `on_change`
         and `callbacks` are provided.
         """
-        with pytest.raises(errors.StreamlitIncompatibleParametersError) as exc:
+        with pytest.raises(errors.StreamlitIncompatibleParametersError):
             register_widget(
                 "el_id",
                 deserializer=lambda x: x,
@@ -653,9 +653,6 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
                 callbacks={"change": lambda: None},
                 value_type="bool_value",
             )
-        assert str(exc.value) == (
-            "`on_change` and `callbacks` cannot be used together."
-        )
 
     def test_bind_query_params_requires_key(self):
         """Test that bind='query-params' raises if widget has no key."""

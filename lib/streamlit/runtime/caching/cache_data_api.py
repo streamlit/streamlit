@@ -716,7 +716,6 @@ class CacheDataAPI:
         validate_refresh_mode(
             refresh_mode,
             time_to_seconds(ttl, coerce_none_to_inf=False),
-            command="st.cache_data",
         )
 
         if refresh_mode == "background" and persist_string is not None:

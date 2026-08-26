@@ -528,7 +528,7 @@ class ChatMixin:
 
         """
         if name is None:
-            raise StreamlitMissingRequiredParameterError("st.chat_message", "name")
+            raise StreamlitMissingRequiredParameterError("name")
 
         if avatar is None and (
             name.lower() in {item.value for item in PresetNames} or is_emoji(name)

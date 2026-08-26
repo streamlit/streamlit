@@ -131,11 +131,11 @@ generic `StreamlitAPIException` with a one-off message.
   enum-like options). Optional `detail` is overlay-only and is not appended
   in uncaught-exception telemetry. Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
-- `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
+- `StreamlitMissingRequiredParameterError(parameter, *, detail=None)`:
   use when a required parameter is missing, `None`, or empty, including an
   empty sequence. `parameter` is appended in uncaught-exception telemetry
   (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
-  `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
+  `raise StreamlitMissingRequiredParameterError("label")`.
 - `StreamlitIncompatibleParametersError(*uses, *, explanation=None)`: use
   when two or more parameter uses cannot be combined. Pass the value when
   the conflict depends on it (`wrap=False`), or the bare parameter name

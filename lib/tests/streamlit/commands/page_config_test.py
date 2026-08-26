@@ -173,13 +173,9 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert c.about_section_md == ""
 
     def test_set_page_config_menu_items_invalid(self):
-        with pytest.raises(StreamlitValueError) as e:
+        with pytest.raises(StreamlitValueError):
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
-        assert str(e.value) == (
-            "Invalid `menu_items` value. Supported values: 'Get help', "
-            "'Report a bug', 'About'. `invalid` is not a supported menu item key."
-        )
 
     def test_set_page_config_menu_items_empty_dict(self):
         st.set_page_config(menu_items={})

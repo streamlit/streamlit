@@ -267,7 +267,6 @@ class Page:
         if isinstance(page, str) and is_url(page):
             if title is None or title.strip() == "":
                 raise StreamlitMissingRequiredParameterError(
-                    "st.Page",
                     "title",
                     detail=(
                         "External URL pages require a non-empty title. "
@@ -342,7 +341,6 @@ class Page:
             # not exist. In that case, we should inform the user the title is
             # mandatory.
             raise StreamlitMissingRequiredParameterError(
-                "st.Page",
                 "title",
                 detail="Streamlit cannot infer a title from this callable.",
             )
@@ -357,7 +355,6 @@ class Page:
 
         if self._title.strip() == "":
             raise StreamlitMissingRequiredParameterError(
-                "st.Page",
                 "title",
                 detail="It cannot be empty or consist of underscores/spaces only.",
             )

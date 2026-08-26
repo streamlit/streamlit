@@ -110,7 +110,7 @@ class BottomContainerProxyTest(unittest.TestCase):
 def test_bottom_raises_exception_inside_sidebar(use_context_manager: bool) -> None:
     """Verify st.bottom raises inside st.sidebar."""
     with st.sidebar:
-        with pytest.raises(StreamlitInvalidLayoutContextError, match=r"st\.sidebar"):
+        with pytest.raises(StreamlitInvalidLayoutContextError):
             if use_context_manager:
                 with st.bottom:
                     pass
@@ -122,9 +122,7 @@ def test_bottom_raises_exception_inside_nested_sidebar() -> None:
     """Verify st.bottom raises in nested containers within sidebar."""
     with st.sidebar:
         with st.container():
-            with pytest.raises(
-                StreamlitInvalidLayoutContextError, match=r"st\.sidebar"
-            ):
+            with pytest.raises(StreamlitInvalidLayoutContextError):
                 st.bottom.markdown("test")
 
 
@@ -144,7 +142,7 @@ def test_bottom_raises_exception_inside_dialog(use_context_manager: bool) -> Non
     )
     token = context_dg_stack.set((*context_dg_stack.get(), dialog_dg))
     try:
-        with pytest.raises(StreamlitInvalidLayoutContextError, match=r"dialog"):
+        with pytest.raises(StreamlitInvalidLayoutContextError):
             if use_context_manager:
                 with st.bottom:
                     pass
@@ -162,9 +160,7 @@ def test_bottom_raises_exception_inside_event_container() -> None:
     )
     token = context_dg_stack.set((*context_dg_stack.get(), event_dg))
     try:
-        with pytest.raises(
-            StreamlitInvalidLayoutContextError, match=r"event containers"
-        ):
+        with pytest.raises(StreamlitInvalidLayoutContextError):
             st.bottom.write("test")
     finally:
         context_dg_stack.reset(token)

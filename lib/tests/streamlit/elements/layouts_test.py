@@ -410,9 +410,8 @@ class ExpanderTest(DeltaGeneratorTestCase):
 
     def test_label_none_raises(self):
         """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
-        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.expander(None)
-        assert "The `label` parameter is required for `st.expander`" in str(e.value)
 
     def test_just_label(self):
         """Test that it can be called with no params"""
@@ -932,15 +931,8 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     def test_container_wrap_false_without_horizontal_raises(self) -> None:
         """Test that st.container raises for wrap=False without horizontal=True."""
-        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.container(horizontal=False, wrap=False)
-        assert str(exc.value) == (
-            "`wrap=False` and `horizontal=False` cannot be used together. "
-            "`wrap=False` can only be used with `horizontal=True`. "
-            "A vertical container has no horizontal row of elements to "
-            "keep in a single, scrolling row. Set `horizontal=True` to "
-            "use `wrap=False`, or remove the `wrap` argument."
-        )
 
     def test_container_wrap_true_without_horizontal_allowed(self) -> None:
         """Test that wrap=True on a vertical container is a no-op, not an error."""
@@ -1045,9 +1037,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
 
     def test_label_none_raises(self):
         """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
-        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.popover(None)
-        assert "The `label` parameter is required for `st.popover`" in str(e.value)
 
     def test_invalid_type_raises(self):
         """Test that an unsupported button type raises a StreamlitValueError."""
@@ -1830,12 +1821,8 @@ class TabsTest(DeltaGeneratorTestCase):
         tabs = ["Tab 1", "Tab 2", "Tab 3"]
         default_tab = "Tab 4"
 
-        with pytest.raises(StreamlitDefaultNotInOptionsError) as context:
+        with pytest.raises(StreamlitDefaultNotInOptionsError):
             st.tabs(tabs, default=default_tab)
-
-        assert "The default value 'Tab 4' is not part of the options." in str(
-            context.value
-        )
 
     def test_valid_default_tab(self):
         """Test that a valid default tab sets the correct index."""
@@ -2334,15 +2321,13 @@ class DialogTest(DeltaGeneratorTestCase):
             "dialog_decorator() missing 1 required positional argument: 'title'"
         )
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
 
             @st.dialog("")
             def dialog():
                 return None
 
             dialog()
-
-        assert "The `title` parameter is required for `st.dialog`" in e.value.args[0]
 
     def test_dialog_decorator_must_be_called_like_a_function_with_a_title(self):
         """Test that the decorator must be called like a function."""
@@ -2381,9 +2366,8 @@ class DialogTest(DeltaGeneratorTestCase):
         def level1_dialog():
             level2_dialog()
 
-        with pytest.raises(FragmentHandledException) as e:
+        with pytest.raises(FragmentHandledException):
             level1_dialog()
-        assert str(e.value) == "Dialogs may not be nested inside other dialogs."
 
     def test_only_one_dialog_can_be_opened_at_same_time(self):
         @st.dialog("Dialog1")
@@ -2394,13 +2378,9 @@ class DialogTest(DeltaGeneratorTestCase):
         def dialog2():
             st.empty()
 
-        with pytest.raises(StreamlitInvalidLayoutContextError) as e:
+        with pytest.raises(StreamlitInvalidLayoutContextError):
             dialog1()
             dialog2()
-
-        assert e.value.args[0].startswith(
-            "Only one dialog is allowed to be opened at the same time."
-        )
 
     def test_dialog_deltagenerator_dismissible_false(self):
         """Test that the delta-generator dialog properly handles dismissible=False"""

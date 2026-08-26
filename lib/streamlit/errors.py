@@ -355,15 +355,12 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
     ``StreamlitMissingRequiredParameterError:label``.
     """
 
-    def __init__(
-        self, command: str, parameter: str, *, detail: str | None = None
-    ) -> None:
-        message = "The `{parameter}` parameter is required for `{command}`."
+    def __init__(self, parameter: str, *, detail: str | None = None) -> None:
+        message = "The `{parameter}` parameter is required."
         if detail:
             message += " {detail}"
         super().__init__(
             message,
-            command=command,
             parameter=parameter,
             detail=detail,
         )
