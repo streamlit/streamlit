@@ -327,13 +327,11 @@ function Tooltip({
                 flexDirection: "row",
                 justifyContent: inline ? "flex-end" : "",
                 width: containerWidth ? "100%" : "auto",
-                // Only constrain the trigger when it is meant to fill its
-                // parent. Applying maxWidth/minWidth on every tooltip can
-                // shrink unrelated triggers (wide buttons, dataframe chrome)
-                // below their content size.
-                ...(containerWidth
-                  ? { maxWidth: "100%", minWidth: 0 }
-                  : undefined),
+                // Always cap and allow shrinking: this trigger is often a flex
+                // item (e.g. badge+help via TooltipIcon), and min-width:auto
+                // would otherwise grow to content and skip ellipsis.
+                maxWidth: "100%",
+                minWidth: 0,
                 ...style,
               }}
               testId={
