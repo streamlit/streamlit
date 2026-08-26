@@ -234,8 +234,6 @@ class MarkdownMixin:
               appears when the element is narrower than its text. In a
               horizontal container, the default ``width="auto"`` sizes to
               the content, so pass ``width="stretch"`` or a pixel width.
-              Hovering the truncated text reveals the full plain-text
-              content, including when ``help`` is set.
 
         Examples
         --------
@@ -355,9 +353,7 @@ class MarkdownMixin:
               it wraps onto additional lines.
             - ``False``: The caption stays on one line. Overflow is truncated
               with an ellipsis. Markdown is limited to inline formatting
-              (the same subset used in widget labels). Hovering the truncated
-              text reveals the full plain-text content, including when
-              ``help`` is set.
+              (the same subset used in widget labels).
 
         Examples
         --------

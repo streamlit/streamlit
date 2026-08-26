@@ -98,9 +98,7 @@ class TextMixin:
               lines. Truncation only appears when the element is
               narrower than its text. Combine ``wrap=False`` with
               ``width="stretch"`` or a pixel width; the default
-              ``width="content"`` sizes to the full text. Hovering the
-              truncated text reveals the full plain-text content, including
-              when ``help`` is set.
+              ``width="content"`` sizes to the full text.
 
         Examples
         --------
