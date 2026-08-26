@@ -29,7 +29,7 @@ The widget was later migrated from BaseWeb to React Aria Components (PR [#16175]
 
 3. **Cluttered UI with Many Selections:** For use cases like plotting, selecting 1000+ options creates unusable visualizations with cluttered charts and excessive rendering time.
 
-The original freeze from clicking "Select all" on 100k+ options ([#15299](https://github.com/streamlit/streamlit/issues/15299)) is already mitigated by hiding the action at 1000+ total options. Selecting that many values would still be expensive (`select_all=True` would re-expose it), because the widget must serialize all selected values, re-render a tag per selection, and send the data to the backend.
+The freeze in [#15299](https://github.com/streamlit/streamlit/issues/15299) is from **applying** a huge bulk selection — serializing every selected value, rendering a tag per selection, and sending it to the backend — not from displaying the option list in the dropdown. Hiding the bulk action at 1000+ total options already mitigates clicking "Select all" on 100k+ options. Selecting that many values would still be expensive (`select_all=True` would re-expose it).
 
 ### User Requests
 
@@ -243,6 +243,15 @@ select_all: bool | int | Literal["auto"] = "auto"
 ```
 
 **Decision:** Rejected. An integer default of `1000` is explicit and matches the shipped gate. A later change to that gate would be a documented default change either way. Streamlit uses string sentinels like `width="stretch"` for layout, not for numeric performance thresholds.
+
+### Alternative 6: Reuse `max_selections` instead of an integer threshold
+
+`max_selections` already limits how many values can be selected. Two variants:
+
+1. Drop the integer form of `select_all`. Show "Select all" only when the selectable count is at or below `max_selections` (and never, or always, when `max_selections` is unset).
+2. Replace the integer with a `"max_selections"` sentinel (`select_all: bool | Literal["max_selections"]`). `True` always shows; `"max_selections"` shows only when the selectable count is at or below `max_selections`.
+
+**Decision:** Rejected. `max_selections` is a product cap ("the user may pick at most N"); the `select_all` integer is a performance/visibility gate on one bulk click. Most apps leave `max_selections` unset, so variant 1 would either always show "Select all" (regressing the freeze) or never show it. Variant 2 still needs a default integer for those apps, which is the current design. The two also compose independently: `max_selections=5` on a 10k list still shows "Select all" today and truncates to 5; gating visibility on `max_selections` would hide that shortcut. Apps that want no bulk-select already use `select_all=False` without imposing a selection cap.
 
 ## Out of Scope (Future Work)
 
