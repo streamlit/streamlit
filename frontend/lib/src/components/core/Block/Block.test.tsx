@@ -28,12 +28,21 @@ import {
 
 import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
+import { mockEndpoints } from "~lib/mocks/mocks"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
+
+// SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
+// async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
+// Mocking it here prevents the animation machinery from running in unit tests.
+vi.mock("react-aria-components", async importOriginal => {
+  const actual = await importOriginal<typeof import("react-aria-components")>()
+  return { ...actual, SelectionIndicator: () => null }
+})
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -728,5 +737,145 @@ describe("BlockNodeRenderer direct column wrapping context", () => {
     await renderColumnChildren([nestedContainer])
 
     expect(screen.queryByTitle(label)).not.toBeInTheDocument()
+  })
+})
+
+describe("BlockNodeRenderer container types", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+  const endpoints = mockEndpoints()
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function makeBlockNodeComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        endpoints={endpoints}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("renders nothing for an empty block that does not allow empty", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: false })
+    )
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    expect(screen.queryByTestId("stLayoutWrapper")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stForm")).not.toBeInTheDocument()
+  })
+
+  it("renders a form block and registers submit behaviors", () => {
+    const setFormSubmitBehaviorsSpy = vi.spyOn(
+      widgetMgr,
+      "setFormSubmitBehaviors"
+    )
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("form child")], {
+          form: {
+            formId: "form-1",
+            clearOnSubmit: true,
+            enterToSubmit: false,
+            border: true,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stForm")).toBeVisible()
+    expect(screen.getByText("form child")).toBeVisible()
+    expect(setFormSubmitBehaviorsSpy).toHaveBeenCalledWith(
+      "form-1",
+      true,
+      false
+    )
+  })
+
+  it("renders a chat message block", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("hello")], {
+          chatMessage: { name: "assistant" },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stChatMessage")).toBeVisible()
+    expect(screen.getByText("hello")).toBeVisible()
+  })
+
+  it("renders an empty chat message", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([], { chatMessage: { name: "user" } })
+      )
+    )
+
+    expect(screen.getByTestId("stChatMessage")).toBeVisible()
+    expect(screen.getByTestId("stChatMessageContent")).toBeVisible()
+  })
+
+  it("renders a dialog block when open", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("dialog body")], {
+          dialog: {
+            title: "My dialog",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stDialog")).toBeVisible()
+    expect(screen.getByText("dialog body")).toBeVisible()
+  })
+
+  it("renders a tab container", () => {
+    const tab = makeVerticalBlock([text("tab body")], {
+      tab: { label: "Tab 0" },
+    })
+    renderWithContexts(
+      makeBlockNodeComponent(makeVerticalBlock([tab], { tabContainer: {} }))
+    )
+
+    expect(screen.getByTestId("stTabs")).toBeVisible()
+    expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
+    expect(screen.getByTestId("stTabs")).not.toHaveStyle({ height: "400px" })
+  })
+
+  it("applies a constraining pixel height to a tab container", () => {
+    const tab = makeVerticalBlock([text("tab body")], {
+      tab: { label: "Tab 0" },
+    })
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([tab], {
+          tabContainer: {},
+          heightConfig: { pixelHeight: 400 },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stTabs")).toBeVisible()
+    expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
+    expect(screen.getByTestId("stTabs")).toHaveStyle({ height: "400px" })
   })
 })

@@ -2952,6 +2952,64 @@ describe("DateInput month/year picker escape handling", () => {
 
     expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
   })
+
+  it("Tab in the month picker closes the picker without closing the calendar", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    await user.click(monthTrigger)
+
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toBeVisible()
+
+    await user.keyboard("{Tab}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
+
+  it("selecting a year from the picker keeps the calendar open", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const yearTrigger = within(calendar).getByRole("button", {
+      name: "year",
+    })
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    expect(yearTrigger).toHaveTextContent("1970")
+    expect(monthTrigger).toHaveTextContent("January")
+
+    await user.click(yearTrigger)
+    await user.click(await screen.findByRole("option", { name: "1971" }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+    expect(yearTrigger).toHaveTextContent("1971")
+    expect(monthTrigger).toHaveTextContent("January")
+  })
 })
 
 describe("DateInput query param binding", () => {
