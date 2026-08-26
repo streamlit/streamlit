@@ -170,10 +170,10 @@ def _require_zero_arg_callable(obj: Any) -> None:
 def _callable_source_candidates(obj: Any) -> list[Any]:
     """Return objects to try when resolving a callable's source file.
 
-    Plain functions work with ``inspect.getsourcefile`` directly. Common
-    zero-argument callables such as ``functools.partial`` and callable class
-    instances do not, so also try their underlying function / ``__call__``,
-    including nested partials and partials wrapping callable instances.
+    Candidates are listed from the outer object inward: the original
+    callable, then ``inspect.unwrap`` results, ``functools.partial.func``,
+    and a callable instance's ``type.__call__``. Nested partials and
+    partials wrapping callable instances are included.
     """
     candidates: list[Any] = []
     seen: set[int] = set()
@@ -202,27 +202,26 @@ def _callable_source_candidates(obj: Any) -> list[Any]:
 
 
 def _resolve_callable_source_path(obj: Any) -> Path:
-    """Resolve the filesystem source path for a callable entrypoint."""
-    source_file: str | None = None
+    """Resolve the filesystem source path for a callable entrypoint.
+
+    Candidates are walked from the outer object inward. The innermost
+    existing source file wins, so a decorated function defined in the app
+    module is not anchored to the decorator's module.
+    """
+    script_path: Path | None = None
     for candidate in _callable_source_candidates(obj):
         try:
             source_file = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
         except (OSError, TypeError):
             continue
-        if source_file is not None:
-            break
+        candidate_path = Path(source_file).resolve()
+        if candidate_path.is_file():
+            script_path = candidate_path
 
-    if source_file is None:
+    if script_path is None:
         raise StreamlitAPIException(
             "The st.App callable entrypoint must be defined in a "
             "filesystem-backed Python source file."
-        )
-
-    script_path = Path(source_file).resolve()
-    if not script_path.is_file():
-        raise StreamlitAPIException(
-            "The source file for the st.App callable entrypoint could not "
-            f"be found: '{script_path}'."
         )
     return script_path
 
@@ -413,6 +412,8 @@ class App:
             uvicorn), the source file also pins config.
           - Streamlit retains the callable object for the lifetime of the
             ``App``; restart the process after changing its definition.
+          - Callable execution takes precedence over a legacy ``pages/``
+            directory. Use ``st.navigation`` for multipage callable apps.
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
         value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import inspect
 import json
 import os
@@ -1685,6 +1686,37 @@ class TestAppInit:
         assert app.script_path == Path(__file__).resolve()
         assert app._script_entrypoint is entry
 
+    def test_app_resolves_decorated_callable_to_wrapped_source(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Decorated entrypoints anchor to the wrapped function, not the decorator."""
+        decorator_file = tmp_path / "st_app_callable_deco.py"
+        decorator_file.write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+        )
+        app_file = tmp_path / "st_app_callable_wrapped.py"
+        app_file.write_text(
+            "from st_app_callable_deco import deco\n\n@deco\ndef main():\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_deco", "st_app_callable_wrapped"):
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_wrapped")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in ("st_app_callable_deco", "st_app_callable_wrapped"):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+        assert app._script_entrypoint is app_mod.main
+
     def test_app_rejects_async_callable(self) -> None:
         """st.App rejects async function callables."""
 
@@ -1738,7 +1770,7 @@ class TestAppInit:
 
         with (
             patch.object(inspect, "getsourcefile", return_value=None),
-            patch.object(inspect, "getfile", return_value=None),
+            patch.object(inspect, "getfile", side_effect=TypeError),
             pytest.raises(StreamlitAPIException, match="filesystem-backed"),
         ):
             App(main)
