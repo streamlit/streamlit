@@ -871,6 +871,13 @@ def test_wrap_false_ellipsizes_markdown_and_sets_title(
     expect(wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
     expect_label_truncated(no_wrap)
 
+    help_container = get_element_by_key(app, "wrap_false_markdown_help")
+    help_md = help_container.get_by_test_id("stMarkdown")
+    expect(help_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect_label_truncated(help_md)
+    expect(help_md.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
+    expect_help_tooltip(app, help_md, "wrap help text")
+
     horizontal_container = get_element_by_key(app, "wrap_false_horizontal_markdown")
     horizontal = horizontal_container.get_by_test_id("stMarkdown")
     expect(horizontal_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()

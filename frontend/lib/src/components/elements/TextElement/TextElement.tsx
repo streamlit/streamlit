@@ -33,15 +33,19 @@ export interface TextProps {
 }
 
 /**
- * Functional element representing preformatted (plain) text.
+ * Replace newlines with spaces so wrap=False stays on one line.
+ *
+ * wrap=False uses nowrap + white-space-collapse:preserve so extra spaces
+ * stay visible (GH#10062). That combination computes to white-space:pre,
+ * which would otherwise honor newlines as extra rows.
  */
 function collapseNewlines(body: string): string {
-  // wrap=False uses nowrap + white-space-collapse:preserve so extra spaces
-  // stay visible (GH#10062). That combination computes to white-space:pre,
-  // which would otherwise honor newlines as extra rows.
   return body.replace(/\r\n|\r|\n/g, " ")
 }
 
+/**
+ * Functional element representing preformatted (plain) text.
+ */
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
   const truncate = element.wrap === false
   const { titleRef, labelTextRef } = useLabelTitleTooltip<HTMLSpanElement>(

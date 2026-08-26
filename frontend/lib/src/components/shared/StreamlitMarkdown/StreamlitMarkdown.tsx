@@ -404,9 +404,11 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
   // Title is derived from the rendered DOM (children are React nodes).
+  // Pass `tag` as the identity key so a same-path title→header swap
+  // (h1→h2) re-attaches the observer to the new heading node.
   const { titleRef, labelTextRef } = useLabelTitleTooltip<HTMLSpanElement>(
     truncate,
-    undefined
+    tag
   )
 
   const actionElements = (

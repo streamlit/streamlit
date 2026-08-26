@@ -38,6 +38,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_horizontal_alignment,
     validate_vertical_alignment,
     validate_width,
+    validate_wrap,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -678,8 +679,7 @@ class LayoutsMixin:
         if invalid_spec:
             raise StreamlitInvalidColumnSpecError()
 
-        if not isinstance(wrap, bool):
-            raise StreamlitValueError("wrap", ["True", "False"])
+        validate_wrap(wrap)
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType

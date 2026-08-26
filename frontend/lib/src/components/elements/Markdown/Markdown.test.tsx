@@ -320,11 +320,12 @@ describe("Markdown wrap", () => {
       "text-overflow": "ellipsis",
       "white-space": "nowrap",
     })
-    // Label mode unwraps headings so the element stays on one line.
+    // Label mode escapes the leading "#" (gh-7359), so it renders as literal
+    // text instead of a heading and the element stays on one line.
     expect(
       screen.queryByRole("heading", { name: "Heading that should be inline" })
     ).not.toBeInTheDocument()
-    expect(container).toHaveTextContent("Heading that should be inline")
+    expect(container).toHaveTextContent("# Heading that should be inline")
   })
 
   it("keeps wrap=false block markdown on one inline line without fenced code", () => {

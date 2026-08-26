@@ -119,6 +119,25 @@ describe("Heading", () => {
     expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
   })
 
+  it("re-attaches the native title when the heading tag changes", async () => {
+    const { rerender } = render(
+      <Heading {...getHeadingProps({ body: "hello world", wrap: false })} />
+    )
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByRole("heading", { level: 1 })).toBeVisible()
+
+    rerender(
+      <Heading
+        {...getHeadingProps({ body: "hello world", wrap: false, tag: "h2" })}
+      />
+    )
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByRole("heading", { level: 2 })).toBeVisible()
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument()
+  })
+
   it.each([
     ["sidebar", IsSidebarContext],
     ["dialog", IsDialogContext],
