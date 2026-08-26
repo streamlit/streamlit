@@ -86,6 +86,7 @@ describe("Heading", () => {
 
     expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
     expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByTestId("stTooltipIcon").closest("[title]")).toBeNull()
   })
 
   it.each([
@@ -131,6 +132,7 @@ describe("Heading", () => {
       ).toBeInTheDocument()
       expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
       expect(await screen.findByTitle("hello world")).toBeVisible()
+      expect(screen.getByTestId("stTooltipIcon").closest("[title]")).toBeNull()
       expect(screen.getByRole("heading")).toHaveStyle({
         overflow: "hidden",
         display: "flex",

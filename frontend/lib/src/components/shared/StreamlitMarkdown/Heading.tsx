@@ -75,8 +75,9 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const isInDialog = useContext(IsDialogContext)
   const flexContext = useContext(FlexContext)
   const truncate = element.wrap === false
-  // st.header can contain new lines which are just interpreted as new
-  // markdown to be rendered as such.
+  // Heading bodies may contain newlines. Render the first line as the heading
+  // and, when wrapping is enabled, render the remainder as Markdown below it.
+  // With wrap=false the extra lines are dropped so the element stays one line tall.
   const [heading, ...rest] = body.split("\n")
 
   return (

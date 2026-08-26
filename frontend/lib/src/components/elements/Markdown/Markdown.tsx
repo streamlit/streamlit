@@ -24,6 +24,8 @@ import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/style
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 
+import { StyledMarkdownTitleTarget } from "./styled-components"
+
 export interface MarkdownProps {
   element: MarkdownProto
 }
@@ -59,11 +61,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     elementType === MarkdownProto.Type.NATIVE &&
     SINGLE_BADGE_REGEX.test(body.trim())
 
-  const addTitleTooltip = truncate
-  const { titleRef, labelTextRef } = useLabelTitleTooltip(
-    addTitleTooltip,
-    body
-  )
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(truncate, body)
 
   // Put help in the markdown source only when it can sit inline without being
   // clipped by truncation. Otherwise render the help icon as a sibling.
@@ -87,14 +85,16 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
       inheritFont={truncate && !isCaption}
     />
   )
-  // display:contents adds no box, so layout and ellipsis stay on the
-  // markdown container. The span is only needed so the title hook can
-  // read plain text; omit it otherwise so inline colored spans remain
-  // the first <span> in the element.
-  const markdown = addTitleTooltip ? (
-    <span ref={labelTextRef} style={{ display: "contents" }}>
-      {streamlitMarkdown}
-    </span>
+  // Title lives on this box (not the outer .stMarkdown) so a sibling help
+  // icon is not a titled descendant. The inner display:contents span lets
+  // the hook read plain text without adding a box. Omit both unless
+  // truncating so inline colored spans remain the first <span>.
+  const markdown = truncate ? (
+    <StyledMarkdownTitleTarget ref={titleRef}>
+      <span ref={labelTextRef} style={{ display: "contents" }}>
+        {streamlitMarkdown}
+      </span>
+    </StyledMarkdownTitleTarget>
   ) : (
     streamlitMarkdown
   )
@@ -125,7 +125,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   }
 
   return (
-    <div className="stMarkdown" data-testid="stMarkdown" ref={titleRef}>
+    <div className="stMarkdown" data-testid="stMarkdown">
       {content}
     </div>
   )

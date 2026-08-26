@@ -379,7 +379,7 @@ def validate_text_alignment(text_alignment: TextAlignment) -> None:
 
 
 def validate_wrap(wrap: bool) -> None:
-    """Raise StreamlitValueError if wrap is not a bool."""
+    """Reject non-boolean wrap; text commands have no auto/None mode."""
     if not isinstance(wrap, bool):
         raise StreamlitValueError("wrap", ["True", "False"])
 

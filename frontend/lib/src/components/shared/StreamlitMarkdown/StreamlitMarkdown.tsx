@@ -403,10 +403,11 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
-  const addTitleTooltip = truncate
-  // Pass "" so the hook reads the rendered heading text from the DOM
-  // (children are React nodes, not a string).
-  const { titleRef, labelTextRef } = useLabelTitleTooltip(addTitleTooltip, "")
+  // Title is derived from the rendered DOM (children are React nodes).
+  const { titleRef, labelTextRef } = useLabelTitleTooltip<HTMLSpanElement>(
+    truncate,
+    undefined
+  )
 
   const actionElements = (
     <HeaderActionElements
@@ -450,10 +451,16 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const headingText = needsHeadingTextSpan ? (
     <StyledHeadingText
       id={headingTextId}
-      ref={labelTextRef}
+      ref={truncate ? titleRef : labelTextRef}
       $truncate={truncate}
     >
-      {children}
+      {truncate ? (
+        <span ref={labelTextRef} style={{ display: "contents" }}>
+          {children}
+        </span>
+      ) : (
+        children
+      )}
     </StyledHeadingText>
   ) : (
     children
@@ -476,7 +483,6 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
 
   return (
     <StyledHeadingWithActionElements
-      ref={titleRef}
       $truncate={truncate}
       data-testid="stHeadingWithActionElements"
     >

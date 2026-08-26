@@ -69,18 +69,22 @@ describe("TextElement element", () => {
 
   it("truncates and exposes the full text via a native title when wrap is false", async () => {
     render(<TextElement {...getProps({ wrap: false })} />)
-    expect(screen.getByText("some plain text")).toHaveStyle({
+    const body = await screen.findByTitle("some plain text")
+    expect(body).toHaveStyle({
       "text-overflow": "ellipsis",
       "white-space": "nowrap",
       "white-space-collapse": "preserve",
     })
-    expect(await screen.findByTitle("some plain text")).toBeVisible()
+    expect(body).toBeVisible()
   })
 
   it("sets a native title when wrap is false, including when help is set", async () => {
     render(<TextElement {...getProps({ wrap: false, help: "help text" })} />)
     expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
     expect(await screen.findByTitle("some plain text")).toBeVisible()
+    expect(
+      screen.getByTestId("stTooltipHoverTarget").closest("[title]")
+    ).toBeNull()
   })
 
   it("collapses newlines when wrap is false so the body stays one line", async () => {
@@ -92,14 +96,12 @@ describe("TextElement element", () => {
         })}
       />
     )
-    const body = screen.getByText("Line one Line two Line three extra")
+    const body = await screen.findByTitle("Line one Line two Line three extra")
     expect(body.textContent).not.toContain("\n")
     expect(body).toHaveStyle({
       "text-overflow": "ellipsis",
       "white-space": "nowrap",
     })
-    expect(
-      await screen.findByTitle("Line one Line two Line three extra")
-    ).toBeVisible()
+    expect(body).toBeVisible()
   })
 })

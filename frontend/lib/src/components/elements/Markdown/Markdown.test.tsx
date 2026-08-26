@@ -364,6 +364,10 @@ describe("Markdown wrap", () => {
 
     expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
     expect(await screen.findByTitle("Overflowing markdown")).toBeVisible()
+    // Native title stays on the truncated text, not an ancestor of help.
+    expect(
+      screen.getByTestId("stTooltipHoverTarget").closest("[title]")
+    ).toBeNull()
   })
 
   it("keeps a sibling help icon for a truncated single badge", async () => {
@@ -378,6 +382,9 @@ describe("Markdown wrap", () => {
     expect(screen.getByText("Overflowing badge")).toBeVisible()
     expect(screen.getByRole("button", { name: "Help" })).toBeVisible()
     expect(await screen.findByTitle("Overflowing badge")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Help" }).closest("[title]")
+    ).toBeNull()
   })
 })
 

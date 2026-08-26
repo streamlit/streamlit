@@ -123,7 +123,9 @@ class HeadingMixin:
               wraps onto additional lines.
             - ``False``: The header stays on one line. Overflow is truncated
               with an ellipsis. Additional body lines after the first newline
-              are not shown. Anchor and help icons remain visible.
+              are not shown. Anchor and help icons remain visible. Hovering
+              the truncated text reveals the full plain-text content,
+              including when ``help`` is set.
 
         Examples
         --------
@@ -244,7 +246,9 @@ class HeadingMixin:
               it wraps onto additional lines.
             - ``False``: The subheader stays on one line. Overflow is truncated
               with an ellipsis. Additional body lines after the first newline
-              are not shown. Anchor and help icons remain visible.
+              are not shown. Anchor and help icons remain visible. Hovering
+              the truncated text reveals the full plain-text content,
+              including when ``help`` is set.
 
         Examples
         --------
@@ -359,7 +363,9 @@ class HeadingMixin:
               wraps onto additional lines.
             - ``False``: The title stays on one line. Overflow is truncated
               with an ellipsis. Additional body lines after the first newline
-              are not shown. Anchor and help icons remain visible.
+              are not shown. Anchor and help icons remain visible. Hovering
+              the truncated text reveals the full plain-text content,
+              including when ``help`` is set.
 
         Examples
         --------

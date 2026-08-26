@@ -251,9 +251,10 @@ metric, updated, region = st.columns(3, vertical_alignment="center")
 metric.markdown(
     "Quarterly revenue versus plan for the complete fiscal year",
     wrap=False,
+    width="stretch",
 )
-updated.caption("Last updated just now", wrap=False)
-region.text("North America · EMEA · APAC", wrap=False)
+updated.caption("Last updated just now", wrap=False, width="stretch")
+region.text("North America · EMEA · APAC", wrap=False, width="stretch")
 ```
 
 ## HTML (use very sparingly!)

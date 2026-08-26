@@ -758,7 +758,8 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
   visibility, and accessible names.
 - Add text-command tests for `wrap=False` ellipsis, label-mode markdown (inline only;
   headings/lists/tables omitted), heading extra-line suppression, help-icon visibility,
-  native `title` tooltip when `help` is unset, and `help` taking precedence.
+  native `title` on the truncated text (kept when `help` is set, since the
+  icon is a sibling), and help/anchor icons remaining untitled.
 - Add E2E coverage at desktop, intermediate, and phone widths in Chromium, Firefox, and
   WebKit.
 - Test touch-style horizontal scrolling and keyboard navigation.

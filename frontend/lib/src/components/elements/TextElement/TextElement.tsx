@@ -44,9 +44,8 @@ function collapseNewlines(body: string): string {
 
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
   const truncate = element.wrap === false
-  const addTitleTooltip = truncate
-  const { titleRef, labelTextRef } = useLabelTitleTooltip(
-    addTitleTooltip,
+  const { titleRef, labelTextRef } = useLabelTitleTooltip<HTMLSpanElement>(
+    truncate,
     element.body
   )
   const displayedBody = truncate
@@ -54,14 +53,14 @@ function TextElement({ element }: Readonly<TextProps>): ReactElement {
     : element.body
 
   return (
-    <StyledLabelHelpWrapper
-      className="stText"
-      data-testid="stText"
-      ref={titleRef}
-    >
+    <StyledLabelHelpWrapper className="stText" data-testid="stText">
       <StyledText $truncate={truncate}>
         {truncate ? (
-          <StyledTextBody ref={labelTextRef}>{displayedBody}</StyledTextBody>
+          <StyledTextBody ref={titleRef}>
+            <span ref={labelTextRef} style={{ display: "contents" }}>
+              {displayedBody}
+            </span>
+          </StyledTextBody>
         ) : (
           displayedBody
         )}

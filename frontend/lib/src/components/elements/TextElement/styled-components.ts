@@ -20,7 +20,8 @@ interface StyledTextProps {
   $truncate?: boolean
 }
 
-// Text element itself - rendered inline-block so it stays with help icon
+// Keep text and help aligned; truncation uses flex so the text can shrink
+// while the help icon remains visible.
 export const StyledText = styled.span<StyledTextProps>(
   ({ theme, $truncate }) => ({
     fontFamily: theme.genericFonts.bodyFont,
