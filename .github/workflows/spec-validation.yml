@@ -47,7 +47,12 @@ jobs:
 
             const specDirs = new Set(
               files
-                .filter(f => f.filename.startsWith('specs/') && f.filename !== 'specs/README.md')
+                .filter(
+                  f =>
+                    f.status !== 'removed' &&
+                    f.filename.startsWith('specs/') &&
+                    f.filename !== 'specs/README.md'
+                )
                 .map(f => f.filename.split('/')[1])
                 .filter(Boolean)
             );
