@@ -457,7 +457,9 @@ def test_subheader_text_alignment(app: Page, assert_snapshot: ImageCompareFuncti
 WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
 
 
-def test_wrap_false_ellipsizes_headings_and_sets_title(app: Page):
+def test_wrap_false_ellipsizes_headings_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """wrap=False keeps titles, headers, and subheaders on one line and exposes
     the full text via a native title.
     """
@@ -476,3 +478,4 @@ def test_wrap_false_ellipsizes_headings_and_sets_title(app: Page):
     for tag in ("h1", "h2", "h3"):
         heading = container.locator(tag)
         wait_until(app, partial(heading_overflows, heading))
+    assert_snapshot(container, name="st_heading-wrap_false")

@@ -451,7 +451,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const headingText = needsHeadingTextSpan ? (
     <StyledHeadingText
       id={headingTextId}
-      ref={truncate ? titleRef : labelTextRef}
+      ref={truncate ? titleRef : undefined}
       $truncate={truncate}
     >
       {truncate ? (
@@ -516,11 +516,17 @@ HideAnchorsContext.displayName = "HideAnchorsContext"
 
 /**
  * True when markdown is rendered as a widget label or wrap=False text.
- * Fenced code must stay inline so it cannot grow into a syntax highlighter
- * or mermaid diagram.
  */
 const IsLabelContext = createContext(false)
 IsLabelContext.displayName = "IsLabelContext"
+
+/**
+ * True when markdown is truncated to one line. Fenced code must stay inline
+ * so it cannot grow into a syntax highlighter or mermaid diagram. Widget
+ * labels that are not truncating keep fenced-code rendering unchanged.
+ */
+const TruncateContext = createContext(false)
+TruncateContext.displayName = "TruncateContext"
 
 const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
@@ -576,6 +582,12 @@ interface RenderedMarkdownProps {
    * visible anchor link icon is not rendered.
    */
   hideAnchors?: boolean
+
+  /**
+   * Truncate to one line. When set with isLabel, fenced code is unwrapped
+   * so the element cannot grow into a syntax-highlighted block.
+   */
+  truncate?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -593,7 +605,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 }) => {
   const match = /language-(\w+)/.exec(className || "")
   const isStreaming = useContext(StreamingContext)
-  const isLabel = useContext(IsLabelContext)
+  const truncate = useContext(TruncateContext)
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
@@ -601,9 +613,10 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const language = match?.[1] || ""
 
-  // Labels and wrap=False text stay inline: fenced blocks must not grow into
-  // syntax highlighters or mermaid diagrams.
-  if (isLabel || inline) {
+  // Truncated text stays inline: fenced blocks must not grow into syntax
+  // highlighters or mermaid diagrams. Non-truncated labels keep fenced-code
+  // highlighting.
+  if (inline || truncate) {
     return (
       <StyledInlineCode className={className} {...omit(props, "node")}>
         {children}
@@ -1148,9 +1161,9 @@ const BASE_REMARK_PLUGINS = [
 // Sets disallowed markdown for widget labels
 const LABEL_DISALLOWED_ELEMENTS = [
   // Restricts table elements, headings, unordered/ordered lists, task lists,
-  // horizontal rules, blockquotes, and fenced code wrappers. Inner `code` still
-  // renders inline via IsLabelContext. Images are allowed but have a max height
-  // equal to the text height.
+  // horizontal rules, and blockquotes. Images are allowed but have a max height
+  // equal to the text height. Fenced `pre` stays allowed so labels keep
+  // syntax-highlighted code; truncation unwraps it separately.
   "table",
   "thead",
   "tbody",
@@ -1169,11 +1182,17 @@ const LABEL_DISALLOWED_ELEMENTS = [
   "input",
   "hr",
   "blockquote",
-  "pre",
 ]
+
+// Truncation also unwraps fenced code so wrap=False text stays one line.
+const TRUNCATE_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "pre"]
 
 // Add link disallowing to the base disallowed elements
 const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
+const TRUNCATE_LINKS_DISALLOWED_ELEMENTS = [
+  ...TRUNCATE_DISALLOWED_ELEMENTS,
+  "a",
+]
 
 interface LinkProps {
   node?: Element
@@ -1217,6 +1236,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   helpText,
   unterminatedParsing,
   hideAnchors,
+  truncate,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1353,8 +1373,13 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
+    if (truncate) {
+      return disableLinks
+        ? TRUNCATE_LINKS_DISALLOWED_ELEMENTS
+        : TRUNCATE_DISALLOWED_ELEMENTS
+    }
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
-  }, [isLabel, disableLinks])
+  }, [isLabel, truncate, disableLinks])
 
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
@@ -1376,19 +1401,21 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       <HelpTextContext.Provider value={helpText}>
         <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
           <IsLabelContext.Provider value={Boolean(isLabel)}>
-            <ErrorBoundary>
-              <ReactMarkdown
-                remarkPlugins={remarkPlugins}
-                rehypePlugins={rehypePlugins}
-                components={renderers}
-                urlTransform={transformLinkUri}
-                disallowedElements={disallowed}
-                // unwrap and render children from invalid markdown
-                unwrapDisallowed={true}
-              >
-                {processedSource}
-              </ReactMarkdown>
-            </ErrorBoundary>
+            <TruncateContext.Provider value={Boolean(truncate)}>
+              <ErrorBoundary>
+                <ReactMarkdown
+                  remarkPlugins={remarkPlugins}
+                  rehypePlugins={rehypePlugins}
+                  components={renderers}
+                  urlTransform={transformLinkUri}
+                  disallowedElements={disallowed}
+                  // unwrap and render children from invalid markdown
+                  unwrapDisallowed={true}
+                >
+                  {processedSource}
+                </ReactMarkdown>
+              </ErrorBoundary>
+            </TruncateContext.Provider>
           </IsLabelContext.Provider>
         </HideAnchorsContext.Provider>
       </HelpTextContext.Provider>
@@ -1439,6 +1466,7 @@ const StreamlitMarkdown: FC<Props> = ({
         helpText={helpText}
         unterminatedParsing={unterminatedParsing}
         hideAnchors={hideAnchors}
+        truncate={truncate}
       />
     </StyledStreamlitMarkdown>
   )

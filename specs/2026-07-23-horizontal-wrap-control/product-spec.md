@@ -626,9 +626,8 @@ The parameter is named `wrap` rather than `wrap_lines` (the `st.code` precedent)
 controls whether items flow onto additional rows in a layout, whereas `wrap_lines` controls
 line wrapping of text within a code block. Breakpoint control for columns is a separate
 behavior, not an additional value of this parameter. `None`/`True`/`False` stay
-layout-only; they never carry additional semantics. For text, `wrap=False` additionally
-restricts markdown to the inline subset so a one-line layout cannot grow from block
-elements.
+layout-only for collections and controls. For text, `wrap=False` also restricts markdown
+to the inline subset so a one-line layout cannot grow from block elements.
 
 ## Alternatives considered
 

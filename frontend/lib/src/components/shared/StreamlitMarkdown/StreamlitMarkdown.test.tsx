@@ -831,7 +831,6 @@ describe("StreamlitMarkdown", () => {
     },
     { input: horizontalRule, tag: "hr", expected: "Horizontal rule" },
     { input: "> Blockquote", tag: "blockquote", expected: "> Blockquote" },
-    { input: "```\ncode block\n```", tag: "pre", expected: "code block" },
   ]
 
   it.each(invalidCases)(
@@ -849,7 +848,20 @@ describe("StreamlitMarkdown", () => {
     }
   )
 
-  it("does not render fenced code blocks when isLabel is true", () => {
+  it("does not render fenced code blocks when truncating a label", () => {
+    render(
+      <StreamlitMarkdown
+        source={"```\nfenced code\n```"}
+        allowHTML={false}
+        isLabel
+        truncate
+      />
+    )
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.getByText(/fenced code/)).toBeInTheDocument()
+  })
+
+  it("keeps fenced code blocks in non-truncated labels", async () => {
     render(
       <StreamlitMarkdown
         source={"```\nfenced code\n```"}
@@ -857,8 +869,7 @@ describe("StreamlitMarkdown", () => {
         isLabel
       />
     )
-    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
-    expect(screen.getByText(/fenced code/)).toBeInTheDocument()
+    expect(await screen.findByTestId("stMarkdownPre")).toBeVisible()
   })
 
   it("keeps truncated label markdown on one line when the source has blocks", () => {
@@ -901,6 +912,32 @@ describe("StreamlitMarkdown", () => {
     expect(container.querySelector("dl")).toHaveStyle("display: inline")
     expect(container.querySelector("form")).toHaveStyle("display: inline")
     expect(container.querySelector("fieldset")).toHaveStyle("display: inline")
+  })
+
+  it("inlines leftover HTML tables when truncating", async () => {
+    render(
+      <StreamlitMarkdown
+        source="<table><thead><tr><th>H</th></tr></thead><tbody><tr><td>cell</td></tr></tbody></table>"
+        allowHTML
+        truncate
+      />
+    )
+    expect(await screen.findByText("cell")).toBeVisible()
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("table")).toHaveStyle("display: inline")
+    expect(container.querySelector("thead")).toHaveStyle("display: inline")
+    expect(container.querySelector("tbody")).toHaveStyle("display: inline")
+    expect(container.querySelector("tr")).toHaveStyle("display: inline")
+    expect(container.querySelector("td")).toHaveStyle("display: inline")
+  })
+
+  it("hides hard breaks when truncating", () => {
+    render(
+      <StreamlitMarkdown source={"one  \ntwo"} allowHTML={false} truncate />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("br")).toHaveStyle("display: none")
+    expect(container).toHaveStyle("white-space: nowrap")
   })
 
   it("doesn't render links when disableLinks is true", () => {
@@ -1217,6 +1254,20 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={false} />)
     const container = screen.getByTestId("stMarkdownContainer")
     expect(container).not.toHaveStyle("white-space: nowrap")
+  })
+
+  it("does not stretch truncated widget labels to 100% width", () => {
+    render(
+      <StreamlitMarkdown
+        source="Compact label"
+        allowHTML={false}
+        isLabel
+        truncate
+      />
+    )
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+      width: "100%",
+    })
   })
 
   // Custom color directive tests

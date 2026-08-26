@@ -103,7 +103,9 @@ def test_match_snapshot_in_sidebar(
 WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
 
 
-def test_wrap_false_ellipsizes_caption_and_sets_title(app: Page):
+def test_wrap_false_ellipsizes_caption_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """wrap=False keeps a caption on one line, ellipsizes overflow, and exposes
     the full text via a native title.
     """
@@ -111,3 +113,4 @@ def test_wrap_false_ellipsizes_caption_and_sets_title(app: Page):
     markdown = container.get_by_test_id("stMarkdown")
     expect(container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
     expect_label_truncated(markdown)
+    assert_snapshot(container, name="st_caption-wrap_false")

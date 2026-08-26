@@ -74,6 +74,9 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(await screen.findByTitle("hello world")).toHaveStyle({
+      flex: "1",
+    })
   })
 
   it("sets a native title when wrap is false, including when help is set", async () => {
@@ -107,6 +110,9 @@ describe("Heading", () => {
     expect(screen.getByRole("heading")).toHaveStyle({
       overflow: "hidden",
       display: "flex",
+    })
+    expect(await screen.findByTitle("hello world")).toHaveStyle({
+      flex: "1",
     })
   })
 

@@ -856,7 +856,9 @@ WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboar
 WRAPPED_HEIGHT_MARGIN = 4
 
 
-def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
+def test_wrap_false_ellipsizes_markdown_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """wrap=False keeps markdown on one line, ellipsizes overflow, and exposes
     the full text via a native title. wrap=True wraps and has no title.
     """
@@ -879,16 +881,18 @@ def test_wrap_false_ellipsizes_markdown_and_sets_title(app: Page):
     assert false_box is not None
     assert true_box is not None
     assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(no_wrap_container, name="st_markdown-wrap_false")
 
 
-def test_wrap_false_keeps_block_markdown_on_one_line(app: Page):
+def test_wrap_false_keeps_block_markdown_on_one_line(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """wrap=False label-mode markdown stays one line even with headings, tables,
     and fenced code. Block tags are omitted or unwrapped; height matches a
     single-sentence wrap=False markdown element.
     """
-    block = get_element_by_key(app, "wrap_false_block_markdown").get_by_test_id(
-        "stMarkdown"
-    )
+    block_container = get_element_by_key(app, "wrap_false_block_markdown")
+    block = block_container.get_by_test_id("stMarkdown")
     single = get_element_by_key(app, "wrap_false_markdown").get_by_test_id("stMarkdown")
 
     expect(block.get_by_test_id("stMarkdownPre")).to_have_count(0)
@@ -901,6 +905,7 @@ def test_wrap_false_keeps_block_markdown_on_one_line(app: Page):
     assert block_box is not None
     assert single_box is not None
     assert abs(block_box["height"] - single_box["height"]) < WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(block_container, name="st_markdown-wrap_false_block")
 
 
 def test_badge_with_help_stays_in_container(app: Page):

@@ -130,7 +130,9 @@ WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboar
 WRAPPED_HEIGHT_MARGIN = 4
 
 
-def test_wrap_false_ellipsizes_text_and_sets_title(app: Page):
+def test_wrap_false_ellipsizes_text_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """wrap=False keeps plain text on one line, ellipsizes overflow, and exposes
     the full text via a native title. wrap=True wraps and has no title.
     """
@@ -154,6 +156,7 @@ def test_wrap_false_ellipsizes_text_and_sets_title(app: Page):
     assert false_box is not None
     assert true_box is not None
     assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(no_wrap_container, name="st_text-wrap_false")
 
 
 WRAP_NEWLINE_TEXT = "Line one Line two Line three extra"

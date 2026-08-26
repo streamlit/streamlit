@@ -55,6 +55,9 @@ export const StyledTextBody = styled.span({
   whiteSpace: "nowrap",
   whiteSpaceCollapse: "preserve",
   minWidth: 0,
+  // Fill the flex row so inherited text-align still positions short copy
+  // while the help icon stays at the end.
+  flex: 1,
 })
 
 // Inline help icon wrapper to keep it flowing with the text

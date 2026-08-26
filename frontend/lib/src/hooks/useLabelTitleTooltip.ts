@@ -53,6 +53,9 @@ export function useLabelTitleTooltip<
 ): LabelTitleTooltipRefs<ContainerElement, LabelElement> {
   const titleRef = useRef<ContainerElement>(null)
   const labelTextRef = useRef<LabelElement>(null)
+  // Skip label in the dependency list when the tooltip is off so streaming
+  // updates on this shared renderer do not re-run a no-op effect.
+  const labelKey = addTitleTooltip ? label : undefined
 
   useEffect(() => {
     const node = titleRef.current
@@ -83,7 +86,7 @@ export function useLabelTitleTooltip<
       characterData: true,
     })
     return () => observer.disconnect()
-  }, [addTitleTooltip, label])
+  }, [addTitleTooltip, labelKey])
 
   return { titleRef, labelTextRef }
 }

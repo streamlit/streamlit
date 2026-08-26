@@ -101,12 +101,11 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
 
   let content: ReactElement
   if (help && isSingleBadgeOnly && !truncate) {
-    // Hover-on-badge tooltip. Cap to the parent so a long chip ellipsizes
-    // instead of growing past the element (width:auto would size to the
-    // label and overflow). wrap=False uses a sibling help icon so the glyph
-    // stays visible next to the truncated chip.
+    // Hover-on-badge tooltip. A long chip ellipsizes via maxWidth/minWidth
+    // on the tooltip trigger rather than stretching the hover target to the
+    // full element width.
     content = (
-      <BaseButtonTooltip help={help} containerWidth={true}>
+      <BaseButtonTooltip help={help} containerWidth={false}>
         {markdown}
       </BaseButtonTooltip>
     )

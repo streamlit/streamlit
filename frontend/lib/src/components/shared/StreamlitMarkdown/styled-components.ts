@@ -235,9 +235,10 @@ export const StyledStreamlitMarkdown =
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
-        // Truncated labels need 100% width so ellipsis can apply in stretch
-        // layouts. Other labels shrink to content.
-        width: isLabel && !truncate ? "" : "100%",
+        // Labels shrink to content so a [label][help] row keeps the icon
+        // beside the text. Truncation still ellipsizes via maxWidth and
+        // minWidth in a bounded parent.
+        width: isLabel ? "" : "100%",
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
@@ -273,6 +274,12 @@ export const StyledStreamlitMarkdown =
             border: "none",
             whiteSpace: "nowrap",
             verticalAlign: "bottom",
+          },
+
+          // CommonMark hard breaks (`<br>` from trailing spaces or `\`) are
+          // not suppressed by nowrap; hide them so wrap=False stays one line.
+          "& br": {
+            display: "none",
           },
 
           "& p": {
@@ -388,6 +395,19 @@ export const StyledStreamlitMarkdown =
           padding: `${theme.spacing.xs} ${theme.spacing.md}`,
           border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
+
+        // table { display: table } above beats :where(table) in the flatten
+        // rule. Re-assert inline layout for leftover raw HTML tables.
+        ...(truncate && {
+          "table, thead, tbody, tr, th, td": {
+            display: "inline",
+            margin: 0,
+            padding: 0,
+            border: "none",
+            whiteSpace: "nowrap",
+            verticalAlign: "bottom",
+          },
+        }),
 
         "span.stMarkdownColoredBackground": {
           borderRadius: theme.radii.sm,
@@ -551,6 +571,9 @@ export const StyledHeadingText = styled.span<{ $truncate?: boolean }>(
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",
       minWidth: 0,
+      // Fill the heading so inherited text-align still positions short copy
+      // while help/anchor icons stay at the end.
+      flex: 1,
     }),
   })
 )
