@@ -185,7 +185,6 @@ generic `StreamlitAPIException` with a one-off message.
     worded for widget options, not tab labels)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
-- Do not raise the deprecated aliases.
 
 Reserve bare `StreamlitAPIException` for one-off cases that no shared type
 covers and that users are expected to hit uncommonly (serialization failures

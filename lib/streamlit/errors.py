@@ -35,10 +35,6 @@ class Error(Exception):  # pragma: no cover - trivial base class
     """
 
 
-class CustomComponentError(Error):  # pragma: no cover - trivial subclass
-    """Exceptions thrown in the custom components code path."""
-
-
 class StreamlitComponentRegistryError(Error):  # pragma: no cover - trivial subclass
     """Exceptions raised while discovering or registering Streamlit components.
 
@@ -46,10 +42,6 @@ class StreamlitComponentRegistryError(Error):  # pragma: no cover - trivial subc
     distributions for component metadata and registering them with the component
     registry.
     """
-
-
-class DeprecationError(Error):  # pragma: no cover - trivial subclass
-    pass
 
 
 class FragmentStorageKeyError(Error, KeyError):  # pragma: no cover - trivial subclass
@@ -64,12 +56,8 @@ class FragmentHandledException(Exception):  # noqa: N818  # pragma: no cover - t
     """
 
 
-class NoStaticFiles(Error):  # noqa: N818  # pragma: no cover - trivial subclass
-    pass
-
-
 class NoSessionContext(Error):  # noqa: N818  # pragma: no cover - trivial subclass
-    pass
+    """Raised when a Streamlit command runs outside an active script session."""
 
 
 class MarkdownFormattedException(Error):  # noqa: N818  # pragma: no cover - trivial subclass
@@ -107,11 +95,11 @@ class StreamlitDataframeConversionError(StreamlitAPIException):
 
 
 class DuplicateWidgetID(StreamlitAPIException):  # pragma: no cover - trivial subclass
-    pass
+    """Base class for duplicate element ID and key errors so ``except DuplicateWidgetID`` catches both."""
 
 
 class StreamlitAuthError(StreamlitAPIException):  # pragma: no cover - trivial subclass
-    pass
+    """Raised when Streamlit authentication fails."""
 
 
 class StreamlitMissingAuthlibError(StreamlitAuthError):
@@ -158,7 +146,7 @@ class StreamlitDuplicateElementKey(
 class UnserializableSessionStateError(
     StreamlitAPIException
 ):  # pragma: no cover - trivial subclass
-    pass
+    """Raised when a session state value cannot be pickled."""
 
 
 class StreamlitAPIWarning(StreamlitAPIException, Warning):
@@ -180,18 +168,6 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
         return util.repr_(self)
 
 
-class StreamlitModuleNotFoundError(StreamlitAPIWarning):
-    """Print a pretty message when a Streamlit command requires a dependency
-    that is not one of our core dependencies.
-    """
-
-    def __init__(self, module_name: str, *args: Any) -> None:
-        message = (
-            f'This Streamlit command requires module "{module_name}" to be installed.'
-        )
-        super().__init__(message, *args)
-
-
 class LocalizableStreamlitException(StreamlitAPIException):
     """API exception with a format-string message and kwargs for localization.
 
@@ -207,27 +183,6 @@ class LocalizableStreamlitException(StreamlitAPIException):
     @property
     def exec_kwargs(self) -> dict[str, Any]:
         return self._exec_kwargs
-
-
-class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for `initial_sidebar_state`."""
-
-    def __init__(self, initial_sidebar_state: str) -> None:
-        super().__init__(
-            '`initial_sidebar_state` must be `"auto"`, `"expanded"`, `"collapsed"`, `"locked"`, '
-            'or a positive integer for width in pixels (got `"{initial_sidebar_state}"`)',
-            initial_sidebar_state=initial_sidebar_state,
-        )
-
-
-class StreamlitInvalidMenuItemKeyError(LocalizableStreamlitException):
-    """Exception raised when an invalid key is specified."""
-
-    def __init__(self, key: str) -> None:
-        super().__init__(
-            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` (`"{key}"` is not a valid key.)',
-            key=key,
-        )
 
 
 class StreamlitInvalidURLError(LocalizableStreamlitException):
@@ -583,6 +538,8 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidColorError(LocalizableStreamlitException):
+    """Raised when a color is not a valid hex string or RGB(A) sequence."""
+
     def __init__(
         self, color: str | Collection[Any] | tuple[int, int, int, int]
     ) -> None:
@@ -710,24 +667,18 @@ class StreamlitDefaultNotInOptionsError(LocalizableStreamlitException):
 
 # config
 class StreamlitInvalidThemeError(LocalizableStreamlitException):
-    """Exception raised for general theme errors."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(
-            message,
-        )
+    """Base class for theme errors so ``except StreamlitInvalidThemeError`` also
+    catches invalid option and section errors.
+    """
 
 
-class StreamlitInvalidThemeOptionError(LocalizableStreamlitException):
+class StreamlitInvalidThemeOptionError(
+    StreamlitInvalidThemeError
+):  # pragma: no cover - trivial subclass
     """Exception raised when an invalid theme config option is provided."""
 
-    def __init__(self, message: str) -> None:
-        super().__init__(
-            message,
-        )
 
-
-class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
+class StreamlitInvalidThemeSectionError(StreamlitInvalidThemeError):
     """Exception raised when an invalid theme section is provided."""
 
     def __init__(self, option_name: str, file_path_or_url: str = "config.toml") -> None:
@@ -738,37 +689,3 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
             option_name=option_name,
             file_path_or_url=file_path_or_url,
         )
-
-
-# Deprecated aliases kept only for backward compatibility.
-# Identity aliases preserve `except OldName` for migrated raises, but also
-# catch every instance of the replacement type. Several names below shipped
-# as distinct classes in 1.62.0 (including StreamlitInvalidSizeError and the
-# gap/alignment errors); do not delete them as unused.
-StreamlitInvalidPageLayoutError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidTextAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidSizeError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidVerticalAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidColumnGapError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidHorizontalAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.
-    StreamlitMissingRequiredParameterError
-)

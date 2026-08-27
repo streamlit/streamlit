@@ -349,32 +349,3 @@ def test_incompatible_parameters_error_explanation_with_braces() -> None:
         "`refresh_mode='background'` and `ttl=None` cannot be used together. "
         "Example: use {value}."
     )
-
-
-@pytest.mark.parametrize(
-    ("alias", "shared"),
-    [
-        ("StreamlitInvalidPageLayoutError", "StreamlitValueError"),
-        ("StreamlitInvalidTextAlignmentError", "StreamlitValueError"),
-        ("StreamlitInvalidBindValueError", "StreamlitValueError"),
-        ("StreamlitInvalidPersistStateError", "StreamlitValueError"),
-        ("StreamlitInvalidSizeError", "StreamlitValueError"),
-        ("StreamlitInvalidVerticalAlignmentError", "StreamlitValueError"),
-        ("StreamlitInvalidColumnGapError", "StreamlitValueError"),
-        ("StreamlitInvalidHorizontalAlignmentError", "StreamlitValueError"),
-        ("StreamlitMissingPageLabelError", "StreamlitMissingRequiredParameterError"),
-    ],
-)
-def test_deprecated_exception_aliases(alias: str, shared: str) -> None:
-    """Deprecated exception names remain aliases of the shared types."""
-    assert getattr(errors, alias) is getattr(errors, shared)
-
-
-# StreamlitModuleNotFoundError tests
-
-
-def test_module_not_found_error_message() -> None:
-    """Test that message includes the missing module name."""
-    exc = errors.StreamlitModuleNotFoundError("pandas")
-    assert "pandas" in str(exc)
-    assert "requires module" in str(exc)
