@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Profiler } from "react"
+
 import {
   act,
   fireEvent,
@@ -1381,15 +1383,29 @@ describe("TextInput live updates", () => {
   })
 
   it("does not flash the previous value when a live commit echoes into widget state", async () => {
-    const { user } = renderLive({ default: "prev" })
+    const seen: string[] = []
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const props = getProps({ liveDelayMs: 0, default: "prev" })
+    render(
+      <Profiler
+        id="live-text-input"
+        onRender={() => {
+          const el = document.querySelector('[data-testid="stTextInputField"]')
+          if (el instanceof HTMLInputElement) {
+            seen.push(el.value)
+          }
+        }}
+      >
+        <TextInput {...props} />
+      </Profiler>
+    )
 
     const input = screen.getByRole("textbox")
     await user.type(input, "x")
     expect(input).toHaveValue("prevx")
-
-    advanceMs(300)
-
-    expect(input).toHaveValue("prevx")
+    const afterTyped = seen.indexOf("prevx")
+    expect(afterTyped).toBeGreaterThan(-1)
+    expect(seen.slice(afterTyped + 1)).not.toContain("prev")
   })
 
   it("resets the debounce timer on each accepted change", async () => {
@@ -1602,7 +1618,7 @@ describe("TextInput live updates", () => {
     expect(screen.getByText("2/5")).toBeVisible()
   })
 
-  it("does not overwrite dirty or focused input with a stale setValue", async () => {
+  it("does not overwrite a newer live value with an older echo", async () => {
     const { user, props, rerender } = renderLive({
       liveDelayMs: 0,
       default: "",
@@ -1658,6 +1674,49 @@ describe("TextInput live updates", () => {
     })
     rerender(<TextInput {...props} element={formattedElement} />)
     expect(input).toHaveValue("ABC")
+  })
+
+  it("applies a session_state restore of an earlier committed string after ack", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDelayMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />
+    )
+    await user.type(input, "d")
+    expect(input).toHaveValue("abcd")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abcd",
+        })}
+      />
+    )
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />
+    )
+    expect(input).toHaveValue("abc")
   })
 
   it("commits live values for password inputs", async () => {

@@ -117,8 +117,8 @@ def _parse_text_input_validate(
 
 # Default pause used when ``live=True``.
 _DEFAULT_LIVE_DELAY_MS: Final = 300
-# Cap at 1 minute so a unit mix-up like ``"60s"`` vs ``"60ms"`` fails loudly
-# rather than creating an unusable debounce.
+# Cap at 1 minute so a typo like "60m" or "2h" cannot schedule a multi-day
+# debounce (uint32 would allow ~49 days).
 _MAX_LIVE_DELAY_MS: Final = 60_000
 
 

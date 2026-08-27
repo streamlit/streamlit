@@ -90,20 +90,9 @@ export interface Props {
 
 const LOG = getLogger("TextInput")
 
-// Bound how many live-committed strings we remember for stale-echo detection.
-const MAX_RECENT_LIVE_COMMITS = 32
-
-function pushRecentLiveCommit(
-  recent: (string | null)[],
-  committed: string | null
-): (string | null)[] {
-  const next = recent.filter(value => value !== committed)
-  next.push(committed)
-  if (next.length > MAX_RECENT_LIVE_COMMITS) {
-    next.shift()
-  }
-  return next
-}
+// Sentinel so `null` (a valid text-input value) is not confused with "no
+// accepted incoming setValue".
+const NO_ACCEPTED_INCOMING: unique symbol = Symbol("noAcceptedIncoming")
 
 function TextInput({
   disabled,
@@ -138,9 +127,16 @@ function TextInput({
   const lastCommittedValueRef = useRef<string | null>(
     getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
-  // Recent live-committed strings, newest last. Used to recognize stale
-  // setValue echoes of older in-flight reruns after dirty has been cleared.
-  const recentLiveCommitsRef = useRef<(string | null)[]>([])
+  // User-committed strings since the last acknowledged setValue. Used to
+  // recognize stale echoes of in-flight reruns. Cleared when the latest
+  // commit is echoed or a non-echo setValue is applied.
+  const pendingLiveCommitsRef = useRef<(string | null)[]>([])
+  // Incoming setValue accepted as a callback / session_state replacement
+  // (not an echo of lastCommitted). commitEchoPending waits for this
+  // `value` rather than treating the lag-frame previous string as a write.
+  const acceptedIncomingRef = useRef<
+    string | null | typeof NO_ACCEPTED_INCOMING
+  >(NO_ACCEPTED_INCOMING)
   // Prevents a one-frame flash of the previous committed value after a live
   // commit. useBasicWidgetState updates `value` in an effect, so the commit
   // render still has the old widget-manager string; useUpdateUiValue would
@@ -194,22 +190,26 @@ function TextInput({
 
   // Skip script-driven setValue that would clobber live edits:
   // - dirty: keystrokes not yet committed
-  // - a recently live-committed string that is not the latest: a stale echo
-  //   of an older in-flight rerun, including after blur
-  // Incoming values that were never live-committed (on_change / session_state
-  // writes) still apply, including while the field is focused.
+  // - an in-flight user-committed string that is not the latest: a stale
+  //   echo of an older rerun, including after blur
+  // After in-flight commits are acknowledged, any other incoming value
+  // (callback / session_state write, including restoring an earlier string)
+  // applies, including while focused.
   const shouldApplyIncomingValue = useCallback(
     (incoming: string | null): boolean => {
       if (dirtyRef.current) {
         return false
       }
-      if (
-        incoming === lastCommittedValueRef.current ||
-        incoming === uiValueRef.current
-      ) {
+      if (incoming === lastCommittedValueRef.current) {
+        pendingLiveCommitsRef.current = []
         return true
       }
-      return !recentLiveCommitsRef.current.includes(incoming)
+      if (pendingLiveCommitsRef.current.includes(incoming)) {
+        return false
+      }
+      acceptedIncomingRef.current = incoming
+      pendingLiveCommitsRef.current = []
+      return true
     },
     []
   )
@@ -235,14 +235,19 @@ function TextInput({
 
   // Run during render so useUpdateUiValue on this pass still treats the
   // in-flight commit as dirty. An effect would run too late to prevent the flash.
+  // Do not re-baseline lastCommitted from the lag-frame previous `value`;
+  // only the echoed commit or an accepted non-echo setValue may clear pending.
   if (commitEchoPendingRef.current) {
-    // A session_state / callback write can replace the echoed commit before
-    // widget state catches up; accept that value as the new baseline.
-    if (value !== lastCommittedValueRef.current && !dirtyRef.current) {
-      lastCommittedValueRef.current = value
-    }
     if (value === lastCommittedValueRef.current) {
       commitEchoPendingRef.current = false
+      acceptedIncomingRef.current = NO_ACCEPTED_INCOMING
+    } else if (
+      acceptedIncomingRef.current !== NO_ACCEPTED_INCOMING &&
+      value === acceptedIncomingRef.current
+    ) {
+      lastCommittedValueRef.current = value
+      commitEchoPendingRef.current = false
+      acceptedIncomingRef.current = NO_ACCEPTED_INCOMING
     }
   } else if (!dirtyRef.current) {
     lastCommittedValueRef.current = value
@@ -298,10 +303,12 @@ function TextInput({
   const commitWidgetValue = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
       lastCommittedValueRef.current = valueToCommit
-      recentLiveCommitsRef.current = pushRecentLiveCommit(
-        recentLiveCommitsRef.current,
-        valueToCommit
+      const pending = pendingLiveCommitsRef.current.filter(
+        value => value !== valueToCommit
       )
+      pending.push(valueToCommit)
+      pendingLiveCommitsRef.current = pending
+      acceptedIncomingRef.current = NO_ACCEPTED_INCOMING
       commitEchoPendingRef.current = true
       setDirtyAndRef(false)
       setValueWithSource({ value: valueToCommit, fromUser: true })
@@ -367,9 +374,7 @@ function TextInput({
   )
 
   const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
-    useDebouncedCallback(() => {
-      tryCommitOutsideForm()
-    }, liveDelayMs)
+    useDebouncedCallback(tryCommitOutsideForm, liveDelayMs)
 
   const commitOrScheduleLive = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {

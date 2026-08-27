@@ -50,7 +50,7 @@ interface OnInputChangeProps {
  * @param setDirty calls setDirty with true
  * @param setUiValue calls setUiValue with the input element's value
  * @param setValueWithSource calls setValueWithSource with the input element's value
- * @param additionalAction optional function to run after the main input change logic
+ * @param additionalAction optional function called with the new value after the main input change logic
  * @return memoized callback
  */
 export default function useOnInputChange({

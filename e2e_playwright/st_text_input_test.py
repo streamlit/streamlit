@@ -822,9 +822,16 @@ def test_text_input_live_commits_while_typing(app: Page):
     expect(app.get_by_text("Press Enter to apply")).to_have_count(0)
     wait_until(app, lambda: app.get_by_text("Live default value: hello").is_visible())
     expect(live_default).to_be_focused()
+    live_default.press("ArrowLeft")
+    caret_before = live_default.evaluate("el => el.selectionStart")
+    live_default.type("x")
+    wait_until(app, lambda: app.get_by_text("Live default value: hellxo").is_visible())
+    expect(live_default).to_have_value("hellxo")
+    expect(live_default).to_have_js_property("selectionStart", caret_before + 1)
+    live_default.press("End")
     live_default.type("!")
-    wait_until(app, lambda: app.get_by_text("Live default value: hello!").is_visible())
-    expect(live_default).to_have_value("hello!")
+    wait_until(app, lambda: app.get_by_text("Live default value: hellxo!").is_visible())
+    expect(live_default).to_have_value("hellxo!")
 
     live_slow = get_text_input(app, "Live 1s input").locator("input").first
     live_slow.type("slow")
