@@ -544,6 +544,7 @@ update-notices:
 	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/sprintf.js/sprintfjs-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/decamelize/decamelize-LICENSE.txt
 
 .PHONY: update-headers
 # Update all license headers.

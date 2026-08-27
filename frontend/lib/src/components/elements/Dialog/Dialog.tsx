@@ -104,18 +104,15 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     }
   }, [id, widgetMgr, fragmentId])
 
-  // Handler to suppress the R key when dialog is open and non-dismissible.
-  // Otherwise, R would dismiss the dialog by rerunning the script.
-  // react-hot-keys binds both keydown and keyup to the same handler, so we
-  // must intercept both — blocking only keydown still lets keyup trigger
-  // App.rerunScript (reproduced on WebKit after backdrop click).
+  // Suppress R while a non-dismissible dialog is open so the app-level
+  // shortcut cannot rerun (and close) the dialog. Capture-phase keydown
+  // must stopImmediatePropagation so GlobalHotkeys never sees the event.
   const handleRKeySuppress = useCallback(
     (e: KeyboardEvent): void => {
       if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
         const target = e.target as HTMLElement
 
-        // We don't want to prevent typing in input fields.
-        // This is the same check that is also done by react-hot-keys.
+        // Allow typing R in inputs, textareas, and contenteditable fields.
         if (
           target &&
           (target.isContentEditable ||
@@ -126,8 +123,6 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
           return
         }
 
-        // stopImmediatePropagation so other listeners on the same target
-        // (hotkeys-js on document) are skipped too.
         e.preventDefault()
         e.stopImmediatePropagation()
       }
@@ -140,11 +135,9 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     if (isOpen && !element.dismissible) {
       // capture=true to intercept before App-level hotkeys
       document.addEventListener("keydown", handleRKeySuppress, true)
-      document.addEventListener("keyup", handleRKeySuppress, true)
 
       return () => {
         document.removeEventListener("keydown", handleRKeySuppress, true)
-        document.removeEventListener("keyup", handleRKeySuppress, true)
       }
     }
     return undefined

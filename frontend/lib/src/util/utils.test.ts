@@ -495,6 +495,17 @@ describe("keysToSnakeCase", () => {
     })
   })
 
+  it("should preserve consecutive uppercase letters", () => {
+    expect(keysToSnakeCase({ testGUILabel: 1, XMLHttpRequest: 2 })).toEqual({
+      test_GUI_label: 1,
+      XML_http_request: 2,
+    })
+  })
+
+  it("should decamelize Unicode letters", () => {
+    expect(keysToSnakeCase({ déjàVu: true })).toEqual({ déjà_vu: true })
+  })
+
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
   })
