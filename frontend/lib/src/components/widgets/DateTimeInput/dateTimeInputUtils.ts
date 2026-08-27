@@ -236,18 +236,19 @@ export function getSegmentState(container: HTMLElement): SegmentState {
 }
 
 /**
- * The time held by a container's rendered `hour` and `minute` segments, ignoring
- * placeholders. Returns null when neither is filled.
+ * Read hour and minute from a container's rendered segments, for the window
+ * before the field has emitted an `onChange`. Returns null when neither is
+ * filled.
  *
  * `DateField` and `TimeField` both withhold `onChange` until every one of their
  * segments is filled, so a time entered while its partner segments are still
  * placeholders reaches no handler — the rendered segments are its only record.
  * An unfilled half of the pair counts as 0, so a lone hour survives.
  *
- * Reads `aria-valuenow`, which React Aria sets from the segment's numeric value
- * and omits for an hour or minute placeholder. The `data-placeholder` filter
- * covers segment types where that does not hold — an `era` placeholder does
- * carry a value.
+ * The `data-placeholder` filter is belt-and-braces on `aria-valuenow`, which
+ * React Aria already omits for an hour or minute placeholder — but it also
+ * guards the `textContent` fallback below, where a placeholder's dashes would
+ * otherwise be parsed.
  *
  * Assumes a 24-hour cycle and no seconds segment: with `hourCycle={12}` the hour
  * reports 1–12 and needs the `dayPeriod` segment to disambiguate, and a `second`

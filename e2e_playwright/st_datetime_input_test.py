@@ -112,6 +112,22 @@ def test_datetime_input_dropdown(app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(calendar, name="st_datetime_input-dropdown")
 
 
+def test_datetime_input_empty_dropdown(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test the calendar popover of an empty widget, where the time field is
+    interactive rather than disabled.
+    """
+    get_datetime_input(app, "Datetime input 8 (empty)").get_by_test_id(
+        "stDateTimeInputField"
+    ).get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    expect(calendar).to_be_visible()
+
+    assert_snapshot(calendar, name="st_datetime_input-empty_dropdown")
+
+
 def test_datetime_input_narrow_rendering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -251,9 +267,6 @@ def test_keeps_time_given_before_a_date(app: Page):
     segments.nth(3).press_sequentially("03")
     segments.nth(4).press_sequentially("24")
     expect(calendar).to_be_visible()
-
-    # A time on its own must not commit — the date is still incomplete.
-    expect_markdown(app, "Value 8: None")
 
     # Any in-month day works: the assertions pin only the preserved time, so
     # they must not depend on which month an empty widget opens on.

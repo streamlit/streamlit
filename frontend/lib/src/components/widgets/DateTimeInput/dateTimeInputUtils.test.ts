@@ -442,9 +442,8 @@ describe("getTypedTimeFromDom", () => {
   })
 
   it("prefers the placeholder marker over a value on the same segment", () => {
-    // Defensive: for hour and minute React Aria omits `aria-valuenow` on a
-    // placeholder, so it never emits this shape — but other segment types
-    // (`era`) do carry a value while placeholdered.
+    // Defensive: React Aria omits `aria-valuenow` on an hour or minute
+    // placeholder, so it never emits this shape.
     const el = document.createElement("div")
     el.innerHTML =
       '<div role="spinbutton" data-type="hour" data-placeholder="true" aria-valuenow="7">07</div>'

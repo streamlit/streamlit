@@ -2194,7 +2194,7 @@ describe("DateTimeInput widget", () => {
       })
     })
 
-    it("prefers the time control the user edited most recently", async () => {
+    it("prefers the time control the user focused most recently", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -2326,7 +2326,7 @@ describe("DateTimeInput widget", () => {
       )
     })
 
-    it("forgets a popover time that was dismissed without being committed", async () => {
+    it("forgets a dismissed popover time, on screen and on commit", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -2340,8 +2340,9 @@ describe("DateTimeInput widget", () => {
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
-      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
-      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      const popoverSegments = within(
+        screen.getByTestId("stDateTimeInputPopoverTime")
+      ).getAllByRole("spinbutton")
       await user.click(popoverSegments[0])
       await user.keyboard("0945")
       expect(popoverSegments[0]).toHaveTextContent("09")
@@ -2355,7 +2356,7 @@ describe("DateTimeInput widget", () => {
       })
       expect(spy).not.toHaveBeenCalled()
 
-      // The next session starts empty rather than showing the discarded time.
+      // The next session starts empty rather than showing the discarded time...
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
       expect(
@@ -2363,43 +2364,11 @@ describe("DateTimeInput widget", () => {
           "spinbutton"
         )[0]
       ).toHaveAttribute("data-placeholder", "true")
-    })
 
-    it("does not apply a dismissed popover time to a later date selection", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
-
-      await user.click(screen.getAllByRole("spinbutton")[0])
-      await screen.findByTestId("stDateTimeInputCalendar")
-      await user.click(
-        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
-          "spinbutton"
-        )[0]
-      )
-      await user.keyboard("0945")
-      await user.click(screen.getByTestId("outside"))
-      await waitFor(() => {
-        expect(
-          screen.queryByTestId("stDateTimeInputCalendar")
-        ).not.toBeInTheDocument()
-      })
-
-      // A fresh session touching only the calendar: the time from the discarded
-      // session must not reappear in the committed value, where nothing on
-      // screen would explain it.
-      await user.click(screen.getAllByRole("spinbutton")[0])
-      await screen.findByTestId("stDateTimeInputCalendar")
+      // ...and a date picked in that session must not resurrect it either,
+      // where nothing on screen would explain the time.
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
-
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith(
           props.element.id,
@@ -2418,6 +2387,48 @@ describe("DateTimeInput widget", () => {
       )
     })
 
+    it("keeps an inline time that is still on screen after dismissal", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Unlike the popover field, the inline segments do not unmount on
+      // dismissal, so the time stays visible — and a later date pick commits it.
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("0324")
+      await user.click(screen.getByTestId("outside"))
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(segments[3]).toHaveTextContent("03")
+
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T03:24"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
     it("drops a pending popover time when the form is reset", async () => {
       const user = userEvent.setup()
       const props = emptyProps()

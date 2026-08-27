@@ -174,6 +174,10 @@ function SingleDateTimeInput({
   // the TimeField's segments from its controlled `value` the moment they
   // complete, so without holding the time here it would blank out as the user
   // finished typing it.
+  //
+  // Display buffer only: `resolveGivenTime` never reads it, because a *partial*
+  // popover time never reaches `onChange` and so never lands here. What commits
+  // is always re-read from the rendered segments.
   const [pendingTime, setPendingTime] = useState<Time | null>(null)
 
   const [prevValue, setPrevValue] = useState(value)
@@ -206,6 +210,11 @@ function SingleDateTimeInput({
   const resolveGivenTime = useCallback((): Time | null => {
     const buffered = displayValueRef.current
     if (buffered) return new Time(buffered.hour, buffered.minute)
+    // Dismissing clears `pendingTime` but leaves the inline segments alone, so
+    // a time typed there survives into a later date pick while a popover one
+    // does not. That asymmetry is deliberate: the popover unmounts with its
+    // value, whereas the inline draft is still on screen, and committing what is
+    // visible is the whole point of reading here.
     const popover = getTypedTimeFromDom(popoverRef.current)
     const inline = getTypedTimeFromDom(triggerRef.current)
     return lastTimeSourceRef.current === "popover"
@@ -585,6 +594,13 @@ function SingleDateTimeInput({
   }, [displayValue])
 
   // Popover TimeField value: the committed time, or one set before a date.
+  //
+  // Before a date exists the two time controls can show different times: a time
+  // typed inline is not mirrored here, and one typed here is not mirrored into
+  // the inline segments. Neither can be: the inline `DateField` cannot be given
+  // a time-only value, and mirroring the other way would mean reading the DOM
+  // during render. `resolveGivenTime` picks between them at commit, so the
+  // divergence is visual only.
   const popoverTimeValue = useMemo((): Time | null => {
     if (!displayValue) return pendingTime
     return new Time(displayValue.hour, displayValue.minute)
@@ -596,9 +612,9 @@ function SingleDateTimeInput({
     (time: TimeValue | null): void => {
       const current = displayValueRef.current
       if (!current) {
-        // Mirror clears too. With no date, `pendingTime` is the only record of
-        // this time and it feeds the field's own value, so ignoring null here
-        // would restore the time into the field the user just emptied.
+        // Drop pendingTime when the user empties the field; otherwise the
+        // controlled value puts the time back. With no date, that state is the
+        // field's only record of the time.
         setPendingTime(time ? new Time(time.hour, time.minute) : null)
         return
       }
