@@ -396,14 +396,18 @@ function TextInput({
     return true
   }
 
-  // Show "Please enter" instructions if in a form & allowed, or not in form
-  // and dirty. Hide "Press Enter to apply" when live updates are on.
+  // Show "Press Enter to apply/submit" when dirty (or in a form that submits
+  // on Enter), and the character count when maxChars is set. Hide the Enter
+  // hint for live widgets; skip the instructions node entirely when neither
+  // hint nor character count would render.
   const allowEnterToSubmit = inForm
     ? widgetMgr.allowFormEnterToSubmit(formId)
     : dirty && !isLive
 
   const shouldShowInstructions =
-    focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
+    focused &&
+    width > convertRemToPx(theme.breakpoints.hideWidgetDetails) &&
+    (allowEnterToSubmit || Boolean(maxChars))
 
   const handleFocus = useCallback((): void => {
     setFocused(true)

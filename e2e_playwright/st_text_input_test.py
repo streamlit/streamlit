@@ -15,7 +15,8 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+import pytest
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -40,6 +41,27 @@ from e2e_playwright.shared.input_utils import (
 )
 
 TEXT_INPUT_ELEMENTS = 42
+
+
+def _ime_events(app: Page) -> list[str]:
+    return app.evaluate("window.__stImeEvents || []")
+
+
+def _record_ime_events(input_locator: Locator) -> None:
+    input_locator.evaluate(
+        """el => {
+            window.__stImeEvents = [];
+            for (const type of [
+                "compositionstart",
+                "compositionupdate",
+                "compositionend",
+            ]) {
+                el.addEventListener(type, () => {
+                    window.__stImeEvents.push(type);
+                });
+            }
+        }"""
+    )
 
 
 def test_text_input_widget_rendering(
@@ -820,6 +842,9 @@ def test_text_input_live_commits_while_typing(app: Page):
     live_default.click()
     live_default.type("hello")
     expect(app.get_by_text("Press Enter to apply")).to_have_count(0)
+    expect(
+        get_text_input(app, "Live default input").get_by_test_id("InputInstructions")
+    ).to_have_count(0)
     wait_until(app, lambda: app.get_by_text("Live default value: hello").is_visible())
     expect(live_default).to_be_focused()
     live_default.press("ArrowLeft")
@@ -828,7 +853,11 @@ def test_text_input_live_commits_while_typing(app: Page):
     wait_until(app, lambda: app.get_by_text("Live default value: hellxo").is_visible())
     expect(live_default).to_have_value("hellxo")
     expect(live_default).to_have_js_property("selectionStart", caret_before + 1)
-    live_default.press("End")
+    expect(live_default).to_be_focused()
+    # Home/End scroll the page on macOS, so move the caret via the selection API.
+    live_default.evaluate(
+        "el => el.setSelectionRange(el.value.length, el.value.length)"
+    )
     live_default.type("!")
     wait_until(app, lambda: app.get_by_text("Live default value: hellxo!").is_visible())
     expect(live_default).to_have_value("hellxo!")
@@ -901,3 +930,90 @@ def test_text_input_live_ignore_validate_and_fragment(app: Page):
     expect(app.get_by_text("Live validate value: 123")).to_have_count(0)
     live_validate.fill("abc")
     wait_until(app, lambda: app.get_by_text("Live validate value: abc").is_visible())
+
+
+def test_text_input_live_dialog_scopes_rerun(app: Page) -> None:
+    """Live commits inside st.dialog must rerun the dialog, not the page."""
+    expect_prefixed_markdown(app, "Outside fragment counter:", "1")
+    click_button(app, "Open live dialog")
+    expect_prefixed_markdown(app, "Outside fragment counter:", "2")
+
+    dialog = app.get_by_test_id("stDialog")
+    expect(dialog).to_be_visible()
+    live_dialog = get_text_input(dialog, "Live dialog input").locator("input").first
+    live_dialog.type("hi")
+    wait_until(app, lambda: dialog.get_by_text("Live dialog value: hi").is_visible())
+    expect_prefixed_markdown(app, "Outside fragment counter:", "2")
+    expect(app.get_by_text("Press Enter to apply")).to_have_count(0)
+
+
+@pytest.mark.only_browser("chromium")
+def test_text_input_live_does_not_commit_during_ime_composition(app: Page) -> None:
+    """CJK IME composition must not live-commit until compositionend.
+
+    Chromium CDP ``Input.imeSetComposition`` / ``Input.insertText`` is the
+    closest CI can get to an OS IME. If those commands do not fire composition
+    events (headless without an IME), fall back to the native event sequence
+    engines emit for IME so the live-commit gate is still exercised in-browser.
+    """
+    live_slow = get_text_input(app, "Live 1s input").locator("input").first
+    live_slow.click()
+    _record_ime_events(live_slow)
+
+    client = app.context.new_cdp_session(app)
+    try:
+        client.send(
+            "Input.imeSetComposition",
+            {"text": "ni", "selectionStart": 2, "selectionEnd": 2},
+        )
+        if "compositionstart" not in _ime_events(app):
+            live_slow.evaluate(
+                """el => {
+                    el.dispatchEvent(new CompositionEvent("compositionstart", {
+                        bubbles: true, composed: true, data: "",
+                    }));
+                    el.value = "ni";
+                    el.dispatchEvent(new InputEvent("input", {
+                        bubbles: true,
+                        composed: true,
+                        data: "ni",
+                        isComposing: true,
+                        inputType: "insertCompositionText",
+                    }));
+                    el.dispatchEvent(new CompositionEvent("compositionupdate", {
+                        bubbles: true, composed: true, data: "ni",
+                    }));
+                }"""
+            )
+
+        wait_for_app_run(app, initial_wait=1500)
+        expect(app.get_by_text("Live 1s value: ni", exact=True)).to_have_count(0)
+        expect(live_slow).to_have_value("ni")
+
+        client.send("Input.insertText", {"text": "你"})
+        if "compositionend" not in _ime_events(app):
+            live_slow.evaluate(
+                """el => {
+                    el.value = "你";
+                    el.dispatchEvent(new CompositionEvent("compositionend", {
+                        bubbles: true, composed: true, data: "你",
+                    }));
+                    el.dispatchEvent(new InputEvent("input", {
+                        bubbles: true,
+                        composed: true,
+                        data: "你",
+                        isComposing: false,
+                        inputType: "insertFromComposition",
+                    }));
+                }"""
+            )
+    finally:
+        client.detach()
+
+    wait_until(
+        app,
+        lambda: app.get_by_text("Live 1s value: 你", exact=True).is_visible(),
+        timeout=4000,
+    )
+    expect(live_slow).to_have_value("你")
+    expect(app.get_by_text("Live 1s value: ni", exact=True)).to_have_count(0)

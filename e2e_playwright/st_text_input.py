@@ -319,3 +319,13 @@ def _live_fragment_search() -> None:
 
 
 _live_fragment_search()
+
+
+@st.dialog("Live dialog")
+def _live_dialog() -> None:
+    dialog_query = st.text_input("Live dialog input", live=True)
+    st.write("Live dialog value:", dialog_query)
+
+
+if st.button("Open live dialog"):
+    _live_dialog()
