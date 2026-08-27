@@ -64,6 +64,7 @@ import {
   computeStepSnap,
   dateTimesEqual,
   getSegmentState,
+  getTypedTimeFromDom,
   parsePastedDateTime,
   validateDateTime,
 } from "./dateTimeInputUtils"
@@ -164,10 +165,22 @@ function SingleDateTimeInput({
     undefined
   )
 
+  // Which time control the user focused last. The inline segments and the
+  // popover TimeField can hold different times at once, so the later edit wins.
+  // Focus alone flips this, which is harmless: an untouched control reads as
+  // null and `resolveGivenTime` falls back to the other.
+  const lastTimeSourceRef = useRef<"inline" | "popover">("inline")
+  // A complete time set in the popover before any date exists. React Aria resets
+  // the TimeField's segments from its controlled `value` the moment they
+  // complete, so without holding the time here it would blank out as the user
+  // finished typing it.
+  const [pendingTime, setPendingTime] = useState<Time | null>(null)
+
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
     setDisplayValue(value)
+    setPendingTime(null)
     lastCommittedRef.current = undefined
   }
 
@@ -175,10 +188,30 @@ function SingleDateTimeInput({
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
+    setPendingTime(null)
   }
 
   const displayValueRef = useRef(displayValue)
   displayValueRef.current = displayValue
+
+  /** The time to merge into a date the user selects: the buffered display
+   * value's if the field already holds one, otherwise whichever of the two time
+   * controls they focused most recently, falling back to the other if that one
+   * is empty. Null when they have given no time at all, in which case the caller
+   * defaults to midnight.
+   *
+   * Both controls are read from their rendered segments, because neither reports
+   * a partial time through `onChange`. Reading them here rather than tracking
+   * them in state means there is no buffered copy to go stale. */
+  const resolveGivenTime = useCallback((): Time | null => {
+    const buffered = displayValueRef.current
+    if (buffered) return new Time(buffered.hour, buffered.minute)
+    const popover = getTypedTimeFromDom(popoverRef.current)
+    const inline = getTypedTimeFromDom(triggerRef.current)
+    return lastTimeSourceRef.current === "popover"
+      ? (popover ?? inline)
+      : (inline ?? popover)
+  }, [])
 
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -197,6 +230,12 @@ function SingleDateTimeInput({
    * formCommit (sync WM write) to prevent the form-submit race. */
   const commitOrRevert = useCallback((): boolean => {
     if (!triggerRef.current) return false
+    // A time given in the popover lives only as long as that popover session:
+    // every path here either commits it into the value or discards it. Without
+    // this, a dismissed time would be restored into the remounted TimeField and
+    // then merged into a date picked in a later session, with nothing on screen
+    // explaining where it came from.
+    setPendingTime(null)
     const { isPartiallyTyped, isFullyCleared } = getSegmentState(
       triggerRef.current
     )
@@ -334,18 +373,21 @@ function SingleDateTimeInput({
       setDisplayValue(date)
       onValidate(date)
       if (date) {
+        // The field now carries its own time, superseding any pending one.
+        setPendingTime(null)
         onFocusChange(new CalendarDate(date.year, date.month, date.day))
       }
     },
     [onFocusChange, onValidate]
   )
 
-  // Calendar date selection: merge with existing time and enter active mode
-  // so Tab cycles within the popover (reaching the TimeField) instead of
-  // dismissing.
+  // Calendar date selection: merge the date with whatever time the user has
+  // already given — the buffered display value's, else one given before any date
+  // existed — and enter active mode so Tab cycles within the popover (reaching
+  // the TimeField) instead of dismissing.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
-      const currentTime = displayValueRef.current
+      const currentTime = resolveGivenTime()
       const merged = new CalendarDateTime(
         date.year,
         date.month,
@@ -354,17 +396,23 @@ function SingleDateTimeInput({
         currentTime?.minute ?? 0
       )
       setDisplayValue(merged)
+      setPendingTime(null)
       onValidate(merged)
       setIsCalendarActive(true)
       activeOriginRef.current = null
     },
-    [onValidate]
+    [onValidate, resolveGivenTime]
   )
 
   const handleFocus = useCallback((): void => {
+    lastTimeSourceRef.current = "inline"
     if (isRestoringFocusRef.current) return
     if (!disabled) setIsOpen(true)
   }, [disabled])
+
+  const handlePopoverTimeFocus = useCallback((): void => {
+    lastTimeSourceRef.current = "popover"
+  }, [])
 
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
@@ -377,6 +425,7 @@ function SingleDateTimeInput({
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
+    setPendingTime(null)
     lastCommittedRef.current = null
     onChange(null)
     formCommitRef.current?.(null)
@@ -410,6 +459,7 @@ function SingleDateTimeInput({
       current: CalendarDateTime | null
     ): void => {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
+      // No date yet: nothing to snap against, so React Aria's default ±1 applies.
       if (!current) return
       const target = e.target as HTMLElement
       const segmentType = target.getAttribute("data-type")
@@ -534,18 +584,26 @@ function SingleDateTimeInput({
     )
   }, [displayValue])
 
-  // Popover TimeField value: extract time from displayValue.
+  // Popover TimeField value: the committed time, or one set before a date.
   const popoverTimeValue = useMemo((): Time | null => {
-    if (!displayValue) return null
+    if (!displayValue) return pendingTime
     return new Time(displayValue.hour, displayValue.minute)
-  }, [displayValue])
+  }, [displayValue, pendingTime])
 
-  // Popover TimeField change: merge new time with existing date.
+  // Popover TimeField change: merge new time with existing date, or hold it as
+  // pending until a date selection can complete the value.
   const handlePopoverTimeChange = useCallback(
     (time: TimeValue | null): void => {
-      if (!time) return
       const current = displayValueRef.current
-      if (!current) return
+      if (!current) {
+        // Mirror clears too. With no date, `pendingTime` is the only record of
+        // this time and it feeds the field's own value, so ignoring null here
+        // would restore the time into the field the user just emptied.
+        setPendingTime(time ? new Time(time.hour, time.minute) : null)
+        return
+      }
+      // A CalendarDateTime always has a time, so there is nothing to clear.
+      if (!time) return
       const merged = new CalendarDateTime(
         current.year,
         current.month,
@@ -703,6 +761,7 @@ function SingleDateTimeInput({
               <StyledPopoverTimeRow
                 data-testid="stDateTimeInputPopoverTime"
                 onKeyDownCapture={handlePopoverTimeKeyDown}
+                onFocus={handlePopoverTimeFocus}
               >
                 <StyledPopoverTimeLabel id={`${id}-time-label`}>
                   Time
@@ -717,7 +776,7 @@ function SingleDateTimeInput({
                     granularity="minute"
                     hourCycle={24}
                     shouldForceLeadingZeros
-                    isDisabled={!displayValue}
+                    isDisabled={disabled}
                   >
                     <StyledPopoverTimeFieldInput>
                       {segment => (

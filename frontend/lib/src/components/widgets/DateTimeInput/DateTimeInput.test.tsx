@@ -1980,4 +1980,478 @@ describe("DateTimeInput widget", () => {
       expect(reachedTimeField).toBe(true)
     })
   })
+
+  describe("Time given before a date", () => {
+    /** Empty widget, so the date segments stay placeholders — the state in which
+     * DateField reports no value at all. min/max are pinned to November 2025 so
+     * the calendar clamps to a deterministic month rather than opening on
+     * today's, which is what makes the /November 19/ day locator reliable. */
+    const emptyProps = (): Props =>
+      getProps({
+        default: [],
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+        format: "YYYY/MM/DD",
+      })
+
+    it("keeps a time typed inline when a date is then picked in the calendar", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Type only the time; the date segments stay empty.
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("03")
+      await user.keyboard("24")
+      expect(segments[3]).toHaveTextContent("03")
+      expect(segments[4]).toHaveTextContent("24")
+
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T03:24"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      // The typed time must not be discarded in favour of midnight.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T00:00"],
+        expect.anything()
+      )
+    })
+
+    it("keeps an hour typed inline without a minute", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("07")
+
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T07:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("keeps the popover TimeField interactive while the widget is empty", async () => {
+      const user = userEvent.setup()
+      render(<DateTimeInput {...emptyProps()} />)
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Doubles as the guard for getTypedTimeFromDom's assumptions: exactly two
+      // segments in the whole popover means no dayPeriod segment (hourCycle 24)
+      // and no seconds segment, and that no other control there reports an
+      // hour/minute the resolver could pick up by mistake.
+      const popoverSegments = within(
+        screen.getByTestId("stDateTimeInputCalendar")
+      ).getAllByRole("spinbutton")
+      expect(popoverSegments).toHaveLength(2)
+      popoverSegments.forEach(seg => {
+        expect(seg).not.toHaveAttribute("aria-disabled", "true")
+      })
+    })
+
+    it("applies a time set in the popover when a date is picked afterwards", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Set the time in the popover before any date exists.
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverHour = timeRow.querySelector<HTMLElement>(
+        '[data-type="hour"]'
+      ) as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("09")
+      await user.keyboard("45")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T09:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("does not commit a time on its own without a date", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("03")
+      await user.keyboard("24")
+      await user.click(screen.getByTestId("outside"))
+
+      // A time with no date is a partially typed field, which reverts.
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("keeps a partial time set in the popover, without a minute", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Only the hour: TimeField withholds onChange until both its segments are
+      // filled, so this never reaches handlePopoverTimeChange.
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      await user.click(within(timeRow).getAllByRole("spinbutton")[0])
+      await user.keyboard("09")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T09:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("prefers the time control the user edited most recently", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Type inline first, then override in the popover. Both hold a time at
+      // once and both are on screen, so the later edit is the one meant.
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("03")
+      await user.keyboard("24")
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("09")
+      await user.keyboard("45")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T09:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      // The earlier inline time must not win just because it was typed first.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T03:24"],
+        expect.anything()
+      )
+    })
+
+    it("forgets a pending popover time once the inline field supplies its own", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      render(<DateTimeInput {...props} />)
+
+      // Set a popover time with no date, so it is held as pending.
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      // Complete the inline field, which supersedes the pending time...
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const inlineSegments = within(inlineField).getAllByRole("spinbutton")
+      await user.click(inlineSegments[0])
+      await user.keyboard("20251119")
+      await user.keyboard("0300")
+
+      // ...then empty it again. The superseded 09:45 must not come back, which
+      // it would if the pending time had outlived the inline field's own value.
+      for (const segment of within(inlineField).getAllByRole("spinbutton")) {
+        await clearSegment(user, segment)
+      }
+      await screen.findByTestId("stDateTimeInputCalendar")
+      expect(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      ).toHaveAttribute("data-placeholder", "true")
+    })
+
+    it("forgets a popover time the user clears again", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("0945")
+      expect(popoverSegments[0]).toHaveTextContent("09")
+
+      // Backspace both segments away. React Aria re-seeds the field from its
+      // controlled value, so a retained pending time would reappear here.
+      await clearSegment(user, popoverSegments[1])
+      await clearSegment(user, popoverSegments[0])
+      expect(popoverSegments[0]).toHaveAttribute("data-placeholder", "true")
+      expect(popoverSegments[1]).toHaveAttribute("data-placeholder", "true")
+
+      // Picking a date must not resurrect the cleared time.
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T00:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T09:45"],
+        expect.anything()
+      )
+    })
+
+    it("forgets a popover time that was dismissed without being committed", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("0945")
+      expect(popoverSegments[0]).toHaveTextContent("09")
+
+      // Dismissed with no date to attach the time to, so nothing commits.
+      await user.click(screen.getByTestId("outside"))
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
+
+      // The next session starts empty rather than showing the discarded time.
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      expect(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      ).toHaveAttribute("data-placeholder", "true")
+    })
+
+    it("does not apply a dismissed popover time to a later date selection", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+      await user.click(screen.getByTestId("outside"))
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+
+      // A fresh session touching only the calendar: the time from the discarded
+      // session must not reappear in the committed value, where nothing on
+      // screen would explain it.
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T00:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T09:45"],
+        expect.anything()
+      )
+    })
+
+    it("drops a pending popover time when the form is reset", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("09")
+      await user.keyboard("45")
+
+      // A form reset clears buffered edits, including the pending time.
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      expect(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      ).toHaveAttribute("data-placeholder", "true")
+    })
+  })
 })

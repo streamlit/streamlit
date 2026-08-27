@@ -28,6 +28,7 @@ import {
   createDateTimeErrorMessage,
   dateTimesEqual,
   formatCalendarDateTime,
+  getTypedTimeFromDom,
   isoToCalendarDateTime,
   parsePastedDateTime,
   snapTimeStep,
@@ -382,5 +383,86 @@ describe("computeStepSnap", () => {
       hour: 10,
       minute: 15,
     })
+  })
+})
+
+describe("getTypedTimeFromDom", () => {
+  /** Builds a container of rendered segments in the shape React Aria produces:
+   * a numeric `aria-valuenow` once the user has typed, and `data-placeholder`
+   * with no `aria-valuenow` until then. */
+  const container = (
+    segments: Partial<Record<"year" | "hour" | "minute", number | null>>
+  ): HTMLElement => {
+    const el = document.createElement("div")
+    el.innerHTML = Object.entries(segments)
+      .map(([type, value]) =>
+        value === null || value === undefined
+          ? `<div role="spinbutton" data-type="${type}" data-placeholder="true">––</div>`
+          : `<div role="spinbutton" data-type="${type}" aria-valuenow="${value}">${value}</div>`
+      )
+      .join("")
+    return el
+  }
+
+  it("returns null for a missing container", () => {
+    expect(getTypedTimeFromDom(null)).toBeNull()
+  })
+
+  it("returns null when neither hour nor minute is typed", () => {
+    expect(
+      getTypedTimeFromDom(container({ year: null, hour: null, minute: null }))
+    ).toBeNull()
+  })
+
+  it("reads a time typed while the date segments are still placeholders", () => {
+    expect(
+      getTypedTimeFromDom(container({ year: null, hour: 3, minute: 24 }))
+    ).toMatchObject({ hour: 3, minute: 24 })
+  })
+
+  it("treats an untyped half of the pair as zero", () => {
+    expect(
+      getTypedTimeFromDom(container({ hour: 3, minute: null }))
+    ).toMatchObject({ hour: 3, minute: 0 })
+    expect(
+      getTypedTimeFromDom(container({ hour: null, minute: 24 }))
+    ).toMatchObject({ hour: 0, minute: 24 })
+  })
+
+  it("reads hour 0 as typed rather than as absent", () => {
+    expect(
+      getTypedTimeFromDom(container({ hour: 0, minute: 30 }))
+    ).toMatchObject({ hour: 0, minute: 30 })
+  })
+
+  it("returns null when only the date segments are typed", () => {
+    expect(
+      getTypedTimeFromDom(container({ year: 2025, hour: null, minute: null }))
+    ).toBeNull()
+  })
+
+  it("prefers the placeholder marker over a value on the same segment", () => {
+    // Defensive: for hour and minute React Aria omits `aria-valuenow` on a
+    // placeholder, so it never emits this shape — but other segment types
+    // (`era`) do carry a value while placeholdered.
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="spinbutton" data-type="hour" data-placeholder="true" aria-valuenow="7">07</div>'
+    expect(getTypedTimeFromDom(el)).toBeNull()
+  })
+
+  it("falls back to the rendered text where aria-valuenow is absent", () => {
+    // React Aria renders segments as textboxes with no aria-valuenow on iOS.
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="textbox" data-type="hour">09</div>' +
+      '<div role="textbox" data-type="minute">45</div>'
+    expect(getTypedTimeFromDom(el)).toMatchObject({ hour: 9, minute: 45 })
+  })
+
+  it("ignores a non-numeric segment value", () => {
+    const el = document.createElement("div")
+    el.innerHTML = '<div role="textbox" data-type="hour">––</div>'
+    expect(getTypedTimeFromDom(el)).toBeNull()
   })
 })

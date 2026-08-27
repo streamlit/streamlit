@@ -232,6 +232,60 @@ def test_clearable_datetime_input(app: Page):
     expect_markdown(app, "Value 8: None")
 
 
+def test_keeps_time_given_before_a_date(app: Page):
+    """A time given before any date survives the calendar date selection.
+
+    The field reports no value until every segment is filled, so a time entered
+    while the date segments are still empty has to be read back out of the
+    field's segment state when a date completes the value — otherwise it silently
+    becomes midnight. Covers both entry points: the inline segments and the
+    popover TimeField.
+    """
+    datetime_input = get_datetime_input(app, "Datetime input 8 (empty)")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    # Segments follow the default YYYY/MM/DD format: year, month, day, hour, minute.
+    segments = datetime_field.get_by_role("spinbutton")
+
+    # --- Time typed into the inline field, with the date left empty ---
+    segments.nth(3).press_sequentially("03")
+    segments.nth(4).press_sequentially("24")
+    expect(calendar).to_be_visible()
+
+    # A time on its own must not commit — the date is still incomplete.
+    expect_markdown(app, "Value 8: None")
+
+    # Any in-month day works: the assertions pin only the preserved time, so
+    # they must not depend on which month an empty widget opens on.
+    calendar.get_by_role("button", name=re.compile(r"\b15, ")).click()
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value 8:", re.compile(r"\d{4}-\d{2}-\d{2} 03:24:00"))
+
+    datetime_input.get_by_test_id("stDateTimeInputClearButton").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: None")
+
+    # --- Time set in the popover TimeField, with no value committed yet ---
+    segments.first.click()
+    expect(calendar).to_be_visible()
+
+    popover_segments = app.get_by_test_id("stDateTimeInputPopoverTime").get_by_role(
+        "spinbutton"
+    )
+    popover_segments.first.press_sequentially("09")
+    popover_segments.last.press_sequentially("45")
+
+    calendar.get_by_role("button", name=re.compile(r"\b15, ")).click()
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value 8:", re.compile(r"\d{4}-\d{2}-\d{2} 09:45:00"))
+    # The popover time must reach the value rather than being dropped to midnight.
+    expect(app.get_by_text(re.compile(r"Value 8: .* 00:00:00"))).not_to_be_visible()
+
+
 def test_callback_invoked(app: Page):
     datetime_field = get_datetime_input(
         app, "Datetime input 6 (with callback)"

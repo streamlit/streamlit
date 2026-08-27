@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CalendarDateTime } from "@internationalized/date"
+import { CalendarDateTime, Time } from "@internationalized/date"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
@@ -215,7 +215,11 @@ export interface SegmentState {
   isFullyCleared: boolean
 }
 
-/** Query spinbutton segments in a container to determine their placeholder state. */
+/** Query spinbutton segments in a container to determine their placeholder state.
+ *
+ * Matches on `role`, which React Aria replaces with `textbox` on iOS, so this
+ * finds no segments there. `getTypedTimeFromDom` below matches `data-type`
+ * instead, which is emitted on every platform. */
 export function getSegmentState(container: HTMLElement): SegmentState {
   const segments = container.querySelectorAll('[role="spinbutton"]')
   const placeholders = container.querySelectorAll(
@@ -229,6 +233,54 @@ export function getSegmentState(container: HTMLElement): SegmentState {
     isPartiallyTyped: placeholderCount > 0 && placeholderCount < totalSegments,
     isFullyCleared: totalSegments > 0 && placeholderCount === totalSegments,
   }
+}
+
+/**
+ * The time held by a container's rendered `hour` and `minute` segments, ignoring
+ * placeholders. Returns null when neither is filled.
+ *
+ * `DateField` and `TimeField` both withhold `onChange` until every one of their
+ * segments is filled, so a time entered while its partner segments are still
+ * placeholders reaches no handler — the rendered segments are its only record.
+ * An unfilled half of the pair counts as 0, so a lone hour survives.
+ *
+ * Reads `aria-valuenow`, which React Aria sets from the segment's numeric value
+ * and omits for an hour or minute placeholder. The `data-placeholder` filter
+ * covers segment types where that does not hold — an `era` placeholder does
+ * carry a value.
+ *
+ * Assumes a 24-hour cycle and no seconds segment: with `hourCycle={12}` the hour
+ * reports 1–12 and needs the `dayPeriod` segment to disambiguate, and a `second`
+ * segment would be ignored.
+ */
+export function getTypedTimeFromDom(
+  container: HTMLElement | null
+): Time | null {
+  const readSegment = (type: "hour" | "minute"): number | null => {
+    // Match on `data-type` rather than `role`: React Aria renders segments as
+    // textboxes, not spinbuttons, on iOS.
+    const segment = container?.querySelector(
+      `[data-type="${type}"]:not([data-placeholder="true"])`
+    )
+    if (!segment) return null
+    // React Aria also drops `aria-valuenow` on iOS, so fall back to the rendered
+    // text. Safe to parse: both fields are pinned to en-US, so the digits are
+    // ASCII, and `shouldForceLeadingZeros` only ever prefixes a zero.
+    const raw = segment.getAttribute("aria-valuenow") ?? segment.textContent
+    if (!raw) return null
+    const parsed = Number(raw)
+    // Range-guarded so a value this function can't represent degrades to "no
+    // time given" rather than reaching `new Time`, which does not validate.
+    const max = type === "hour" ? 23 : 59
+    return Number.isInteger(parsed) && parsed >= 0 && parsed <= max
+      ? parsed
+      : null
+  }
+
+  const hour = readSegment("hour")
+  const minute = readSegment("minute")
+  if (hour === null && minute === null) return null
+  return new Time(hour ?? 0, minute ?? 0)
 }
 
 // --- useBasicWidgetState integration ---
