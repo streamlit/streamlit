@@ -474,9 +474,13 @@ function TextInput({
   const handleCompositionEnd = useCallback(
     (e: CompositionEvent<HTMLInputElement>): void => {
       isComposingRef.current = false
-      commitOrScheduleLive(e.currentTarget.value)
+      // compositionend does not go through the input handler. Route through
+      // onChange so maxChars and uiValue stay in sync before a live commit.
+      // A trailing input event with the same value is deduped by
+      // tryCommitOutsideForm.
+      onChange({ target: { value: e.currentTarget.value } })
     },
-    [commitOrScheduleLive]
+    [onChange]
   )
 
   const handleKeyDown = useCallback(

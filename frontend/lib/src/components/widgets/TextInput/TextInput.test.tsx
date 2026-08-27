@@ -1615,6 +1615,43 @@ describe("TextInput live updates", () => {
     )
   })
 
+  it("does not commit an over-limit IME confirmation", () => {
+    const { setStringValueSpy } = renderLive({
+      liveDebounceMs: 0,
+      maxChars: 1,
+    })
+
+    const input = screen.getByRole("textbox")
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.compositionStart(input)
+    fireEvent.change(input, { target: { value: "a" } })
+    fireEvent.compositionEnd(input, { target: { value: "ab" } })
+    /* eslint-enable testing-library/prefer-user-event */
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("syncs uiValue on IME confirmation before a 0ms live commit", () => {
+    const { props, setStringValueSpy } = renderLive({ liveDebounceMs: 0 })
+
+    const input = screen.getByRole("textbox")
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.compositionStart(input)
+    fireEvent.change(input, { target: { value: "a" } })
+    expect(input).toHaveValue("a")
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    fireEvent.compositionEnd(input, { target: { value: "あ" } })
+    /* eslint-enable testing-library/prefer-user-event */
+
+    expect(input).toHaveValue("あ")
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "あ",
+      fromUserCommit(props)
+    )
+  })
+
   it("hides Press Enter to apply while still showing the character count", async () => {
     const { user } = renderLive({ maxChars: 5 })
 
