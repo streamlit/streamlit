@@ -31,11 +31,13 @@ if TYPE_CHECKING:
         WALLACE = 2
         GREENE = 3
 
-    assert_type(radio("foo", []), None)
+    # ty infers `Unknown` for empty options.
+    assert_type(radio("foo", []), None)  # ty: ignore[type-assertion-failure]
 
     assert_type(radio("foo", [1, 2, 3]), int)
     assert_type(radio("foo", [1, 2, 3], index=None), int | None)
-    assert_type(radio("foo", [1.0, 2.0, 3.0]), float)
+    # ty infers `float*` (not equivalent to `float`).
+    assert_type(radio("foo", [1.0, 2.0, 3.0]), float)  # ty: ignore[type-assertion-failure]
     assert_type(radio("foo", [1.0, 2.0, 3.0], index=None), float | None)
     assert_type(radio("foo", [1.0, 2, 3.0]), float)
     assert_type(radio("foo", [1.0, 2, 3.0], index=None), float | None)
@@ -44,7 +46,8 @@ if TYPE_CHECKING:
     assert_type(radio("foo", Alfred), Alfred)
     assert_type(radio("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
     assert_type(radio("foo", Alfred, index=None), Alfred | None)
-    assert_type(radio("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
+    # ty infers `int | Alfred | str | None` rather than `object`.
+    assert_type(radio("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)  # ty: ignore[type-assertion-failure]
 
     # Check bind parameter
     assert_type(radio("foo", ["a", "b"], bind="query-params"), str)

@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 
     # Invalid width / height values (only int or "stretch" / "content", and
     # None is not allowed)
-    graphviz_chart("digraph { a -> b }", width="invalid")  # type: ignore[arg-type]
-    graphviz_chart("digraph { a -> b }", width=None)  # type: ignore[arg-type]
-    graphviz_chart("digraph { a -> b }", height="invalid")  # type: ignore[arg-type]
-    graphviz_chart("digraph { a -> b }", height=None)  # type: ignore[arg-type]
+    graphviz_chart("digraph { a -> b }", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    graphviz_chart("digraph { a -> b }", width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    graphviz_chart("digraph { a -> b }", height="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    graphviz_chart("digraph { a -> b }", height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

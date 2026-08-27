@@ -43,5 +43,5 @@ uv run pytest lib/tests/streamlit/my_example_test.py -k test_that_something_work
 ## Typing tests
 
 Public-API typing tests in `lib/tests/streamlit/typing/` are not pytest tests.
-`make python-types` checks them with mypy; they are not in ty's source set.
+`make python-types` checks them with mypy and ty.
 See `lib/tests/streamlit/typing/README.md` and `lib/streamlit/AGENTS.md`.
