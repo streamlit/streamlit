@@ -71,7 +71,7 @@ Icons go in the text for headings, and in `icon=` only for elements that have th
 # BAD: raises TypeError -- st.title, st.header, and st.subheader have no icon parameter
 st.title("Sales dashboard", icon=":material/analytics:")
 
-# GOOD: icon in the heading text
+# GOOD: if a heading needs an icon, put it in the text
 st.title(":material/analytics: Sales dashboard")
 
 # GOOD: icon= where the element supports it
