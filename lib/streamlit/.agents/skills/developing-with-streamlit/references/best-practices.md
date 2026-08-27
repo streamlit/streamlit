@@ -46,6 +46,7 @@ query = st.text_input("", placeholder="Search")
 # GOOD: Accessible label, visually collapsed
 query = st.text_input(
     "Search",
+    type="search",
     placeholder="Search",
     label_visibility="collapsed",
 )
@@ -208,7 +209,7 @@ Use forms to batch related inputs when intermediate changes would trigger expens
 
 ```python
 # BAD: Search runs after each widget update
-query = st.text_input("Search")
+query = st.text_input("Search", type="search")
 category = st.selectbox("Category", categories)
 results = search(query, category)
 

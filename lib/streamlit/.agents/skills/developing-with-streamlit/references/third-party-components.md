@@ -30,13 +30,6 @@ Custom components can break when Streamlit updates, so prefer core features when
 
 ## Popular custom components
 
-### streamlit-keyup
-
-Prefer `st.text_input("Search", type="search", live=True)` (in a `@st.fragment` when the rest of the app is expensive). Use this component only if you need behavior the core widget does not provide.
-
-- **Repo:** https://github.com/blackary/streamlit-keyup
-- **Docs:** https://pypi.org/project/streamlit-keyup/
-
 ### streamlit-bokeh
 
 Official replacement for `st.bokeh_chart` (removed from Streamlit API). Maintained by Streamlit.
