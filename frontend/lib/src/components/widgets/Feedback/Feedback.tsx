@@ -201,7 +201,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { type } = element
 
-  const [hookValue, setValueWithSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     FeedbackValue,
     FeedbackProto
   >({
@@ -214,10 +214,6 @@ function Feedback(props: Readonly<Props>): ReactElement {
     fragmentId,
     formClearBehavior: "resetValueOnly",
   })
-
-  // Prefer the proto when the backend sent setValue (session_state / script).
-  // Otherwise the hook value (updated on this render when the user clicks).
-  const value = element.value ?? hookValue
 
   const containerWidth = shouldWidthStretch(widthConfig)
 

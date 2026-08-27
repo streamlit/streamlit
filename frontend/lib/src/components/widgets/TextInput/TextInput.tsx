@@ -123,9 +123,12 @@ function TextInput({
   const lastCommittedValueRef = useRef<string | null>(
     getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
-  // User-committed strings since the last acknowledged setValue. Used to
-  // recognize stale echoes of in-flight reruns. Cleared when the latest
-  // commit is echoed or a non-echo setValue is applied.
+  // User-committed strings that may still be in flight. Used to recognize
+  // stale setValue echoes of older reruns. Ordinary live reruns do not send
+  // setValue, so this set is only an ack stand-in: a matching latest-commit
+  // echo removes that one value, and a non-echo setValue clears the rest.
+  // A restore of an earlier unacked string is indistinguishable from a stale
+  // echo without a commit generation on the wire.
   const pendingLiveCommitsRef = useRef(new Set<string | null>())
   const isComposingRef = useRef(false)
 
@@ -177,16 +180,17 @@ function TextInput({
   // - dirty: keystrokes not yet committed
   // - an in-flight user-committed string that is not the latest: a stale
   //   echo of an older rerun, including after blur
-  // After in-flight commits are acknowledged, any other incoming value
-  // (callback / session_state write, including restoring an earlier string)
-  // applies, including while focused.
+  // Matching the latest commit acks only that value so a later stale echo of
+  // an earlier commit (A then B then A, then a late B) is still dropped.
+  // Any other incoming value (callback / session_state write) applies,
+  // including while focused.
   const shouldApplyIncomingValue = useCallback(
     (incoming: string | null): boolean => {
       if (dirtyRef.current) {
         return false
       }
       if (incoming === lastCommittedValueRef.current) {
-        pendingLiveCommitsRef.current.clear()
+        pendingLiveCommitsRef.current.delete(incoming)
         return true
       }
       if (pendingLiveCommitsRef.current.has(incoming)) {
@@ -220,6 +224,10 @@ function TextInput({
   // session_state / callback writes update `value` without going through
   // commitWidgetValue; keep lastCommitted aligned so later echoes compare
   // against the script's value, not the previous user commit.
+  // This must run during render: useBasicWidgetState's setValue effect is
+  // registered by a hook called above, so it runs before any effect declared
+  // here. Moving this into useEffect would leave the ref stale for that
+  // setValue effect. A discarded render still writes the ref.
   if (!dirty) {
     lastCommittedValueRef.current = value
   }
@@ -267,13 +275,14 @@ function TextInput({
   const commitWidgetValue = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
       lastCommittedValueRef.current = valueToCommit
-      if (liveEnabled) {
+      // on_change="ignore" stages without a rerun, so nothing will echo-ack.
+      if (liveEnabled && !element.ignoreRerun) {
         pendingLiveCommitsRef.current.add(valueToCommit)
       }
       setDirtyAndRef(false)
       setValueWithSource({ value: valueToCommit, fromUser: true })
     },
-    [liveEnabled, setDirtyAndRef, setValueWithSource]
+    [element.ignoreRerun, liveEnabled, setDirtyAndRef, setValueWithSource]
   )
 
   const isUserValueInvalid = useCallback(
@@ -335,6 +344,15 @@ function TextInput({
 
   const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
     useDebouncedCallback(tryCommitOutsideForm, liveDebounceMs)
+
+  // useDebouncedCallback does not cancel a manually started timer when the
+  // delay changes. Drop pending work if live is toggled or the delay changes
+  // on a keyed widget; blur/Enter still flush if the user confirms.
+  useEffect(() => {
+    return () => {
+      cancelLiveCommit()
+    }
+  }, [cancelLiveCommit, liveDebounceMs, liveEnabled])
 
   const commitOrScheduleLive = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {

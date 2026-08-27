@@ -1724,6 +1724,104 @@ describe("TextInput live updates", () => {
     expect(input).toHaveValue("abc")
   })
 
+  it("does not apply a stale B echo after A then B then A", () => {
+    const { props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    /* eslint-disable testing-library/prefer-user-event -- sequential live commits without extra clear-to-empty */
+    fireEvent.change(input, { target: { value: "A" } })
+    fireEvent.change(input, { target: { value: "B" } })
+    fireEvent.change(input, { target: { value: "A" } })
+    /* eslint-enable testing-library/prefer-user-event */
+    expect(input).toHaveValue("A")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "A",
+        })}
+      />
+    )
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "B",
+        })}
+      />
+    )
+    expect(input).toHaveValue("A")
+  })
+
+  it("applies a session_state restore of a string staged with ignoreRerun", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      ignoreRerun: true,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "ab")
+    expect(input).toHaveValue("ab")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "a",
+        })}
+      />
+    )
+    expect(input).toHaveValue("a")
+  })
+
+  it("cancels a pending debounce when live is turned off", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive()
+
+    await user.type(screen.getByRole("textbox"), "abc")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          liveDebounceMs: null,
+        })}
+      />
+    )
+    advanceMs(300)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("cancels a pending debounce when the delay changes", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive()
+
+    await user.type(screen.getByRole("textbox"), "abc")
+    advanceMs(200)
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          liveDebounceMs: 500,
+        })}
+      />
+    )
+    advanceMs(100)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    advanceMs(500)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
   it("commits live values for password inputs", async () => {
     const { user, props, setStringValueSpy } = renderLive({
       type: TextInputProto.Type.PASSWORD,
