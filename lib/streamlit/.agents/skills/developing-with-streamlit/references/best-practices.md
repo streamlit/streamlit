@@ -209,7 +209,7 @@ Use forms to batch related inputs when intermediate changes would trigger expens
 
 ```python
 # BAD: Search runs after each widget update
-query = st.text_input("Search", type="search")
+query = st.text_input("Search")
 category = st.selectbox("Category", categories)
 results = search(query, category)
 
