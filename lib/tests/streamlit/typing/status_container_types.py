@@ -32,9 +32,10 @@ if TYPE_CHECKING:
     # st.status returns StatusContainer
     assert_type(status("Test"), StatusContainer)
 
-    # StatusContainer is a DeltaGenerator (Liskov substitution)
-    s: DeltaGenerator = status("Test")
-    assert_type(s, DeltaGenerator)
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
+    _status_as_delta_generator: DeltaGenerator = status("Test")
 
     # Context manager returns Self
     with status("Test") as ctx:

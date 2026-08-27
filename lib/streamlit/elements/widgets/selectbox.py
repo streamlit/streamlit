@@ -283,6 +283,34 @@ class SelectboxMixin:
         persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
+    # A dynamic index: int | None with default accept_new_options=False
+    # returns T | None. This sits before the bool catch-all so checkers
+    # that do not expand int | None (e.g. pyrefly) do not pick up a
+    # spurious | str. mypy expands the union, so CI cannot catch deleting
+    # this overload. See #16630.
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int | None = 0,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> T | None: ...
+
     @overload
     def selectbox(
         self,
@@ -649,7 +677,6 @@ class SelectboxMixin:
         proto_filter_mode = validate_select_widget_filter_mode(
             filter_mode,
             accept_new_options=accept_new_options,
-            command="st.selectbox",
         )
 
         formatted_options, formatted_option_to_option_index = create_mappings(

@@ -57,15 +57,29 @@ coverage (95% or higher) of our Python code in `lib/streamlit`.
 ### Typing Tests
 
 We have typing tests in `lib/tests/streamlit/typing` for our public API to catch
-typing errors in parameters or return types by using mypy and `assert_type`.
+typing errors in parameters or return types by using mypy, ty, and `assert_type`.
 
-- **These are NOT pytest tests** — they are checked by mypy only, never executed at runtime.
+- **These are NOT pytest tests** — they are checked by mypy and ty, never executed at runtime.
 - All assertions and imports go inside `if TYPE_CHECKING:` blocks.
 - Do **not** use `def test_*()` functions or `import streamlit as st`.
 - Import from Mixin classes directly (e.g. `LayoutsMixin().expander`).
 - Always include `from __future__ import annotations` at the top.
+- Overloads discriminated on `bool` need an explicit fallback overload for
+  non-literal values, because mypy does not expand `bool` into
+  `Literal[True] | Literal[False]`. String-`Literal` discriminators do not
+  need that fallback; mypy expands union arguments, so assert the union
+  result directly. Cover both the literal cases and the non-literal case.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
-  (e.g. `radio_types.py`, `button_types.py`).
+  (e.g. `radio_types.py`, `file_uploader_types.py`).
+- Intentional invalid calls need a suppression for each checker that reports an
+  error: `# type: ignore[...]` (mypy) and `# ty: ignore[...]` (ty). Place each
+  suppression where its checker reports the diagnostic; use the same line when
+  possible. Add a checker's comment only when that checker actually errors —
+  ty's `unused-ignore-comment` rule is disabled, so a superfluous suppression
+  is silently kept.
+- A valid call whose asserted type mypy accepts but ty rejects may use
+  `# ty: ignore[type-assertion-failure]`. Add a short note saying what ty infers
+  instead, so the suppression can be removed once ty catches up.
 - For dict-like return values backed by `AttributeDictionary` /
   `ReadOnlyAttributeDictionary` subclasses (e.g. dataframe/chart selection
   state, `ButtonColumn` click state, `st.data_editor` edit state), assert both
@@ -126,12 +140,27 @@ generic `StreamlitAPIException` with a one-off message.
 
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits.
-- `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
-  an invalid value from a known finite set (Literal / enum-like options). Example:
+- `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
+  parameter receives an invalid value from a known set of options or an
+  accepted range. `valid_values` is the user-facing list of supported values:
+  Literal / enum-like options, or a short range description (for example
+  `"a positive duration"`). `parameter` is appended in uncaught-exception
+  telemetry (`StreamlitValueError:<parameter>`); optional `detail` appears in
+  the error message only. Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
-- `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
-  use when a required parameter is missing, `None`, or empty. Example:
-  `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
+- `StreamlitMissingRequiredParameterError(parameter, *, detail=None)`:
+  use when a required parameter is missing, `None`, or empty, including an
+  empty sequence. `parameter` is appended in uncaught-exception telemetry
+  (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
+  `raise StreamlitMissingRequiredParameterError("label")`.
+- `StreamlitIncompatibleParametersError(first_use, second_use, *other_uses, *, explanation=None)`: use
+  when two or more parameter uses cannot be combined. Pass `parameter=value`
+  when the conflict depends on a value (`wrap=False`), or the bare parameter
+  name when merely providing it conflicts (`on_change`). These strings appear
+  only in the displayed error; uncaught-exception telemetry records only the
+  exception type. Optional `explanation` is appended when the generic
+  "cannot be used together" message needs more context. Example:
+  `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
   uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
@@ -139,28 +168,26 @@ generic `StreamlitAPIException` with a one-off message.
   `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
-  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
-    `StreamlitInvalidSizeError` (layout sizing helpers)
+  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError`
+    (layout sizing helpers)
   - `StreamlitInvalidColorError`
-  - `StreamlitInvalidVerticalAlignmentError` /
-    `StreamlitInvalidHorizontalAlignmentError` /
-    `StreamlitInvalidColumnGapError` (layout alignment/gap; these keep
-    element-type context in the message)
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
-  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout
-    or form context)
+  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
+    form, dialog, or fragment context — including opening a second dialog in the
+    same run, or writing to a container across a parallel-fragment boundary)
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)
-  - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
+  - `StreamlitDefaultNotInOptionsError` (default/index not in widget `options`;
+    `st.tabs` `default` uses `StreamlitValueError` because this message is
+    worded for widget options, not tab labels)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
-- Do not raise the deprecated aliases.
 
-Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
-type (incompatible option combinations, nesting rules, serialization failures,
+Reserve bare `StreamlitAPIException` for one-off cases that no shared type
+covers and that users are expected to hit uncommonly (serialization failures
 and similar).
 
 ## Theming and Layout

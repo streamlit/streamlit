@@ -81,13 +81,13 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width value (not "stretch", "content", "auto", or int)
-    markdown("Text", width="invalid")  # type: ignore[arg-type]
+    markdown("Text", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid text_alignment value (not "left", "center", "right", or "justify")
-    markdown("Text", text_alignment="start")  # type: ignore[arg-type]
+    markdown("Text", text_alignment="start")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing help as positional argument (should be keyword-only)
-    markdown("Text", False, "help text")  # type: ignore[call-arg]
+    markdown("Text", False, "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
 
     # Invalid anchors value (must be bool)
-    markdown("# H", anchors="yes")  # type: ignore[arg-type]
+    markdown("# H", anchors="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

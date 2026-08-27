@@ -86,15 +86,16 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = _logger.get_logger(__name__)
 
-# All formats that support direct editing, meaning that these
-# formats will be returned with the same type when used with data_editor.
+T = TypeVar("T")
+
+# Dataframe-like inputs return the same type. List, dict, and set inputs use
+# dedicated overloads that preserve inner type parameters but return the plain
+# builtin, matching the runtime conversion (a dict subclass in returns a plain
+# dict out). The bound's tuple[Any] matches only 1-tuples, so longer tuples hit
+# the data: Any overload and return pd.DataFrame.
 EditableData = TypeVar(
     "EditableData",
-    bound=dataframe_util.DataFrameGenericAlias[Any]
-    | tuple[Any]
-    | list[Any]
-    | set[Any]
-    | dict[str, Any],
+    bound=dataframe_util.DataFrameGenericAlias[Any] | tuple[Any],
 )
 
 
@@ -736,6 +737,74 @@ def _check_type_compatibilities(
 
 
 class DataEditorMixin:
+    # Inner types are echoed. Runtime may convert row/column tuples to lists
+    # (e.g. [(1, 2)] becomes list[list[int]]); that mismatch is pre-existing.
+    @overload
+    def data_editor(
+        self,
+        data: list[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> list[T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: dict[str, T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> dict[str, T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: set[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> set[T]:
+        pass
+
     @overload
     def data_editor(
         self,

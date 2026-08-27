@@ -18,7 +18,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, to_help_str
@@ -401,14 +404,15 @@ class HeadingMixin:
             elif isinstance(anchor, str):
                 proto.anchor = anchor
             elif anchor is True:  # type: ignore
-                raise StreamlitAPIException(
-                    f"Anchor parameter has invalid value: {anchor}. "
-                    "Supported values: None, any string or False"
+                raise StreamlitValueError(
+                    "anchor",
+                    ["None", "False", "any string"],
                 )
             else:
-                raise StreamlitAPIException(
-                    f"Anchor parameter has invalid type: {type(anchor).__name__}. "
-                    "Supported values: None, any string or False"
+                raise StreamlitInvalidParameterTypeError(
+                    "anchor",
+                    type(anchor).__name__,
+                    ["str", "None", "False"],
                 )
 
         if help:

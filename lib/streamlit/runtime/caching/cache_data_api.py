@@ -33,7 +33,7 @@ from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
@@ -714,16 +714,19 @@ class CacheDataAPI:
             raise StreamlitValueError("scope", ["'global'", "'session'"])
 
         validate_refresh_mode(
-            refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)
+            refresh_mode,
+            time_to_seconds(ttl, coerce_none_to_inf=False),
         )
 
         if refresh_mode == "background" and persist_string is not None:
-            raise StreamlitAPIException(
-                "The 'refresh_mode=\"background\"' option is not compatible with "
-                "'persist' caching. Persisted (disk) caches do not support TTL-based "
-                "expiration, which background refresh requires. Use persist=None (the "
-                'default) with refresh_mode="background", or use '
-                'refresh_mode="foreground".'
+            raise StreamlitIncompatibleParametersError(
+                "refresh_mode='background'",
+                f"persist={persist!r}",
+                explanation=(
+                    "Persisted (disk) caches do not support TTL-based expiration, "
+                    "which background refresh requires. Use `persist=None` with "
+                    '`refresh_mode="background"`, or use `refresh_mode="foreground"`.'
+                ),
             )
 
         def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:

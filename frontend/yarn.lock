@@ -207,13 +207,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^8.0.0":
-  version: 8.0.0
-  resolution: "@babel/runtime@npm:8.0.0"
-  checksum: 10c0/450857cf52b3a3935d4aad505277201361c86185dad3bdd2ae083d78b76c6265c7fc7610e170c80de1b825d5bfdcfb50697f0853fff922b2661c91cff1fbbd81
-  languageName: node
-  linkType: hard
-
 "@babel/template@npm:^7.29.7":
   version: 7.29.7
   resolution: "@babel/template@npm:7.29.7"
@@ -3258,7 +3251,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/app@workspace:app"
   dependencies:
-    "@babel/runtime": "npm:^8.0.0"
     "@emotion-icons/emotion-icon": "npm:^4.1.0"
     "@emotion-icons/material-outlined": "npm:^3.14.0"
     "@emotion-icons/material-rounded": "npm:^3.14.0"
@@ -3275,7 +3267,7 @@ __metadata:
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.2"
-    "@testing-library/user-event": "npm:^14.6.5"
+    "@testing-library/user-event": "npm:^14.6.6"
     "@types/hoist-non-react-statics": "npm:^3.3.7"
     "@types/iframe-resizer": "npm:~4.0.0"
     "@types/lodash-es": "npm:~4.17.12"
@@ -3283,10 +3275,8 @@ __metadata:
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
     "@types/react-transition-group": "npm:^4.4.12"
-    "@types/ua-parser-js": "npm:^0.7.39"
     "@vitejs/plugin-react-swc": "npm:^4.3.3"
     chrome-launcher: "npm:^1.2.1"
-    classnames: "npm:^2.3.2"
     color2k: "npm:^2.0.2"
     hoist-non-react-statics: "npm:^3.3.2"
     iframe-resizer: "npm:4.3.11"
@@ -3300,13 +3290,10 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     react-helmet-async: "npm:^3.0.0"
-    react-hot-keys: "npm:^3.0.0"
     react-transition-group: "npm:^4.4.5"
     tree-kill: "npm:^1.2.2"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
-    ua-parser-js: "npm:^1.0.41"
-    uuid: "npm:^14.0.2"
     vite: "npm:^8.2.2"
     vite-bundle-analyzer: "npm:^1.3.9"
     vite-plugin-terminal: "npm:^1.4.0"
@@ -3389,7 +3376,7 @@ __metadata:
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.2"
-    "@testing-library/user-event": "npm:^14.6.5"
+    "@testing-library/user-event": "npm:^14.6.6"
     "@types/d3-graphviz": "npm:^3.1.0"
     "@types/d3-selection": "npm:~3.0.11"
     "@types/hast": "npm:^3.0.5"
@@ -3404,16 +3391,13 @@ __metadata:
     "@types/react-color": "npm:^3.0.13"
     "@types/react-dom": "npm:^18.2.0"
     "@types/react-syntax-highlighter": "npm:^15.5.5"
-    "@types/ua-parser-js": "npm:^0.7.39"
     "@types/xxhashjs": "npm:^0.2.2"
     "@vitejs/plugin-react-swc": "npm:^4.3.3"
     apache-arrow: "npm:^21.2.0"
     axios: "npm:^1.19.0"
-    classnames: "npm:^2.3.2"
     color2k: "npm:^2.0.2"
     d3-graphviz: "npm:^5.6.0"
     d3-selection: "npm:^3.0.0"
-    decamelize: "npm:^6.0.1"
     dompurify: "npm:^3.4.14"
     hoist-non-react-statics: "npm:^3.3.2"
     hotkeys-js: "npm:^4.0.5"
@@ -3460,11 +3444,9 @@ __metadata:
     timezone-mock: "npm:^1.4.3"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
-    ua-parser-js: "npm:^1.0.41"
     unified: "npm:^11.0.5"
     unist-util-visit: "npm:^5.1.0"
     urlpattern-polyfill: "npm:^10.1.0"
-    uuid: "npm:^14.0.2"
     vega: "npm:^6.4.0"
     vega-embed: "npm:^7.1.0"
     vega-interpreter: "npm:^2.3.2"
@@ -3740,12 +3722,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/user-event@npm:^14.6.5":
-  version: 14.6.5
-  resolution: "@testing-library/user-event@npm:14.6.5"
+"@testing-library/user-event@npm:^14.6.6":
+  version: 14.6.6
+  resolution: "@testing-library/user-event@npm:14.6.6"
   peerDependencies:
     "@testing-library/dom": ">=7.21.4"
-  checksum: 10c0/874ad9548fb286bf1b42d9bdc7080b5b9e82cf975608b5e082cc5bbb506816291b6117305477c0a30670914279c2b35039cd07e7559ee993c5f5211722a95660
+  checksum: 10c0/2cb82d3a364a2a29da19bb5d2a614aedaa474ac6f599a42fc28c1926056f7b91f5cec37b33452bafcb3f6b37a950024da289dea88ead3c2056c6005c91c7f942
   languageName: node
   linkType: hard
 
@@ -4603,13 +4585,6 @@ __metadata:
   version: 2.0.7
   resolution: "@types/trusted-types@npm:2.0.7"
   checksum: 10c0/4c4855f10de7c6c135e0d32ce462419d8abbbc33713b31d294596c0cc34ae1fa6112a2f9da729c8f7a20707782b0d69da3b1f8df6645b0366d08825ca1522e0c
-  languageName: node
-  linkType: hard
-
-"@types/ua-parser-js@npm:^0.7.39":
-  version: 0.7.39
-  resolution: "@types/ua-parser-js@npm:0.7.39"
-  checksum: 10c0/fea522f42dfc2854d9c93144a13c3db3bbe1c791458451db06d46bec7e1dbbe945d1542e02bb38378e39a04bdb7810b43e2ead26f9e6c250832e187312522708
   languageName: node
   linkType: hard
 
@@ -5981,7 +5956,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"classnames@npm:^2.2.1, classnames@npm:^2.2.5, classnames@npm:^2.3.2":
+"classnames@npm:^2.2.1, classnames@npm:^2.2.5":
   version: 2.5.1
   resolution: "classnames@npm:2.5.1"
   checksum: 10c0/afff4f77e62cea2d79c39962980bf316bacb0d7c49e13a21adaadb9221e1c6b9d3cdb829d8bb1b23c406f4e740507f37e1dcf506f7e3b7113d17c5bab787aa69
@@ -7074,13 +7049,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decamelize@npm:^6.0.1":
-  version: 6.0.1
-  resolution: "decamelize@npm:6.0.1"
-  checksum: 10c0/c0a3a529591ebab1d1a9458b60684194e91d904e9b0a56367d3d507b2c8ab89dfd40c61423ca6a1eb2f70e2d44d2efe78f3342326395d3738d1d42592b1a6224
-  languageName: node
-  linkType: hard
-
 "decimal.js@npm:^10.4.3":
   version: 10.4.3
   resolution: "decimal.js@npm:10.4.3"
@@ -7798,7 +7766,7 @@ __metadata:
   dependencies:
     "@typescript-eslint/rule-tester": "npm:^8.67.0"
     "@typescript-eslint/utils": "npm:^8.67.0"
-    eslint: "npm:^10.8.1"
+    eslint: "npm:^10.9.0"
     typescript: "npm:^6.0.3"
     typescript-v7: "npm:typescript@7.0.2"
     typesync: "npm:^0.14.3"
@@ -7847,9 +7815,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^10.8.1":
-  version: 10.8.1
-  resolution: "eslint@npm:10.8.1"
+"eslint@npm:^10.9.0":
+  version: 10.9.0
+  resolution: "eslint@npm:10.9.0"
   dependencies:
     "@eslint-community/eslint-utils": "npm:^4.8.0"
     "@eslint-community/regexpp": "npm:^4.12.2"
@@ -7888,7 +7856,7 @@ __metadata:
       optional: true
   bin:
     eslint: bin/eslint.js
-  checksum: 10c0/0c4720a43ef2052829db18e37aa79adb5f0a62137bdf4a4f8e9507bbbbf888ba0669fc03e4b7139d8f27b59b051bbbcd0a3988b068c30fa934a766d60a81f599
+  checksum: 10c0/bc6c9f4a5c0b97e37ab1aa1753ae30ad5b0cf43a25ca3dcfff937f2b47243654c3ca34e37f71006474a3c1b95d6d4e046149facc6d66af4af6e993a619c23509
   languageName: node
   linkType: hard
 
@@ -9119,7 +9087,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hotkeys-js@npm:^4.0.2, hotkeys-js@npm:^4.0.5":
+"hotkeys-js@npm:^4.0.5":
   version: 4.0.5
   resolution: "hotkeys-js@npm:4.0.5"
   checksum: 10c0/541748a199e4908c091fd2a1a443b4d0741022558ed583b6ee191d5fa466930e17eb15cd2f5a0f741480775290547701305986ca55cc478b071259844e4dbbb5
@@ -13031,19 +12999,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hot-keys@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "react-hot-keys@npm:3.0.0"
-  dependencies:
-    hotkeys-js: "npm:^4.0.2"
-  peerDependencies:
-    "@babel/runtime": ">=7.10.0"
-    react: ">=16.9.0"
-    react-dom: ">=16.9.0"
-  checksum: 10c0/546f4f47d623bdd49fc3b75e6c9c0b8a3ba56ec1af36e4cfc63644589e7bdefe3c876a93a236e20f35ffba4e235c0ada001ca9e37654008afb2edffcc6892a8e
-  languageName: node
-  linkType: hard
-
 "react-html-attributes@npm:^1.4.6":
   version: 1.4.6
   resolution: "react-html-attributes@npm:1.4.6"
@@ -14145,7 +14100,7 @@ __metadata:
     "@types/node": "npm:>=24 <25"
     "@vitest/coverage-v8": "npm:^4.1.11"
     "@vitest/eslint-plugin": "npm:^1.6.27"
-    eslint: "npm:^10.8.1"
+    eslint: "npm:^10.9.0"
     eslint-import-resolver-typescript: "npm:^4.4.5"
     eslint-plugin-import-x: "npm:^4.17.1"
     eslint-plugin-lodash: "npm:^8.0.0"
@@ -14905,15 +14860,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ua-parser-js@npm:^1.0.41":
-  version: 1.0.41
-  resolution: "ua-parser-js@npm:1.0.41"
-  bin:
-    ua-parser-js: script/cli.js
-  checksum: 10c0/45dc1f7f3ce8248e0e64640d2e29c65c0ea1fc9cb105594de84af80e2a57bba4f718b9376098ca7a5b0ffe240f8995b0fa3714afa9d36861c41370a378f1a274
-  languageName: node
-  linkType: hard
-
 "uc.micro@npm:^2.0.0, uc.micro@npm:^2.1.0":
   version: 2.1.0
   resolution: "uc.micro@npm:2.1.0"
@@ -15303,7 +15249,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^11.1.0 || ^12 || ^13 || ^14.0.0, uuid@npm:^14.0.2":
+"uuid@npm:^11.1.0 || ^12 || ^13 || ^14.0.0":
   version: 14.0.2
   resolution: "uuid@npm:14.0.2"
   bin:

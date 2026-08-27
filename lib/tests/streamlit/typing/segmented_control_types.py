@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import assert_type
 
@@ -53,6 +53,14 @@ if TYPE_CHECKING:
         segmented_control("foo", options, selection_mode="multi", default=[1]),
         list[int],
     )
+    optional_default: list[int] | None = None
+    # Sequence overload includes None so this matches without union expansion.
+    assert_type(
+        segmented_control(
+            "foo", options, selection_mode="multi", default=optional_default
+        ),
+        list[int],
+    )
 
     # Check bind parameter
     assert_type(segmented_control("foo", options, bind="query-params"), int | None)
@@ -84,10 +92,28 @@ if TYPE_CHECKING:
         int | None,  # Explicitly None default still returns V | None
     )
 
-    # Note: required=True with selection_mode="multi" is invalid and raises
-    # StreamlitAPIException at runtime. This combination cannot be caught at
-    # type-check time because the overload fallback accepts it. The validation
-    # is enforced in _internal_button_group() at runtime.
+    # A variable typed as the full Literal union returns both result types.
+    selection_mode: Literal["single", "multi"] = "single"
+    # ty infers `int | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        segmented_control("foo", options, selection_mode=selection_mode),
+        int | list[int] | None,
+    )
+    # Non-literal required still infers V | None in the default single-select mode.
+    required: bool = False
+    assert_type(segmented_control("foo", options, required=required), int | None)
+
+    # required=True with selection_mode="multi" raises StreamlitAPIException at
+    # runtime, so the overloads reject it statically too.
+    segmented_control(  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+        "foo", options, selection_mode="multi", required=True
+    )
+    # Inherent limitation of the Literal[False] discriminator: a required: bool
+    # variable matches no multi-select overload, even when it is False
+    # (mypy only; ty accepts this call).
+    segmented_control(  # type: ignore[call-overload]
+        "foo", options, selection_mode="multi", required=required
+    )
 
     # Check wrap parameter
     assert_type(segmented_control("foo", options, wrap=True), int | None)
