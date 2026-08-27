@@ -21,7 +21,7 @@ env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
   MODEL_INPUT: ${{ github.event.inputs.model || '' }}
   DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.6-terra-xhigh,claude-opus-5-thinking-medium,cursor-grok-4.6-xhigh' }}
-  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-sol-high,claude-opus-5-thinking-high,cursor-grok-4.6-xhigh"
+  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-sol-high,claude-opus-5-thinking-high,gemini-3.7-flash-high,cursor-grok-4.6-xhigh"
 
 jobs:
   # Job 1: Parse model list and check for API key
