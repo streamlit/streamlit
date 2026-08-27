@@ -399,7 +399,12 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 4. Multi-select -> list[V]
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
     # Reject required=True in multi-select mode statically: it raises
     # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
     # bool cannot exclude True, so a `required: bool` variable then matches no
@@ -411,7 +416,30 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
         required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -769,7 +797,12 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 4. Multi-select -> list[V]
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
     # Reject required=True in multi-select mode statically: it raises
     # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
     # bool cannot exclude True, so a `required: bool` variable then matches no
@@ -781,7 +814,30 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
         required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,

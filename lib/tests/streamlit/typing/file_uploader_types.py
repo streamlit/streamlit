@@ -51,11 +51,13 @@ if TYPE_CHECKING:
 
     # Non-literal values return the union of single- and multi-file results.
     accept_multiple_files: bool = True
-    assert_type(
+    # ty infers `list[UploadedFile]` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
         file_uploader("Upload", accept_multiple_files=accept_multiple_files),
         UploadedFile | list[UploadedFile] | None,
     )
-    assert_type(
+    # ty infers `list[UploadedFile]` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
         file_uploader("Upload", None, accept_multiple_files),
         UploadedFile | list[UploadedFile] | None,
     )

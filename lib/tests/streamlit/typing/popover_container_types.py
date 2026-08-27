@@ -32,9 +32,10 @@ if TYPE_CHECKING:
     # st.popover returns PopoverContainer
     assert_type(popover("Test"), PopoverContainer)
 
-    # PopoverContainer is a DeltaGenerator (Liskov substitution)
-    pop: DeltaGenerator = popover("Test")
-    assert_type(pop, DeltaGenerator)
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
+    _popover_as_delta_generator: DeltaGenerator = popover("Test")
 
     # Context manager returns Self
     with popover("Test") as ctx:

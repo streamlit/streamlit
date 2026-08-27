@@ -67,8 +67,14 @@ if TYPE_CHECKING:
 
     # Non-literal bool values return the union of both result types.
     accept: bool = True
-    assert_type(chat_input("Message", accept_file=accept), str | ChatInputValue | None)
-    assert_type(chat_input("Message", accept_audio=accept), str | ChatInputValue | None)
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        chat_input("Message", accept_file=accept), str | ChatInputValue | None
+    )
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        chat_input("Message", accept_audio=accept), str | ChatInputValue | None
+    )
 
     # Mixed: accept_audio=True with a non-literal accept_file infers
     # ChatInputValue | None, including when audio_sample_rate is passed.
@@ -148,7 +154,7 @@ if TYPE_CHECKING:
 
     # audio_sample_rate is only on the accept_audio=True overloads, so passing
     # it with accept_audio omitted is a type error.
-    chat_input("Message", audio_sample_rate=16000)  # type: ignore[call-overload]
+    chat_input("Message", audio_sample_rate=16000)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     assert_type(
         chat_input("Message", accept_audio=True, audio_sample_rate=16000),

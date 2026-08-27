@@ -25,7 +25,7 @@ New features should include:
 3. **Python unit tests** in `lib/tests`
    - Run: `uv run pytest lib/tests/streamlit/the_test_name.py`
    - New elements: add to `lib/tests/streamlit/element_mocks.py`
-   - Public `st.*` commands: add or update `lib/tests/streamlit/typing/<command>_types.py` (mypy `assert_type`, not pytest)
+   - Public `st.*` commands: add or update `lib/tests/streamlit/typing/<command>_types.py` (mypy and ty `assert_type`, not pytest)
 
 4. **Frontend** in `frontend/`
    - New elements: add to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`
