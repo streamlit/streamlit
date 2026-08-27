@@ -590,27 +590,6 @@ class ChatMixin:
         key: Key | None = None,
         max_chars: int | None = None,
         max_upload_size: int | None = None,
-        accept_file: Literal[False] = False,
-        file_type: str | Sequence[str] | None = None,
-        accept_audio: Literal[True],
-        audio_sample_rate: int | None = 16000,
-        disabled: bool = False,
-        submit_mode: Literal["submit", "disable", "stop"] = "submit",
-        on_submit: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        width: WidthWithoutContent = "stretch",
-        height: Height = "content",
-    ) -> ChatInputValue | None: ...
-
-    @overload
-    def chat_input(
-        self,
-        placeholder: str = "Your message",
-        *,
-        key: Key | None = None,
-        max_chars: int | None = None,
-        max_upload_size: int | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -623,6 +602,55 @@ class ChatMixin:
         width: WidthWithoutContent = "stretch",
         height: Height = "content",
     ) -> ChatInputValue | None: ...
+
+    # accept_audio=True with omitted accept_file, literal False, or a
+    # non-literal bool infers ChatInputValue | None.
+    # Includes audio_sample_rate so that combination matches.
+    # When accept_file is False or non-literal, audio_sample_rate without
+    # accept_audio=True matches no overload, which keeps it a type error.
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        max_upload_size: int | None = None,
+        accept_file: bool | Literal["multiple", "directory"] = False,
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: Literal[True],
+        audio_sample_rate: int | None = 16000,
+        disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: Height = "content",
+    ) -> ChatInputValue | None: ...
+
+    # Non-literal accept_file / accept_audio values return the union of both
+    # result types. audio_sample_rate is omitted so that kwarg still requires
+    # an accept_audio=True overload to match.
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        max_upload_size: int | None = None,
+        accept_file: bool | Literal["multiple", "directory"] = False,
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: bool = False,
+        disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: Height = "content",
+    ) -> str | ChatInputValue | None: ...
 
     @gather_metrics("chat_input")
     def chat_input(

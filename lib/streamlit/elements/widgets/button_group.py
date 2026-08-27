@@ -376,7 +376,7 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def pills(
         self,
@@ -385,7 +385,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -400,6 +400,10 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def pills(
         self,
@@ -408,7 +412,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
-        required: bool = False,
+        required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -742,7 +746,7 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def segmented_control(
         self,
@@ -751,7 +755,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -766,6 +770,10 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def segmented_control(
         self,
@@ -774,7 +782,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
-        required: bool = False,
+        required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,

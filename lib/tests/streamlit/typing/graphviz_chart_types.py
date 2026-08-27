@@ -58,6 +58,7 @@ if TYPE_CHECKING:
     assert_type(
         graphviz_chart(
             digraph,
+            use_container_width=True,
             width="stretch",
             height=400,
         ),
