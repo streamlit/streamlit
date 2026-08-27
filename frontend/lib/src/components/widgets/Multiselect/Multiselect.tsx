@@ -679,42 +679,19 @@ const Multiselect: FC<Props> = props => {
         }
       }
 
-      // Creatable Enter: commit typed text as a new option.
-      // Only create when no item is focused or CREATABLE_ID is focused.
-      // If focus is on a real option or bulk action, let RAC handle it.
-      if (
-        e.key === "Enter" &&
-        !e.nativeEvent.isComposing &&
-        (element.acceptNewOptions ?? false)
-      ) {
-        const currentInput = inputValueRef.current
-        if (currentInput) {
-          const focused = focusedKeyRef.current
-          const shouldCreate =
-            !notNullOrUndefined(focused) || String(focused) === CREATABLE_ID
-
-          if (shouldCreate) {
-            const alreadyExists =
-              element.options.some(o => o === currentInput) ||
-              value.includes(currentInput)
-            if (!alreadyExists) {
-              if (
-                element.maxSelections > 0 &&
-                value.length >= element.maxSelections
-              ) {
-                e.preventDefault()
-                e.stopPropagation()
-                return
-              }
-              e.preventDefault()
-              e.stopPropagation()
-              const newValue = [...value, currentInput]
-              setValueWithSource({ value: newValue, fromUser: true })
-              setInputValue("")
-              return
-            }
-          }
+      // Enter with no active descendant: commit the first visible row so
+      // users do not need ArrowDown first. If a row is already focused, RAC
+      // commits that row instead.
+      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+        if (notNullOrUndefined(focusedKeyRef.current)) {
+          return
         }
+        const first = displayOptionsRef.current[0]
+        if (!first || !isOpenRef.current) return
+        e.preventDefault()
+        e.stopPropagation()
+        handleChange([first.id])
+        return
       }
 
       // Backspace on empty input removes last tag
@@ -737,15 +714,7 @@ const Multiselect: FC<Props> = props => {
         setValueWithSource({ value: newValue, fromUser: true })
       }
     },
-    [
-      disabled,
-      element.acceptNewOptions,
-      element.maxSelections,
-      element.options,
-      isFilterNone,
-      setValueWithSource,
-      value,
-    ]
+    [disabled, handleChange, isFilterNone, setValueWithSource, value]
   )
 
   // Map selected values to option IDs for the ComboBox selection prop

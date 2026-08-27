@@ -227,6 +227,26 @@ describe("Multiselect widget", () => {
     })
   })
 
+  it("focuses the first row so Enter selects it without ArrowDown", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: [] })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["a", "b", "c"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+  })
+
   it("filters based on label, not value", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })
@@ -595,8 +615,8 @@ describe("Multiselect widget", () => {
     const bulkAction = screen.getByText(/Select \d+ matches/)
     expect(bulkAction).toBeVisible()
 
-    // Press ArrowDown to focus the bulk action, then Enter to activate it
-    await user.keyboard("{ArrowDown}{Enter}")
+    // "Select X matches" is first and focused, so Enter activates it
+    await user.keyboard("{Enter}")
 
     // All matching options should now be selected as tags
     expect(screen.getByText("apple")).toBeVisible()
@@ -1138,7 +1158,7 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("Select all")).toBeVisible()
     })
 
-    it("never shows Select all when selectAll is 0, so ArrowDown+Enter selects the first match", async () => {
+    it("never shows Select all when selectAll is 0, so Enter selects the first match", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [],
@@ -1157,7 +1177,7 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("apple")).toBeVisible()
       expect(screen.getByText("apricot")).toBeVisible()
 
-      await user.keyboard("{ArrowDown}{Enter}")
+      await user.keyboard("{Enter}")
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,

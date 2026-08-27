@@ -43,7 +43,7 @@ def test_select_all_parameter(app: Page):
     expect(app.get_by_role("option")).to_have_count(2)
     expect(app.get_by_role("option").nth(0)).to_have_text("apple")
 
-    app.get_by_role("option", name="apple", exact=True).click()
+    input_false.press("Enter")
     wait_for_app_run(app)
 
     expect_text(app, "select_all False: ['apple']")

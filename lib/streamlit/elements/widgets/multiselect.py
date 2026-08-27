@@ -593,7 +593,8 @@ class MultiSelectMixin:
         **Example 3: Disable Select all**
 
         Hide the "Select all" option so the first dropdown row is the first
-        matching option instead of a bulk action.
+        matching option instead of a bulk action. Enter then selects that
+        match.
 
         >>> import streamlit as st
         >>>

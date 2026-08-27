@@ -291,6 +291,10 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingRight: theme.spacing.none,
   listStyle: "none",
   margin: theme.spacing.none,
+  // First row is the Enter target when nothing is keyboard-focused yet.
+  "&:not(:has([data-focused])) [role='option']:first-of-type [data-item-hl]": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
 }))
 
 export const StyledEmptyState = styled.span(({ theme }) => ({
