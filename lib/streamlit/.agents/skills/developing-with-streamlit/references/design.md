@@ -43,7 +43,7 @@ st.markdown(":material/calendar_today:")
 st.markdown(":material/dashboard:")
 st.markdown(":material/person:")
 
-# GOOD: in headings, the directive goes in the text
+# GOOD: if a heading needs an icon, put it in the text
 st.title(":material/analytics: Sales dashboard")
 st.subheader(":material/table: Recent orders")
 
@@ -181,7 +181,7 @@ with st.expander("Settings", icon=":material/settings:"):
     st.write("Configure your preferences")
 ```
 
-Other elements like `st.button` and `st.tabs` also support icons—worth considering when it adds clarity.
+Other elements take an `icon` parameter too, such as `st.button`, `st.metric`, and `st.page_link`—worth considering when it adds clarity. `st.tabs` has no `icon` parameter; put `:material/icon_name:` in the tab label instead.
 
 ## References
 

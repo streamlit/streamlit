@@ -122,13 +122,14 @@ Use Google Material Symbols with `:material/icon_name:` syntax. Find icons at [f
 st.markdown(":material/check_circle: Complete")
 ```
 
-Material icons also work in the `icon` parameter of the elements that define one —
-`st.button`, `st.expander`, `st.info`, `st.warning`, `st.error`, `st.success`,
-`st.badge`, `st.toast`, `st.page_link`, and `page_icon` on `st.set_page_config`.
+Material icons also work in the `icon` parameter of commands that define one, including
+`st.button`, `st.expander`, `st.info`, `st.badge`, `st.toast`, `st.page_link`, `st.metric`,
+and `st.Page`. `st.set_page_config` takes `page_icon`. Run `streamlit docs st.<command>`
+to confirm whether a command takes `icon`.
 
 There is no `icon` parameter on the heading and text commands (`st.title`,
 `st.header`, `st.subheader`, `st.markdown`, `st.caption`, `st.write`) — passing one
-raises `TypeError`. Put the directive in the text instead:
+raises `TypeError`. Put `:material/icon_name:` in the text instead:
 
 ```python
 # GOOD
