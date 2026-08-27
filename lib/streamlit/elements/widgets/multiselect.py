@@ -80,6 +80,8 @@ T = TypeVar("T")
 _SELECT_ALL_ALWAYS: Final = -1
 # Default ``select_all`` threshold (show when 1000 or fewer are selectable).
 _DEFAULT_SELECT_ALL: Final = 1000
+# Integer thresholds are stored in an int32 proto field.
+_SELECT_ALL_MAX_THRESHOLD: Final = 2**31 - 1
 
 
 class MultiSelectSerde(Generic[T]):
@@ -202,10 +204,11 @@ def _encode_select_all(select_all: object) -> int:
     if isinstance(select_all, bool):
         return _SELECT_ALL_ALWAYS if select_all else 0
     if isinstance(select_all, int):
-        if select_all < 0:
+        if select_all < 0 or select_all > _SELECT_ALL_MAX_THRESHOLD:
             raise StreamlitAPIException(
                 f"Invalid value for select_all: {select_all!r}. "
-                "When using an int, `select_all` must be a non-negative integer."
+                "When using an int, `select_all` must be a non-negative integer "
+                "no larger than 2147483647."
             )
         return select_all
     raise StreamlitAPIException(
@@ -702,6 +705,7 @@ class MultiSelectMixin:
             filter_mode,
             accept_new_options=accept_new_options,
         )
+        encoded_select_all = _encode_select_all(select_all)
 
         form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(
@@ -740,7 +744,7 @@ class MultiSelectMixin:
             proto.help = to_help_str(help)
         proto.accept_new_options = accept_new_options
         proto.filter_mode = proto_filter_mode
-        proto.select_all = _encode_select_all(select_all)
+        proto.select_all = encoded_select_all
         # wrap is layout-only and intentionally excluded from the element id
         # (see compute_and_register_element_id above), so toggling it never
         # resets the widget's value.

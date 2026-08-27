@@ -637,6 +637,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
             (False, 0),
             (0, 0),
             (1000, 1000),
+            (2**31 - 1, 2**31 - 1),
         ]
     )
     def test_select_all(self, value: bool | int, expected: int) -> None:
@@ -653,6 +654,27 @@ class Multiselectbox(DeltaGeneratorTestCase):
             StreamlitAPIException, match=r"must be a non-negative integer"
         ):
             st.multiselect("the label", ("m", "f"), select_all=-1)
+
+    def test_select_all_above_int32_raises(self) -> None:
+        """select_all values above the proto int32 max raise StreamlitAPIException."""
+        with pytest.raises(
+            StreamlitAPIException, match=r"must be a non-negative integer"
+        ):
+            st.multiselect("the label", ("m", "f"), select_all=2**31)
+
+    def test_select_all_invalid_does_not_register_key(self) -> None:
+        """Invalid select_all must not register the widget key.
+
+        Catching StreamlitAPIException and rendering a valid multiselect with
+        the same key in the same run must not hit StreamlitDuplicateElementKey.
+        """
+        with pytest.raises(
+            StreamlitAPIException, match=r"must be a non-negative integer"
+        ):
+            st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=-1)
+        st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=False)
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.select_all == 0
 
     @parameterized.expand([("yes",), (1.5,), (None,)])
     def test_select_all_invalid_type_raises(self, value: object) -> None:
