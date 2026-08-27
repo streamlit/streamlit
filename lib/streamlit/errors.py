@@ -254,47 +254,6 @@ class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for vertical_alignment."""
-
-    def __init__(self, vertical_alignment: str, element_type: str) -> None:
-        super().__init__(
-            "The `vertical_alignment` argument to `{element_type}` must be "
-            '`"top"`, `"center"`, `"bottom"`, or `"distribute"`. \n'
-            "The argument passed was {vertical_alignment}.",
-            vertical_alignment=vertical_alignment,
-            element_type=element_type,
-        )
-
-
-class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for gap."""
-
-    def __init__(self, gap: object, element_type: str) -> None:
-        super().__init__(
-            'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
-            '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
-            '`"xxlarge"`, `None`, or a non-negative integer specifying '
-            "the gap in pixels. \n"
-            "The argument passed was {gap}.",
-            gap=gap,
-            element_type=element_type,
-        )
-
-
-class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for horizontal_alignment."""
-
-    def __init__(self, horizontal_alignment: str, element_type: str) -> None:
-        super().__init__(
-            "The `horizontal_alignment` argument to `{element_type}` must be "
-            '`"left"`, `"center"`, `"right"`, or `"distribute"`. \n'
-            "The argument passed was {horizontal_alignment}.",
-            horizontal_alignment=horizontal_alignment,
-            element_type=element_type,
-        )
-
-
 # st.multiselect
 class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""
@@ -455,11 +414,11 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
 class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
     """Raised when two or more parameter uses cannot be combined.
 
-    Pass the value when the conflict depends on it (for example
-    ``wrap=False``), or the bare parameter name when merely providing it
-    conflicts (for example ``on_change``).
-    Uses are overlay-only; uncaught-exception telemetry is the type name
-    with no suffix.
+    Describe each conflict as a string. Include ``parameter=value`` when the
+    conflict depends on a value (for example ``wrap=False``); otherwise pass
+    only the parameter name (for example ``on_change``). These strings appear
+    only in the displayed error; uncaught-exception telemetry records only
+    the exception type.
     """
 
     def __init__(self, *uses: str, explanation: str | None = None) -> None:
@@ -681,19 +640,13 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidSizeError(LocalizableStreamlitException):
-    """Exception raised when an invalid size value is provided."""
-
-    def __init__(self, size: Any) -> None:
-        super().__init__(
-            "Invalid size value: {size}. Size must be either a positive integer (pixels), "
-            "'stretch', 'small', 'medium', or 'large'.",
-            size=repr(size),
-        )
-
-
 class StreamlitValueError(LocalizableStreamlitException):
-    """Raised when a parameter receives a value outside a known finite set."""
+    """Raised when a parameter receives a value outside a known finite set.
+
+    Uncaught-exception telemetry appends the parameter name, for example
+    ``StreamlitValueError:width``. Optional ``detail`` appears in the error
+    message only.
+    """
 
     def __init__(
         self,
@@ -793,6 +746,18 @@ StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
     StreamlitValueError
 )
 StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidSizeError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidVerticalAlignmentError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidColumnGapError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidHorizontalAlignmentError = (  # Replaced: StreamlitValueError.
     StreamlitValueError
 )
 StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.

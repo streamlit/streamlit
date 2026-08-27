@@ -390,7 +390,6 @@ class LayoutsMixin:
                 "wrap=False",
                 "horizontal=False",
                 explanation=(
-                    "`wrap=False` can only be used with `horizontal=True`. "
                     "A vertical container has no horizontal row of elements to "
                     "keep in a single, scrolling row. Set `horizontal=True` to "
                     "use `wrap=False`, or remove the `wrap` argument."
@@ -695,6 +694,7 @@ class LayoutsMixin:
             raise StreamlitValueError(
                 "vertical_alignment",
                 [f"'{alignment}'" for alignment in vertical_alignment_mapping],
+                detail=f"Got {vertical_alignment!r}.",
             )
 
         gap_config = get_gap_config(gap)

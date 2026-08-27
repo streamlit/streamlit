@@ -117,7 +117,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
     def test_columns_with_invalid_vertical_alignment(self):
         """Test that it throws an error on invalid vertical_alignment argument"""
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"Got 'invalid'\."):
             st.columns(3, vertical_alignment="invalid")
 
     def test_not_equal_width_int_columns(self):
@@ -322,7 +322,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
         """Test that it throws an error on invalid gap argument"""
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
             st.columns(3, gap=invalid_gap)
 
     def test_columns_with_border(self):
@@ -409,7 +409,10 @@ class ExpanderTest(DeltaGeneratorTestCase):
 
     def test_label_none_raises(self):
         """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
-        with pytest.raises(StreamlitMissingRequiredParameterError):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"The `label` parameter is required",
+        ):
             st.expander(None)
 
     def test_just_label(self):
@@ -932,7 +935,7 @@ class ContainerTest(DeltaGeneratorTestCase):
         """Test that st.container raises for wrap=False without horizontal=True."""
         with pytest.raises(
             StreamlitIncompatibleParametersError,
-            match=r"`wrap=False` can only be used with `horizontal=True`",
+            match=r"Set `horizontal=True` to use `wrap=False`",
         ):
             st.container(horizontal=False, wrap=False)
 
@@ -974,7 +977,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     @parameterized.expand([("invalid",), (-1,), (True,)])
     def test_container_invalid_gap(self, invalid_gap) -> None:
         """Test that st.container raises on invalid gap values."""
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
             st.container(gap=invalid_gap)
 
     @parameterized.expand(
@@ -985,7 +988,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
         """Test that st.container raises on invalid horizontal_alignment."""
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`horizontal_alignment`"):
             st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
 
     @parameterized.expand(
@@ -996,7 +999,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_vertical_alignment(self, vertical_alignment) -> None:
         """Test that st.container raises on invalid vertical_alignment."""
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`vertical_alignment`"):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
 
     @parameterized.expand(
@@ -1039,7 +1042,10 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
 
     def test_label_none_raises(self):
         """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
-        with pytest.raises(StreamlitMissingRequiredParameterError):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"The `label` parameter is required",
+        ):
             st.popover(None)
 
     def test_invalid_type_raises(self):
@@ -2334,7 +2340,10 @@ class DialogTest(DeltaGeneratorTestCase):
             "dialog_decorator() missing 1 required positional argument: 'title'"
         )
 
-        with pytest.raises(StreamlitMissingRequiredParameterError):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"The `title` parameter is required",
+        ):
 
             @st.dialog("")
             def dialog():
@@ -2379,7 +2388,10 @@ class DialogTest(DeltaGeneratorTestCase):
         def level1_dialog():
             level2_dialog()
 
-        with pytest.raises(FragmentHandledException):
+        with pytest.raises(
+            FragmentHandledException,
+            match=r"Dialogs may not be nested inside other dialogs\.",
+        ):
             level1_dialog()
 
     def test_only_one_dialog_can_be_opened_at_same_time(self):
@@ -2391,7 +2403,10 @@ class DialogTest(DeltaGeneratorTestCase):
         def dialog2():
             st.empty()
 
-        with pytest.raises(StreamlitInvalidLayoutContextError):
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"Only one dialog is allowed to be opened at the same time\.",
+        ):
             dialog1()
             dialog2()
 

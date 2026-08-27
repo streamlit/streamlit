@@ -357,6 +357,10 @@ def test_incompatible_parameters_error_explanation_with_braces() -> None:
         ("StreamlitInvalidTextAlignmentError", "StreamlitValueError"),
         ("StreamlitInvalidBindValueError", "StreamlitValueError"),
         ("StreamlitInvalidPersistStateError", "StreamlitValueError"),
+        ("StreamlitInvalidSizeError", "StreamlitValueError"),
+        ("StreamlitInvalidVerticalAlignmentError", "StreamlitValueError"),
+        ("StreamlitInvalidColumnGapError", "StreamlitValueError"),
+        ("StreamlitInvalidHorizontalAlignmentError", "StreamlitValueError"),
         ("StreamlitMissingPageLabelError", "StreamlitMissingRequiredParameterError"),
     ],
 )
