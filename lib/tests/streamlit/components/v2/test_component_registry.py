@@ -796,7 +796,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Test successful resolution
         resolved = ComponentPathUtils.resolve_glob_pattern("test-*.js", package_root)
-        assert str(resolved.resolve()) == Path(test_file).resolve().as_posix()
+        assert resolved.resolve() == Path(test_file).resolve()
 
         # Test no matches
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:
