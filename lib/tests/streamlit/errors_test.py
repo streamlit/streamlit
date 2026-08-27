@@ -349,3 +349,39 @@ def test_incompatible_parameters_error_explanation_with_braces() -> None:
         "`refresh_mode='background'` and `ttl=None` cannot be used together. "
         "Example: use {value}."
     )
+
+
+# StreamlitInvalidColorError tests
+
+
+def test_invalid_color_error_bullets_start_their_own_lines() -> None:
+    """Bullets each start a line, so the Markdown-rendered message shows a list
+    rather than literal asterisks mid-sentence."""
+    exc = errors.StreamlitInvalidColorError("red")
+    assert str(exc) == (
+        "This does not look like a valid color: 'red'.\n\n"
+        "Colors must be in one of the following formats:\n\n"
+        "* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`\n"
+        "* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`"
+    )
+
+
+def test_invalid_color_error_reprs_non_string_color() -> None:
+    """A sequence color is shown as its repr rather than as a bare string."""
+    exc = errors.StreamlitInvalidColorError([1.0, 0.5, 0, 0.2, 9])
+    assert str(exc).startswith(
+        "This does not look like a valid color: [1.0, 0.5, 0, 0.2, 9]."
+    )
+
+
+# StreamlitBadTimeStringError tests
+
+
+def test_bad_time_string_error_message_reads_as_one_sentence() -> None:
+    """The message keeps a space between "as" and the example, so it reads as
+    one sentence."""
+    exc = errors.StreamlitBadTimeStringError("nonsense")
+    assert str(exc) == (
+        "Time string doesn't look right. It should be formatted as "
+        "`'1d2h34m'` or `2 days`, for example. Got: nonsense"
+    )

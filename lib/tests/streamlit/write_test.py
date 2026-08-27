@@ -376,6 +376,24 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once_with(my_instance)
 
+    def test_obj_instance_with_uppercase_hex_repr(self):
+        """An address repr reaches the help view whatever hex casing it uses.
+
+        Windows CPython formats addresses with uppercase digits, so this pins
+        the routing on hosts whose own reprs are lowercase.
+        """
+
+        class SomeClass:
+            def __repr__(self) -> str:
+                return "<__main__.SomeClass object at 0x0000027B0C1B1550>"
+
+        my_instance = SomeClass()
+
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            st.write(my_instance)
+
+            p.assert_called_once_with(my_instance)
+
     def test_dataclass_instance(self):
         """Test st.write with a dataclass instance."""
 
@@ -390,8 +408,8 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once_with(my_instance)
 
-    # We use "looks like a memory address" as a test inside st.write, so here we're
-    # checking that that logic isn't broken.
+    # A string argument takes st.write's string branch, so an address-looking
+    # string must render as markdown rather than reaching the help view.
     def test_str_looking_like_mem_address(self):
         """Test calling st.write on a string that looks like a memory address."""
 

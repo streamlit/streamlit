@@ -73,6 +73,28 @@ describe("ExceptionElement Element", () => {
     expect(screen.getByTestId("stMarkdownContainer")).toBeInTheDocument()
   })
 
+  it("renders a markdown message's bullets as a real list", () => {
+    // A Streamlit exception message is Markdown, so a bullet list in it must
+    // render as list markup rather than as literal asterisks in the prose.
+    render(
+      <ExceptionElement
+        {...getProps({
+          messageIsMarkdown: true,
+          message: "Pick one of:\n\n* the first option\n* the second option",
+        })}
+      />
+    )
+
+    expect(screen.getByRole("list")).toBeVisible()
+    const bullets = screen.getAllByRole("listitem")
+    expect(bullets).toHaveLength(2)
+    expect(bullets[0]).toHaveTextContent("the first option")
+    expect(bullets[1]).toHaveTextContent("the second option")
+
+    // No asterisk survives in the prose.
+    expect(screen.queryByText(/of:\s*\*/)).not.toBeInTheDocument()
+  })
+
   it("should render if there's no message", () => {
     render(<ExceptionElement {...getProps({ message: "" })} />)
 
