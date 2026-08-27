@@ -145,7 +145,7 @@ class HtmlMixin:
             html_content = clean_text(cast("SupportsStr", body))
 
         if html_content == "":
-            raise StreamlitMissingRequiredParameterError("st.html", "body")
+            raise StreamlitMissingRequiredParameterError("body")
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 

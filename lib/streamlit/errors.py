@@ -193,6 +193,13 @@ class StreamlitModuleNotFoundError(StreamlitAPIWarning):
 
 
 class LocalizableStreamlitException(StreamlitAPIException):
+    """API exception with a format-string message and kwargs for localization.
+
+    Users can localize the message from ``exec_kwargs``, for example in an
+    ``on_script_error`` handler on ``st.App``. Kwargs are used for telemetry
+    only in a few specific cases (for example ``parameter``).
+    """
+
     def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__((message).format(**kwargs))
         self._exec_kwargs = kwargs
@@ -244,47 +251,6 @@ class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
             "positive integer (number of columns) or a list of positive numbers (width ratios of the columns). "
             "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
             "for more information."
-        )
-
-
-class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for vertical_alignment."""
-
-    def __init__(self, vertical_alignment: str, element_type: str) -> None:
-        super().__init__(
-            "The `vertical_alignment` argument to `{element_type}` must be "
-            '`"top"`, `"center"`, `"bottom"`, or `"distribute"`. \n'
-            "The argument passed was {vertical_alignment}.",
-            vertical_alignment=vertical_alignment,
-            element_type=element_type,
-        )
-
-
-class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for gap."""
-
-    def __init__(self, gap: object, element_type: str) -> None:
-        super().__init__(
-            'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
-            '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
-            '`"xxlarge"`, `None`, or a non-negative integer specifying '
-            "the gap in pixels. \n"
-            "The argument passed was {gap}.",
-            gap=gap,
-            element_type=element_type,
-        )
-
-
-class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for horizontal_alignment."""
-
-    def __init__(self, horizontal_alignment: str, element_type: str) -> None:
-        super().__init__(
-            "The `horizontal_alignment` argument to `{element_type}` must be "
-            '`"left"`, `"center"`, `"right"`, or `"distribute"`. \n'
-            "The argument passed was {horizontal_alignment}.",
-            horizontal_alignment=horizontal_alignment,
-            element_type=element_type,
         )
 
 
@@ -428,19 +394,54 @@ class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
 
 
 class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
-    """Raised when a required parameter is missing, ``None``, or empty."""
+    """Raised when a required parameter is missing, ``None``, or empty.
 
-    def __init__(
-        self, command: str, parameter: str, *, detail: str | None = None
-    ) -> None:
-        message = "The `{parameter}` parameter is required for `{command}`."
+    Uncaught-exception telemetry appends the parameter name, for example
+    ``StreamlitMissingRequiredParameterError:label``.
+    """
+
+    def __init__(self, parameter: str, *, detail: str | None = None) -> None:
+        message = "The `{parameter}` parameter is required."
         if detail:
             message += " {detail}"
         super().__init__(
             message,
-            command=command,
             parameter=parameter,
             detail=detail,
+        )
+
+
+class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
+    """Raised when two or more parameter uses cannot be combined.
+
+    Describe each conflict as a string. Include ``parameter=value`` when the
+    conflict depends on a value (for example ``wrap=False``); otherwise pass
+    only the parameter name (for example ``on_change``). These strings appear
+    only in the displayed error; uncaught-exception telemetry records only
+    the exception type.
+    """
+
+    def __init__(
+        self,
+        first_use: str,
+        second_use: str,
+        *other_uses: str,
+        explanation: str | None = None,
+    ) -> None:
+        uses = (first_use, second_use, *other_uses)
+        quoted = [f"`{use}`" for use in uses]
+        if len(quoted) == 2:
+            uses_text = f"{quoted[0]} and {quoted[1]}"
+        else:
+            uses_text = ", ".join(quoted[:-1]) + f", and {quoted[-1]}"
+        message = "{uses_text} cannot be used together."
+        if explanation:
+            message += " {explanation}"
+        super().__init__(
+            message,
+            uses_text=uses_text,
+            uses=list(uses),
+            explanation=explanation,
         )
 
 
@@ -557,7 +558,7 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidLayoutContextError(StreamlitAPIException):
-    """Raised when a command is used in a disallowed layout context."""
+    """Raised when a command is used in a disallowed layout, form, or dialog context."""
 
 
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
@@ -642,25 +643,31 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidSizeError(LocalizableStreamlitException):
-    """Exception raised when an invalid size value is provided."""
-
-    def __init__(self, size: Any) -> None:
-        super().__init__(
-            "Invalid size value: {size}. Size must be either a positive integer (pixels), "
-            "'stretch', 'small', 'medium', or 'large'.",
-            size=repr(size),
-        )
-
-
 class StreamlitValueError(LocalizableStreamlitException):
-    """Raised when a parameter receives a value outside a known finite set."""
+    """Raised when a parameter receives a value outside a known set or range.
 
-    def __init__(self, parameter: str, valid_values: list[str]) -> None:
+    ``valid_values`` is the user-facing list of supported values: Literal /
+    enum-like options, or a short description of an accepted range (for
+    example ``a positive duration``). Uncaught-exception telemetry appends
+    the parameter name, for example ``StreamlitValueError:width``. Optional
+    ``detail`` appears in the error message only.
+    """
+
+    def __init__(
+        self,
+        parameter: str,
+        valid_values: list[str],
+        *,
+        detail: str | None = None,
+    ) -> None:
+        message = "Invalid `{parameter}` value. Supported values: {valid_values}."
+        if detail:
+            message += " {detail}"
         super().__init__(
-            "Invalid `{parameter}` value. Supported values: {valid_values}.",
+            message,
             parameter=parameter,
             valid_values=", ".join(valid_values),
+            detail=detail,
         )
 
 
@@ -668,14 +675,25 @@ class StreamlitInvalidParameterTypeError(LocalizableStreamlitException):
     """Raised when a parameter has an unsupported type."""
 
     def __init__(
-        self, parameter: str, provided_type: str, expected_types: list[str]
+        self,
+        parameter: str,
+        provided_type: str,
+        expected_types: list[str],
+        *,
+        detail: str | None = None,
     ) -> None:
-        super().__init__(
+        message = (
             "Invalid `{parameter}` type. Expected one of: {expected_types}. "
-            "Provided type: {provided_type}.",
+            "Provided type: {provided_type}."
+        )
+        if detail:
+            message += " {detail}"
+        super().__init__(
+            message,
             parameter=parameter,
             expected_types=", ".join(expected_types),
             provided_type=provided_type,
+            detail=detail,
         )
 
 
@@ -723,6 +741,10 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
 
 
 # Deprecated aliases kept only for backward compatibility.
+# Identity aliases preserve `except OldName` for migrated raises, but also
+# catch every instance of the replacement type. Several names below shipped
+# as distinct classes in 1.62.0 (including StreamlitInvalidSizeError and the
+# gap/alignment errors); do not delete them as unused.
 StreamlitInvalidPageLayoutError = (  # Replaced: StreamlitValueError.
     StreamlitValueError
 )
@@ -733,6 +755,18 @@ StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
     StreamlitValueError
 )
 StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidSizeError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidVerticalAlignmentError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidColumnGapError = (  # Replaced: StreamlitValueError.
+    StreamlitValueError
+)
+StreamlitInvalidHorizontalAlignmentError = (  # Replaced: StreamlitValueError.
     StreamlitValueError
 )
 StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.
