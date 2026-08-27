@@ -1138,7 +1138,7 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("Select all")).toBeVisible()
     })
 
-    it("never shows Select all when selectAll is 0, so Enter selects the first match", async () => {
+    it("never shows Select all when selectAll is 0, so ArrowDown+Enter selects the first match", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [],

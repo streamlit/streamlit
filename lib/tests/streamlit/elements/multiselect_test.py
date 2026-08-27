@@ -696,6 +696,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c2 = self.get_delta_from_queue().new_element.multiselect
         assert c1.id != c2.id
 
+    def test_select_all_false_and_zero_share_unkeyed_id(self) -> None:
+        """False and 0 are equivalent, so unkeyed widgets share an id."""
+        st.multiselect("same label", ("m", "f"), select_all=False)
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.multiselect("same label", ("m", "f"), select_all=0)
+
 
 def test_multiselect_enum_coercion():
     """Test E2E Enum Coercion on a selectbox."""

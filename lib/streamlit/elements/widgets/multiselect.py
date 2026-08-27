@@ -208,7 +208,7 @@ def _encode_select_all(select_all: object) -> int:
             raise StreamlitAPIException(
                 f"Invalid value for select_all: {select_all!r}. "
                 "When using an int, `select_all` must be a non-negative integer "
-                "no larger than 2147483647."
+                f"no larger than {_SELECT_ALL_MAX_THRESHOLD}."
             )
         return select_all
     raise StreamlitAPIException(
@@ -456,16 +456,9 @@ class MultiSelectMixin:
             ``accept_new_options=True``.
 
         select_all : bool or int
-            Controls whether the dropdown shows a "Select all" or
-            "Select X matches" option. This can be one of the following:
-
-            - ``True``: Always show the option when two or more selectable
-              options remain.
-            - ``False`` or ``0``: Never show the option.
-            - An integer: Show the option when the number of currently
-              selectable options is at or below this threshold. Must be
-              non-negative. ``1000`` (default) shows the option for 1000 or
-              fewer selectable options.
+            Visibility of the dropdown's "Select all" or "Select X matches"
+            option. ``1000`` (default) shows the option when 1000 or fewer
+            options are selectable.
 
             Selectable options are unselected items from ``options``. When
             the user is searching, only matching unselected items count.
@@ -473,6 +466,14 @@ class MultiSelectMixin:
             ``max_selections`` does not change this count, but the option is
             hidden when ``max_selections`` is already reached. The option is
             never shown when fewer than two selectable options remain.
+
+            This can be one of the following:
+
+            - ``True``: Always show the option when two or more selectable
+              options remain.
+            - ``False`` or ``0``: Never show the option.
+            - An integer: Show the option when the selectable count is at or
+              below this threshold. Must be non-negative.
 
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
@@ -591,8 +592,8 @@ class MultiSelectMixin:
 
         **Example 3: Disable Select all**
 
-        Hide the "Select all" option so typing a search and pressing Enter
-        adds the first match instead of selecting every match.
+        Hide the "Select all" option so the first dropdown row is the first
+        matching option instead of a bulk action.
 
         >>> import streamlit as st
         >>>
@@ -724,7 +725,7 @@ class MultiSelectMixin:
             placeholder=placeholder,
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
-            select_all=select_all,
+            select_all=encoded_select_all,
             width=width,
         )
 

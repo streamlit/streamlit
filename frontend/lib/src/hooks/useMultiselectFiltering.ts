@@ -29,7 +29,11 @@ export const CREATABLE_ID = "__creatable__"
 
 /** Sentinel for Python `select_all=True`: always show the bulk action. */
 export const SELECT_ALL_ALWAYS = -1
-/** Default threshold when the proto field is unset (legacy messages). */
+/**
+ * Threshold used when the proto field is unset (legacy messages). Bulk-selecting
+ * more than this many options at once can freeze the browser and produce very
+ * large widget-state payloads.
+ */
 export const SELECT_ALL_DEFAULT_THRESHOLD = 1000
 
 export interface MultiselectOption {
