@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Generic,
     Literal,
     TypeVar,
@@ -52,6 +53,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidMaxError,
     StreamlitSelectionCountExceedsMaxError,
 )
@@ -73,6 +75,11 @@ if TYPE_CHECKING:
     )
 
 T = TypeVar("T")
+
+# Proto sentinel for ``select_all=True`` (always show the bulk action).
+_SELECT_ALL_ALWAYS: Final = -1
+# Default ``select_all`` threshold (show when 1000 or fewer are selectable).
+_DEFAULT_SELECT_ALL: Final = 1000
 
 
 class MultiSelectSerde(Generic[T]):
@@ -186,6 +193,27 @@ def _check_max_selections(
         )
 
 
+def _encode_select_all(select_all: object) -> int:
+    """Validate ``select_all`` and encode it for the proto.
+
+    Check ``bool`` before ``int`` so ``True`` encodes as always-show (``-1``),
+    not as the integer ``1``.
+    """
+    if isinstance(select_all, bool):
+        return _SELECT_ALL_ALWAYS if select_all else 0
+    if isinstance(select_all, int):
+        if select_all < 0:
+            raise StreamlitAPIException(
+                f"Invalid value for select_all: {select_all!r}. "
+                "When using an int, `select_all` must be a non-negative integer."
+            )
+        return select_all
+    raise StreamlitAPIException(
+        f"Invalid type for select_all: {type(select_all).__name__!s}. "
+        "select_all must be a bool or a non-negative integer."
+    )
+
+
 class MultiSelectMixin:
     @overload
     def multiselect(
@@ -206,6 +234,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
         wrap: bool | None = None,
         bind: BindOption = None,
@@ -231,6 +260,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
         wrap: bool | None = None,
         bind: BindOption = None,
@@ -256,6 +286,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
         wrap: bool | None = None,
         bind: BindOption = None,
@@ -281,6 +312,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
         wrap: bool | None = None,
         bind: BindOption = None,
@@ -420,6 +452,25 @@ class MultiSelectMixin:
             ``filter_mode=None`` is incompatible with
             ``accept_new_options=True``.
 
+        select_all : bool or int
+            Controls whether the dropdown shows a "Select all" or
+            "Select X matches" option. This can be one of the following:
+
+            - ``True``: Always show the option when two or more selectable
+              options remain.
+            - ``False`` or ``0``: Never show the option.
+            - An integer: Show the option when the number of currently
+              selectable options is at or below this threshold. Must be
+              non-negative. ``1000`` (default) shows the option for 1000 or
+              fewer selectable options.
+
+            Selectable options are unselected items from ``options``. When
+            the user is searching, only matching unselected items count.
+            Custom values added with ``accept_new_options`` do not count.
+            ``max_selections`` does not change this count, but the option is
+            hidden when ``max_selections`` is already reached. The option is
+            never shown when fewer than two selectable options remain.
+
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
             following:
@@ -535,6 +586,25 @@ class MultiSelectMixin:
            https://doc-multiselect-accept-new-options.streamlit.app/
            height: 350px
 
+        **Example 3: Disable Select all**
+
+        Hide the "Select all" option so typing a search and pressing Enter
+        adds the first match instead of selecting every match.
+
+        >>> import streamlit as st
+        >>>
+        >>> clients = st.multiselect(
+        ...     "Select clients",
+        ...     ["Acme", "Globex", "Initech", "Umbrella", "Wayne"],
+        ...     select_all=False,
+        ... )
+        >>>
+        >>> st.write("You selected:", clients)
+
+        .. output::
+           https://doc-multiselect-select-all.streamlit.app/
+           height: 350px
+
         """
         # Convert empty string to single space to distinguish from None:
         # - None (default) → "" → Frontend shows contextual placeholders
@@ -560,6 +630,7 @@ class MultiSelectMixin:
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
+            select_all=select_all,
             width=width,
             wrap=wrap,
             bind=bind,
@@ -585,6 +656,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
         wrap: bool | None = None,
         bind: BindOption = None,
@@ -648,6 +720,7 @@ class MultiSelectMixin:
             placeholder=placeholder,
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
+            select_all=select_all,
             width=width,
         )
 
@@ -667,6 +740,7 @@ class MultiSelectMixin:
             proto.help = to_help_str(help)
         proto.accept_new_options = accept_new_options
         proto.filter_mode = proto_filter_mode
+        proto.select_all = _encode_select_all(select_all)
         # wrap is layout-only and intentionally excluded from the element id
         # (see compute_and_register_element_id above), so toggling it never
         # resets the widget's value.

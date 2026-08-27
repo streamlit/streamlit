@@ -283,6 +283,7 @@ const Multiselect: FC<Props> = props => {
     filterMode: element.filterMode,
     acceptNewOptions: element.acceptNewOptions ?? false,
     maxSelections: element.maxSelections,
+    selectAll: element.selectAll,
   })
 
   const displayOptionsRef = useRef(displayOptions)

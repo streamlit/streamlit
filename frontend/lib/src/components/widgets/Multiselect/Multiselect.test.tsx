@@ -1074,7 +1074,7 @@ describe("Multiselect widget", () => {
       expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
     })
 
-    it("does not show Select all when there are >= 1000 options", async () => {
+    it("does not show Select all when there are more than 1000 selectable options", async () => {
       vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
         320
       )
@@ -1082,7 +1082,7 @@ describe("Multiselect widget", () => {
         300
       )
       const user = userEvent.setup()
-      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const options = Array.from({ length: 1001 }, (_, i) => `option_${i}`)
       const props = getProps({ default: [], options })
       render(<Multiselect {...props} />)
 
@@ -1093,7 +1093,35 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("option_0")).toBeVisible()
     })
 
-    it("does not show Select X matches when there are >= 1000 options", async () => {
+    it("shows Select X matches when search narrows a 1000+ list to the threshold", async () => {
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        320
+      )
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(
+        300
+      )
+      const user = userEvent.setup()
+      const options = [
+        "needle_a",
+        "needle_b",
+        ...Array.from({ length: 1001 }, (_, i) => `item_${i}`),
+      ]
+      const props = getProps({
+        default: [],
+        options,
+        filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.click(multiSelect)
+      await user.type(multiSelect, "needle")
+
+      expect(screen.getByText("Select 2 matches")).toBeVisible()
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+    })
+
+    it("shows Select all when there are exactly 1000 selectable options", async () => {
       vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
         320
       )
@@ -1105,18 +1133,49 @@ describe("Multiselect widget", () => {
       const props = getProps({ default: [], options })
       render(<Multiselect {...props} />)
 
-      const multiSelect = screen.getByRole("combobox")
-      await user.click(multiSelect)
-      // Search for options matching "option_1"
-      await user.type(multiSelect, "option_1")
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
-      // "Select X matches" should NOT be shown for >= 1000 total options
-      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
-      // But matching options should still be visible
-      expect(screen.queryAllByText(/option_1/).length).toBeGreaterThan(0)
+      expect(screen.getByText("Select all")).toBeVisible()
     })
 
-    it("shows Select all when there are less than 1000 options", async () => {
+    it("never shows Select all when selectAll is 0, so Enter selects the first match", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana"],
+        selectAll: 0,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+
+      const input = screen.getByRole("combobox")
+      await user.type(input, "ap")
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      expect(screen.getByText("apple")).toBeVisible()
+      expect(screen.getByText("apricot")).toBeVisible()
+
+      await user.keyboard("{ArrowDown}{Enter}")
+
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        ["apple"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["apple", "apricot"],
+        expect.anything()
+      )
+    })
+
+    it("shows Select all on large lists when selectAll is -1", async () => {
       vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
         320
       )
@@ -1124,13 +1183,83 @@ describe("Multiselect widget", () => {
         300
       )
       const user = userEvent.setup()
-      const options = Array.from({ length: 999 }, (_, i) => `option_${i}`)
-      const props = getProps({ default: [], options })
+      const options = Array.from({ length: 1001 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options, selectAll: -1 })
       render(<Multiselect {...props} />)
 
       await user.click(screen.getByRole("button", { name: "Open" }))
 
       expect(screen.getByText("Select all")).toBeVisible()
+    })
+
+    it("hides Select all when selectable options exceed a custom threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c", "d"],
+        selectAll: 3,
+      })
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+    })
+
+    it("shows Select all when selectable options fall to a custom threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [0],
+        options: ["a", "b", "c", "d"],
+        selectAll: 3,
+      })
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+      expect(screen.getByText("Select all")).toBeVisible()
+    })
+
+    it("shows Select X matches when search drops to a custom threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: [
+          "apple",
+          "apricot",
+          "avocado",
+          "banana",
+          "blueberry",
+          "cherry",
+        ],
+        selectAll: 3,
+        filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      expect(screen.getByText("Select 2 matches")).toBeVisible()
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+    })
+
+    it("does not count custom chips toward the selectAll threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["red", "green", "blue"],
+        selectAll: 2,
+        acceptNewOptions: true,
+        rawValues: ["purple"],
+        setValue: true,
+      })
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+
+      // Count unselected option entries, not selected chips: a custom value
+      // must not drop 3 remaining options to 2.
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      expect(screen.getByText("red")).toBeVisible()
     })
   })
 })
