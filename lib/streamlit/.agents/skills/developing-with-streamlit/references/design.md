@@ -65,6 +65,19 @@ st.markdown(":material/person:")
 st.markdown("Celebration! 🎉")
 ```
 
+Icons go in the text for headings, and in `icon=` only for elements that have that parameter:
+
+```python
+# BAD: raises TypeError -- st.title, st.header, and st.subheader have no icon parameter
+st.title("Sales dashboard", icon=":material/analytics:")
+
+# GOOD: icon in the heading text
+st.title(":material/analytics: Sales dashboard")
+
+# GOOD: icon= where the element supports it
+st.button("Refresh", icon=":material/refresh:")
+```
+
 Format: `:material/icon_name:`
 
 Find icons: https://fonts.google.com/icons

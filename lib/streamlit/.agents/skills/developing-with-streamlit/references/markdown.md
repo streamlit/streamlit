@@ -129,7 +129,17 @@ Full list of icons available in Streamlit: [material_icon_names.py](https://raw.
 st.markdown(":material/check_circle: Complete")
 ```
 
-Material icons also work in `icon` parameters across many elements (`st.button`, `st.expander`, `st.info`, etc.).
+Material icons also work in the `icon` parameter of elements that have one (`st.button`, `st.expander`, `st.info`, `st.badge`, `st.page_link`).
+
+Not every element has an `icon` parameter. The heading commands do not: passing `icon=` to `st.title`, `st.header`, or `st.subheader` raises `TypeError`. Their `body` accepts the same Markdown directives as `st.markdown`, so put the icon in the text instead. Check `streamlit docs st.<command>` when unsure whether a command takes `icon=`.
+
+```python
+# BAD: raises TypeError -- headings have no icon parameter
+st.title("Sales dashboard", icon=":material/analytics:")
+
+# GOOD: icon in the body text
+st.title(":material/analytics: Sales dashboard")
+```
 
 ## Emojis
 
