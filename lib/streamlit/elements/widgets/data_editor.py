@@ -88,9 +88,10 @@ _LOGGER: Final = _logger.get_logger(__name__)
 
 T = TypeVar("T")
 
-# Dataframe-like and tuple inputs are returned with the same type.
-# List, dict, and set inputs get dedicated overloads so that their inner type
-# parameters are preserved.
+# Dataframe-like inputs are returned with the same type. The bound uses
+# tuple[Any] (a 1-tuple), so longer tuples fall through to data: Any and are
+# typed as pd.DataFrame. List, dict, and set inputs get dedicated overloads
+# so that their inner type parameters are preserved.
 EditableData = TypeVar(
     "EditableData",
     bound=dataframe_util.DataFrameGenericAlias[Any] | tuple[Any],

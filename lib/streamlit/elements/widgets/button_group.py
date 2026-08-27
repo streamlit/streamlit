@@ -396,8 +396,8 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select with a sequence default -> list[V]
-    # Kept separate from overload 5 so ty infers V from the options rather than
-    # from the default itself, which would produce list[int | list[int]].
+    # Split so checkers infer V from options, not from default.
+    # A combined Sequence[V] | V | None made default=[1] infer list[V | Sequence[V]].
     # Reject required=True in multi-select mode statically: it raises
     # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
     # bool cannot exclude True, so a `required: bool` variable then matches no
@@ -791,8 +791,8 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select with a sequence default -> list[V]
-    # Kept separate from overload 5 so ty infers V from the options rather than
-    # from the default itself, which would produce list[int | list[int]].
+    # Split so checkers infer V from options, not from default.
+    # A combined Sequence[V] | V | None made default=[1] infer list[V | Sequence[V]].
     # Reject required=True in multi-select mode statically: it raises
     # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
     # bool cannot exclude True, so a `required: bool` variable then matches no

@@ -95,6 +95,8 @@ class NumberInputSerde:
 
 
 class NumberInputMixin:
+    # Split the constrained TypeVar value overloads into explicit int and None
+    # cases so ty infers int when value defaults to "min", not int | None.
     # If "min_value: int" is given and all other numerical inputs are
     #   "int"s or not provided (value optionally being "min"), return "int"
     @overload
