@@ -250,11 +250,11 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid theme value (only "streamlit" or None)
-    plotly_chart(fig, theme="dark")  # type: ignore[call-overload]
+    plotly_chart(fig, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values (only int or "stretch" / "content")
-    plotly_chart(fig, width="invalid")  # type: ignore[call-overload]
-    plotly_chart(fig, height=None)  # type: ignore[call-overload]
+    plotly_chart(fig, width="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    plotly_chart(fig, height=None)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid selection_mode value
-    plotly_chart(fig, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]
+    plotly_chart(fig, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

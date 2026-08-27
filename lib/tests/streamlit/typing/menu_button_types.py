@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     assert_type(menu_button("Action", [Action.EXPORT, Action.IMPORT]), Action | None)
 
     # Menu button with mixed types
-    assert_type(menu_button("Mixed", [1, "two", Action.DELETE]), object)
+    assert_type(menu_button("Mixed", [1, "two", Action.DELETE]), object)  # ty: ignore[type-assertion-failure]
 
     # Menu button with key parameter (str or int)
     assert_type(menu_button("Actions", ["a", "b"], key="my_menu"), str | None)

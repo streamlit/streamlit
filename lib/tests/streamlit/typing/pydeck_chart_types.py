@@ -213,11 +213,11 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width / height values (only int or "stretch")
-    pydeck_chart(deck, width="invalid")  # type: ignore[call-overload]
-    pydeck_chart(deck, height=None)  # type: ignore[call-overload]
+    pydeck_chart(deck, width="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    pydeck_chart(deck, height=None)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid selection_mode value
-    pydeck_chart(deck, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]
+    pydeck_chart(deck, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # Invalid on_select value
-    pydeck_chart(deck, on_select="invalid")  # type: ignore[call-overload]
+    pydeck_chart(deck, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]

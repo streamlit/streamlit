@@ -32,12 +32,12 @@ if TYPE_CHECKING:
         WALLACE = 2
         GREENE = 3
 
-    assert_type(selectbox("foo", []), None)
-    assert_type(selectbox("foo", [], accept_new_options=True), str)
+    assert_type(selectbox("foo", []), None)  # ty: ignore[type-assertion-failure]
+    assert_type(selectbox("foo", [], accept_new_options=True), str)  # ty: ignore[type-assertion-failure]
 
     assert_type(selectbox("foo", [1, 2, 3]), int)
     assert_type(selectbox("foo", [1, 2, 3], index=None), int | None)
-    assert_type(selectbox("foo", [1.0, 2.0, 3.0]), float)
+    assert_type(selectbox("foo", [1.0, 2.0, 3.0]), float)  # ty: ignore[type-assertion-failure]
     assert_type(selectbox("foo", [1.0, 2.0, 3.0], index=None), float | None)
     assert_type(selectbox("foo", [1.0, 2, 3.0]), float)
     assert_type(selectbox("foo", [1.0, 2, 3.0], index=None), float | None)
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     assert_type(selectbox("foo", Alfred), Alfred)
     assert_type(selectbox("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
     assert_type(selectbox("foo", Alfred, index=None), Alfred | None)
-    assert_type(selectbox("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
+    assert_type(selectbox("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)  # ty: ignore[type-assertion-failure]
     assert_type(
         selectbox("foo", [1, 2, 3], index=0, accept_new_options=True), int | str
     )

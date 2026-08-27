@@ -395,7 +395,9 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 4. Multi-select -> list[V]
+    # 4. Multi-select with a sequence default -> list[V]
+    # Kept separate from overload 5 so ty infers V from the options rather than
+    # from the default itself, which would produce list[int | list[int]].
     @overload
     def pills(
         self,
@@ -403,7 +405,30 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
+        default: Sequence[V],
+        required: bool = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
         required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -761,7 +786,9 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 4. Multi-select -> list[V]
+    # 4. Multi-select with a sequence default -> list[V]
+    # Kept separate from overload 5 so ty infers V from the options rather than
+    # from the default itself, which would produce list[int | list[int]].
     @overload
     def segmented_control(
         self,
@@ -769,7 +796,30 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
+        default: Sequence[V],
+        required: bool = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
         required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,

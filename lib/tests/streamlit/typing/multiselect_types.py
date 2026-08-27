@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["foo", "bar"], default=None), list[str])
     assert_type(multiselect("foo", Alfred), list[Alfred])
     assert_type(multiselect("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), list[Alfred])
-    assert_type(multiselect("foo", [1, Alfred.HITCHCOCK, "five"]), list[object])
+    assert_type(multiselect("foo", [1, Alfred.HITCHCOCK, "five"]), list[object])  # ty: ignore[type-assertion-failure]
 
     # Tests with accept_new_options=True
     assert_type(multiselect("foo", [1, 2, 3], accept_new_options=True), list[int | str])

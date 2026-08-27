@@ -492,7 +492,13 @@ ignore_missing_imports = true
 root = ["./lib"]
 
 [tool.ty.src]
-include = ["lib/streamlit", "e2e_playwright", "scripts"]
+include = [
+  "lib/streamlit",
+  # Public-API typing tests; the type checkers run them, not pytest.
+  "lib/tests/streamlit/typing",
+  "e2e_playwright",
+  "scripts",
+]
 exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",

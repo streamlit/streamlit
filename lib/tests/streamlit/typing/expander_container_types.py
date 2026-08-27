@@ -32,9 +32,9 @@ if TYPE_CHECKING:
     # st.expander returns ExpanderContainer
     assert_type(expander("Test"), ExpanderContainer)
 
-    # ExpanderContainer is a DeltaGenerator (Liskov substitution)
-    exp: DeltaGenerator = expander("Test")
-    assert_type(exp, DeltaGenerator)
+    # Assignment is the subtype check; assert_type after a DeltaGenerator
+    # annotation would only see that annotation.
+    _expander_as_delta_generator: DeltaGenerator = expander("Test")
 
     # Context manager returns Self
     with expander("Test") as ctx:
