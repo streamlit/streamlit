@@ -421,12 +421,14 @@ class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
     the exception type.
     """
 
-    def __init__(self, *uses: str, explanation: str | None = None) -> None:
-        if len(uses) < 2:
-            raise ValueError(
-                "StreamlitIncompatibleParametersError requires at least two "
-                "parameter uses."
-            )
+    def __init__(
+        self,
+        first_use: str,
+        second_use: str,
+        *other_uses: str,
+        explanation: str | None = None,
+    ) -> None:
+        uses = (first_use, second_use, *other_uses)
         quoted = [f"`{use}`" for use in uses]
         if len(quoted) == 2:
             uses_text = f"{quoted[0]} and {quoted[1]}"
@@ -642,11 +644,13 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
 
 
 class StreamlitValueError(LocalizableStreamlitException):
-    """Raised when a parameter receives a value outside a known finite set.
+    """Raised when a parameter receives a value outside a known set or range.
 
-    Uncaught-exception telemetry appends the parameter name, for example
-    ``StreamlitValueError:width``. Optional ``detail`` appears in the error
-    message only.
+    ``valid_values`` is the user-facing list of supported values: Literal /
+    enum-like options, or a short description of an accepted range (for
+    example ``a positive duration``). Uncaught-exception telemetry appends
+    the parameter name, for example ``StreamlitValueError:width``. Optional
+    ``detail`` appears in the error message only.
     """
 
     def __init__(
@@ -737,6 +741,10 @@ class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
 
 
 # Deprecated aliases kept only for backward compatibility.
+# Identity aliases preserve `except OldName` for migrated raises, but also
+# catch every instance of the replacement type. Several names below shipped
+# as distinct classes in 1.62.0 (including StreamlitInvalidSizeError and the
+# gap/alignment errors); do not delete them as unused.
 StreamlitInvalidPageLayoutError = (  # Replaced: StreamlitValueError.
     StreamlitValueError
 )

@@ -319,10 +319,10 @@ def test_incompatible_parameters_error_formats_three_uses() -> None:
 
 def test_incompatible_parameters_error_requires_two_uses() -> None:
     """Fewer than two uses is a constructor contract violation."""
-    with pytest.raises(ValueError, match="at least two parameter uses"):
-        errors.StreamlitIncompatibleParametersError()
-    with pytest.raises(ValueError, match="at least two parameter uses"):
-        errors.StreamlitIncompatibleParametersError("ttl")
+    with pytest.raises(TypeError, match="first_use"):
+        errors.StreamlitIncompatibleParametersError()  # type: ignore[call-arg]
+    with pytest.raises(TypeError, match="second_use"):
+        errors.StreamlitIncompatibleParametersError("ttl")  # type: ignore[call-arg]
 
 
 def test_incompatible_parameters_error_with_explanation() -> None:

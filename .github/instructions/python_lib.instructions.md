@@ -133,17 +133,19 @@ generic `StreamlitAPIException` with a one-off message.
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits.
 - `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
-  parameter receives an invalid value from a known finite set (Literal /
-  enum-like options). `parameter` is appended in uncaught-exception telemetry
-  (`StreamlitValueError:<parameter>`); optional `detail` appears in the error
-  message only. Example:
+  parameter receives an invalid value from a known set of options or an
+  accepted range. `valid_values` is the user-facing list of supported values:
+  Literal / enum-like options, or a short range description (for example
+  `"a positive duration"`). `parameter` is appended in uncaught-exception
+  telemetry (`StreamlitValueError:<parameter>`); optional `detail` appears in
+  the error message only. Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
 - `StreamlitMissingRequiredParameterError(parameter, *, detail=None)`:
   use when a required parameter is missing, `None`, or empty, including an
   empty sequence. `parameter` is appended in uncaught-exception telemetry
   (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
   `raise StreamlitMissingRequiredParameterError("label")`.
-- `StreamlitIncompatibleParametersError(*uses, *, explanation=None)`: use
+- `StreamlitIncompatibleParametersError(first_use, second_use, *other_uses, *, explanation=None)`: use
   when two or more parameter uses cannot be combined. Pass `parameter=value`
   when the conflict depends on a value (`wrap=False`), or the bare parameter
   name when merely providing it conflicts (`on_change`). These strings appear
