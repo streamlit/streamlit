@@ -142,16 +142,14 @@ function TimeInput({
     onFormCleared: stableOnFormCleared,
   })
 
-  // Local display state drives the TimeField directly, avoiding the
-  // useEffect-delay in useBasicWidgetState that would cause React Aria
-  // to see a stale value mid-render and reset its segment edit buffer.
+  // Local display state drives the TimeField so typed digits can stay
+  // uncommitted until blur, without React Aria resetting its segment buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
 
   // Tracks whether the user has a pending (uncommitted) edit. Drives the
   // "Press Enter to apply/submit form" hint via InputInstructions.
-  // Explicit state — NOT derived from (displayValue !== value) — to avoid a
-  // one-render flicker after arrow-key/immediate commits where value still
-  // reflects the previous async update cycle.
+  // Explicit state — not derived from (displayValue !== value) — because
+  // typed digits update displayValue before the commit on blur.
   const [dirty, setDirty] = useState(false)
 
   const [isFocused, setIsFocused] = useState(false)

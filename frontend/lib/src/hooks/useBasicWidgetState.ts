@@ -118,7 +118,15 @@ export function useBasicWidgetClientState<
       fromUser: false,
     })
 
-  // When someone calls setNextValueWithSource, update internal state and tell
+  // Expose the in-flight event value on this render. The effect below still
+  // persists it into currentValue and WidgetStateManager. If callers returned
+  // currentValue alone, it would lag one frame (the effect), and
+  // useUpdateUiValue would copy that stale string into a just-committed input.
+  const value = isNullOrUndefined(nextValueWithSource)
+    ? currentValue
+    : nextValueWithSource.value
+
+  // When someone calls setNextValueWithSource, persist internal state and tell
   // widget manager to update its state too.
   useEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
@@ -156,7 +164,7 @@ export function useBasicWidgetClientState<
   // Manage our form-clear event handler.
   useFormClearHelper({ widgetMgr, element, onFormCleared: handleFormCleared })
 
-  return [currentValue, setNextValueWithSource]
+  return [value, setNextValueWithSource]
 }
 
 // Interface for a proto that has a setValue, id, and .formId

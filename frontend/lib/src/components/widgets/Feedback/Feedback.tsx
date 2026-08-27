@@ -215,8 +215,8 @@ function Feedback(props: Readonly<Props>): ReactElement {
     formClearBehavior: "resetValueOnly",
   })
 
-  // Use element.value (from session_state) as the source of truth when set.
-  // The hook's value may lag behind due to effect timing, so prefer element.value.
+  // Prefer the proto when the backend sent setValue (session_state / script).
+  // Otherwise the hook value (updated on this render when the user clicks).
   const value = element.value ?? hookValue
 
   const containerWidth = shouldWidthStretch(widthConfig)

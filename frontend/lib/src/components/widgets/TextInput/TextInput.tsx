@@ -90,10 +90,6 @@ export interface Props {
 
 const LOG = getLogger("TextInput")
 
-// Sentinel so `null` (a valid text-input value) is not confused with "no
-// accepted incoming setValue".
-const NO_ACCEPTED_INCOMING: unique symbol = Symbol("noAcceptedIncoming")
-
 function TextInput({
   disabled,
   element,
@@ -130,18 +126,7 @@ function TextInput({
   // User-committed strings since the last acknowledged setValue. Used to
   // recognize stale echoes of in-flight reruns. Cleared when the latest
   // commit is echoed or a non-echo setValue is applied.
-  const pendingLiveCommitsRef = useRef<(string | null)[]>([])
-  // Incoming setValue accepted as a callback / session_state replacement
-  // (not an echo of lastCommitted). commitEchoPending waits for this
-  // `value` rather than treating the lag-frame previous string as a write.
-  const acceptedIncomingRef = useRef<
-    string | null | typeof NO_ACCEPTED_INCOMING
-  >(NO_ACCEPTED_INCOMING)
-  // Prevents a one-frame flash of the previous committed value after a live
-  // commit. useBasicWidgetState updates `value` in an effect, so the commit
-  // render still has the old widget-manager string; useUpdateUiValue would
-  // copy it into the input without this flag.
-  const commitEchoPendingRef = useRef(false)
+  const pendingLiveCommitsRef = useRef(new Set<string | null>())
   const isComposingRef = useRef(false)
 
   const setDirtyAndRef = useCallback((nextDirty: boolean): void => {
@@ -201,14 +186,13 @@ function TextInput({
         return false
       }
       if (incoming === lastCommittedValueRef.current) {
-        pendingLiveCommitsRef.current = []
+        pendingLiveCommitsRef.current.clear()
         return true
       }
-      if (pendingLiveCommitsRef.current.includes(incoming)) {
+      if (pendingLiveCommitsRef.current.has(incoming)) {
         return false
       }
-      acceptedIncomingRef.current = incoming
-      pendingLiveCommitsRef.current = []
+      pendingLiveCommitsRef.current.clear()
       return true
     },
     []
@@ -233,34 +217,14 @@ function TextInput({
       : undefined,
   })
 
-  // Run during render so useUpdateUiValue on this pass still treats the
-  // in-flight commit as dirty. An effect would run too late to prevent the flash.
-  // Do not re-baseline lastCommitted from the lag-frame previous `value`;
-  // only the echoed commit or an accepted non-echo setValue may clear pending.
-  if (commitEchoPendingRef.current) {
-    if (value === lastCommittedValueRef.current) {
-      commitEchoPendingRef.current = false
-      acceptedIncomingRef.current = NO_ACCEPTED_INCOMING
-    } else if (
-      acceptedIncomingRef.current !== NO_ACCEPTED_INCOMING &&
-      value === acceptedIncomingRef.current
-    ) {
-      lastCommittedValueRef.current = value
-      commitEchoPendingRef.current = false
-      acceptedIncomingRef.current = NO_ACCEPTED_INCOMING
-    }
-  } else if (!dirtyRef.current) {
+  // session_state / callback writes update `value` without going through
+  // commitWidgetValue; keep lastCommitted aligned so later echoes compare
+  // against the script's value, not the previous user commit.
+  if (!dirty) {
     lastCommittedValueRef.current = value
   }
 
-  // Treat an in-flight commit as dirty so useUpdateUiValue does not copy the
-  // previous widget-manager value into the input. See commitEchoPendingRef.
-  useUpdateUiValue(
-    value,
-    uiValue,
-    setUiValue,
-    dirty || commitEchoPendingRef.current
-  )
+  useUpdateUiValue(value, uiValue, setUiValue, dirty)
 
   const theme = useEmotionTheme()
   const id = useId()
@@ -303,17 +267,13 @@ function TextInput({
   const commitWidgetValue = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
       lastCommittedValueRef.current = valueToCommit
-      const pending = pendingLiveCommitsRef.current.filter(
-        value => value !== valueToCommit
-      )
-      pending.push(valueToCommit)
-      pendingLiveCommitsRef.current = pending
-      acceptedIncomingRef.current = NO_ACCEPTED_INCOMING
-      commitEchoPendingRef.current = true
+      if (liveEnabled) {
+        pendingLiveCommitsRef.current.add(valueToCommit)
+      }
       setDirtyAndRef(false)
       setValueWithSource({ value: valueToCommit, fromUser: true })
     },
-    [setDirtyAndRef, setValueWithSource]
+    [liveEnabled, setDirtyAndRef, setValueWithSource]
   )
 
   const isUserValueInvalid = useCallback(

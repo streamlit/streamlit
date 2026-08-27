@@ -765,3 +765,50 @@ describe("useBasicWidgetState - shouldApplyIncomingValue", () => {
     expect(incoming.setValue).toBe(false)
   })
 })
+
+describe("useBasicWidgetState - in-flight value", () => {
+  let widgetMgr: WidgetStateManager
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    widgetMgr = new WidgetStateManager({
+      formsDataChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+    })
+  })
+
+  it("returns the committed value on the same render as setValueWithSource", () => {
+    const seen: MockValue[] = []
+    const element: MockProto = {
+      formId: "",
+      setValue: false,
+      id: "widget-inflight",
+      value: "proto",
+      default: "default-value",
+    }
+
+    const { result } = renderHook(() => {
+      const state = useBasicWidgetState({
+        getStateFromWidgetMgr,
+        getCurrStateFromProto,
+        getDefaultStateFromProto,
+        updateWidgetMgrState,
+        element,
+        widgetMgr,
+        fragmentId: undefined,
+        formClearBehavior: "resetValueOnly",
+      })
+      seen.push(state[0])
+      return state
+    })
+
+    seen.length = 0
+    act(() => {
+      result.current[1]({ value: "committed", fromUser: true })
+    })
+
+    // Not "default-value" then "committed": the hook must not lag one effect
+    // behind, or useUpdateUiValue would flash the previous widget value.
+    expect(seen[0]).toBe("committed")
+  })
+})
