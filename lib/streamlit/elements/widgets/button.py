@@ -45,7 +45,7 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidLayoutContextError,
-    StreamlitMissingPageLabelError,
+    StreamlitMissingRequiredParameterError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
 )
@@ -1644,7 +1644,10 @@ class ButtonMixin:
             # Handle external links:
             if is_url(page):
                 if label is None or label == "":
-                    raise StreamlitMissingPageLabelError()
+                    raise StreamlitMissingRequiredParameterError(
+                        "label",
+                        detail="Streamlit cannot infer a label for an external URL.",
+                    )
                 page_link_proto.page = page
                 page_link_proto.external = True
                 return self.dg._enqueue(

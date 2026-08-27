@@ -20,7 +20,10 @@ from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from streamlit import url_util
 from streamlit.elements.lib.layout_utils import validate_height
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -101,9 +104,12 @@ class PdfMixin:
         """
         # Validate data parameter early
         if data is None:
-            raise StreamlitAPIException(
-                "The PDF data cannot be None. Please provide a valid PDF file path, URL, "
-                "bytes data, or file-like object."
+            raise StreamlitMissingRequiredParameterError(
+                "data",
+                detail=(
+                    "Please provide a valid PDF file path, URL, bytes data, "
+                    "or file-like object."
+                ),
             )
 
         # Check if custom PDF component is available first

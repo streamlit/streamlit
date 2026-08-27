@@ -260,6 +260,32 @@ def test_multiselect_valid_options(app: Page):
     expect(ms.locator("input")).to_have_attribute("placeholder", "Please select")
 
 
+def test_multiselect_ctrl_cmd_a_selects_filter_text(app: Page):
+    """Should select typed filter text with Control/Command+A so Backspace can delete it."""
+    input_elem = _get_multiselect_input(app, "multiselect 1")
+    input_elem.click()
+    expect(app.get_by_role("option", name="male", exact=True)).to_be_visible()
+
+    # Empty-filter Ctrl/Cmd+A must not bulk-select options.
+    input_elem.press("ControlOrMeta+a")
+    expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
+    expect_text(app, "value 1: []")
+
+    input_elem.press_sequentially("ma")
+    expect(app.get_by_role("option", name="male", exact=True)).to_be_visible()
+
+    input_elem.press("ControlOrMeta+a")
+    expect(input_elem).to_have_js_property("selectionStart", 0)
+    expect(input_elem).to_have_js_property("selectionEnd", 2)
+    expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
+    expect_text(app, "value 1: []")
+
+    input_elem.press("Backspace")
+    expect(input_elem).to_have_value("")
+    expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
+    expect_text(app, "value 1: []")
+
+
 def test_multiselect_no_valid_options(app: Page):
     """Should show that there are no options."""
     ms = get_multiselect(app, "multiselect 3")

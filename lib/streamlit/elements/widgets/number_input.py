@@ -17,7 +17,9 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
+
+from typing_extensions import TypeVar
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
@@ -61,8 +63,12 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 Number: TypeAlias = int | float
-IntOrNone = TypeVar("IntOrNone", int, None)
-FloatOrNone = TypeVar("FloatOrNone", float, None)
+# Omitting `value` returns int/float, never int | None / float | None.
+# `default=` states that for checkers that leave an unsolved TypeVar as Unknown
+# (e.g. pyright); mypy already infers it, so CI cannot catch a regression here.
+# PEP 696 leaves function-scoped defaults unspecified, so behavior is per-checker.
+IntOrNone = TypeVar("IntOrNone", int, None, default=int)
+FloatOrNone = TypeVar("FloatOrNone", float, None, default=float)
 
 
 @dataclass

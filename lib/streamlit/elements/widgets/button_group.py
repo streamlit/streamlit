@@ -53,7 +53,11 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -372,7 +376,7 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def pills(
         self,
@@ -381,7 +385,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -396,6 +400,10 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def pills(
         self,
@@ -404,7 +412,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
-        required: bool = False,
+        required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -738,7 +746,7 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def segmented_control(
         self,
@@ -747,7 +755,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -762,6 +770,10 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def segmented_control(
         self,
@@ -770,7 +782,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
-        required: bool = False,
+        required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -1094,9 +1106,10 @@ class ButtonGroupMixin:
 
         # Validate required with multi-select
         if required and selection_mode == "multi":
-            raise StreamlitAPIException(
-                "The `required` argument cannot be used with `selection_mode='multi'`. "
-                "The `required` parameter is only supported for single-select mode."
+            raise StreamlitIncompatibleParametersError(
+                "required=True",
+                "selection_mode='multi'",
+                explanation="`required` is only supported for single-select mode.",
             )
 
         # Use str as default format_func

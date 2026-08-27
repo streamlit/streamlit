@@ -88,3 +88,26 @@ if TYPE_CHECKING:
     assert_type(number_input("foo", value=3.14, bind="query-params"), float)
     assert_type(number_input("foo", bind=None), float)
     assert_type(number_input("foo", value=None, bind="query-params"), float | None)
+
+    def on_number_change(prefix: str) -> None: ...
+
+    # Common parameters combined
+    assert_type(
+        number_input(
+            "foo",
+            value=1,
+            format="%d",
+            key="quantity",
+            help="Enter a quantity",
+            on_change=on_number_change,
+            args=("quantity",),
+            kwargs={},
+            placeholder="0",
+            disabled=False,
+            label_visibility="visible",
+            icon=":material/123:",
+            width=240,
+            persist_state="page",
+        ),
+        int,
+    )

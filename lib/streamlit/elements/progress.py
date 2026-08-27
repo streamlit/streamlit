@@ -18,7 +18,7 @@ import math
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 from streamlit.string_util import clean_text
 
@@ -72,8 +72,10 @@ def _get_value(value: FloatOrInt) -> int:
         raise StreamlitAPIException(
             f"Progress Value has invalid value [0.0, 1.0]: {value}"
         )
-    raise StreamlitAPIException(
-        f"Progress Value has invalid type: {type(value).__name__}"
+    raise StreamlitInvalidParameterTypeError(
+        "value",
+        type(value).__name__,
+        ["int", "float"],
     )
 
 
@@ -82,9 +84,10 @@ def _get_text(text: str | None) -> str | None:
         return None
     if isinstance(text, str):
         return clean_text(text)
-    raise StreamlitAPIException(
-        f"Progress Text is of type {type(text)}, which is not an accepted type."
-        "Text only accepts: str. Please convert the text to an accepted type."
+    raise StreamlitInvalidParameterTypeError(
+        "text",
+        type(text).__name__,
+        ["str"],
     )
 
 

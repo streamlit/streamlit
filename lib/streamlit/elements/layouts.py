@@ -43,10 +43,10 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidVerticalAlignmentError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -382,18 +382,19 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.CopyFrom(
-            get_gap_config(gap, "st.container")
-        )
+        block_proto.flex_container.gap_config.CopyFrom(get_gap_config(gap))
 
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
         if wrap is False and not horizontal:
-            raise StreamlitAPIException(
-                "`wrap=False` can only be used with `horizontal=True`. "
-                "A vertical container has no horizontal row of elements to keep "
-                "in a single, scrolling row. Set `horizontal=True` to use "
-                "`wrap=False`, or remove the `wrap` argument."
+            raise StreamlitIncompatibleParametersError(
+                "wrap=False",
+                "horizontal=False",
+                explanation=(
+                    "A vertical container has no horizontal row of elements to "
+                    "keep in a single, scrolling row. Set `horizontal=True` to "
+                    "use `wrap=False`, or remove the `wrap` argument."
+                ),
             )
         if horizontal:
             # `wrap=True` (default) keeps the default horizontal behavior of
@@ -690,12 +691,13 @@ class LayoutsMixin:
         }
 
         if vertical_alignment not in vertical_alignment_mapping:
-            raise StreamlitInvalidVerticalAlignmentError(
-                vertical_alignment=vertical_alignment,
-                element_type="st.columns",
+            raise StreamlitValueError(
+                "vertical_alignment",
+                [f"'{alignment}'" for alignment in vertical_alignment_mapping],
+                detail=f"Got {vertical_alignment!r}.",
             )
 
-        gap_config = get_gap_config(gap, "st.columns")
+        gap_config = get_gap_config(gap)
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
@@ -988,19 +990,24 @@ class LayoutsMixin:
 
         """
         if not tabs:
-            raise StreamlitAPIException(
-                "The input argument to st.tabs must contain at least one tab label."
+            raise StreamlitMissingRequiredParameterError(
+                "tabs", detail="Provide at least one tab label."
             )
 
         if default and default not in tabs:
-            raise StreamlitAPIException(
-                f"The default tab '{default}' is not in the list of tabs."
+            raise StreamlitValueError(
+                "default",
+                ["a tab label from `tabs`"],
+                detail=f"`{default}` is not in the list of tabs.",
             )
 
-        if any(not isinstance(tab, str) for tab in tabs):
-            raise StreamlitAPIException(
-                "The tabs input list to st.tabs is only allowed to contain strings."
-            )
+        for tab in tabs:
+            if not isinstance(tab, str):
+                raise StreamlitInvalidParameterTypeError(
+                    "tabs",
+                    type(tab).__name__,
+                    ["a string for each tab label"],
+                )
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
@@ -1377,7 +1384,7 @@ class LayoutsMixin:
 
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for an expander")
+            raise StreamlitMissingRequiredParameterError("label")
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
@@ -1764,7 +1771,7 @@ class LayoutsMixin:
 
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for a popover")
+            raise StreamlitMissingRequiredParameterError("label")
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
