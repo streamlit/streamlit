@@ -247,6 +247,18 @@ describe("Multiselect widget", () => {
     )
   })
 
+  it("marks only the first option as the collection start for Enter highlight", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: [] })
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+
+    const options = screen.getAllByRole("option")
+    expect(options[0]).toHaveAttribute("aria-posinset", "1")
+    expect(options[1]).toHaveAttribute("aria-posinset", "2")
+  })
+
   it("filters based on label, not value", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })

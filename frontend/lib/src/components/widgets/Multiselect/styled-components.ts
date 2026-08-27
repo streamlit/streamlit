@@ -291,10 +291,13 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingRight: theme.spacing.none,
   listStyle: "none",
   margin: theme.spacing.none,
-  // First row is the Enter target when nothing is keyboard-focused yet.
-  "&:not(:has([data-focused])) [role='option']:first-of-type [data-item-hl]": {
-    backgroundColor: theme.colors.darkenedBgMix15,
-  },
+  // First collection item is the Enter target when nothing is keyboard-focused.
+  // Virtualizer wraps each option in its own [role=presentation], so :first-of-type
+  // would match every row. aria-posinset marks the true first item.
+  "&:not(:has([data-focused])) [role='option'][aria-posinset='1'] [data-item-hl]":
+    {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
 }))
 
 export const StyledEmptyState = styled.span(({ theme }) => ({

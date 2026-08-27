@@ -55,6 +55,19 @@ def test_select_all_parameter(app: Page):
     ms_true.scroll_into_view_if_needed()
     ms_true.locator("input").click()
     expect(app.get_by_role("option", name="Select all")).to_be_visible()
+    options_true = app.get_by_role("option")
+    expect(options_true.nth(0)).to_have_attribute("aria-posinset", "1")
+    first_bg = (
+        options_true.nth(0)
+        .locator("[data-item-hl]")
+        .evaluate("el => getComputedStyle(el).backgroundColor")
+    )
+    second_bg = (
+        options_true.nth(1)
+        .locator("[data-item-hl]")
+        .evaluate("el => getComputedStyle(el).backgroundColor")
+    )
+    assert first_bg != second_bg
     _close_dropdown(app)
 
     # Integer threshold uses the filtered selectable count.
