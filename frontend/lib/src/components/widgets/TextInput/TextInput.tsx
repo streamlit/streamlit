@@ -169,8 +169,8 @@ function TextInput({
   const inForm = isInForm({ formId })
   // protobufjs optional uint32 is `null` when unset (prototype default), not
   // `undefined`. `0` is a live-on immediate commit and must not be treated as off.
-  const isLive = notNullOrUndefined(element.liveDelayMs)
-  const liveDelayMs = element.liveDelayMs ?? 0
+  const isLive = notNullOrUndefined(element.liveDebounceMs)
+  const liveDebounceMs = element.liveDebounceMs ?? 0
   const liveEnabled = isLive && !inForm
 
   // Skip script-driven setValue that would clobber live edits:
@@ -334,21 +334,21 @@ function TextInput({
   )
 
   const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
-    useDebouncedCallback(tryCommitOutsideForm, liveDelayMs)
+    useDebouncedCallback(tryCommitOutsideForm, liveDebounceMs)
 
   const commitOrScheduleLive = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
       if (!liveEnabled || isComposingRef.current) {
         return
       }
-      if (liveDelayMs === 0) {
+      if (liveDebounceMs === 0) {
         tryCommitOutsideForm(valueToCommit)
         return
       }
-      // Delay > 0: fire with uiValueRef at timer time, not this keystroke.
+      // Debounce > 0: fire with uiValueRef at timer time, not this keystroke.
       scheduleLiveCommit()
     },
-    [liveDelayMs, liveEnabled, scheduleLiveCommit, tryCommitOutsideForm]
+    [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryCommitOutsideForm]
   )
 
   const handleAcceptedChange = useCallback(

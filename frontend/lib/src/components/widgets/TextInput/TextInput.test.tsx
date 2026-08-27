@@ -1342,7 +1342,10 @@ describe("TextInput live updates", () => {
     setStringValueSpy: MockInstance
   } => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const props = getProps({ liveDelayMs: 300, ...elementProps }, widgetProps)
+    const props = getProps(
+      { liveDebounceMs: 300, ...elementProps },
+      widgetProps
+    )
     const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
     const view = render(<TextInput {...props} />)
     setStringValueSpy.mockClear()
@@ -1385,7 +1388,7 @@ describe("TextInput live updates", () => {
   it("does not flash the previous value when a live commit echoes into widget state", async () => {
     const seen: string[] = []
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const props = getProps({ liveDelayMs: 0, default: "prev" })
+    const props = getProps({ liveDebounceMs: 0, default: "prev" })
     render(
       <Profiler
         id="live-text-input"
@@ -1426,8 +1429,10 @@ describe("TextInput live updates", () => {
     )
   })
 
-  it("commits each accepted change immediately when liveDelayMs is 0", async () => {
-    const { user, props, setStringValueSpy } = renderLive({ liveDelayMs: 0 })
+  it("commits each accepted change immediately when liveDebounceMs is 0", async () => {
+    const { user, props, setStringValueSpy } = renderLive({
+      liveDebounceMs: 0,
+    })
 
     await user.type(screen.getByRole("textbox"), "ab")
     expect(setStringValueSpy).toHaveBeenCalledTimes(2)
@@ -1620,7 +1625,7 @@ describe("TextInput live updates", () => {
 
   it("does not overwrite a newer live value with an older echo", async () => {
     const { user, props, rerender } = renderLive({
-      liveDelayMs: 0,
+      liveDebounceMs: 0,
       default: "",
     })
 
@@ -1639,7 +1644,7 @@ describe("TextInput live updates", () => {
 
   it("does not apply a stale setValue after blur", async () => {
     const { user, props, rerender } = renderLive({
-      liveDelayMs: 0,
+      liveDebounceMs: 0,
       default: "",
     })
 
@@ -1659,7 +1664,7 @@ describe("TextInput live updates", () => {
 
   it("applies a focused session_state setValue that is not a live echo", async () => {
     const { user, props, rerender } = renderLive({
-      liveDelayMs: 0,
+      liveDebounceMs: 0,
       default: "",
     })
 
@@ -1678,7 +1683,7 @@ describe("TextInput live updates", () => {
 
   it("applies a session_state restore of an earlier committed string after ack", async () => {
     const { user, props, rerender } = renderLive({
-      liveDelayMs: 0,
+      liveDebounceMs: 0,
       default: "",
     })
 

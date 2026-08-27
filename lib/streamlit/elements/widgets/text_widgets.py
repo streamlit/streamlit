@@ -116,22 +116,22 @@ def _parse_text_input_validate(
 
 
 # Default pause used when ``live=True``.
-_DEFAULT_LIVE_DELAY_MS: Final = 300
+_DEFAULT_LIVE_DEBOUNCE_MS: Final = 300
 # Cap at 1 minute so a typo like "60m" or "2h" cannot schedule a multi-day
 # debounce (uint32 would allow ~49 days).
-_MAX_LIVE_DELAY_MS: Final = 60_000
+_MAX_LIVE_DEBOUNCE_MS: Final = 60_000
 
 
 def _parse_text_input_live(live: object) -> int | None:
-    """Normalize ``live`` to a debounce delay in milliseconds.
+    """Normalize ``live`` to a debounce in milliseconds.
 
-    Returns ``None`` when live is off so the proto field stays unset (existing
-    widget IDs stay stable). ``0`` commits on every accepted change.
+    Returns ``None`` when live is off so the proto field stays unset. ``0``
+    commits on every accepted change.
     """
     if live is False:
         return None
     if live is True:
-        return _DEFAULT_LIVE_DELAY_MS
+        return _DEFAULT_LIVE_DEBOUNCE_MS
 
     # bool is a subclass of int — True/False must be handled before this.
     if isinstance(live, (int, float, timedelta)):
@@ -152,17 +152,13 @@ def _parse_text_input_live(live: object) -> int | None:
 
     # Duration strings always parse to a finite number of seconds.
     seconds = time_to_seconds(live)
-    if seconds < 0:
-        raise StreamlitAPIException(
-            f"The `live` parameter cannot be a negative duration. Got: `{live}`."
-        )
-
-    delay_ms = round(seconds * 1000.0)
-    if delay_ms > _MAX_LIVE_DELAY_MS:
+    debounce_ms = round(seconds * 1000.0)
+    # Use ``seconds < 0`` so a sub-millisecond negative does not round to 0.
+    if seconds < 0 or debounce_ms > _MAX_LIVE_DEBOUNCE_MS:
         raise StreamlitAPIException(
             f"The `live` duration must be between 0 and 1 minute. Got: `{live}`."
         )
-    return delay_ms
+    return debounce_ms
 
 
 # Default (regex, message) validation rules for the specialized text input types.
@@ -716,7 +712,7 @@ class TextWidgetsMixin:
         key = to_key(key)
 
         validate_on_change_mode(on_change)
-        live_delay_ms = _parse_text_input_live(live)
+        live_debounce_ms = _parse_text_input_live(live)
 
         on_change_callback: WidgetCallback | None = (
             on_change if callable(on_change) else None
@@ -739,33 +735,10 @@ class TextWidgetsMixin:
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
 
-        # Compute the widget identity from the RAW user-provided values, before
-        # resolving any type-derived smart defaults below. `type` is already
-        # part of the identity, so folding the type defaults (icon, placeholder,
-        # validate, autocomplete) in here would needlessly reset every
-        # pre-existing widget on upgrade. This is what keeps `type="default"`
-        # and `type="password"` element IDs byte-for-byte unchanged.
+        # Hash the raw user-provided values, before type-derived defaults below.
+        # `type` is already part of the identity, so those defaults (icon,
+        # placeholder, validate, autocomplete) stay out of the hash.
         identity_validate_regex, _ = _parse_text_input_validate(validate)
-
-        # Only contribute the validation regex to the element identity when
-        # validation is actually configured. This keeps element IDs (and thus
-        # widget state) stable across upgrades for the common case of inputs
-        # without validation, instead of hashing a `validate=None` placeholder
-        # that would reset every pre-existing text input on the first run after
-        # upgrade. A falsy regex (`None` or `""`) is identity-neutral, matching
-        # the frontend, which treats an empty regex as "no validation". When a
-        # regex is set, it still affects identity so that changing the regex
-        # resets the widget (its value may no longer be valid). The message is
-        # intentionally excluded since it is cosmetic.
-        validate_identity_kwarg = (
-            {"validate": identity_validate_regex} if identity_validate_regex else {}
-        )
-        # Hash normalized milliseconds so `True` and `"300ms"` share an ID.
-        # Omitted / False is not hashed, so existing unkeyed inputs keep their
-        # state on upgrade. `"0ms"` is a real live mode and is hashed.
-        live_identity_kwarg = (
-            {"live": live_delay_ms} if live_delay_ms is not None else {}
-        )
 
         element_id = compute_and_register_element_id(
             "text_input",
@@ -774,8 +747,6 @@ class TextWidgetsMixin:
             # they change, since the widget value might become invalid based on a
             # different max_chars or validation regex. Only the regex (not the
             # message) is used for identity, since the message is purely cosmetic.
-            # `live` is a timing flag and is intentionally not in this set:
-            # enabling live on a keyed widget keeps its value.
             key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,
@@ -787,8 +758,9 @@ class TextWidgetsMixin:
             placeholder=str(placeholder),
             icon=icon,
             width=width,
-            **validate_identity_kwarg,
-            **live_identity_kwarg,
+            # Normalized milliseconds so `True` and `"300ms"` share an ID.
+            live=live_debounce_ms,
+            validate=identity_validate_regex,
         )
 
         # Resolve the effective values from the type defaults now that the
@@ -806,9 +778,8 @@ class TextWidgetsMixin:
 
         # `validate=None` falls back to the type default (a no-op for
         # `default`/`password`, which define none); `validate=""` and explicit
-        # values pass through unchanged. This effective regex is separate from
-        # the identity regex above, which intentionally ignores the type
-        # default so the default rule never enters the widget ID.
+        # values pass through unchanged. Identity uses the raw user value above,
+        # so the type default never enters the widget ID.
         effective_validate = type_defaults.validate if validate is None else validate
         validate_regex, validate_message = _parse_text_input_validate(
             effective_validate
@@ -868,8 +839,8 @@ class TextWidgetsMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             text_input_proto.ignore_rerun = True
 
-        if live_delay_ms is not None:
-            text_input_proto.live_delay_ms = live_delay_ms
+        if live_debounce_ms is not None:
+            text_input_proto.live_debounce_ms = live_debounce_ms
 
         serde = TextInputSerde(value, max_chars)
 
