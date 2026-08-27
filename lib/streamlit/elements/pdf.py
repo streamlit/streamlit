@@ -105,7 +105,6 @@ class PdfMixin:
         # Validate data parameter early
         if data is None:
             raise StreamlitMissingRequiredParameterError(
-                "st.pdf",
                 "data",
                 detail=(
                     "Please provide a valid PDF file path, URL, bytes data, "

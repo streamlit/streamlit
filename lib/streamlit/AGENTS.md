@@ -126,12 +126,24 @@ generic `StreamlitAPIException` with a one-off message.
 
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits.
-- `StreamlitValueError(parameter, valid_values)`: use when a parameter receives
-  an invalid value from a known finite set (Literal / enum-like options). Example:
+- `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
+  parameter receives an invalid value from a known finite set (Literal /
+  enum-like options). Optional `detail` is overlay-only and is not appended
+  in uncaught-exception telemetry. Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
-- `StreamlitMissingRequiredParameterError(command, parameter, *, detail=None)`:
-  use when a required parameter is missing, `None`, or empty. Example:
-  `raise StreamlitMissingRequiredParameterError("st.expander", "label")`.
+- `StreamlitMissingRequiredParameterError(parameter, *, detail=None)`:
+  use when a required parameter is missing, `None`, or empty, including an
+  empty sequence. `parameter` is appended in uncaught-exception telemetry
+  (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
+  `raise StreamlitMissingRequiredParameterError("label")`.
+- `StreamlitIncompatibleParametersError(*uses, *, explanation=None)`: use
+  when two or more parameter uses cannot be combined. Pass the value when
+  the conflict depends on it (`wrap=False`), or the bare parameter name
+  when merely providing it conflicts (`on_change`). Uses are overlay-only;
+  uncaught-exception telemetry is the type name with no suffix. Optional
+  `explanation` is appended when the generic "cannot be used together"
+  message needs more context. Example:
+  `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
   uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
@@ -139,28 +151,23 @@ generic `StreamlitAPIException` with a one-off message.
   `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
-  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError` /
-    `StreamlitInvalidSizeError` (layout sizing helpers)
+  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError`
+    (layout sizing helpers)
   - `StreamlitInvalidColorError`
-  - `StreamlitInvalidVerticalAlignmentError` /
-    `StreamlitInvalidHorizontalAlignmentError` /
-    `StreamlitInvalidColumnGapError` (layout alignment/gap; these keep
-    element-type context in the message)
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
-  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout
-    or form context)
+  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
+    form, or dialog context, including opening a second dialog in the same run)
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)
   - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
-- Do not raise the deprecated aliases.
 
-Reserve bare `StreamlitAPIException` for cases that are not covered by a shared
-type (incompatible option combinations, nesting rules, serialization failures,
+Reserve bare `StreamlitAPIException` for one-off cases that no shared type
+covers and that users are expected to hit uncommonly (serialization failures
 and similar).
 
 ## Theming and Layout

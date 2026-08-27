@@ -106,7 +106,11 @@ from streamlit.elements.widgets.slider import SliderMixin
 from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+)
 from streamlit.proto import Block_pb2
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -540,7 +544,7 @@ class DeltaGenerator(
                 if fragment_path and not _is_inside_fragment_path(
                     cursor_path, fragment_path
                 ):
-                    raise StreamlitAPIException(
+                    raise StreamlitInvalidLayoutContextError(
                         "Writing to containers outside a parallel fragment is not "
                         "allowed during the initial page load, because parallel "
                         "fragments run concurrently on separate threads and "
@@ -828,7 +832,7 @@ def _get_or_create_outside_wrapper(
     if ctx.fragment_ids_this_run and (
         dg._creating_fragment_id not in ctx.fragment_ids_this_run
     ):
-        raise StreamlitAPIException(
+        raise StreamlitInvalidLayoutContextError(
             "A fragment tried to write to a container created outside the "
             "fragment, but that container was not written to during the initial "
             "run, so Streamlit could not reserve a stable position for it.\n\n"

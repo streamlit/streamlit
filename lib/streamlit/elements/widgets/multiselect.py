@@ -629,7 +629,6 @@ class MultiSelectMixin:
         proto_filter_mode = validate_select_widget_filter_mode(
             filter_mode,
             accept_new_options=accept_new_options,
-            command="st.multiselect",
         )
 
         form_id = current_form_id(self.dg)

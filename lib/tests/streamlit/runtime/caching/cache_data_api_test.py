@@ -30,7 +30,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
@@ -885,44 +889,40 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         st.cache_data.clear()
 
     def test_background_without_ttl_raises(self) -> None:
-        """refresh_mode="background" without a ttl raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """refresh_mode="background" without a ttl requires a positive ttl."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r'Set a positive `ttl` \(for example `ttl="1h"`\)',
+        ):
 
             @st.cache_data(refresh_mode="background")
             def foo() -> int:
                 return 1
 
-        assert "requires a 'ttl' value" in str(exc.value)
-
     def test_background_with_zero_ttl_raises(self) -> None:
-        """A non-positive ttl is treated as no ttl for background refresh."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """A non-positive ttl is an invalid value for background refresh."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Background refresh requires a positive `ttl`",
+        ):
 
             @st.cache_data(ttl=0, refresh_mode="background")
             def foo() -> int:
                 return 1
 
-        assert "requires a 'ttl' value" in str(exc.value)
+    @parameterized.expand(
+        [
+            ("disk", "disk"),
+            ("true", True),
+        ]
+    )
+    def test_background_with_persist_raises(self, _: str, persist: str | bool) -> None:
+        """refresh_mode="background" with persist raises an incompatibility error."""
+        with pytest.raises(StreamlitIncompatibleParametersError):
 
-    def test_background_with_persist_disk_raises(self) -> None:
-        """refresh_mode="background" with persist="disk" raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
-
-            @st.cache_data(ttl="1h", persist="disk", refresh_mode="background")
+            @st.cache_data(ttl="1h", persist=persist, refresh_mode="background")
             def foo() -> int:
                 return 1
-
-        assert "not compatible with 'persist'" in str(exc.value)
-
-    def test_background_with_persist_true_raises(self) -> None:
-        """refresh_mode="background" with persist=True raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
-
-            @st.cache_data(ttl="1h", persist=True, refresh_mode="background")
-            def foo() -> int:
-                return 1
-
-        assert "not compatible with 'persist'" in str(exc.value)
 
     def test_invalid_refresh_mode_raises(self) -> None:
         """An unknown refresh_mode value raises a StreamlitValueError."""

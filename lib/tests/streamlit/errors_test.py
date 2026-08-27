@@ -164,7 +164,39 @@ def test_invalid_parameter_type_error_message() -> None:
         "parameter": "index",
         "expected_types": "int, None",
         "provided_type": "str",
+        "detail": None,
     }
+
+
+def test_invalid_parameter_type_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitInvalidParameterTypeError(
+        "tabs",
+        "bool",
+        ["str"],
+        detail="Each tab label must be a string.",
+    )
+    assert str(exc) == (
+        "Invalid `tabs` type. Expected one of: str. Provided type: bool. "
+        "Each tab label must be a string."
+    )
+    assert exc.exec_kwargs["parameter"] == "tabs"
+    assert exc.exec_kwargs["detail"] == "Each tab label must be a string."
+
+
+def test_value_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitValueError(
+        "scope",
+        ["'global'", "'session'"],
+        detail="Connection class Foo has an invalid scope.",
+    )
+    assert str(exc) == (
+        "Invalid `scope` value. Supported values: 'global', 'session'. "
+        "Connection class Foo has an invalid scope."
+    )
+    assert exc.exec_kwargs["parameter"] == "scope"
+    assert exc.exec_kwargs["detail"] == "Connection class Foo has an invalid scope."
 
 
 def test_widget_already_instantiated_error_message() -> None:
@@ -238,32 +270,83 @@ def test_invalid_max_error_with_corrective_action() -> None:
 
 
 def test_missing_required_parameter_error_message() -> None:
-    """Default message includes command and parameter."""
-    exc = errors.StreamlitMissingRequiredParameterError("st.expander", "label")
-    assert str(exc) == "The `label` parameter is required for `st.expander`."
+    """Default message includes the parameter."""
+    exc = errors.StreamlitMissingRequiredParameterError("label")
+    assert str(exc) == "The `label` parameter is required."
+    assert exc.exec_kwargs["parameter"] == "label"
 
 
 def test_missing_required_parameter_error_with_detail() -> None:
     """Optional detail is appended to the default message."""
     exc = errors.StreamlitMissingRequiredParameterError(
-        "st.toast",
         "body",
         detail="It cannot be blank.",
     )
-    assert str(exc) == (
-        "The `body` parameter is required for `st.toast`. It cannot be blank."
-    )
+    assert str(exc) == ("The `body` parameter is required. It cannot be blank.")
 
 
 def test_missing_required_parameter_error_detail_with_braces() -> None:
     """Detail text with braces does not break message formatting."""
     exc = errors.StreamlitMissingRequiredParameterError(
-        "st.dialog",
         "title",
         detail="Example: use {value}.",
     )
+    assert str(exc) == ("The `title` parameter is required. Example: use {value}.")
+
+
+def test_incompatible_parameters_error_formats_uses() -> None:
+    """Uses are joined into the user-facing message."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "wrap=False", "unsafe_allow_html=True"
+    )
     assert str(exc) == (
-        "The `title` parameter is required for `st.dialog`. Example: use {value}."
+        "`wrap=False` and `unsafe_allow_html=True` cannot be used together."
+    )
+    assert "parameter" not in exc.exec_kwargs
+
+
+def test_incompatible_parameters_error_formats_three_uses() -> None:
+    """Three uses are joined with an Oxford comma."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "refresh_mode='background'", "ttl", "persist='disk'"
+    )
+    assert str(exc) == (
+        "`refresh_mode='background'`, `ttl`, and `persist='disk'` "
+        "cannot be used together."
+    )
+
+
+def test_incompatible_parameters_error_requires_two_uses() -> None:
+    """Fewer than two uses is a constructor contract violation."""
+    with pytest.raises(ValueError, match="at least two parameter uses"):
+        errors.StreamlitIncompatibleParametersError()
+    with pytest.raises(ValueError, match="at least two parameter uses"):
+        errors.StreamlitIncompatibleParametersError("ttl")
+
+
+def test_incompatible_parameters_error_with_explanation() -> None:
+    """Optional explanation is appended to the generic message."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "bind='query-params'",
+        "type='password'",
+        explanation="Password values must not appear in URLs.",
+    )
+    assert str(exc) == (
+        "`bind='query-params'` and `type='password'` cannot be used together. "
+        "Password values must not appear in URLs."
+    )
+
+
+def test_incompatible_parameters_error_explanation_with_braces() -> None:
+    """Explanation text with braces does not break message formatting."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "refresh_mode='background'",
+        "ttl=None",
+        explanation="Example: use {value}.",
+    )
+    assert str(exc) == (
+        "`refresh_mode='background'` and `ttl=None` cannot be used together. "
+        "Example: use {value}."
     )
 
 

@@ -193,6 +193,13 @@ class StreamlitModuleNotFoundError(StreamlitAPIWarning):
 
 
 class LocalizableStreamlitException(StreamlitAPIException):
+    """API exception with a format-string message and kwargs for localization.
+
+    Users can localize the message from ``exec_kwargs``, for example in an
+    ``on_script_error`` handler on ``st.App``. Kwargs are used for telemetry
+    only in a few specific cases (for example ``parameter``).
+    """
+
     def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__((message).format(**kwargs))
         self._exec_kwargs = kwargs
@@ -428,19 +435,51 @@ class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
 
 
 class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
-    """Raised when a required parameter is missing, ``None``, or empty."""
+    """Raised when a required parameter is missing, ``None``, or empty.
 
-    def __init__(
-        self, command: str, parameter: str, *, detail: str | None = None
-    ) -> None:
-        message = "The `{parameter}` parameter is required for `{command}`."
+    Uncaught-exception telemetry appends the parameter name, for example
+    ``StreamlitMissingRequiredParameterError:label``.
+    """
+
+    def __init__(self, parameter: str, *, detail: str | None = None) -> None:
+        message = "The `{parameter}` parameter is required."
         if detail:
             message += " {detail}"
         super().__init__(
             message,
-            command=command,
             parameter=parameter,
             detail=detail,
+        )
+
+
+class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
+    """Raised when two or more parameter uses cannot be combined.
+
+    Pass the value when the conflict depends on it (for example
+    ``wrap=False``), or the bare parameter name when merely providing it
+    conflicts (for example ``on_change``).
+    Uses are overlay-only; uncaught-exception telemetry is the type name
+    with no suffix.
+    """
+
+    def __init__(self, *uses: str, explanation: str | None = None) -> None:
+        if len(uses) < 2:
+            raise ValueError(
+                "StreamlitIncompatibleParametersError requires at least two "
+                "parameter uses."
+            )
+        quoted = [f"`{use}`" for use in uses]
+        if len(quoted) == 2:
+            uses_text = f"{quoted[0]} and {quoted[1]}"
+        else:
+            uses_text = ", ".join(quoted[:-1]) + f", and {quoted[-1]}"
+        message = "{uses_text} cannot be used together."
+        if explanation:
+            message += " {explanation}"
+        super().__init__(
+            message,
+            uses_text=uses_text,
+            explanation=explanation,
         )
 
 
@@ -557,7 +596,7 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidLayoutContextError(StreamlitAPIException):
-    """Raised when a command is used in a disallowed layout context."""
+    """Raised when a command is used in a disallowed layout, form, or dialog context."""
 
 
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
@@ -656,11 +695,21 @@ class StreamlitInvalidSizeError(LocalizableStreamlitException):
 class StreamlitValueError(LocalizableStreamlitException):
     """Raised when a parameter receives a value outside a known finite set."""
 
-    def __init__(self, parameter: str, valid_values: list[str]) -> None:
+    def __init__(
+        self,
+        parameter: str,
+        valid_values: list[str],
+        *,
+        detail: str | None = None,
+    ) -> None:
+        message = "Invalid `{parameter}` value. Supported values: {valid_values}."
+        if detail:
+            message += " {detail}"
         super().__init__(
-            "Invalid `{parameter}` value. Supported values: {valid_values}.",
+            message,
             parameter=parameter,
             valid_values=", ".join(valid_values),
+            detail=detail,
         )
 
 
@@ -668,14 +717,25 @@ class StreamlitInvalidParameterTypeError(LocalizableStreamlitException):
     """Raised when a parameter has an unsupported type."""
 
     def __init__(
-        self, parameter: str, provided_type: str, expected_types: list[str]
+        self,
+        parameter: str,
+        provided_type: str,
+        expected_types: list[str],
+        *,
+        detail: str | None = None,
     ) -> None:
-        super().__init__(
+        message = (
             "Invalid `{parameter}` type. Expected one of: {expected_types}. "
-            "Provided type: {provided_type}.",
+            "Provided type: {provided_type}."
+        )
+        if detail:
+            message += " {detail}"
+        super().__init__(
+            message,
             parameter=parameter,
             expected_types=", ".join(expected_types),
             provided_type=provided_type,
+            detail=detail,
         )
 
 

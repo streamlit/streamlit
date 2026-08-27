@@ -33,6 +33,7 @@ from streamlit.elements.widgets.button_group import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
+    StreamlitIncompatibleParametersError,
     StreamlitValueError,
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
@@ -2183,10 +2184,7 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
         self, command: Callable[..., Any]
     ):
         """Test that required=True with selection_mode='multi' raises an exception."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be used with.*selection_mode='multi'",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             command("label", ["a", "b", "c"], selection_mode="multi", required=True)
 
     @parameterized.expand([(st.pills,), (st.segmented_control,)])
