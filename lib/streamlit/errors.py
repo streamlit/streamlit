@@ -689,37 +689,3 @@ class StreamlitInvalidThemeSectionError(StreamlitInvalidThemeError):
             option_name=option_name,
             file_path_or_url=file_path_or_url,
         )
-
-
-# Deprecated aliases kept only for backward compatibility.
-# Identity aliases preserve `except OldName` for migrated raises, but also
-# catch every instance of the replacement type. Several names below shipped
-# as distinct classes in 1.62.0 (including StreamlitInvalidSizeError and the
-# gap/alignment errors); do not delete them as unused.
-StreamlitInvalidPageLayoutError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidTextAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidBindValueError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidPersistStateError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidSizeError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidVerticalAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidColumnGapError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitInvalidHorizontalAlignmentError = (  # Replaced: StreamlitValueError.
-    StreamlitValueError
-)
-StreamlitMissingPageLabelError = (  # Replaced: StreamlitMissingRequiredParameterError.
-    StreamlitMissingRequiredParameterError
-)
