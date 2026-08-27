@@ -342,7 +342,7 @@ def test_marshall_video_unsupported_subtitles_type_raises(
 ) -> None:
     """Reject subtitle containers that are not str, bytes, Path, BytesIO, or dict."""
     proto = VideoProto()
-    with pytest.raises(StreamlitInvalidParameterTypeError):
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         marshall_video(
             mock.Mock(),
             "coord",
@@ -350,6 +350,7 @@ def test_marshall_video_unsupported_subtitles_type_raises(
             "https://example.com/video.mp4",
             subtitles=bad_subtitles,  # type: ignore[arg-type]
         )
+    assert exc_info.value.exec_kwargs["parameter"] == "subtitles"
 
 
 def test_parse_start_end_time_none_start_raises() -> None:

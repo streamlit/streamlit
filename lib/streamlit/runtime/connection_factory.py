@@ -106,7 +106,7 @@ def _create_connection(
         raise StreamlitValueError(
             "scope",
             ["'global'", "'session'"],
-            detail=f"Connection class {connection_class} has scope {scope!r}.",
+            detail=f"Connection class {connection_class.__name__} has scope {scope!r}.",
         )
 
     def on_release_wrapped(connection: ConnectionClass) -> None:

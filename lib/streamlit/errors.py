@@ -95,7 +95,7 @@ class StreamlitDataframeConversionError(StreamlitAPIException):
 
 
 class DuplicateWidgetID(StreamlitAPIException):  # pragma: no cover - trivial subclass
-    """Legacy base class for duplicate element ID and key errors, kept for compatibility."""
+    """Base class for duplicate element ID and key errors so ``except DuplicateWidgetID`` catches both."""
 
 
 class StreamlitAuthError(StreamlitAPIException):  # pragma: no cover - trivial subclass
@@ -657,16 +657,15 @@ class StreamlitDefaultNotInOptionsError(LocalizableStreamlitException):
 
 # config
 class StreamlitInvalidThemeError(LocalizableStreamlitException):
-    """Exception raised for general theme errors."""
+    """Base class for theme errors so ``except StreamlitInvalidThemeError`` also
+    catches invalid option and section errors.
+    """
 
 
-class StreamlitInvalidThemeOptionError(StreamlitInvalidThemeError):
+class StreamlitInvalidThemeOptionError(
+    StreamlitInvalidThemeError
+):  # pragma: no cover - trivial subclass
     """Exception raised when an invalid theme config option is provided."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(
-            message,
-        )
 
 
 class StreamlitInvalidThemeSectionError(StreamlitInvalidThemeError):

@@ -44,7 +44,7 @@ _VALID_SIDEBAR_STATE_VALUES: Final = [
     "'expanded'",
     "'collapsed'",
     "'locked'",
-    "a positive integer",
+    "a positive integer (width in pixels)",
 ]
 
 PageIcon: TypeAlias = AtomicImage | str
