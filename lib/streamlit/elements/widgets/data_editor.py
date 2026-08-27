@@ -88,10 +88,11 @@ _LOGGER: Final = _logger.get_logger(__name__)
 
 T = TypeVar("T")
 
-# Dataframe-like inputs are returned with the same type. The bound uses
-# tuple[Any] (a 1-tuple), so longer tuples fall through to data: Any and are
-# typed as pd.DataFrame. List, dict, and set inputs get dedicated overloads
-# so that their inner type parameters are preserved.
+# Dataframe-like inputs return the same type. List, dict, and set inputs use
+# dedicated overloads that preserve inner type parameters but return the plain
+# builtin, matching the runtime conversion (a dict subclass in returns a plain
+# dict out). The bound's tuple[Any] matches only 1-tuples, so longer tuples hit
+# the data: Any overload and return pd.DataFrame.
 EditableData = TypeVar(
     "EditableData",
     bound=dataframe_util.DataFrameGenericAlias[Any] | tuple[Any],
@@ -736,6 +737,8 @@ def _check_type_compatibilities(
 
 
 class DataEditorMixin:
+    # Inner types are echoed. Runtime may convert row/column tuples to lists
+    # (e.g. [(1, 2)] becomes list[list[int]]); that mismatch is pre-existing.
     @overload
     def data_editor(
         self,

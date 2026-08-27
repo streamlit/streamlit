@@ -102,7 +102,9 @@ if TYPE_CHECKING:
     image("image.png", output_format="WEBP")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing link as positional argument (should be keyword-only).
-    # ty reports on the extra positional argument; mypy reports on the call.
+    # The suppressions sit on different lines because ty reports on the first
+    # extra positional argument while mypy reports on the whole call. If
+    # st.image gains or loses a positional parameter, move the ty suppression.
     image(
         "image.png",
         None,

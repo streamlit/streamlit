@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["foo", "bar"], default=None), list[str])
     assert_type(multiselect("foo", Alfred), list[Alfred])
     assert_type(multiselect("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), list[Alfred])
+    # ty infers `list[int | Alfred | str]` rather than `list[object]`.
     assert_type(multiselect("foo", [1, Alfred.HITCHCOCK, "five"]), list[object])  # ty: ignore[type-assertion-failure]
 
     # Tests with accept_new_options=True
@@ -119,6 +120,7 @@ if TYPE_CHECKING:
 
     # Non-literal accept_new_options returns the union of both result types.
     accept_new_options: bool = True
+    # ty infers `list[int | str]` rather than the union of both overloads.
     assert_type(  # ty: ignore[type-assertion-failure]
         multiselect("foo", [1, 2, 3], accept_new_options=accept_new_options),
         list[int] | list[int | str],

@@ -34,7 +34,9 @@ if TYPE_CHECKING:
     assert_type(select_slider("foo", [1, 2, 3]), int)
     assert_type(select_slider("foo", [1, 2, 3], value=2), int)
     assert_type(select_slider("foo", [1, 2, 3], value=(1, 3)), tuple[int, int])
+    # ty infers `float*` (not equivalent to `float`).
     assert_type(select_slider("foo", [1.0, 2.0, 3.0]), float)  # ty: ignore[type-assertion-failure]
+    # ty infers `float*` (not equivalent to `float`).
     assert_type(select_slider("foo", [1.0, 2.0, 3.0], value=3.0), float)  # ty: ignore[type-assertion-failure]
     assert_type(
         select_slider("foo", [1.0, 2.0, 3.0], value=(2.0, 3.0)), tuple[float, float]
@@ -42,9 +44,11 @@ if TYPE_CHECKING:
     assert_type(select_slider("foo", ["foo", "bar"]), str)
     assert_type(select_slider("foo", Alfred), Alfred)
     assert_type(select_slider("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
+    # ty infers `int | Alfred | str` rather than `object`.
     assert_type(  # ty: ignore[type-assertion-failure]
         select_slider("foo", [1, Alfred.HITCHCOCK, "five"], value="five"), object
     )
+    # ty infers `tuple[int | Alfred | str, int | Alfred | str]`.
     assert_type(  # ty: ignore[type-assertion-failure]
         select_slider("foo", [1, Alfred.HITCHCOCK, "five"], value=[1, "five"]),
         tuple[object, object],
@@ -54,6 +58,7 @@ if TYPE_CHECKING:
         tuple[list[int], list[int]],
     )
     opt: list[object] = [1, 2, "4"]
+    # ty infers `tuple[object, object]` rather than `object`.
     assert_type(select_slider("foo", options=opt, value=[1, 2]), object)  # ty: ignore[type-assertion-failure]
     # See note in select_slider.py; we can't really tell mypy that this will return a
     # tuple[object, object] since value: Sequence[int] is a subtype of object.

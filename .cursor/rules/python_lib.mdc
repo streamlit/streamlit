@@ -74,15 +74,20 @@ typing errors in parameters or return types by using mypy, ty, and `assert_type`
 - Always include `from __future__ import annotations` at the top.
 - Overloads discriminated on `bool` need an explicit fallback overload for
   non-literal values, because mypy does not expand `bool` into
-  `Literal[True] | Literal[False]`. String-`Literal` discriminators do not:
-  mypy expands union arguments, so assert the union result directly.
-  Cover both the literal cases and the non-literal case.
+  `Literal[True] | Literal[False]`. String-`Literal` discriminators do not
+  need that fallback; mypy expands union arguments, so assert the union
+  result directly. Cover both the literal cases and the non-literal case.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
   (e.g. `radio_types.py`, `file_uploader_types.py`).
-- Intentional invalid calls need both `# type: ignore[...]` (mypy) and
-  `# ty: ignore[...]` (ty) on the same line.
-- Valid calls that still disagree between checkers may keep
-  `# ty: ignore[type-assertion-failure]`.
+- Intentional invalid calls need a suppression for each checker that reports an
+  error: `# type: ignore[...]` (mypy) and `# ty: ignore[...]` (ty). Place each
+  suppression where its checker reports the diagnostic; use the same line when
+  possible. Add a checker's comment only when that checker actually errors —
+  ty's `unused-ignore-comment` rule is disabled, so a superfluous suppression
+  is silently kept.
+- A valid call whose asserted type mypy accepts but ty rejects may use
+  `# ty: ignore[type-assertion-failure]`. Add a short note saying what ty infers
+  instead, so the suppression can be removed once ty catches up.
 - For dict-like return values backed by `AttributeDictionary` /
   `ReadOnlyAttributeDictionary` subclasses (e.g. dataframe/chart selection
   state, `ButtonColumn` click state, `st.data_editor` edit state), assert both

@@ -53,6 +53,14 @@ if TYPE_CHECKING:
         segmented_control("foo", options, selection_mode="multi", default=[1]),
         list[int],
     )
+    optional_default: list[int] | None = None
+    # Sequence overload includes None so this matches without union expansion.
+    assert_type(
+        segmented_control(
+            "foo", options, selection_mode="multi", default=optional_default
+        ),
+        list[int],
+    )
 
     # Check bind parameter
     assert_type(segmented_control("foo", options, bind="query-params"), int | None)
@@ -86,6 +94,7 @@ if TYPE_CHECKING:
 
     # A variable typed as the full Literal union returns both result types.
     selection_mode: Literal["single", "multi"] = "single"
+    # ty infers `int | None` rather than the union of both overloads.
     assert_type(  # ty: ignore[type-assertion-failure]
         segmented_control("foo", options, selection_mode=selection_mode),
         int | list[int] | None,
@@ -100,7 +109,8 @@ if TYPE_CHECKING:
         "foo", options, selection_mode="multi", required=True
     )
     # Inherent limitation of the Literal[False] discriminator: a required: bool
-    # variable matches no multi-select overload, even when it is False.
+    # variable matches no multi-select overload, even when it is False
+    # (mypy only; ty accepts this call).
     segmented_control(  # type: ignore[call-overload]
         "foo", options, selection_mode="multi", required=required
     )

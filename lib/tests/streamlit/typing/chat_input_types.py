@@ -67,9 +67,11 @@ if TYPE_CHECKING:
 
     # Non-literal bool values return the union of both result types.
     accept: bool = True
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
     assert_type(  # ty: ignore[type-assertion-failure]
         chat_input("Message", accept_file=accept), str | ChatInputValue | None
     )
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
     assert_type(  # ty: ignore[type-assertion-failure]
         chat_input("Message", accept_audio=accept), str | ChatInputValue | None
     )

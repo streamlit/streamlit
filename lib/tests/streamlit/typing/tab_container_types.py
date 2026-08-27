@@ -40,8 +40,9 @@ if TYPE_CHECKING:
     assert_type(tab2, TabContainer)
     assert_type(tab3, TabContainer)
 
-    # Assignment is the subtype check; assert_type after a DeltaGenerator
-    # annotation would only see that annotation.
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
     _tabs_as_delta_generators: Sequence[DeltaGenerator] = tabs(["A", "B"])
 
     # Context manager returns Self

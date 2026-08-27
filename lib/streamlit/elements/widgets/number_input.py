@@ -95,8 +95,10 @@ class NumberInputSerde:
 
 
 class NumberInputMixin:
-    # Split the constrained TypeVar value overloads into explicit int and None
-    # cases so ty infers int when value defaults to "min", not int | None.
+    # Each numeric group has one overload for a concrete value (or the "min"
+    # default) and one for value=None. A single constrained TypeVar covering
+    # both would leave ty and pyright inferring int | None where the runtime
+    # always returns int.
     # If "min_value: int" is given and all other numerical inputs are
     #   "int"s or not provided (value optionally being "min"), return "int"
     @overload

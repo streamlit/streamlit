@@ -396,8 +396,11 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select with a sequence default -> list[V]
-    # Split so checkers infer V from options, not from default.
-    # A combined Sequence[V] | V | None made default=[1] infer list[V | Sequence[V]].
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
     # Reject required=True in multi-select mode statically: it raises
     # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
     # bool cannot exclude True, so a `required: bool` variable then matches no
@@ -409,7 +412,7 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V],
+        default: Sequence[V] | None,
         required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -791,8 +794,11 @@ class ButtonGroupMixin:
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
     # 4. Multi-select with a sequence default -> list[V]
-    # Split so checkers infer V from options, not from default.
-    # A combined Sequence[V] | V | None made default=[1] infer list[V | Sequence[V]].
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
     # Reject required=True in multi-select mode statically: it raises
     # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
     # bool cannot exclude True, so a `required: bool` variable then matches no
@@ -804,7 +810,7 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V],
+        default: Sequence[V] | None,
         required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,

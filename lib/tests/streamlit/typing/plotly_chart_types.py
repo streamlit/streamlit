@@ -81,6 +81,7 @@ if TYPE_CHECKING:
 
     # Non-literal on_select returns the union of both result types.
     on_select: Literal["ignore", "rerun"] = "rerun"
+    # ty infers `PlotlyState` rather than the union of both overloads.
     assert_type(  # ty: ignore[type-assertion-failure]
         plotly_chart(fig, on_select=on_select), DeltaGenerator | PlotlyState
     )
