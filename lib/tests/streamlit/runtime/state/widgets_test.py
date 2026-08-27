@@ -643,7 +643,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         """Test that `register_widget` raises an exception when both `on_change`
         and `callbacks` are provided.
         """
-        with pytest.raises(errors.StreamlitAPIException):
+        with pytest.raises(errors.StreamlitIncompatibleParametersError):
             register_widget(
                 "el_id",
                 deserializer=lambda x: x,

@@ -25,6 +25,7 @@ import streamlit as st
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -746,15 +747,16 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     def test_bind_query_params_with_password_raises_exception(self) -> None:
         """Test that bind='query-params' with type='password' raises an exception."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"Password values must not appear in URLs",
+        ):
             st.text_input(
                 "the label",
                 key="my_text",
                 bind="query-params",
                 type="password",
             )
-
-        assert "password" in str(exc.value).lower()
 
 
 class TextInputOnChangeModeTest(DeltaGeneratorTestCase):

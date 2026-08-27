@@ -677,7 +677,6 @@ class SelectboxMixin:
         proto_filter_mode = validate_select_widget_filter_mode(
             filter_mode,
             accept_new_options=accept_new_options,
-            command="st.selectbox",
         )
 
         formatted_options, formatted_option_to_option_index = create_mappings(

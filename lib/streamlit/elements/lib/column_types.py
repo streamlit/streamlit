@@ -3475,7 +3475,6 @@ def ButtonColumn(
     # Raise an error if callbacks are provided without a key
     if on_click is not None or args is not None or kwargs is not None:
         raise StreamlitMissingRequiredParameterError(
-            "st.column_config.ButtonColumn",
             "key",
             detail=(
                 "Callbacks passed via `on_click`, `args`, or `kwargs` need a unique "

@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 def validate_text(toast_text: SupportsStr) -> SupportsStr:
     if str(toast_text) == "":
         raise StreamlitMissingRequiredParameterError(
-            "st.toast",
             "body",
             detail="Please provide a message.",
         )

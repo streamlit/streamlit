@@ -34,7 +34,11 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -745,9 +749,10 @@ class TextWidgetsMixin:
 
         # Prevent binding password inputs to query params (exposes secrets in URL)
         if bind == "query-params" and type == "password":
-            raise StreamlitAPIException(
-                "Cannot use `bind='query-params'` with `type='password'`. "
-                "Password values must not appear in URLs."
+            raise StreamlitIncompatibleParametersError(
+                "bind='query-params'",
+                "type='password'",
+                explanation="Password values must not appear in URLs.",
             )
 
         # Set query param key if bound

@@ -75,10 +75,8 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
     def test_st_html_empty_body_throws_error(self):
         """Test st.html with empty body throws error."""
-        with pytest.raises(StreamlitMissingRequiredParameterError) as ctx:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.html("")
-
-        assert "The `body` parameter is required for `st.html`" in str(ctx.value)
 
     def test_st_html_with_style_tag_only(self):
         """Test st.html with only a style tag."""

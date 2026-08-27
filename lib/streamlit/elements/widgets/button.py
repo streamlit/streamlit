@@ -1645,7 +1645,6 @@ class ButtonMixin:
             if is_url(page):
                 if label is None or label == "":
                     raise StreamlitMissingRequiredParameterError(
-                        "st.page_link",
                         "label",
                         detail="Streamlit cannot infer a label for an external URL.",
                     )
