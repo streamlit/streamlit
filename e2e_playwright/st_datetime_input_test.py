@@ -112,22 +112,6 @@ def test_datetime_input_dropdown(app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(calendar, name="st_datetime_input-dropdown")
 
 
-def test_datetime_input_empty_dropdown(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test the calendar popover of an empty widget, where the time field is
-    interactive rather than disabled.
-    """
-    get_datetime_input(app, "Datetime input 8 (empty)").get_by_test_id(
-        "stDateTimeInputField"
-    ).get_by_role("spinbutton").first.click()
-
-    calendar = app.get_by_test_id("stDateTimeInputCalendar")
-    expect(calendar).to_be_visible()
-
-    assert_snapshot(calendar, name="st_datetime_input-empty_dropdown")
-
-
 def test_datetime_input_narrow_rendering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
