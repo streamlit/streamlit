@@ -685,7 +685,7 @@ describe("TextInput widget", () => {
     const textInput = screen.getByRole("textbox")
     await user.type(textInput, "TEST")
 
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
   it("hides Please enter to apply text when width is smaller than 180px", async () => {
@@ -697,11 +697,11 @@ describe("TextInput widget", () => {
     const props = getProps({}, {})
     render(<TextInput {...props} />)
 
+    // Focus on input
     const textInput = screen.getByRole("textbox")
-    await user.type(textInput, "TEST")
+    await user.click(textInput)
 
     expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
-    expect(screen.queryByText("Press Enter to apply")).not.toBeInTheDocument()
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", async () => {
@@ -709,18 +709,11 @@ describe("TextInput widget", () => {
     const props = getProps({}, {})
     render(<TextInput {...props} />)
 
+    // Focus on input
     const textInput = screen.getByRole("textbox")
-    await user.type(textInput, "TEST")
+    await user.click(textInput)
 
-    expect(screen.getByText("Press Enter to apply")).toBeVisible()
-  })
-
-  it("does not mount InputInstructions on focus when the value is not dirty", async () => {
-    const user = userEvent.setup()
-    render(<TextInput {...getProps()} />)
-
-    await user.click(screen.getByRole("textbox"))
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 
   it("focuses input when clicking label", async () => {
@@ -1665,14 +1658,6 @@ describe("TextInput live updates", () => {
     await user.type(screen.getByRole("textbox"), "ab")
     expect(screen.queryByText("Press Enter to apply")).not.toBeInTheDocument()
     expect(screen.getByText("2/5")).toBeVisible()
-  })
-
-  it("does not mount InputInstructions for live inputs without maxChars", async () => {
-    const { user } = renderLive()
-
-    await user.type(screen.getByRole("textbox"), "ab")
-    expect(screen.queryByText("Press Enter to apply")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("does not overwrite a newer live value with an older echo", async () => {

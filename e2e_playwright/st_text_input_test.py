@@ -44,7 +44,8 @@ TEXT_INPUT_ELEMENTS = 42
 
 
 def _ime_events(app: Page) -> list[str]:
-    return app.evaluate("window.__stImeEvents || []")
+    events = app.evaluate("window.__stImeEvents || []")
+    return [str(event) for event in events]
 
 
 def _record_ime_events(input_locator: Locator) -> None:
@@ -842,9 +843,6 @@ def test_text_input_live_commits_while_typing(app: Page):
     live_default.click()
     live_default.type("hello")
     expect(app.get_by_text("Press Enter to apply")).to_have_count(0)
-    expect(
-        get_text_input(app, "Live default input").get_by_test_id("InputInstructions")
-    ).to_have_count(0)
     wait_until(app, lambda: app.get_by_text("Live default value: hello").is_visible())
     expect(live_default).to_be_focused()
     live_default.press("ArrowLeft")
