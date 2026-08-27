@@ -87,5 +87,5 @@ class SpaceTest(DeltaGeneratorTestCase):
     )
     def test_space_invalid_sizes(self, invalid_size):
         """Test that invalid size values raise an exception."""
-        with pytest.raises(StreamlitValueError):
+        with pytest.raises(StreamlitValueError, match=r"`size`"):
             st.space(invalid_size)

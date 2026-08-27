@@ -134,8 +134,9 @@ generic `StreamlitAPIException` with a one-off message.
   API. Prefer a more specific subclass when one fits.
 - `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
   parameter receives an invalid value from a known finite set (Literal /
-  enum-like options). Optional `detail` is overlay-only and is not appended
-  in uncaught-exception telemetry. Example:
+  enum-like options). `parameter` is appended in uncaught-exception telemetry
+  (`StreamlitValueError:<parameter>`); optional `detail` appears in the error
+  message only. Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
 - `StreamlitMissingRequiredParameterError(parameter, *, detail=None)`:
   use when a required parameter is missing, `None`, or empty, including an
@@ -143,12 +144,12 @@ generic `StreamlitAPIException` with a one-off message.
   (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
   `raise StreamlitMissingRequiredParameterError("label")`.
 - `StreamlitIncompatibleParametersError(*uses, *, explanation=None)`: use
-  when two or more parameter uses cannot be combined. Pass the value when
-  the conflict depends on it (`wrap=False`), or the bare parameter name
-  when merely providing it conflicts (`on_change`). Uses are overlay-only;
-  uncaught-exception telemetry is the type name with no suffix. Optional
-  `explanation` is appended when the generic "cannot be used together"
-  message needs more context. Example:
+  when two or more parameter uses cannot be combined. Pass `parameter=value`
+  when the conflict depends on a value (`wrap=False`), or the bare parameter
+  name when merely providing it conflicts (`on_change`). These strings appear
+  only in the displayed error; uncaught-exception telemetry records only the
+  exception type. Optional `explanation` is appended when the generic
+  "cannot be used together" message needs more context. Example:
   `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
 - `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
   use when a parameter has an unsupported type. `parameter` is appended in
@@ -164,7 +165,8 @@ generic `StreamlitAPIException` with a one-off message.
     date/time bounds)
   - `StreamlitInvalidFormCallbackError` (form callback policy)
   - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
-    form, or dialog context, including opening a second dialog in the same run)
+    form, dialog, or fragment context — including opening a second dialog in the
+    same run, or writing to a container across a parallel-fragment boundary)
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)

@@ -369,11 +369,11 @@ class StreamlitMissingRequiredParameterError(LocalizableStreamlitException):
 class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
     """Raised when two or more parameter uses cannot be combined.
 
-    Pass the value when the conflict depends on it (for example
-    ``wrap=False``), or the bare parameter name when merely providing it
-    conflicts (for example ``on_change``).
-    Uses are overlay-only; uncaught-exception telemetry is the type name
-    with no suffix.
+    Describe each conflict as a string. Include ``parameter=value`` when the
+    conflict depends on a value (for example ``wrap=False``); otherwise pass
+    only the parameter name (for example ``on_change``). These strings appear
+    only in the displayed error; uncaught-exception telemetry records only
+    the exception type.
     """
 
     def __init__(self, *uses: str, explanation: str | None = None) -> None:
@@ -598,7 +598,12 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
 
 
 class StreamlitValueError(LocalizableStreamlitException):
-    """Raised when a parameter receives a value outside a known finite set."""
+    """Raised when a parameter receives a value outside a known finite set.
+
+    Uncaught-exception telemetry appends the parameter name, for example
+    ``StreamlitValueError:width``. Optional ``detail`` appears in the error
+    message only.
+    """
 
     def __init__(
         self,
