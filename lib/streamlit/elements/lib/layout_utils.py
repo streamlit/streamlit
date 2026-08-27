@@ -249,17 +249,10 @@ def validate_space_size(size: SpaceSize) -> None:
     StreamlitValueError
         If the size value is invalid.
     """
-    if not isinstance(size, (int, str)):
-        raise StreamlitValueError(
-            "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
-        )
-
-    if isinstance(size, str):
-        if size not in _VALID_SPACE_SIZE_STRINGS:
-            raise StreamlitValueError(
-                "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
-            )
-    elif isinstance(size, int) and size <= 0:
+    is_valid_size = (isinstance(size, str) and size in _VALID_SPACE_SIZE_STRINGS) or (
+        isinstance(size, int) and size > 0
+    )
+    if not is_valid_size:
         raise StreamlitValueError(
             "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
         )
@@ -303,7 +296,7 @@ _GAP_STRING_MAPPING: dict[str, GapSize.ValueType] = {
 _VALID_GAP_VALUES: Final = [
     *[f"'{size}'" for size in _GAP_STRING_MAPPING],
     "None",
-    "a non-negative integer",
+    "a non-negative integer (pixels)",
 ]
 
 

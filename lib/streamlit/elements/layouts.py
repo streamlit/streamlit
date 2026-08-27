@@ -1006,8 +1006,7 @@ class LayoutsMixin:
                 raise StreamlitInvalidParameterTypeError(
                     "tabs",
                     type(tab).__name__,
-                    ["str"],
-                    detail="Each tab label must be a string.",
+                    ["a string for each tab label"],
                 )
 
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:

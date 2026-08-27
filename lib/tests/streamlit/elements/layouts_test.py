@@ -1795,13 +1795,13 @@ class TabsTest(DeltaGeneratorTestCase):
         """Test that only strings are allowed as tab labels."""
         with pytest.raises(
             StreamlitInvalidParameterTypeError,
-            match="Each tab label must be a string",
+            match="a string for each tab label",
         ):
             st.tabs(["tab1", True])
 
         with pytest.raises(
             StreamlitInvalidParameterTypeError,
-            match="Each tab label must be a string",
+            match="a string for each tab label",
         ):
             st.tabs(["tab1", 10])
 
