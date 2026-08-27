@@ -912,13 +912,16 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("disk", "disk"),
-            ("true", True),
+            ("disk",),
+            (True,),
         ]
     )
-    def test_background_with_persist_raises(self, _: str, persist: str | bool) -> None:
+    def test_background_with_persist_raises(self, persist: str | bool) -> None:
         """refresh_mode="background" with persist raises an incompatibility error."""
-        with pytest.raises(StreamlitIncompatibleParametersError):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=rf"persist={persist!r}",
+        ):
 
             @st.cache_data(ttl="1h", persist=persist, refresh_mode="background")
             def foo() -> int:

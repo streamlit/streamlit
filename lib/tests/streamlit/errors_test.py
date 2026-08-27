@@ -302,6 +302,7 @@ def test_incompatible_parameters_error_formats_uses() -> None:
     assert str(exc) == (
         "`wrap=False` and `unsafe_allow_html=True` cannot be used together."
     )
+    assert exc.exec_kwargs["uses"] == ["wrap=False", "unsafe_allow_html=True"]
     assert "parameter" not in exc.exec_kwargs
 
 

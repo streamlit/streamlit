@@ -170,7 +170,9 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)
-  - `StreamlitDefaultNotInOptionsError` (default/index not in `options`)
+  - `StreamlitDefaultNotInOptionsError` (default/index not in widget `options`;
+    `st.tabs` `default` uses `StreamlitValueError` because this message is
+    worded for widget options, not tab labels)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
 - Do not raise the deprecated aliases.

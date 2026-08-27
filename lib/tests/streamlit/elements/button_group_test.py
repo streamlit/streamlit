@@ -2184,7 +2184,10 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
         self, command: Callable[..., Any]
     ):
         """Test that required=True with selection_mode='multi' raises an exception."""
-        with pytest.raises(StreamlitIncompatibleParametersError):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"`required` is only supported for single-select mode",
+        ):
             command("label", ["a", "b", "c"], selection_mode="multi", required=True)
 
     @parameterized.expand([(st.pills,), (st.segmented_control,)])

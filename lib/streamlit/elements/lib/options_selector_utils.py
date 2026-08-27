@@ -76,7 +76,12 @@ def validate_select_widget_filter_mode(
 
     if filter_mode is None and accept_new_options:
         raise StreamlitIncompatibleParametersError(
-            "filter_mode=None", "accept_new_options=True"
+            "filter_mode=None",
+            "accept_new_options=True",
+            explanation=(
+                "`filter_mode` cannot be `None` when `accept_new_options=True`. "
+                "Set `filter_mode` to `fuzzy`, `contains`, or `prefix`."
+            ),
         )
 
     return _SELECT_WIDGET_FILTER_MODE_PROTO_MAP[filter_mode]

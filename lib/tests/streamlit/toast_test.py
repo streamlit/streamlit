@@ -42,7 +42,9 @@ class ToastTest(DeltaGeneratorTestCase):
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
-        with pytest.raises(StreamlitMissingRequiredParameterError):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError, match=r"Please provide a message"
+        ):
             st.toast("")
 
     def test_valid_icon(self):

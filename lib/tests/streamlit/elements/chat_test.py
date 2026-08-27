@@ -169,7 +169,10 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
-        with pytest.raises(StreamlitInvalidLayoutContextError):
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"`st.chat_input\(\)` can't be used in a `st.form\(\)`",
+        ):
             st.form("Form Key").chat_input()
 
     @parameterized.expand(

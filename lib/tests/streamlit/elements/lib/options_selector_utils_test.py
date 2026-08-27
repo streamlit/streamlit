@@ -148,7 +148,10 @@ class TestValidateSelectWidgetFilterMode:
 
     def test_rejects_none_with_accept_new_options(self) -> None:
         """filter_mode=None cannot be combined with accept_new_options=True."""
-        with pytest.raises(StreamlitIncompatibleParametersError):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"`filter_mode=None` and `accept_new_options=True`",
+        ):
             validate_select_widget_filter_mode(
                 None,
                 accept_new_options=True,

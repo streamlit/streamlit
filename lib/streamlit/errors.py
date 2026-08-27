@@ -438,6 +438,7 @@ class StreamlitIncompatibleParametersError(LocalizableStreamlitException):
         super().__init__(
             message,
             uses_text=uses_text,
+            uses=list(uses),
             explanation=explanation,
         )
 
