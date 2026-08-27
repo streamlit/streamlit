@@ -322,11 +322,8 @@ class PydeckMixin:
         width: WidthWithoutContent = "stretch",
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
-        selection_mode: Literal[
-            "single-object"
-        ],  # Selection mode will only be activated by on_select param; default value here to make it work with mypy
-        # No default value here to make it work with mypy
-        on_select: Literal["ignore"],
+        selection_mode: SelectionMode = "single-object",
+        on_select: Literal["ignore"] = "ignore",
         key: Key | None = None,
     ) -> DeltaGenerator: ...
 
@@ -339,7 +336,8 @@ class PydeckMixin:
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
         key: Key | None = None,
     ) -> PydeckState: ...
 
