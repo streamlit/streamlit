@@ -425,7 +425,7 @@ class PlotlyMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"] = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = (
             "points",
             "box",
@@ -444,7 +444,8 @@ class PlotlyMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: SelectionMode | Iterable[SelectionMode] = (
             "points",
             "box",

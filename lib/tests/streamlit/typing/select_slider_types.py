@@ -68,3 +68,24 @@ if TYPE_CHECKING:
         select_slider("foo", [1, 2, 3], value=(1, 3), bind="query-params"),
         tuple[int, int],
     )
+
+    def on_select_slider_change(prefix: str) -> None: ...
+
+    # Common parameters combined
+    assert_type(
+        select_slider(
+            "foo",
+            [1, 2, 3],
+            format_func=lambda value: f"Option {value}",
+            key="range",
+            help="Choose a value",
+            on_change=on_select_slider_change,
+            args=("range",),
+            kwargs={},
+            disabled=False,
+            label_visibility="visible",
+            width=360,
+            persist_state="page",
+        ),
+        int,
+    )

@@ -114,3 +114,33 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["a", "b"], wrap=True), list[str])
     assert_type(multiselect("foo", ["a", "b"], wrap=False), list[str])
     assert_type(multiselect("foo", ["a", "b"], wrap=None), list[str])
+
+    def on_multiselect_change(prefix: str) -> None: ...
+
+    # Non-literal accept_new_options returns the union of both result types.
+    accept_new_options: bool = True
+    assert_type(  # ty: ignore[type-assertion-failure]
+        multiselect("foo", [1, 2, 3], accept_new_options=accept_new_options),
+        list[int] | list[int | str],
+    )
+
+    # Common parameters combined
+    assert_type(
+        multiselect(
+            "foo",
+            [1, 2, 3],
+            format_func=lambda value: f"Option {value}",
+            key="numbers",
+            help="Choose numbers",
+            on_change=on_multiselect_change,
+            args=("selected",),
+            kwargs={},
+            max_selections=2,
+            placeholder="Choose up to two",
+            disabled=False,
+            label_visibility="visible",
+            width=400,
+            persist_state="session",
+        ),
+        list[int],
+    )

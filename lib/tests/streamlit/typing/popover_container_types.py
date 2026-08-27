@@ -63,3 +63,17 @@ if TYPE_CHECKING:
     assert_type(popover("Test", wrap=True), PopoverContainer)
     assert_type(popover("Test", wrap=False), PopoverContainer)
     assert_type(popover("Test", wrap=None), PopoverContainer)
+
+    # All parameters combined
+    assert_type(
+        popover(
+            "Actions",
+            type="primary",
+            help="Available actions",
+            icon=":material/more_vert:",
+            disabled=False,
+            use_container_width=True,
+            width="stretch",
+        ),
+        PopoverContainer,
+    )
