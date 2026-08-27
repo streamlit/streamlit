@@ -282,6 +282,28 @@ def test_keeps_time_given_before_a_date(app: Page):
     # The popover time must reach the value rather than being dropped to midnight.
     expect(app.get_by_text(re.compile(r"Value 8: .* 00:00:00"))).not_to_be_visible()
 
+    datetime_input.get_by_test_id("stDateTimeInputClearButton").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: None")
+
+    # --- Date typed inline, time set only in the popover, no calendar click ---
+    # Neither control reports a value in this state, so dismissal has to combine
+    # what is on screen. Worth covering here rather than only in unit tests: a
+    # real outside click commits on pointerdown and then fires blur, running the
+    # commit path twice, which jsdom does not reproduce.
+    segments.first.click()
+    expect(calendar).to_be_visible()
+    popover_segments.first.press_sequentially("07")
+    popover_segments.last.press_sequentially("30")
+    segments.nth(0).press_sequentially("2026")
+    segments.nth(1).press_sequentially("01")
+    segments.nth(2).press_sequentially("15")
+
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: 2026-01-15 07:30:00")
+
 
 def test_callback_invoked(app: Page):
     datetime_field = get_datetime_input(

@@ -28,6 +28,7 @@ import {
   createDateTimeErrorMessage,
   dateTimesEqual,
   formatCalendarDateTime,
+  getTypedDateFromDom,
   getTypedTimeFromDom,
   isoToCalendarDateTime,
   parsePastedDateTime,
@@ -463,5 +464,64 @@ describe("getTypedTimeFromDom", () => {
     const el = document.createElement("div")
     el.innerHTML = '<div role="textbox" data-type="hour">––</div>'
     expect(getTypedTimeFromDom(el)).toBeNull()
+  })
+})
+
+describe("getTypedDateFromDom", () => {
+  const renderSegments = (
+    segments: Partial<Record<"year" | "month" | "day", number | null>>
+  ): HTMLElement => {
+    const el = document.createElement("div")
+    el.innerHTML = Object.entries(segments)
+      .map(([type, value]) =>
+        value === null || value === undefined
+          ? `<div role="spinbutton" data-type="${type}" data-placeholder="true">––</div>`
+          : `<div role="spinbutton" data-type="${type}" aria-valuenow="${value}">${value}</div>`
+      )
+      .join("")
+    return el
+  }
+
+  it("returns null for a missing container", () => {
+    expect(getTypedDateFromDom(null)).toBeNull()
+  })
+
+  it("reads a fully typed date", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 11, day: 19 }))
+    ).toMatchObject({ year: 2025, month: 11, day: 19 })
+  })
+
+  it("returns null unless every part is filled", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 11, day: null }))
+    ).toBeNull()
+    expect(
+      getTypedDateFromDom(renderSegments({ year: null, month: 11, day: 19 }))
+    ).toBeNull()
+  })
+
+  it("rejects a day that does not exist in its month", () => {
+    // The day segment's maximum is the longest month, not the current one, so
+    // this combination is typeable and must be rejected rather than clamped to
+    // Feb 28.
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 2, day: 30 }))
+    ).toBeNull()
+  })
+
+  it("accepts a leap day in a leap year and rejects it otherwise", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2024, month: 2, day: 29 }))
+    ).toMatchObject({ year: 2024, month: 2, day: 29 })
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 2, day: 29 }))
+    ).toBeNull()
+  })
+
+  it("rejects a zero part", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 0, day: 19 }))
+    ).toBeNull()
   })
 })

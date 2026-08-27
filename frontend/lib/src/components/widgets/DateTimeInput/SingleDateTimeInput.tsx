@@ -64,6 +64,7 @@ import {
   computeStepSnap,
   dateTimesEqual,
   getSegmentState,
+  getTypedDateFromDom,
   getTypedTimeFromDom,
   parsePastedDateTime,
   validateDateTime,
@@ -233,29 +234,73 @@ function SingleDateTimeInput({
 
   const [isOpen, setIsOpen] = useState(false)
 
+  /** The datetime the two controls describe between them when the field itself
+   * holds no value: a complete date read from the inline segments, plus a time
+   * from whichever control the user last touched. Null unless both halves are
+   * present — a date alone gives nothing to commit, and defaulting its time
+   * would be inventing one. */
+  const completeFromVisibleParts = useCallback((): CalendarDateTime | null => {
+    const date = getTypedDateFromDom(triggerRef.current)
+    const time = resolveGivenTime()
+    if (!date || !time) return null
+    return new CalendarDateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute
+    )
+  }, [resolveGivenTime])
+
   /** Validate and commit the pending value, or revert to the last committed
    * value. Returns true if the field holds a valid (committed or unchanged)
    * value, false if it was reverted. Calls both onChange (React state) and
    * formCommit (sync WM write) to prevent the form-submit race. */
   const commitOrRevert = useCallback((): boolean => {
     if (!triggerRef.current) return false
+    const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+      triggerRef.current
+    )
+
+    // A date typed inline with its time given only in the popover reads as
+    // partially typed, because the field withholds onChange while the hour and
+    // minute are placeholders. Both halves are on screen, so complete the value
+    // from them rather than discarding a date and time the user can see.
+    //
+    // The gate also requires the field to hold no value of its own. Clearing one
+    // segment of an existing value reads as partially typed too — React Aria
+    // reports nothing unless every segment is cleared — and that is an edit in
+    // progress, not two halves to combine, so it still reverts.
+    //
+    // Read before `setPendingTime(null)` below, so the merge never depends on
+    // React batching that clear: flushing it would blank the popover's segments.
+    const completedFromParts =
+      isPartiallyTyped && !displayValueRef.current
+        ? completeFromVisibleParts()
+        : null
+
     // A time given in the popover lives only as long as that popover session:
     // every path here either commits it into the value or discards it. Without
     // this, a dismissed time would be restored into the remounted TimeField and
     // then merged into a date picked in a later session, with nothing on screen
     // explaining where it came from.
     setPendingTime(null)
-    const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-      triggerRef.current
-    )
 
-    if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+    // Safe to reach twice: an outside click commits on pointerdown and the
+    // browser then fires blur, by which point the popover is unmounted and its
+    // half unreadable. This branch touches only local display and error state, so
+    // it cannot undo the commit that just happened.
+    if (
+      (isPartiallyTyped && !completedFromParts) ||
+      (isFullyCleared && !clearable)
+    ) {
       setDisplayValue(value)
       onCloseRef.current(true)
       return false
     }
 
-    const pending = isFullyCleared ? null : displayValueRef.current
+    const pending =
+      completedFromParts ?? (isFullyCleared ? null : displayValueRef.current)
 
     if (validateDateTime(pending, minDateTime, maxDateTime)) {
       setDisplayValue(value)
@@ -276,7 +321,7 @@ function SingleDateTimeInput({
     onChangeRef.current(pending)
     formCommitRef.current?.(pending)
     return true
-  }, [value, clearable, minDateTime, maxDateTime])
+  }, [value, clearable, minDateTime, maxDateTime, completeFromVisibleParts])
 
   // Reset state when the popover opens: clear the commit-dedup guard and
   // sync the calendar's focused month to the committed value so a prior

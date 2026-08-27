@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CalendarDateTime, Time } from "@internationalized/date"
+import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
@@ -218,8 +218,8 @@ export interface SegmentState {
 /** Query spinbutton segments in a container to determine their placeholder state.
  *
  * Matches on `role`, which React Aria replaces with `textbox` on iOS, so this
- * finds no segments there. `getTypedTimeFromDom` below matches `data-type`
- * instead, which is emitted on every platform. */
+ * finds no segments there. `readSegment` below matches `data-type` instead,
+ * which is emitted on every platform. */
 export function getSegmentState(container: HTMLElement): SegmentState {
   const segments = container.querySelectorAll('[role="spinbutton"]')
   const placeholders = container.querySelectorAll(
@@ -236,6 +236,48 @@ export function getSegmentState(container: HTMLElement): SegmentState {
 }
 
 /**
+ * Read one segment's numeric value from a container, or null when it is absent,
+ * a placeholder, or outside `max`.
+ *
+ * Matches on `data-type` rather than `role`, because React Aria renders segments
+ * as textboxes, not spinbuttons, on iOS — and falls back to the rendered text,
+ * because it drops `aria-valuenow` there too. Safe to parse: both fields are
+ * pinned to en-US so the digits are ASCII, and `shouldForceLeadingZeros` only
+ * ever prefixes a zero.
+ *
+ * The `data-placeholder` filter also guards the text fallback, where a
+ * placeholder's dashes would otherwise parse.
+ *
+ * Range-guarded so a value the caller cannot represent degrades to "not given"
+ * rather than reaching a `Time` or `CalendarDate` constructor: `Time` stores
+ * whatever it is handed, and `CalendarDate` silently clamps.
+ */
+const SEGMENT_MAX = {
+  hour: 23,
+  minute: 59,
+  year: 9999,
+  month: 12,
+  day: 31,
+} as const
+
+function readSegment(
+  container: HTMLElement | null,
+  type: keyof typeof SEGMENT_MAX
+): number | null {
+  const max = SEGMENT_MAX[type]
+  const segment = container?.querySelector(
+    `[data-type="${type}"]:not([data-placeholder="true"])`
+  )
+  if (!segment) return null
+  const raw = segment.getAttribute("aria-valuenow") ?? segment.textContent
+  if (!raw) return null
+  const parsed = Number(raw)
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= max
+    ? parsed
+    : null
+}
+
+/**
  * Read hour and minute from a container's rendered segments, for the window
  * before the field has emitted an `onChange`. Returns null when neither is
  * filled.
@@ -245,11 +287,6 @@ export function getSegmentState(container: HTMLElement): SegmentState {
  * placeholders reaches no handler — the rendered segments are its only record.
  * An unfilled half of the pair counts as 0, so a lone hour survives.
  *
- * The `data-placeholder` filter is belt-and-braces on `aria-valuenow`, which
- * React Aria already omits for an hour or minute placeholder — but it also
- * guards the `textContent` fallback below, where a placeholder's dashes would
- * otherwise be parsed.
- *
  * Assumes a 24-hour cycle and no seconds segment: with `hourCycle={12}` the hour
  * reports 1–12 and needs the `dayPeriod` segment to disambiguate, and a `second`
  * segment would be ignored.
@@ -257,31 +294,32 @@ export function getSegmentState(container: HTMLElement): SegmentState {
 export function getTypedTimeFromDom(
   container: HTMLElement | null
 ): Time | null {
-  const readSegment = (type: "hour" | "minute"): number | null => {
-    // Match on `data-type` rather than `role`: React Aria renders segments as
-    // textboxes, not spinbuttons, on iOS.
-    const segment = container?.querySelector(
-      `[data-type="${type}"]:not([data-placeholder="true"])`
-    )
-    if (!segment) return null
-    // React Aria also drops `aria-valuenow` on iOS, so fall back to the rendered
-    // text. Safe to parse: both fields are pinned to en-US, so the digits are
-    // ASCII, and `shouldForceLeadingZeros` only ever prefixes a zero.
-    const raw = segment.getAttribute("aria-valuenow") ?? segment.textContent
-    if (!raw) return null
-    const parsed = Number(raw)
-    // Range-guarded so a value this function can't represent degrades to "no
-    // time given" rather than reaching `new Time`, which does not validate.
-    const max = type === "hour" ? 23 : 59
-    return Number.isInteger(parsed) && parsed >= 0 && parsed <= max
-      ? parsed
-      : null
-  }
-
-  const hour = readSegment("hour")
-  const minute = readSegment("minute")
+  const hour = readSegment(container, "hour")
+  const minute = readSegment(container, "minute")
   if (hour === null && minute === null) return null
   return new Time(hour ?? 0, minute ?? 0)
+}
+
+/**
+ * Read year, month and day from a container's rendered segments, before the
+ * field has emitted an `onChange`. Returns null unless all three are filled and
+ * form a real date.
+ *
+ * Unlike a time, a date has nothing to default: a missing part means no date.
+ * The day segment's maximum is the longest month rather than the current one, so
+ * `2025/02/30` is typeable — the `CalendarDate` constructor clamps it to Feb 28,
+ * so reading the day back out rejects it. Same check `isoToCalendarDateTime` uses.
+ */
+export function getTypedDateFromDom(
+  container: HTMLElement | null
+): CalendarDate | null {
+  const year = readSegment(container, "year")
+  const month = readSegment(container, "month")
+  const day = readSegment(container, "day")
+  if (year === null || month === null || day === null) return null
+  if (year < 1 || month < 1 || day < 1) return null
+  const result = new CalendarDate(year, month, day)
+  return result.day === day ? result : null
 }
 
 // --- useBasicWidgetState integration ---
