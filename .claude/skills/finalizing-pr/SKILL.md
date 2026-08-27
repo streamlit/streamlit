@@ -111,7 +111,7 @@ If relevant intermediate files exist (specs, plans, implementation notes in `wor
 
 ### 11. AI review and fix loop
 
-Run the AI review and fix loop up to 5 times. Always run `fixing-pr` for the review that was just completed, then stop if that review was approved:
+Run the AI review and fix loop up to 5 times. After each review, always run `fixing-pr` so it can wait for CI and address comments, then exit if that review was approved:
 
 ```
 for iteration 1 to 5:
@@ -150,7 +150,7 @@ The verdict section contains a bold keyword indicating the result:
 - **`**APPROVED**`** → exit loop, PR is ready
 - **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
 
-Do not start another iteration after an `APPROVED` verdict.
+Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` pushed follow-up CI fixes. Those commits are covered by CI but not by the AI review.
 
 ### 12. Post agent metrics
 
