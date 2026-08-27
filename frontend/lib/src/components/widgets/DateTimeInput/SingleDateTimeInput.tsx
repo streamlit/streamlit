@@ -568,6 +568,10 @@ function SingleDateTimeInput({
         (!e.shiftKey && e.target === segments[segments.length - 1]) ||
         (e.shiftKey && e.target === segments[0])
       if (isLeavingField) {
+        // Commit before closing, as the popover's own Tab handler does. Leaving
+        // it to the blur that follows would run the commit after the popover has
+        // unmounted, and a time given only there would be unreadable by then.
+        commitOrRevert()
         setIsOpen(false)
       }
     },

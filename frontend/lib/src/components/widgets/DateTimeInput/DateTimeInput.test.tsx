@@ -2549,6 +2549,51 @@ describe("DateTimeInput widget", () => {
       expect(spy).not.toHaveBeenCalled()
     })
 
+    it("completes the value when Tab leaves the field, not just on dismissal", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const inline = within(inlineField).getAllByRole("spinbutton")
+      await user.click(inline[0])
+      await user.keyboard("20251119")
+
+      // Tab off the last segment closes the popover, so the merge has to happen
+      // while it is still mounted — otherwise its half is unreadable and both
+      // halves are discarded.
+      await user.click(inline[inline.length - 1])
+      await user.tab()
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T09:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
     it("merges a lone popover hour as the top of that hour", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
