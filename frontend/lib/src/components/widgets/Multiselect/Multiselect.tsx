@@ -274,6 +274,13 @@ const Multiselect: FC<Props> = props => {
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
+  // onHoverEnd does not fire when filtering unmounts the hovered row.
+  if (
+    notNullOrUndefined(hoveredKeyRef.current) &&
+    !displayOptions.some(o => o.id === hoveredKeyRef.current)
+  ) {
+    hoveredKeyRef.current = null
+  }
   const valueRef = useRef(value)
   valueRef.current = value
 
@@ -705,13 +712,15 @@ const Multiselect: FC<Props> = props => {
           return
         }
         if (!isOpenRef.current) return
+        const display = displayOptionsRef.current
         const hovered = hoveredKeyRef.current
-        const first = displayOptionsRef.current[0]
+        const hoveredStillShown =
+          notNullOrUndefined(hovered) && display.some(o => o.id === hovered)
         // Swallow Enter when the menu is open with no rows (for example
         // max_selections reached) so RAC does not try to commit typed text.
         e.preventDefault()
         e.stopPropagation()
-        const targetId = hovered ?? first?.id
+        const targetId = hoveredStillShown ? hovered : display[0]?.id
         if (notNullOrUndefined(targetId)) {
           handleChange([targetId])
         }

@@ -275,6 +275,32 @@ describe("Multiselect widget", () => {
     )
   })
 
+  it("falls back to the first row on Enter when the hovered option is filtered away", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.hover(screen.getByRole("option", { name: "banana" }))
+    await user.type(screen.getByRole("combobox"), "ap")
+    expect(screen.queryByRole("option", { name: "banana" })).toBeNull()
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apple", "apricot"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+  })
+
   it("numbers options with aria-posinset so only the first gets the Enter highlight", async () => {
     // StyledListBox highlights [aria-posinset='1'] as the unfocused Enter target.
     const user = userEvent.setup()
