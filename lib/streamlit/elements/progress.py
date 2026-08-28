@@ -18,7 +18,10 @@ import math
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 from streamlit.string_util import clean_text
 
@@ -60,18 +63,14 @@ def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> b
 
 def _get_value(value: FloatOrInt) -> int:
     if isinstance(value, int):
-        if 0 <= value <= 100:
-            return value
-        raise StreamlitAPIException(
-            f"Progress Value has invalid value [0, 100]: {value}"
-        )
+        if not 0 <= value <= 100:
+            raise StreamlitValueOutOfRangeError("value", value, 0, 100)
+        return value
 
     if isinstance(value, float):
-        if _check_float_between(value, low=0.0, high=1.0):
-            return int(value * 100)
-        raise StreamlitAPIException(
-            f"Progress Value has invalid value [0.0, 1.0]: {value}"
-        )
+        if not _check_float_between(value, low=0.0, high=1.0):
+            raise StreamlitValueOutOfRangeError("value", value, 0.0, 1.0)
+        return int(value * 100)
     raise StreamlitInvalidParameterTypeError(
         "value",
         type(value).__name__,

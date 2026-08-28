@@ -238,15 +238,52 @@ def test_selection_count_exceeds_max_pluralization(
     assert f"{max_sel} {expected_options_noun}" in msg
 
 
-# StreamlitInvalidRangeError tests
+# StreamlitInvalidMinMaxError tests
 
 
-def test_invalid_range_error_message() -> None:
-    """Range errors name both bounds."""
-    exc = errors.StreamlitInvalidRangeError(10, 5)
+def test_invalid_min_max_error_message() -> None:
+    """Min/max errors name both bounds."""
+    exc = errors.StreamlitInvalidMinMaxError(10, 5)
     assert str(exc) == (
         "The `min_value`, set to 10, cannot be greater than the `max_value`, set to 5."
     )
+
+
+def test_invalid_min_max_error_equal_bounds_message() -> None:
+    """Equal bounds use a dedicated sentence instead of 'cannot be greater than'."""
+    exc = errors.StreamlitInvalidMinMaxError(10, 10)
+    assert str(exc) == (
+        "The `min_value` and `max_value` parameters are both set to 10. "
+        "They must not be equal."
+    )
+
+
+# StreamlitValueOutOfRangeError tests
+
+
+def test_value_out_of_range_error_message() -> None:
+    """Out-of-range errors name the parameter, value, and closed interval."""
+    exc = errors.StreamlitValueOutOfRangeError("index", 5, 0, 2)
+    assert str(exc) == (
+        "The `index` parameter, set to 5, is outside the required range [0, 2]."
+    )
+
+
+def test_value_out_of_range_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitValueOutOfRangeError(
+        "index",
+        5,
+        0,
+        2,
+        detail="Choose an index that exists in options.",
+    )
+    assert str(exc) == (
+        "The `index` parameter, set to 5, is outside the required range [0, 2]. "
+        "Choose an index that exists in options."
+    )
+    assert exc.exec_kwargs["parameter"] == "index"
+    assert exc.exec_kwargs["detail"] == "Choose an index that exists in options."
 
 
 # StreamlitInvalidURLError tests

@@ -36,10 +36,11 @@ from streamlit.connections import SQLConnection
 from streamlit.errors import (
     StreamlitIncompatibleParametersError,
     StreamlitInvalidLayoutContextError,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidRangeError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
@@ -887,8 +888,12 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitInvalidParameterTypeError:spec",
         ),
         (
-            StreamlitInvalidRangeError(10, 5),
-            "StreamlitInvalidRangeError",
+            StreamlitInvalidMinMaxError(10, 5),
+            "StreamlitInvalidMinMaxError",
+        ),
+        (
+            StreamlitValueOutOfRangeError("index", 5, 0, 2),
+            "StreamlitValueOutOfRangeError:index",
         ),
         (
             StreamlitIncompatibleParametersError(
@@ -969,7 +974,8 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "streamlit-value-error-detail",
         "streamlit-missing-required-parameter",
         "invalid-parameter-type",
-        "invalid-range",
+        "invalid-min-max",
+        "value-out-of-range",
         "incompatible-parameters",
         "invalid-context-no-command-suffix",
         "modulenotfound-message-fallback",

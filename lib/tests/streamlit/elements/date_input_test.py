@@ -24,8 +24,8 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidRangeError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
@@ -222,8 +222,8 @@ class DateInputTest(DeltaGeneratorTestCase):
         # No need to assert anything. Testing if not throwing an error.
 
     def test_min_max_exception(self):
-        """min_value after max_value raises StreamlitInvalidRangeError."""
-        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
+        """min_value after max_value raises StreamlitInvalidMinMaxError."""
+        with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
             st.date_input(
                 "the label",
                 min_value=date(2022, 1, 1),

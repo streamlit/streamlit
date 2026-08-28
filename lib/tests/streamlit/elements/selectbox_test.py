@@ -31,6 +31,7 @@ from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -192,17 +193,16 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueOutOfRangeError):
             st.selectbox("the label", ("m", "f"), 2)
 
-    def test_raises_exception_of_index_larger_than_options(self):
-        """Test that it raises an exception if index is larger than options."""
-        with pytest.raises(StreamlitAPIException) as ex:
+    def test_index_out_of_range_error_message(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.selectbox("Test box", ["a"], index=1)
 
-        assert (
-            str(ex.value)
-            == "Selectbox index must be greater than or equal to 0 and less than the length of options."
+        assert str(ex.value) == (
+            "The `index` parameter, set to 1, is outside the required range [0, 0]."
         )
 
     def test_outside_form(self):

@@ -16,7 +16,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -42,13 +46,16 @@ class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
             element = self.get_delta_from_queue().new_element
             assert int(value * 100) == element.progress.value
 
-    def test_progress_bad_values(self):
-        """Test Progress with bad values."""
-        values = [-1, 101, -0.01, 1.01]
-        for value in values:
-            with pytest.raises(StreamlitAPIException):
-                st.progress(value)
+    @parameterized.expand([-1, 101, -0.01, 1.01])
+    def test_progress_out_of_range(self, value: float):
+        """Out-of-range values raise StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as exc_info:
+            st.progress(value)
+        expected_range = "[0, 100]" if isinstance(value, int) else "[0.0, 1.0]"
+        assert expected_range in str(exc_info.value)
 
+    def test_progress_invalid_type(self):
+        """Non-numeric values raise StreamlitInvalidParameterTypeError."""
         with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
             st.progress("some string")
         assert exc_info.value.exec_kwargs["parameter"] == "value"

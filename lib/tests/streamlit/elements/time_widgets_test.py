@@ -31,8 +31,8 @@ from streamlit.elements.widgets.time_widgets import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidRangeError,
 )
 
 if TYPE_CHECKING:
@@ -80,8 +80,8 @@ def test_convert_datetimelike_rejects_unparseable_string() -> None:
 
 
 def test_date_input_values_rejects_min_after_max() -> None:
-    """min after max raises StreamlitInvalidRangeError; equal bounds are allowed."""
-    with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
+    """min after max raises StreamlitInvalidMinMaxError; equal bounds are allowed."""
+    with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
         _DateInputValues(
             value=None,
             is_range=False,

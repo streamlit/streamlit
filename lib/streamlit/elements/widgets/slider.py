@@ -46,8 +46,8 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidRangeError,
     StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
@@ -1154,7 +1154,7 @@ class SliderMixin:
         # The frontend will error if the values are equal, so checking here
         # lets us produce a nicer python error message and stack trace.
         if min_value == max_value:
-            raise StreamlitInvalidRangeError(min_value, max_value)
+            raise StreamlitInvalidMinMaxError(min_value, max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
