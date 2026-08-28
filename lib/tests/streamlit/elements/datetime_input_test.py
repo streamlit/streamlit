@@ -156,9 +156,11 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             st.datetime_input("The label", step=timedelta(hours=24))
 
     def test_format_validation(self):
-        """Test invalid format raises."""
-        with pytest.raises(StreamlitAPIException):
+        """Test invalid format raises, including mixed separators."""
+        with pytest.raises(StreamlitValueError, match="YYYY/MM/DD"):
             st.datetime_input("the label", format="YY/MM/DD")
+        with pytest.raises(StreamlitValueError, match="YYYY/MM/DD"):
+            st.datetime_input("the label", format="YYYY/MM-DD")
 
     def test_width_config_default(self):
         """Test that default width is 'stretch'."""

@@ -87,15 +87,20 @@ DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
 DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
 
 DEFAULT_STEP_MINUTES: Final = 15
-ALLOWED_DATE_FORMATS: Final = re.compile(
-    r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
-)
-_DATE_FORMAT_GRAMMAR: Final = [
-    (
-        "the component order `YYYY MM DD`, `DD MM YYYY`, or `MM DD YYYY`, "
-        "with `/`, `.`, or `-` separators (including mixed separators)"
-    )
+_SUPPORTED_DATE_FORMATS: Final = [
+    "'YYYY/MM/DD'",
+    "'DD/MM/YYYY'",
+    "'MM/DD/YYYY'",
+    "'YYYY.MM.DD'",
+    "'DD.MM.YYYY'",
+    "'MM.DD.YYYY'",
+    "'YYYY-MM-DD'",
+    "'DD-MM-YYYY'",
+    "'MM-DD-YYYY'",
 ]
+ALLOWED_DATE_FORMATS: Final = re.compile(
+    "^(" + "|".join(re.escape(fmt.strip("'")) for fmt in _SUPPORTED_DATE_FORMATS) + ")$"
+)
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
@@ -1472,7 +1477,7 @@ class TimeWidgetsMixin:
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitValueError(
                 "format",
-                _DATE_FORMAT_GRAMMAR,
+                _SUPPORTED_DATE_FORMATS,
                 detail=f"Provided value: {format!r}.",
             )
 
@@ -1976,7 +1981,7 @@ class TimeWidgetsMixin:
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitValueError(
                 "format",
-                _DATE_FORMAT_GRAMMAR,
+                _SUPPORTED_DATE_FORMATS,
                 detail=f"Provided value: {format!r}.",
             )
 

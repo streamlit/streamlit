@@ -321,7 +321,6 @@ class DateInputTest(DeltaGeneratorTestCase):
             ("YYYY-MM-DD"),
             ("DD-MM-YYYY"),
             ("MM-DD-YYYY"),
-            ("YYYY/MM-DD"),  # Mixed separators are accepted by the regex
         ]
     )
     def test_supported_date_format_values(self, format: str):
@@ -346,6 +345,7 @@ class DateInputTest(DeltaGeneratorTestCase):
             ("YYYY/QQ/DD"),  # Unsupported format
             ("YYYY/Q/DD"),  # Unsupported format
             ("YYYY/MM/DD HH:mm:ss"),  # Unsupported format
+            ("YYYY/MM-DD"),  # Mixed separators are not supported
             (""),  # Empty not allowed
         ]
     )
@@ -354,7 +354,7 @@ class DateInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError) as ex:
             st.date_input("the label", format=format)
         assert "Invalid `format` value" in str(ex.value)
-        assert "mixed separators" in str(ex.value)
+        assert "'YYYY/MM/DD'" in str(ex.value)
         assert f"Provided value: {format!r}" in str(ex.value)
 
     def test_shows_cached_widget_replay_warning(self):
