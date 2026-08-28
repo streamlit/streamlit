@@ -46,38 +46,59 @@ def verify_sidebar_state(page: Page, expected_state: str) -> None:
 
 
 def create_sidebar_monitor_script() -> str:
-    """Create JavaScript to monitor sidebar state changes during page load."""
+    """Create JavaScript to monitor sidebar state changes during page load.
+
+    Exposes two globals to the test:
+
+    - ``window.__sidebarStates``: the log of observed ``aria-expanded`` changes.
+    - ``window.__resetSidebarStates()``: empties that log.
+
+    The last observed value is tracked in ``window.__lastSidebarState``, which
+    deliberately lives outside the log: resetting the log must not make the next
+    observation of an unchanged sidebar look like a fresh state change.
+    """
     return """
     window.__sidebarStates = [];
     window.__monitorStarted = Date.now();
+    window.__lastSidebarState = null;
 
-    // Override setAttribute to catch aria-expanded changes
+    window.__resetSidebarStates = function() {
+        window.__sidebarStates = [];
+        window.__monitorStarted = Date.now();
+    };
+
+    // Record a state only when it differs from the last observed one, so that
+    // repeated observations of an unchanged sidebar are not logged as changes.
+    const recordState = (ariaExpanded, method) => {
+        if (window.__lastSidebarState === ariaExpanded) {
+            return;
+        }
+        window.__lastSidebarState = ariaExpanded;
+        window.__sidebarStates.push({
+            timestamp: Date.now() - window.__monitorStarted,
+            ariaExpanded: ariaExpanded,
+            method: method
+        });
+    };
+
+    // Override setAttribute to catch a value that is set and then reverted
+    // within a single task, which the MutationObserver below would coalesce
+    // into a single callback and therefore miss.
     const originalSetAttribute = Element.prototype.setAttribute;
     Element.prototype.setAttribute = function(name, value) {
         if (this.dataset && this.dataset.testid === 'stSidebar' && name === 'aria-expanded') {
-            window.__sidebarStates.push({
-                timestamp: Date.now() - window.__monitorStarted,
-                ariaExpanded: value,
-                method: 'setAttribute'
-            });
+            recordState(value, 'setAttribute');
         }
         return originalSetAttribute.call(this, name, value);
     };
 
-    // Monitor DOM mutations
+    // Monitor DOM mutations. `childList` is needed to observe the sidebar's
+    // state as soon as it is added to the DOM, which also means this callback
+    // fires on unrelated DOM changes; recordState filters those out.
     const observer = new MutationObserver(() => {
         const sidebar = document.querySelector('[data-testid="stSidebar"]');
         if (sidebar) {
-            const ariaExpanded = sidebar.getAttribute('aria-expanded');
-            const lastState = window.__sidebarStates[window.__sidebarStates.length - 1];
-
-            if (!lastState || lastState.ariaExpanded !== ariaExpanded) {
-                window.__sidebarStates.push({
-                    timestamp: Date.now() - window.__monitorStarted,
-                    ariaExpanded: ariaExpanded,
-                    method: 'mutation'
-                });
-            }
+            recordState(sidebar.getAttribute('aria-expanded'), 'mutation');
         }
     });
 
@@ -308,7 +329,7 @@ def test_sidebar_stability_after_initial_load(page: Page, app_base_url: str):
     verify_sidebar_state(page, "collapsed")
 
     # Clear previous state tracking and monitor for additional changes
-    page.evaluate("window.__sidebarStates = []; window.__monitorStarted = Date.now();")
+    page.evaluate("window.__resetSidebarStates()")
 
     # Wait a bit more and verify state hasn't changed
     page.wait_for_timeout(1000)
