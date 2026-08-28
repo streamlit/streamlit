@@ -296,7 +296,7 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
 
-/** Marks the heading body text used for aria-labelledby and auto-anchor slugs. */
+/** Selects the heading body text used for aria-labelledby and auto-anchor slugs. */
 const HEADING_TEXT_SELECTOR = "[data-heading-text]"
 
 interface HeadingActionElements {
@@ -369,15 +369,14 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
    * mount-time ref callback and the rerun effect below so the two paths cannot
    * drift apart.
    *
-   * Prefer the labelled body-text span when present so a decorative leading icon
-   * (or action icons) does not affect the auto-generated anchor slug.
+   * Use the body-text span so a decorative leading icon or action icons do
+   * not affect the auto-generated anchor slug.
    */
   const applyAnchor = useCallback(
     (node: HTMLElement): void => {
-      const textSource =
-        node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR) ?? node
+      const textSource = node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR)
       const anchor =
-        propsAnchor || createAnchorFromText(textSource.textContent)
+        propsAnchor || createAnchorFromText(textSource?.textContent ?? null)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
       if (windowHash && windowHash === anchor) {
@@ -482,9 +481,11 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
   //
-  // The leading icon is also inline (not a flex sibling) so wrapping and
-  // text-align match markdown icons, while the labelled body span keeps it
-  // out of the accessible name and auto-anchor slug.
+  // On the wrapping path the leading icon is inline so wrapping and
+  // text-align match markdown icons. wrap=False makes the heading a flex
+  // row: the icon stays start-chrome, the body ellipsizes, and actions
+  // stay trailing. The labelled body span keeps the glyph out of the
+  // accessible name and auto-anchor slug.
   const headerElementWithActions = (
     <Tag {...tagProps} {...mergedAttributes}>
       {icon}

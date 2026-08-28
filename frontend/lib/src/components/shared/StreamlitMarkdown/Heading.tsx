@@ -82,13 +82,12 @@ function Heading(props: HeadingProtoProps): ReactElement {
   // With wrap=false the extra lines are dropped so the element stays one line tall.
   const [heading, ...rest] = body.split("\n")
 
-  // Render the icon as an inline sibling of the body text instead of
-  // prepending `:material/name:` to the markdown source: this keeps
-  // wrapping and text_alignment identical to a markdown icon, keeps the
-  // glyph out of the accessible name and auto-anchor, and also supports
-  // "spinner", which has no markdown equivalent.
+  // Keep the icon as an inline sibling instead of injecting it into the markdown source:
+  // - wrapping and text_alignment match a markdown icon when wrap=True
+  // - the glyph stays out of the accessible name and auto-anchor
+  // - "spinner" works (it has no markdown equivalent)
   const headingIcon = icon ? (
-    <StyledHeadingIcon aria-hidden="true">
+    <StyledHeadingIcon aria-hidden="true" data-testid="stHeadingIconWrapper">
       <DynamicIcon iconValue={icon} size="inherit" testid="stHeadingIcon" />
     </StyledHeadingIcon>
   ) : undefined

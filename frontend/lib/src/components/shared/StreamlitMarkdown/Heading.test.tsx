@@ -490,12 +490,32 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     const heading = screen.getByRole("heading")
-    // A flex heading would put the icon in a gutter and break wrap/text-align.
+    // wrap=True keeps the heading out of flex so the icon stays in the
+    // inline text flow (wrap=False uses display:flex for truncation).
+    expect(heading).not.toHaveStyle({ display: "flex" })
     expect(heading).not.toHaveStyle({ display: "inline-flex" })
-    const iconWrapper = heading.querySelector("[aria-hidden='true']")
+    const iconWrapper = screen.getByTestId("stHeadingIconWrapper")
     expect(iconWrapper).toHaveStyle({
       display: "inline-flex",
       verticalAlign: "bottom",
+    })
+  })
+
+  it("keeps the icon as start-chrome when wrap is false", () => {
+    const props = getHeadingProps({
+      body: "hello",
+      icon: "🔥",
+      wrap: false,
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    const iconWrapper = screen.getByTestId("stHeadingIconWrapper")
+    expect(heading).toHaveStyle({ display: "flex" })
+    expect(heading.firstElementChild).toBe(iconWrapper)
+    expect(iconWrapper).toHaveStyle({ flexShrink: "0" })
+    expect(heading.querySelector("[data-heading-text]")).toHaveStyle({
+      flex: "1",
     })
   })
 })

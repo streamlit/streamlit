@@ -601,8 +601,8 @@ export const StyledHeadingIcon = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  // Fill the heading line box so the 1em glyph sits with the letters.
-  // A 1em box + vertical-align bottom leaves line-height gap above the icon.
+  // A 1em-tall box with vertical-align: bottom would leave the line-height gap
+  // above the icon, so the wrapper spans the full heading line box.
   verticalAlign: "bottom",
   marginInlineEnd: theme.spacing.sm,
   color: "inherit",
