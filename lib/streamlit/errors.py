@@ -579,11 +579,10 @@ class StreamlitBadTimeStringError(LocalizableStreamlitException):
         )
 
 
-class StreamlitSecretNotFoundError(LocalizableStreamlitException, FileNotFoundError):
-    """Exception raised when a secret cannot be found or parsed in the secrets.toml file."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
+class StreamlitSecretNotFoundError(
+    LocalizableStreamlitException, FileNotFoundError
+):  # pragma: no cover - trivial subclass
+    """Exception raised when a secret cannot be found or a secrets source cannot be parsed."""
 
 
 class StreamlitInvalidWidthError(LocalizableStreamlitException):
