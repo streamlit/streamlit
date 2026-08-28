@@ -27,7 +27,8 @@ from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
 )
@@ -176,17 +177,17 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.selectbox(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True
             )
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: int, None\. Provided type: str\.",
+        ):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
@@ -241,11 +242,11 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.selectbox("the label", ("m", "f"), label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_placeholder(self):
@@ -1012,8 +1013,8 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.selectbox("the label", ["a", "b"], key="my_key", bind="invalid-value")
 
     def test_persist_state_passed_to_metadata(self) -> None:

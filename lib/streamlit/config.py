@@ -27,11 +27,10 @@ from collections import OrderedDict
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
-from blinker import Signal
-
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
+from streamlit.signal_util import Signal
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -817,11 +816,37 @@ _create_option(
         still served) rather than queued.
 
         Set to 0 to disable background refresh entirely: stale entries are then
-        recomputed by a blocking foreground call at hard expiry (2 x ttl).
+        recomputed by a blocking foreground call at the configured hard-expiry
+        bound.
     """,
     visibility="hidden",
     default_val=4,
     type_=int,
+)
+
+_create_option(
+    "runner.cacheBackgroundRefreshTTLMultiplier",
+    description="""
+        Multiplier applied to a cached function's ttl to set the hard-expiration
+        bound for refresh_mode="background". Hard expiry occurs at
+        multiplier * ttl. The default is 2.0, so stale values can be served
+        for one additional ttl while Streamlit attempts a background refresh.
+
+        This is a process-wide bound for every refresh_mode="background"
+        function in the process, not a per-function default. Raising it to
+        keep one long-idle cache also keeps stale entries for every other
+        background cache for (multiplier - 1) * ttl.
+
+        Values must be finite and greater than 1.0. Invalid values are ignored
+        with a warning and the default 2.0 is used. Values of 1.0 would remove
+        the stale window; values below 1.0 would hard-expire before the
+        freshness ttl. Use refresh_mode="foreground" to never serve stale
+        values. Larger values keep entries longer after idle periods or
+        refresh failures, at the cost of higher memory use and older served
+        data. Applies to both @st.cache_data and @st.cache_resource.
+    """,
+    default_val=2.0,
+    type_=float,
 )
 
 _create_option(
@@ -1051,8 +1076,10 @@ _create_option(
         Enables support for Cross-Origin Resource Sharing (CORS) protection,
         for added security.
 
-        If XSRF protection is enabled and CORS protection is disabled at the
-        same time, Streamlit will enable them both instead.
+        If you set this option to `False`, Streamlit sends
+        `Access-Control-Allow-Origin: *` on most HTTP routes and accepts a
+        WebSocket connection from any origin. Streamlit does not enable this
+        option for you when `server.enableXsrfProtection` is `True`.
     """,
     default_val=True,
     type_=bool,
@@ -1101,8 +1128,9 @@ _create_option(
         Enables support for Cross-Site Request Forgery (XSRF) protection, for
         added security.
 
-        If XSRF protection is enabled and CORS protection is disabled at the
-        same time, Streamlit will enable them both instead.
+        This option does not enable `server.enableCORS`. Streamlit does not
+        need a valid XSRF token to open a WebSocket connection, so this option
+        does not replace `server.enableCORS`.
     """,
     default_val=True,
     type_=bool,
@@ -2938,7 +2966,7 @@ def _maybe_convert_to_number(v: Any) -> Any:
 
 # Allow outside modules to wait for the config file to be parsed before doing
 # something.
-_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
+_on_config_parsed = Signal()
 
 
 def get_config_files(file_name: str) -> list[str]:
@@ -3076,23 +3104,37 @@ def _check_conflicts() -> None:
                 "browser.serverPort does not work when global.developmentMode is true."
             )
 
-    # XSRF conflicts
-    if get_option("server.enableXsrfProtection") and (
-        not get_option("server.enableCORS") or get_option("global.developmentMode")
+    # Tell the operator when Streamlit does not limit cross-origin access.
+    if get_option("server.enableXsrfProtection") and not get_option(
+        "server.enableCORS"
     ):
         logger.warning(
             """
-Warning: the config option 'server.enableCORS=false' is not compatible with
-'server.enableXsrfProtection=true'.
-As a result, 'server.enableCORS' is being overridden to 'true'.
+'server.enableCORS=false' tells Streamlit not to limit cross-origin access.
+Streamlit sends the header 'Access-Control-Allow-Origin: *', except on the file
+upload routes, which stay pinned to the app address and still require a valid
+XSRF token.
+Streamlit also accepts a WebSocket connection from any origin.
+Streamlit does not set 'server.enableCORS' to 'true' for you.
+'server.enableXsrfProtection=true' does not stop a cross-origin WebSocket
+connection, because Streamlit does not need a valid XSRF token to open one.
 
-More information:
-In order to protect against CSRF attacks, we send a cookie with each request.
-To do so, we must specify allowable origins, which places a restriction on
-cross-origin resource sharing.
+To limit cross-origin access, do these steps:
+  1. Set 'server.enableCORS=true'.
+  2. Put the origins that you trust in 'server.corsAllowedOrigins'.
 
-If cross origin resource sharing is required, please disable server.enableXsrfProtection.
-            """
+'server.allowedHosts' can also limit the hostnames that Streamlit accepts on a
+WebSocket connection.
+"""
+        )
+    elif get_option("global.developmentMode") and get_option("server.enableCORS"):
+        # Development mode only relaxes the header, not the WebSocket origin
+        # check, so this is a note for contributors rather than a warning.
+        logger.debug(
+            "'global.developmentMode=true' makes Streamlit send the header "
+            "'Access-Control-Allow-Origin: *', because the Vite dev server and "
+            "the Streamlit server use different ports. Streamlit still limits "
+            "the origins of WebSocket connections."
         )
 
     # Validate the XSRF cookie SameSite value. We explicitly require a string

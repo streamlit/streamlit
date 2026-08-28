@@ -111,15 +111,14 @@ If relevant intermediate files exist (specs, plans, implementation notes in `wor
 
 ### 11. AI review and fix loop
 
-Iterate through AI review and fixes until the review passes (max 5 iterations):
+Run the AI review and fix loop up to 5 times. After each review, always run `fixing-pr` so it can wait for CI and address comments, then exit if that review was approved:
 
 ```
 for iteration 1 to 5:
     1. Trigger AI review by applying the "ai-review" label
     2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments
-    3. Check AI review verdict in the latest github-actions bot comment
-    4. If verdict is "approved" → exit loop
-    5. Otherwise → continue to next iteration
+    3. Check the latest AI review verdict
+    4. If it is "approved" → exit loop
 ```
 
 **Triggering AI review:**
@@ -151,7 +150,7 @@ The verdict section contains a bold keyword indicating the result:
 - **`**APPROVED**`** → exit loop, PR is ready
 - **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
 
-**Important:** After each `fixing-pr` run, re-check if changes were made. If changes were pushed, the AI review will be stale and needs re-triggering. Continue iterating until the review verdict is "approved" or max iterations reached.
+Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` pushed follow-up CI fixes. Those commits are covered by CI but not by the AI review.
 
 ### 12. Post agent metrics
 

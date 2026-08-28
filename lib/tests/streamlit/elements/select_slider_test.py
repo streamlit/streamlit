@@ -27,8 +27,8 @@ import streamlit as st
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -258,13 +258,13 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.select_slider(
                 "the label", options=["red", "orange"], label_visibility="wrong_value"
             )
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):
@@ -741,8 +741,8 @@ class SelectSliderBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.select_slider(
                 "the label",
                 options=["a", "b"],

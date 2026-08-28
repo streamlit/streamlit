@@ -234,10 +234,10 @@ const NumberInput: React.FC<Props> = ({
   const commitValue = useCallback(
     ({
       value: valueArg,
-      fromUi,
+      fromUser,
     }: {
       value: number | null
-      fromUi: boolean
+      fromUser: boolean
     }): boolean => {
       // Validate range and show Streamlit-styled error message if out of range.
       if (notNullOrUndefined(valueArg)) {
@@ -251,7 +251,7 @@ const NumberInput: React.FC<Props> = ({
       const newValue = valueArg ?? elementDefault ?? null
 
       setValidationError(null)
-      setValueWithSource({ value: newValue, fromUi })
+      setValueWithSource({ value: newValue, fromUser })
 
       // Inside a form, write the committed value to the WidgetStateManager
       // synchronously. `setValueWithSource` only defers the write to an effect,
@@ -263,7 +263,7 @@ const NumberInput: React.FC<Props> = ({
         updateWidgetMgrState(
           element,
           widgetMgr,
-          { value: newValue, fromUi },
+          { value: newValue, fromUser },
           fragmentId
         )
       }
@@ -289,7 +289,7 @@ const NumberInput: React.FC<Props> = ({
   const clearable = isNullOrUndefined(element.default) && !disabled
 
   const handleClear = useCallback(() => {
-    commitValue({ value: null, fromUi: true })
+    commitValue({ value: null, fromUser: true })
   }, [commitValue])
 
   const handleFocus = useCallback((): void => {
@@ -357,7 +357,7 @@ const NumberInput: React.FC<Props> = ({
     if (dirty) {
       // Use currentNumericValue (parsed from formattedValue) not value (from useBasicWidgetState)
       // because value isn't updated until commit, but the user has typed a new value
-      commitValue({ value: currentNumericValue, fromUi: true })
+      commitValue({ value: currentNumericValue, fromUser: true })
     }
     setIsFocused(false)
   }, [dirty, currentNumericValue, commitValue])
@@ -369,7 +369,7 @@ const NumberInput: React.FC<Props> = ({
         step,
         "add"
       )
-      commitValue({ value: newValue, fromUi: true })
+      commitValue({ value: newValue, fromUser: true })
     }
   }, [currentNumericValue, min, step, canInc, commitValue])
 
@@ -380,7 +380,7 @@ const NumberInput: React.FC<Props> = ({
         step,
         "subtract"
       )
-      commitValue({ value: newValue, fromUi: true })
+      commitValue({ value: newValue, fromUser: true })
     }
   }, [currentNumericValue, max, step, canDec, commitValue])
 
@@ -398,7 +398,6 @@ const NumberInput: React.FC<Props> = ({
           decrement()
           break
         case "Escape":
-          // Replaces BaseWeb's clearOnEscape — clear the value when widget has no default.
           if (clearable) {
             e.preventDefault()
             handleClear()
@@ -411,7 +410,7 @@ const NumberInput: React.FC<Props> = ({
             // commitValue will fall back to elementDefault
             shouldSubmitForm = commitValue({
               value: currentNumericValue,
-              fromUi: true,
+              fromUser: true,
             })
           }
           // Also gate on `!validationError`: a step on an out-of-range value
@@ -520,9 +519,8 @@ const NumberInput: React.FC<Props> = ({
             id={id}
             data-testid="stNumberInputField"
             type="number"
-            // Omit inputMode here — the native browser default for type="number"
-            // already provides the right mobile keyboard. The original BaseWeb
-            // code set inputMode="" to undo BaseWeb's own override to "text" (#8867).
+            // Omit inputMode because the native default for type="number" provides
+            // the appropriate mobile keyboard.
             step={step}
             min={min}
             max={max}

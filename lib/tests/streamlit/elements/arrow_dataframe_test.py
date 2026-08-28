@@ -45,7 +45,11 @@ from streamlit.elements.lib.column_config_utils import (
     ButtonClickSerde,
     ButtonColumnClickState,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
@@ -274,7 +278,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_dataframe_with_invalid_on_select(self):
         """Test that an exception is thrown if the on_select parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.dataframe(df, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -469,7 +473,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         """Test that selection_default requires on_select to be activated."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"Set `on_select` to `'rerun'` or a callback",
+        ):
             st.dataframe(df, selection_default={"selection": {"rows": [0]}})
 
     def test_row_selection_auto_hides_range_index(self):
@@ -1389,8 +1396,8 @@ def test_dataframe_selection_serde_serialize_roundtrip() -> None:
 
 
 def test_parse_selection_mode_with_invalid_mode_raises() -> None:
-    """``parse_selection_mode`` raises ``StreamlitAPIException`` for unknown modes."""
-    with pytest.raises(StreamlitAPIException, match="Invalid selection mode"):
+    """``parse_selection_mode`` raises ``StreamlitValueError`` for unknown modes."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `selection_mode` value"):
         parse_selection_mode("not-a-real-mode")  # type: ignore[arg-type]
 
 

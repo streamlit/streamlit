@@ -3,6 +3,15 @@
 Tips and guidelines specific to the development of the Streamlit Python library,
 not applicable to scripts and e2e tests.
 
+## FIPS Compatibility
+
+- Production code must remain compatible with Python/OpenSSL environments running in FIPS mode.
+- For non-security hashing, use `streamlit.util.create_fast_hasher` (incremental hashing) or `calc_hash` (one-shot string/bytes hashing) instead of calling `hashlib` directly.
+  - Direct use of `hashlib.md5`, `sha1`, `blake2b`, `blake2s`, and `hashlib.new` is banned by lint (ruff `TID251`).
+  - The shared `streamlit.util` helpers are the only sanctioned direct callers, guarded with `# noqa: TID251`.
+- FIPS-approved constructors (e.g. `hashlib.sha256`) remain allowed for genuine security needs.
+- Update `lib/tests/streamlit/fips_test.py` when changing hashing behavior.
+
 ## Logging
 
 If something needs to be logged, please use our logger - that returns a default
@@ -13,6 +22,25 @@ from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 ```
+
+## Metrics
+
+- Use `gather_metrics` only for public `st.*` APIs. Never use it for internal methods or functions.
+
+## Streamlit Backend Performance Hot Paths
+
+Changes to these high-fan-out internals can affect every command, message, session, or rerun. Keep work in them minimal, and add or extend performance coverage when modifying these areas:
+
+- **Element creation and enqueueing** (`delta_generator.py`, element-ID calculation, public-command metrics): Avoid extra validation, hashing, protobuf copies, or context work per `st.*` call.
+- **ForwardMsg hashing, caching, and serialization** (`runtime/forward_msg_cache.py`, protobuf transport): Messages can be serialized for hashing and again for transport. Avoid extra copies or passes over large payloads, including on cache hits.
+- **Delta queueing and WebSocket flushing** (`runtime/forward_msg_queue.py`, `runtime.py`, WebSocket handlers): Preserve delta coalescing, bounded queues, and event-loop responsiveness; message count and flush cadence directly affect throughput and backpressure.
+- **Script reruns and session/widget state** (`script_runner.py`, `runtime/state/session_state.py`): Avoid additional full-state scans, expensive equality checks, unstable widget IDs, or cleanup work repeated for every rerun and session.
+- **`st.cache_data` and `st.cache_resource`** (`runtime/caching/`): Hits still hash arguments; `st.cache_data` also copies and unpickles results. Be careful with large keys/results, serialization, validation, replayed messages, and lock scope.
+- **Dataframe/Arrow and streaming paths** (`dataframe_util.py`, `elements/arrow.py`, `elements/write.py`): Avoid dataframe conversions and copies, repeated Arrow serialization, per-cell styling work, and many tiny streaming updates that repeatedly rebuild growing payloads.
+
+## Embedded agent skills
+
+User-facing skills ship under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). Keep them current as features land; follow `lib/streamlit/.agents/skills/AGENTS.md`.
 
 ## Unit Tests
 
@@ -29,15 +57,29 @@ coverage (95% or higher) of our Python code in `lib/streamlit`.
 ### Typing Tests
 
 We have typing tests in `lib/tests/streamlit/typing` for our public API to catch
-typing errors in parameters or return types by using mypy and `assert_type`.
+typing errors in parameters or return types by using mypy, ty, and `assert_type`.
 
-- **These are NOT pytest tests** — they are checked by mypy only, never executed at runtime.
+- **These are NOT pytest tests** — they are checked by mypy and ty, never executed at runtime.
 - All assertions and imports go inside `if TYPE_CHECKING:` blocks.
 - Do **not** use `def test_*()` functions or `import streamlit as st`.
 - Import from Mixin classes directly (e.g. `LayoutsMixin().expander`).
 - Always include `from __future__ import annotations` at the top.
+- Overloads discriminated on `bool` need an explicit fallback overload for
+  non-literal values, because mypy does not expand `bool` into
+  `Literal[True] | Literal[False]`. String-`Literal` discriminators do not
+  need that fallback; mypy expands union arguments, so assert the union
+  result directly. Cover both the literal cases and the non-literal case.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
-  (e.g. `radio_types.py`, `button_types.py`).
+  (e.g. `radio_types.py`, `file_uploader_types.py`).
+- Intentional invalid calls need a suppression for each checker that reports an
+  error: `# type: ignore[...]` (mypy) and `# ty: ignore[...]` (ty). Place each
+  suppression where its checker reports the diagnostic; use the same line when
+  possible. Add a checker's comment only when that checker actually errors —
+  ty's `unused-ignore-comment` rule is disabled, so a superfluous suppression
+  is silently kept.
+- A valid call whose asserted type mypy accepts but ty rejects may use
+  `# ty: ignore[type-assertion-failure]`. Add a short note saying what ty infers
+  instead, so the suppression can be removed once ty catches up.
 - For dict-like return values backed by `AttributeDictionary` /
   `ReadOnlyAttributeDictionary` subclasses (e.g. dataframe/chart selection
   state, `ButtonColumn` click state, `st.data_editor` edit state), assert both
@@ -89,6 +131,64 @@ reStructuredText directives. Follow these guidelines:
      height: 200px
 
   ```
+
+## Exception handling
+
+User-facing API errors raised from `st.*` commands belong in
+`streamlit.errors`. Prefer existing reusable exception types over raising a
+generic `StreamlitAPIException` with a one-off message.
+
+- `StreamlitAPIException`: base for malformed user interaction with the Streamlit
+  API. Prefer a more specific subclass when one fits.
+- `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
+  parameter receives an invalid value from a known set of options or an
+  accepted range. `valid_values` is the user-facing list of supported values:
+  Literal / enum-like options, or a short range description (for example
+  `"a positive duration"`). `parameter` is appended in uncaught-exception
+  telemetry (`StreamlitValueError:<parameter>`); optional `detail` appears in
+  the error message only. Example:
+  `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
+- `StreamlitMissingRequiredParameterError(parameter, *, detail=None)`:
+  use when a required parameter is missing, `None`, or empty, including an
+  empty sequence. `parameter` is appended in uncaught-exception telemetry
+  (`StreamlitMissingRequiredParameterError:<parameter>`). Example:
+  `raise StreamlitMissingRequiredParameterError("label")`.
+- `StreamlitIncompatibleParametersError(first_use, second_use, *other_uses, *, explanation=None)`: use
+  when two or more parameter uses cannot be combined. Pass `parameter=value`
+  when the conflict depends on a value (`wrap=False`), or the bare parameter
+  name when merely providing it conflicts (`on_change`). These strings appear
+  only in the displayed error; uncaught-exception telemetry records only the
+  exception type. Optional `explanation` is appended when the generic
+  "cannot be used together" message needs more context. Example:
+  `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
+- `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
+  use when a parameter has an unsupported type. `parameter` is appended in
+  uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
+  Pass concise type names as strings; for example,
+  `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
+- Prefer other shared validators/errors when they already exist for the
+  parameter, including:
+  - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError`
+    (layout sizing helpers)
+  - `StreamlitInvalidColorError`
+  - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
+    date/time bounds)
+  - `StreamlitInvalidFormCallbackError` (form callback policy)
+  - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
+    form, dialog, or fragment context — including opening a second dialog in the
+    same run, or writing to a container across a parallel-fragment boundary)
+  - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
+  - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
+    widget with that key is instantiated this run)
+  - `StreamlitDefaultNotInOptionsError` (default/index not in widget `options`;
+    `st.tabs` `default` uses `StreamlitValueError` because this message is
+    worded for widget options, not tab labels)
+  - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
+    `page_link`)
+
+Reserve bare `StreamlitAPIException` for one-off cases that no shared type
+covers and that users are expected to hit uncommonly (serialization failures
+and similar).
 
 ## Theming and Layout
 

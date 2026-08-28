@@ -66,14 +66,11 @@ UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 
 
 class RunLocation(Enum):
-    """The execution phase of the currently running Streamlit code.
+    """Which phase of Streamlit execution is active on this thread.
 
-    Tracks which of three phases is active on the current thread:
-
-    - ``MAIN_SCRIPT`` — the top-level app script body is running.
-    - ``FRAGMENT`` — a ``@st.fragment`` body is executing.
-    - ``CALLBACK`` — a widget callback (``on_change``, ``on_click``, etc.)
-      is executing.
+    - ``MAIN_SCRIPT`` — the top-level app script body.
+    - ``FRAGMENT`` — a ``@st.fragment`` body.
+    - ``CALLBACK`` — a widget callback (``on_change``, ``on_click``, etc.).
     """
 
     MAIN_SCRIPT = "main_script"
@@ -112,11 +109,7 @@ class FragmentThreadState:
 
     @property
     def in_fragment_callback(self) -> bool:
-        """True when executing inside a widget callback for a fragment widget.
-
-        Derived from ``run_location`` and ``fragment_id`` so that all existing
-        consumers of this flag keep working without change.
-        """
+        """True while a callback for a widget defined inside a fragment is running."""
         return (
             self.run_location is RunLocation.CALLBACK and self.fragment_id is not None
         )
@@ -318,6 +311,16 @@ class ScriptRunContext:
             if is_same_page:
                 qp.set_initial_query_params(query_string)
                 qp.populate_from_query_string(query_string)
+
+    @property
+    def has_script_started(self) -> bool:
+        """Whether this run reached its script body.
+
+        False when a widget callback queued an ``st.rerun()`` that preempted the run
+        before its body. ``SessionState.on_script_finished`` then skips stale-widget
+        cleanup, which assumes the body re-registered its widgets.
+        """
+        return self._has_script_started
 
     def on_script_start(self) -> None:
         self._has_script_started = True

@@ -689,12 +689,12 @@ function ChatInput({
         audioFileInfo: audioInfo,
       }
 
-      widgetMgr.setChatInputValue(
-        element,
-        composedValue,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setChatInputValue(element.id, composedValue, {
+        // Chat input cannot be placed inside a form.
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
 
       // Track submission for submit_mode behavior
       if (submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT) {

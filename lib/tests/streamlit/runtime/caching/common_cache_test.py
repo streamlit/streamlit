@@ -27,7 +27,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import (
     cache_background_refresh,
@@ -61,7 +61,7 @@ from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def get_text_or_block(delta):
@@ -840,13 +840,13 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     def test_bad_scope_raises_exception(self, _, cache_decorator):
         """A bad scope argument should raise an exception."""
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
 
             @cache_decorator(scope="request")
             def get_foo() -> None:
                 pass
 
-        e.match("Unsupported scope option.*request")
+        e.match(r"Invalid `scope` value")
 
 
 class CommonCacheTTLTest(unittest.TestCase):
@@ -1115,8 +1115,8 @@ def test_arrow_replay():
     assert not at.exception
 
 
-# The fresh ttl (in seconds) used across the background-refresh tests. The hard
-# eviction bound is 2*_BG_TTL, and the stale grace window is [_BG_TTL, 2*_BG_TTL).
+# The fresh ttl (in seconds) used across the background-refresh tests. Default
+# hard eviction bound is 2*_BG_TTL; individual tests may override the multiplier.
 _BG_TTL = 100
 
 
@@ -1211,7 +1211,7 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
     )
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_hard_expiry_blocks_foreground(self, _, cache_decorator, timer_patch: Mock):
-        """Past 2*ttl the entry is a hard miss: a blocking foreground recompute, no stale serve."""
+        """Past the default 2*ttl hard bound, the call blocks and recomputes."""
         call_count = [0]
 
         @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
@@ -1228,6 +1228,69 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
             assert foo() == 2
             # A hard miss is not a stale serve, so no background refresh is triggered.
             submit_mock.assert_not_called()
+
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [
+            ("cache_data_widen", cache_data, 4.0, _BG_TTL * 2.5, _BG_TTL * 4 + 1),
+            (
+                "cache_resource_widen",
+                cache_resource,
+                4.0,
+                _BG_TTL * 2.5,
+                _BG_TTL * 4 + 1,
+            ),
+            ("cache_data_shorten", cache_data, 1.5, _BG_TTL * 1.25, _BG_TTL * 1.75),
+            (
+                "cache_resource_shorten",
+                cache_resource,
+                1.5,
+                _BG_TTL * 1.25,
+                _BG_TTL * 1.75,
+            ),
+        ]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_configured_multiplier_sets_hard_expiry(
+        self,
+        _name: str,
+        cache_decorator: Any,
+        multiplier: float,
+        stale_at: float,
+        expired_at: float,
+        timer_patch: Mock,
+    ) -> None:
+        """The configured multiplier sets when a stale value is served vs hard-expired."""
+        call_count = [0]
+
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+
+            @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+            def foo() -> int:
+                call_count[0] += 1
+                return call_count[0]
+
+            timer_patch.return_value = 0
+            assert foo() == 1
+
+            # Fail the refresh so the stale value stays until hard expiry.
+            with patch.object(
+                cache_background_refresh.get_background_refresh_manager(),
+                "submit",
+                return_value=False,
+            ) as submit_mock:
+                timer_patch.return_value = stale_at
+                assert foo() == 1
+                submit_mock.assert_called_once()
+                assert call_count[0] == 1
+
+                submit_mock.reset_mock()
+                timer_patch.return_value = expired_at
+                assert foo() == 2
+                submit_mock.assert_not_called()
 
         assert call_count[0] == 2
 

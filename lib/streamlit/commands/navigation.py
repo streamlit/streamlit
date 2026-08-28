@@ -19,7 +19,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
@@ -56,9 +60,10 @@ def convert_to_streamlit_page(
         # Convert function to Page
         return Page(page_input)
 
-    raise StreamlitAPIException(
-        f"Invalid page type: {type(page_input)}. Must be either a string path, "
-        "a pathlib.Path, a callable function, or a st.Page object."
+    raise StreamlitInvalidParameterTypeError(
+        "pages",
+        type(page_input).__name__,
+        ["str", "Path", "callable", "st.Page"],
     )
 
 
@@ -318,10 +323,7 @@ def navigation(
     """
     # Validate position parameter
     if not isinstance(position, str) or position not in {"sidebar", "hidden", "top"}:
-        raise StreamlitAPIException(
-            f'Invalid position "{position}". '
-            'The position parameter must be one of "sidebar", "hidden", or "top".'
-        )
+        raise StreamlitValueError("position", ["'sidebar'", "'hidden'", "'top'"])
 
     # Disable the use of the pages feature (ie disregard v1 behavior of Multipage Apps)
     PagesManager.uses_pages_directory = False

@@ -44,7 +44,10 @@ export default defineConfig({
             // Keep declaration emit on a separate tsconfig so normal typechecking can
             // still resolve sibling workspace source without pulling those files into
             // the build root under TypeScript 6.
-            tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
+            tsconfigPath: path.resolve(
+              import.meta.dirname,
+              "tsconfig.build.json"
+            ),
           }),
         ]
       : []),
@@ -55,7 +58,7 @@ export default defineConfig({
     reportCompressedSize: false,
     lib: {
       // Specify the entry point of your library
-      entry: path.resolve(__dirname, "src/index.ts"),
+      entry: path.resolve(import.meta.dirname, "src/index.ts"),
       name: "@streamlit/lib", // Replace with your library's name
       fileName: format => `streamlit-lib.${format}.js`,
       // For development, only build es format since that is what Streamlit uses.
@@ -78,7 +81,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
     alias: {
-      "~lib": path.resolve(__dirname, "../lib/src"),
+      "~lib": path.resolve(import.meta.dirname, "src"),
     },
   },
   test: {

@@ -346,21 +346,19 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert metric_proto.label == "Column 5"
 
-    def test_invalid_label(self):
-        with pytest.raises(TypeError) as exc:
-            st.metric(123, "-321")
+    def test_non_str_label_is_coerced(self):
+        """Non-string labels are coerced so protobuf assignment does not TypeError."""
+        st.metric(123, "-321")
 
-        assert str(exc.value) == (
-            "'123' is of type <class 'int'>, which is not an accepted type. "
-            "label only accepts: str. Please convert the label to an accepted type."
-        )
+        metric_proto = self.get_delta_from_queue().new_element.metric
+        assert metric_proto.label == "123"
 
     def test_invalid_label_visibility(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.metric("label_test", "123", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_empty_label_warning(self):
@@ -395,10 +393,10 @@ class MetricTest(DeltaGeneratorTestCase):
         )
 
     def test_invalid_delta_color(self):
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.metric("Hello World.", 123, 0, delta_color="Invalid")
 
-        assert "'Invalid' is not an accepted value" in str(exc.value)
+        assert "Invalid `delta_color` value" in str(exc.value)
 
     @parameterized.expand(
         [

@@ -32,6 +32,7 @@ from streamlit.string_util import (
     AnyNumber,
     clean_text,
     from_number,
+    to_help_str,
     validate_icon_or_emoji,
 )
 
@@ -406,15 +407,15 @@ class MetricMixin:
                     height: 210px
 
         """
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         metric_proto = MetricProto()
         metric_proto.body = _parse_value(value)
-        metric_proto.label = _parse_label(label)
+        metric_proto.label = label
         metric_proto.delta = _parse_delta(delta)
         metric_proto.show_border = border
         if help is not None:
-            metric_proto.help = dedent(help)
+            metric_proto.help = to_help_str(help)
         metric_proto.icon = validate_icon_or_emoji(icon)
 
         color_and_direction = _determine_delta_color_and_direction(
@@ -481,17 +482,8 @@ def _parse_chart_type(
 
 def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
     if delta_arrow not in {"auto", "up", "down", "off"}:
-        raise StreamlitValueError("delta_arrow", ["auto", "up", "down", "off"])
+        raise StreamlitValueError("delta_arrow", ["'auto'", "'up'", "'down'", "'off'"])
     return delta_arrow
-
-
-def _parse_label(label: str) -> str:
-    if not isinstance(label, str):
-        raise TypeError(
-            f"'{label}' is of type {type(label)}, which is not an accepted type."
-            " label only accepts: str. Please convert the label to an accepted type."
-        )
-    return label
 
 
 def _parse_value(value: Value) -> str:
@@ -515,10 +507,22 @@ def _determine_delta_color_and_direction(
     delta: Delta,
 ) -> MetricColorAndDirection:
     if delta_color not in _VALID_DELTA_COLORS:
-        raise StreamlitAPIException(
-            f"'{delta_color}' is not an accepted value. delta_color only accepts: "
-            "'normal', 'inverse', 'off', or a color name ('red', 'orange', 'yellow', "
-            "'green', 'blue', 'violet', 'gray'/'grey', 'primary')"
+        raise StreamlitValueError(
+            "delta_color",
+            [
+                "'normal'",
+                "'inverse'",
+                "'off'",
+                "'red'",
+                "'orange'",
+                "'yellow'",
+                "'green'",
+                "'blue'",
+                "'violet'",
+                "'gray'",
+                "'grey'",
+                "'primary'",
+            ],
         )
 
     if delta is None or delta == "":

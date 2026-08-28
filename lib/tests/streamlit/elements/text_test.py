@@ -33,7 +33,7 @@ class StTextAPITest(DeltaGeneratorTestCase):
 
     def test_st_text_with_help(self):
         """Test st.text with help."""
-        st.text("some text", help="help text")
+        st.text("some text", help="    help text")
         el = self.get_delta_from_queue().new_element
         assert el.text.body == "some text"
         assert el.text.help == "help text"
@@ -129,7 +129,7 @@ class StTextTextAlignmentTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.text("Test text", text_alignment="middle")
 
-        assert 'Invalid text_alignment value: "middle"' in str(exc.value)
+        assert "Invalid `text_alignment` value" in str(exc.value)
         assert "left" in str(exc.value)
         assert "center" in str(exc.value)
         assert "right" in str(exc.value)

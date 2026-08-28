@@ -15,7 +15,6 @@
  */
 
 import { getLogger } from "loglevel"
-import { v4 as uuidv4 } from "uuid"
 
 import {
   BackendOperationRequest,
@@ -24,6 +23,7 @@ import {
   IDataframeChunkRequestPayload,
   IDataframeChunkResponsePayload,
 } from "@streamlit/protobuf"
+import { generateUuid } from "@streamlit/utils"
 
 const LOG = getLogger("BackendOperationClient")
 
@@ -152,7 +152,7 @@ export class BackendOperationClient {
     payload: IBackendOperationRequest[typeof payloadField],
     timeoutMs?: number
   ): Promise<TResponse> {
-    const requestId = uuidv4()
+    const requestId = generateUuid()
     const effectiveTimeout = timeoutMs ?? this.timeoutMs
 
     const resolver = Promise.withResolvers<TResponse>()

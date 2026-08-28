@@ -20,6 +20,11 @@ import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
+import {
+  STEP_CONNECTOR_BOTTOM_VAR,
+  STEP_FOLLOWED_BY_STEP_SELECTOR,
+} from "~lib/components/core/Layout/stepConnector"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -149,10 +154,16 @@ interface StyledColumnProps {
   gap: streamlit.IGapConfig | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
+  /**
+   * Whether the parent row allows wrapping/stacking. When true (default),
+   * columns stack below the columns breakpoint. When false, columns keep a
+   * usable minimum width and scroll horizontally instead.
+   */
+  $wrap?: boolean
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment }) => {
+  ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
@@ -166,10 +177,16 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // e.g. if it overflows to next row.
       width,
       flex: `1 1 ${width}`,
-
-      [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        minWidth: `calc(100% - ${theme.spacing.twoXL})`,
-      },
+      ...($wrap
+        ? {
+            [`@media (max-width: ${theme.breakpoints.columns})`]: {
+              minWidth: `calc(100% - ${theme.spacing.twoXL})`,
+            },
+          }
+        : {
+            // Usable floor so nowrap columns scroll instead of shrinking to zero.
+            minWidth: theme.spacing.sixXL,
+          }),
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
         marginTop: "auto",
         // Align the last direct-child checkbox/toggle with other input widgets.
@@ -259,6 +276,13 @@ export interface StyledFlexContainerBlockProps {
   align?: BlockProto.FlexContainer.Align | null
   justify?: BlockProto.FlexContainer.Justify | null
   overflow?: React.CSSProperties["overflow"]
+  /**
+   * Horizontal overflow behavior. Set to "auto" for a horizontal container
+   * with `wrap=false` so its elements stay in a single, horizontally
+   * scrollable row. When set, applied as `overflowX` alongside `overflowY`
+   * (from `overflow`) instead of the `overflow` shorthand.
+   */
+  overflowX?: React.CSSProperties["overflowX"]
 }
 
 export const StyledFlexContainerBlock =
@@ -274,6 +298,7 @@ export const StyledFlexContainerBlock =
       align,
       justify,
       overflow,
+      overflowX,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -297,7 +322,39 @@ export const StyledFlexContainerBlock =
           borderRadius: theme.radii.default,
           padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
         }),
-        overflow,
+        ...(overflowX !== undefined
+          ? {
+              overflowX,
+              // `overflow` is a single-keyword value from layout styles
+              // (`visible`/`auto`/`hidden`), which is valid as overflow-y.
+              overflowY: overflow as React.CSSProperties["overflowY"],
+              // The browser coerces the cross-axis overflow to "auto" when one
+              // axis scrolls, which would clip child focus rings and shadows.
+              // A bordered container already has enough internal padding; an
+              // unbordered one gets vertical breathing room (cancelled by a
+              // negative margin so the outer layout is unchanged).
+              ...(!border && {
+                paddingBlock: theme.sizes.focusRingWidth,
+                marginBlock: `-${theme.sizes.focusRingWidth}`,
+              }),
+            }
+          : { overflow }),
+        // Consecutive steps should read as one continuous timeline, so a step's
+        // connector has to span the flex gap separating it from the next step.
+        // The property holds a negative `bottom` offset for the connector, and
+        // this container is the only place that knows the gap size. Re-declaring
+        // it here confines the inherited value to one level, so a step nested
+        // inside another step's content starts from zero again.
+        [STEP_CONNECTOR_BOTTOM_VAR]: theme.spacing.none,
+        ...(direction === Direction.VERTICAL &&
+          gapWidth && {
+            // Scoping to steps that are directly followed by another step keeps
+            // the line from dangling after the last step or after an
+            // interleaved non-step element.
+            [STEP_FOLLOWED_BY_STEP_SELECTOR]: {
+              [STEP_CONNECTOR_BOTTOM_VAR]: `-${gapWidth}`,
+            },
+          }),
       }
     }
   )

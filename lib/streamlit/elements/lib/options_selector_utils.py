@@ -20,7 +20,11 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitDefaultNotInOptionsError,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
@@ -57,7 +61,6 @@ def validate_select_widget_filter_mode(
     filter_mode: SelectWidgetFilterMode,
     *,
     accept_new_options: bool,
-    command: Literal["st.selectbox", "st.multiselect"],
 ) -> ProtoSelectWidgetFilterMode.ValueType:
     """Validate ``filter_mode`` and return the protobuf enum value."""
     try:
@@ -72,9 +75,13 @@ def validate_select_widget_filter_mode(
         )
 
     if filter_mode is None and accept_new_options:
-        raise StreamlitAPIException(
-            f"The `filter_mode` argument to `{command}` cannot be None when "
-            "`accept_new_options=True`."
+        raise StreamlitIncompatibleParametersError(
+            "filter_mode=None",
+            "accept_new_options=True",
+            explanation=(
+                "`filter_mode` cannot be `None` when `accept_new_options=True`. "
+                "Set `filter_mode` to `fuzzy`, `contains`, or `prefix`."
+            ),
         )
 
     return _SELECT_WIDGET_FILTER_MODE_PROTO_MAP[filter_mode]
@@ -119,10 +126,7 @@ def check_and_convert_to_indices(
 
     for value in default_values:
         if value not in opt:
-            raise StreamlitAPIException(
-                f"The default value '{value}' is not part of the options. "
-                "Please make sure that every default values also exists in the options."
-            )
+            raise StreamlitDefaultNotInOptionsError(value)
 
     return [opt.index(value) for value in default_values]
 
@@ -166,10 +170,9 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
 
     coercion_type = config.get_option("runner.enumCoercion")
     if coercion_type not in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:
-        raise StreamlitAPIException(
-            "Invalid value for config option runner.enumCoercion. "
-            f"Expected one of {_ALLOWED_ENUM_COERCION_CONFIG_SETTINGS}, "
-            f"but got '{coercion_type}'."
+        raise StreamlitValueError(
+            "runner.enumCoercion",
+            [f"'{v}'" for v in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS],
         )
     if coercion_type == "off":
         return from_enum_value  # do not attempt to coerce

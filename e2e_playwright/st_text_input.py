@@ -100,6 +100,28 @@ st.text_input(
     "text input 16 - material icon", placeholder="Placeholder", icon=":material/search:"
 )
 
+st.markdown("Specialized input types:")
+
+email_value = st.text_input("Email", key="email_input", type="email")
+st.write("email value:", email_value)
+
+url_value = st.text_input("URL", key="url_input", type="url")
+st.write("url value:", url_value)
+
+st.text_input("Phone", key="phone_input", type="phone")
+st.text_input("Search", key="search_input", type="search", bind="query-params")
+
+override_value = st.text_input(
+    "Work email (overrides)",
+    key="email_override_input",
+    type="email",
+    icon=":material/work:",
+    placeholder="name@company.com",
+    validate=(r"^[\w.+-]+@company\.com$", "Use your @company.com address."),
+    autocomplete="off",
+)
+st.write("override value:", override_value)
+
 st.text_input("text input 17 (width=200px)", "width test", width=200)
 st.text_input("text input 18 (width='stretch')", "width test", width="stretch")
 
@@ -233,3 +255,16 @@ st.text_input(
 st.write(f"Text input counter: {st.session_state.setvalue_counter}")
 
 st.button("Trigger text input rerun")
+
+# --- on_change="ignore" text input ---
+ignore_text = st.text_input(
+    "Ignore change text input",
+    value="hello",
+    key="ignore_text",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore text value:", ignore_text)
+
+if st.button("Apply ignore text", key="apply_ignore_text"):
+    st.write("Applied ignore text value:", ignore_text)

@@ -24,8 +24,8 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -133,6 +133,9 @@ class DateInputTest(DeltaGeneratorTestCase):
             #       Add test for empty value list case
             ([date(2021, 4, 26)], "2011-04-26", "2031-04-26"),
             ([date(2007, 2, 4), date(2012, 1, 3)], "1997-02-04", "2022-01-03"),
+            # GH#7427: date.max / date.min clamp instead of overflowing
+            (date.max, "9989-12-31", "9999-12-31"),
+            (date.min, "0001-01-01", "0011-01-01"),
         ]
     )
     def test_min_max_values(self, arg_value, min_date_value, max_date_value):
@@ -278,11 +281,11 @@ class DateInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.date_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     @parameterized.expand(
@@ -872,8 +875,8 @@ class DateInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.date_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_explicit_value(self):

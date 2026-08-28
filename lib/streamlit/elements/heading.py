@@ -18,10 +18,13 @@ from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_icon_or_emoji
+from streamlit.string_util import clean_text, to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -443,8 +446,9 @@ class HeadingMixin:
         ]
         if divider in valid_colors:
             return divider
-        raise StreamlitAPIException(
-            f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
+        raise StreamlitValueError(
+            "divider",
+            ["True"] + [f"'{c}'" for c in valid_colors],
         )
 
     @staticmethod
@@ -469,17 +473,18 @@ class HeadingMixin:
             elif isinstance(anchor, str):
                 proto.anchor = anchor
             elif anchor is True:  # type: ignore
-                raise StreamlitAPIException(
-                    f"Anchor parameter has invalid value: {anchor}. "
-                    "Supported values: None, any string or False"
+                raise StreamlitValueError(
+                    "anchor",
+                    ["None", "False", "any string"],
                 )
             else:
-                raise StreamlitAPIException(
-                    f"Anchor parameter has invalid type: {type(anchor).__name__}. "
-                    "Supported values: None, any string or False"
+                raise StreamlitInvalidParameterTypeError(
+                    "anchor",
+                    type(anchor).__name__,
+                    ["str", "None", "False"],
                 )
 
         if help:
-            proto.help = help
+            proto.help = to_help_str(help)
 
         return proto

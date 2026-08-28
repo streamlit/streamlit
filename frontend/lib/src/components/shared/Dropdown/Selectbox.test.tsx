@@ -591,9 +591,8 @@ describe("Selectbox widget", () => {
 
   it("clears the typed query on Escape and restores the committed label", async () => {
     // Regression test for https://github.com/streamlit/streamlit/issues/16004
-    // With a value already committed, typing a query then pressing Escape
-    // must drop the typed query and restore the committed label — matching
-    // pre-1.59 (BaseWeb) behavior. The committed value must not change.
+    // Escape while filtering must restore the committed label without changing
+    // the committed value.
     const user = userEvent.setup()
     props = getProps({
       options: ["Apple", "Banana", "Cherry"],

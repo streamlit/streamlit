@@ -29,6 +29,7 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
 import type { EmotionTheme } from "~lib/theme/types"
 
 /** Right padding that shrinks when a scrollbar appears, keeping content aligned. */
@@ -67,21 +68,37 @@ export const StyledTrigger = styled(Group, {
 
 /**
  * Scrollable area inside the trigger that holds tags + the filter input.
- * Wraps tags into multiple rows and scrolls vertically when overflowing.
+ * When `$wrap` is true, tags wrap onto multiple rows and the area scrolls
+ * vertically when overflowing. When `$wrap` is false, tags stay in a single
+ * row and the area scrolls horizontally instead.
+ *
+ * In single-row mode, a fade mask is applied on each edge that has off-screen
+ * chips (both edges when scrolled to the middle), driven by the
+ * `data-can-scroll-start`/`data-can-scroll-end` attributes, to signal that the
+ * row is horizontally scrollable. The native horizontal scrollbar is hidden
+ * so it doesn't consume the pinned one-row height and clip the chips; the fade
+ * is the sole scroll affordance while native scrolling via
+ * trackpad/shift-wheel/keyboard still works.
  */
-export const StyledTagsContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap" as const,
-  alignItems: "center",
-  flexGrow: 1,
-  overflowY: "auto" as const,
-  overflowX: "hidden" as const,
-  paddingLeft: theme.sizes.tagMarginInsideBorder,
-  paddingTop: theme.sizes.tagMarginInsideBorder,
-  paddingBottom: theme.spacing.none,
-  paddingRight: theme.spacing.none,
-  cursor: "text",
-}))
+export const StyledTagsContainer = styled.div<{ $wrap: boolean }>(
+  ({ theme, $wrap }) => ({
+    display: "flex",
+    flexWrap: $wrap ? ("wrap" as const) : ("nowrap" as const),
+    alignItems: "center",
+    flexGrow: 1,
+    overflowY: $wrap ? ("auto" as const) : ("hidden" as const),
+    overflowX: $wrap ? ("hidden" as const) : ("auto" as const),
+    paddingLeft: theme.sizes.tagMarginInsideBorder,
+    paddingTop: theme.sizes.tagMarginInsideBorder,
+    paddingBottom: theme.spacing.none,
+    paddingRight: theme.spacing.none,
+    cursor: "text",
+    // Hide the horizontal scrollbar in single-row mode so it can't reduce the
+    // fixed one-row height and clip chips/controls. Kept visible while wrapping,
+    // where the vertical scrollbar is the intended overflow affordance.
+    ...(!$wrap && getHorizontalOverflowFadeStyles(theme.spacing.lg)),
+  })
+)
 
 /** Wrapper for the tag group that participates in flex layout without adding a box. */
 export const StyledTagGroup = styled.span({
@@ -89,10 +106,13 @@ export const StyledTagGroup = styled.span({
 })
 
 /** Individual removable tag pill displaying a selected value. */
-export const StyledTag = styled.span<{ $disabled?: boolean }>(
-  ({ theme, $disabled }) => ({
+export const StyledTag = styled.span<{ $disabled?: boolean; $wrap?: boolean }>(
+  ({ theme, $disabled, $wrap }) => ({
     display: "inline-flex",
     alignItems: "center",
+    // In single-row mode, keep chips at their natural width so the container
+    // scrolls horizontally instead of squeezing the chips.
+    flexShrink: $wrap === false ? 0 : 1,
     height: theme.sizes.elementHighlightHeight,
     maxWidth: `calc(100% - ${theme.spacing.lg})`,
     borderRadius: theme.radii.md2,

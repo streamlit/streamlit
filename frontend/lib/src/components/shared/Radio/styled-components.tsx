@@ -40,14 +40,11 @@ export const StyledRadioGroup = styled(RARadioGroup, {
   display: "flex",
   flexDirection: $horizontal ? "row" : "column",
   flexWrap: "wrap",
-  // Horizontal groups use `center` to match BaseWeb's default, which distributes
-  // the minElementHeight space evenly above and below the items. Vertical groups
-  // use `flex-start` so items stack from the top.
+  // Horizontal groups use `center` to distribute the minElementHeight space
+  // evenly above and below items. Vertical groups stack items from the top.
   alignItems: $horizontal ? "center" : "flex-start",
   // Horizontal groups always use `lg` (16px) between items regardless of
-  // captions, matching the effective spacing of the old BaseWeb implementation
-  // (which combined a `sm` per-item marginRight with a `sm` group gap = 16px).
-  // Vertical groups add `sm` between items only when captions are present.
+  // captions. Vertical groups add `sm` only when captions are present.
   gap: $horizontal
     ? theme.spacing.lg
     : $hasCaptions

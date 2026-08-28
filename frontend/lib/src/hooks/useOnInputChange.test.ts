@@ -45,7 +45,7 @@ describe("useOnInputChange", () => {
     await waitFor(() => {
       expect(setValueWithSource).toHaveBeenCalledWith({
         value: "someValue",
-        fromUi: true,
+        fromUser: true,
       })
     })
   })
@@ -133,7 +133,7 @@ describe("useOnInputChange", () => {
     await waitFor(() => {
       expect(setValueWithSource).toHaveBeenCalledWith({
         value: "someValue",
-        fromUi: true,
+        fromUser: true,
       })
     })
     await waitFor(() => {

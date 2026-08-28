@@ -33,6 +33,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
     StreamlitPageNotFoundError,
+    StreamlitValueError,
 )
 from streamlit.navigation.page import Page
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
@@ -118,6 +119,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert not c.is_form_submitter
         assert not c.disabled
 
+    @parameterized.expand(get_button_command_matrix([123]))
+    def test_non_string_label_is_coerced(
+        self, name: str, command: Callable[..., Any], label: int
+    ) -> None:
+        """Non-string labels are coerced to strings for protobuf assignment."""
+        command(label=label)
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.label == "123"
+
     @parameterized.expand(
         [
             (name, command, type_)
@@ -152,7 +162,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         self, name: str, command: Callable[..., Any]
     ) -> None:
         """Test that invalid icon_position values raise an error."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
             command(icon_position="center")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -576,9 +586,9 @@ class ButtonTest(DeltaGeneratorTestCase):
     )
     def test_invalid_type(self, name: str, command: Callable[..., Any]):
         """Test with invalid type parameter."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             command(type="invalid")
-        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
+        assert "Invalid `type` value" in str(exc_info.value)
 
     @parameterized.expand(
         [
@@ -661,6 +671,31 @@ class ButtonTest(DeltaGeneratorTestCase):
                     st.page_link(Path("pages/page1.py"))
                     c = self.get_delta_from_queue().new_element.page_link
                     assert c.page == "page1"
+                    assert c.page_script_hash == "hash123"
+                    assert c.label == "Page 1"
+
+    def test_page_link_missing_url_pathname_does_not_raise_keyerror(self):
+        """Pages without ``url_pathname`` (default registry payload) still resolve."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page1": {
+                "script_path": "/app/pages/page1.py",
+                "page_name": "Page 1",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/page1.py"):
+                    st.page_link("pages/page1.py")
+                    c = self.get_delta_from_queue().new_element.page_link
+                    assert c.page == ""
                     assert c.page_script_hash == "hash123"
                     assert c.label == "Page 1"
 

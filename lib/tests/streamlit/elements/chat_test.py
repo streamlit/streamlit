@@ -30,7 +30,10 @@ from streamlit.elements.widgets.chat import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -166,13 +169,11 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"`st.chat_input\(\)` can't be used in a `st.form\(\)`",
+        ):
             st.form("Form Key").chat_input()
-
-        assert (
-            str(exception_message.value)
-            == "`st.chat_input()` can't be used in a `st.form()`."
-        )
 
     @parameterized.expand(
         [
@@ -251,12 +252,12 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.accept_file == expected
 
     def test_chat_input_invalid_accept_file(self):
-        with pytest.raises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitValueError) as ex:
             st.chat_input(accept_file="invalid")
 
         assert (
             str(ex.value)
-            == "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
         )
 
     def test_file_type(self):
@@ -699,13 +700,10 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_accept_file_invalid_value(self):
         """Test that invalid accept_file values raise an error."""
-        with pytest.raises(StreamlitAPIException) as cm:
+        with pytest.raises(StreamlitValueError) as cm:
             st.chat_input("the label", accept_file="invalid")
 
-        assert (
-            "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
-            in str(cm.value)
-        )
+        assert "Invalid `accept_file` value" in str(cm.value)
 
     def test_directory_upload_with_callback(self):
         """Test directory upload with on_submit callback."""
@@ -838,9 +836,9 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_input_audio_sample_rate_invalid(self):
         """Test that invalid audio_sample_rate raises an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input(accept_audio=True, audio_sample_rate=12345)
-        assert "Invalid audio_sample_rate" in str(exc.value)
+        assert "Invalid `audio_sample_rate` value" in str(exc.value)
 
     @parameterized.expand(
         [
@@ -1247,7 +1245,10 @@ class AvatarProcessingTest(DeltaGeneratorTestCase):
 
     def test_chat_message_raises_when_name_is_none(self) -> None:
         """Test chat_message raises when name is explicitly None."""
-        with pytest.raises(StreamlitAPIException, match="author name is required"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`name` parameter is required",
+        ):
             st.chat_message(None)  # type: ignore[arg-type]
 
 
@@ -1275,12 +1276,12 @@ class ChatInputSubmitModeTest(DeltaGeneratorTestCase):
 
     def test_submit_mode_invalid(self):
         """Test that invalid submit_mode values raise an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("Placeholder", submit_mode="invalid")
-        assert "The `submit_mode` parameter must be" in str(exc.value)
+        assert "Invalid `submit_mode` value" in str(exc.value)
 
     def test_submit_mode_bool_not_allowed(self):
         """Test that bool values are not accepted for submit_mode."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("Placeholder", submit_mode=True)
-        assert "The `submit_mode` parameter must be" in str(exc.value)
+        assert "Invalid `submit_mode` value" in str(exc.value)
