@@ -443,17 +443,19 @@ describe("Heading", () => {
   })
 
   it("keeps accessible name as body text when icon is present", () => {
-    // Icon alone triggers aria-labelledby so the decorative icon is excluded
-    // from the accessible name.
+    // The leading icon is aria-hidden, so the accessible name stays the body
+    // even without aria-labelledby (hideAnchor, no help).
     const props = getHeadingProps({
       body: "Dashboard",
       icon: ":material/dashboard:",
+      hideAnchor: true,
+      help: "",
     })
     render(<Heading {...props} />)
 
     const heading = screen.getByRole("heading", { name: "Dashboard" })
     expect(heading).toBeVisible()
-    expect(heading).toHaveAttribute("aria-labelledby")
+    expect(heading).not.toHaveAttribute("aria-labelledby")
   })
 
   it("auto-generated anchor ignores the icon", () => {

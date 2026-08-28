@@ -50,10 +50,10 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        icon: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
-        icon: str | None = None,
         wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in header formatting.
@@ -82,6 +82,30 @@ class HeadingMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        icon : str or None
+            An optional emoji or icon to display next to the header. If
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
+            The icon is decorative: it is not included in the heading's
+            accessible name and does not affect the auto-generated anchor.
 
         divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
             Shows a colored divider below the header. If this is ``True``,
@@ -118,30 +142,6 @@ class HeadingMixin:
                 width must be wider than its content. If you use
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
-
-        icon : str or None
-            An optional emoji or icon to display next to the header. If
-            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
-            Empty string is accepted so you can pass ``page.icon`` when a
-            page has no icon. If ``icon`` is a non-empty string, the
-            following options are valid:
-
-            - A single-character emoji. For example, you can set ``icon="🚨"``
-              or ``icon="🔥"``. Emoji short codes are not supported.
-
-            - An icon from the Material Symbols library (rounded style) in the
-              format ``":material/icon_name:"`` where "icon_name" is the name
-              of the icon in snake case.
-
-              For example, ``icon=":material/thumb_up:"`` will display the
-              Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
-              font library.
-
-            - ``"spinner"``: Displays a spinner as an icon.
-
-            The icon is decorative: it is not included in the heading's
-            accessible name and does not affect the auto-generated anchor.
 
         wrap : bool
             Whether the header can wrap onto multiple lines. This can be one
@@ -199,10 +199,10 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        icon: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
-        icon: str | None = None,
         wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
@@ -231,6 +231,30 @@ class HeadingMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        icon : str or None
+            An optional emoji or icon to display next to the subheader. If
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
+            The icon is decorative: it is not included in the heading's
+            accessible name and does not affect the auto-generated anchor.
 
         divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
             Shows a colored divider below the header. If this is ``True``,
@@ -267,30 +291,6 @@ class HeadingMixin:
                 width must be wider than its content. If you use
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
-
-        icon : str or None
-            An optional emoji or icon to display next to the subheader. If
-            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
-            Empty string is accepted so you can pass ``page.icon`` when a
-            page has no icon. If ``icon`` is a non-empty string, the
-            following options are valid:
-
-            - A single-character emoji. For example, you can set ``icon="🚨"``
-              or ``icon="🔥"``. Emoji short codes are not supported.
-
-            - An icon from the Material Symbols library (rounded style) in the
-              format ``":material/icon_name:"`` where "icon_name" is the name
-              of the icon in snake case.
-
-              For example, ``icon=":material/thumb_up:"`` will display the
-              Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
-              font library.
-
-            - ``"spinner"``: Displays a spinner as an icon.
-
-            The icon is decorative: it is not included in the heading's
-            accessible name and does not affect the auto-generated anchor.
 
         wrap : bool
             Whether the subheader can wrap onto multiple lines. This can be one
@@ -348,9 +348,9 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        icon: str | None = None,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
-        icon: str | None = None,
         wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in title formatting.
@@ -383,6 +383,30 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        icon : str or None
+            An optional emoji or icon to display next to the title. If
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
+            The icon is decorative: it is not included in the heading's
+            accessible name and does not affect the auto-generated anchor.
+
         width : "stretch", "content", or int
             The width of the title element. This can be one of the following:
 
@@ -411,30 +435,6 @@ class HeadingMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
-        icon : str or None
-            An optional emoji or icon to display next to the title. If
-            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
-            Empty string is accepted so you can pass ``page.icon`` when a
-            page has no icon. If ``icon`` is a non-empty string, the
-            following options are valid:
-
-            - A single-character emoji. For example, you can set ``icon="🚨"``
-              or ``icon="🔥"``. Emoji short codes are not supported.
-
-            - An icon from the Material Symbols library (rounded style) in the
-              format ``":material/icon_name:"`` where "icon_name" is the name
-              of the icon in snake case.
-
-              For example, ``icon=":material/thumb_up:"`` will display the
-              Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
-              font library.
-
-            - ``"spinner"``: Displays a spinner as an icon.
-
-            The icon is decorative: it is not included in the heading's
-            accessible name and does not affect the auto-generated anchor.
-
         wrap : bool
             Whether the title can wrap onto multiple lines. This can be one
             of the following:
@@ -456,7 +456,7 @@ class HeadingMixin:
 
         .. output::
            https://doc-title.streamlit.app/
-           height: 220px
+           height: 320px
 
         """
         layout_config = create_layout_config(

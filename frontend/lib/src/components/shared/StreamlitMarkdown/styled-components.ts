@@ -610,6 +610,10 @@ export const StyledHeadingIcon = styled.span(({ theme }) => ({
   lineHeight: theme.lineHeights.none,
   width: "1em",
   height: `${theme.lineHeights.headings}em`,
+  // Clip to the 1em box so Material ligature names (e.g. "star") cannot
+  // expand the heading before the icon font loads. Keep a fixed width
+  // (not minWidth) so that pre-load text cannot grow the box. Emoji and
+  // spinner glyphs are optically shrunk to fit inside 1em.
   overflow: "hidden",
   userSelect: "none",
   boxSizing: "border-box",

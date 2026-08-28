@@ -436,18 +436,20 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // optional decorative leading icon. Those are rendered inside the <h*> for
   // layout, but must not become part of the heading's accessible name.
   //
-  // aria-labelledby points at a span that wraps only the body text so the name
-  // stays stable (visible heading text only).
+  // The body is always wrapped in a data-heading-text span so auto-anchor
+  // slugs ignore the icon and action elements. aria-labelledby points at that
+  // span when action elements are present so the accessible name stays the
+  // visible heading text. The leading icon is aria-hidden, so it is not part
+  // of this condition.
   //
   // useId() keeps the label span id unique even when headings share an anchor slug.
   //
-  // Set aria-labelledby when action elements or a leading icon are present:
+  // Set aria-labelledby when action elements are present:
   // - help: tooltip can appear even in sidebar/dialog (no heading id/anchor)
   // - anchor icon: only when we have an elementId and it's not hidden
-  // - icon: decorative leading icon must not pollute the accessible name
   const rawHeadingTextId = useId()
   const headingTextId =
-    help || icon || (elementId && !hideAnchor && !isInSidebarOrDialog)
+    help || (elementId && !hideAnchor && !isInSidebarOrDialog)
       ? rawHeadingTextId
       : undefined
 
@@ -460,8 +462,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     ...ariaLabelledbyAttribute,
   }
   const Tag = tag
-  const needsHeadingTextSpan = Boolean(headingTextId) || truncate
-  const headingText = needsHeadingTextSpan ? (
+  const headingText = (
     <StyledHeadingText
       id={headingTextId}
       ref={titleRef}
@@ -476,8 +477,6 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
         children
       )}
     </StyledHeadingText>
-  ) : (
-    children
   )
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but

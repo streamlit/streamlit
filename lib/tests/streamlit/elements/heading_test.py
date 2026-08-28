@@ -464,70 +464,33 @@ class StTitleTest(DeltaGeneratorTestCase):
 class StHeadingIconTest(DeltaGeneratorTestCase):
     """Test the shared icon parameter on st.title / st.header / st.subheader."""
 
-    @parameterized.expand(
-        [
-            (st.header, "some header"),
-            (st.subheader, "some subheader"),
-            (st.title, "some title"),
-        ]
-    )
-    def test_icon_defaults_to_empty(self, heading_fn, body):
+    def test_omitted_icon_serializes_to_empty(self):
         """Test that omitting icon leaves an empty proto field."""
-        heading_fn(body)
+        st.header("some header")
         el = self.get_delta_from_queue().new_element
         assert el.heading.icon == ""
 
     @parameterized.expand(
         [
-            (st.header, "some header"),
-            (st.subheader, "some subheader"),
-            (st.title, "some title"),
+            (st.header, "some header", None, ""),
+            (st.header, "some header", "", ""),
+            (st.header, "some header", "🔥", "🔥"),
+            (
+                st.header,
+                "some header",
+                ":material/thermostat:",
+                ":material/thermostat:",
+            ),
+            (st.header, "some header", "spinner", "spinner"),
+            (st.subheader, "some subheader", "🚨", "🚨"),
+            (st.title, "some title", ":material/dashboard:", ":material/dashboard:"),
         ]
     )
-    def test_icon_none_serializes_to_empty(self, heading_fn, body):
-        """Test that icon=None serializes to empty string on the proto."""
-        heading_fn(body, icon=None)
-        el = self.get_delta_from_queue().new_element
-        assert el.heading.icon == ""
-
-    @parameterized.expand(
-        [
-            (st.header, "some header"),
-            (st.subheader, "some subheader"),
-            (st.title, "some title"),
-        ]
-    )
-    def test_icon_empty_string_serializes_to_empty(self, heading_fn, body):
-        """Test that icon="" is treated like None (e.g. page.icon when unset)."""
-        heading_fn(body, icon="")
-        el = self.get_delta_from_queue().new_element
-        assert el.heading.icon == ""
-
-    @parameterized.expand(
-        [
-            (":material/thermostat:", ":material/thermostat:"),
-            ("🔥", "🔥"),
-            ("spinner", "spinner"),
-        ]
-    )
-    def test_icon_forwards_to_proto(self, icon_value, expected):
-        """Test that validated icon values are forwarded to the proto field."""
-        st.header("some header", icon=icon_value)
-        el = self.get_delta_from_queue().new_element
-        assert el.heading.icon == expected
-
-    @parameterized.expand(
-        [
-            (st.header, "some header", "🔥"),
-            (st.subheader, "some subheader", "🚨"),
-            (st.title, "some title", ":material/dashboard:"),
-        ]
-    )
-    def test_icon_accepted_by_all_heading_commands(self, heading_fn, body, icon):
-        """Test that each heading command accepts and forwards icon."""
+    def test_icon_serializes_to_proto(self, heading_fn, body, icon, expected):
+        """Test that icon values are forwarded (None and "" become empty)."""
         heading_fn(body, icon=icon)
         el = self.get_delta_from_queue().new_element
-        assert el.heading.icon == icon
+        assert el.heading.icon == expected
 
     @parameterized.expand(
         [
