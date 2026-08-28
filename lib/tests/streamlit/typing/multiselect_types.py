@@ -116,6 +116,11 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["a", "b"], wrap=False), list[str])
     assert_type(multiselect("foo", ["a", "b"], wrap=None), list[str])
 
+    # Check select_all parameter
+    assert_type(multiselect("foo", ["a", "b"], select_all=True), list[str])
+    assert_type(multiselect("foo", ["a", "b"], select_all=False), list[str])
+    assert_type(multiselect("foo", ["a", "b"], select_all=1000), list[str])
+
     def on_multiselect_change(prefix: str) -> None: ...
 
     # Non-literal accept_new_options returns the union of both result types.
@@ -143,6 +148,10 @@ if TYPE_CHECKING:
             label_visibility="visible",
             width=400,
             persist_state="session",
+            select_all=False,
         ),
         list[int],
     )
+
+    # Invalid select_all type
+    multiselect("foo", ["a", "b"], select_all="yes")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
