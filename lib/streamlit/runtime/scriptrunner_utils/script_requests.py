@@ -54,6 +54,10 @@ class RerunData:
     fragment_id: str | None = None
     # The queue of fragment_ids waiting to be run.
     fragment_id_queue: list[str] = field(default_factory=list)
+    # True when the user explicitly scoped the rerun to fragment(s) — via
+    # scope="fragment" (self-targeting) or a key / list of keys (targeting
+    # other fragments by name). False for default widget-interaction reruns
+    # inside a fragment, even though those also populate fragment_id_queue.
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False

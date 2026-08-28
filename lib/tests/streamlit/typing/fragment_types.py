@@ -46,12 +46,19 @@ if TYPE_CHECKING:
 
     assert_type(timed_fragment_str(), str)
 
-    # With key parameter
+    # With key parameter (str)
     @st.fragment(key="charts")
     def keyed_fragment() -> None:
         pass
 
     assert_type(keyed_fragment(), None)
+
+    # With key parameter (int)
+    @st.fragment(key=42)
+    def keyed_fragment_int() -> None:
+        pass
+
+    assert_type(keyed_fragment_int(), None)
 
     # With key=None (default)
     @st.fragment(key=None)

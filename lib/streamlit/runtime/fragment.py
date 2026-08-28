@@ -122,6 +122,7 @@ class FragmentStorage(Protocol):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
+        definition_id: str | None = None,
     ) -> None:
         """Store a fragment definition.
 
@@ -267,6 +268,10 @@ class MemoryFragmentStorage(FragmentStorage):
         # Uses dict[str, None] for O(1) membership checks with stable insertion order.
         self._ids_by_target_key: dict[str, dict[str, None]] = {}
         self._target_key_by_id: dict[str, str] = {}
+        # Durable mapping from user key to fragment definition id.  Survives
+        # fragment-only reruns so a partial rerun cannot steal a key owned by a
+        # non-re-executing fragment with a different definition.
+        self._definition_id_by_key: dict[str, str] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -307,6 +312,7 @@ class MemoryFragmentStorage(FragmentStorage):
             del ids[fragment_id]
             if not ids:
                 del self._ids_by_target_key[target_key]
+                self._definition_id_by_key.pop(target_key, None)
 
     def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
@@ -342,8 +348,14 @@ class MemoryFragmentStorage(FragmentStorage):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
+        definition_id: str | None = None,
     ) -> None:
         with self._lock:
+            if target_key is not None and definition_id is not None:
+                existing = self._definition_id_by_key.get(target_key)
+                if existing is not None and existing != definition_id:
+                    raise StreamlitDuplicateElementKey(target_key)
+                self._definition_id_by_key[target_key] = definition_id
             self._registration_sequence += 1
             self._fragments[key] = fragment
             self._parent_by_id[key] = parent_fragment_id
@@ -544,7 +556,7 @@ def _fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
-    key: str | None = None,
+    key: str | int | None = None,
     additional_hash_info: str = "",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
@@ -555,12 +567,10 @@ def _fragment(
     """
 
     if key is not None:
-        if not isinstance(key, str):
-            raise StreamlitAPIException(
-                f"The fragment `key` must be a string, not `{type(key).__name__}`."
-            )
+        from streamlit.elements.lib.utils import to_key
         from streamlit.runtime.state.common import require_valid_user_key
 
+        key = to_key(key)
         require_valid_user_key(key)
 
     if key in _RESERVED_FRAGMENT_KEYS:
@@ -599,16 +609,12 @@ def _fragment(
             f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
 
-        # Unlike the fragment id, this identifies the fragment function itself
-        # (no delta path), so different call sites of one keyed fragment share it
-        # and don't collide on the per-run key-uniqueness check below.
+        fragment_definition_id: str | None = None
         if key is not None:
             fragment_definition_id = (
                 f"{non_optional_func.__module__}."
                 f"{get_object_name(non_optional_func)}{additional_hash_info}"
             )
-            if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
-                raise StreamlitDuplicateElementKey(key)
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
@@ -736,6 +742,7 @@ def _fragment(
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,
             target_key=key,
+            definition_id=fragment_definition_id,
         )
 
         if run_every:
@@ -766,7 +773,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
-    key: str | None = None,
+    key: str | int | None = None,
 ) -> F: ...
 
 
@@ -778,7 +785,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
-    key: str | None = None,
+    key: str | int | None = None,
 ) -> Callable[[F], F]: ...
 
 
@@ -788,7 +795,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
-    key: str | None = None,
+    key: str | int | None = None,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -871,13 +878,13 @@ def fragment(
             unsynchronized mutations of shared mutable resources across fragments
             unless you coordinate access explicitly.
 
-    key : str or None
+    key : str, int, or None
         An optional name for the fragment. If this is ``None`` (default),
         the fragment cannot be targeted by ``st.rerun``. When set, a widget
         callback can rerun this fragment with ``st.rerun("<key>")``.
         Each fragment function rendered in a run must use a unique key;
         multiple call sites of the same function share that key and rerun
-        together.
+        together. An ``int`` key is normalized to its string representation.
 
         A fragment key must be unique among the fragments that render in a
         single run, just like a widget ``key``. The names ``"app"`` and

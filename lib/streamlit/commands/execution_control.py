@@ -28,6 +28,7 @@ from streamlit.errors import (
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
     StreamlitPageNotFoundError,
+    StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import Page, _validate_registered_page
@@ -58,11 +59,13 @@ _KEYED_RERUN_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset(
 
 
 def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
-    """Whether this rerun is fragment-scoped (preempts the pending run body).
+    """Whether this rerun targets specific fragments rather than the whole app.
 
-    Returns ``True`` for any scope other than ``"app"`` — fragment self-reruns
-    and keyed targets both replace the interaction's default rerun regardless of
-    where the triggering widget lives.
+    Every scope other than ``"app"`` is a fragment rerun: ``"fragment"`` is the
+    self-targeting variant (rerun the fragment the callback lives in), while a
+    key or list of keys targets other fragments (or self) by name. All of these
+    set ``is_fragment_scoped_rerun=True`` on ``RerunData``, which lets the
+    script runner preempt the current run body.
 
     Note: callback-vote coalescing may still escalate to a full-app rerun if
     another callback returns normally or calls plain ``st.rerun()``; that
@@ -114,7 +117,8 @@ def _new_fragment_id_queue(
                 "Passing a fragment key to `st.rerun()` is only allowed from a "
                 "widget callback (e.g. `on_change` / `on_click`). Calling it "
                 "from the main script body or a fragment body would abort the "
-                "current run."
+                "current run. If you meant to rerun the whole app or the "
+                "current fragment, use `scope='app'` or `scope='fragment'`."
             )
         return ctx.fragment_storage.resolve_target(scope)
 
@@ -184,7 +188,7 @@ def _set_query_params_for_switch(
 
 @gather_metrics("rerun")
 def rerun(  # type: ignore[misc]
-    scope: Literal["app", "fragment"] | str | Sequence[str] = "app",
+    scope: Literal["app", "fragment"] | str | int | Sequence[str | int] = "app",
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Rerun the script immediately.
 
@@ -198,7 +202,7 @@ def rerun(  # type: ignore[misc]
 
     Parameters
     ----------
-    scope : "app", "fragment", str, or list of str
+    scope : "app", "fragment", str, int, or list of str/int
         Specifies what part of the app should rerun.
 
         - ``"app"`` (default): the full app reruns.
@@ -206,15 +210,23 @@ def rerun(  # type: ignore[misc]
           command is called. Only valid inside a fragment during a fragment
           rerun. Raises ``StreamlitAPIException`` during a full-app rerun or
           outside of a fragment.
-        - A fragment key (str) or list of fragment keys: reruns only the named
-          fragment(s), replacing the interaction's default rerun. The key must
-          match the ``key`` argument passed to ``@st.fragment(key=...)``.
+        - A fragment key (str or int) or list of fragment keys: reruns only the
+          named fragment(s), replacing the interaction's default rerun. The key
+          must match the ``key`` argument passed to ``@st.fragment(key=...)``.
+          An ``int`` key is normalized to its string representation.
           An unknown key raises ``StreamlitAPIException``. This form is only
           valid from a widget callback (``on_change`` / ``on_click``);
           calling it from the main script body or a fragment body raises
           ``StreamlitAPIException``. If a sibling callback in the same
           interaction returns normally or calls ``st.rerun()``, the result
           escalates to a full-app rerun.
+
+        .. note::
+            When a keyed rerun replaces the interaction default, only the
+            targeted fragment(s) rerun. Other widgets changed in the same
+            interaction (e.g. form fields submitted alongside the callback)
+            have their values applied to session state, but they won't render
+            until the next full-app rerun.
 
     Examples
     --------
@@ -245,32 +257,54 @@ def rerun(  # type: ignore[misc]
     >>> )
 
     """
+    if isinstance(scope, int):
+        scope = str(scope)
+    if isinstance(scope, (bytes, bytearray)):
+        raise StreamlitInvalidParameterTypeError(
+            "scope",
+            type(scope).__name__,
+            ["str", "int", "list[str | int]"],
+        )
     if not isinstance(scope, (str, Sequence)):
-        raise StreamlitAPIException(
-            f"`scope` must be a string or a list of strings, "
-            f"not `{type(scope).__name__}`."
+        raise StreamlitInvalidParameterTypeError(
+            "scope",
+            type(scope).__name__,
+            ["str", "int", "list[str | int]"],
         )
     if isinstance(scope, str) and scope == "":
-        raise StreamlitAPIException(
-            "st.rerun() was called with an empty string scope. "
-            "Pass a fragment key, a list of keys, 'app', or 'fragment'."
+        raise StreamlitValueError(
+            "scope",
+            ["'app'", "'fragment'", "a fragment key", "a list of keys"],
+            detail="Got an empty string.",
         )
     if isinstance(scope, Sequence) and not isinstance(scope, str) and len(scope) == 0:
-        raise StreamlitAPIException(
-            "st.rerun() was called with an empty list scope. "
-            "Pass a fragment key, a list of keys, 'app', or 'fragment'."
+        raise StreamlitValueError(
+            "scope",
+            ["'app'", "'fragment'", "a fragment key", "a list of keys"],
+            detail="Got an empty list.",
         )
     if isinstance(scope, Sequence) and not isinstance(scope, str):
+        normalized: list[str] = []
         for name in scope:
-            if not isinstance(name, str):
-                raise StreamlitAPIException(
-                    f"Fragment keys must be strings, not `{type(name).__name__}`."
+            if isinstance(name, int):
+                normalized.append(str(name))
+            elif not isinstance(name, str):
+                raise StreamlitInvalidParameterTypeError(
+                    "scope list items",
+                    type(name).__name__,
+                    ["str", "int"],
                 )
+            else:
+                normalized.append(name)
+        for name in normalized:
             if name in {"app", "fragment"}:
-                raise StreamlitAPIException(
-                    f"'{name}' is a reserved scope name and cannot be used inside a list. "
-                    f"Pass '{name}' directly as a string, or use fragment keys only in lists."
+                raise StreamlitValueError(
+                    "scope",
+                    ["fragment keys"],
+                    detail=f"'{name}' is a reserved scope name and cannot appear inside a list. "
+                    f"Pass '{name}' directly as a string.",
                 )
+        scope = normalized
 
     ctx = get_script_run_ctx()
 

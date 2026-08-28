@@ -31,6 +31,7 @@ from streamlit.errors import (
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
     StreamlitPageNotFoundError,
+    StreamlitValueError,
 )
 from streamlit.navigation.page import Page
 from streamlit.runtime.scriptrunner import RerunData, RerunException
@@ -141,33 +142,77 @@ def test_st_rerun_scope_positional() -> None:
 
 
 def test_st_rerun_empty_string_raises() -> None:
-    """st.rerun('') raises StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="empty string scope"):
+    """st.rerun('') raises StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match="empty string"):
         rerun("")
 
 
 def test_st_rerun_empty_list_raises() -> None:
-    """st.rerun([]) raises StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="empty list scope"):
+    """st.rerun([]) raises StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match="empty list"):
         rerun([])
 
 
-def test_st_rerun_list_with_app_raises() -> None:
-    """st.rerun(['app']) raises StreamlitAPIException for reserved name."""
-    with pytest.raises(StreamlitAPIException, match="reserved"):
-        rerun(["app"])
+@pytest.mark.parametrize("reserved", ["app", "fragment"])
+def test_st_rerun_list_with_reserved_name_raises(reserved: str) -> None:
+    """st.rerun([<reserved>]) raises StreamlitValueError for reserved names."""
+    with pytest.raises(StreamlitValueError, match="reserved scope name"):
+        rerun([reserved])
 
 
-def test_st_rerun_list_with_fragment_raises() -> None:
-    """st.rerun(['fragment']) raises StreamlitAPIException for reserved name."""
-    with pytest.raises(StreamlitAPIException, match="reserved"):
-        rerun(["fragment"])
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_list_with_int_items_normalizes(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """st.rerun([1, 2]) normalizes int items to strings and resolves them."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_1", "frag_2"]
+    patched_get_script_run_ctx.return_value = ctx
 
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
 
-def test_st_rerun_list_with_non_string_raises() -> None:
-    """st.rerun([1, 2]) raises StreamlitAPIException for non-string items."""
-    with pytest.raises(StreamlitAPIException, match="strings"):
+    with pytest.raises(RerunException) as exc_info:
         rerun([1, 2])
+
+    ctx.fragment_storage.resolve_target.assert_called_once_with(["1", "2"])
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_1", "frag_2"]
+
+
+def test_st_rerun_list_with_invalid_type_raises() -> None:
+    """st.rerun([3.14]) raises StreamlitInvalidParameterTypeError for non-string/non-int items."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        rerun([3.14])
+
+
+def test_st_rerun_invalid_scope_type_raises() -> None:
+    """st.rerun(scope=3.14) raises StreamlitInvalidParameterTypeError for unsupported types."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        rerun(3.14)
+
+
+def test_st_rerun_bytes_scope_raises() -> None:
+    """st.rerun(b"charts") raises StreamlitInvalidParameterTypeError."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        rerun(b"charts")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_int_scope_normalizes(patched_get_script_run_ctx: MagicMock) -> None:
+    """st.rerun(scope=42) normalizes the int to '42' and resolves it."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_42"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    with pytest.raises(RerunException) as exc_info:
+        rerun(42)
+
+    ctx.fragment_storage.resolve_target.assert_called_once_with("42")
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_42"]
+    assert data.is_fragment_scoped_rerun is True
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")

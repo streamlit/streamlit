@@ -32,6 +32,8 @@ from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
+    StreamlitAPIException,
+    StreamlitDuplicateElementKey,
     StreamlitInvalidLayoutContextError,
 )
 from streamlit.proto.Block_pb2 import Block
@@ -2469,7 +2471,6 @@ def test_fragment_reserved_key_raises(reserved_key: str) -> None:
 
 def test_fragment_duplicate_key_different_definitions_raises() -> None:
     """Two different fragment definitions sharing a key raise StreamlitDuplicateElementKey."""
-    from streamlit.errors import StreamlitDuplicateElementKey
 
     mock_ctx = MagicMock()
     mock_ctx.fragment_storage = MemoryFragmentStorage()
@@ -2513,29 +2514,40 @@ def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:
         my_fragment()
 
 
-def test_shared_run_state_reset_clears_fragment_user_keys() -> None:
-    """reset() frees previously-claimed fragment user keys for the next run."""
-    shared = SharedRunState()
-
-    assert shared.register_fragment_user_key("my_key", "definition_a") is True
-    assert shared.register_fragment_user_key("my_key", "definition_b") is False
-
-    shared.reset()
-
-    assert shared.register_fragment_user_key("my_key", "definition_b") is True
-
-
-def test_fragment_different_definitions_same_key_collide() -> None:
-    """Two different fragment definitions using the same key in one run collide:
-    register_fragment_user_key returns False for the second definition_id.
-    """
-    shared = SharedRunState()
-
-    assert (
-        shared.register_fragment_user_key("shared_key", "mymodule.fragment_alpha")
-        is True
+def test_partial_rerun_rejects_duplicate_key_from_different_definition() -> None:
+    """A fragment-only rerun cannot steal a key owned by a non-re-executing fragment."""
+    storage = MemoryFragmentStorage()
+    storage.register(
+        "frag_a_id", lambda: None, target_key="charts", definition_id="module.func_a"
     )
-    assert (
-        shared.register_fragment_user_key("shared_key", "mymodule.fragment_beta")
-        is False
+    with pytest.raises(StreamlitDuplicateElementKey):
+        storage.register(
+            "frag_c_id",
+            lambda: None,
+            target_key="charts",
+            definition_id="module.func_c",
+        )
+
+
+def test_same_definition_can_reregister_key() -> None:
+    """Multiple call sites of one keyed fragment share the key without collision."""
+    storage = MemoryFragmentStorage()
+    storage.register(
+        "frag_id_1", lambda: None, target_key="charts", definition_id="module.func_a"
     )
+    storage.register(
+        "frag_id_2", lambda: None, target_key="charts", definition_id="module.func_a"
+    )
+
+
+def test_definition_id_cleaned_up_when_last_fragment_removed() -> None:
+    """After all fragments for a key are removed, a new definition can claim it."""
+    storage = MemoryFragmentStorage()
+    storage.register(
+        "frag_a", lambda: None, target_key="charts", definition_id="module.func_a"
+    )
+    storage.clear(new_fragment_ids=frozenset())
+    storage.register(
+        "frag_b", lambda: None, target_key="charts", definition_id="module.func_b"
+    )
+    assert storage.resolve_target("charts") == ["frag_b"]

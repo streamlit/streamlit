@@ -30,3 +30,7 @@ if TYPE_CHECKING:
 
     # st.rerun() returns NoReturn for all scope variants.
     assert_type(rerun(), NoReturn)
+    assert_type(rerun(scope="app"), NoReturn)
+    assert_type(rerun(scope=42), NoReturn)
+    assert_type(rerun(scope=["charts", "table"]), NoReturn)
+    assert_type(rerun(scope=[1, 2]), NoReturn)
