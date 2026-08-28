@@ -1982,10 +1982,9 @@ describe("DateTimeInput widget", () => {
   })
 
   describe("Time given before a date", () => {
-    /** Empty widget, so the date segments stay placeholders — the state in which
-     * DateField reports no value at all. min/max are pinned to November 2025 so
-     * the calendar clamps to a deterministic month rather than opening on
-     * today's, which is what makes the /November 19/ day locator reliable. */
+    /** Empty widget, so the date segments stay placeholders. min/max are pinned to
+     * November 2025 so the calendar clamps to a deterministic month rather than
+     * opening on today's, which is what makes the /November 19/ locator reliable. */
     const emptyProps = (): Props =>
       getProps({
         default: [],
@@ -2207,7 +2206,7 @@ describe("DateTimeInput widget", () => {
       spy.mockClear()
 
       // Type inline first, then override in the popover. Both hold a time at
-      // once and both are on screen, so the later edit is the one meant.
+      // once and both are on screen, so the control focused most recently wins.
       const segments = screen.getAllByRole("spinbutton")
       await user.click(segments[3])
       await user.keyboard("03")
@@ -2644,6 +2643,56 @@ describe("DateTimeInput widget", () => {
           }
         )
       })
+    })
+
+    it("prefers the popover draft over an inline one when dismissed together", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // A complete date plus an hour inline, so the field still reports nothing
+      // and holds an 03:00 draft of its own.
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.keyboard("03")
+
+      // Then a different, complete time in the popover — focused last, so it wins.
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T09:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      // The inline draft must not win, and must not commit as a second value.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T03:00"],
+        expect.anything()
+      )
+      expect(spy).toHaveBeenCalledTimes(1)
     })
 
     it("merges a lone popover hour as the top of that hour", async () => {

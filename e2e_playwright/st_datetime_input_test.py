@@ -281,8 +281,6 @@ def test_keeps_time_given_before_a_date(app: Page):
     expect(calendar).not_to_be_visible()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Value 8:", re.compile(r"\d{4}-\d{2}-\d{2} 09:45:00"))
-    # The popover time must reach the value rather than being dropped to midnight.
-    expect(app.get_by_text(re.compile(r"Value 8: .* 00:00:00"))).not_to_be_visible()
 
     datetime_input.get_by_test_id("stDateTimeInputClearButton").click()
     wait_for_app_run(app)

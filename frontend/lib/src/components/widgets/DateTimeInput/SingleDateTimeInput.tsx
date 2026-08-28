@@ -156,6 +156,14 @@ function SingleDateTimeInput({
   const activeOriginRef = useRef<HTMLElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
 
+  // Three React Aria constraints shape the state below, referred to by name:
+  // - WITHHELD ONCHANGE: `DateField` and `TimeField` report no value until every
+  //   one of their segments is filled, so a partial entry reaches no handler.
+  // - RE-SEED: a controlled `value` resets the field's segment display state, and
+  //   an unchanged `value` leaves whatever the user typed in place.
+  // - IOS ROLES: segments render as textboxes rather than spinbuttons there, so
+  //   `role`-based queries find nothing and `aria-valuenow` is dropped.
+
   // --- Two-layer state ---
   const [displayValue, setDisplayValue] = useState<CalendarDateTime | null>(
     value
@@ -172,14 +180,12 @@ function SingleDateTimeInput({
   // rather than edit, so merely tabbing through flips it — harmless, because an
   // untouched control reads as null and the fallback applies.
   const lastTimeSourceRef = useRef<"inline" | "popover">("inline")
-  // A complete time set in the popover before any date exists. React Aria resets
-  // the TimeField's segments from its controlled `value` the moment they
-  // complete, so without holding the time here it would blank out as the user
-  // finished typing it.
+  // A complete time set in the popover before any date exists — without holding it
+  // here, RE-SEED would blank the segments as the user finished typing.
   //
-  // Display buffer only: `resolveGivenTime` never reads it, because a *partial*
-  // popover time never reaches `onChange` and so never lands here. What commits
-  // is always re-read from the rendered segments.
+  // Display buffer only: `resolveGivenTime` never reads it, since WITHHELD ONCHANGE
+  // means a partial popover time never lands here. What commits is re-read from
+  // the rendered segments.
   const [pendingTime, setPendingTime] = useState<Time | null>(null)
 
   const [prevValue, setPrevValue] = useState(value)
@@ -281,11 +287,11 @@ function SingleDateTimeInput({
       // placeholder. Complete the value from what is on screen instead of
       // discarding halves the user can see.
       //
-      // Keyed off the field having no value rather than off `isPartiallyTyped`:
-      // clearing one segment of an existing value also reads as partially typed
-      // (React Aria reports nothing unless every segment is cleared), and that is
-      // an edit in progress rather than two halves to combine. Using the readers
-      // also keeps this working on iOS, where `getSegmentState` matches nothing.
+      // Keyed off the field having no value rather than off `isPartiallyTyped`,
+      // for two reasons: clearing one segment of an existing value also reads as
+      // partially typed, and that is an edit in progress rather than two halves to
+      // combine; and `getSegmentState` matches nothing under IOS ROLES, where the
+      // readers still work.
       //
       // Read before `setPendingTime(null)` below, so the merge never depends on
       // React batching that clear: flushing it would blank the popover's segments.
@@ -331,6 +337,14 @@ function SingleDateTimeInput({
       }
 
       lastCommittedRef.current = pending
+      // Keep the latest-value ref in step with what was just committed, rather
+      // than waiting for the value round-trip. An outside click commits on
+      // pointerdown and the browser then fires blur, so a second pass can run
+      // before that round-trip lands; without this it would re-read the DOM with
+      // the popover already unmounted and could commit a different draft. Not
+      // test-pinned — jsdom flushes renders between events, so it cannot order
+      // the two.
+      displayValueRef.current = pending
       onChangeRef.current(pending)
       formCommitRef.current?.(pending)
       return true
@@ -403,9 +417,9 @@ function SingleDateTimeInput({
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
-  // Matches segments on `role`, unlike the form-clear effect above: this path
-  // predates it and shares the iOS gap tracked for `getSegmentState`, where React
-  // Aria renders segments as textboxes and neither query finds them.
+  // Matches segments on `role`, unlike the form-clear effect above, and so shares
+  // the iOS gap tracked for `getSegmentState`: React Aria renders segments as
+  // textboxes there and neither query finds them.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
     if (isCalendarActiveRef.current && activeOriginRef.current) {
