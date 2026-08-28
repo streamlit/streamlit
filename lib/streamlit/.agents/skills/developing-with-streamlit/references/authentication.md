@@ -35,13 +35,12 @@ if st.button("Log out"):
 **Why st.login:**
 - Real per-user identity from a trusted provider (Google, Microsoft, Okta, Auth0, …)
 - Signed identity cookie — can't be faked client-side
-- Streamlit enables CORS and XSRF protection automatically when auth is configured
+- Configuring `[auth]` turns on XSRF protection automatically
 - `st.user` exposes verified claims (email, name, etc.); no password handling in your code
 
 ## Requirements
 
-- **Streamlit >= 1.42** — this is when `st.login` / `st.logout` / `st.user` shipped.
-- **Authlib >= 1.3.2** — the auth flow depends on it. Install both with the extra:
+The auth flow needs the optional `auth` extra, which pulls in Authlib:
 
 ```shell
 pip install "streamlit[auth]"
