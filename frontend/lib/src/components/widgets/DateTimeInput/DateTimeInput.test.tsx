@@ -2695,6 +2695,54 @@ describe("DateTimeInput widget", () => {
       expect(spy).toHaveBeenCalledTimes(1)
     })
 
+    it("commits the same value again after a form clear", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+
+      const enterSameValue = async (): Promise<void> => {
+        const field = screen.getByTestId("stDateTimeInputField")
+        await user.click(within(field).getAllByRole("spinbutton")[0])
+        await user.keyboard("20251119")
+        await user.keyboard("1200")
+        await user.click(screen.getByTestId("outside"))
+        await waitFor(() => {
+          expect(
+            screen.queryByTestId("stDateTimeInputCalendar")
+          ).not.toBeInTheDocument()
+        })
+      }
+
+      await enterSameValue()
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+      spy.mockClear()
+
+      // Re-entering the value that was just submitted has to reach widget state
+      // again — the dedup memory must not outlive the clear.
+      await enterSameValue()
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T12:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
     it("merges a lone popover hour as the top of that hour", async () => {
       const user = userEvent.setup()
       const props = emptyProps()

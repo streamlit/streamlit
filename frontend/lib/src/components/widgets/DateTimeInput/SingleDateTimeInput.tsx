@@ -207,6 +207,11 @@ function SingleDateTimeInput({
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
     setPendingTime(null)
+    // A clear ends the interaction, so the dedup memory goes with it: re-entering
+    // the value that was just submitted has to commit again. In practice the
+    // clear also changes `value`, which resets this in the block above, but that
+    // is a coincidence of the two paths rather than something to rely on.
+    lastCommittedRef.current = undefined
     shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
       document.activeElement
     )
