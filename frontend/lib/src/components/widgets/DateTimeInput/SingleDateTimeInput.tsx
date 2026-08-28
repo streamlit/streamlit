@@ -89,6 +89,10 @@ import {
   StyledVisuallyHidden,
 } from "./styled-components"
 
+/** Editable segments, matched on `data-type` rather than `role` so IOS ROLES does
+ * not hide them. Literals are the separators between segments. */
+const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
+
 interface SingleDateTimeInputProps {
   value: CalendarDateTime | null
   onChange: (value: CalendarDateTime | null) => void
@@ -346,9 +350,7 @@ function SingleDateTimeInput({
       // than waiting for the value round-trip. An outside click commits on
       // pointerdown and the browser then fires blur, so a second pass can run
       // before that round-trip lands; without this it would re-read the DOM with
-      // the popover already unmounted and could commit a different draft. Not
-      // test-pinned — jsdom flushes renders between events, so it cannot order
-      // the two.
+      // the popover already unmounted and could commit a different draft.
       displayValueRef.current = pending
       onChangeRef.current(pending)
       formCommitRef.current?.(pending)
@@ -385,9 +387,7 @@ function SingleDateTimeInput({
     if (!shouldRestoreFocusRef.current) return
     shouldRestoreFocusRef.current = false
     isRestoringFocusRef.current = true
-    triggerRef.current
-      ?.querySelector<HTMLElement>('[data-type]:not([data-type="literal"])')
-      ?.focus()
+    triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
     isRestoringFocusRef.current = false
   }, [formResetKey])
 
@@ -422,17 +422,13 @@ function SingleDateTimeInput({
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
-  // Matches segments on `role`, unlike the form-clear effect above, and so shares
-  // the iOS gap tracked for `getSegmentState`: React Aria renders segments as
-  // textboxes there and neither query finds them.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
     if (isCalendarActiveRef.current && activeOriginRef.current) {
       activeOriginRef.current.focus()
     } else {
-      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
+      const segments =
+        triggerRef.current?.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
       const lastSegment = segments?.[segments.length - 1]
       if (lastSegment) {
         lastSegment.focus()

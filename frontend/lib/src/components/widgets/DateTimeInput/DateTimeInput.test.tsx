@@ -2934,8 +2934,8 @@ describe("DateTimeInput widget", () => {
         expect(first).toHaveFocus()
       })
       expect(document.body).not.toHaveFocus()
-      // The popover stays open across a form clear, as it did before this change —
-      // focusing a segment is what opens it, so the restore cannot close it.
+      // The popover stays open across a form clear: focusing a segment is what
+      // opens it, so the focus restore cannot close it.
       expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
     })
 
