@@ -1343,7 +1343,7 @@ describe("TextInput live updates", () => {
   } => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const props = getProps(
-      { liveDebounceMs: 300, ...elementProps },
+      { liveDebounceMs: 250, ...elementProps },
       widgetProps
     )
     const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
@@ -1372,7 +1372,7 @@ describe("TextInput live updates", () => {
     const { user, props, setStringValueSpy } = renderLive()
 
     await user.type(screen.getByRole("textbox"), "abc")
-    advanceMs(299)
+    advanceMs(249)
     expect(setStringValueSpy).not.toHaveBeenCalled()
 
     advanceMs(1)
@@ -1417,7 +1417,7 @@ describe("TextInput live updates", () => {
     await user.type(screen.getByRole("textbox"), "ab")
     advanceMs(200)
     await user.type(screen.getByRole("textbox"), "c")
-    advanceMs(299)
+    advanceMs(249)
     expect(setStringValueSpy).not.toHaveBeenCalled()
 
     advanceMs(1)

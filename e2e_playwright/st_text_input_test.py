@@ -893,7 +893,7 @@ def test_text_input_live_search_clear_and_form(app: Page):
 
     live_form = get_text_input(app, "Live form input").locator("input").first
     live_form.type("inside")
-    # Default live debounce is 300ms; wait past it to prove forms don't live-commit.
+    # Default live debounce is 250ms; wait past it to prove forms don't live-commit.
     wait_for_app_run(app, initial_wait=600)
     expect(app.get_by_text("Live form value: inside")).to_have_count(0)
     click_form_button(app, "Submit live form")
@@ -911,7 +911,7 @@ def test_text_input_live_ignore_validate_and_fragment(app: Page):
 
     live_ignore = get_text_input(app, "Live ignore input").locator("input").first
     live_ignore.type("staged")
-    # Wait past the 300ms default debounce to prove ignore does not rerun.
+    # Wait past the 250ms default debounce to prove ignore does not rerun.
     wait_for_app_run(app, initial_wait=600)
     expect(app.get_by_text("Live ignore value: staged")).to_have_count(0)
     expect_prefixed_markdown(app, "Outside fragment counter:", "1")

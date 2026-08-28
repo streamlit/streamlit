@@ -117,7 +117,7 @@ def _parse_text_input_validate(
 
 
 # Default pause used when ``live=True``.
-_DEFAULT_LIVE_DEBOUNCE_MS: Final = 300
+_DEFAULT_LIVE_DEBOUNCE_MS: Final = 250
 # Cap at 1 minute so a typo like "60m" or "2h" cannot schedule a multi-day
 # debounce (uint32 would allow ~49 days).
 _MAX_LIVE_DEBOUNCE_MS: Final = 60_000
@@ -138,7 +138,7 @@ def _parse_text_input_live(live: object) -> int | None:
     if isinstance(live, (int, float, timedelta)):
         raise StreamlitAPIException(
             "The `live` parameter does not accept a number or "
-            "`datetime.timedelta`. Use `True` for a 300ms pause, "
+            "`datetime.timedelta`. Use `True` for a 250ms pause, "
             "or a duration string like `'300ms'` or `'0.5s'`. "
             "`live=300` is not milliseconds (and `live=0.3` is not "
             "seconds); duration units must be explicit."
@@ -549,10 +549,10 @@ class TextWidgetsMixin:
 
             - ``False`` (default): Commit on blur, Enter, or clearing a
               ``type="search"`` input.
-            - ``True``: Commit after 300ms of inactivity following an
+            - ``True``: Commit after 250ms of inactivity following an
               accepted user-originated value change.
             - A duration string (same format as ``ttl`` in
-              ``st.cache_data``, for example ``"300ms"`` or ``"0.5s"``):
+              ``st.cache_data``, for example ``"250ms"`` or ``"0.5s"``):
               Commit after that pause. Must be between 0 and 1 minute.
               ``"0ms"``, ``"0s"``, and ``"0"`` commit on every accepted
               user-originated value change.
@@ -759,7 +759,7 @@ class TextWidgetsMixin:
             placeholder=str(placeholder),
             icon=icon,
             width=width,
-            # Normalized milliseconds so `True` and `"300ms"` share an ID.
+            # Normalized milliseconds so `True` and `"250ms"` share an ID.
             live=live_debounce_ms,
             validate=identity_validate_regex,
         )

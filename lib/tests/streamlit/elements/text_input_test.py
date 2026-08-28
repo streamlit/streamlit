@@ -708,12 +708,12 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert not c.HasField("live_debounce_ms")
 
     def test_live_true_sets_default_debounce(self) -> None:
-        """Test that live=True marshals a 300ms debounce."""
+        """Test that live=True marshals a 250ms debounce."""
         st.text_input("the label", live=True)
 
         c = self.get_delta_from_queue().new_element.text_input
         assert c.HasField("live_debounce_ms")
-        assert c.live_debounce_ms == 300
+        assert c.live_debounce_ms == 250
 
     @parameterized.expand(
         [
@@ -747,7 +747,7 @@ class TextInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.text_input
         assert c.type == TextInput.PASSWORD
-        assert c.live_debounce_ms == 300
+        assert c.live_debounce_ms == 250
 
     def test_live_true_inside_form_still_sets_proto_field(self) -> None:
         """Test that forms still marshal live_debounce_ms; the no-op is frontend-only."""
@@ -756,7 +756,7 @@ class TextInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.text_input
         assert c.HasField("live_debounce_ms")
-        assert c.live_debounce_ms == 300
+        assert c.live_debounce_ms == 250
 
     @parameterized.expand(
         [
@@ -769,12 +769,13 @@ class TextInputTest(DeltaGeneratorTestCase):
     def test_live_number_or_timedelta_raises(
         self, live: int | float | timedelta
     ) -> None:
-        """Test that numbers and timedelta raise StreamlitAPIException pointing at True/'300ms'."""
+        """Test that numbers and timedelta point users to valid alternatives."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.text_input("the label", live=live)
 
         message = str(exc.value)
         assert "True" in message
+        assert "250ms" in message
         assert "300ms" in message
 
     @parameterized.expand(
@@ -858,17 +859,17 @@ class TextInputTest(DeltaGeneratorTestCase):
             assert omitted_id == expected_id
             assert false_id == expected_id
 
-    def test_live_true_and_300ms_share_identity(self) -> None:
-        """Test that live=True and live='300ms' hash the same normalized ms."""
+    def test_live_true_and_250ms_share_identity(self) -> None:
+        """Test that live=True and live='250ms' hash the same normalized ms."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
             st.text_input("Label", live=True)
             id_true = self.get_delta_from_queue().new_element.text_input.id
-            st.text_input("Label", live="300ms")
-            id_300ms = self.get_delta_from_queue().new_element.text_input.id
-            assert id_true == id_300ms
+            st.text_input("Label", live="250ms")
+            id_250ms = self.get_delta_from_queue().new_element.text_input.id
+            assert id_true == id_250ms
 
     def test_live_500ms_differs_from_true(self) -> None:
         """Test that a different delay produces a different unkeyed widget ID."""
