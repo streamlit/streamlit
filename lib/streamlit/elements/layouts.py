@@ -995,6 +995,8 @@ class LayoutsMixin:
             )
 
         if default and default not in tabs:
+            # StreamlitDefaultNotInOptionsError is worded for widget option
+            # values, not tab labels.
             raise StreamlitValueError(
                 "default",
                 ["a tab label from `tabs`"],

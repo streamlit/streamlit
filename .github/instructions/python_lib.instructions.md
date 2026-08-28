@@ -167,10 +167,11 @@ generic `StreamlitAPIException` with a one-off message.
   exception type. Optional `explanation` is appended when the generic
   "cannot be used together" message needs more context. Example:
   `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
-- `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
+- `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types, *, detail=None)`:
   use when a parameter has an unsupported type. `parameter` is appended in
   uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
-  Pass concise type names as strings; for example,
+  Pass concise type names as strings; optional `detail` appears in the error
+  message only. For example,
   `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
@@ -191,13 +192,9 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)
-  - `StreamlitDefaultNotInOptionsError` (default value not in widget `options`;
-    `st.tabs` `default` and integer `index` use `StreamlitValueError` because
-    this message is worded for option values, not tab labels or indices)
+  - `StreamlitDefaultNotInOptionsError` (default value not in widget `options`)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
-  - `BidiComponentError` (base for CCv2 bidi errors; keep the unprefixed
-    specialized subclasses — no `Streamlit` prefix)
 
 Reserve bare `StreamlitAPIException` for one-off cases that no shared type
 covers and that users are expected to hit uncommonly (serialization failures
