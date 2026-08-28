@@ -16,8 +16,6 @@
 
 import { ReactElement, useContext, useMemo } from "react"
 
-import classNames from "classnames"
-
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { BlockNode } from "~lib/AppNode"
@@ -225,10 +223,12 @@ export const FlexBoxContainer = (
     >
       <StyledFlexContainerBlock
         {...styles}
-        className={classNames(
+        className={[
           getClassnamePrefix(direction),
-          convertKeyToClassName(userKey)
-        )}
+          convertKeyToClassName(userKey),
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-testid={getClassnamePrefix(direction)}
         data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}

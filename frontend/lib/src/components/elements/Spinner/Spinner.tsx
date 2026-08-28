@@ -16,8 +16,6 @@
 
 import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
-import classNames from "classnames"
-
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
@@ -65,7 +63,7 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
 
   return (
     <StyledSpinner
-      className={classNames({ stSpinner: true, stCacheSpinner: cache })}
+      className={cache ? "stSpinner stCacheSpinner" : "stSpinner"}
       data-testid="stSpinner"
       cache={cache}
     >

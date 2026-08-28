@@ -39,7 +39,7 @@ export default defineConfig({
     sourcemap: DEV_BUILD || DEV_WATCH,
     reportCompressedSize: false,
     lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
+      entry: path.resolve(import.meta.dirname, "src/index.ts"),
       name: "@streamlit/component-v2-lib",
       formats: ["es"],
       fileName: () => `streamlit-component-v2-lib.mjs`,
