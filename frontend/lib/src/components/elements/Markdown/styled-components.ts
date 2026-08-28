@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,20 +14,12 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+import styled from "@emotion/styled"
 
-message Heading {
-  // h1, h2, h3, div, etc
-  string tag = 1;
-
-  string anchor = 2;
-  string body = 3;
-
-  string help = 4;
-  bool hide_anchor = 5;
-  string divider = 6;
-
-  // If false, the heading stays on one line and ellipsizes instead of wrapping.
-  // Absent or true means the heading wraps.
-  optional bool wrap = 7;
-}
+// Real box for the native `title` so help icons can sit as untitled siblings.
+// display:contents cannot carry `title`.
+export const StyledMarkdownTitleTarget = styled.div({
+  minWidth: 0,
+  flex: 1,
+  overflow: "hidden",
+})

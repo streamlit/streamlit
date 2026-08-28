@@ -17,12 +17,13 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expand_sidebar,
     expect_font,
     expect_help_tooltip,
+    expect_label_truncated,
     get_caption,
     get_element_by_key,
     get_markdown,
@@ -849,3 +850,88 @@ def test_mermaid_invalid_syntax_shows_error(app: Page):
     # The error chart is the 3rd one (index 2)
     error_chart = mermaid_charts.nth(2)
     expect(error_chart.locator("img")).to_have_count(0)
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+WRAPPED_HEIGHT_MARGIN = 4
+
+
+def test_wrap_false_ellipsizes_markdown_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False keeps markdown on one line, ellipsizes overflow, and exposes
+    the full text via a native title. wrap=True wraps and has no title.
+    """
+    no_wrap_container = get_element_by_key(app, "wrap_false_markdown")
+    wrap_container = get_element_by_key(app, "wrap_true_markdown")
+    no_wrap = no_wrap_container.get_by_test_id("stMarkdown")
+    wraps = wrap_container.get_by_test_id("stMarkdown")
+
+    expect(no_wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect(wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
+    expect_label_truncated(no_wrap)
+
+    help_container = get_element_by_key(app, "wrap_false_markdown_help")
+    help_md = help_container.get_by_test_id("stMarkdown")
+    expect(help_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect_label_truncated(help_md)
+    expect(help_md.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
+    expect_help_tooltip(app, help_md, "wrap help text")
+
+    horizontal_container = get_element_by_key(app, "wrap_false_horizontal_markdown")
+    horizontal = horizontal_container.get_by_test_id("stMarkdown")
+    expect(horizontal_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect_label_truncated(horizontal)
+
+    false_box = no_wrap.bounding_box()
+    true_box = wraps.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(no_wrap_container, name="st_markdown-wrap_false")
+
+
+def test_wrap_false_keeps_block_markdown_on_one_line(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False label-mode markdown stays one line even with headings, tables,
+    and fenced code. Block tags are omitted or unwrapped; height matches a
+    single-sentence wrap=False markdown element.
+    """
+    block_container = get_element_by_key(app, "wrap_false_block_markdown")
+    block = block_container.get_by_test_id("stMarkdown")
+    single = get_element_by_key(app, "wrap_false_markdown").get_by_test_id("stMarkdown")
+
+    expect(block.get_by_test_id("stMarkdownPre")).to_have_count(0)
+    expect(block.get_by_role("heading")).to_have_count(0)
+    expect(block.locator("table")).to_have_count(0)
+    expect(block.locator("ul")).to_have_count(0)
+
+    block_box = block.bounding_box()
+    single_box = single.bounding_box()
+    assert block_box is not None
+    assert single_box is not None
+    assert abs(block_box["height"] - single_box["height"]) < WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(block_container, name="st_markdown-wrap_false_block")
+
+
+def test_badge_with_help_stays_in_container(app: Page):
+    """A long badge with help ellipsizes the chip and stays inside the parent
+    instead of overflowing.
+    """
+    container = get_element_by_key(app, "badge_help")
+    badge = container.get_by_test_id("stMarkdown")
+
+    expect_help_tooltip(app, badge, "wrap help text")
+
+    chip = badge.locator(".stMarkdownBadge").first
+    wait_until(
+        app,
+        lambda: chip.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
+
+    container_box = container.bounding_box()
+    badge_box = badge.bounding_box()
+    assert container_box is not None
+    assert badge_box is not None
+    assert badge_box["width"] <= container_box["width"] + 1

@@ -73,20 +73,25 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
   - Search `specs/` for a relevant product spec. Product decisions explicitly described in a
     product spec that is already merged into the PR's base branch are considered approved and
     aligned; do not relitigate them. Instead, verify that the implementation follows the spec
-    and separately assess any user-facing behavior that the merged spec does not cover. A new
-    or modified spec in the current PR is not already approved by this rule.
+    and separately assess any user-facing behavior that the merged spec does not cover.
+    A new spec that exists only on the current PR is not already approved by this rule.
+  - Small, incremental edits to an already-merged product spec may land on the same
+    implementation PR. They do not require a separate spec PR. Treat those edits as expected
+    spec maintenance; do not request changes solely because the spec was updated here.
+    Still assess any newly introduced product decisions for alignment.
   - Read the PR body for explicit product-approval context. If it states that specific
     product-related decisions were explicitly approved, treat only those decisions as approved
     and aligned; do not relitigate them. Verify that the implementation matches the approved
     decisions and separately assess any user-facing behavior outside their stated scope. Do not
     infer approval from vague wording or the mere presence of product discussion.
-  - A new user-facing feature or significant public API change requires a product spec
+  - A brand-new user-facing feature or significant public API change requires a product spec
     already merged into the base branch unless the PR body explicitly documents approval of
     both the product change and proceeding without a merged spec. If neither condition is met,
     call this out as a merge-blocking Product Alignment issue: merge the product spec first,
     then the implementation (see `specs/README.md` and `specs/AGENTS.md`). A spec that exists
-    only on this implementation PR is not sufficient. Bug fixes, DevOps work, and small
-    non-controversial enhancements do not need a spec.
+    only on this implementation PR (not as an incremental update to a spec already on the
+    base branch) is not sufficient. Bug fixes, DevOps work, and small non-controversial
+    enhancements do not need a spec.
   - If neither a merged spec nor explicit PR-body approval covers a product decision, that
     absence is not approval. Request changes for material product/API alignment issues.
   - Inspect analogous Streamlit APIs, configs, and behaviors. Check that the proposed surface
@@ -154,14 +159,16 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 [State whether the PR has user-facing product impact. If yes, identify any relevant product
 spec already merged into the base branch, treat its documented product decisions as approved,
-and assess whether the implementation follows it. Also identify any specific product-related
-decisions that the PR body says were explicitly approved and assess whether the implementation
-matches them. If this is a new user-facing feature or significant public API change with neither
-a merged product spec nor explicit PR-body approval to proceed without one, request that the spec
-be merged before this implementation PR. For user-facing aspects not covered by either form of
-approval, assess the user value and complexity tradeoff, consistency with analogous Streamlit
-surfaces, and alignment with the principles in `specs/AGENTS.md`; clearly identify material
-issues that warrant requested changes. If no, state why this section is not applicable.]
+and assess whether the implementation follows it. Small, incremental updates to an
+already-merged spec on this PR are expected and do not need a separate spec PR; do not
+block on that. Also identify any specific product-related decisions that the PR body says
+were explicitly approved and assess whether the implementation matches them. If this is a
+brand-new user-facing feature or significant public API change with neither a merged product
+spec nor explicit PR-body approval to proceed without one, request that the spec be merged
+before this implementation PR. For user-facing aspects not covered by an approved spec or
+PR-body approval, assess the user value and complexity tradeoff, consistency with analogous
+Streamlit surfaces, and alignment with the principles in `specs/AGENTS.md`; clearly identify
+material issues that warrant requested changes. If no, state why this section is not applicable.]
 
 ## Code Quality
 
@@ -225,10 +232,12 @@ Verdict criteria:
 - Product feedback must cite concrete changed behavior and the relevant documented principle or
   established Streamlit pattern. Do not raise product feedback for a decision explicitly approved
   in the PR body unless the implementation deviates from that decision or introduces behavior
-  outside its stated scope. A new user-facing feature or significant public API change without a
-  product spec already merged into the base branch or explicit PR-body approval to proceed without
-  one is merge-blocking: request that the spec land first. For smaller changes that do not require
-  a spec, a missing merged spec is expected; still request changes for material alignment issues.
-  Product questions and optional refinements are non-blocking; request changes when a mismatch
-  would create material user harm or lasting, unjustified complexity in the public surface.
+  outside its stated scope. A brand-new user-facing feature or significant public API change
+  without a product spec already merged into the base branch or explicit PR-body approval to
+  proceed without one is merge-blocking: request that the spec land first. Small, incremental
+  changes to an already-merged product spec do not need a separate spec PR and are not
+  merge-blocking for that reason. For smaller changes that do not require a spec, a missing
+  merged spec is expected; still request changes for material alignment issues. Product
+  questions and optional refinements are non-blocking; request changes when a mismatch would
+  create material user harm or lasting, unjustified complexity in the public surface.
 - Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.

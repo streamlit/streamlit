@@ -69,6 +69,10 @@ if TYPE_CHECKING:
         DeltaGenerator,
     )
 
+    # Title with wrap parameter (keyword-only)
+    assert_type(title("Title", wrap=True), DeltaGenerator)
+    assert_type(title("Title", wrap=False), DeltaGenerator)
+
     # =====================================================================
     # st.header return type tests
     # =====================================================================
@@ -127,6 +131,10 @@ if TYPE_CHECKING:
         DeltaGenerator,
     )
 
+    # Header with wrap parameter (keyword-only)
+    assert_type(header("Header", wrap=True), DeltaGenerator)
+    assert_type(header("Header", wrap=False), DeltaGenerator)
+
     # =====================================================================
     # st.subheader return type tests
     # =====================================================================
@@ -178,6 +186,10 @@ if TYPE_CHECKING:
         DeltaGenerator,
     )
 
+    # Subheader with wrap parameter (keyword-only)
+    assert_type(subheader("Subheader", wrap=True), DeltaGenerator)
+    assert_type(subheader("Subheader", wrap=False), DeltaGenerator)
+
     # =====================================================================
     # Invalid usages - should NOT type check
     # =====================================================================
@@ -196,3 +208,8 @@ if TYPE_CHECKING:
     title("Title", "anchor", "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
     header("Header", "anchor", "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
     subheader("Subheader", "anchor", "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Invalid wrap value (must be bool)
+    title("Title", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    header("Header", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    subheader("Subheader", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
