@@ -15,8 +15,6 @@ This spec also **approves** a default keyboard change that ships with the parame
 
 The `select_all` API was merged in [#15300](https://github.com/streamlit/streamlit/pull/15300). **Keyboard / Enter below is an approved amendment by the spec author (`lukasmasuch`, 2026-08-28).** It is intended to land in the same implementation PR ([#16673](https://github.com/streamlit/streamlit/pull/16673)). It does not need a separate spec PR, and it is not an implementation-only deviation.
 
-Until #16673 merges, `develop` still has the older "unfocused Enter creates the typed value" wording from #15300. That copy is stale. The approved Keyboard / Enter spec is this file.
-
 Approved shipped defaults for apps that never pass `select_all`:
 
 1. Unfocused Enter commits the first visible row (replaces the RAC no-op).

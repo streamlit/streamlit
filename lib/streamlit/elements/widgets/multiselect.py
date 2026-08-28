@@ -196,6 +196,8 @@ def _check_max_selections(
         )
 
 
+# Annotated as ``object`` (not ``bool | int``) so the type-error branch below
+# stays reachable for values users pass at runtime.
 def _encode_select_all(select_all: object) -> int:
     """Validate ``select_all`` and encode it for the proto."""
     # Check bool before int so True encodes as always-show (-1), not 1.
@@ -210,7 +212,8 @@ def _encode_select_all(select_all: object) -> int:
                     "When using an int, `select_all` must be a non-negative integer."
                 ),
             )
-        # Thresholds above the int32 proto max already mean "always show".
+        # Clamp to the int32 max; a threshold that large is always-show for
+        # realistic lists.
         return min(select_all, _SELECT_ALL_MAX_THRESHOLD)
     raise StreamlitInvalidParameterTypeError(
         "select_all",
@@ -472,13 +475,11 @@ class MultiSelectMixin:
             This can be one of the following:
 
             - ``True``: Always show the option when two or more selectable
-              options remain.
-
-              .. note::
-                 ``True`` re-enables bulk-select on lists larger than the
-                 default 1000 threshold. Use it only for manageable option
-                 counts; selecting thousands of values at once can freeze
-                 the browser (see issue 15299).
+              options remain. This re-enables bulk-select on lists larger
+              than the default 1000 threshold. Use it only for manageable
+              option counts; selecting thousands of values at once can
+              freeze the browser (see `#15299
+              <https://github.com/streamlit/streamlit/issues/15299>`_).
             - ``False``: Never show the option.
             - A non-negative integer: Show the option when the selectable
               count is at or below this threshold. ``0`` never shows the

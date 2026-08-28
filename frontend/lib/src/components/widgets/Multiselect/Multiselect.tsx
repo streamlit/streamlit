@@ -176,21 +176,6 @@ const TagRemoveIcon: FC = () => (
   </svg>
 )
 
-/** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
-const renderOption = (item: unknown): ReactElement => {
-  const option = item as MultiselectOption
-  return (
-    <StyledListBoxItem
-      id={option.id}
-      textValue={option.label}
-      $isCreatable={option.isCreatable}
-      $isBulkAction={option.isBulkAction}
-    >
-      <StyledItemHighlight data-item-hl="">{option.label}</StyledItemHighlight>
-    </StyledListBoxItem>
-  )
-}
-
 /**
  * Pass-through filter for RAC's <ComboBox defaultFilter>. Our own
  * `filterSelectOptions` runs upstream in useMultiselectFiltering, so RAC
@@ -256,6 +241,7 @@ const Multiselect: FC<Props> = props => {
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >(null)
   const focusedKeyRef = useRef<Key | null>(null)
+  const hoveredKeyRef = useRef<Key | null>(null)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
   // flip up when near the bottom, rather than overflowing (see #16181).
@@ -495,7 +481,33 @@ const Multiselect: FC<Props> = props => {
     isOpenRef.current = open
     if (!open) {
       setInputValue("")
+      hoveredKeyRef.current = null
     }
+  }, [])
+
+  /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
+  const renderOption = useCallback((item: unknown): ReactElement => {
+    const option = item as MultiselectOption
+    return (
+      <StyledListBoxItem
+        id={option.id}
+        textValue={option.label}
+        $isCreatable={option.isCreatable}
+        $isBulkAction={option.isBulkAction}
+        onHoverStart={() => {
+          hoveredKeyRef.current = option.id
+        }}
+        onHoverEnd={() => {
+          if (hoveredKeyRef.current === option.id) {
+            hoveredKeyRef.current = null
+          }
+        }}
+      >
+        <StyledItemHighlight data-item-hl="">
+          {option.label}
+        </StyledItemHighlight>
+      </StyledListBoxItem>
+    )
   }, [])
 
   const handleTagGroupRemove = useCallback(
@@ -679,26 +691,30 @@ const Multiselect: FC<Props> = props => {
         }
       }
 
-      // Enter with no active descendant: commit the first visible row so
-      // users do not need ArrowDown first. The first row is "Select all" /
-      // "Select X matches" when that bulk action is shown, otherwise the
-      // first matching option. "Add: …" is last, so it is first only when
-      // the query matches no existing option. If a row is already focused
-      // (hovering a row also focuses it), RAC commits that row instead.
-      // TODO: Set RAC focusedKey / aria-activedescendant to that first row
+      // Enter with no RAC focusedKey: commit the hovered row if any,
+      // otherwise the first visible row so users do not need ArrowDown first.
+      // Hover paints data-hovered without setting focusedKey, so we track
+      // it separately. The first row is "Select all" / "Select X matches"
+      // when that bulk action is shown, otherwise the first matching option.
+      // "Add: …" is last, so it is first only when the query matches no
+      // existing option.
+      // TODO: Set RAC focusedKey / aria-activedescendant to the Enter target
       // (ComboBox focus-management follow-up; see StyledListBox).
       if (e.key === "Enter" && !e.nativeEvent.isComposing) {
         if (notNullOrUndefined(focusedKeyRef.current)) {
           return
         }
-        const first = displayOptionsRef.current[0]
         if (!isOpenRef.current) return
+        const hovered = hoveredKeyRef.current
+        const first = displayOptionsRef.current[0]
         // Swallow Enter when the menu is open with no rows (for example
         // max_selections reached) so RAC does not try to commit typed text.
         e.preventDefault()
         e.stopPropagation()
-        if (!first) return
-        handleChange([first.id])
+        const targetId = hovered ?? first?.id
+        if (notNullOrUndefined(targetId)) {
+          handleChange([targetId])
+        }
         return
       }
 

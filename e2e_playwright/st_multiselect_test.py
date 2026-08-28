@@ -73,7 +73,7 @@ def remove_from_multiselect(page: Page, label: str, option_text: str) -> None:
 
 def _close_dropdown(app: Page) -> None:
     app.keyboard.press("Escape")
-    expect(app.get_by_role("option")).to_have_count(0)
+    expect(app.get_by_test_id("stMultiSelectDropdown")).not_to_be_visible()
 
 
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -835,6 +835,16 @@ def test_select_all_parameter(app: Page):
     input_chips.click()
     expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
     expect(app.get_by_role("option", name="one", exact=True)).to_be_visible()
+
+    # Selecting one real option drops the selectable count to the threshold.
+    # Select all must appear even though a custom chip is also selected.
+    app.get_by_role("option", name="one", exact=True).click()
+    wait_for_app_run(app)
+    expect_text(app, "select_all custom chips: ['custom', 'one']")
+    _close_dropdown(app)
+
+    input_chips.click()
+    expect(app.get_by_role("option", name="Select all")).to_be_visible()
 
 
 # --- Query parameter binding tests ---

@@ -291,7 +291,9 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingRight: theme.spacing.none,
   listStyle: "none",
   margin: theme.spacing.none,
-  // First collection item is the Enter target when nothing is keyboard-focused.
+  // First collection item is the Enter target when nothing is keyboard-focused
+  // or hovered. Hover is tracked separately in Multiselect keydown because it
+  // paints data-hovered without setting RAC focusedKey.
   // Virtualizer wraps each option in its own [role=presentation], so :first-of-type
   // would match every row. aria-posinset marks the true first item.
   // TODO: Drive this highlight from RAC focusedKey / aria-activedescendant instead
