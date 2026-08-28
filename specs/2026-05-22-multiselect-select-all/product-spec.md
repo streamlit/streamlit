@@ -164,11 +164,13 @@ Both "Select all" and "Select X matches" are controlled by the same parameter. W
 
 **Keyboard / Enter:**
 
-When the bulk-action row is visible, it is the first dropdown item. Enter activates "Select all" / "Select X matches" when that row is focused. That is intended: if bulk-select is shown, activating it with Enter is the correct behavior.
+When no dropdown item is keyboard-focused, Enter commits the first visible row (the highlighted Enter target). Users do not need ArrowDown first. If a row is already focused, Enter activates that focused row.
+
+When the bulk-action row is visible, it is first, so Enter activates "Select all" / "Select X matches". That is intended: if bulk-select is shown, activating it with Enter is the correct behavior.
 
 When the bulk action is hidden (`select_all=False`, the threshold is not met, or fewer than 2 selectable options), Enter selects the first matching option. Apps that want search-then-Enter to add the first match should hide the bulk action with `select_all=False` ([#16537](https://github.com/streamlit/streamlit/issues/16537)).
 
-With `accept_new_options=True`, Enter still creates the typed value when no dropdown item is focused (today's create-on-Enter). If the bulk-action row is focused, Enter activates it rather than creating a custom value. ArrowDown focuses the bulk-action row first.
+With `accept_new_options=True`, the "Add: …" row is last. Enter creates the typed value when that row is first — when the query matches no existing option. When the query matches existing options, Enter commits the first listed row (bulk action if shown, otherwise the first match) rather than creating the typed prefix. Creating a custom value that also matches existing options is still available: ArrowDown to "Add: …" then Enter, or click that row. A unique custom value still creates with a single Enter.
 
 **Interaction with `max_selections`:**
 
@@ -253,6 +255,12 @@ select_all: bool | int | Literal["auto"] = "auto"
 
 **Decision:** Rejected. `max_selections` is a product cap ("the user may pick at most N"); the `select_all` integer is a performance/visibility gate on one bulk click. Most apps leave `max_selections` unset, so variant 1 would either always show "Select all" (regressing the freeze) or never show it. Variant 2 still needs a default integer for those apps, which is the current design. The two also compose independently: `max_selections=5` on a 10k list still shows "Select all" today and truncates to 5; gating visibility on `max_selections` would hide that shortcut. Apps that want no bulk-select already use `select_all=False` without imposing a selection cap.
 
+### Alternative 7: Keep unfocused create-on-Enter for `accept_new_options`
+
+When `accept_new_options=True` and no dropdown item is focused, Enter could still create the typed value even if existing options match the query (`"py"` + Enter → `"py"`, not `python` / "Select 2 matches").
+
+**Decision:** Rejected. Enter commits the first visible row. A query that matches existing options should add those matches (or the first match when bulk is hidden), not a typed prefix. Unique custom values still create with a single Enter because "Add: …" is then first. Values that also match existing options can be created via ArrowDown or click on "Add: …".
+
 ## Out of Scope (Future Work)
 
 - **Custom "Select all" label:** Users might want to customize "Select all" to "Add all to cart" etc.
@@ -266,7 +274,7 @@ select_all: bool | int | Literal["auto"] = "auto"
 | Item                         | ✅ or comment |
 |------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | ✅ Yes, full-stack change (Python + proto + frontend) |
-| No breaking API changes      | ✅ Yes, new optional parameter. Default keeps the 1000-option performance gate for typical unfiltered lists; see the unfiltered deltas in Threshold evaluation. |
+| No breaking API changes      | ✅ Yes, new optional parameter. Default keeps the 1000-option performance gate for typical unfiltered lists; see the unfiltered deltas in Threshold evaluation. Enter with no focused row now commits the first visible item, including when `accept_new_options=True` and the query matches existing options; unique custom values still create with a single Enter. |
 | No new dependencies          | ✅ Yes |
 | Metrics collected            | ✅ Track `select_all` parameter usage |
 | Any security/legal impact?   | ✅ No impact |

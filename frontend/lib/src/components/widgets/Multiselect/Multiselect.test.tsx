@@ -638,6 +638,36 @@ describe("Multiselect widget", () => {
     expect(screen.queryByText("a", { exact: true })).not.toBeInTheDocument()
   })
 
+  it("selects the first match on Enter instead of creating a matching query", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["python", "pytorch"],
+      acceptNewOptions: true,
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.type(input, "py")
+    expect(screen.getByText("Add: py")).toBeInTheDocument()
+    expect(screen.getByText("python")).toBeVisible()
+
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["python"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    expect(screen.queryByText("py", { exact: true })).not.toBeInTheDocument()
+  })
+
   it("predictably produces case sensitive matches", async () => {
     const user = userEvent.setup()
     const props = getProps({
