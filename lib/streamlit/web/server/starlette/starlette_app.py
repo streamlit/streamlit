@@ -74,12 +74,6 @@ if TYPE_CHECKING:
     from starlette.routing import BaseRoute
     from starlette.types import Receive, Scope, Send
 
-    # Starlette types ExceptionHandler as Callable[[Request, Exception], Response].
-    # Callable parameters are contravariant, so a handler annotated with a
-    # specific exception subclass — the usual user pattern — is rejected.
-    # Ellipsis parameters accept those handlers while still requiring a callable.
-    ExceptionHandler: TypeAlias = Callable[..., Any]
-
     from streamlit.runtime import Runtime
     from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -88,6 +82,13 @@ if TYPE_CHECKING:
         OnScriptErrorHandler,
     )
     from streamlit.runtime.secrets import SecretsValue
+
+    # Accept handlers typed with a specific exception subclass (the usual user
+    # pattern). Starlette's ExceptionHandler uses Callable[[Request, Exception],
+    # Response]; because Callable parameters are contravariant, those handlers
+    # are rejected. Two Any parameters accept them while still requiring a
+    # two-argument callable.
+    ExceptionHandler: TypeAlias = Callable[[Any, Any], Any]
 
 # Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (

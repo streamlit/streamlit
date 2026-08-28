@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from starlette.types import Receive, Scope, Send
     from starlette.websockets import WebSocket
 
+    # NOTE: st.App is a module-level re-export, so we must import streamlit as
+    # st here rather than only importing App from streamlit.starlette.
     import streamlit as st
     from streamlit.starlette import App
 
@@ -135,10 +137,7 @@ if TYPE_CHECKING:
     assert_type(App("main.py", on_script_error=maybe_suppress_error), App)
 
     # =====================================================================
-    # exception_handlers: handlers may be typed with a specific exception
-    # subclass. Starlette's ExceptionHandler uses Callable[[Request, Exception],
-    # Response], which rejects that pattern because Callable parameters are
-    # contravariant.
+    # exception_handlers: subclass-typed exc must be accepted (see starlette_app.py).
     # =====================================================================
 
     assert_type(App("main.py", exception_handlers=None), App)
@@ -154,7 +153,7 @@ if TYPE_CHECKING:
         App("main.py", exception_handlers={Exception: handle_any_exception}),
         App,
     )
-    assert_type(App("main.py", exception_handlers={429: handle_quota}), App)
+    assert_type(App("main.py", exception_handlers={429: handle_any_exception}), App)
     assert_type(
         App("main.py", exception_handlers={Exception: handle_websocket}),
         App,
@@ -246,10 +245,17 @@ if TYPE_CHECKING:
 
     App("main.py", on_script_error=bad_error_handler)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
-    # exception_handlers values must be callables
+    # exception_handlers values must be two-argument callables
     App(
         "main.py",
         exception_handlers={ValueError: "not a handler"},  # type: ignore[dict-item]  # ty: ignore[invalid-argument-type]
+    )
+
+    def wrong_arity_handler(exc: Exception) -> JSONResponse: ...
+
+    App(
+        "main.py",
+        exception_handlers={ValueError: wrong_arity_handler},  # type: ignore[dict-item]  # ty: ignore[invalid-argument-type]
     )
 
     # debug must be bool
