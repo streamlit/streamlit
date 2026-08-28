@@ -281,6 +281,11 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+    expect(screen.getByTestId("stHeadingIcon")).toHaveStyle({
+      fontSize: "1em",
+      width: "1em",
+      height: "1em",
+    })
   })
 
   it("renders spinner icon", () => {

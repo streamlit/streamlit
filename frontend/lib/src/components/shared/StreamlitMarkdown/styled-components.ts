@@ -533,34 +533,12 @@ export const StyledHeadingIcon = styled.span(({ theme }) => ({
   marginInlineEnd: theme.spacing.sm,
   color: "inherit",
   fontSize: "1em",
-  lineHeight: 1,
+  lineHeight: theme.lineHeights.none,
   width: "1em",
   height: `${theme.lineHeights.headings}em`,
   overflow: "hidden",
   userSelect: "none",
   boxSizing: "border-box",
-
-  // DynamicIcon defaults to fixed rem iconSizes; override to inherit our size.
-  "& > span": {
-    boxSizing: "border-box",
-    fontSize: "1em",
-    width: "1em",
-    height: "1em",
-    margin: 0,
-    padding: 0,
-
-    "& > span, & > img": {
-      boxSizing: "border-box !important",
-      fontSize: "inherit",
-      // Important: spinner styles set rem widths that otherwise win and overflow.
-      width: "100% !important",
-      height: "100% !important",
-      maxWidth: "100%",
-      maxHeight: "100%",
-      margin: 0,
-      padding: 0,
-    },
-  },
 }))
 
 interface StyledDividerProps {

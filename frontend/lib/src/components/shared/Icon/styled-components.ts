@@ -19,8 +19,10 @@ import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
-import type { IconSize } from "~lib/theme/types"
+import type { IconSizeProp } from "~lib/theme/types"
 import { computeSpacingStyle } from "~lib/theme/utils"
+
+import { getIconCssSize } from "./getIconCssSize"
 
 const spinKeyframe = keyframes({
   from: { transform: "rotate(0deg)" },
@@ -28,7 +30,7 @@ const spinKeyframe = keyframes({
 })
 
 interface StyledSpinnerIconProps {
-  size?: IconSize
+  size?: IconSizeProp
   margin?: string
   padding?: string
 }
@@ -43,7 +45,7 @@ export const StyledSpinnerIcon = styled("span", {
   theme,
 }) => {
   // Spinners are rendered 20% smaller to visually match the size of Material icons:
-  const adjustedSpinnerSize = `calc(${theme.iconSizes[size]} * 0.80)`
+  const adjustedSpinnerSize = `calc(${getIconCssSize(size, theme.iconSizes)} * 0.80)`
 
   return {
     display: "block",
@@ -74,7 +76,7 @@ export const StyledSpinnerIcon = styled("span", {
 interface StyledIconProps {
   as?: EmotionIcon
   color?: string
-  size: IconSize
+  size: IconSizeProp
   margin: string
   padding: string
 }
@@ -83,15 +85,16 @@ export const StyledIcon = styled("span", {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size", "as"].includes(prop),
 })<StyledIconProps>(({ color, size, margin, padding, theme }) => {
+  const iconCssSize = getIconCssSize(size, theme.iconSizes)
   return {
     color: color || "inherit",
     fill: "currentColor",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: theme.iconSizes[size],
-    width: theme.iconSizes[size],
-    height: theme.iconSizes[size],
+    fontSize: iconCssSize,
+    width: iconCssSize,
+    height: iconCssSize,
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
     flexShrink: 0,
@@ -99,21 +102,22 @@ export const StyledIcon = styled("span", {
 })
 
 interface StyledDynamicIconProps {
-  size?: IconSize
+  size?: IconSizeProp
   margin?: string
   padding?: string
 }
 
 export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
   ({ size = "lg", margin = "", padding = "", theme }) => {
+    const iconCssSize = getIconCssSize(size, theme.iconSizes)
     return {
       fill: "currentColor",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: theme.iconSizes[size],
-      width: theme.iconSizes[size],
-      height: theme.iconSizes[size],
+      fontSize: iconCssSize,
+      width: iconCssSize,
+      height: iconCssSize,
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
       flexShrink: 0,
@@ -127,7 +131,7 @@ export const StyledImageIcon = styled.img({
 })
 
 interface StyledEmojiIconProps {
-  size: IconSize
+  size: IconSizeProp
   margin: string
   padding: string
   color?: string
@@ -136,7 +140,7 @@ interface StyledEmojiIconProps {
 export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
   ({ size, margin, padding, theme, color }) => {
     // Emojis are rendered 10% smaller to visually match the size of Material icons:
-    const adjustedIconSize = `calc(${theme.iconSizes[size]} * 0.90)`
+    const adjustedIconSize = `calc(${getIconCssSize(size, theme.iconSizes)} * 0.90)`
     return {
       display: "inline-flex",
       alignItems: "center",

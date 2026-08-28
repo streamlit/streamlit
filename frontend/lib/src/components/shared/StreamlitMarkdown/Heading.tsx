@@ -86,7 +86,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
   // name and auto-anchor. Spinner is not valid heading markdown.
   const headingIcon = icon ? (
     <StyledHeadingIcon aria-hidden="true">
-      <DynamicIcon iconValue={icon} testid="stHeadingIcon" />
+      <DynamicIcon iconValue={icon} size="inherit" testid="stHeadingIcon" />
     </StyledHeadingIcon>
   ) : undefined
 
