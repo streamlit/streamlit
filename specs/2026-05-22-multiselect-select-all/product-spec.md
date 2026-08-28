@@ -209,7 +209,7 @@ When `max_selections` is already reached (i.e., `len(selected) >= max_selections
 |----------|----------|
 | `select_all=0` | Same as `select_all=False` |
 | `select_all=1` | Same as `False` / `0`: the 2+ selectable minimum means a threshold of `1` never shows the bulk action. `2` is the smallest meaningful threshold. (`True == 1` in Python is handled by checking `bool` first; `st.json(expanded=0)` documents the analogous `0` ≡ `False` overlap.) |
-| `select_all < 0` (any negative integer) | Raises `StreamlitAPIException`. Follow `st.navigation(expanded=...)`: "When using an int, `select_all` must be a non-negative integer." |
+| `select_all < 0` (any negative integer) | Raises `StreamlitValueError`. Follow `st.navigation(expanded=...)`: "When using an int, `select_all` must be a non-negative integer." |
 | `select_all` above the int32 proto max (`2**31 - 1`) | Clamped to `2**31 - 1`. A threshold that large already means "always show" for realistic lists. |
 | Single option remaining | "Select all" never shown (requires 2+ selectable options, even with `select_all=True`) |
 | All options selected | "Select all" not shown (no selectable option entries) |

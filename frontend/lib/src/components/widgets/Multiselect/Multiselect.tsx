@@ -685,6 +685,8 @@ const Multiselect: FC<Props> = props => {
       // first matching option. "Add: …" is last, so it is first only when
       // the query matches no existing option. If a row is already focused
       // (hovering a row also focuses it), RAC commits that row instead.
+      // TODO: Set RAC focusedKey / aria-activedescendant to that first row
+      // (ComboBox focus-management follow-up; see StyledListBox).
       if (e.key === "Enter" && !e.nativeEvent.isComposing) {
         if (notNullOrUndefined(focusedKeyRef.current)) {
           return
