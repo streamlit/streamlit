@@ -357,8 +357,10 @@ describe("Heading", () => {
     const heading = screen.getByRole("heading")
     // A flex heading would put the icon in a gutter and break wrap/text-align.
     expect(heading).not.toHaveStyle({ display: "inline-flex" })
-    expect(screen.getByTestId("stHeadingIcon").parentElement).toHaveStyle({
+    const iconWrapper = heading.querySelector("[aria-hidden='true']")
+    expect(iconWrapper).toHaveStyle({
       display: "inline-flex",
+      verticalAlign: "bottom",
     })
   })
 })

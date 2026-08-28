@@ -519,9 +519,7 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
  *
  * Inline in the heading's text flow so wrapping and text-align match a
  * markdown icon (`:material/name: Title`). The wrapper is one heading
- * line tall so the 1em glyph sits with the letters (not on the line-box
- * floor). The labelled body-text span keeps this out of the accessible
- * name and auto-generated anchor.
+ * line tall so the 1em glyph sits with the letters.
  */
 export const StyledHeadingIcon = styled.span(({ theme }) => ({
   display: "inline-flex",

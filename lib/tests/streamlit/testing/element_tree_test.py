@@ -466,6 +466,24 @@ def test_subheader():
     repr(sr.subheader[0])
 
 
+def test_heading_icon() -> None:
+    """AppTest exposes heading icon values, including when no icon is set."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+
+        st.title("T", icon=":material/star:")
+        st.header("H", icon="🚀")
+        st.subheader("S")
+        """,
+    )
+    sr = script.run()
+
+    assert sr.title[0].icon == ":material/star:"
+    assert sr.header[0].icon == "🚀"
+    assert sr.subheader[0].icon == ""
+
+
 def test_heading_elements_by_type():
     script = AppTest.from_string(
         """

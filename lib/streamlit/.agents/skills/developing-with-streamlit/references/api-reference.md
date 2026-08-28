@@ -74,7 +74,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
 | `st.graphviz_chart` | Display a graph using the dagre-d3 library. Use it for directed graphs, diagrams, and node-edge visualizations. |
-| `st.header` | Display text in header formatting. Use it for major sections below the page title. Supports an optional `icon` (emoji, Material Symbol, or `"spinner"`). |
+| `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help and other information for a given object. It renders docstrings, signatures, and related information inside the app. |
 | `st.html` | Insert HTML into your app. JavaScript is ignored by default (opt in with `unsafe_allow_javascript=True`); for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
 | `st.iframe` | Embed content in an iframe. Use it to show an external page or embedded resource in a bounded frame. |
@@ -119,7 +119,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.spinner` | Display a loading spinner while executing a block of code. Use it as a context manager around work that may take noticeable time. |
 | `st.status` | Insert a status container to display output from long-running tasks. Use it to show progress, intermediate output, and final state for multi-step operations. |
 | `st.stop` | Stops execution immediately. Use it to halt rendering after validation failures, missing inputs, or intentional early exits. |
-| `st.subheader` | Display text in subheader formatting. Use it for subsections under headers. Supports an optional `icon` (emoji, Material Symbol, or `"spinner"`). |
+| `st.subheader` | Display text in subheader formatting. Use it for subsections under headers. |
 | `st.success` | Display a success message. Use it for completed actions or positive status. |
 | `st.switch_page` | Programmatically switch the current page in a multipage app. Use it for navigation triggered by app logic. |
 | `st.table` | Display data in a static table. Use it for small, styled tables such as key-value summaries, confusion matrices, or leaderboards, including cells with supported Markdown, when users do not need interactive exploration. |
@@ -128,7 +128,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.text_area` | Display a multi-line text input widget. Use it for comments, prompts, notes, and longer free-form input. |
 | `st.text_input` | Display a single-line text input widget. Use it for short free-form input such as names, filters, IDs, or search text. |
 | `st.time_input` | Display a time input widget. Use it when users need to choose a time of day. |
-| `st.title` | Display text in title formatting. Use it for the main page title. Supports an optional `icon` (emoji, Material Symbol, or `"spinner"`). |
+| `st.title` | Display text in title formatting. Use it for the main page title. |
 | `st.toast` | Display a short message, known as a notification "toast". It appears in the app's top-right corner and disappears after four seconds. |
 | `st.toggle` | Display a toggle widget. Use it for boolean settings that behave like on/off switches. |
 | `st.vega_lite_chart` | Display a chart using the Vega-Lite library. Use it for direct Vega-Lite specifications or when you already have Vega-Lite JSON. |

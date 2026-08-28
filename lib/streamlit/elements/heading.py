@@ -120,8 +120,10 @@ class HeadingMixin:
 
         icon : str or None
             An optional emoji or icon to display next to the header. If
-            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
-            is a string, the following options are valid:
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -254,8 +256,10 @@ class HeadingMixin:
 
         icon : str or None
             An optional emoji or icon to display next to the subheader. If
-            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
-            is a string, the following options are valid:
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -382,8 +386,10 @@ class HeadingMixin:
 
         icon : str or None
             An optional emoji or icon to display next to the title. If
-            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
-            is a string, the following options are valid:
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.

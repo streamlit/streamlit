@@ -472,7 +472,7 @@ def test_heading_icon_parameter(
 def test_heading_icon_respects_text_alignment(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Icon headings should still honor text_alignment (not pack at flex-start)."""
+    """Icon headings should still honor text_alignment."""
     container = get_element_by_key(app, "heading_icons_alignment")
 
     centered = get_heading(container, "Centered title with icon")
