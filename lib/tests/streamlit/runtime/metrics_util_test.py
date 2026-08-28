@@ -923,9 +923,9 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         (
             StreamlitInvalidLayoutContextError(
                 "Forms cannot be nested in other forms.",
-                error_id="nested-dialogs-not-allowed",
+                error_id="nested-forms-not-allowed",
             ),
-            "StreamlitInvalidLayoutContextError:nested-dialogs-not-allowed",
+            "StreamlitInvalidLayoutContextError:nested-forms-not-allowed",
         ),
         (
             LocalizableStreamlitException(

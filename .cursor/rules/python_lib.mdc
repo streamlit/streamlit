@@ -217,7 +217,10 @@ generic `StreamlitAPIException` with a one-off message.
 
 Reserve bare `StreamlitAPIException` for one-off cases that no shared type
 covers and that users are expected to hit uncommonly (serialization failures
-and similar). Always pass `error_id` at those remaining sites.
+and similar). Always pass `error_id` at those remaining sites. Do not tag
+sites in `_UNTAGGED_STREAMLIT_API_EXCEPTION_SITES` in
+`lib/tests/streamlit/errors_test.py`; those await a specialized-type
+migration — update the allowlist when migrating them.
 
 ## Theming and Layout
 

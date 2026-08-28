@@ -54,10 +54,24 @@ _UNTAGGED_STREAMLIT_API_EXCEPTION_SITES: dict[str, int] = {
 }
 
 
-def _is_streamlit_api_exception_call(func: ast.expr) -> bool:
+def _constructor_name(func: ast.expr) -> str | None:
     if isinstance(func, ast.Name):
-        return func.id == "StreamlitAPIException"
-    return isinstance(func, ast.Attribute) and func.attr == "StreamlitAPIException"
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+def _is_streamlit_api_exception_call(func: ast.expr) -> bool:
+    return _constructor_name(func) == "StreamlitAPIException"
+
+
+def _is_streamlit_exception_constructor(func: ast.expr) -> bool:
+    """Match Streamlit API exception constructors that may take ``error_id``."""
+    name = _constructor_name(func)
+    if name in {"StreamlitAPIException", "LocalizableStreamlitException"}:
+        return True
+    return bool(name) and name.startswith("Streamlit") and name.endswith("Error")
 
 
 @cache
@@ -88,11 +102,13 @@ def _iter_streamlit_api_exception_calls() -> list[tuple[str, ast.Call]]:
 
 
 def _iter_error_id_kwargs() -> list[tuple[str, ast.Call, ast.expr]]:
-    """Return ``error_id=`` kwargs on production constructors, including subclasses."""
+    """Return ``error_id=`` kwargs on Streamlit exception constructors."""
     kwargs: list[tuple[str, ast.Call, ast.expr]] = []
     for rel, tree in _parsed_streamlit_modules():
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
+            if not isinstance(
+                node, ast.Call
+            ) or not _is_streamlit_exception_constructor(node.func):
                 continue
             error_id_kw = next(
                 (kw for kw in node.keywords if kw.arg == "error_id"), None
