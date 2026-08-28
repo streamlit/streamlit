@@ -25,11 +25,12 @@ import subprocess
 import sys
 import time
 import urllib.request
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, NoReturn
 
 import pytest
 from typing_extensions import Self
-from websockets.exceptions import InvalidHandshake
+from websockets.exceptions import ConnectionClosed, InvalidHandshake
 from websockets.sync.client import connect
 
 from streamlit import util
@@ -197,11 +198,10 @@ def test_wait_for_streamlit_health_retries_socket_timeout(
             raise TimeoutError("timed out")
         return _OkResponse()
 
-    class _FakeOpener:
-        open = staticmethod(fake_open)
-
     monkeypatch.setattr(
-        urllib.request, "build_opener", lambda *_args, **_kwargs: _FakeOpener()
+        urllib.request,
+        "build_opener",
+        lambda *_args, **_kwargs: SimpleNamespace(open=fake_open),
     )
     monkeypatch.setattr(time, "sleep", lambda _seconds: None)
 
@@ -315,9 +315,9 @@ def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
     connect_params = inspect.signature(connect).parameters
     connect_kwargs: dict[str, Any] = {
         "subprotocols": ["streamlit"],
-        # Generous close timeout so teardown cannot fail a completed session
-        # when the server is still flushing under FIPS hash-fallback load.
-        "close_timeout": 10,
+        # Keep teardown snappy if the server is wedged. Close failures are
+        # already suppressed below, so a long close_timeout only adds wait.
+        "close_timeout": 2,
     }
     # ping_interval and proxy only exist on the sync client in websockets 15+.
     # 12.x rejects unknown kwargs; 13-14 forward them to create_connection.
@@ -358,32 +358,44 @@ def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
     # cannot starve the rerun round-trip or misreport "did not finish".
     deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
     try:
-        websocket.send(rerun_request)
-        while time.monotonic() < deadline:
-            try:
-                payload = websocket.recv(timeout=max(0.1, deadline - time.monotonic()))
-            except TimeoutError:
+        try:
+            websocket.send(rerun_request)
+            while time.monotonic() < deadline:
+                try:
+                    payload = websocket.recv(
+                        timeout=max(0.1, deadline - time.monotonic())
+                    )
+                except TimeoutError:
+                    _fail_with_server_log(
+                        log_path,
+                        "Timed out waiting for the FIPS smoke app's messages",
+                    )
+                assert isinstance(payload, bytes)
+
+                forward_msg = ForwardMsg.FromString(payload)
+                if (
+                    forward_msg.HasField("delta")
+                    and forward_msg.delta.HasField("new_element")
+                    and forward_msg.delta.new_element.HasField("markdown")
+                    and forward_msg.delta.new_element.markdown.body
+                    == _FIPS_SMOKE_MARKER
+                ):
+                    saw_smoke_marker = True
+
+                if forward_msg.WhichOneof("type") == "script_finished":
+                    assert (
+                        forward_msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+                    )
+                    break
+            else:
                 _fail_with_server_log(
-                    log_path,
-                    "Timed out waiting for the FIPS smoke app's messages",
+                    log_path, "Streamlit did not finish the FIPS smoke app"
                 )
-            assert isinstance(payload, bytes)
-
-            forward_msg = ForwardMsg.FromString(payload)
-            if (
-                forward_msg.HasField("delta")
-                and forward_msg.delta.HasField("new_element")
-                and forward_msg.delta.new_element.HasField("markdown")
-                and forward_msg.delta.new_element.markdown.body == _FIPS_SMOKE_MARKER
-            ):
-                saw_smoke_marker = True
-
-            if forward_msg.WhichOneof("type") == "script_finished":
-                assert forward_msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
-                break
-        else:
+        except ConnectionClosed as ex:
             _fail_with_server_log(
-                log_path, "Streamlit did not finish the FIPS smoke app"
+                log_path,
+                "FIPS smoke WebSocket closed before the session finished. "
+                f"Last error: {ex!r}",
             )
     finally:
         # Close is best-effort: a close-handshake timeout must not replace a
