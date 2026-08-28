@@ -2167,16 +2167,28 @@ describe("on_change='ignore' mode", () => {
     expect(sendRerunBackMsg).toHaveBeenCalled()
   })
 
-  it("forwards triggerRerun: false inside a form", async () => {
+  it("does not change form batching when ignoreRerun is true", async () => {
     const user = userEvent.setup()
-    const props = getIntProps({
-      ignoreRerun: true,
-      formId: "testForm",
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
     })
+    const props = getIntProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
     const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
 
     render(<NumberInput {...props} />)
     setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
 
     await user.click(screen.getByTestId("stNumberInputStepUp"))
 
@@ -2186,6 +2198,9 @@ describe("on_change='ignore' mode", () => {
       fromUser: true,
       triggerRerun: false,
     })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
   })
 
   it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
