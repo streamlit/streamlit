@@ -329,8 +329,8 @@ When `wrap=False` on a text command:
   line. Extra body lines after the first newline are not shown. Anchor and help icons
   remain visible.
 - Help icons remain visible and are not clipped by the ellipsis.
-- When `help` is not set, hovering the element reveals the full plain-text content in a
-  tooltip (see "Tooltip for the full label").
+- Hovering the element reveals the full plain-text content in a tooltip, including when
+  `help` is set (see "Tooltip for the full label").
 
 ### Tooltip for the full label
 

@@ -33,9 +33,9 @@ from e2e_playwright.shared.app_utils import (
 )
 
 # Does not include divider header/subheaders
-TITLE_COUNT = 12
-HEADER_COUNT = 11
-SUBHEADER_COUNT = 14
+TITLE_COUNT = 14
+HEADER_COUNT = 12
+SUBHEADER_COUNT = 15
 
 
 def _get_title_elements(app: Page) -> Locator:
@@ -478,4 +478,15 @@ def test_wrap_false_ellipsizes_headings_and_sets_title(
     for tag in ("h1", "h2", "h3"):
         heading = container.locator(tag)
         wait_until(app, partial(heading_overflows, heading))
+    expect(container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(3)
     assert_snapshot(container, name="st_heading-wrap_false")
+
+    wrap_true = get_element_by_key(app, "wrap_true_headings")
+    expect(wrap_true.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
+
+    extra_lines = get_element_by_key(app, "wrap_false_heading_extra_lines")
+    expect(extra_lines.get_by_text("Second line that must not appear")).to_have_count(0)
+    expect(extra_lines.get_by_title("First line", exact=True)).to_be_visible()
+    expect(
+        extra_lines.get_by_title("First line\nSecond line that must not appear")
+    ).to_have_count(0)

@@ -111,8 +111,17 @@ describe("Tooltip element", () => {
     expect(screen.getByText("Child Element")).toBeInTheDocument()
   })
 
-  it("constrains trigger width so flex parents can ellipsize content", () => {
+  it("does not constrain trigger width by default", () => {
     renderTooltip()
+
+    const trigger = screen.getByTestId("stTooltipHoverTarget")
+    expect(trigger.style.maxWidth).toBe("")
+    expect(trigger.style.minWidth).toBe("")
+    expect(trigger.style.width).toBe("auto")
+  })
+
+  it("constrains trigger width when constrainWidth is set", () => {
+    renderTooltip({ constrainWidth: true })
 
     const trigger = screen.getByTestId("stTooltipHoverTarget")
     expect(trigger.style.maxWidth).toBe("100%")
@@ -125,8 +134,8 @@ describe("Tooltip element", () => {
 
     const trigger = screen.getByTestId("stTooltipHoverTarget")
     expect(trigger.style.width).toBe("100%")
-    expect(trigger.style.maxWidth).toBe("100%")
-    expect(trigger.style.minWidth).toBe("0")
+    expect(trigger.style.maxWidth).toBe("")
+    expect(trigger.style.minWidth).toBe("")
   })
 
   it("sets the same content", async () => {

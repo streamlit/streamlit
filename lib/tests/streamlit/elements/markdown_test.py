@@ -350,6 +350,7 @@ class StLatexAPITest(DeltaGeneratorTestCase):
         )
         el = self.get_delta_from_queue().new_element
         assert el.markdown.help == "help text"
+        assert not el.markdown.HasField("wrap")
 
 
 class StBadgeAPITest(DeltaGeneratorTestCase):
@@ -374,6 +375,7 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
         st.badge("Simple badge")
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == ":blue-badge[Simple badge]"
+        assert not el.markdown.HasField("wrap")
 
     def test_st_badge_with_width(self):
         """Test st.badge with different width types."""

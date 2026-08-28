@@ -61,12 +61,14 @@ describe("Heading", () => {
     expect(headingElement).toHaveClass("stHeading")
   })
 
-  it("hides extra body lines when wrap is false", () => {
+  it("hides extra body lines when wrap is false", async () => {
     const props = getHeadingProps({ wrap: false })
     render(<Heading {...props} />)
 
     expect(screen.getByRole("heading")).toHaveTextContent("hello world")
     expect(screen.queryByText("this is a new line")).not.toBeInTheDocument()
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.queryByTitle(/this is a new line/)).not.toBeInTheDocument()
   })
 
   it("exposes the full heading via a native title when wrap is false", async () => {

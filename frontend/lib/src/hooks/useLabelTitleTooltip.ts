@@ -59,7 +59,8 @@ interface LabelTitleTooltipRefs<
  *   `addTitleTooltip` is false, no observer is attached.
  *
  * @param addTitleTooltip Whether to attach the native title tooltip.
- * @param label The raw label source, used to re-sync when it changes.
+ * @param identityKey Value whose change forces a title re-sync. Usually the
+ *   raw label source; headings pass their tag.
  * @returns Refs to attach to the title container and the label text wrapper.
  */
 export function useLabelTitleTooltip<
@@ -67,13 +68,13 @@ export function useLabelTitleTooltip<
   LabelElement extends HTMLElement = HTMLSpanElement,
 >(
   addTitleTooltip: boolean,
-  label: string | null | undefined
+  identityKey: string | null | undefined
 ): LabelTitleTooltipRefs<ContainerElement, LabelElement> {
   const titleRef = useRef<ContainerElement>(null)
   const labelTextRef = useRef<LabelElement>(null)
-  // Skip label in the dependency list when the tooltip is off so streaming
-  // updates on this shared renderer do not re-run a no-op effect.
-  const labelKey = addTitleTooltip ? label : undefined
+  // Skip identityKey in the dependency list when the tooltip is off so
+  // streaming updates on this shared renderer do not re-run a no-op effect.
+  const effectIdentityKey = addTitleTooltip ? identityKey : undefined
 
   useEffect(() => {
     const node = titleRef.current
@@ -109,7 +110,7 @@ export function useLabelTitleTooltip<
       characterData: true,
     })
     return () => observer.disconnect()
-  }, [addTitleTooltip, labelKey])
+  }, [addTitleTooltip, effectIdentityKey])
 
   return { titleRef, labelTextRef }
 }

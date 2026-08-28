@@ -109,6 +109,7 @@ export interface TooltipProps {
   onMouseEnterDelay?: number
   closeDelay?: number
   containerWidth?: boolean
+  constrainWidth?: boolean
   error?: boolean
   dismissOnClick?: boolean
   interactive?: boolean
@@ -225,6 +226,7 @@ function Tooltip({
   onMouseEnterDelay,
   closeDelay,
   containerWidth,
+  constrainWidth,
   error,
   dismissOnClick = false,
   interactive = true,
@@ -327,11 +329,11 @@ function Tooltip({
                 flexDirection: "row",
                 justifyContent: inline ? "flex-end" : "",
                 width: containerWidth ? "100%" : "auto",
-                // Always cap and allow shrinking: this trigger is often a flex
-                // item (e.g. badge+help via TooltipIcon), and min-width:auto
-                // would otherwise grow to content and skip ellipsis.
-                maxWidth: "100%",
-                minWidth: 0,
+                // Opt-in: cap and allow shrinking so a flex-item trigger
+                // (e.g. badge+help) can ellipsize instead of growing to content.
+                ...(constrainWidth
+                  ? { maxWidth: "100%", minWidth: 0 }
+                  : undefined),
                 ...style,
               }}
               testId={

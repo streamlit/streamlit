@@ -246,9 +246,11 @@ class MarkdownMixin:
               wraps onto additional lines.
             - ``False``: The text stays on one line. Overflow is truncated
               with an ellipsis. Markdown is limited to inline formatting
-              (the same subset used in widget labels). This cannot be
-              combined with ``unsafe_allow_html=True``. Truncation only
-              appears when the element is narrower than its text.
+              (the same subset used in widget labels). Leading block
+              markers such as ``#`` and ``-`` are shown as literal text
+              rather than headings or lists. This cannot be combined with
+              ``unsafe_allow_html=True``. Truncation only appears when the
+              element is narrower than its text.
 
         Examples
         --------
@@ -370,8 +372,10 @@ class MarkdownMixin:
               it wraps onto additional lines.
             - ``False``: The caption stays on one line. Overflow is truncated
               with an ellipsis. Markdown is limited to inline formatting
-              (the same subset used in widget labels). This cannot be
-              combined with ``unsafe_allow_html=True``.
+              (the same subset used in widget labels). Leading block
+              markers such as ``#`` and ``-`` are shown as literal text
+              rather than headings or lists. This cannot be combined with
+              ``unsafe_allow_html=True``.
 
         Examples
         --------

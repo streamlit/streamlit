@@ -328,6 +328,61 @@ describe("Markdown wrap", () => {
     expect(container).toHaveTextContent("# Heading that should be inline")
   })
 
+  it("does not truncate latex when wrap is false", async () => {
+    const props = getProps({
+      body: "$$\nx + y\n$$",
+      wrap: false,
+      elementType: MarkdownProto.Type.LATEX,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).not.toHaveStyle("white-space: nowrap")
+    expect(container).not.toHaveStyle("text-overflow: ellipsis")
+    expect(screen.queryByTitle("x + y")).not.toBeInTheDocument()
+    expect(
+      screen
+        .getByTestId("stMarkdown")
+        .querySelector("span[style*='display: contents']")
+    ).toBeNull()
+    // Formula stays display math, not label-mode truncated markdown.
+    await waitFor(() => {
+      expect(container.querySelector(".katex-display")).toBeTruthy()
+    })
+  })
+
+  it("does not truncate a divider when wrap is false", () => {
+    const props = getProps({
+      body: "---",
+      wrap: false,
+      elementType: MarkdownProto.Type.DIVIDER,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).not.toHaveStyle("white-space: nowrap")
+    expect(container).not.toHaveStyle("text-overflow: ellipsis")
+    expect(screen.queryByTitle("---")).not.toBeInTheDocument()
+    expect(container.querySelector("hr")).toBeTruthy()
+    expect(
+      screen.queryByRole("heading", { name: "---" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not truncate a badge when wrap is unset", () => {
+    const props = getProps({
+      body: ":blue-badge[Label]",
+      elementType: MarkdownProto.Type.NATIVE,
+    })
+    render(<Markdown {...props} />)
+
+    expect(screen.getByText("Label")).toBeVisible()
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle(
+      "white-space: nowrap"
+    )
+    expect(screen.queryByTitle("Label")).not.toBeInTheDocument()
+  })
+
   it("keeps wrap=false block markdown on one inline line without fenced code", () => {
     const props = getProps({
       body: "# Heading\n\n- item\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n```\ncode block\n```",

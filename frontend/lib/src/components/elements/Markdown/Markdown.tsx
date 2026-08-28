@@ -65,16 +65,16 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
 
   // Put help in the markdown source only when it can sit inline without being
   // clipped by truncation. Otherwise render the help icon as a sibling.
-  const useInlineHelpDirective =
+  const shouldInlineHelpDirective =
     Boolean(help) && !truncate && !isSingleBadgeOnly && !isLatex && !allowHtml
-  const source = useInlineHelpDirective ? `${body} :help[]` : body
+  const source = shouldInlineHelpDirective ? `${body} :help[]` : body
 
   const streamlitMarkdown = (
     <StreamlitMarkdown
       isCaption={isCaption}
       source={source}
       allowHTML={allowHtml}
-      helpText={useInlineHelpDirective ? help : undefined}
+      helpText={shouldInlineHelpDirective ? help : undefined}
       unterminatedParsing={unterminatedParsing}
       hideAnchors={hideAnchors}
       // Label mode keeps inline-only markdown so the text can ellipsize on
@@ -105,7 +105,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     // on the tooltip trigger rather than stretching the hover target to the
     // full element width.
     content = (
-      <BaseButtonTooltip help={help} containerWidth={false}>
+      <BaseButtonTooltip help={help} containerWidth={false} constrainWidth>
         {markdown}
       </BaseButtonTooltip>
     )

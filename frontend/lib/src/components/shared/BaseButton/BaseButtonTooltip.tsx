@@ -25,6 +25,8 @@ interface Props {
   children: ReactElement
   // TODO(lawilby): Probably remove this once width is implemented on Popover.
   containerWidth: boolean
+  /** Cap the trigger so a flex-item child (e.g. a long badge) can ellipsize. */
+  constrainWidth?: boolean
   help?: string
   placement?: Placement
 }
@@ -34,6 +36,7 @@ export function BaseButtonTooltip({
   help,
   placement,
   containerWidth,
+  constrainWidth,
 }: Props): ReactElement {
   if (!help) {
     return children
@@ -45,6 +48,7 @@ export function BaseButtonTooltip({
           content={help}
           placement={placement || Placement.TOP}
           containerWidth={containerWidth}
+          constrainWidth={constrainWidth}
         >
           {children}
         </TooltipIcon>
