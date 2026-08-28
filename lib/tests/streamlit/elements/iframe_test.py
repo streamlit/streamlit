@@ -20,7 +20,11 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.iframe import IframeMixin, _is_file, marshall
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -42,11 +46,23 @@ def test_marshall_with_valid_tab_index(tab_index: int | None) -> None:
 
 @pytest.mark.parametrize(
     "invalid_value",
-    ["0", 1.5, True, [], {}, -2, -100],
-    ids=["string", "float", "bool", "list", "dict", "minus_two", "minus_hundred"],
+    ["0", 1.5, True, [], {}],
+    ids=["string", "float", "bool", "list", "dict"],
 )
-def test_marshall_with_invalid_tab_index(invalid_value: object) -> None:
-    """Test that invalid tab_index types and values raise StreamlitValueError."""
+def test_marshall_with_invalid_tab_index_type(invalid_value: object) -> None:
+    """Invalid tab_index types raise StreamlitInvalidParameterTypeError."""
+    proto = IFrameProto()
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        marshall(proto, src="https://example.com", tab_index=invalid_value)
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    [-2, -100],
+    ids=["minus_two", "minus_hundred"],
+)
+def test_marshall_with_invalid_tab_index_value(invalid_value: object) -> None:
+    """Out-of-range tab_index integers raise StreamlitValueError."""
     proto = IFrameProto()
     with pytest.raises(StreamlitValueError):
         marshall(proto, src="https://example.com", tab_index=invalid_value)

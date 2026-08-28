@@ -245,14 +245,20 @@ def test_invalid_range_error_message() -> None:
     """Range errors name both bounds."""
     exc = errors.StreamlitInvalidRangeError(10, 5)
     assert str(exc) == (
-        "The `min_value`, set to 10, must be less than the `max_value`, set to 5."
+        "The `min_value`, set to 10, cannot be greater than the `max_value`, set to 5."
     )
+
+
+# StreamlitInvalidURLError tests
 
 
 def test_invalid_url_error_default_protocols() -> None:
     """One-argument constructor still mentions http, https, and mailto."""
     exc = errors.StreamlitInvalidURLError("www.example.com")
     assert '"http://", "https://", or "mailto:"' in str(exc)
+
+
+# BidiComponentError tests
 
 
 def test_bidi_component_error_hierarchy() -> None:

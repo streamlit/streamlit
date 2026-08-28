@@ -503,15 +503,31 @@ class Multiselectbox(DeltaGeneratorTestCase):
             (-1,),
             (-100,),
             (True,),
+            (1.5,),
+            ("2",),
         ]
     )
-    def test_max_selections_negative_no_action(self, max_selections: object) -> None:
-        """Raise StreamlitValueError without an action for negative max_selections."""
+    def test_max_selections_invalid_values_have_no_action(
+        self, max_selections: object
+    ) -> None:
+        """Raise StreamlitValueError without an action for invalid max_selections."""
         with pytest.raises(
             StreamlitValueError,
             match=r"Supported values: a positive integer\.$",
         ):
             st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
+
+    def test_max_selections_array_like_raises_value_error(self) -> None:
+        """Array-like max_selections raises StreamlitValueError, not a numpy truth error."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Supported values: a positive integer\.$",
+        ):
+            st.multiselect(
+                "the label",
+                ["a", "b", "c"],
+                max_selections=np.array([0, 1]),  # type: ignore[arg-type]
+            )
 
     @parameterized.expand(
         [

@@ -24,6 +24,7 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidRangeError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
@@ -222,7 +223,7 @@ class DateInputTest(DeltaGeneratorTestCase):
 
     def test_min_max_exception(self):
         """min_value after max_value raises StreamlitInvalidRangeError."""
-        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
             st.date_input(
                 "the label",
                 min_value=date(2022, 1, 1),
@@ -341,6 +342,11 @@ class DateInputTest(DeltaGeneratorTestCase):
         """Test that it raises an exception for invalid date formats."""
         with pytest.raises(StreamlitValueError):
             st.date_input("the label", format=format)
+
+    def test_invalid_date_format_type(self) -> None:
+        """Non-string format values raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.date_input("the label", format=123)  # type: ignore[arg-type]
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""

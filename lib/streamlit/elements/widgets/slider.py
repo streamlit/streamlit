@@ -1050,9 +1050,17 @@ class SliderMixin:
 
         if isinstance(step, timedelta):
             if step == timedelta(0):
-                raise StreamlitValueError("step", ["a nonzero timedelta"])
+                raise StreamlitValueError(
+                    "step",
+                    ["a timedelta"],
+                    detail="Zero is not allowed.",
+                )
         elif step == 0:
-            raise StreamlitValueError("step", ["a nonzero number"])
+            raise StreamlitValueError(
+                "step",
+                ["a number"],
+                detail="Zero is not allowed.",
+            )
 
         # Ensure that all arguments are of the same type.
         slider_args = [min_value, max_value, step]

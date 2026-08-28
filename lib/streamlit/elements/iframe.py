@@ -25,7 +25,11 @@ from streamlit.elements.lib.layout_utils import (
     validate_height,
     validate_width,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
@@ -65,11 +69,13 @@ def _validate_tab_index(tab_index: int | None) -> None:
     """Validate tab_index according to web specifications."""
     if tab_index is None:
         return
-    if not (
-        isinstance(tab_index, int)
-        and not isinstance(tab_index, bool)
-        and tab_index >= -1
-    ):
+    if isinstance(tab_index, bool) or not isinstance(tab_index, int):
+        raise StreamlitInvalidParameterTypeError(
+            "tab_index",
+            type(tab_index).__name__,
+            ["int"],
+        )
+    if tab_index < -1:
         raise StreamlitValueError("tab_index", ["None", "-1", "a non-negative integer"])
 
 

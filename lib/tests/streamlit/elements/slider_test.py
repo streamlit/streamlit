@@ -222,9 +222,9 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.max == 101
 
     def test_min_equals_max(self):
-        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
             st.slider("oh no", min_value=10, max_value=10)
-        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
             date = datetime(2024, 4, 3)
             st.slider("datetime", min_value=date, max_value=date)
 
@@ -434,7 +434,7 @@ class SliderTest(DeltaGeneratorTestCase):
     def test_step_zero(self):
         with pytest.raises(StreamlitValueError) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)
-        assert "a nonzero number" in str(exc.value)
+        assert "Zero is not allowed" in str(exc.value)
         with pytest.raises(StreamlitValueError) as exc:
             st.slider(
                 "Label",
@@ -442,7 +442,7 @@ class SliderTest(DeltaGeneratorTestCase):
                 max_value=datetime(2020, 1, 2),
                 step=timedelta(0),
             )
-        assert "a nonzero timedelta" in str(exc.value)
+        assert "Zero is not allowed" in str(exc.value)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""

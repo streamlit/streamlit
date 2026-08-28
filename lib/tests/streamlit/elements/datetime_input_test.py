@@ -160,6 +160,11 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError, match="YYYY/MM/DD"):
             st.datetime_input("the label", format="YY/MM/DD")
 
+    def test_invalid_format_type(self) -> None:
+        """Non-string format values raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.datetime_input("the label", format=123)  # type: ignore[arg-type]
+
     def test_width_config_default(self):
         """Test that default width is 'stretch'."""
         st.datetime_input("the label")
@@ -295,7 +300,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         """min_value after max_value raises StreamlitInvalidRangeError."""
         min_value = datetime(2030, 1, 1, 12, 0)
         max_value = datetime(2020, 1, 1, 12, 0)
-        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
             st.datetime_input("Label", min_value=min_value, max_value=max_value)
 
     def test_min_equals_max_is_allowed(self):

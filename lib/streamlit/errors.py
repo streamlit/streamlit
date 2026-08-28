@@ -193,10 +193,10 @@ class StreamlitInvalidURLError(LocalizableStreamlitException):
         url: str,
         protocols: Collection[str] = ("http", "https", "mailto"),
     ) -> None:
-        # mailto: and data: have no authority component, so they are written
-        # as scheme: rather than scheme://.
+        # mailto: has no authority component, so it is written as scheme:
+        # rather than scheme://.
         prefixes = [
-            f'"{protocol}:"' if protocol in {"mailto", "data"} else f'"{protocol}://"'
+            f'"{protocol}:"' if protocol == "mailto" else f'"{protocol}://"'
             for protocol in protocols
         ]
         if len(prefixes) <= 2:
@@ -329,7 +329,7 @@ class StreamlitInvalidRangeError(LocalizableStreamlitException):
 
     def __init__(self, min_value: object, max_value: object) -> None:
         super().__init__(
-            "The `min_value`, set to {min_value}, must be less than "
+            "The `min_value`, set to {min_value}, cannot be greater than "
             "the `max_value`, set to {max_value}.",
             min_value=min_value,
             max_value=max_value,

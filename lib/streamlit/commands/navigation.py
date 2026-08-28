@@ -432,7 +432,9 @@ def _navigation(
     elif isinstance(expanded, int):
         if expanded < 0:
             raise StreamlitValueError(
-                "expanded", ["True", "False", "a non-negative integer"]
+                "expanded",
+                ["True", "False", "a non-negative integer"],
+                detail=f"Provided value: {expanded!r}.",
             )
         if expanded == 0:
             # Documented default behavior: collapsed, default visible_items

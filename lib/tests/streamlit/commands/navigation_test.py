@@ -229,6 +229,7 @@ class NavigationTest(DeltaGeneratorTestCase):
                 expanded=-1,
             )
         assert "a non-negative integer" in str(exc.value)
+        assert "Provided value: -1" in str(exc.value)
 
     def test_navigation_message_with_expanded_invalid_type_raises(self):
         """Test that invalid expanded type raises an error."""

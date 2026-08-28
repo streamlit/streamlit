@@ -88,23 +88,39 @@ DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
 
 DEFAULT_STEP_MINUTES: Final = 15
 _SUPPORTED_DATE_FORMATS: Final = [
-    "'YYYY/MM/DD'",
-    "'DD/MM/YYYY'",
-    "'MM/DD/YYYY'",
-    "'YYYY.MM.DD'",
-    "'DD.MM.YYYY'",
-    "'MM.DD.YYYY'",
-    "'YYYY-MM-DD'",
-    "'DD-MM-YYYY'",
-    "'MM-DD-YYYY'",
+    "YYYY/MM/DD",
+    "DD/MM/YYYY",
+    "MM/DD/YYYY",
+    "YYYY.MM.DD",
+    "DD.MM.YYYY",
+    "MM.DD.YYYY",
+    "YYYY-MM-DD",
+    "DD-MM-YYYY",
+    "MM-DD-YYYY",
 ]
 ALLOWED_DATE_FORMATS: Final = re.compile(
-    "^(" + "|".join(re.escape(fmt.strip("'")) for fmt in _SUPPORTED_DATE_FORMATS) + ")$"
+    "^(" + "|".join(re.escape(fmt) for fmt in _SUPPORTED_DATE_FORMATS) + ")$"
 )
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
 _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
+
+
+def _validate_date_format(date_format: object) -> None:
+    """Raise if ``format`` is not one of the supported Moment.js date strings."""
+    if not isinstance(date_format, str):
+        raise StreamlitInvalidParameterTypeError(
+            "format",
+            type(date_format).__name__,
+            ["str"],
+        )
+    if not ALLOWED_DATE_FORMATS.match(date_format):
+        raise StreamlitValueError(
+            "format",
+            [repr(fmt) for fmt in _SUPPORTED_DATE_FORMATS],
+            detail=f"Provided value: {date_format!r}.",
+        )
 
 
 def _date_to_proto_string(value: date) -> str:
@@ -1474,12 +1490,7 @@ class TimeWidgetsMixin:
         has_explicit_bounds = min_value is not None or max_value is not None
         del value, min_value, max_value
 
-        if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitValueError(
-                "format",
-                _SUPPORTED_DATE_FORMATS,
-                detail=f"Provided value: {format!r}.",
-            )
+        _validate_date_format(format)
 
         if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
             raise StreamlitInvalidParameterTypeError(
@@ -1978,12 +1989,7 @@ class TimeWidgetsMixin:
             format=format,
             width=width,
         )
-        if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitValueError(
-                "format",
-                _SUPPORTED_DATE_FORMATS,
-                detail=f"Provided value: {format!r}.",
-            )
+        _validate_date_format(format)
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,

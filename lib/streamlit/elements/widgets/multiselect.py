@@ -613,7 +613,8 @@ class MultiSelectMixin:
                     ["a positive integer"],
                     detail=(
                         "To disable `st.multiselect`, use `disabled=True`."
-                        if max_selections_value == 0
+                        if isinstance(max_selections_value, Integral)
+                        and max_selections_value == 0
                         else None
                     ),
                 )

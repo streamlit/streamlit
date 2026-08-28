@@ -81,7 +81,7 @@ def test_convert_datetimelike_rejects_unparseable_string() -> None:
 
 def test_date_input_values_rejects_min_after_max() -> None:
     """min after max raises StreamlitInvalidRangeError; equal bounds are allowed."""
-    with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+    with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
         _DateInputValues(
             value=None,
             is_range=False,

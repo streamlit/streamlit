@@ -46,6 +46,7 @@ from streamlit.dataframe_util import (
 from streamlit.errors import (
     DuplicateWidgetID,
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitValueError,
 )
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
@@ -631,15 +632,20 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (-2, "invalid_tab_index_too_small"),
             ("not_an_int", "invalid_tab_index_not_int"),
             (True, "invalid_tab_index_bool"),
+            (1.5, "invalid_tab_index_float"),
         ]
     )
-    def test_invalid_tab_index(self, tab_index: object, key: str) -> None:
-        """Invalid tab_index values raise StreamlitValueError."""
-        with pytest.raises(StreamlitValueError):
+    def test_invalid_tab_index_type(self, tab_index: object, key: str) -> None:
+        """Non-integer tab_index values raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             self.test_component(tab_index=tab_index, key=key)
+
+    def test_invalid_tab_index_value(self) -> None:
+        """Integers below -1 raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            self.test_component(tab_index=-2, key="invalid_tab_index_too_small")
 
 
 class IFrameTest(DeltaGeneratorTestCase):
