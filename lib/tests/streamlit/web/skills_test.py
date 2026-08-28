@@ -2014,13 +2014,18 @@ class TestGlobalInstallationConflicts:
 
         assert exc.value.reason == "write_denied"
 
-    def test_generalises_when_targets_fail_for_different_reasons(
+    def test_reports_the_authoritative_targets_cause_when_targets_disagree(
         self, tmp_path: Path, mock_meta_skill_dir: Path
     ) -> None:
-        """Disagreeing targets report the generic write_failed, not a guess.
+        """Targets fail differently -> the authoritative target's cause wins.
 
-        Claiming "permission denied" when one target was denied and the other was out
-        of disk would send whoever reads the telemetry after half the problem.
+        Both causes used to be pooled, so disagreement collapsed to the generic
+        write_failed. Attributing the failure to the dir a detected harness actually
+        reads is sharper: ~/.claude being out of disk is the fix to chase, while
+        ~/.agents being denied is not why this user's agent has no skill. The
+        no-guessing rule the pooled version protected still holds for the causes
+        that do justify an error - see
+        ``test_write_error_generalises_when_justifying_reasons_disagree``.
         """
         home = tmp_path / "home"
         # ~/.claude present -> _get_global_target_dirs yields two targets.
@@ -2046,7 +2051,13 @@ class TestGlobalInstallationConflicts:
         ):
             skills._install_global_skills(yes=True)
 
-        assert exc.value.reason == "write_failed"
+        # ~/.claude (authoritative) ran out of space; ~/.agents was denied.
+        assert exc.value.reason == "write_no_space"
+        # Both failures are still named for the user, even though only one of them
+        # decided the reason.
+        message = exc.value.format_message()
+        assert ".agents/skills" in message
+        assert ".claude/skills" in message
 
     def test_partial_write_failure_reports_write_failed_not_success(
         self, tmp_path: Path, mock_meta_skill_dir: Path
@@ -2057,8 +2068,12 @@ class TestGlobalInstallationConflicts:
         ``~/.agents`` copies OK (result.installed non-empty) but ``~/.claude`` raises
         OSError (result.errored), the success branch used to win over the errored
         branch - so a half-installed system reported success and emitted no
-        write_failed telemetry for exactly the locked-down cohort under study. Any
-        errored target must fail loud.
+        write_failed telemetry for exactly the locked-down cohort under study.
+
+        This is the direction that must stay hard: ``~/.claude/skills`` is the
+        authoritative target when Claude Code is detected, so failing it means the
+        install reached no agent. The mirror case is deliberately NOT a failure - see
+        ``test_best_effort_target_failure_still_reports_success``.
         """
         home = tmp_path / "home"
         # ~/.claude present -> _get_global_target_dirs yields both targets.
@@ -2083,6 +2098,98 @@ class TestGlobalInstallationConflicts:
             skills._install_global_skills(yes=True)
 
         assert exc.value.reason == "write_failed"
+
+    def test_best_effort_target_failure_still_reports_success(
+        self, tmp_path: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """~/.claude copies, ~/.agents fails -> success, not a hard failure.
+
+        The mirror of the test above, and the case it used to get wrong. Claude Code
+        reads ``.claude/skills`` and ignores ``.agents/skills`` entirely, so this
+        developer's agent has the skill and works; reporting failure told them
+        otherwise. It gets worse once a partial install reopens the nudge, because
+        the repair it offers fails on the same unwritable ~/.agents every time, with
+        no way out.
+        """
+        home = tmp_path / "home"
+        # ~/.claude present -> _get_global_target_dirs yields both targets.
+        (home / ".claude").mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            # Targets are ordered [.agents, .claude]: the best-effort one fails,
+            # the authoritative one copies fine.
+            patch.object(
+                skills.shutil,
+                "copytree",
+                side_effect=[OSError(errno.EACCES, "Permission denied"), None],
+            ),
+            # ~/.claude above says Claude Code is present; pin it so the
+            # .claude target does not depend on the machine's PATH.
+            patch.object(skills, "_is_claude_code_present", return_value=True),
+            patch.object(skills, "_LOGGER") as logger,
+        ):
+            result = skills._install_global_skills(yes=True)
+
+        installed = [path.replace("\\", "/") for path in result.installed]
+        errored = [path.replace("\\", "/") for path in result.errored]
+        # It landed where Claude Code reads it, so the install stands.
+        assert any(".claude/skills" in path for path in installed)
+        # Not swallowed: the CLI summary still lists the failure, and the server log
+        # records it for the in-app install, which has no terminal to print to.
+        assert any(".agents/skills" in path for path in errored)
+        assert logger.warning.called
+
+    @pytest.mark.parametrize(
+        ("claude_present", "expected_dir_name"),
+        [(True, ".claude"), (False, ".agents")],
+    )
+    def test_authoritative_target_follows_claude_detection(
+        self, tmp_path: Path, claude_present: bool, expected_dir_name: str
+    ) -> None:
+        """Authority follows the detected harness, not a fixed path.
+
+        Claude Code is the only harness verified to read a dir we write, so when it
+        is detected ``.claude/skills`` is what an install has to land. With nothing
+        detected, ``.agents/skills`` is the only dir we write, so it carries
+        authority by default - leaving none would turn every write failure into a
+        silent success.
+        """
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(
+                skills, "_is_claude_code_present", return_value=claude_present
+            ),
+        ):
+            authoritative = skills._authoritative_global_target_dir()
+
+            assert authoritative == tmp_path / expected_dir_name / "skills"
+            # Whatever it names has to be a dir the installer actually writes,
+            # or an install could never satisfy it.
+            assert authoritative in skills._get_global_target_dirs()
+
+    def test_write_error_generalises_when_justifying_reasons_disagree(self) -> None:
+        """Disagreeing causes report the generic write_failed, not a guess.
+
+        Only the backstop and direct callers reach this now that one authoritative
+        target contributes at most one cause, but the rule still has to hold:
+        claiming "permission denied" for a set that was half permissions and half
+        disk-full would send whoever reads the telemetry after the wrong fix.
+        """
+        result = skills._InstallResult(
+            errored=["~/.agents/skills/developing-with-streamlit"],
+            write_reasons={"write_denied", "write_no_space"},
+        )
+
+        # Pooled and disagreeing -> generic.
+        assert skills._write_error(result).reason == "write_failed"
+        # An explicit single justifying cause wins over the pooled set.
+        assert (
+            skills._write_error(result, {"write_no_space"}).reason == "write_no_space"
+        )
 
 
 class TestInteractiveModeSelection:

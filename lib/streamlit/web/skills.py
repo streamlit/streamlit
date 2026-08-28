@@ -366,6 +366,30 @@ def _get_global_target_dirs() -> list[Path]:
     return targets
 
 
+def _authoritative_global_target_dir() -> Path:
+    """The one global target dir whose write decides if an install succeeded.
+
+    Claude Code is the only harness verified to read a directory we write, and it
+    reads ``.claude/skills`` while ignoring ``.agents/skills`` entirely. So when
+    Claude Code is detected, ``~/.claude/skills`` is what an install has to land,
+    and ``~/.agents/skills`` is best-effort - written for harnesses that may or may
+    not read it, and never the reason an install that already reached Claude Code
+    is reported as a failure.
+
+    With no Claude Code detected, none of our targets has a verified reader and
+    ``~/.agents/skills`` is the only one we write, so it carries authority by
+    default. That is a deliberate choice between two wrong answers: leaving no
+    target authoritative would turn every write failure into a silent success.
+
+    Always one of :func:`_get_global_target_dirs`, so exactly one target in that
+    list is load-bearing and the rest are best-effort.
+    """
+    home = Path.home()
+    if _is_claude_code_present():
+        return home / ".claude" / "skills"
+    return home / ".agents" / "skills"
+
+
 # How completely the bundled skill is installed, judged only against the
 # directories `streamlit skills` itself writes. ``partial`` is the state this
 # vocabulary exists for: it is the wedge - the skill sitting in .agents/skills
@@ -935,22 +959,32 @@ def _conflict_error(skipped: list[str]) -> InstallError:
     )
 
 
-def _write_error(result: _InstallResult) -> InstallError:
+def _write_error(
+    result: _InstallResult,
+    reasons: set[_InstallFailureReason] | None = None,
+) -> InstallError:
     """Build a "couldn't write" error for filesystem failures during copy.
 
     Distinct from :func:`_conflict_error`, which reports pre-existing files.
 
-    The reason follows what the failed targets agreed on:
+    ``reasons`` are the causes that *justify* the error - in practice those from the
+    authoritative target, whose path a detected harness reads. ``None`` means every
+    recorded cause justifies it. A best-effort failure is still named in the
+    message, since the user should see everything that did not land, but it must
+    not decide the reason: a dead-weight target cannot be allowed to mislabel a
+    failure a load-bearing one caused.
+
+    The reason follows what the justifying failures agreed on:
 
     - all agreed on one cause -> that cause
-    - they disagreed -> the generic ``write_failed``, because claiming "permission
-      denied" for a set that was half permissions and half disk-full would point
-      whoever reads the telemetry at the wrong fix
+    - they disagreed, or none was recorded -> the generic ``write_failed``, because
+      claiming "permission denied" for a set that was half permissions and half
+      disk-full would point whoever reads the telemetry at the wrong fix
     """
     joined = ", ".join(_concise_install_paths(result.errored))
-    reasons = result.write_reasons
+    justifying = result.write_reasons if reasons is None else reasons
     reason: _InstallFailureReason = (
-        next(iter(reasons)) if len(reasons) == 1 else "write_failed"
+        next(iter(justifying)) if len(justifying) == 1 else "write_failed"
     )
     return InstallError(
         f"Could not write {joined}. Check folder permissions and free disk "
@@ -1150,27 +1184,69 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             reason="source_incomplete",
         )
 
-    # Install to each target directory
+    # Install to each target directory, keeping a per-target result so each
+    # target's outcome can be judged on its own. The aggregate below cannot support
+    # that: ``write_reasons`` is a set, so two targets failing the same way are
+    # indistinguishable from one, and nothing in it records WHICH target failed.
     result = _InstallResult()
     # For global install, only one skill is installed but we use a set for consistency
     bundled_skill_names = {_GLOBAL_SKILL_NAME}
+    authoritative_dir = _authoritative_global_target_dir()
+    authoritative_failed = False
+    authoritative_reasons: set[_InstallFailureReason] = set()
+    degraded_dirs: list[Path] = []
+
     for target_dir in target_dirs:
+        target_result = _InstallResult()
         _install_skill_copy(
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
             target_dir,
-            result,
+            target_result,
             bundled_skill_names,
         )
+        if target_result.errored:
+            if target_dir == authoritative_dir:
+                authoritative_failed = True
+                authoritative_reasons |= target_result.write_reasons
+            else:
+                degraded_dirs.append(target_dir)
+        result.installed += target_result.installed
+        result.up_to_date += target_result.up_to_date
+        result.skipped += target_result.skipped
+        result.errored += target_result.errored
+        result.write_reasons |= target_result.write_reasons
 
     # Report results
     _print_result(result)
 
-    # A write failure on ANY target is a hard failure, even if another target
-    # succeeded - otherwise a partial install (e.g. ~/.agents ok but ~/.claude
-    # denied) reports success and drops skillsNudgeInstallFailed:write_failed.
-    if result.errored:
+    # A write failure on the AUTHORITATIVE target is a hard failure: a detected
+    # harness reads that path, so the install reached no agent. A failure on a
+    # best-effort target is not, and used to be - telling a developer whose
+    # ~/.claude/skills was written, and whose Claude Code therefore works
+    # perfectly, that the install had failed. Worse once a partial install
+    # reopens the nudge: that developer would be nudged toward a repair that
+    # fails on the same unwritable target every time, with no way out.
+    if authoritative_failed:
+        raise _write_error(result, authoritative_reasons)
+
+    # Nothing landed anywhere. Unreachable while the authoritative dir is always
+    # one of ``target_dirs``, but a target added later must not be able to turn a
+    # total failure into a silent success.
+    if result.errored and not (result.installed or result.up_to_date):
         raise _write_error(result)
+
+    if degraded_dirs:
+        # Not swallowed. _print_result above already lists it under "Failed to
+        # write" for a CLI user; this leaves the same trace in the server log for
+        # the in-app install, which has no terminal to print to.
+        _LOGGER.warning(
+            "Skills install wrote %s but could not write best-effort target(s) %s. "
+            "Reporting success: the skill is installed where a detected agent "
+            "reads it.",
+            authoritative_dir,
+            ", ".join(str(path) for path in degraded_dirs),
+        )
 
     if result.installed or result.up_to_date:
         click.echo()
