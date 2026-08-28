@@ -80,13 +80,12 @@ function Heading(props: HeadingProtoProps): ReactElement {
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
 
+  // Inline sibling of the heading body (not prepended to the markdown
+  // source) so wrapping and text-align match `:material/name: Title`,
+  // while the labelled body span keeps the icon out of the accessible
+  // name and auto-anchor. Spinner is not valid heading markdown.
   const headingIcon = icon ? (
-    <StyledHeadingIcon
-      aria-hidden="true"
-      // Spinners read larger than Material/emoji at the same em size; mark them
-      // so CSS can optically shrink them.
-      {...(icon === "spinner" ? { "data-spinner": true } : {})}
-    >
+    <StyledHeadingIcon aria-hidden="true">
       <DynamicIcon iconValue={icon} testid="stHeadingIcon" />
     </StyledHeadingIcon>
   ) : undefined

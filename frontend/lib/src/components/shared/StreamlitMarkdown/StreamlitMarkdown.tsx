@@ -448,15 +448,11 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
   //
-  // data-has-icon enables inline-flex centering in CSS so the leading icon
-  // optically aligns with the heading text (vertical-align alone is unreliable
-  // with heading line-heights) without overriding inherited text-align.
+  // The leading icon is also inline (not a flex sibling) so wrapping and
+  // text-align match markdown icons, while the labelled body span keeps it
+  // out of the accessible name and auto-anchor slug.
   const headerElementWithActions = (
-    <Tag
-      {...tagProps}
-      {...mergedAttributes}
-      {...(icon ? { "data-has-icon": true } : {})}
-    >
+    <Tag {...tagProps} {...mergedAttributes}>
       {icon}
       {headingTextId ? (
         <span id={headingTextId} data-heading-text="">

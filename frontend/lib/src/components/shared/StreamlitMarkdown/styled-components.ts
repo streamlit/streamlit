@@ -113,18 +113,6 @@ function getMarkdownHeadingDefinitions(
       margin: 0,
       color: "inherit",
     },
-    // Inline-flex so the icon+text group still honors inherited text-align
-    // from text_alignment (center/right/justify). Prefer this over
-    // vertical-align, which fights heading line-height and glyph metrics.
-    "h1[data-has-icon], h2[data-has-icon], h3[data-has-icon]": {
-      display: "inline-flex",
-      alignItems: "center",
-      maxWidth: "100%",
-      // Let the body-text span shrink so long titles wrap instead of overflowing.
-      "& [data-heading-text]": {
-        minWidth: 0,
-      },
-    },
     h1: {
       fontSize: convertFontSizes(
         theme.fontSizes.h1FontSize,
@@ -529,39 +517,48 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
 /**
  * Leading decorative icon for st.title / st.header / st.subheader.
  *
- * Sized to ~cap-height (0.7em) so icons sit with the text instead of competing
- * with the full em box. Scales with heading font size (incl. sidebar/dialog).
- * Vertical centering is handled by the parent heading's flex layout.
+ * Inline in the heading's text flow so wrapping and text-align match a
+ * markdown icon (`:material/name: Title`). The wrapper is one heading
+ * line tall so the 1em glyph sits with the letters (not on the line-box
+ * floor). The labelled body-text span keeps this out of the accessible
+ * name and auto-generated anchor.
  */
 export const StyledHeadingIcon = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  flexShrink: 0,
+  // Fill the heading line box so the 1em glyph sits with the letters.
+  // A 1em box + vertical-align bottom leaves line-height gap above the icon.
+  verticalAlign: "bottom",
   marginInlineEnd: theme.spacing.sm,
   color: "inherit",
-  fontSize: "0.7em",
-  lineHeight: "1em",
-
-  // Spinners are solid rings and read larger than Material/emoji glyphs.
-  "&[data-spinner]": {
-    fontSize: "0.55em",
-  },
+  fontSize: "1em",
+  lineHeight: 1,
+  width: "1em",
+  height: `${theme.lineHeights.headings}em`,
+  overflow: "hidden",
+  userSelect: "none",
+  boxSizing: "border-box",
 
   // DynamicIcon defaults to fixed rem iconSizes; override to inherit our size.
   "& > span": {
+    boxSizing: "border-box",
     fontSize: "1em",
     width: "1em",
     height: "1em",
+    margin: 0,
+    padding: 0,
 
     "& > span, & > img": {
-      boxSizing: "border-box",
+      boxSizing: "border-box !important",
       fontSize: "inherit",
       // Important: spinner styles set rem widths that otherwise win and overflow.
       width: "100% !important",
       height: "100% !important",
       maxWidth: "100%",
       maxHeight: "100%",
+      margin: 0,
+      padding: 0,
     },
   },
 }))

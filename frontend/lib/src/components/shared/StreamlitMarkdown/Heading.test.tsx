@@ -345,12 +345,15 @@ describe("Heading", () => {
     )
   })
 
-  it("uses inline-flex for icon headings so inherited text-align still applies", () => {
+  it("renders the leading icon inline so wrapping matches markdown", () => {
     const props = getHeadingProps({ body: "hello", icon: "🔥" })
     render(<Heading {...props} />)
 
     const heading = screen.getByRole("heading")
-    expect(heading).toHaveAttribute("data-has-icon")
-    expect(heading).toHaveStyle({ display: "inline-flex" })
+    // A flex heading would put the icon in a gutter and break wrap/text-align.
+    expect(heading).not.toHaveStyle({ display: "inline-flex" })
+    expect(screen.getByTestId("stHeadingIcon").parentElement).toHaveStyle({
+      display: "inline-flex",
+    })
   })
 })
