@@ -33,6 +33,7 @@ from streamlit.errors import (
     StreamlitDuplicateElementId,
     StreamlitIncompatibleParametersError,
     StreamlitInvalidMaxError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
     StreamlitValueError,
@@ -649,27 +650,30 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.HasField("select_all")
 
     def test_select_all_negative_raises(self) -> None:
-        """Negative select_all values raise StreamlitAPIException."""
+        """Negative select_all values raise StreamlitValueError."""
         with pytest.raises(
-            StreamlitAPIException, match=r"must be a non-negative integer"
+            StreamlitValueError,
+            match=r"Invalid `select_all` value.*integer between 0 and 2147483647",
         ):
             st.multiselect("the label", ("m", "f"), select_all=-1)
 
     def test_select_all_above_int32_raises(self) -> None:
-        """select_all values above the proto int32 max raise StreamlitAPIException."""
+        """Values above the proto int32 max raise StreamlitValueError."""
         with pytest.raises(
-            StreamlitAPIException, match=r"must be a non-negative integer"
+            StreamlitValueError,
+            match=r"Invalid `select_all` value.*integer between 0 and 2147483647",
         ):
             st.multiselect("the label", ("m", "f"), select_all=2**31)
 
     def test_select_all_invalid_does_not_register_key(self) -> None:
         """Invalid select_all must not register the widget key.
 
-        Catching StreamlitAPIException and rendering a valid multiselect with
+        Catching StreamlitValueError and rendering a valid multiselect with
         the same key in the same run must not hit StreamlitDuplicateElementKey.
         """
         with pytest.raises(
-            StreamlitAPIException, match=r"must be a non-negative integer"
+            StreamlitValueError,
+            match=r"Invalid `select_all` value.*integer between 0 and 2147483647",
         ):
             st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=-1)
         st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=False)
@@ -678,9 +682,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     @parameterized.expand([("yes",), (1.5,), (None,)])
     def test_select_all_invalid_type_raises(self, value: object) -> None:
-        """Non bool/int select_all values raise StreamlitAPIException."""
+        """Non bool/int values raise StreamlitInvalidParameterTypeError."""
         with pytest.raises(
-            StreamlitAPIException, match=r"must be a bool or a non-negative integer"
+            StreamlitInvalidParameterTypeError,
+            match=rf"Invalid `select_all` type.*Provided type: {type(value).__name__}",
         ):
             st.multiselect("the label", ("m", "f"), select_all=value)  # type: ignore[arg-type]
 

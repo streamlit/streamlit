@@ -53,9 +53,10 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitInvalidMaxError,
+    StreamlitInvalidParameterTypeError,
     StreamlitSelectionCountExceedsMaxError,
+    StreamlitValueError,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -205,15 +206,20 @@ def _encode_select_all(select_all: object) -> int:
         return _SELECT_ALL_ALWAYS if select_all else 0
     if isinstance(select_all, int):
         if select_all < 0 or select_all > _SELECT_ALL_MAX_THRESHOLD:
-            raise StreamlitAPIException(
-                f"Invalid value for select_all: {select_all!r}. "
-                "When using an int, `select_all` must be a non-negative integer "
-                f"no larger than {_SELECT_ALL_MAX_THRESHOLD}."
+            raise StreamlitValueError(
+                "select_all",
+                [
+                    "True",
+                    "False",
+                    f"an integer between 0 and {_SELECT_ALL_MAX_THRESHOLD}",
+                ],
+                detail=f"Got {select_all!r}.",
             )
         return select_all
-    raise StreamlitAPIException(
-        f"Invalid type for select_all: {type(select_all).__name__!s}. "
-        "select_all must be a bool or a non-negative integer."
+    raise StreamlitInvalidParameterTypeError(
+        "select_all",
+        type(select_all).__name__,
+        ["bool", "int"],
     )
 
 
