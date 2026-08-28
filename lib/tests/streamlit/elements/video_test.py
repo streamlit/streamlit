@@ -16,7 +16,7 @@
 
 from io import BytesIO
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import pytest
@@ -188,12 +188,13 @@ class VideoTest(DeltaGeneratorTestCase):
         fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
 
-        with NamedTemporaryFile(suffix=".vtt", mode="wb") as tmp_file:
-            p = Path(tmp_file.name)
-            tmp_file.write(fake_sub_content)
-            tmp_file.flush()
+        # Write the subtitle to a closed file before st.video: subtitle handling
+        # reopens the path, and Windows refuses to reopen a still-open temp file.
+        with TemporaryDirectory() as tmp_dir:
+            subtitle_path = Path(tmp_dir) / "subtitles.vtt"
+            subtitle_path.write_bytes(fake_sub_content)
 
-            st.video(fake_video_data, subtitles=p)
+            st.video(fake_video_data, subtitles=subtitle_path)
 
         expected_english_subtitle_url = _calculate_file_id(
             fake_sub_content,
