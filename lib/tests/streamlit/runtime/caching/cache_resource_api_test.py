@@ -623,7 +623,7 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         )
 
     def test_hard_ttl_is_double_fresh_ttl(self) -> None:
-        """In background mode the underlying cache ttl is 2x the user-facing ttl."""
+        """The default hard TTL is twice the user-facing freshness TTL."""
         cache = _resource_caches.get_cache(
             key="bg_key",
             display_name="bg",
@@ -635,6 +635,33 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         )
         assert cache.fresh_ttl_seconds == _BG_TTL
         assert cache.ttl_seconds == _BG_TTL * 2
+
+    @parameterized.expand(
+        [
+            ("custom", 3.5, _BG_TTL * 3.5),
+            ("overflow_fallback", 1e308, _BG_TTL * 2),
+        ]
+    )
+    # Each case needs a distinct key so it builds a fresh cache rather than reusing one.
+    def test_configured_multiplier_sets_background_hard_ttl(
+        self, case: str, multiplier: float, expected_hard_ttl: float
+    ) -> None:
+        """The configured multiplier sets background hard TTL; overflow falls back."""
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+            cache = _resource_caches.get_cache(
+                key=f"multiplier_{case}",
+                display_name=f"multiplier_{case}",
+                max_entries=None,
+                ttl=_BG_TTL,
+                validate=None,
+                on_release=lambda _v: None,
+                refresh_mode="background",
+            )
+
+        assert cache.fresh_ttl_seconds == _BG_TTL
+        assert cache.ttl_seconds == expected_hard_ttl
 
     def test_cache_recreated_on_mode_change(self) -> None:
         """Changing refresh_mode across reruns rebuilds the cache."""

@@ -816,11 +816,37 @@ _create_option(
         still served) rather than queued.
 
         Set to 0 to disable background refresh entirely: stale entries are then
-        recomputed by a blocking foreground call at hard expiry (2 x ttl).
+        recomputed by a blocking foreground call at the configured hard-expiry
+        bound.
     """,
     visibility="hidden",
     default_val=4,
     type_=int,
+)
+
+_create_option(
+    "runner.cacheBackgroundRefreshTTLMultiplier",
+    description="""
+        Multiplier applied to a cached function's ttl to set the hard-expiration
+        bound for refresh_mode="background". Hard expiry occurs at
+        multiplier * ttl. The default is 2.0, so stale values can be served
+        for one additional ttl while Streamlit attempts a background refresh.
+
+        This is a process-wide bound for every refresh_mode="background"
+        function in the process, not a per-function default. Raising it to
+        keep one long-idle cache also keeps stale entries for every other
+        background cache for (multiplier - 1) * ttl.
+
+        Values must be finite and greater than 1.0. Invalid values are ignored
+        with a warning and the default 2.0 is used. Values of 1.0 would remove
+        the stale window; values below 1.0 would hard-expire before the
+        freshness ttl. Use refresh_mode="foreground" to never serve stale
+        values. Larger values keep entries longer after idle periods or
+        refresh failures, at the cost of higher memory use and older served
+        data. Applies to both @st.cache_data and @st.cache_resource.
+    """,
+    default_val=2.0,
+    type_=float,
 )
 
 _create_option(

@@ -75,7 +75,7 @@ from tests.streamlit.element_mocks import (
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def as_cached_result(value: Any) -> CachedResult:
@@ -941,7 +941,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         )
 
     def test_hard_ttl_is_double_fresh_ttl(self) -> None:
-        """In background mode the underlying storage ttl is 2x the user-facing ttl."""
+        """The default hard TTL is twice the user-facing freshness TTL."""
         cache = _data_caches.get_cache(
             key="bg_key",
             persist=None,
@@ -952,6 +952,32 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         )
         assert cache.fresh_ttl_seconds == 100
         assert cache.ttl_seconds == 200
+
+    @parameterized.expand(
+        [
+            ("custom", 3.5, 350),
+            ("overflow_fallback", 1e308, 200),
+        ]
+    )
+    # Each case needs a distinct key so it builds a fresh cache rather than reusing one.
+    def test_configured_multiplier_sets_background_hard_ttl(
+        self, case: str, multiplier: float, expected_hard_ttl: float
+    ) -> None:
+        """The configured multiplier sets background hard TTL; overflow falls back."""
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+            cache = _data_caches.get_cache(
+                key=f"multiplier_{case}",
+                persist=None,
+                max_entries=None,
+                ttl=100,
+                display_name=f"multiplier_{case}",
+                refresh_mode="background",
+            )
+
+        assert cache.fresh_ttl_seconds == 100
+        assert cache.ttl_seconds == expected_hard_ttl
 
     def test_stored_at_set_only_in_background_mode(self) -> None:
         """stored_at is set (and survives pickling) in background mode, and None otherwise."""
