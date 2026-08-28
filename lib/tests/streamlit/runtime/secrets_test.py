@@ -155,9 +155,25 @@ class SecretsTest(unittest.TestCase):
             StreamlitSecretNotFoundError, match="Error parsing secrets file"
         ) as excinfo:
             self.secrets.get("no_such_secret", None)
-        assert MOCK_SECRETS_FILE_LOC in str(excinfo.value)
+        message = str(excinfo.value)
+        error = excinfo.value.exec_kwargs["error"]
+        assert MOCK_SECRETS_FILE_LOC in message
         assert excinfo.value.exec_kwargs["path"] == MOCK_SECRETS_FILE_LOC
-        assert isinstance(excinfo.value.exec_kwargs["error"], str)
+        assert error
+        assert error in message
+
+    @patch("builtins.open", new_callable=mock_open, read_data="key = {invalid")
+    @patch("streamlit.config.get_option", return_value=["/mock/{secrets}.toml"])
+    def test_malformed_toml_error_with_braces_in_path(self, mock_get_option, _):
+        """Brace characters in the secrets path still raise StreamlitSecretNotFoundError."""
+        with pytest.raises(StreamlitSecretNotFoundError) as excinfo:
+            self.secrets.get("no_such_secret", None)
+        message = str(excinfo.value)
+        error = excinfo.value.exec_kwargs["error"]
+        assert "/mock/{secrets}.toml" in message
+        assert excinfo.value.exec_kwargs["path"] == "/mock/{secrets}.toml"
+        assert error
+        assert error in message
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
@@ -665,9 +681,7 @@ def test_missing_entry_error_messages_include_hint(
     message_fn: Callable[[str], str], kind: str
 ) -> None:
     """Missing key and attribute messages include the shared docs hint."""
-    message = message_fn("foo")
-    assert f'st.secrets has no {kind} "foo".' in message
-    assert _MISSING_ENTRY_HINT in message
+    assert message_fn("foo") == f'st.secrets has no {kind} "foo". {_MISSING_ENTRY_HINT}'
 
 
 # --- Tests for _validate_secrets_value ---
