@@ -320,19 +320,62 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidRangeError(LocalizableStreamlitException):
+class StreamlitInvalidMinMaxError(LocalizableStreamlitException):
     """Raised when ``min_value`` is greater than ``max_value``.
 
-    ``st.slider`` also raises this for equal bounds; ``st.date_input`` and
-    ``st.datetime_input`` treat equal bounds as a valid single-day range.
+    ``st.slider`` also raises this for equal bounds. ``st.date_input`` and
+    ``st.datetime_input`` treat equal bounds as a valid single-day /
+    single-instant range.
     """
 
     def __init__(self, min_value: object, max_value: object) -> None:
+        if min_value == max_value:
+            message = (
+                "The `min_value` and `max_value` parameters are both set to "
+                "{min_value}. They must not be equal."
+            )
+        else:
+            message = (
+                "The `min_value`, set to {min_value}, cannot be greater than "
+                "the `max_value`, set to {max_value}."
+            )
         super().__init__(
-            "The `min_value`, set to {min_value}, cannot be greater than "
-            "the `max_value`, set to {max_value}.",
+            message,
             min_value=min_value,
             max_value=max_value,
+        )
+
+
+class StreamlitValueOutOfRangeError(LocalizableStreamlitException):
+    """Raised when a parameter is outside a closed ``[min, max]`` interval.
+
+    Uncaught-exception telemetry appends the parameter name, for example
+    ``StreamlitValueOutOfRangeError:index``. Optional ``detail`` appears in
+    the error message only.
+    """
+
+    def __init__(
+        self,
+        parameter: str,
+        value: object,
+        min_value: object,
+        max_value: object,
+        *,
+        detail: str | None = None,
+    ) -> None:
+        message = (
+            "The `{parameter}` parameter, set to {value}, is outside the "
+            "required range [{min_value}, {max_value}]."
+        )
+        if detail:
+            message += " {detail}"
+        super().__init__(
+            message,
+            parameter=parameter,
+            value=value,
+            min_value=min_value,
+            max_value=max_value,
+            detail=detail,
         )
 
 
@@ -617,13 +660,14 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
 
 
 class StreamlitValueError(LocalizableStreamlitException):
-    """Raised when a parameter receives a value outside a known set or range.
+    """Raised when a parameter receives a value outside a known set of options.
 
     ``valid_values`` is the user-facing list of supported values: Literal /
-    enum-like options, or a short description of an accepted range (for
-    example ``a positive duration``). Uncaught-exception telemetry appends
-    the parameter name, for example ``StreamlitValueError:width``. Optional
-    ``detail`` appears in the error message only.
+    enum-like options, or a short description of an open-ended constraint (for
+    example ``a positive duration``). For a closed ``[min, max]`` interval,
+    use ``StreamlitValueOutOfRangeError``. Uncaught-exception telemetry
+    appends the parameter name, for example ``StreamlitValueError:width``.
+    Optional ``detail`` appears in the error message only.
     """
 
     def __init__(

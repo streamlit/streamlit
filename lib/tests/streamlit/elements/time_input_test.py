@@ -32,6 +32,7 @@ from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -152,12 +153,14 @@ class TimeInputTest(DeltaGeneratorTestCase):
             st.time_input("Set an alarm for", value, step=True)
         with pytest.raises(StreamlitInvalidParameterTypeError):
             st.time_input("Set an alarm for", value, step=(90, 0))
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
+        ):
             st.time_input("Set an alarm for", value, step=0)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
+        ):
             st.time_input("Set an alarm for", value, step=timedelta(hours=24))
-        with pytest.raises(StreamlitAPIException):
-            st.time_input("Set an alarm for", value, step=timedelta(days=1))
         # step=1 and step=59 are now valid (sub-minute steps unlocked)
         st.time_input("Set an alarm for", value, step=1)
         st.time_input("Set an alarm for", value, step=59)

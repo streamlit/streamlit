@@ -34,8 +34,8 @@ from streamlit.elements.widgets.slider import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidRangeError,
     StreamlitInvalidWidthError,
     StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
@@ -222,9 +222,9 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.max == 101
 
     def test_min_equals_max(self):
-        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="must not be equal"):
             st.slider("oh no", min_value=10, max_value=10)
-        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="must not be equal"):
             date = datetime(2024, 4, 3)
             st.slider("datetime", min_value=date, max_value=date)
 

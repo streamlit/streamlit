@@ -149,13 +149,19 @@ generic `StreamlitAPIException` with a one-off message.
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits.
 - `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
-  parameter receives an invalid value from a known set of options or an
-  accepted range. `valid_values` is the user-facing list of supported values:
-  Literal / enum-like options, or a short range description (for example
-  `"a positive duration"`). `parameter` is appended in uncaught-exception
-  telemetry (`StreamlitValueError:<parameter>`); optional `detail` appears in
-  the error message only. Example:
+  parameter receives an invalid value from a known set of options, or a short
+  open-ended constraint (for example `"a positive duration"`). For a closed
+  `[min, max]` interval, use `StreamlitValueOutOfRangeError` instead.
+  `valid_values` is the user-facing list of supported values. `parameter` is
+  appended in uncaught-exception telemetry (`StreamlitValueError:<parameter>`);
+  optional `detail` appears in the error message only. Example:
   `raise StreamlitValueError("type", ["'primary'", "'secondary'", "'tertiary'"])`.
+- `StreamlitValueOutOfRangeError(parameter, value, min_value, max_value, *, detail=None)`:
+  use when a parameter is outside a closed `[min, max]` interval, including a
+  dynamic max such as `len(options) - 1`. `parameter` is appended in
+  uncaught-exception telemetry (`StreamlitValueOutOfRangeError:<parameter>`);
+  optional `detail` appears in the error message only. Example:
+  `raise StreamlitValueOutOfRangeError("index", index, 0, len(options) - 1)`.
 - `StreamlitMissingRequiredParameterError(parameter, *, detail=None)`:
   use when a required parameter is missing, `None`, or empty, including an
   empty sequence. `parameter` is appended in uncaught-exception telemetry
@@ -180,11 +186,12 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitInvalidWidthError` / `StreamlitInvalidHeightError`
     (layout sizing helpers)
   - `StreamlitInvalidColorError`
-  - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
-    date/time bounds)
-  - `StreamlitInvalidRangeError` (`min_value` cannot be greater than `max_value`.
-    `st.slider` also rejects equal bounds; `st.date_input` /
-    `st.datetime_input` allow a single-day / single-instant range)
+  - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (widget
+    `value` vs user-configured `min_value` / `max_value`)
+  - `StreamlitInvalidMinMaxError` (`min_value` cannot be greater than
+    `max_value`; `st.slider` also rejects equal bounds, while
+    `st.date_input` / `st.datetime_input` allow a single-day /
+    single-instant range)
   - `StreamlitInvalidURLError(url, protocols)` (`st.logo(link=)`, page-config
     menu items). Pass the allowed schemes, for example `["http", "https"]`.
     `protocols` defaults to `("http", "https", "mailto")`.

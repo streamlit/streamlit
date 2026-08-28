@@ -44,12 +44,12 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidRangeError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
@@ -418,7 +418,7 @@ class _DateTimeInputValues:
 
     def __post_init__(self) -> None:
         if self.min > self.max:
-            raise StreamlitInvalidRangeError(self.min, self.max)
+            raise StreamlitInvalidMinMaxError(self.min, self.max)
 
         if self.value is not None:
             if self.value < self.min:
@@ -467,7 +467,7 @@ class _DateInputValues:
 
     def __post_init__(self) -> None:
         if self.min > self.max:
-            raise StreamlitInvalidRangeError(self.min, self.max)
+            raise StreamlitInvalidMinMaxError(self.min, self.max)
 
         if self.value:
             start_value = self.value[0]
@@ -1080,9 +1080,14 @@ class TimeWidgetsMixin:
             )
         if isinstance(step, timedelta):
             step = int(step.total_seconds())
-        if step < 1 or step > timedelta(hours=23).seconds:
-            raise StreamlitAPIException(
-                f"`step` must be between 1 second and 23 hours but is currently set to {step} seconds."
+        if not 1 <= step <= timedelta(hours=23).seconds:
+            # Use unit labels so the message reads [1 second, 23 hours]
+            # rather than [1, 82800].
+            raise StreamlitValueOutOfRangeError(
+                "step",
+                value=f"{step} seconds",
+                min_value="1 second",
+                max_value="23 hours",
             )
 
         serde = TimeInputSerde(parsed_time, step=step)
@@ -1501,9 +1506,14 @@ class TimeWidgetsMixin:
         step_seconds = (
             int(step.total_seconds()) if isinstance(step, timedelta) else step
         )
-        if step_seconds < 60 or step_seconds > timedelta(hours=23).seconds:
-            raise StreamlitAPIException(
-                f"`step` must be between 60 seconds and 23 hours but is currently set to {step_seconds} seconds."
+        if not 60 <= step_seconds <= timedelta(hours=23).seconds:
+            # Use unit labels so the message reads [60 seconds, 23 hours]
+            # rather than [60, 82800].
+            raise StreamlitValueOutOfRangeError(
+                "step",
+                value=f"{step_seconds} seconds",
+                min_value="60 seconds",
+                max_value="23 hours",
             )
 
         session_state = get_session_state().filtered_state

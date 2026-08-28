@@ -26,12 +26,13 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateTimeInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
-    StreamlitInvalidRangeError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -150,9 +151,13 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             st.datetime_input("The label", step=True)
         with pytest.raises(StreamlitInvalidParameterTypeError):
             st.datetime_input("The label", step=(1, 0))
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+        ):
             st.datetime_input("The label", step=30)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+        ):
             st.datetime_input("The label", step=timedelta(hours=24))
 
     def test_format_validation(self):
@@ -297,10 +302,10 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             assert proto.max == "2024-01-01T12:00"
 
     def test_min_max_exception(self):
-        """min_value after max_value raises StreamlitInvalidRangeError."""
+        """min_value after max_value raises StreamlitInvalidMinMaxError."""
         min_value = datetime(2030, 1, 1, 12, 0)
         max_value = datetime(2020, 1, 1, 12, 0)
-        with pytest.raises(StreamlitInvalidRangeError, match="cannot be greater than"):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
             st.datetime_input("Label", min_value=min_value, max_value=max_value)
 
     def test_min_equals_max_is_allowed(self):

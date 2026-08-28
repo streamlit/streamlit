@@ -42,8 +42,8 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -500,9 +500,7 @@ class RadioMixin:
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
-            raise StreamlitAPIException(
-                "Radio index must be between 0 and length of options"
-            )
+            raise StreamlitValueOutOfRangeError("index", index, 0, len(opt) - 1)
 
         def handle_captions(caption: str | None) -> str:
             if caption is None:

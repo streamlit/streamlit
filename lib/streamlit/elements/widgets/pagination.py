@@ -26,7 +26,11 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -262,17 +266,15 @@ class PaginationMixin:
                 f"`num_pages` must be an integer of at least 1. Got {num_pages}."
             )
 
-        # Validate default
-        if (
-            not isinstance(default, int)
-            or isinstance(default, bool)
-            or default < 1
-            or default > num_pages
-        ):
-            raise StreamlitAPIException(
-                f"`default` must be between 1 and `num_pages` ({num_pages}). "
-                f"Got {default}."
+        # bool is a subclass of int, so True would otherwise be treated as page 1.
+        if isinstance(default, bool) or not isinstance(default, int):
+            raise StreamlitInvalidParameterTypeError(
+                "default",
+                type(default).__name__,
+                ["int"],
             )
+        if not 1 <= default <= num_pages:
+            raise StreamlitValueOutOfRangeError("default", default, 1, num_pages)
 
         # Validate max_visible_pages
         if max_visible_pages is not None and (
