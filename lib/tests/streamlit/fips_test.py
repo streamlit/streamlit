@@ -28,6 +28,8 @@ import urllib.request
 from typing import TYPE_CHECKING, Any, NoReturn
 
 import pytest
+from typing_extensions import Self
+from websockets.exceptions import InvalidHandshake
 from websockets.sync.client import connect
 
 from streamlit import util
@@ -43,8 +45,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS = 30
-# Deadline for the WebSocket smoke session (rerun request to script finish),
-# kept separate from the server-startup timeout so each reads independently.
+# Budget for opening the smoke WebSocket and, separately, for the session
+# from rerun request to script finish. Kept independent of the server-startup
+# timeout so each phase reads independently.
 _FIPS_SMOKE_SESSION_TIMEOUT_SECS = 30
 # Number of times to retry starting the server on a fresh port, guarding against
 # the small window where the chosen port is claimed between selection and bind.
@@ -165,12 +168,10 @@ def test_internal_hashing_uses_non_security_hashes(
 def test_wait_for_streamlit_health_retries_socket_timeout(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Retry when urllib raises a raw ``TimeoutError`` instead of ``URLError``.
+    """Retry health polling when urllib raises a raw socket timeout.
 
-    A 1s socket timeout during ``getresponse()``/``read()`` is
-    ``TimeoutError("timed out")`` and is not wrapped in ``URLError``. That is
-    the failure this smoke test flakes with under CI load if the health poll
-    does not catch it.
+    urllib does not wrap a socket read timeout in ``URLError``, so
+    ``_wait_for_streamlit_health`` must catch ``TimeoutError`` too.
     """
 
     class _AliveProcess:
@@ -178,7 +179,7 @@ def test_wait_for_streamlit_health_retries_socket_timeout(
             return None
 
     class _OkResponse:
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *_args: object) -> None:
@@ -187,11 +188,12 @@ def test_wait_for_streamlit_health_retries_socket_timeout(
         def read(self) -> bytes:
             return b"ok"
 
-    calls = {"n": 0}
+    call_count = 0
 
     def fake_open(_url: str, timeout: float = 1) -> _OkResponse:
-        calls["n"] += 1
-        if calls["n"] < 3:
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
             raise TimeoutError("timed out")
         return _OkResponse()
 
@@ -207,7 +209,7 @@ def test_wait_for_streamlit_health_retries_socket_timeout(
     log_path.write_text("", encoding="utf-8")
     process: Any = _AliveProcess()
     assert _wait_for_streamlit_health(process, 12345, log_path) is True
-    assert calls["n"] == 3
+    assert call_count == 3
 
 
 @pytest.mark.parametrize("reject_blake2_digest_size", [False, True])
@@ -310,33 +312,37 @@ def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
     """
     websocket_url = f"ws://127.0.0.1:{port}/_stcore/stream"
     rerun_request = BackMsg(rerun_script=ClientState()).SerializeToString()
-    deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
+    connect_params = inspect.signature(connect).parameters
     connect_kwargs: dict[str, Any] = {
         "subprotocols": ["streamlit"],
         # Generous close timeout so teardown cannot fail a completed session
         # when the server is still flushing under FIPS hash-fallback load.
         "close_timeout": 10,
+    }
+    # ping_interval and proxy only exist on the sync client in websockets 15+.
+    # 12.x rejects unknown kwargs; 13-14 forward them to create_connection.
+    if "ping_interval" in connect_params:
         # This is a short smoke test; disable client pings so keepalive
         # timeouts cannot surface as a raw ``TimeoutError: timed out``.
-        "ping_interval": None,
-    }
-    # websockets>=13 honors HTTP_PROXY by default. Force direct loopback,
-    # matching the health check's ProxyHandler({}). websockets 12 (min-deps)
-    # has no proxy argument and forwards unknown kwargs to create_connection.
-    if "proxy" in inspect.signature(connect).parameters:
+        connect_kwargs["ping_interval"] = None
+    # websockets>=15 honors HTTP_PROXY by default. Force direct loopback,
+    # matching the health check's ProxyHandler({}). Older releases have no
+    # proxy argument, and 12.x rejects unknown kwargs outright.
+    if "proxy" in connect_params:
         connect_kwargs["proxy"] = None
 
     websocket = None
     last_connect_error: BaseException | None = None
-    while time.monotonic() < deadline:
+    connect_deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
+    while time.monotonic() < connect_deadline:
         try:
             websocket = connect(
                 websocket_url,
-                open_timeout=max(0.1, deadline - time.monotonic()),
+                open_timeout=min(5, max(0.1, connect_deadline - time.monotonic())),
                 **connect_kwargs,
             )
             break
-        except (TimeoutError, OSError, ConnectionError) as ex:
+        except (OSError, InvalidHandshake) as ex:
             last_connect_error = ex
             time.sleep(0.2)
 
@@ -348,6 +354,9 @@ def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
         )
 
     saw_smoke_marker = False
+    # Start the session budget after the socket is open so a slow handshake
+    # cannot starve the rerun round-trip or misreport "did not finish".
+    deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
     try:
         websocket.send(rerun_request)
         while time.monotonic() < deadline:
