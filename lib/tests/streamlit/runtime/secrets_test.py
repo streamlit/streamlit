@@ -165,7 +165,7 @@ class SecretsTest(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data="key = {invalid")
     @patch("streamlit.config.get_option", return_value=["/mock/{secrets}.toml"])
     def test_malformed_toml_error_with_braces_in_path(self, mock_get_option, _):
-        """Brace characters in the secrets path still raise StreamlitSecretNotFoundError."""
+        """A secrets path containing braces does not interfere with parse-error formatting."""
         with pytest.raises(StreamlitSecretNotFoundError) as excinfo:
             self.secrets.get("no_such_secret", None)
         message = str(excinfo.value)

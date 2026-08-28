@@ -582,7 +582,7 @@ class StreamlitBadTimeStringError(LocalizableStreamlitException):
 class StreamlitSecretNotFoundError(
     LocalizableStreamlitException, FileNotFoundError
 ):  # pragma: no cover - trivial subclass
-    """Exception raised when a secret cannot be found or a secrets source cannot be parsed."""
+    """Exception raised when a secret cannot be found, or a secrets file or directory cannot be parsed."""
 
 
 class StreamlitInvalidWidthError(LocalizableStreamlitException):
