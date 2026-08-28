@@ -250,8 +250,11 @@ def simplify_number(num: int) -> str:
     )
 
 
+# Match both hex casings: CPython formats the address with the platform C
+# runtime's "%p" (glibc lowercase, MSVC uppercase). Use a character class
+# rather than re.IGNORECASE so " AT 0X" still fails to match.
 _OBJ_MEM_ADDRESS: Final = re.compile(
-    r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-f]+\>$"
+    r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-fA-F]+\>$"
 )
 
 

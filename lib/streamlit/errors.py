@@ -619,8 +619,8 @@ class StreamlitInvalidColorError(LocalizableStreamlitException):
     ) -> None:
         super().__init__(
             "This does not look like a valid color: {color}.\n\n"
-            "Colors must be in one of the following formats:"
-            "* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`"
+            "Colors must be in one of the following formats:\n\n"
+            "* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`\n"
             "* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`",
             color=repr(color),
         )
@@ -631,7 +631,7 @@ class StreamlitBadTimeStringError(LocalizableStreamlitException):
 
     def __init__(self, time_string: str) -> None:
         super().__init__(
-            "Time string doesn't look right. It should be formatted as"
+            "Time string doesn't look right. It should be formatted as "
             "`'1d2h34m'` or `2 days`, for example. Got: {time_string}",
             time_string=time_string,
         )
