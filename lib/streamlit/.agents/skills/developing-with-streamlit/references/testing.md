@@ -52,7 +52,25 @@ def script():
 at = AppTest.from_function(script).run()
 ```
 
-The script must be runnable on its own, so it must include its own imports. `.run()` accepts an optional `timeout` (seconds); the default is 3.
+The script must be runnable on its own, so it must include its own imports. `.run()` accepts an optional `timeout` (seconds); the default is 3. If a script with heavy imports times out on a cold CI runner, raise it with `.run(timeout=10)` or `AppTest.from_file("app.py", default_timeout=10)`.
+
+### Multipage apps
+
+`AppTest` renders one page at a time. Initialize from the app's **entrypoint** script — the same file you would pass to `streamlit run` — whether the app uses `st.navigation` or a `pages/` directory:
+
+```python
+at = AppTest.from_file("streamlit_app.py").run()   # entrypoint, not a child page
+```
+
+To reach a file-based child page, call `switch_page()` with a path relative to the entrypoint, then `.run()`. `switch_page()` does not rerun on its own:
+
+```python
+at = AppTest.from_file("streamlit_app.py").run()
+at.switch_page("pages/settings.py").run()
+assert not at.exception
+```
+
+Don't pass a child page straight to `from_file()` — that makes it the main script and changes how relative page paths resolve.
 
 ## Simulating interaction
 
