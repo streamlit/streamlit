@@ -762,29 +762,20 @@ def test_select_all_parameter(app: Page):
     expect(ms_false.locator('span[title="apricot"]')).not_to_be_visible()
     _close_dropdown(app)
 
-    # True: Select all is shown. Unfocused Enter's target is that first row.
+    # True: Select all is shown; unfocused Enter bulk-selects all 8 items.
     ms_true = get_multiselect(app, "select_all True")
     ms_true.scroll_into_view_if_needed()
-    _get_multiselect_input(app, "select_all True").click()
+    input_true = _get_multiselect_input(app, "select_all True")
+    input_true.click()
     expect(app.get_by_role("option", name="Select all")).to_be_visible()
-    options_true = app.get_by_role("option")
-    expect(options_true.nth(0)).to_have_text("Select all")
-    expect(options_true.nth(0)).to_have_attribute("aria-posinset", "1")
-
-    def first_row_is_highlighted() -> bool:
-        first_bg = (
-            options_true.nth(0)
-            .locator("[data-item-hl]")
-            .evaluate("el => getComputedStyle(el).backgroundColor")
-        )
-        second_bg = (
-            options_true.nth(1)
-            .locator("[data-item-hl]")
-            .evaluate("el => getComputedStyle(el).backgroundColor")
-        )
-        return bool(first_bg and second_bg and first_bg != second_bg)
-
-    wait_until(app, first_row_is_highlighted)
+    expect(app.get_by_role("option").nth(0)).to_have_text("Select all")
+    input_true.press("Enter")
+    wait_for_app_run(app)
+    expect_text(
+        app,
+        "select_all True: ['item 0', 'item 1', 'item 2', 'item 3', "
+        "'item 4', 'item 5', 'item 6', 'item 7']",
+    )
     _close_dropdown(app)
 
     # Integer threshold uses the filtered selectable count.

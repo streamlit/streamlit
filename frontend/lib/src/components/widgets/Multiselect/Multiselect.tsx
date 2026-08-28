@@ -690,9 +690,12 @@ const Multiselect: FC<Props> = props => {
           return
         }
         const first = displayOptionsRef.current[0]
-        if (!first || !isOpenRef.current) return
+        if (!isOpenRef.current) return
+        // Swallow Enter when the menu is open with no rows (for example
+        // max_selections reached) so RAC does not try to commit typed text.
         e.preventDefault()
         e.stopPropagation()
+        if (!first) return
         handleChange([first.id])
         return
       }

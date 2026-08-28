@@ -53,10 +53,10 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitInvalidMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitSelectionCountExceedsMaxError,
+    StreamlitValueError,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -206,9 +206,12 @@ def _encode_select_all(select_all: object) -> int:
         return _SELECT_ALL_ALWAYS if select_all else 0
     if isinstance(select_all, int):
         if select_all < 0:
-            raise StreamlitAPIException(
-                f"Invalid value for select_all: {select_all!r}. "
-                "When using an int, `select_all` must be a non-negative integer."
+            raise StreamlitValueError(
+                "select_all",
+                ["True", "False", "a non-negative integer"],
+                detail=(
+                    "When using an int, `select_all` must be a non-negative integer."
+                ),
             )
         # Thresholds above the int32 proto max already mean "always show".
         return min(select_all, _SELECT_ALL_MAX_THRESHOLD)
@@ -473,9 +476,11 @@ class MultiSelectMixin:
 
             - ``True``: Always show the option when two or more selectable
               options remain.
-            - ``False`` or ``0``: Never show the option.
-            - An integer: Show the option when the selectable count is at or
-              below this threshold. Must be non-negative.
+            - ``False``: Never show the option.
+            - A non-negative integer: Show the option when the selectable
+              count is at or below this threshold. ``0`` never shows the
+              option (same as ``False``), and ``1`` never shows it either
+              because two selectable options are always required.
 
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the

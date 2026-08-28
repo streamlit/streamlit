@@ -649,10 +649,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.HasField("select_all")
 
     def test_select_all_negative_raises(self) -> None:
-        """Negative select_all values raise StreamlitAPIException."""
+        """Negative select_all values raise StreamlitValueError."""
         with pytest.raises(
-            StreamlitAPIException,
-            match=r"When using an int, `select_all` must be a non-negative integer",
+            StreamlitValueError,
+            match=r"Invalid `select_all` value.*must be a non-negative integer",
         ):
             st.multiselect("the label", ("m", "f"), select_all=-1)
 
@@ -666,12 +666,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
     def test_select_all_invalid_does_not_register_key(self) -> None:
         """Invalid select_all must not register the widget key.
 
-        Catching StreamlitAPIException and rendering a valid multiselect with
+        Catching StreamlitValueError and rendering a valid multiselect with
         the same key in the same run must not hit StreamlitDuplicateElementKey.
         """
         with pytest.raises(
-            StreamlitAPIException,
-            match=r"When using an int, `select_all` must be a non-negative integer",
+            StreamlitValueError,
+            match=r"Invalid `select_all` value.*must be a non-negative integer",
         ):
             st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=-1)
         st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=False)
