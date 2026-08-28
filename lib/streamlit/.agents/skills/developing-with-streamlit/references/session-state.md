@@ -70,8 +70,9 @@ Notes:
 - When the value equals the default, the param is dropped from the URL to keep it clean.
 - A bound param can't be set or deleted through `st.query_params` — change it programmatically via `st.session_state[key]` instead. Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
-- Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`) or on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
+- Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
 - Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
+- To keep a value across reruns or page switches *without* exposing it in the URL, use `persist_state` instead (see [Persisting widget values](#persisting-widget-values-persist_state)); when both are set, `bind` takes precedence.
 
 ## Widget input constraints are mostly client-side
 
