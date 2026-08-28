@@ -75,9 +75,10 @@
 3. Read and analyze the changed files to understand the full context.
 4. Important: Read the relevant sub-directory `AGENTS.md` files based on changed files (see checklist above).
 5. Classify whether the PR has user-facing product impact. If it does, read
-   the PR body for explicit product-approval context, read `specs/AGENTS.md`, inspect comparable
-   existing Streamlit surfaces, and perform the product alignment assessment from the checklist.
-   If it does not, mark the Product Alignment section as not applicable and explain why briefly.
+   `specs/AGENTS.md`, inspect comparable existing Streamlit surfaces, read the PR body for explicit
+   product-approval context if a PR exists, and perform the product alignment assessment from the
+   checklist. If it does not, mark the Product Alignment section as not applicable and explain why
+   briefly.
 6. Assess performance impact, including the backend and frontend hot paths.
 7. Run an explicit external-test risk assessment using `/assessing-external-test-risk` and determine whether this branch should include `@pytest.mark.external_test` coverage.
 8. Evaluate readability: run the `/reviewing-readability` skill on the changed code (comments, docstrings, naming) and the `/reviewing-pr-description` skill on the PR title/description if a PR exists, and include their findings and proposed rewrites in your review.
