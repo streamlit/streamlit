@@ -2756,6 +2756,92 @@ describe("DateTimeInput widget", () => {
         )
       })
     })
+    it("forgets an inline time typed before a form clear", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[3])
+      await user.keyboard("0324")
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // clear_on_submit has to empty the segments too, not just the value —
+      // otherwise the time stays on screen and a later date selection commits it.
+      await waitFor(() => {
+        const hour = within(inlineField)
+          .getAllByRole("spinbutton")
+          .find(s => s.getAttribute("data-type") === "hour")
+        expect(hour).toHaveAttribute("data-placeholder", "true")
+      })
+
+      spy.mockClear()
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T00:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T03:24"],
+        expect.anything()
+      )
+    })
+
+    it("keeps focus in the field after a form clear, with the calendar still open", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      render(<DateTimeInput {...props} />)
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const hour = within(inlineField)
+        .getAllByRole("spinbutton")
+        .find(s => s.getAttribute("data-type") === "hour") as HTMLElement
+      await user.click(hour)
+      await user.keyboard("0324")
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // Remounting the field to clear it must not cost the user their place —
+      // Enter-to-submit leaves focus here.
+      await waitFor(() => {
+        const first = within(
+          screen.getByTestId("stDateTimeInputField")
+        ).getAllByRole("spinbutton")[0]
+        expect(first).toHaveFocus()
+      })
+      expect(document.body).not.toHaveFocus()
+      // The popover stays open across a form clear, as it did before this change —
+      // focusing a segment is what opens it, so the restore cannot close it.
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+    })
+
     it("drops a pending popover time when the form is reset", async () => {
       const user = userEvent.setup()
       const props = emptyProps()

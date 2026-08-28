@@ -145,8 +145,9 @@ function SingleDateTimeInput({
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
-  // Guards against `handleFocus` reopening the popover it's in the middle
-  // of closing — see `restoreFocusToField` below.
+  // Suppresses `handleFocus` while focus is being moved programmatically, so a
+  // restore is not mistaken for the user arriving in the field — see
+  // `restoreFocusToField` and the form-clear effect below.
   const isRestoringFocusRef = useRef(false)
 
   const [isCalendarActive, setIsCalendarActive] = useState(false)
@@ -189,11 +190,20 @@ function SingleDateTimeInput({
     lastCommittedRef.current = undefined
   }
 
+  // Whether focus was inside the field when a form clear remounted it, so the
+  // effect below can put focus back. Captured here rather than in that effect
+  // because the remount has already happened by the time effects run, taking the
+  // focused segment with it.
+  const shouldRestoreFocusRef = useRef(false)
+
   const [prevResetKey, setPrevResetKey] = useState(formResetKey)
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
     setPendingTime(null)
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
   }
 
   const displayValueRef = useRef(displayValue)
@@ -342,6 +352,26 @@ function SingleDateTimeInput({
     wasOpenRef.current = isOpen
   }, [isOpen, value, onFocusChange])
 
+  // Put focus back after a form clear: Enter-to-submit leaves focus in the field,
+  // and the remount (see the DateField's `key`) discards the focused segment.
+  // Flagged as a restore so `handleFocus` does not treat it as the user arriving.
+  //
+  // Cleared synchronously rather than after a frame, unlike `restoreFocusToField`:
+  // `.focus()` dispatches `focusin` synchronously, so `handleFocus` has already
+  // run by the next line, and a deferred clear could be skipped — a hidden tab
+  // throttles rAF indefinitely — leaving the flag stuck and the field inert.
+  //
+  // Matched on `data-type` rather than `role`, which React Aria replaces on iOS.
+  useEffect(() => {
+    if (!shouldRestoreFocusRef.current) return
+    shouldRestoreFocusRef.current = false
+    isRestoringFocusRef.current = true
+    triggerRef.current
+      ?.querySelector<HTMLElement>('[data-type]:not([data-type="literal"])')
+      ?.focus()
+    isRestoringFocusRef.current = false
+  }, [formResetKey])
+
   // Focus active calendar cell on active mode entry.
   useEffect(() => {
     if (!isCalendarActive || !isOpen) return
@@ -373,6 +403,9 @@ function SingleDateTimeInput({
 
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
+  // Matches segments on `role`, unlike the form-clear effect above: this path
+  // predates it and shares the iOS gap tracked for `getSegmentState`, where React
+  // Aria renders segments as textboxes and neither query finds them.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
     if (isCalendarActiveRef.current && activeOriginRef.current) {
@@ -735,6 +768,13 @@ function SingleDateTimeInput({
         <I18nProvider locale="en-US">
           <StyledDateField>
             <DateField<CalendarDateTime>
+              // Remount on form clear. React Aria keeps its own display state
+              // for segments the user has typed but not completed, and with
+              // `value` already null there is no prop change to re-seed it — so a
+              // time typed before `clear_on_submit` would stay on screen, and now
+              // that dismissal completes a value from what is visible, it would
+              // also commit.
+              key={formResetKey}
               aria-label={label}
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}

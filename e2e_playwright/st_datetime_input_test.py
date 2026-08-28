@@ -332,6 +332,47 @@ def test_form_submission_resets_value(app: Page):
     expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
 
 
+def test_form_clear_empties_the_segments_and_keeps_focus(app: Page):
+    """A cleared form empties the field's segments, not just its value.
+
+    React Aria keeps display state for segments typed but not completed, so a
+    partial time could survive `clear_on_submit` and be committed with a later
+    date. Clearing remounts the field, which costs the focused segment — checked
+    here rather than only in unit tests, since focus and remount timing are
+    browser behavior.
+    """
+    form_field = get_datetime_input(app, "Datetime input 13 (form)").get_by_test_id(
+        "stDateTimeInputField"
+    )
+    segments = form_field.get_by_role("spinbutton")
+
+    # A time with no date: the field reports no value, so only the segments hold it.
+    segments.nth(3).press_sequentially("03")
+    segments.nth(4).press_sequentially("24")
+    expect(segments.nth(3)).to_have_text("03")
+
+    app.get_by_role("button", name="Submit datetime form").click()
+    wait_for_app_run(app)
+
+    # The time must not survive the clear, on screen or in the committed value.
+    expect(form_field.get_by_role("spinbutton").nth(3)).to_have_attribute(
+        "data-placeholder", "true"
+    )
+    expect_markdown(app, "Form submitted value: None")
+
+    # Submitting by button leaves focus on the button, so nothing is restored.
+    expect(form_field.get_by_role("spinbutton").first).not_to_be_focused()
+
+    # Enter-to-submit is the case where focus is in the field when the clear
+    # arrives, and the remount would otherwise drop the user to the page body.
+    type_date(form_field, "2025", "12", "24", "12", "00", commit=False)
+    form_field.get_by_role("spinbutton").last.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
+    expect(form_field.get_by_role("spinbutton").first).to_be_focused()
+
+
 def test_fragment_reruns(app: Page):
     """Test that datetime input works correctly inside a fragment."""
     fragment_field = get_datetime_input(
