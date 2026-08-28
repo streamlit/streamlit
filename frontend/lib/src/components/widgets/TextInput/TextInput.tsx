@@ -183,7 +183,8 @@ function TextInput({
   // Matching the latest commit acks only that value so a later stale echo of
   // an earlier commit (A then B then A, then a late B) is still dropped.
   // Any other incoming value (callback / session_state write) applies,
-  // including while focused.
+  // including while focused. Keep pending commits so a later echo of an
+  // older in-flight value cannot overwrite that authoritative write.
   const shouldApplyIncomingValue = useCallback(
     (incoming: string | null): boolean => {
       if (dirtyRef.current) {
@@ -196,7 +197,6 @@ function TextInput({
       if (pendingLiveCommitsRef.current.has(incoming)) {
         return false
       }
-      pendingLiveCommitsRef.current.clear()
       return true
     },
     []

@@ -1718,6 +1718,41 @@ describe("TextInput live updates", () => {
     expect(input).toHaveValue("ABC")
   })
 
+  it("does not apply a stale echo after an authoritative setValue", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "ABC",
+        })}
+      />
+    )
+    expect(input).toHaveValue("ABC")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "ab",
+        })}
+      />
+    )
+    expect(input).toHaveValue("ABC")
+  })
+
   it("applies a session_state restore of an earlier committed string after ack", async () => {
     const { user, props, rerender } = renderLive({
       liveDebounceMs: 0,
