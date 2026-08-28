@@ -64,8 +64,6 @@ countries = st.multiselect(
 )
 ```
 
-The dropdown shows "Select all" (or "Select X matches" while searching) when two or more unselected options remain and that count is at or below `select_all` (default `1000`). The first row is keyboard-active, so Enter commits it. Pass `select_all=False` so that row is the first matching option instead of a bulk action. Pass `select_all=True` to always show the shortcut. An integer bounds the currently selectable (search-narrowed) count, not `len(options)` or the resulting selection size.
-
 ## Keep options on one row with `wrap`
 
 `st.pills`, `st.segmented_control`, and `st.multiselect` accept `wrap`. The
