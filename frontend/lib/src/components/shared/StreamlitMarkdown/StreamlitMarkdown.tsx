@@ -295,7 +295,7 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
 })
 
 /** Marks the heading body text used for aria-labelledby and auto-anchor slugs. */
-const HEADING_TEXT_TEST_ID = "stHeadingText"
+const HEADING_TEXT_SELECTOR = "[data-heading-text]"
 
 interface HeadingActionElements {
   elementId?: string
@@ -367,9 +367,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const applyAnchor = useCallback(
     (node: HTMLElement): void => {
       const textSource =
-        node.querySelector<HTMLElement>(
-          `[data-testid='${HEADING_TEXT_TEST_ID}']`
-        ) ?? node
+        node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR) ?? node
       const anchor =
         propsAnchor || createAnchorFromText(textSource.textContent)
       setElementId(anchor)
@@ -450,9 +448,9 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
   //
-  // data-has-icon enables flex centering in CSS so the leading icon optically
-  // aligns with the heading text (vertical-align alone is unreliable with
-  // heading line-heights).
+  // data-has-icon enables inline-flex centering in CSS so the leading icon
+  // optically aligns with the heading text (vertical-align alone is unreliable
+  // with heading line-heights) without overriding inherited text-align.
   const headerElementWithActions = (
     <Tag
       {...tagProps}
@@ -461,7 +459,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     >
       {icon}
       {headingTextId ? (
-        <span id={headingTextId} data-testid={HEADING_TEXT_TEST_ID}>
+        <span id={headingTextId} data-heading-text="">
           {children}
         </span>
       ) : (

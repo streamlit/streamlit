@@ -113,11 +113,17 @@ function getMarkdownHeadingDefinitions(
       margin: 0,
       color: "inherit",
     },
-    // Flex-center leading icons with the heading text. Prefer this over
+    // Inline-flex so the icon+text group still honors inherited text-align
+    // from text_alignment (center/right/justify). Prefer this over
     // vertical-align, which fights heading line-height and glyph metrics.
     "h1[data-has-icon], h2[data-has-icon], h3[data-has-icon]": {
-      display: "flex",
+      display: "inline-flex",
       alignItems: "center",
+      maxWidth: "100%",
+      // Let the body-text span shrink so long titles wrap instead of overflowing.
+      "& [data-heading-text]": {
+        minWidth: 0,
+      },
     },
     h1: {
       fontSize: convertFontSizes(
@@ -535,7 +541,7 @@ export const StyledHeadingIcon = styled.span(({ theme }) => ({
   marginInlineEnd: theme.spacing.sm,
   color: "inherit",
   fontSize: "0.7em",
-  lineHeight: 1,
+  lineHeight: "1em",
 
   // Spinners are solid rings and read larger than Material/emoji glyphs.
   "&[data-spinner]": {

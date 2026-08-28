@@ -126,3 +126,16 @@ with st.container(key="heading_icons"):
     st.title("Title with icon param", icon=":material/star:")
     st.header("Header with emoji icon", icon="🚀", divider="blue")
     st.subheader("Subheader with icon", icon=":material/bolt:")
+
+# Icon + text_alignment: icon headings must still honor center/right alignment
+with st.container(key="heading_icons_alignment"):
+    st.title(
+        "Centered title with icon",
+        icon=":material/star:",
+        text_alignment="center",
+    )
+    st.header(
+        "Right header with icon",
+        icon="🚀",
+        text_alignment="right",
+    )

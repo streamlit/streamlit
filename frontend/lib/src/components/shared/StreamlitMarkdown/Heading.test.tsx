@@ -331,4 +331,26 @@ describe("Heading", () => {
     expect(heading).toHaveAttribute("id", "my-section")
     expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
   })
+
+  it("marks body text for accessible name and anchor isolation", () => {
+    const props = getHeadingProps({
+      body: "Dashboard",
+      icon: ":material/dashboard:",
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    expect(heading.querySelector("[data-heading-text]")).toHaveTextContent(
+      "Dashboard"
+    )
+  })
+
+  it("uses inline-flex for icon headings so inherited text-align still applies", () => {
+    const props = getHeadingProps({ body: "hello", icon: "🔥" })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    expect(heading).toHaveAttribute("data-has-icon")
+    expect(heading).toHaveStyle({ display: "inline-flex" })
+  })
 })
