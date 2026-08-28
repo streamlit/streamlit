@@ -174,8 +174,9 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitInvalidColorError`
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
-  - `StreamlitInvalidRangeError` (`min_value` must be less than `max_value`,
-    including when they are equal)
+  - `StreamlitInvalidRangeError` (`min_value` must be less than `max_value`.
+    `st.slider` also rejects equal bounds; `st.date_input` /
+    `st.datetime_input` allow a single-day / single-instant range)
   - `StreamlitInvalidURLError(url, protocols)` (`st.logo(link=)`, page-config
     menu items). Pass the allowed schemes, for example `["http", "https"]`.
     `protocols` defaults to `("http", "https", "mailto")`.

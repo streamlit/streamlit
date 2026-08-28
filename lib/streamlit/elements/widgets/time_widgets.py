@@ -401,7 +401,7 @@ class _DateTimeInputValues:
         )
 
     def __post_init__(self) -> None:
-        if self.min >= self.max:
+        if self.min > self.max:
             raise StreamlitInvalidRangeError(self.min, self.max)
 
         if self.value is not None:
@@ -450,7 +450,7 @@ class _DateInputValues:
         )
 
     def __post_init__(self) -> None:
-        if self.min >= self.max:
+        if self.min > self.max:
             raise StreamlitInvalidRangeError(self.min, self.max)
 
         if self.value:

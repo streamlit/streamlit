@@ -319,7 +319,7 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidRangeError(LocalizableStreamlitException):
-    """Raised when ``min_value`` is not less than ``max_value``."""
+    """Raised when ``min_value`` and ``max_value`` do not form a valid range."""
 
     def __init__(self, min_value: object, max_value: object) -> None:
         super().__init__(

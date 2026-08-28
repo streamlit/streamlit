@@ -208,6 +208,7 @@ class DateInputTest(DeltaGeneratorTestCase):
                 TODAY,
                 TODAY + timedelta(days=14),
             ),
+            (TODAY, TODAY, TODAY),
         ]
     )
     def test_value_in_range(self, value, min_date, max_date):
@@ -215,18 +216,12 @@ class DateInputTest(DeltaGeneratorTestCase):
         # No need to assert anything. Testing if not throwing an error.
 
     def test_min_max_exception(self):
-        """min_value must be strictly less than max_value."""
+        """min_value after max_value raises StreamlitInvalidRangeError."""
         with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
             st.date_input(
                 "the label",
                 min_value=date(2022, 1, 1),
                 max_value=date(2020, 1, 1),
-            )
-        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
-            st.date_input(
-                "the label",
-                min_value=date(2022, 1, 1),
-                max_value=date(2022, 1, 1),
             )
 
     def test_default_min_if_today_is_before_min(self):
