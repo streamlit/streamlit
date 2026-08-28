@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 19
+NUM_DATETIME_INPUTS = 20
 
 
 def test_datetime_input_widget_rendering(
@@ -374,3 +374,27 @@ def test_datetime_input_query_param_out_of_range_resets(page: Page, app_base_url
 
     expect_prefixed_markdown(page, "Bound minmax datetime:", "2025-11-19 16:45:00")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_dt="))
+
+
+def test_year_picker_lists_boundary_year_when_bounds_cross_a_year(app: Page):
+    """st.datetime_input shares the calendar header with st.date_input, so the
+    year dropdown must offer the later year here too.
+
+    Regression test for GitHub issue #16686.
+    """
+    datetime_field = get_datetime_input(app, "Year-crossing datetime")
+    datetime_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    expect(calendar).to_be_visible()
+
+    expect(calendar.get_by_role("button", name="month", exact=True)).to_have_text(
+        "February"
+    )
+    year_trigger = calendar.get_by_role("button", name="year", exact=True)
+    expect(year_trigger).to_have_text("2025")
+
+    year_trigger.click()
+    year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(year_popover).to_be_visible()
+    expect(year_popover.get_by_role("option")).to_have_text(["2024", "2025"])

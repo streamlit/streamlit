@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 24
+NUM_DATE_INPUTS = 26
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -884,3 +884,103 @@ def test_year_picker_does_not_revert_month(app: Page):
     calendar.get_by_label(re.compile(r"March 6, 2011")).click()
     wait_for_app_run(app)
     expect_markdown(app, "Value 2: 2011-03-06")
+
+
+def test_calendar_header_with_year_crossing_bounds(app: Page):
+    """Exercises the calendar header when the bounds cross a year boundary.
+
+    With `max_value`'s month/day preceding `min_value`'s:
+
+    - the year dropdown offers both years,
+    - the header year matches the grid,
+    - picking the earlier year clamps into range,
+    - months with no reachable day are neither selectable nor styled as live,
+    - range mode behaves the same.
+
+    Regression test for GitHub issue #16686.
+    """
+    date_field = get_date_input(app, "Year-crossing single").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # The grid opens on February 2025, so the header must agree.
+    expect(calendar.get_by_role("button", name="month", exact=True)).to_have_text(
+        "February"
+    )
+    year_trigger = calendar.get_by_role("button", name="year", exact=True)
+    expect(year_trigger).to_have_text("2025")
+
+    year_trigger.click()
+    year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(year_popover).to_be_visible()
+    expect(year_popover.get_by_role("option")).to_have_text(["2024", "2025"])
+
+    # 2024 is reachable. February 2024 precedes `min_value`, so the calendar
+    # clamps to the earliest allowed month instead of leaving the valid range.
+    year_popover.get_by_role("option", name="2024").click()
+    expect(year_trigger).to_have_text("2024")
+    expect(calendar.get_by_role("button", name="month", exact=True)).to_have_text(
+        "August"
+    )
+    # --- Months with no reachable day are offered but not selectable ---
+    # Selecting a year closes the picker but leaves the calendar open, now on
+    # August 2024: August is in range, January-July 2024 are not.
+    calendar.get_by_role("button", name="month", exact=True).click()
+    month_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(month_popover).to_be_visible()
+    expect(month_popover.get_by_role("option", name="August")).not_to_have_attribute(
+        "aria-disabled", "true"
+    )
+    expect(month_popover.get_by_role("option", name="January")).to_have_attribute(
+        "aria-disabled", "true"
+    )
+
+    # The state has to be visible, not just announced: an unselectable month
+    # that looks identical to a selectable one reads as a dead click target.
+    # December rather than August is the enabled sample, because August is the
+    # selected month and `data-selected` styling would confound the comparison.
+    expect(month_popover.get_by_role("option", name="January")).to_have_css(
+        "cursor", "not-allowed"
+    )
+    expect(month_popover.get_by_role("option", name="December")).to_have_css(
+        "cursor", "pointer"
+    )
+    reachable_color = month_popover.get_by_role("option", name="December").evaluate(
+        "el => getComputedStyle(el).color"
+    )
+    unreachable_color = month_popover.get_by_role("option", name="January").evaluate(
+        "el => getComputedStyle(el).color"
+    )
+    assert reachable_color != unreachable_color, (
+        f"disabled month is styled identically to an enabled one ({reachable_color})"
+    )
+
+    # Assert each dismissal: if the first Escape missed the picker, the calendar
+    # would stay open and the range half below would match two calendars.
+    app.keyboard.press("Escape")
+    expect(month_popover).not_to_be_attached()
+    expect(calendar).to_be_visible()
+
+    app.keyboard.press("Escape")
+    expect(calendar).not_to_be_attached()
+
+    # --- Range mode reads a different calendar state, so re-check it there ---
+    range_field = get_date_input(app, "Year-crossing range").get_by_test_id(
+        "stDateInputField"
+    )
+    range_field.get_by_role("spinbutton").first.click()
+
+    range_calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(range_calendar).to_be_visible()
+
+    range_year_trigger = range_calendar.get_by_role("button", name="year", exact=True)
+    expect(range_year_trigger).to_have_text("2025")
+
+    range_year_trigger.click()
+    range_year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(range_year_popover).to_be_visible()
+    expect(range_year_popover.get_by_role("option")).to_have_text(["2024", "2025"])

@@ -387,6 +387,15 @@ export const StyledDropdownListBoxItem = styled(ListBoxItem)(({ theme }) => ({
   "&[data-selected]": {
     backgroundColor: theme.colors.darkenedBgMix25,
   },
+  // Mirrors StyledCalendarCell's [data-disabled] rule, so an unselectable month
+  // reads the same in the dropdown as it does in the calendar below. Fading is
+  // allowed here because these options are genuinely inactive — WCAG exempts
+  // inactive controls from the contrast requirement.
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+    backgroundColor: "transparent",
+  },
 }))
 
 export const StyledCalendarHeaderSelectTrigger = styled(Button)(
