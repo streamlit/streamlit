@@ -557,6 +557,11 @@ class TextWidgetsMixin:
               ``"0ms"``, ``"0s"``, and ``"0"`` commit on every accepted
               user-originated value change.
 
+            The 250ms default suits most cases. Consider ``"200ms"`` for
+            inexpensive fragment-scoped filtering and ``"300ms"`` to
+            ``"500ms"`` when each update performs expensive computation or
+            a remote request.
+
             Inside ``st.form``, ``live`` has no effect: form widgets only
             commit on submit. ``on_change="ignore"`` still wins: each pause
             stages the value without triggering a rerun. Prefer wrapping
