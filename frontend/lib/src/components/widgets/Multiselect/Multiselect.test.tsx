@@ -247,7 +247,8 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("marks only the first option as the collection start for Enter highlight", async () => {
+  it("numbers options with aria-posinset so only the first gets the Enter highlight", async () => {
+    // StyledListBox highlights [aria-posinset='1'] as the unfocused Enter target.
     const user = userEvent.setup()
     const props = getProps({ default: [] })
     render(<Multiselect {...props} />)

@@ -473,6 +473,12 @@ class MultiSelectMixin:
 
             - ``True``: Always show the option when two or more selectable
               options remain.
+
+              .. note::
+                 ``True`` re-enables bulk-select on lists larger than the
+                 default 1000 threshold. Use it only for manageable option
+                 counts; selecting thousands of values at once can freeze
+                 the browser (see issue 15299).
             - ``False``: Never show the option.
             - A non-negative integer: Show the option when the selectable
               count is at or below this threshold. ``0`` never shows the
