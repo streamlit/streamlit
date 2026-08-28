@@ -67,11 +67,12 @@ if TYPE_CHECKING:
     import asyncio
     from collections.abc import AsyncIterator, Callable, Mapping, Sequence
     from contextlib import AbstractAsyncContextManager
+    from typing import TypeAlias
 
     from starlette.applications import Starlette
     from starlette.middleware import Middleware
     from starlette.routing import BaseRoute
-    from starlette.types import ExceptionHandler, Receive, Scope, Send
+    from starlette.types import Receive, Scope, Send
 
     from streamlit.runtime import Runtime
     from streamlit.runtime.media_file_manager import MediaFileManager
@@ -81,6 +82,13 @@ if TYPE_CHECKING:
         OnScriptErrorHandler,
     )
     from streamlit.runtime.secrets import SecretsValue
+
+    # Accept handlers typed with a specific exception subclass (the usual user
+    # pattern). Starlette's ExceptionHandler uses Callable[[Request, Exception],
+    # Response]; because Callable parameters are contravariant, those handlers
+    # are rejected. Two Any parameters accept them while still requiring a
+    # two-argument callable.
+    ExceptionHandler: TypeAlias = Callable[[Any, Any], Any]
 
 # Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
@@ -339,9 +347,10 @@ class App:
         A mapping of either integer status codes, or exception class types onto
         callables which handle the exceptions. Exception handler callables should
         be of the form ``handler(request, exc) -> response`` and may be either
-        standard functions, or async functions. This is only for exception handling
-        on the network layer. Use ``on_script_error`` for customized handling of
-        uncaught exceptions from the app script.
+        standard functions, or async functions. The ``exc`` argument may be
+        annotated with a specific exception subclass. This is only for exception
+        handling on the network layer. Use ``on_script_error`` for customized
+        handling of uncaught exceptions from the app script.
     debug : bool
         Enable debug mode for the underlying Starlette application.
 
