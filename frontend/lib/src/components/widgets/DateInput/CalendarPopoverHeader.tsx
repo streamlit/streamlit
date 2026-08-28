@@ -139,7 +139,7 @@ function HeaderPickerSelect({
         isNonModal
         data-testid="stDateInputHeaderPickerPopover"
       >
-        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+        {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions */}
         <div onKeyDown={handlePickerKeyDown}>
           <StyledDropdownListBox items={items}>
             {renderPickerItem}

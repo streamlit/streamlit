@@ -32,9 +32,6 @@ updates:
       - dependency-name: "react-map-gl"
         # The license was changed with the mapbox-gl update.
         versions: [">=5.4.0"]
-      - dependency-name: "ua-parser-js"
-        # The license was changed to AGPLv3 with the 2.0 major version update.
-        versions: [">=2.0.0"]
       - dependency-name: "react"
         # Updating react will need some extra work.
         versions: [">=19.0.0"]

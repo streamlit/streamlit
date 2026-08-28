@@ -199,7 +199,7 @@ describe("Tooltip element", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
     render(
-      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+      // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
       <div onKeyDown={outerKeyDown}>
         <Tooltip {...getProps()}>
           <button>trigger</button>
