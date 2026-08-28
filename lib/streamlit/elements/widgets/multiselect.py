@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from numbers import Integral
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -53,7 +54,6 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitInvalidMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitSelectionCountExceedsMaxError,
     StreamlitValueError,
@@ -698,15 +698,24 @@ class MultiSelectMixin:
         )
         label = maybe_raise_label_warnings(label, label_visibility)
 
-        if max_selections is not None and max_selections < 1:
-            raise StreamlitInvalidMaxError(
-                "st.multiselect",
-                "max_selections",
-                max_selections,
-                corrective_action="To disable `st.multiselect`, use `disabled=True`."
-                if max_selections == 0
-                else None,
-            )
+        if max_selections is not None:
+            # Numpy integers are Integral but not int; bool is both and is rejected.
+            max_selections_value: object = max_selections
+            if (
+                isinstance(max_selections_value, bool)
+                or not isinstance(max_selections_value, Integral)
+                or max_selections_value < 1
+            ):
+                raise StreamlitValueError(
+                    "max_selections",
+                    ["a positive integer"],
+                    detail=(
+                        "To disable `st.multiselect`, use `disabled=True`."
+                        if isinstance(max_selections_value, Integral)
+                        and max_selections_value == 0
+                        else None
+                    ),
+                )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options, formatted_option_to_option_index = create_mappings(

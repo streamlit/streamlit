@@ -35,8 +35,8 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitValueError,
 )
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
@@ -100,16 +100,18 @@ def _parse_text_input_validate(
     if isinstance(validate, str):
         return validate, None
 
-    if (
-        isinstance(validate, tuple)
-        and len(validate) == 2
-        and all(isinstance(item, str) for item in validate)
-    ):
-        return validate
+    if isinstance(validate, tuple):
+        if len(validate) == 2 and all(isinstance(item, str) for item in validate):
+            return validate
+        raise StreamlitValueError(
+            "validate",
+            ["a regex string", "a (regex, message) tuple of strings"],
+        )
 
-    raise StreamlitAPIException(
-        "The `validate` parameter must be `None`, a regex string, or a "
-        "`(regex, message)` tuple of strings."
+    raise StreamlitInvalidParameterTypeError(
+        "validate",
+        type(validate).__name__,
+        ["None", "str", "tuple"],
     )
 
 

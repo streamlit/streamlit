@@ -238,32 +238,33 @@ def test_selection_count_exceeds_max_pluralization(
     assert f"{max_sel} {expected_options_noun}" in msg
 
 
-# StreamlitInvalidMaxError tests
+# StreamlitInvalidRangeError tests
 
 
-def test_invalid_max_error_without_corrective_action() -> None:
-    """Test message without corrective action."""
-    exc = errors.StreamlitInvalidMaxError(
-        widget_name="st.multiselect",
-        parameter_name="max_selections",
-        value=-1,
+def test_invalid_range_error_message() -> None:
+    """Range errors name both bounds."""
+    exc = errors.StreamlitInvalidRangeError(10, 5)
+    assert str(exc) == (
+        "The `min_value`, set to 10, cannot be greater than the `max_value`, set to 5."
     )
-    msg = str(exc)
-    assert "st.multiselect" in msg
-    assert "max_selections" in msg
-    assert "-1" in msg
 
 
-def test_invalid_max_error_with_corrective_action() -> None:
-    """Test message includes corrective action when provided."""
-    exc = errors.StreamlitInvalidMaxError(
-        widget_name="st.text_input",
-        parameter_name="max_chars",
-        value=0,
-        corrective_action="Set it to None to allow unlimited characters.",
-    )
-    msg = str(exc)
-    assert "Set it to None" in msg
+# StreamlitInvalidURLError tests
+
+
+def test_invalid_url_error_default_protocols() -> None:
+    """One-argument constructor still mentions http, https, and mailto."""
+    exc = errors.StreamlitInvalidURLError("www.example.com")
+    assert '"http://", "https://", or "mailto:"' in str(exc)
+
+
+# BidiComponentError tests
+
+
+def test_bidi_component_error_hierarchy() -> None:
+    """Specialized bidi errors share a ``BidiComponentError`` base."""
+    exc = errors.BidiComponentInvalidIdError("base", "__")
+    assert isinstance(exc, errors.BidiComponentError)
 
 
 # StreamlitMissingRequiredParameterError tests

@@ -24,6 +24,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
 )
@@ -256,7 +257,7 @@ class StPagesTest(DeltaGeneratorTestCase):
         def page_9():
             pass
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.Page(page_9, url_path="")
 
     def test_non_default_pages_cannot_have_nested_url_path(self):
@@ -460,7 +461,10 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         kwargs: dict = {"title": title}
         if url_path is not None:
             kwargs["url_path"] = url_path
-        with pytest.raises(StreamlitAPIException, match="URL path cannot be empty"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match="The `url_path` parameter is required",
+        ):
             st.Page("https://example.com", **kwargs)
 
     def test_external_url_cannot_have_nested_url_path(self):

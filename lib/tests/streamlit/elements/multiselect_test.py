@@ -32,7 +32,6 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
     StreamlitIncompatibleParametersError,
-    StreamlitInvalidMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
@@ -334,6 +333,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.max_selections == 2
 
+        st.multiselect(
+            "the label", ("m", "f"), max_selections=np.int64(2), key="numpy_max"
+        )
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.max_selections == 2
+
     @parameterized.expand(
         [
             (["a", "b", "c"], 3),
@@ -488,27 +493,45 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
 
-    def test_max_selections_zero_includes_action(self) -> None:
-        """Raise StreamlitInvalidMaxError with a suggested action when max_selections is 0."""
+    @parameterized.expand([(0,), (False,)])
+    def test_max_selections_zero_includes_action(self, max_selections: object) -> None:
+        """Raise StreamlitValueError with a suggested action when max_selections is 0 or False."""
         with pytest.raises(
-            StreamlitInvalidMaxError,
+            StreamlitValueError,
             match=r"To disable `st\.multiselect`, use `disabled=True`",
         ):
-            st.multiselect("the label", ["a", "b", "c"], max_selections=0)
+            st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
 
     @parameterized.expand(
         [
             (-1,),
             (-100,),
+            (True,),
+            (1.5,),
+            ("2",),
         ]
     )
-    def test_max_selections_negative_no_action(self, max_selections: int) -> None:
-        """Raise StreamlitInvalidMaxError without an action for negative max_selections."""
+    def test_max_selections_invalid_values_have_no_action(
+        self, max_selections: object
+    ) -> None:
+        """Raise StreamlitValueError without an action for invalid max_selections."""
         with pytest.raises(
-            StreamlitInvalidMaxError,
-            match=r"must be a positive integer\.$",
+            StreamlitValueError,
+            match=r"Supported values: a positive integer\.$",
         ):
             st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
+
+    def test_max_selections_array_like_raises_value_error(self) -> None:
+        """Array-like max_selections raises StreamlitValueError, not a numpy truth error."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Supported values: a positive integer\.$",
+        ):
+            st.multiselect(
+                "the label",
+                ["a", "b", "c"],
+                max_selections=np.array([0, 1]),  # type: ignore[arg-type]
+            )
 
     @parameterized.expand(
         [

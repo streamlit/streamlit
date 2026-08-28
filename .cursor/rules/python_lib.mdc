@@ -169,10 +169,11 @@ generic `StreamlitAPIException` with a one-off message.
   exception type. Optional `explanation` is appended when the generic
   "cannot be used together" message needs more context. Example:
   `raise StreamlitIncompatibleParametersError("wrap=False", "horizontal=False")`.
-- `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types)`:
+- `StreamlitInvalidParameterTypeError(parameter, provided_type, expected_types, *, detail=None)`:
   use when a parameter has an unsupported type. `parameter` is appended in
   uncaught-exception telemetry (`StreamlitInvalidParameterTypeError:<parameter>`).
-  Pass concise type names as strings; for example,
+  Pass concise type names as strings; optional `detail` appears in the error
+  message only. For example,
   `raise StreamlitInvalidParameterTypeError("step", "str", ["int", "timedelta"])`.
 - Prefer other shared validators/errors when they already exist for the
   parameter, including:
@@ -181,10 +182,17 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitInvalidColorError`
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
+  - `StreamlitInvalidRangeError` (`min_value` cannot be greater than `max_value`.
+    `st.slider` also rejects equal bounds; `st.date_input` /
+    `st.datetime_input` allow a single-day / single-instant range)
+  - `StreamlitInvalidURLError(url, protocols)` (`st.logo(link=)`, page-config
+    menu items). Pass the allowed schemes, for example `["http", "https"]`.
+    `protocols` defaults to `("http", "https", "mailto")`.
   - `StreamlitInvalidFormCallbackError` (form callback policy)
   - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
     form, dialog, or fragment context — including opening a second dialog in the
-    same run, or writing to a container across a parallel-fragment boundary)
+    same run, writing to a container across a parallel-fragment boundary, or
+    `st.rerun(scope="fragment")` outside a fragment rerun)
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)

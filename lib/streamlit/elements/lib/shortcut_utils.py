@@ -21,6 +21,7 @@ from typing import (
 
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
 )
 from streamlit.logger import get_logger
 
@@ -132,15 +133,19 @@ def normalize_shortcut(shortcut: str) -> str:
 
     Raises
     ------
+    StreamlitInvalidParameterTypeError
+        If ``shortcut`` is not a string.
     StreamlitAPIException
-        If the shortcut is not a string value.
-        If the shortcut does not contain at least one key or modifier.
-        If the shortcut contains a single non-modifier key.
-        If the shortcut uses the keys 'C' or 'R', with or without modifiers.
-        If the shortcut does not include a non-modifier key.
+        If the shortcut is empty, specifies more than one non-modifier key,
+        uses the reserved keys ``C`` or ``R``, includes only modifiers, or
+        contains an unsupported non-modifier key.
     """
     if not isinstance(shortcut, str):
-        raise StreamlitAPIException("shortcut must be a string value.")
+        raise StreamlitInvalidParameterTypeError(
+            "shortcut",
+            type(shortcut).__name__,
+            ["str"],
+        )
 
     tokens = [token.strip() for token in shortcut.split("+") if token.strip()]
     if not tokens:

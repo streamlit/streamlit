@@ -38,7 +38,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
@@ -530,14 +530,18 @@ class FileUploaderMixin:
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
 
-        # Validate max_upload_size early to provide a clear error message
         if max_upload_size is not None and (
-            not isinstance(max_upload_size, int) or max_upload_size <= 0
+            isinstance(max_upload_size, bool)
+            or not isinstance(max_upload_size, int)
+            or max_upload_size < 1
         ):
-            raise StreamlitAPIException(
-                "The `max_upload_size` parameter must be a positive integer "
-                "representing the maximum file size in megabytes, or None "
-                "to fall back to the `server.maxUploadSize` configuration option."
+            raise StreamlitValueError(
+                "max_upload_size",
+                ["a positive integer"],
+                detail=(
+                    "Set it to None to fall back to the `server.maxUploadSize` "
+                    "configuration option."
+                ),
             )
 
         check_widget_policies(
