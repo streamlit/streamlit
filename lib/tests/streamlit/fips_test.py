@@ -18,14 +18,14 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import inspect
 import os
 import socket
 import subprocess
 import sys
 import time
 import urllib.request
-from typing import TYPE_CHECKING, Any
-from urllib.error import URLError
+from typing import TYPE_CHECKING, Any, NoReturn
 
 import pytest
 from websockets.sync.client import connect
@@ -162,6 +162,54 @@ def test_internal_hashing_uses_non_security_hashes(
         assert md5_call_count > 0  # BLAKE2b was rejected, so we fell back to MD5.
 
 
+def test_wait_for_streamlit_health_retries_socket_timeout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Retry when urllib raises a raw ``TimeoutError`` instead of ``URLError``.
+
+    A 1s socket timeout during ``getresponse()``/``read()`` is
+    ``TimeoutError("timed out")`` and is not wrapped in ``URLError``. That is
+    the failure this smoke test flakes with under CI load if the health poll
+    does not catch it.
+    """
+
+    class _AliveProcess:
+        def poll(self) -> None:
+            return None
+
+    class _OkResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b"ok"
+
+    calls = {"n": 0}
+
+    def fake_open(_url: str, timeout: float = 1) -> _OkResponse:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise TimeoutError("timed out")
+        return _OkResponse()
+
+    class _FakeOpener:
+        open = staticmethod(fake_open)
+
+    monkeypatch.setattr(
+        urllib.request, "build_opener", lambda *_args, **_kwargs: _FakeOpener()
+    )
+    monkeypatch.setattr(time, "sleep", lambda _seconds: None)
+
+    log_path = tmp_path / "streamlit_server.log"
+    log_path.write_text("", encoding="utf-8")
+    process: Any = _AliveProcess()
+    assert _wait_for_streamlit_health(process, 12345, log_path) is True
+    assert calls["n"] == 3
+
+
 @pytest.mark.parametrize("reject_blake2_digest_size", [False, True])
 def test_streamlit_run_serves_app_when_fips_rejects_security_hashes(
     reject_blake2_digest_size: bool, tmp_path: Path
@@ -209,7 +257,7 @@ st.write("{_FIPS_SMOKE_MARKER}")
     log_path = tmp_path / "streamlit_server.log"
     process, port = _start_streamlit_server(app_path, env, log_path)
     try:
-        _run_streamlit_websocket_session(port)
+        _run_streamlit_websocket_session(port, log_path)
     finally:
         _terminate(process)
 
@@ -254,7 +302,7 @@ def _start_streamlit_server(
     )
 
 
-def _run_streamlit_websocket_session(port: int) -> None:
+def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
     """Drive a rerun over the WebSocket and assert the smoke session succeeds.
 
     Sends a ``BackMsg`` rerun request, then asserts that the app emits the
@@ -262,22 +310,54 @@ def _run_streamlit_websocket_session(port: int) -> None:
     """
     websocket_url = f"ws://127.0.0.1:{port}/_stcore/stream"
     rerun_request = BackMsg(rerun_script=ClientState()).SerializeToString()
+    deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
+    connect_kwargs: dict[str, Any] = {
+        "subprotocols": ["streamlit"],
+        # Generous close timeout so teardown cannot fail a completed session
+        # when the server is still flushing under FIPS hash-fallback load.
+        "close_timeout": 10,
+        # This is a short smoke test; disable client pings so keepalive
+        # timeouts cannot surface as a raw ``TimeoutError: timed out``.
+        "ping_interval": None,
+    }
+    # websockets>=13 honors HTTP_PROXY by default. Force direct loopback,
+    # matching the health check's ProxyHandler({}). websockets 12 (min-deps)
+    # has no proxy argument and forwards unknown kwargs to create_connection.
+    if "proxy" in inspect.signature(connect).parameters:
+        connect_kwargs["proxy"] = None
+
+    websocket = None
+    last_connect_error: BaseException | None = None
+    while time.monotonic() < deadline:
+        try:
+            websocket = connect(
+                websocket_url,
+                open_timeout=max(0.1, deadline - time.monotonic()),
+                **connect_kwargs,
+            )
+            break
+        except (TimeoutError, OSError, ConnectionError) as ex:
+            last_connect_error = ex
+            time.sleep(0.2)
+
+    if websocket is None:
+        _fail_with_server_log(
+            log_path,
+            f"Timed out opening the FIPS smoke WebSocket at {websocket_url}. "
+            f"Last error: {last_connect_error!r}",
+        )
+
     saw_smoke_marker = False
-
-    with connect(
-        websocket_url,
-        subprotocols=["streamlit"],
-        open_timeout=5,
-        close_timeout=2,
-    ) as websocket:
+    try:
         websocket.send(rerun_request)
-
-        deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
         while time.monotonic() < deadline:
             try:
                 payload = websocket.recv(timeout=max(0.1, deadline - time.monotonic()))
             except TimeoutError:
-                pytest.fail("Timed out waiting for the FIPS smoke app's messages")
+                _fail_with_server_log(
+                    log_path,
+                    "Timed out waiting for the FIPS smoke app's messages",
+                )
             assert isinstance(payload, bytes)
 
             forward_msg = ForwardMsg.FromString(payload)
@@ -293,9 +373,17 @@ def _run_streamlit_websocket_session(port: int) -> None:
                 assert forward_msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
                 break
         else:
-            pytest.fail("Streamlit did not finish the FIPS smoke app")
+            _fail_with_server_log(
+                log_path, "Streamlit did not finish the FIPS smoke app"
+            )
+    finally:
+        # Close is best-effort: a close-handshake timeout must not replace a
+        # real session failure (or fail a session that already succeeded).
+        with contextlib.suppress(Exception):
+            websocket.close()
 
-    assert saw_smoke_marker, "The FIPS runtime canaries did not complete"
+    if not saw_smoke_marker:
+        _fail_with_server_log(log_path, "The FIPS runtime canaries did not complete")
 
 
 def _wait_for_streamlit_health(
@@ -320,7 +408,12 @@ def _wait_for_streamlit_health(
             with opener.open(health_url, timeout=1) as response:
                 if response.read().decode("utf-8") == "ok":
                     return True
-        except URLError as ex:
+        except OSError as ex:
+            # urllib wraps connect/send failures in URLError (an OSError). A
+            # 1s socket timeout during getresponse()/read() can also raise
+            # TimeoutError("timed out") directly. Catch both so a slow
+            # response retries until the startup deadline instead of failing
+            # the test with an uncaught TimeoutError.
             last_error = ex
 
         time.sleep(0.2)
@@ -335,6 +428,12 @@ def _wait_for_streamlit_health(
         f"Last error: {last_error!r}\n"
         f"Output:\n{output}"
     )
+
+
+def _fail_with_server_log(log_path: Path, message: str) -> NoReturn:
+    """Fail the test, appending the Streamlit server log for diagnostics."""
+    output = log_path.read_text(encoding="utf-8", errors="replace")
+    pytest.fail(f"{message}\nOutput:\n{output}")
 
 
 def _terminate(process: subprocess.Popen[str]) -> None:
