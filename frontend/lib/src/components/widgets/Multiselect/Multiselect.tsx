@@ -683,8 +683,8 @@ const Multiselect: FC<Props> = props => {
       // users do not need ArrowDown first. The first row is "Select all" /
       // "Select X matches" when that bulk action is shown, otherwise the
       // first matching option. "Add: …" is last, so it is first only when
-      // the query matches no existing option. If a row is already focused,
-      // RAC commits that row instead.
+      // the query matches no existing option. If a row is already focused
+      // (hovering a row also focuses it), RAC commits that row instead.
       if (e.key === "Enter" && !e.nativeEvent.isComposing) {
         if (notNullOrUndefined(focusedKeyRef.current)) {
           return

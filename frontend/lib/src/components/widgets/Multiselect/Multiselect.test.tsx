@@ -227,7 +227,7 @@ describe("Multiselect widget", () => {
     })
   })
 
-  it("focuses the first row so Enter selects it without ArrowDown", async () => {
+  it("commits the first visible row on Enter without ArrowDown", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -627,7 +627,7 @@ describe("Multiselect widget", () => {
     const bulkAction = screen.getByText(/Select \d+ matches/)
     expect(bulkAction).toBeVisible()
 
-    // "Select X matches" is first and focused, so Enter activates it
+    // "Select X matches" is the first visible row, so unfocused Enter activates it.
     await user.keyboard("{Enter}")
 
     // All matching options should now be selected as tags

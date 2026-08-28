@@ -11,6 +11,18 @@ Add a keyword-only `select_all` parameter to `st.multiselect` that allows users 
 
 This spec also **approves** a default keyboard change that ships with the parameter: when no dropdown item is focused, Enter commits the first visible row. That includes activating the bulk-action row when it is shown. With `accept_new_options`, a unique typed value still creates with a single Enter; a typed prefix that matches existing options does not.
 
+## Spec status
+
+The `select_all` API was merged in [#15300](https://github.com/streamlit/streamlit/pull/15300). **Keyboard / Enter below is an approved amendment by the spec author (`lukasmasuch`, 2026-08-28).** It is intended to land in the same implementation PR ([#16673](https://github.com/streamlit/streamlit/pull/16673)). It does not need a separate spec PR, and it is not an implementation-only deviation.
+
+Until #16673 merges, `develop` still has the older "unfocused Enter creates the typed value" wording from #15300. That copy is stale. The approved Keyboard / Enter spec is this file.
+
+Approved shipped defaults for apps that never pass `select_all`:
+
+1. Unfocused Enter commits the first visible row (replaces the RAC no-op).
+2. When the bulk-action row is shown, that row is first, so a single Enter bulk-selects. Opt-out: `select_all=False`.
+3. `accept_new_options=True`: Enter creates the typed value only when no existing option matches. A typed prefix of matching options is **not** created; there is no parameter to restore that RAC leftover. Migration: ArrowDown or click "Add: …". That removal is intentional (Alternative 7).
+
 ## Problem
 
 ### Current Behavior
@@ -166,9 +178,9 @@ Both "Select all" and "Select X matches" are controlled by the same parameter. W
 
 **Keyboard / Enter (approved default-behavior change):**
 
-This section **replaces** the earlier "unfocused Enter creates the typed value" wording that landed on `develop` with the spec. The spec author approved that amendment in the same PR as the `select_all` implementation. It is a product decision, not an implementation-only deviation, and does not need a separate spec PR.
+This section **replaces** the earlier "unfocused Enter creates the typed value" wording that landed on `develop` with the spec in #15300. The spec author (`lukasmasuch`) approved this amendment on 2026-08-28 to ship in the `select_all` implementation PR ([#16673](https://github.com/streamlit/streamlit/pull/16673)). It is a product decision, not an implementation-only deviation, and does not need a separate spec PR.
 
-**Rule:** When no dropdown item is keyboard-focused, Enter commits the first visible row (the highlighted Enter target). Users do not need ArrowDown first. If a row is already focused, Enter activates that focused row.
+**Rule:** When no dropdown item is keyboard-focused, Enter commits the first visible row (the highlighted Enter target). Users do not need ArrowDown first. If a row is already focused (including hover, which focuses in React Aria), Enter activates that focused row.
 
 | Situation | Today on `develop` (RAC) | Approved |
 |-----------|--------------------------|----------|
@@ -177,7 +189,11 @@ This section **replaces** the earlier "unfocused Enter creates the typed value" 
 | `accept_new_options=True`, query matches existing options, Enter | Creates the typed prefix | Commits the first listed row (bulk if shown, else first match). Create via ArrowDown or click on "Add: …" |
 | `accept_new_options=True`, query matches no existing option, Enter | Creates the typed value | Creates the typed value ("Add: …" is last in the list, so it is first only when nothing else matches) |
 
-When the bulk-action row is visible, unfocused Enter activates it. `select_all=False` is the opt-out. "Add: …" is last in the dropdown, so unfocused Enter creates a custom value only when the query matches no existing option. Alternatives 7–8 (restore prefix create-on-Enter, or skip the bulk row) were rejected.
+When the bulk-action row is visible, unfocused Enter activates it. That is the intended default, including for apps that never pass `select_all`. `select_all=False` is the opt-out of bulk-select-on-Enter (the first row is then the first match).
+
+**Migration (`accept_new_options`):** Creating a typed prefix that also matches existing options with a single unfocused Enter is removed. Unique custom values still create with one Enter. To add a matching prefix, ArrowDown or click "Add: …". No `select_all` value restores prefix create-on-Enter; that leftover RAC path was rejected (Alternative 7).
+
+Alternatives 7–8 (restore prefix create-on-Enter, or skip the bulk row on unfocused Enter) were rejected.
 
 **Interaction with `max_selections`:**
 
@@ -267,7 +283,7 @@ select_all: bool | int | Literal["auto"] = "auto"
 
 When `accept_new_options=True` and no dropdown item is focused, Enter could still create the typed value even if existing options match the query (`"py"` + Enter → `"py"`, not `python` / "Select 2 matches").
 
-**Decision:** Rejected. **Approved shipped behavior** is first-row Enter. A query that matches existing options should add those matches (or the first match when bulk is hidden), not a typed prefix. Unique custom values still create with a single Enter because "Add: …" is then first. Values that also match existing options can be created via ArrowDown or click on "Add: …".
+**Decision:** Rejected. **Approved shipped behavior** is first-row Enter. This is a breaking interaction change for creatable multiselects, not an API break: a query that matches existing options adds those matches (or the first match when bulk is hidden), not a typed prefix. Unique custom values still create with a single Enter because "Add: …" is then first. Values that also match existing options can be created via ArrowDown or click on "Add: …". There is no opt-out parameter; restoring the leftover RAC path would reintroduce the prefix-create gotcha.
 
 ### Alternative 8: Unfocused Enter skips the bulk-action row
 
@@ -288,7 +304,7 @@ Unfocused Enter could skip bulk-action rows and, when `accept_new_options` is se
 | Item                         | ✅ or comment |
 |------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | ✅ Yes, full-stack change (Python + proto + frontend) |
-| No breaking API changes      | ✅ Yes, new optional parameter. Approved default-behavior deltas: the unfiltered threshold table, and unfocused Enter committing the first visible row (including bulk when shown, and not creating a matching `accept_new_options` prefix). Unique custom values still create with a single Enter. See Keyboard / Enter. |
+| No breaking API changes      | ✅ Yes, new optional parameter. Approved **interaction** deltas (not API breaks): the unfiltered threshold table, and unfocused Enter committing the first visible row (including bulk when shown). Matching-prefix create-on-Enter is intentionally removed; unique custom values still create with a single Enter. See Keyboard / Enter and Alternative 7. |
 | No new dependencies          | ✅ Yes |
 | Metrics collected            | ✅ Track `select_all` parameter usage |
 | Any security/legal impact?   | ✅ No impact |

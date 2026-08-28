@@ -197,11 +197,8 @@ def _check_max_selections(
 
 
 def _encode_select_all(select_all: object) -> int:
-    """Validate ``select_all`` and encode it for the proto.
-
-    Check ``bool`` before ``int`` so ``True`` encodes as always-show (``-1``),
-    not as the integer ``1``.
-    """
+    """Validate ``select_all`` and encode it for the proto."""
+    # Check bool before int so True encodes as always-show (-1), not 1.
     if isinstance(select_all, bool):
         return _SELECT_ALL_ALWAYS if select_all else 0
     if isinstance(select_all, int):
@@ -481,6 +478,14 @@ class MultiSelectMixin:
               count is at or below this threshold. ``0`` never shows the
               option (same as ``False``), and ``1`` never shows it either
               because two selectable options are always required.
+
+            When no dropdown item is keyboard-focused, Enter commits the
+            first visible row. If this option is shown, that row is first,
+            so Enter bulk-selects. Pass ``False`` so Enter selects the first
+            match instead. With ``accept_new_options=True``, Enter creates a
+            typed value only when it matches no existing option. To add a
+            prefix that also matches an option, use ArrowDown or click
+            ``Add: …``.
 
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
