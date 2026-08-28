@@ -628,6 +628,8 @@ class ChatTest(DeltaGeneratorTestCase):
             ("negative", -1),
             ("float", 1.5),
             ("string", "10"),
+            ("true", True),
+            ("false", False),
         ]
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
@@ -635,6 +637,18 @@ class ChatTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("the label", max_upload_size=max_upload_size)
         assert "a positive integer" in str(exc.value)
+
+    def test_numpy_integer_max_upload_size(self) -> None:
+        """Numpy integers remain valid max upload sizes for chat_input."""
+        import numpy as np
+
+        st.chat_input(
+            "the label",
+            max_upload_size=np.int64(7),  # type: ignore[arg-type]
+            accept_file="multiple",
+        )
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.max_upload_size_mb == 7
 
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""

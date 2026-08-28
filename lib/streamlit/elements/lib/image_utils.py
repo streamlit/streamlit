@@ -157,12 +157,14 @@ def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str = "JPEG") -> 
     return _pil_to_bytes(img, img_format)
 
 
-def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
+def _verify_np_shape(
+    array: npt.NDArray[Any], *, parameter: str = "image"
+) -> npt.NDArray[Any]:
     shape: NumpyShape = array.shape
     if len(shape) not in {2, 3}:
         raise StreamlitValueError(
-            "image",
-            ["a numpy array of rank 2 or 3"],
+            parameter,
+            ["a 2D or 3D NumPy array"],
         )
     if len(shape) == 3 and shape[-1] not in {1, 3, 4}:
         raise StreamlitAPIException(
@@ -250,6 +252,8 @@ def image_to_url(
     channels: Channels,
     output_format: ImageFormatOrAuto,
     image_id: str,
+    *,
+    parameter: str = "image",
 ) -> str:
     """Return a URL that an image can be served from.
     If `image` is already a URL, return it unmodified.
@@ -327,7 +331,9 @@ def image_to_url(
 
     # Numpy Arrays (ie opencv)
     elif isinstance(image, np.ndarray):
-        image = _clip_image(_verify_np_shape(_as_ndarray(image)), clamp)
+        image = _clip_image(
+            _verify_np_shape(_as_ndarray(image), parameter=parameter), clamp
+        )
 
         if channels == "BGR":
             if len(image.shape) == 3:

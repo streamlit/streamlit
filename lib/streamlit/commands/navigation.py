@@ -349,7 +349,9 @@ def _navigation(
     page_list = pages_from_nav_sections(nav_sections)
 
     if not page_list:
-        raise StreamlitMissingRequiredParameterError("pages")
+        raise StreamlitMissingRequiredParameterError(
+            "pages", detail="Provide at least one `st.Page`."
+        )
 
     default_page = None
     pagehash_to_pageinfo: dict[PageHash, PageInfo] = {}
@@ -429,7 +431,9 @@ def _navigation(
             # Don't set visible_items - leave it unset to use default
     elif isinstance(expanded, int):
         if expanded < 0:
-            raise StreamlitValueError("expanded", ["a non-negative integer"])
+            raise StreamlitValueError(
+                "expanded", ["True", "False", "a non-negative integer"]
+            )
         if expanded == 0:
             # Documented default behavior: collapsed, default visible_items
             msg.navigation.expanded = False

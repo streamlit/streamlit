@@ -292,11 +292,14 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             assert proto.max == "2024-01-01T12:00"
 
     def test_min_max_exception(self):
-        """Test that min_value > max_value raises an exception."""
+        """min_value must be strictly less than max_value."""
         min_value = datetime(2030, 1, 1, 12, 0)
         max_value = datetime(2020, 1, 1, 12, 0)
-        with pytest.raises(StreamlitInvalidRangeError):
+        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
             st.datetime_input("Label", min_value=min_value, max_value=max_value)
+        equal = datetime(2024, 1, 1, 12, 0)
+        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+            st.datetime_input("Label", min_value=equal, max_value=equal)
 
     def test_initial_value_out_of_bounds_exception(self):
         """Test that initial value out of min/max bounds raises an exception."""

@@ -104,6 +104,7 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
             channels="RGB",
             output_format="auto",
             image_id="favicon",
+            parameter="page_icon",
         )
     except Exception:
         if isinstance(page_icon, str):

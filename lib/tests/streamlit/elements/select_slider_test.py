@@ -96,8 +96,9 @@ class SliderTest(DeltaGeneratorTestCase):
 
     def test_invalid_options(self):
         """Test that it raises an error on an empty options"""
-        with pytest.raises(StreamlitMissingRequiredParameterError):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.select_slider("the label", options=[])
+        assert "Provide at least one option" in str(exc.value)
 
     def test_none_value(self):
         """Test that it allows None as a valid option"""

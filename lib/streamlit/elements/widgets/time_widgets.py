@@ -90,16 +90,11 @@ DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
-_SUPPORTED_DATE_FORMATS: Final = [
-    "'YYYY/MM/DD'",
-    "'DD/MM/YYYY'",
-    "'MM/DD/YYYY'",
-    "'YYYY.MM.DD'",
-    "'DD.MM.YYYY'",
-    "'MM.DD.YYYY'",
-    "'YYYY-MM-DD'",
-    "'DD-MM-YYYY'",
-    "'MM-DD-YYYY'",
+_DATE_FORMAT_GRAMMAR: Final = [
+    (
+        "the component order `YYYY MM DD`, `DD MM YYYY`, or `MM DD YYYY`, "
+        "with `/`, `.`, or `-` separators (including mixed separators)"
+    )
 ]
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
@@ -401,7 +396,7 @@ class _DateTimeInputValues:
         )
 
     def __post_init__(self) -> None:
-        if self.min > self.max:
+        if self.min >= self.max:
             raise StreamlitInvalidRangeError(self.min, self.max)
 
         if self.value is not None:
@@ -450,7 +445,7 @@ class _DateInputValues:
         )
 
     def __post_init__(self) -> None:
-        if self.min > self.max:
+        if self.min >= self.max:
             raise StreamlitInvalidRangeError(self.min, self.max)
 
         if self.value:
@@ -1475,7 +1470,11 @@ class TimeWidgetsMixin:
         del value, min_value, max_value
 
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitValueError("format", _SUPPORTED_DATE_FORMATS)
+            raise StreamlitValueError(
+                "format",
+                _DATE_FORMAT_GRAMMAR,
+                detail=f"Provided value: {format!r}.",
+            )
 
         if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
             raise StreamlitInvalidParameterTypeError(
@@ -1975,7 +1974,11 @@ class TimeWidgetsMixin:
             width=width,
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitValueError("format", _SUPPORTED_DATE_FORMATS)
+            raise StreamlitValueError(
+                "format",
+                _DATE_FORMAT_GRAMMAR,
+                detail=f"Provided value: {format!r}.",
+            )
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,

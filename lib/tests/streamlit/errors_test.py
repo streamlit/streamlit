@@ -259,8 +259,9 @@ def test_invalid_range_error_message() -> None:
         ),
         ("www.example.com", ("http", "https"), '"http://" or "https://"'),
         ("ftp://example.com", ("https",), '"https://"'),
+        ("ftp://example.com", ("ftp",), '"ftp://"'),
     ],
-    ids=["three-protocols", "two-protocols", "one-protocol"],
+    ids=["three-protocols", "two-protocols", "one-protocol", "non-http-scheme"],
 )
 def test_invalid_url_error_formats_protocols(
     url: str, protocols: tuple[str, ...], expected_prefixes: str
@@ -271,6 +272,12 @@ def test_invalid_url_error_formats_protocols(
         f'"{url}" is not a valid URL. '
         f"You must use a fully qualified domain beginning with {expected_prefixes}."
     )
+
+
+def test_invalid_url_error_preserves_default_protocols() -> None:
+    """The original one-argument constructor keeps its protocol guidance."""
+    exc = errors.StreamlitInvalidURLError("www.example.com")
+    assert '"http://", "https://", or "mailto:"' in str(exc)
 
 
 def test_bidi_component_error_hierarchy() -> None:

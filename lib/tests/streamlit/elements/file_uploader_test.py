@@ -183,6 +183,8 @@ class FileUploaderTest(DeltaGeneratorTestCase):
             ("negative", -1),
             ("float", 1.5),
             ("string", "10"),
+            ("true", True),
+            ("false", False),
         ]
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object):
@@ -191,6 +193,14 @@ class FileUploaderTest(DeltaGeneratorTestCase):
             st.file_uploader("the label", max_upload_size=max_upload_size)
 
         assert "a positive integer" in str(exc.value)
+
+    def test_numpy_integer_max_upload_size(self):
+        """Numpy integers remain valid max upload sizes."""
+        import numpy as np
+
+        st.file_uploader("the label", max_upload_size=np.int64(5))  # type: ignore[arg-type]
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.max_upload_size_mb == 5
 
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_unique_uploaded_file_instance(self, get_upload_files_patch):

@@ -34,6 +34,7 @@ from streamlit.elements.media import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
 )
@@ -325,7 +326,7 @@ def test_marshall_video_youtube_with_subtitles_raises() -> None:
     """Subtitles are rejected for YouTube iframe URLs."""
     proto = VideoProto()
     with pytest.raises(
-        StreamlitAPIException, match="Subtitles are not supported for YouTube"
+        StreamlitIncompatibleParametersError, match="data=<YouTube URL>"
     ):
         marshall_video(
             mock.Mock(),

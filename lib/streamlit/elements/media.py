@@ -608,7 +608,7 @@ def marshall_video(
             if subtitles:
                 raise StreamlitIncompatibleParametersError(
                     "subtitles",
-                    "YouTube videos",
+                    "data=<YouTube URL>",
                     explanation="Subtitles are not supported for YouTube videos.",
                 )
         else:

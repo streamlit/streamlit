@@ -361,7 +361,9 @@ class MenuButtonMixin:
         opt = convert_anything_to_list(options)
 
         if len(opt) == 0:
-            raise StreamlitMissingRequiredParameterError("options")
+            raise StreamlitMissingRequiredParameterError(
+                "options", detail="Provide at least one option."
+            )
 
         check_python_comparable(opt)
 

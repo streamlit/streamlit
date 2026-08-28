@@ -463,7 +463,9 @@ class SelectSliderMixin:
         check_python_comparable(opt)
 
         if len(opt) == 0:
-            raise StreamlitMissingRequiredParameterError("options")
+            raise StreamlitMissingRequiredParameterError(
+                "options", detail="Provide at least one option."
+            )
 
         def as_index_list(v: Any) -> list[int]:
             if _is_range_value(v):

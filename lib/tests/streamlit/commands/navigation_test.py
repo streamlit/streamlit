@@ -36,8 +36,9 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_no_pages(self):
         """Test that an error is thrown with no pages"""
-        with pytest.raises(StreamlitMissingRequiredParameterError):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.navigation([])
+        assert "Provide at least one `st.Page`" in str(exc.value)
 
     def test_single_page(self):
         """Test that a single page is returned"""

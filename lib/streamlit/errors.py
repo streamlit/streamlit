@@ -188,9 +188,13 @@ class LocalizableStreamlitException(StreamlitAPIException):
 class StreamlitInvalidURLError(LocalizableStreamlitException):
     """Raised when a URL is malformed or uses an unsupported protocol."""
 
-    def __init__(self, url: str, protocols: Collection[str]) -> None:
+    def __init__(
+        self,
+        url: str,
+        protocols: Collection[str] = ("http", "https", "mailto"),
+    ) -> None:
         prefixes = [
-            f'"{protocol}://"' if protocol in {"http", "https"} else f'"{protocol}:"'
+            f'"{protocol}:"' if protocol in {"mailto", "data"} else f'"{protocol}://"'
             for protocol in protocols
         ]
         if len(prefixes) <= 2:
@@ -448,7 +452,9 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
 
 
 # Bidirectional Components
-class BidiComponentError(LocalizableStreamlitException):  # pragma: no cover
+class BidiComponentError(
+    LocalizableStreamlitException
+):  # pragma: no cover - trivial base class
     """Base class for bidirectional (CCv2) component errors.
 
     ``except BidiComponentError`` catches all specialized bidi errors.

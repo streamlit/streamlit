@@ -1048,8 +1048,11 @@ class SliderMixin:
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
 
-        if step == 0:
-            raise StreamlitValueError("step", ["a nonzero number", "timedelta"])
+        if isinstance(step, timedelta):
+            if step == timedelta(0):
+                raise StreamlitValueError("step", ["a nonzero timedelta"])
+        elif step == 0:
+            raise StreamlitValueError("step", ["a nonzero number"])
 
         # Ensure that all arguments are of the same type.
         slider_args = [min_value, max_value, step]

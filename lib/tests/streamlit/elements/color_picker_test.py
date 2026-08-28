@@ -264,7 +264,9 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 
     def test_empty_key_raises_exception(self) -> None:
         """Test that an empty key raises an exception."""
-        with pytest.raises(StreamlitAPIException, match=r"`key`.*non-empty"):
+        with pytest.raises(
+            StreamlitValueError, match=r"Invalid `key` value.*a non-empty string"
+        ):
             st.color_picker("the label", key="")
 
 

@@ -164,6 +164,7 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.menu_button("the label", [])
         assert "The `options` parameter is required" in str(exc.value)
+        assert "Provide at least one option" in str(exc.value)
 
     def test_duplicate_formatted_labels_raises(self):
         """Test that duplicate formatted labels raise an exception."""

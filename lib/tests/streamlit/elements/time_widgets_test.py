@@ -79,14 +79,44 @@ def test_convert_datetimelike_rejects_unparseable_string() -> None:
         )
 
 
-def test_date_input_values_rejects_min_after_max() -> None:
-    """Test that constructing date bounds with min > max raises an exception."""
-    with pytest.raises(StreamlitInvalidRangeError, match="min_value"):
+@pytest.mark.parametrize(
+    ("min_date", "max_date"),
+    [
+        (date(2022, 1, 1), date(2020, 1, 1)),
+        (date(2022, 1, 1), date(2022, 1, 1)),
+    ],
+    ids=["min-after-max", "min-equals-max"],
+)
+def test_date_input_values_rejects_invalid_bounds(
+    min_date: date, max_date: date
+) -> None:
+    """Date bounds must be a non-empty range: min < max."""
+    with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
         _DateInputValues(
             value=None,
             is_range=False,
-            min=date(2022, 1, 1),
-            max=date(2020, 1, 1),
+            min=min_date,
+            max=max_date,
+        )
+
+
+@pytest.mark.parametrize(
+    ("min_dt", "max_dt"),
+    [
+        (datetime(2022, 1, 1, 12, 0), datetime(2020, 1, 1, 12, 0)),
+        (datetime(2022, 1, 1, 12, 0), datetime(2022, 1, 1, 12, 0)),
+    ],
+    ids=["min-after-max", "min-equals-max"],
+)
+def test_datetime_input_values_rejects_invalid_bounds(
+    min_dt: datetime, max_dt: datetime
+) -> None:
+    """Datetime bounds must be a non-empty range: min < max."""
+    with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+        _DateTimeInputValues(
+            value=None,
+            min=min_dt,
+            max=max_dt,
         )
 
 

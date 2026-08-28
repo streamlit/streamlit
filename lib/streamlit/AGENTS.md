@@ -178,6 +178,7 @@ generic `StreamlitAPIException` with a one-off message.
     including when they are equal)
   - `StreamlitInvalidURLError(url, protocols)` (`st.logo(link=)`, page-config
     menu items). Pass the allowed schemes, for example `["http", "https"]`.
+    `protocols` defaults to `("http", "https", "mailto")`.
   - `StreamlitInvalidFormCallbackError` (form callback policy)
   - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
     form, dialog, or fragment context — including opening a second dialog in the

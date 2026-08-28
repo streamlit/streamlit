@@ -24,6 +24,7 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidRangeError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
@@ -225,6 +226,21 @@ class DateInputTest(DeltaGeneratorTestCase):
         st.date_input("the label", value=value, min_value=min_date, max_value=max_date)
         # No need to assert anything. Testing if not throwing an error.
 
+    def test_min_max_exception(self):
+        """min_value must be strictly less than max_value."""
+        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+            st.date_input(
+                "the label",
+                min_value=date(2022, 1, 1),
+                max_value=date(2020, 1, 1),
+            )
+        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
+            st.date_input(
+                "the label",
+                min_value=date(2022, 1, 1),
+                max_value=date(2022, 1, 1),
+            )
+
     def test_default_min_if_today_is_before_min(self):
         min_date = date(9998, 2, 28)
         st.date_input("the label", min_value=min_date, max_value=date(9999, 2, 28))
@@ -305,6 +321,7 @@ class DateInputTest(DeltaGeneratorTestCase):
             ("YYYY-MM-DD"),
             ("DD-MM-YYYY"),
             ("MM-DD-YYYY"),
+            ("YYYY/MM-DD"),  # Mixed separators are accepted by the regex
         ]
     )
     def test_supported_date_format_values(self, format: str):
@@ -336,11 +353,9 @@ class DateInputTest(DeltaGeneratorTestCase):
         """Test that it raises an exception for invalid date formats."""
         with pytest.raises(StreamlitValueError) as ex:
             st.date_input("the label", format=format)
-        assert str(ex.value) == (
-            "Invalid `format` value. Supported values: 'YYYY/MM/DD', 'DD/MM/YYYY', "
-            "'MM/DD/YYYY', 'YYYY.MM.DD', 'DD.MM.YYYY', 'MM.DD.YYYY', "
-            "'YYYY-MM-DD', 'DD-MM-YYYY', 'MM-DD-YYYY'."
-        )
+        assert "Invalid `format` value" in str(ex.value)
+        assert "mixed separators" in str(ex.value)
+        assert f"Provided value: {format!r}" in str(ex.value)
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
