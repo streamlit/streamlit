@@ -54,3 +54,19 @@ if TYPE_CHECKING:
     assert_type(container(gap=None), DeltaGenerator)
     assert_type(container(gap=0), DeltaGenerator)
     assert_type(container(gap=20), DeltaGenerator)
+
+    # st.container accepts layout parameters together.
+    assert_type(
+        container(
+            border=True,
+            key="scrolling-row",
+            width=640,
+            height=320,
+            horizontal=True,
+            wrap=False,
+            horizontal_alignment="center",
+            vertical_alignment="bottom",
+            autoscroll=True,
+        ),
+        DeltaGenerator,
+    )

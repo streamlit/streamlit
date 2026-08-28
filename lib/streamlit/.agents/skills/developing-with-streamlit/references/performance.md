@@ -75,6 +75,20 @@ combined with `persist`. The function can't use session-specific features (e.g.
 `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
 with both `st.cache_data` and `st.cache_resource`.
 
+By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
+it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
+finite number greater than `1.0` to move that bound: a multiplier of `M`
+hard-expires at `M × ttl`, giving a stale window of `(M - 1) × ttl`. Invalid
+values warn and fall back to `2.0`. Raising it avoids blocking recomputes after
+idle periods or failed refreshes; lowering it serves fresher data and frees
+memory sooner.
+
+```toml
+# .streamlit/config.toml
+[runner]
+cacheBackgroundRefreshTTLMultiplier = 4.0
+```
+
 Background refresh is access-driven: it starts only after a call observes an expired entry,
 so the caller may briefly receive stale data. For advanced cases that need the server to
 initiate background refreshes for specific global cache keys even without user traffic, use

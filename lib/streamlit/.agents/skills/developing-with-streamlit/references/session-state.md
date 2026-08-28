@@ -37,6 +37,46 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+## Syncing a widget to the URL (shareable links)
+
+To make a widget's value shareable through the page URL, pass `bind="query-params"` together with `key=`. Streamlit writes the value to the URL query string when it changes and restores it from the URL on load — **don't hand-roll `st.query_params`** for this. The `key=` becomes the query-parameter name.
+
+```python
+# GOOD: one widget, automatic URL sync. Picking "Newest" -> ?sort=Newest;
+# loading ?sort=Price reopens with "Price" selected.
+sort = st.selectbox(
+    "Sort order",
+    ["Relevance", "Newest", "Price"],
+    key="sort",  # REQUIRED with bind=; becomes the URL param name (?sort=...)
+    bind="query-params",  # exact string, with a hyphen
+)
+st.write(f"Sorting by: {sort}")
+```
+
+```python
+# BAD: hand-rolled plumbing. More code, an extra rerun to guard, it conflicts
+# with bind= (a bound param can't be set/deleted via st.query_params), and it
+# crashes on an unexpected URL value — .index(default) raises ValueError if a
+# user opens ?sort=Foo. With bind="query-params", an unknown URL value just
+# falls back to the default instead of raising.
+default = st.query_params.get("sort", "Relevance")
+sort = st.selectbox(
+    "Sort order",
+    ["Relevance", "Newest", "Price"],
+    index=["Relevance", "Newest", "Price"].index(default),
+)
+st.query_params["sort"] = sort  # don't do this when bind= handles sync
+```
+
+Notes:
+- `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid. Not supported with `st.text_input(type="password")`.
+- When the value equals the default, the param is dropped from the URL to keep it clean.
+- A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitAPIException` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
+- Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
+- Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
+- Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
+- To keep a value across reruns or page switches *without* exposing it in the URL, use `persist_state` instead (see [Persisting widget values](#persisting-widget-values-persist_state)); when both are set, `bind` takes precedence.
+
 ## Widget input constraints are mostly client-side
 
 Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` (`st.text_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.

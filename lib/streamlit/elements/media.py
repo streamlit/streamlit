@@ -25,7 +25,7 @@ from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -618,9 +618,10 @@ def marshall_video(
         elif isinstance(subtitles, dict):
             subtitle_items.extend(subtitles.items())
         else:
-            raise StreamlitAPIException(
-                f"Unsupported data type for subtitles: {type(subtitles)}. "
-                f"Only str (file paths) and dict are supported."
+            raise StreamlitInvalidParameterTypeError(
+                "subtitles",
+                type(subtitles).__name__,
+                ["str", "bytes", "BytesIO", "Path", "dict"],
             )
 
         for label, subtitle_data in subtitle_items:

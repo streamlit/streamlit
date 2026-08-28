@@ -16,7 +16,6 @@
 
 import { pick } from "lodash-es"
 import { getLogger } from "loglevel"
-import { v4 as uuidv4 } from "uuid"
 
 import { IS_DEV_ENV } from "@streamlit/connection"
 import {
@@ -26,7 +25,11 @@ import {
   setCookie,
 } from "@streamlit/lib"
 import { IMetricsEvent, MetricsEvent } from "@streamlit/protobuf"
-import { getCookie, localStorageAvailable } from "@streamlit/utils"
+import {
+  generateUuid,
+  getCookie,
+  localStorageAvailable,
+} from "@streamlit/utils"
 
 // Default metrics config fetched when none provided by host config endpoint
 export const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/metrics.json"
@@ -338,7 +341,7 @@ export class MetricsManager {
 
       setCookie(anonymousIdKey, this.anonymousId, expiration)
     } else {
-      this.anonymousId = uuidv4()
+      this.anonymousId = generateUuid()
 
       setCookie(anonymousIdKey, this.anonymousId, expiration)
       if (isLocalStoreAvailable) {

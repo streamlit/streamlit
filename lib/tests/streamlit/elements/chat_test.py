@@ -30,7 +30,9 @@ from streamlit.elements.widgets.chat import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -167,13 +169,11 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"`st.chat_input\(\)` can't be used in a `st.form\(\)`",
+        ):
             st.form("Form Key").chat_input()
-
-        assert (
-            str(exception_message.value)
-            == "`st.chat_input()` can't be used in a `st.form()`."
-        )
 
     @parameterized.expand(
         [
@@ -1245,7 +1245,10 @@ class AvatarProcessingTest(DeltaGeneratorTestCase):
 
     def test_chat_message_raises_when_name_is_none(self) -> None:
         """Test chat_message raises when name is explicitly None."""
-        with pytest.raises(StreamlitAPIException, match="author name is required"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`name` parameter is required",
+        ):
             st.chat_message(None)  # type: ignore[arg-type]
 
 

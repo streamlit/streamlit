@@ -80,10 +80,10 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid value type (not int or float)
-    progress("invalid_string")  # type: ignore[arg-type]
+    progress("invalid_string")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid text type (not str or None)
-    progress(50, text=123)  # type: ignore[arg-type]
+    progress(50, text=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid width value (not "stretch" or int)
-    progress(50, width="full")  # type: ignore[arg-type]
+    progress(50, width="full")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

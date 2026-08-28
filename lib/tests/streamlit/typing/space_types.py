@@ -58,9 +58,9 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid size literal
-    space("tiny")  # type: ignore[arg-type]
-    space(size="full")  # type: ignore[arg-type]
+    space("tiny")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    space(size="full")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid size type
-    space(1.5)  # type: ignore[arg-type]
-    space(size=None)  # type: ignore[arg-type]
+    space(1.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    space(size=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

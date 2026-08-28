@@ -54,7 +54,11 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.Dataframe_pb2 import (
     Dataframe as DataframeProto,
 )
@@ -1061,8 +1065,13 @@ class ArrowMixin:
         selection_mode_set: set[SelectionMode] = set()
 
         if selection_default is not None and not is_selection_activated:
-            raise StreamlitAPIException(
-                "selection_default can only be used when on_select is not 'ignore'."
+            raise StreamlitIncompatibleParametersError(
+                "selection_default",
+                "on_select='ignore'",
+                explanation=(
+                    "Set `on_select` to `'rerun'` or a callback to use "
+                    "`selection_default`."
+                ),
             )
 
         if is_selection_activated:

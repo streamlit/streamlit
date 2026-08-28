@@ -20,7 +20,7 @@ from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import StreamlitInvalidLayoutContextError, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -63,7 +63,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidLayoutContextError
         Raised when a dialog has already been opened in the current script run.
     """
     script_run_ctx = get_script_run_ctx()
@@ -72,7 +72,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
     # this might need to change.
     if should_open and script_run_ctx:
         if script_run_ctx.has_dialog_opened:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "Only one dialog is allowed to be opened at the same time. "
                 "Please make sure to not call a dialog-decorated function more than once in a script run."
             )

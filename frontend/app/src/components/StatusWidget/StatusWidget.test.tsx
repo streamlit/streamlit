@@ -227,6 +227,31 @@ describe("StatusWidget element", () => {
 
     expect(rerunScript).toHaveBeenCalledWith(true)
   })
+
+  it.each([
+    ["A", "a"],
+    ["Shift+A", "{Shift>}a{/Shift}"],
+  ])("calls Always rerun when %s is pressed", async (_label, keys) => {
+    const user = userEvent.setup()
+    const rerunScript = vi.fn()
+
+    render(
+      <StatusWidget
+        {...getProps({
+          rerunScript,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
+        })}
+      />
+    )
+
+    expect(await screen.findByText("Always rerun")).toBeVisible()
+
+    await user.keyboard(keys)
+
+    expect(rerunScript).toHaveBeenCalledWith(true)
+    expect(rerunScript).not.toHaveBeenCalledWith(false)
+  })
 })
 
 describe("Running Icon", () => {

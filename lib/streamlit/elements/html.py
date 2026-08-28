@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Final, cast
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitMissingRequiredParameterError
 from streamlit.proto.Html_pb2 import Html as HtmlProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -144,9 +144,8 @@ class HtmlMixin:
         else:
             html_content = clean_text(cast("SupportsStr", body))
 
-        # Raise an error if the body is empty
         if html_content == "":
-            raise StreamlitAPIException("`st.html` body cannot be empty")
+            raise StreamlitMissingRequiredParameterError("body")
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 

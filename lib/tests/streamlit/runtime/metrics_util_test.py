@@ -34,8 +34,10 @@ from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.navigation.page import _create_page
@@ -868,8 +870,26 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitValueError:width",
         ),
         (
+            StreamlitValueError(
+                "scope",
+                ["'global'", "'session'"],
+                detail="Connection class Foo has an invalid scope.",
+            ),
+            "StreamlitValueError:scope",
+        ),
+        (
+            StreamlitMissingRequiredParameterError("label"),
+            "StreamlitMissingRequiredParameterError:label",
+        ),
+        (
             StreamlitInvalidParameterTypeError("spec", "str", ["int", "list"]),
             "StreamlitInvalidParameterTypeError:spec",
+        ),
+        (
+            StreamlitIncompatibleParametersError(
+                "wrap=False", "unsafe_allow_html=True"
+            ),
+            "StreamlitIncompatibleParametersError",
         ),
         (
             StreamlitInvalidLayoutContextError(
@@ -941,7 +961,10 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "unsupported-proto-type",
         "unsupported-byteslike",
         "streamlit-value-error",
+        "streamlit-value-error-detail",
+        "streamlit-missing-required-parameter",
         "invalid-parameter-type",
+        "incompatible-parameters",
         "invalid-context-no-command-suffix",
         "modulenotfound-message-fallback",
         "import-error-message-fallback",

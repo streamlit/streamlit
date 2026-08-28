@@ -632,6 +632,20 @@ const Multiselect: FC<Props> = props => {
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (disabled) return
 
+      // RAC binds Mod+A to "select all options" while the menu is open and
+      // calls preventDefault(), which would keep the user from selecting the
+      // typed filter text. stopPropagation (without preventDefault) keeps the
+      // input's native select-all.
+      if (
+        e.key.toLowerCase() === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        e.stopPropagation()
+        return
+      }
+
       // Block character input for FILTER_MODE_NONE, but allow Backspace
       // through when input is empty so the tag-removal handler can process it.
       if (isFilterNone && !e.ctrlKey && !e.metaKey && !e.altKey) {

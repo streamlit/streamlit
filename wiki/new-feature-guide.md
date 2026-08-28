@@ -9,6 +9,7 @@ Most features need implementation in three areas:
 
 New features should include:
 - Python unit tests in `lib/tests`
+- Python typing tests in `lib/tests/streamlit/typing/` for public `st.*` commands
 - Vitest unit tests
 - E2E Playwright tests in `e2e_playwright/`
 
@@ -24,6 +25,7 @@ New features should include:
 3. **Python unit tests** in `lib/tests`
    - Run: `uv run pytest lib/tests/streamlit/the_test_name.py`
    - New elements: add to `lib/tests/streamlit/element_mocks.py`
+   - Public `st.*` commands: add or update `lib/tests/streamlit/typing/<command>_types.py` (mypy and ty `assert_type`, not pytest)
 
 4. **Frontend** in `frontend/`
    - New elements: add to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`

@@ -122,16 +122,16 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # width only accepts "small", "medium", or "large".
-    dialog("Bad width", width="invalid")  # type: ignore[call-overload]
+    dialog("Bad width", width="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # dismissible must be a bool.
-    dialog("Bad dismissible", dismissible="yes")  # type: ignore[call-overload]
+    dialog("Bad dismissible", dismissible="yes")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # icon must be a str or None.
-    dialog("Bad icon", icon=123)  # type: ignore[call-overload]
+    dialog("Bad icon", icon=123)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # on_dismiss only accepts "ignore", "rerun", or a callable.
-    dialog("Bad on_dismiss", on_dismiss="invalid")  # type: ignore[call-overload]
+    dialog("Bad on_dismiss", on_dismiss="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # Decorator options are keyword-only and can't be passed positionally.
-    dialog("Positional option", "small")  # type: ignore[call-overload]
+    dialog("Positional option", "small")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

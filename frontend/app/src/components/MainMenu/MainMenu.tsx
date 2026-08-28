@@ -303,8 +303,8 @@ function buildMenuData({
  * Developer items: Rerun, and Auto-rerun toggle (dev mode only).
  *
  * Note: Keyboard shortcuts are displayed uppercase for design consistency.
- * The react-hot-keys library normalizes key presses to lowercase, so both
- * 'r' and 'R' trigger the Rerun action.
+ * GlobalHotkeys normalizes key presses to lowercase, so both 'r' and 'R'
+ * trigger the Rerun action.
  */
 function buildDevItems(
   developmentMode: boolean,
@@ -351,8 +351,8 @@ function buildDevItems(
  * Clear cache item (dev mode only, in its own section).
  *
  * Note: Keyboard shortcut displayed uppercase for design consistency.
- * The react-hot-keys library normalizes key presses to lowercase, so both
- * 'c' and 'C' trigger the Clear cache action.
+ * GlobalHotkeys normalizes key presses to lowercase, so both 'c' and 'C'
+ * trigger the Clear cache action.
  */
 function buildClearCacheItem(
   developmentMode: boolean,
