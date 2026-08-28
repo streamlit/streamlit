@@ -44,10 +44,13 @@ at = AppTest.from_file("streamlit_app.py").run()
 # From a string (handy for short, self-contained scripts)
 at = AppTest.from_string("import streamlit as st; st.write('hi')").run()
 
+
 # From a function (write the script body with IDE assistance)
 def script():
     import streamlit as st
+
     st.title("Hello")
+
 
 at = AppTest.from_function(script).run()
 ```
@@ -59,7 +62,7 @@ The script must be runnable on its own, so it must include its own imports. `.ru
 `AppTest` renders one page at a time. Initialize from the app's **entrypoint** script — the same file you would pass to `streamlit run` — whether the app uses `st.navigation` or a `pages/` directory:
 
 ```python
-at = AppTest.from_file("streamlit_app.py").run()   # entrypoint, not a child page
+at = AppTest.from_file("streamlit_app.py").run()  # entrypoint, not a child page
 ```
 
 To reach a file-based child page, call `switch_page()` with a path relative to the entrypoint, then `.run()`. `switch_page()` does not rerun on its own:
@@ -81,7 +84,7 @@ at.text_input[0].set_value("foo").run()
 at.number_input[0].set_value(5).run()
 at.slider[0].set_value(10).run()
 at.checkbox[0].set_value(True).run()
-at.selectbox[0].select("Option").run()      # .select is an alias for .set_value
+at.selectbox[0].select("Option").run()  # .select is an alias for .set_value
 at.button[0].click().run()
 ```
 
@@ -100,15 +103,15 @@ Each element type is exposed as a list; index into it and read `.value`:
 
 ```python
 assert at.markdown[0].value == "Welcome"
-assert at.metric[0].value == "42"          # metric values are strings
-assert len(at.dataframe[0].value) == 3     # .value is a pandas DataFrame
+assert at.metric[0].value == "42"  # metric values are strings
+assert len(at.dataframe[0].value) == 3  # .value is a pandas DataFrame
 ```
 
 Alerts are lists too, so truthiness tells you whether one was shown:
 
 ```python
-assert at.error          # at least one st.error rendered
-assert not at.success    # no st.success rendered
+assert at.error  # at least one st.error rendered
+assert not at.success  # no st.success rendered
 assert at.warning[0].value == "Low balance"
 ```
 
@@ -126,7 +129,7 @@ assert not at.exception
 `at.session_state` behaves like `st.session_state`. Seed it before a run, or read it after:
 
 ```python
-at.session_state["user"] = "alice"   # seed before running
+at.session_state["user"] = "alice"  # seed before running
 at.run()
 assert at.session_state["count"] == 1
 ```
@@ -163,9 +166,7 @@ App (`app.py`):
 import pandas as pd
 import streamlit as st
 
-df = pd.DataFrame(
-    {"name": ["a", "b", "c"], "status": ["Active", "Inactive", "Active"]}
-)
+df = pd.DataFrame({"name": ["a", "b", "c"], "status": ["Active", "Inactive", "Active"]})
 
 status = st.selectbox("Status", ["All", "Active", "Inactive"], key="status")
 filtered = df if status == "All" else df[df["status"] == status]
