@@ -386,4 +386,136 @@ describe("Heading", () => {
     const heading = screen.getByRole("heading")
     expect(heading).not.toHaveStyle({ padding: "0" })
   })
+
+  it.each([
+    ["by default", undefined],
+    ["when icon is empty string", ""],
+  ])("does not render icon %s", (_label, icon) => {
+    const props = getHeadingProps({ body: "hello", icon })
+    render(<Heading {...props} />)
+
+    expect(screen.queryByTestId("stHeadingIcon")).not.toBeInTheDocument()
+  })
+
+  it("renders emoji icon", () => {
+    const props = getHeadingProps({ body: "hello", icon: "🔥" })
+    render(<Heading {...props} />)
+
+    const icon = screen.getByTestId("stHeadingIcon")
+    expect(icon).toBeVisible()
+    expect(icon).toHaveTextContent("🔥")
+  })
+
+  it("renders material icon", () => {
+    const props = getHeadingProps({
+      body: "hello",
+      icon: ":material/dashboard:",
+    })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+    expect(screen.getByTestId("stHeadingIcon")).toHaveStyle({
+      fontSize: "1em",
+      width: "1em",
+      height: "1em",
+    })
+  })
+
+  it("renders spinner icon", () => {
+    const props = getHeadingProps({ body: "hello", icon: "spinner" })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+  })
+
+  it("renders icon together with help and anchor", () => {
+    const props = getHeadingProps({
+      body: "hello",
+      icon: "🚀",
+      help: "help text",
+      anchor: "some-anchor",
+    })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+    expect(screen.getByTestId("stTooltipIcon")).toBeInTheDocument()
+    expect(screen.getByRole("link")).toHaveAttribute("href", "#some-anchor")
+  })
+
+  it("keeps accessible name as body text when icon is present", () => {
+    // The leading icon is aria-hidden, so the accessible name stays the body
+    // even without aria-labelledby (hideAnchor, no help).
+    const props = getHeadingProps({
+      body: "Dashboard",
+      icon: ":material/dashboard:",
+      hideAnchor: true,
+      help: "",
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading", { name: "Dashboard" })
+    expect(heading).toBeVisible()
+    expect(heading).not.toHaveAttribute("aria-labelledby")
+  })
+
+  it("auto-generated anchor ignores the icon", () => {
+    const props = getHeadingProps({
+      body: "My Section",
+      icon: ":material/dashboard:",
+      anchor: "",
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    // Would be "dashboard-my-section" if material ligature text leaked into the slug
+    expect(heading).toHaveAttribute("id", "my-section")
+    expect(screen.getByTestId("stHeadingIcon")).toBeVisible()
+  })
+
+  it("marks body text for accessible name and anchor isolation", () => {
+    const props = getHeadingProps({
+      body: "Dashboard",
+      icon: ":material/dashboard:",
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    expect(heading.querySelector("[data-heading-text]")).toHaveTextContent(
+      "Dashboard"
+    )
+  })
+
+  it("renders the leading icon inline so wrapping matches markdown", () => {
+    const props = getHeadingProps({ body: "hello", icon: "🔥" })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    // wrap=True keeps the heading out of flex so the icon stays in the
+    // inline text flow (wrap=False uses display:flex for truncation).
+    expect(heading).not.toHaveStyle({ display: "flex" })
+    expect(heading).not.toHaveStyle({ display: "inline-flex" })
+    const iconWrapper = screen.getByTestId("stHeadingIconWrapper")
+    expect(iconWrapper).toHaveStyle({
+      display: "inline-flex",
+      verticalAlign: "bottom",
+    })
+  })
+
+  it("keeps the icon as start-chrome when wrap is false", () => {
+    const props = getHeadingProps({
+      body: "hello",
+      icon: "🔥",
+      wrap: false,
+    })
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    const iconWrapper = screen.getByTestId("stHeadingIconWrapper")
+    expect(heading).toHaveStyle({ display: "flex" })
+    expect(heading.firstElementChild).toBe(iconWrapper)
+    expect(iconWrapper).toHaveStyle({ flexShrink: "0" })
+    expect(heading.querySelector("[data-heading-text]")).toHaveStyle({
+      flex: "1",
+    })
+  })
 })

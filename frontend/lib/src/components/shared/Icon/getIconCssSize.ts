@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +14,15 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+import type { IconSize, IconSizeProp } from "~lib/theme/types"
 
-message Heading {
-  // h1, h2, h3, div, etc
-  string tag = 1;
-
-  string anchor = 2;
-  string body = 3;
-
-  string help = 4;
-  bool hide_anchor = 5;
-  string divider = 6;
-
-  // If false, the heading stays on one line and ellipsizes instead of wrapping.
-  // Absent or true means the heading wraps.
-  optional bool wrap = 7;
-
-  // Optional emoji, Material icon shortcode, or "spinner". Empty = no icon.
-  string icon = 8;
+/**
+ * Resolves an icon size prop to a CSS length.
+ * `"inherit"` tracks the parent font-size instead of a rem token.
+ */
+export function getIconCssSize(
+  size: IconSizeProp,
+  iconSizes: Record<IconSize, string>
+): string {
+  return size === "inherit" ? "1em" : iconSizes[size]
 }

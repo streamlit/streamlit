@@ -129,7 +129,7 @@ Full list of icons available in Streamlit: [material_icon_names.py](https://raw.
 st.markdown(":material/check_circle: Complete")
 ```
 
-Material icons also work in `icon` parameters across many elements (`st.button`, `st.expander`, `st.info`, etc.).
+Material icons also work in `icon` parameters across many elements (`st.title`, `st.header`, `st.subheader`, `st.button`, `st.expander`, `st.info`, etc.).
 
 ## Emojis
 

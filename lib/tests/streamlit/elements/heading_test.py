@@ -461,6 +461,58 @@ class StTitleTest(DeltaGeneratorTestCase):
         assert el.width_config.use_stretch is True
 
 
+class StHeadingIconTest(DeltaGeneratorTestCase):
+    """Test the shared icon parameter on st.title / st.header / st.subheader."""
+
+    def test_omitted_icon_serializes_to_empty(self):
+        """Test that omitting icon leaves an empty proto field."""
+        st.header("some header")
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == ""
+
+    @parameterized.expand(
+        [
+            (st.header, "some header", None, ""),
+            (st.header, "some header", "", ""),
+            (st.header, "some header", "🔥", "🔥"),
+            (
+                st.header,
+                "some header",
+                ":material/thermostat:",
+                ":material/thermostat:",
+            ),
+            (st.header, "some header", "spinner", "spinner"),
+            (st.subheader, "some subheader", "🚨", "🚨"),
+            (st.title, "some title", ":material/dashboard:", ":material/dashboard:"),
+        ]
+    )
+    def test_icon_serializes_to_proto(self, heading_fn, body, icon, expected):
+        """Test that icon values are forwarded (None and "" become empty)."""
+        heading_fn(body, icon=icon)
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == expected
+
+    @parameterized.expand(
+        [
+            (st.header, "some header"),
+            (st.subheader, "some subheader"),
+            (st.title, "some title"),
+        ]
+    )
+    def test_icon_invalid_raises(self, heading_fn, body):
+        """Test that an invalid icon raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            heading_fn(body, icon="not-a-valid-icon")
+
+    def test_icon_with_help_and_divider(self):
+        """Test that icon works together with help and divider."""
+        st.header("some header", icon="🚀", help="help text", divider="blue")
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.icon == "🚀"
+        assert el.heading.help == "help text"
+        assert el.heading.divider == "blue"
+
+
 class StTitleTextAlignmentTest(DeltaGeneratorTestCase):
     """Test st.title text_alignment parameter."""
 

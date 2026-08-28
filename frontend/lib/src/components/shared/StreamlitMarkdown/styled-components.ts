@@ -590,6 +590,37 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   },
 }))
 
+/**
+ * Leading decorative icon for st.title / st.header / st.subheader.
+ *
+ * Inline in the heading's text flow so wrapping and text-align match a
+ * markdown icon (`:material/name: Title`). The wrapper is one heading
+ * line tall so the 1em glyph sits with the letters.
+ */
+export const StyledHeadingIcon = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  // A 1em-tall box with vertical-align: bottom would leave the line-height gap
+  // above the icon, so the wrapper spans the full heading line box.
+  verticalAlign: "bottom",
+  marginInlineEnd: theme.spacing.sm,
+  color: "inherit",
+  fontSize: "1em",
+  lineHeight: theme.lineHeights.none,
+  width: "1em",
+  height: `${theme.lineHeights.headings}em`,
+  // Clip to the 1em box so Material ligature names (e.g. "star") cannot
+  // expand the heading before the icon font loads. Keep a fixed width
+  // (not minWidth) so that pre-load text cannot grow the box. Emoji and
+  // spinner glyphs are optically shrunk to fit inside 1em.
+  overflow: "hidden",
+  userSelect: "none",
+  boxSizing: "border-box",
+  // wrap=false makes the heading a flex row; keep the glyph from shrinking.
+  flexShrink: 0,
+}))
+
 interface StyledDividerProps {
   rainbow: boolean
   color: string

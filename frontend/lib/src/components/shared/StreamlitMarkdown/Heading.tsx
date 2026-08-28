@@ -22,6 +22,7 @@ import { Heading as HeadingProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 
 import {
   HeadingWithActionElements,
@@ -30,6 +31,7 @@ import {
 } from "./StreamlitMarkdown"
 import {
   StyledHeaderDivider,
+  StyledHeadingIcon,
   StyledStreamlitMarkdown,
 } from "./styled-components"
 
@@ -71,7 +73,7 @@ const OVERRIDE_COMPONENTS: Components = {
 
 function Heading(props: HeadingProtoProps): ReactElement {
   const { element } = props
-  const { tag, anchor, body, help, hideAnchor, divider } = element
+  const { tag, anchor, body, help, hideAnchor, divider, icon } = element
   const isInDialog = useContext(IsDialogContext)
   const flexContext = useContext(FlexContext)
   const truncate = element.wrap === false
@@ -79,6 +81,16 @@ function Heading(props: HeadingProtoProps): ReactElement {
   // and, when wrapping is enabled, render the remainder as Markdown below it.
   // With wrap=false the extra lines are dropped so the element stays one line tall.
   const [heading, ...rest] = body.split("\n")
+
+  // Keep the icon as an inline sibling instead of injecting it into the markdown source:
+  // - wrapping and text_alignment match a markdown icon when wrap=True
+  // - the glyph stays out of the accessible name and auto-anchor
+  // - "spinner" works (it has no markdown equivalent)
+  const headingIcon = icon ? (
+    <StyledHeadingIcon aria-hidden="true" data-testid="stHeadingIconWrapper">
+      <DynamicIcon iconValue={icon} size="inherit" testid="stHeadingIcon" />
+    </StyledHeadingIcon>
+  ) : undefined
 
   return (
     <div className="stHeading" data-testid="stHeading">
@@ -95,6 +107,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
           help={help}
           hideAnchor={hideAnchor}
           tag={tag}
+          icon={headingIcon}
           truncate={truncate}
         >
           <RenderedMarkdown

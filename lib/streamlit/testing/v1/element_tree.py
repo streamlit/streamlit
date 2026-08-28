@@ -672,6 +672,11 @@ class HeadingBase(Element, ABC):
     def value(self) -> str:
         return self.proto.body
 
+    @property
+    def icon(self) -> str:
+        """The heading icon, or empty string when none is set."""
+        return self.proto.icon
+
 
 @dataclass(repr=False)
 class Header(HeadingBase):
