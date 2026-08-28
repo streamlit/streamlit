@@ -187,8 +187,8 @@ class PdfMixin:
             "The PDF viewer requires the `streamlit-pdf` component to be installed.\n\n"
             "Please run `pip install streamlit[pdf]` to install it.\n\n"
             "For more information, see the Streamlit PDF documentation at "
-            "https://docs.streamlit.io/develop/api-reference/media/st.pdf.",
             # TODO: Update this URL when docs are updated
+            "https://docs.streamlit.io/develop/api-reference/media/st.pdf.",
             error_id="pdf-component-not-installed",
         )
 

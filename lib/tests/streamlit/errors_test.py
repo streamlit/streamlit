@@ -19,6 +19,7 @@ from __future__ import annotations
 import ast
 import re
 from collections import Counter
+from functools import cache
 from pathlib import Path
 
 import pytest
@@ -59,18 +60,46 @@ def _is_streamlit_api_exception_call(func: ast.expr) -> bool:
     return isinstance(func, ast.Attribute) and func.attr == "StreamlitAPIException"
 
 
+@cache
+def _parsed_streamlit_modules() -> tuple[tuple[str, ast.Module], ...]:
+    """Parse ``lib/streamlit`` once for the inventory tests."""
+    lib_root = Path(errors.__file__).parent
+    parsed: list[tuple[str, ast.Module]] = []
+    for path in lib_root.rglob("*.py"):
+        parsed.append(
+            (
+                path.relative_to(lib_root).as_posix(),
+                ast.parse(path.read_text(encoding="utf-8"), filename=str(path)),
+            )
+        )
+    return tuple(parsed)
+
+
 def _iter_streamlit_api_exception_calls() -> list[tuple[str, ast.Call]]:
     """Return production ``StreamlitAPIException(...)`` calls as (relative path, node)."""
-    lib_root = Path(errors.__file__).parent
     calls: list[tuple[str, ast.Call]] = []
-    for path in lib_root.rglob("*.py"):
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for rel, tree in _parsed_streamlit_modules():
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and _is_streamlit_api_exception_call(
                 node.func
             ):
-                calls.append((str(path.relative_to(lib_root)), node))
+                calls.append((rel, node))
     return calls
+
+
+def _iter_error_id_kwargs() -> list[tuple[str, ast.Call, ast.expr]]:
+    """Return ``error_id=`` kwargs on production constructors, including subclasses."""
+    kwargs: list[tuple[str, ast.Call, ast.expr]] = []
+    for rel, tree in _parsed_streamlit_modules():
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            error_id_kw = next(
+                (kw for kw in node.keywords if kw.arg == "error_id"), None
+            )
+            if error_id_kw is not None:
+                kwargs.append((rel, node, error_id_kw.value))
+    return kwargs
 
 
 # StreamlitAPIException tests
@@ -137,16 +166,14 @@ def test_localizable_exception_error_id_is_reserved() -> None:
 def test_streamlit_api_exception_error_ids_are_kebab_case() -> None:
     """Literal ``error_id`` values must be kebab-case slugs.
 
-    ``ast.Name`` is allowed for computed category slugs (for example
-    ``delta_generator``). Interpolated or call-built values are not.
+    Interpolated or call-built values are not allowed so widget keys, paths,
+    and free text cannot reach telemetry labels. ``error_id=error_id``
+    pass-throughs on constructors are ignored.
     """
     invalid: list[str] = []
-    for rel, node in _iter_streamlit_api_exception_calls():
-        error_id_kw = next((kw for kw in node.keywords if kw.arg == "error_id"), None)
-        if error_id_kw is None:
-            continue
-        value = error_id_kw.value
-        if isinstance(value, ast.Name):
+    for rel, node, value in _iter_error_id_kwargs():
+        if isinstance(value, ast.Name) and value.id == "error_id":
+            # Constructor pass-through such as ``error_id=error_id``.
             continue
         if isinstance(value, ast.Constant) and isinstance(value.value, str):
             if not _KEBAB_CASE_ERROR_ID.fullmatch(value.value):
@@ -166,7 +193,12 @@ def test_untagged_api_exceptions_are_pending_specialized_types() -> None:
     for rel, node in _iter_streamlit_api_exception_calls():
         if not any(kw.arg == "error_id" for kw in node.keywords):
             untagged[rel] += 1
-    assert dict(untagged) == _UNTAGGED_STREAMLIT_API_EXCEPTION_SITES
+    assert dict(untagged) == _UNTAGGED_STREAMLIT_API_EXCEPTION_SITES, (
+        "Untagged StreamlitAPIException sites changed. Pass error_id on one-off "
+        "raises, or add the site to _UNTAGGED_STREAMLIT_API_EXCEPTION_SITES if it "
+        "should become a specialized type in errors.py. "
+        f"Found: {dict(untagged)}"
+    )
 
 
 # StreamlitAPIWarning tests

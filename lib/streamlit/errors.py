@@ -186,8 +186,9 @@ class LocalizableStreamlitException(StreamlitAPIException):
     """
 
     def __init__(self, message: str, **kwargs: Any) -> None:
-        # Pop ``error_id`` so telemetry can store it without interpolating it
-        # into the message.
+        # Treat error_id as a telemetry slug, not a message placeholder:
+        # extract it before formatting so it is not interpolated or stored
+        # in exec_kwargs.
         error_id = kwargs.pop("error_id", None)
         super().__init__((message).format(**kwargs), error_id=error_id)
         self._exec_kwargs = kwargs

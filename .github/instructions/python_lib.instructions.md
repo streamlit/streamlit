@@ -146,11 +146,12 @@ generic `StreamlitAPIException` with a one-off message.
 
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits. When a bare
-  `StreamlitAPIException` is still the right type, pass a unique kebab-case
-  `error_id` (for example `failed-loading-secrets-file`). It is stored on the
-  exception and appended in uncaught-exception telemetry
-  (`StreamlitAPIException:<error_id>`). Do not put widget keys, file paths, or
-  free-text values in `error_id`.
+  `StreamlitAPIException` is still the right type, pass a stable kebab-case
+  `error_id` that is unique per distinct error (reuse the same id when the same
+  error is raised from multiple sites; for example
+  `failed-loading-secrets-file`). It is stored on the exception and appended in
+  uncaught-exception telemetry (`StreamlitAPIException:<error_id>`). Do not put
+  widget keys, file paths, or free-text values in `error_id`.
 - `StreamlitValueError(parameter, valid_values, *, detail=None)`: use when a
   parameter receives an invalid value from a known set of options, or a short
   open-ended constraint (for example `"a positive duration"`). For a closed
