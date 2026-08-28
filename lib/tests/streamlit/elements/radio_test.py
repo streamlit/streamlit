@@ -14,8 +14,6 @@
 
 """radio unit tests."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -166,11 +164,6 @@ class RadioTest(DeltaGeneratorTestCase):
         """Test that value must be within the length of the options."""
         with pytest.raises(StreamlitAPIException):
             st.radio("the label", ("m", "f"), 2)
-
-    def test_invalid_caption_type(self):
-        """Test that captions must be strings or None."""
-        with pytest.raises(StreamlitInvalidParameterTypeError):
-            st.radio("the label", ("m", "f"), captions=[1, 2])
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""

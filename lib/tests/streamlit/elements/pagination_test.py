@@ -117,13 +117,17 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
     """Tests for st.pagination input validation."""
 
     def test_num_pages_must_be_positive(self):
-        """num_pages must be an integer of at least 1."""
-        for num_pages in (0, -5):
-            with pytest.raises(StreamlitValueError, match="a positive integer"):
-                st.pagination(num_pages)
+        """Test that num_pages must be >= 1."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.pagination(0)
+        assert "`num_pages` must be an integer of at least 1" in str(e.value)
+
+        with pytest.raises(StreamlitAPIException) as e:
+            st.pagination(-5)
+        assert "`num_pages` must be an integer of at least 1" in str(e.value)
 
     def test_default_must_be_in_range(self):
-        """default must be between 1 and num_pages."""
+        """Test that default must be between 1 and num_pages."""
         with pytest.raises(StreamlitAPIException) as e:
             st.pagination(10, default=0)
         assert "`default` must be between 1 and `num_pages`" in str(e.value)
@@ -134,9 +138,11 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
 
     def test_max_visible_pages_negative(self):
         """Test that negative max_visible_pages raises exception."""
-        with pytest.raises(StreamlitValueError) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.pagination(10, max_visible_pages=-1)
-        assert "None, a non-negative integer" in str(e.value)
+        assert "`max_visible_pages` must be a non-negative integer or None" in str(
+            e.value
+        )
 
 
 class TestPaginationWidthConfig(DeltaGeneratorTestCase):

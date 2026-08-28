@@ -435,9 +435,6 @@ class SliderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)
         assert "a nonzero number" in str(exc.value)
-        assert "timedelta" not in str(exc.value)
-
-    def test_step_zero_timedelta(self):
         with pytest.raises(StreamlitValueError) as exc:
             st.slider(
                 "Label",

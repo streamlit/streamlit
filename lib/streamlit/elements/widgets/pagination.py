@@ -26,7 +26,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -252,12 +252,15 @@ class PaginationMixin:
 
         key = to_key(key)
 
+        # Validate num_pages
         if (
             not isinstance(num_pages, int)
             or isinstance(num_pages, bool)
             or num_pages < 1
         ):
-            raise StreamlitValueError("num_pages", ["a positive integer"])
+            raise StreamlitAPIException(
+                f"`num_pages` must be an integer of at least 1. Got {num_pages}."
+            )
 
         # Validate default
         if (
@@ -271,13 +274,15 @@ class PaginationMixin:
                 f"Got {default}."
             )
 
+        # Validate max_visible_pages
         if max_visible_pages is not None and (
             not isinstance(max_visible_pages, int)
             or isinstance(max_visible_pages, bool)
             or max_visible_pages < 0
         ):
-            raise StreamlitValueError(
-                "max_visible_pages", ["None", "a non-negative integer"]
+            raise StreamlitAPIException(
+                f"`max_visible_pages` must be a non-negative integer or None. "
+                f"Got {max_visible_pages}."
             )
 
         check_widget_policies(self.dg, key, on_change, default_value=default)

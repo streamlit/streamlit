@@ -25,10 +25,7 @@ from streamlit.elements.lib.utils import (
     LabelVisibility,
     get_label_visibility_proto_value,
 )
-from streamlit.errors import (
-    StreamlitAPIException,
-    StreamlitValueError,
-)
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (

@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from numbers import Integral
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit import config
@@ -531,22 +530,19 @@ class FileUploaderMixin:
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
 
-        if max_upload_size is not None:
-            max_upload_size_value: object = max_upload_size
-            if (
-                isinstance(max_upload_size_value, bool)
-                or not isinstance(max_upload_size_value, Integral)
-                or max_upload_size_value < 1
-            ):
-                raise StreamlitValueError(
-                    "max_upload_size",
-                    ["a positive integer"],
-                    detail=(
-                        "Set it to None to fall back to the `server.maxUploadSize` "
-                        "configuration option."
-                    ),
-                )
-            max_upload_size = int(max_upload_size_value)
+        if max_upload_size is not None and (
+            isinstance(max_upload_size, bool)
+            or not isinstance(max_upload_size, int)
+            or max_upload_size < 1
+        ):
+            raise StreamlitValueError(
+                "max_upload_size",
+                ["a positive integer"],
+                detail=(
+                    "Set it to None to fall back to the `server.maxUploadSize` "
+                    "configuration option."
+                ),
+            )
 
         check_widget_policies(
             self.dg,

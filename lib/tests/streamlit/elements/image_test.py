@@ -370,13 +370,16 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         - check shape 3 but dims 1, 3, 4
         - if only one channel convert to just 2 dimensions.
         """
-        with pytest.raises(StreamlitValueError, match="2D or 3D"):
+        with pytest.raises(StreamlitValueError) as shape_exc:
             st.image(np.ndarray(shape=1))
+        assert "2D or 3D" in str(shape_exc.value)
 
-        with pytest.raises(
-            StreamlitAPIException, match="Channel can only be 1, 3, or 4 got 2"
-        ):
+        with pytest.raises(StreamlitAPIException) as shape2_exc:
             st.image(np.ndarray(shape=(1, 2, 2)))
+        assert (
+            str(shape2_exc.value)
+            == "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)"
+        )
 
     def test_clip_image(self):
         """Test streamlit.image.clip_image.

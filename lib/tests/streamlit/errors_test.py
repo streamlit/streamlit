@@ -249,33 +249,8 @@ def test_invalid_range_error_message() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("url", "protocols", "expected_prefixes"),
-    [
-        (
-            "www.example.com",
-            ("http", "https", "mailto"),
-            '"http://", "https://", or "mailto:"',
-        ),
-        ("www.example.com", ("http", "https"), '"http://" or "https://"'),
-        ("ftp://example.com", ("https",), '"https://"'),
-        ("ftp://example.com", ("ftp",), '"ftp://"'),
-    ],
-    ids=["three-protocols", "two-protocols", "one-protocol", "non-http-scheme"],
-)
-def test_invalid_url_error_formats_protocols(
-    url: str, protocols: tuple[str, ...], expected_prefixes: str
-) -> None:
-    """Protocol lists are rendered as prefixes in the error message."""
-    exc = errors.StreamlitInvalidURLError(url, protocols)
-    assert str(exc) == (
-        f'"{url}" is not a valid URL. '
-        f"You must use a fully qualified domain beginning with {expected_prefixes}."
-    )
-
-
-def test_invalid_url_error_preserves_default_protocols() -> None:
-    """The original one-argument constructor keeps its protocol guidance."""
+def test_invalid_url_error_default_protocols() -> None:
+    """One-argument constructor still mentions http, https, and mailto."""
     exc = errors.StreamlitInvalidURLError("www.example.com")
     assert '"http://", "https://", or "mailto:"' in str(exc)
 

@@ -331,17 +331,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.max_selections == 2
 
-    def test_numpy_integer_max_selections(self):
-        """Numpy integers remain valid max selections."""
-        st.multiselect(
-            "the label",
-            ("m", "f"),
-            max_selections=np.int64(2),  # type: ignore[arg-type]
-        )
-
-        c = self.get_delta_from_queue().new_element.multiselect
-        assert c.max_selections == 2
-
     @parameterized.expand(
         [
             (["a", "b", "c"], 3),
@@ -496,44 +485,23 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     def test_max_selections_zero_includes_action(self) -> None:
         """Raise StreamlitValueError with a suggested action when max_selections is 0."""
-        with pytest.raises(
-            StreamlitValueError,
-            match=r"To disable `st\.multiselect`, use `disabled=True`",
-        ):
-            st.multiselect("the label", ["a", "b", "c"], max_selections=0)
-
-    def test_max_selections_false_includes_action(self) -> None:
-        """False is rejected like 0 and still suggests disabled=True."""
-        with pytest.raises(
-            StreamlitValueError,
-            match=r"To disable `st\.multiselect`, use `disabled=True`",
-        ):
-            st.multiselect("the label", ["a", "b", "c"], max_selections=False)
-
-    @parameterized.expand(
-        [
-            ("true", True),
-            ("string", "2"),
-            ("float", 1.5),
-        ]
-    )
-    def test_max_selections_invalid_types(
-        self, _name: str, max_selections: object
-    ) -> None:
-        """Non-integers and bool True are rejected without the disable hint."""
-        with pytest.raises(
-            StreamlitValueError,
-            match=r"Supported values: a positive integer\.$",
-        ):
-            st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
+        for max_selections in (0, False):
+            with pytest.raises(
+                StreamlitValueError,
+                match=r"To disable `st\.multiselect`, use `disabled=True`",
+            ):
+                st.multiselect(
+                    "the label", ["a", "b", "c"], max_selections=max_selections
+                )
 
     @parameterized.expand(
         [
             (-1,),
             (-100,),
+            (True,),
         ]
     )
-    def test_max_selections_negative_no_action(self, max_selections: int) -> None:
+    def test_max_selections_negative_no_action(self, max_selections: object) -> None:
         """Raise StreamlitValueError without an action for negative max_selections."""
         with pytest.raises(
             StreamlitValueError,

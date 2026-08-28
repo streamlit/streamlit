@@ -14,8 +14,6 @@
 
 """st.audio unit tests"""
 
-from __future__ import annotations
-
 import os
 from io import BytesIO
 
@@ -89,28 +87,44 @@ class AudioTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (np.linspace(1, 10, num=300).reshape((10, 10, 3)), 3),  # 3d numpy array
-            (np.linspace(1, 10, num=300).reshape((10, 2, 5, 3)), 4),  # 4d numpy array
-            (np.empty((2, 0, 0, 0)), 4),  # 4d empty numpy array
+            (
+                np.linspace(1, 10, num=300).reshape((10, 10, 3)),  # 3d numpy array
+                3,
+                "Numpy array audio input must be a 1D or 2D array.",
+            ),
+            (
+                np.linspace(1, 10, num=300).reshape((10, 2, 5, 3)),  # 4d numpy array
+                4,
+                "Numpy array audio input must be a 1D or 2D array.",
+            ),
+            (
+                np.empty((2, 0, 0, 0)),  # 4d empty numpy array
+                4,
+                "Numpy array audio input must be a 1D or 2D array.",
+            ),
         ]
     )
-    def test_st_audio_invalid_numpy_array(self, np_arr, expected_shape):
-        """Invalid-rank numpy arrays raise StreamlitAPIException."""
+    def test_st_audio_invalid_numpy_array(self, np_arr, expected_shape, exception_text):
+        """Test st.audio using invalid numpy array."""
+
         sample_rate = 44100
         assert len(np_arr.shape) == expected_shape
 
-        with pytest.raises(
-            StreamlitAPIException,
-            match="Numpy array audio input must be a 1D or 2D array",
-        ):
+        with pytest.raises(StreamlitAPIException) as e:
             st.audio(np_arr, sample_rate=sample_rate)
 
+        assert str(e.value) == exception_text
+
     def test_st_audio_missing_sample_rate_numpy_arr(self):
-        """Numpy audio without sample_rate raises StreamlitMissingRequiredParameterError."""
+        """Test st.audio raises exception when sample_rate missing in case of valid
+        numpy array."""
+
         valid_np_array = np.array([1, 2, 3, 4, 5])
 
-        with pytest.raises(StreamlitMissingRequiredParameterError, match="sample_rate"):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
             st.audio(valid_np_array)
+
+        assert "sample_rate" in str(e.value)
 
     def test_st_audio_sample_rate_raises_warning(self):
         """Test st.audio raises streamlit warning when sample_rate parameter provided,
