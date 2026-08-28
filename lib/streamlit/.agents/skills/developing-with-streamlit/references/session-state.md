@@ -47,8 +47,8 @@ To make a widget's value shareable through the page URL, pass `bind="query-param
 sort = st.selectbox(
     "Sort order",
     ["Relevance", "Newest", "Price"],
-    key="sort",            # REQUIRED with bind=; becomes the URL param name (?sort=...)
-    bind="query-params",   # exact string, with a hyphen
+    key="sort",  # REQUIRED with bind=; becomes the URL param name (?sort=...)
+    bind="query-params",  # exact string, with a hyphen
 )
 st.write(f"Sorting by: {sort}")
 ```
@@ -60,9 +60,12 @@ st.write(f"Sorting by: {sort}")
 # user opens ?sort=Foo. With bind="query-params", an unknown URL value just
 # falls back to the default instead of raising.
 default = st.query_params.get("sort", "Relevance")
-sort = st.selectbox("Sort order", ["Relevance", "Newest", "Price"],
-                    index=["Relevance", "Newest", "Price"].index(default))
-st.query_params["sort"] = sort   # don't do this when bind= handles sync
+sort = st.selectbox(
+    "Sort order",
+    ["Relevance", "Newest", "Price"],
+    index=["Relevance", "Newest", "Price"].index(default),
+)
+st.query_params["sort"] = sort  # don't do this when bind= handles sync
 ```
 
 Notes:
