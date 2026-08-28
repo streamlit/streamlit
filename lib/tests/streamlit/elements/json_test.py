@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitInvalidWidthError
+from streamlit.runtime.secrets import AttrDict, Secrets
 from streamlit.user_info import UserInfoProxy
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -144,6 +145,51 @@ class StJsonAPITest(DeltaGeneratorTestCase):
             assert body["name"] == "Test User"
             assert body["tokens"]["id"] == "***"
             assert body["tokens"]["access"] == "***"
+
+    def test_st_json_masks_secrets(self):
+        """Test that st.json masks all values when displaying Secrets."""
+        secrets = Secrets()
+        secrets._secrets = {
+            "api_key": "secret-api-key",
+            "auth": {
+                "cookie_secret": "secret-cookie-key",
+                "allowed_emails": ["admin@example.com"],
+            },
+        }
+
+        st.json(secrets)
+
+        el = self.get_delta_from_queue().new_element
+        assert json.loads(el.json.body) == {
+            "api_key": "***",
+            "auth": {
+                "cookie_secret": "***",
+                "allowed_emails": ["***"],
+            },
+        }
+
+    def test_st_json_masks_nested_secrets_section(self):
+        """Test that st.json masks an AttrDict nested in another value."""
+        st.json(
+            {
+                "public": "visible",
+                "credentials": AttrDict(
+                    {
+                        "username": "streamlit",
+                        "password": "secret-password",
+                    }
+                ),
+            }
+        )
+
+        el = self.get_delta_from_queue().new_element
+        assert json.loads(el.json.body) == {
+            "public": "visible",
+            "credentials": {
+                "username": "***",
+                "password": "***",
+            },
+        }
 
     def test_st_json_with_namedtuple(self):
         """Test st.json converts namedtuple to dict via _asdict."""

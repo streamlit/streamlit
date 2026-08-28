@@ -163,8 +163,8 @@ class SecretsTest(unittest.TestCase):
             [
                 True,
                 (
-                    "{'db_username': 'Jane', 'db_password': '12345qwerty', "
-                    "'subsection': {'email': 'eng@streamlit.io'}}"
+                    "{'db_username': '***', 'db_password': '***', "
+                    "'subsection': {'email': '***'}}"
                 ),
             ],
         ]
@@ -710,10 +710,12 @@ def test_convert_to_dict(
 
 
 def test_attr_dict_repr() -> None:
-    """``AttrDict.__repr__`` mirrors the wrapped nested mapping."""
-    data = {"k": "v", "n": {"inner": 1}}
+    """``AttrDict.__repr__`` preserves structure while redacting values."""
+    data = {"k": "v", "n": {"inner": 1, "items": ["a", "b"]}}
     attr_dict = AttrDict(data)
-    assert repr(attr_dict) == repr(data)
+    assert repr(attr_dict) == (
+        "{'k': '***', 'n': {'inner': '***', 'items': ['***', '***']}}"
+    )
     assert len(attr_dict) == 2
 
 
