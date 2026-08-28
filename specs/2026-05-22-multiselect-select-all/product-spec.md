@@ -9,6 +9,8 @@ created: 2026-05-22
 
 Add a keyword-only `select_all` parameter to `st.multiselect` that allows users to control the "Select all" and "Select X matches" dropdown options. The parameter accepts `True` (always show), `False` (never show), or an integer threshold (show only when the number of currently selectable options is at or below the threshold). Integer thresholds use that selectable count — unselected option entries, narrowed by search when a query is active — not the total unfiltered `len(options)`.
 
+This spec also **approves** a default keyboard change that ships with the parameter: when no dropdown item is focused, Enter commits the first visible row. That includes activating the bulk-action row when it is shown. With `accept_new_options`, a unique typed value still creates with a single Enter; a typed prefix that matches existing options does not.
+
 ## Problem
 
 ### Current Behavior
@@ -19,7 +21,7 @@ This feature was added in PR [#13015](https://github.com/streamlit/streamlit/pul
 
 The 1000-option gate is static: it uses `len(options)`, not the number of currently selectable or filtered options. Filtering a 1000+ option widget down to a handful of matches still does not show "Select X matches". Today's comparison is also strict (`len(options) < 1000`), so a widget with **exactly** 1000 options hides the bulk action.
 
-The widget was later migrated from BaseWeb to React Aria Components (PR [#16175](https://github.com/streamlit/streamlit/pull/16175)). "Select all" / "Select X matches" remain custom bulk-action rows at the top of the dropdown with the same visibility rules, labels, 2+ selectable minimum, and `max_selections` behavior. The migration did not change the product behavior this spec covers.
+The widget was later migrated from BaseWeb to React Aria Components (PR [#16175](https://github.com/streamlit/streamlit/pull/16175)). "Select all" / "Select X matches" remain custom bulk-action rows at the top of the dropdown with the same visibility rules, labels, 2+ selectable minimum, and `max_selections` behavior. After that migration, unfocused Enter is a no-op for ordinary options (`focusedKey` stays null) except a leftover create-on-Enter path for `accept_new_options`. This spec **approves** replacing that with first-row Enter; see Keyboard / Enter.
 
 ### User Pain Points
 
@@ -162,15 +164,20 @@ The filtered 1000+ → "Select X matches" change is the intended win. The first 
 
 Both "Select all" and "Select X matches" are controlled by the same parameter. When `select_all=False`, neither option appears. When `select_all=100`, "Select X matches" only appears when the selectable filtered match count is at or below 100.
 
-**Keyboard / Enter:**
+**Keyboard / Enter (approved default-behavior change):**
 
-When no dropdown item is keyboard-focused, Enter commits the first visible row (the highlighted Enter target). Users do not need ArrowDown first. If a row is already focused, Enter activates that focused row.
+This section **replaces** the earlier "unfocused Enter creates the typed value" wording that landed on `develop` with the spec. The spec author approved that amendment in the same PR as the `select_all` implementation. It is a product decision, not an implementation-only deviation, and does not need a separate spec PR.
 
-When the bulk-action row is visible, it is first, so Enter activates "Select all" / "Select X matches". That is intended: if bulk-select is shown, activating it with Enter is the correct behavior.
+**Rule:** When no dropdown item is keyboard-focused, Enter commits the first visible row (the highlighted Enter target). Users do not need ArrowDown first. If a row is already focused, Enter activates that focused row.
 
-When the bulk action is hidden (`select_all=False`, the threshold is not met, or fewer than 2 selectable options), Enter selects the first matching option. Apps that want search-then-Enter to add the first match should hide the bulk action with `select_all=False` ([#16537](https://github.com/streamlit/streamlit/issues/16537)).
+| Situation | Today on `develop` (RAC) | Approved |
+|-----------|--------------------------|----------|
+| Dropdown open, nothing focused, bulk row visible, Enter | No-op | Activates "Select all" / "Select X matches" |
+| Search, bulk hidden, Enter | No-op unless ArrowDown first | Selects the first matching option ([#16537](https://github.com/streamlit/streamlit/issues/16537)) |
+| `accept_new_options=True`, query matches existing options, Enter | Creates the typed prefix | Commits the first listed row (bulk if shown, else first match). Create via ArrowDown or click on "Add: …" |
+| `accept_new_options=True`, query matches no existing option, Enter | Creates the typed value | Creates the typed value ("Add: …" is last in the list, so it is first only when nothing else matches) |
 
-With `accept_new_options=True`, the "Add: …" row is last. Enter creates the typed value when that row is first — when the query matches no existing option. When the query matches existing options, Enter commits the first listed row (bulk action if shown, otherwise the first match) rather than creating the typed prefix. Creating a custom value that also matches existing options is still available: ArrowDown to "Add: …" then Enter, or click that row. A unique custom value still creates with a single Enter.
+When the bulk-action row is visible, unfocused Enter activates it. `select_all=False` is the opt-out. "Add: …" is last in the dropdown, so unfocused Enter creates a custom value only when the query matches no existing option. Alternatives 7–8 (restore prefix create-on-Enter, or skip the bulk row) were rejected.
 
 **Interaction with `max_selections`:**
 
@@ -187,6 +194,7 @@ When `max_selections` is already reached (i.e., `len(selected) >= max_selections
 | `select_all=0` | Same as `select_all=False` |
 | `select_all=1` | Same as `False` / `0`: the 2+ selectable minimum means a threshold of `1` never shows the bulk action. `2` is the smallest meaningful threshold. (`True == 1` in Python is handled by checking `bool` first; `st.json(expanded=0)` documents the analogous `0` ≡ `False` overlap.) |
 | `select_all < 0` (any negative integer) | Raises `StreamlitAPIException`. Follow `st.navigation(expanded=...)`: "When using an int, `select_all` must be a non-negative integer." |
+| `select_all` above the int32 proto max (`2**31 - 1`) | Clamped to `2**31 - 1`. A threshold that large already means "always show" for realistic lists. |
 | Single option remaining | "Select all" never shown (requires 2+ selectable options, even with `select_all=True`) |
 | All options selected | "Select all" not shown (no selectable option entries) |
 | `max_selections` reached | "Select all" not shown (no additional selections can be made) |
@@ -259,7 +267,13 @@ select_all: bool | int | Literal["auto"] = "auto"
 
 When `accept_new_options=True` and no dropdown item is focused, Enter could still create the typed value even if existing options match the query (`"py"` + Enter → `"py"`, not `python` / "Select 2 matches").
 
-**Decision:** Rejected. Enter commits the first visible row. A query that matches existing options should add those matches (or the first match when bulk is hidden), not a typed prefix. Unique custom values still create with a single Enter because "Add: …" is then first. Values that also match existing options can be created via ArrowDown or click on "Add: …".
+**Decision:** Rejected. **Approved shipped behavior** is first-row Enter. A query that matches existing options should add those matches (or the first match when bulk is hidden), not a typed prefix. Unique custom values still create with a single Enter because "Add: …" is then first. Values that also match existing options can be created via ArrowDown or click on "Add: …".
+
+### Alternative 8: Unfocused Enter skips the bulk-action row
+
+Unfocused Enter could skip bulk-action rows and, when `accept_new_options` is set, prefer the "Add: …" row so bulk-select and create-on-Enter stay opt-in via ArrowDown or click.
+
+**Decision:** Rejected. First-row Enter is the approved keyboard model. Bulk-select with Enter is correct when the bulk row is shown; `select_all=False` is the opt-out. Preferring "Add: …" over matching options would recreate the prefix-create gotcha Alternative 7 removes.
 
 ## Out of Scope (Future Work)
 
@@ -274,7 +288,7 @@ When `accept_new_options=True` and no dropdown item is focused, Enter could stil
 | Item                         | ✅ or comment |
 |------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | ✅ Yes, full-stack change (Python + proto + frontend) |
-| No breaking API changes      | ✅ Yes, new optional parameter. Default keeps the 1000-option performance gate for typical unfiltered lists; see the unfiltered deltas in Threshold evaluation. Enter with no focused row now commits the first visible item, including when `accept_new_options=True` and the query matches existing options; unique custom values still create with a single Enter. |
+| No breaking API changes      | ✅ Yes, new optional parameter. Approved default-behavior deltas: the unfiltered threshold table, and unfocused Enter committing the first visible row (including bulk when shown, and not creating a matching `accept_new_options` prefix). Unique custom values still create with a single Enter. See Keyboard / Enter. |
 | No new dependencies          | ✅ Yes |
 | Metrics collected            | ✅ Track `select_all` parameter usage |
 | Any security/legal impact?   | ✅ No impact |

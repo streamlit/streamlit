@@ -656,13 +656,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
         ):
             st.multiselect("the label", ("m", "f"), select_all=-1)
 
-    def test_select_all_above_int32_raises(self) -> None:
-        """Values above the proto int32 max raise StreamlitAPIException."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"When using an int, `select_all` must be a non-negative integer",
-        ):
-            st.multiselect("the label", ("m", "f"), select_all=2**31)
+    def test_select_all_above_int32_clamps(self) -> None:
+        """Values above the proto int32 max clamp to the int32 ceiling."""
+        st.multiselect("the label", ("m", "f"), select_all=2**31)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.select_all == 2**31 - 1
 
     def test_select_all_invalid_does_not_register_key(self) -> None:
         """Invalid select_all must not register the widget key.

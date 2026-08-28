@@ -205,14 +205,13 @@ def _encode_select_all(select_all: object) -> int:
     if isinstance(select_all, bool):
         return _SELECT_ALL_ALWAYS if select_all else 0
     if isinstance(select_all, int):
-        # Reject values that cannot be stored on the int32 proto field, but
-        # keep the user-facing message free of that implementation detail.
-        if select_all < 0 or select_all > _SELECT_ALL_MAX_THRESHOLD:
+        if select_all < 0:
             raise StreamlitAPIException(
                 f"Invalid value for select_all: {select_all!r}. "
                 "When using an int, `select_all` must be a non-negative integer."
             )
-        return select_all
+        # Thresholds above the int32 proto max already mean "always show".
+        return min(select_all, _SELECT_ALL_MAX_THRESHOLD)
     raise StreamlitInvalidParameterTypeError(
         "select_all",
         type(select_all).__name__,

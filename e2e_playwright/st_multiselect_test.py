@@ -742,7 +742,7 @@ def test_select_all_parameter(app: Page):
     # False: no bulk action; the first row is the first match.
     ms_false = get_multiselect(app, "select_all False")
     ms_false.scroll_into_view_if_needed()
-    input_false = ms_false.locator("input")
+    input_false = _get_multiselect_input(app, "select_all False")
     input_false.click()
 
     options = app.get_by_role("option")
@@ -762,12 +762,13 @@ def test_select_all_parameter(app: Page):
     expect(ms_false.locator('span[title="apricot"]')).not_to_be_visible()
     _close_dropdown(app)
 
-    # True: Select all is shown.
+    # True: Select all is shown. Unfocused Enter's target is that first row.
     ms_true = get_multiselect(app, "select_all True")
     ms_true.scroll_into_view_if_needed()
-    ms_true.locator("input").click()
+    _get_multiselect_input(app, "select_all True").click()
     expect(app.get_by_role("option", name="Select all")).to_be_visible()
     options_true = app.get_by_role("option")
+    expect(options_true.nth(0)).to_have_text("Select all")
     expect(options_true.nth(0)).to_have_attribute("aria-posinset", "1")
 
     def first_row_is_highlighted() -> bool:
@@ -789,7 +790,7 @@ def test_select_all_parameter(app: Page):
     # Integer threshold uses the filtered selectable count.
     ms_threshold = get_multiselect(app, "select_all threshold")
     ms_threshold.scroll_into_view_if_needed()
-    input_threshold = ms_threshold.locator("input")
+    input_threshold = _get_multiselect_input(app, "select_all threshold")
     input_threshold.click()
 
     expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
@@ -809,7 +810,7 @@ def test_select_all_parameter(app: Page):
     # max_selections hides Select all once the cap is reached.
     ms_max = get_multiselect(app, "select_all with max_selections")
     ms_max.scroll_into_view_if_needed()
-    input_max = ms_max.locator("input")
+    input_max = _get_multiselect_input(app, "select_all with max_selections")
     input_max.click()
 
     expect(app.get_by_role("option", name="Select all")).to_be_visible()
@@ -830,7 +831,7 @@ def test_select_all_parameter(app: Page):
     # Custom chips do not count toward the threshold.
     ms_chips = get_multiselect(app, "select_all custom chips")
     ms_chips.scroll_into_view_if_needed()
-    input_chips = ms_chips.locator("input")
+    input_chips = _get_multiselect_input(app, "select_all custom chips")
     input_chips.click()
 
     expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
