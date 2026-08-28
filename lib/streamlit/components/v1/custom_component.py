@@ -107,6 +107,7 @@ class CustomComponent(BaseCustomComponent):
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
+        # -1 is valid per the HTML tabindex spec: focusable, but not tab-reachable.
         if tab_index is not None and not (
             isinstance(tab_index, int)
             and not isinstance(tab_index, bool)

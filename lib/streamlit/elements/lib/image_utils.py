@@ -25,7 +25,6 @@ from typing import TYPE_CHECKING, Final, Literal, TypeAlias, Union, cast
 from streamlit import runtime, url_util
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidParameterTypeError,
     StreamlitValueError,
 )
 from streamlit.runtime import caching
@@ -428,14 +427,6 @@ def marshall_images(
         captions = [None] * len(images)
     else:
         captions = [str(caption)]
-
-    if not isinstance(captions, list):
-        raise StreamlitInvalidParameterTypeError(
-            "caption",
-            type(captions).__name__,
-            ["list"],
-            detail="If image is a list then caption should be a list as well.",
-        )
 
     if len(captions) != len(images):
         raise StreamlitAPIException(

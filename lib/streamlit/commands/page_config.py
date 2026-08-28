@@ -46,6 +46,7 @@ _VALID_SIDEBAR_STATE_VALUES: Final = [
     "'locked'",
     "a positive integer (width in pixels)",
 ]
+_MENU_ITEM_URL_PROTOCOLS: Final = ("http", "https", "mailto")
 
 PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
@@ -348,12 +349,8 @@ def validate_menu_items(menu_items: MenuItems) -> None:
                 ["'Get help'", "'Report a bug'", "'About'"],
                 detail=f"`{k}` is not a supported menu item key.",
             )
-        if (
-            v is not None
-            and k != ABOUT_KEY
-            and not is_url(v, ("http", "https", "mailto"))
-        ):
-            raise StreamlitInvalidURLError(v, ("http", "https", "mailto"))
+        if v is not None and k != ABOUT_KEY and not is_url(v, _MENU_ITEM_URL_PROTOCOLS):
+            raise StreamlitInvalidURLError(v, _MENU_ITEM_URL_PROTOCOLS)
 
 
 def valid_menu_item_key(key: str) -> TypeGuard[MenuKey]:

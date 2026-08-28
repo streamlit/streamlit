@@ -1013,7 +1013,7 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     """Tests for slider parameter validation edge cases."""
 
     def test_overlong_value_sequence_raises(self):
-        """A list or tuple longer than 2 items raises StreamlitAPIException."""
+        """A list or tuple longer than two items raises StreamlitValueError."""
         with pytest.raises(StreamlitValueError, match="containing up to two"):
             st.slider("the label", value=[1, 2, 3])
 

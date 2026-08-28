@@ -26,6 +26,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -628,15 +629,17 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
         assert not proto.HasField("tab_index")
 
-    def test_invalid_tab_index(self) -> None:
-        """Invalid tab_index values raise StreamlitValueError."""
-        for tab_index, key in (
+    @parameterized.expand(
+        [
             (-2, "invalid_tab_index_too_small"),
             ("not_an_int", "invalid_tab_index_not_int"),
             (True, "invalid_tab_index_bool"),
-        ):
-            with pytest.raises(StreamlitValueError):
-                self.test_component(tab_index=tab_index, key=key)
+        ]
+    )
+    def test_invalid_tab_index(self, tab_index: object, key: str) -> None:
+        """Invalid tab_index values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            self.test_component(tab_index=tab_index, key=key)
 
 
 class IFrameTest(DeltaGeneratorTestCase):

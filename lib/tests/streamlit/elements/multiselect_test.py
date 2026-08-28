@@ -331,6 +331,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.max_selections == 2
 
+        st.multiselect(
+            "the label", ("m", "f"), max_selections=np.int64(2), key="numpy_max"
+        )
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.max_selections == 2
+
     @parameterized.expand(
         [
             (["a", "b", "c"], 3),
@@ -483,16 +489,14 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
 
-    def test_max_selections_zero_includes_action(self) -> None:
-        """Raise StreamlitValueError with a suggested action when max_selections is 0."""
-        for max_selections in (0, False):
-            with pytest.raises(
-                StreamlitValueError,
-                match=r"To disable `st\.multiselect`, use `disabled=True`",
-            ):
-                st.multiselect(
-                    "the label", ["a", "b", "c"], max_selections=max_selections
-                )
+    @parameterized.expand([(0,), (False,)])
+    def test_max_selections_zero_includes_action(self, max_selections: object) -> None:
+        """Raise StreamlitValueError with a suggested action when max_selections is 0 or False."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"To disable `st\.multiselect`, use `disabled=True`",
+        ):
+            st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
 
     @parameterized.expand(
         [

@@ -193,6 +193,8 @@ class StreamlitInvalidURLError(LocalizableStreamlitException):
         url: str,
         protocols: Collection[str] = ("http", "https", "mailto"),
     ) -> None:
+        # mailto: and data: have no authority component, so they are written
+        # as scheme: rather than scheme://.
         prefixes = [
             f'"{protocol}:"' if protocol in {"mailto", "data"} else f'"{protocol}://"'
             for protocol in protocols
@@ -319,7 +321,11 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidRangeError(LocalizableStreamlitException):
-    """Raised when ``min_value`` and ``max_value`` do not form a valid range."""
+    """Raised when ``min_value`` is greater than ``max_value``.
+
+    ``st.slider`` also raises this for equal bounds; ``st.date_input`` and
+    ``st.datetime_input`` treat equal bounds as a valid single-day range.
+    """
 
     def __init__(self, min_value: object, max_value: object) -> None:
         super().__init__(
@@ -455,7 +461,7 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
 class BidiComponentError(
     LocalizableStreamlitException
 ):  # pragma: no cover - trivial base class
-    """Base class for bidirectional (CCv2) component errors.
+    """Base class for bidirectional (custom components v2) component errors.
 
     ``except BidiComponentError`` catches all specialized bidi errors.
     """

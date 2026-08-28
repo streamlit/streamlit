@@ -156,31 +156,36 @@ class DateInputTest(DeltaGeneratorTestCase):
                 TODAY,
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 TODAY + timedelta(days=8),
                 TODAY,
                 TODAY + timedelta(days=7),
+                StreamlitValueAboveMaxError,
             ),
             (
                 [TODAY, TODAY + timedelta(2)],
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 [TODAY, TODAY + timedelta(8)],
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 [TODAY, TODAY + timedelta(8)],
                 TODAY,
                 TODAY + timedelta(days=7),
+                StreamlitValueAboveMaxError,
             ),
         ]
     )
-    def test_value_out_of_range(self, value, min_date, max_date):
-        with pytest.raises((StreamlitValueBelowMinError, StreamlitValueAboveMaxError)):
+    def test_value_out_of_range(self, value, min_date, max_date, expected_error):
+        with pytest.raises(expected_error):
             st.date_input(
                 "the label", value=value, min_value=min_date, max_value=max_date
             )

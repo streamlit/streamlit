@@ -372,7 +372,7 @@ class Page:
             if stripped_url_path.strip() == "" and not default:
                 raise StreamlitMissingRequiredParameterError(
                     "url_path",
-                    detail="It cannot be empty unless the page is the default page.",
+                    detail="url_path cannot be empty unless the page is the default page.",
                 )
 
             self._url_path = stripped_url_path
