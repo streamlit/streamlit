@@ -16,10 +16,9 @@
 
 import styled from "@emotion/styled"
 
+import { getIconCssSize } from "~lib/components/shared/Icon/getIconCssSize"
 import type { IconSizeProp } from "~lib/theme/types"
 import { computeSpacingStyle } from "~lib/theme/utils"
-
-import { getIconCssSize } from "../getIconCssSize"
 
 export interface StyledMaterialIconProps {
   size: IconSizeProp

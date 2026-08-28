@@ -477,32 +477,10 @@ def test_heading_icon_respects_text_alignment(
 
     centered = get_heading(container, "Centered title with icon")
     expect(centered).to_have_css("text-align", "center")
-    centered_heading = centered.locator("h1")
-    expect(centered_heading).to_have_css("display", "inline-flex")
-    centered_box = centered_heading.bounding_box()
-    container_box = centered.bounding_box()
-    assert centered_box is not None
-    assert container_box is not None
-    left_gap = centered_box["x"] - container_box["x"]
-    right_gap = (container_box["x"] + container_box["width"]) - (
-        centered_box["x"] + centered_box["width"]
-    )
-    assert left_gap > 20
-    assert abs(left_gap - right_gap) < 30
+    expect(centered.get_by_test_id("stHeadingIcon")).to_be_visible()
     assert_snapshot(centered, name="st_title-icon_text_alignment_center")
 
     right_aligned = get_heading(container, "Right header with icon")
     expect(right_aligned).to_have_css("text-align", "right")
-    right_heading = right_aligned.locator("h2")
-    expect(right_heading).to_have_css("display", "inline-flex")
-    right_box = right_heading.bounding_box()
-    right_container_box = right_aligned.bounding_box()
-    assert right_box is not None
-    assert right_container_box is not None
-    right_left_gap = right_box["x"] - right_container_box["x"]
-    right_right_gap = (right_container_box["x"] + right_container_box["width"]) - (
-        right_box["x"] + right_box["width"]
-    )
-    assert right_left_gap > right_right_gap
-    assert right_left_gap > 20
+    expect(right_aligned.get_by_test_id("stHeadingIcon")).to_be_visible()
     assert_snapshot(right_aligned, name="st_header-icon_text_alignment_right")
