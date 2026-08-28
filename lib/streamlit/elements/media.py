@@ -25,7 +25,12 @@ from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -200,8 +205,9 @@ class MediaMixin:
         is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
 
         if is_data_numpy_array and sample_rate is None:
-            raise StreamlitAPIException(
-                "`sample_rate` must be specified when `data` is a numpy array."
+            raise StreamlitMissingRequiredParameterError(
+                "sample_rate",
+                detail="Must be specified when `data` is a numpy array.",
             )
         if not is_data_numpy_array and sample_rate is not None:
             self.dg.warning(
@@ -600,8 +606,10 @@ def marshall_video(
             proto.url = youtube_url
             proto.type = VideoProto.Type.YOUTUBE_IFRAME
             if subtitles:
-                raise StreamlitAPIException(
-                    "Subtitles are not supported for YouTube videos."
+                raise StreamlitIncompatibleParametersError(
+                    "subtitles",
+                    "YouTube videos",
+                    explanation="Subtitles are not supported for YouTube videos.",
                 )
         else:
             proto.url = data

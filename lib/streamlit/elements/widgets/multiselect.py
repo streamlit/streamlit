@@ -51,10 +51,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import (
-    StreamlitInvalidMaxError,
-    StreamlitSelectionCountExceedsMaxError,
-)
+from streamlit.errors import StreamlitSelectionCountExceedsMaxError, StreamlitValueError
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -602,14 +599,19 @@ class MultiSelectMixin:
         )
         label = maybe_raise_label_warnings(label, label_visibility)
 
-        if max_selections is not None and max_selections < 1:
-            raise StreamlitInvalidMaxError(
-                "st.multiselect",
+        if max_selections is not None and (
+            not isinstance(max_selections, int)
+            or isinstance(max_selections, bool)
+            or max_selections < 1
+        ):
+            raise StreamlitValueError(
                 "max_selections",
-                max_selections,
-                corrective_action="To disable `st.multiselect`, use `disabled=True`."
-                if max_selections == 0
-                else None,
+                ["a positive integer"],
+                detail=(
+                    "To disable `st.multiselect`, use `disabled=True`."
+                    if max_selections == 0
+                    else None
+                ),
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)

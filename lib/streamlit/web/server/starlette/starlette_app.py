@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
@@ -99,8 +99,10 @@ def _validate_run_config(
         return {}
 
     if not isinstance(run_config, MappingABC):
-        raise StreamlitAPIException(
-            f"config must be a mapping or None, got {type(run_config).__name__!r}."
+        raise StreamlitInvalidParameterTypeError(
+            "config",
+            type(run_config).__name__,
+            ["mapping", "None"],
         )
 
     validated_config = dict(run_config)

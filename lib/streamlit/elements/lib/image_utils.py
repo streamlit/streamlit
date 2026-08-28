@@ -23,7 +23,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, Union, cast
 
 from streamlit import runtime, url_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.runtime import caching
 
 if TYPE_CHECKING:
@@ -156,7 +160,10 @@ def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str = "JPEG") -> 
 def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
     shape: NumpyShape = array.shape
     if len(shape) not in {2, 3}:
-        raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
+        raise StreamlitValueError(
+            "image",
+            ["a numpy array of rank 2 or 3"],
+        )
     if len(shape) == 3 and shape[-1] not in {1, 3, 4}:
         raise StreamlitAPIException(
             f"Channel can only be 1, 3, or 4 got {shape[-1]}. Shape is {shape}"
@@ -423,8 +430,11 @@ def marshall_images(
         captions = [str(caption)]
 
     if not isinstance(captions, list):
-        raise StreamlitAPIException(
-            "If image is a list then caption should be a list as well."
+        raise StreamlitInvalidParameterTypeError(
+            "caption",
+            type(captions).__name__,
+            ["list"],
+            detail="If image is a list then caption should be a list as well.",
         )
 
     if len(captions) != len(images):

@@ -108,8 +108,8 @@ def test_verify_np_shape_valid(
 @pytest.mark.parametrize(
     ("shape", "error_substr"),
     [
-        ((100,), "length 2 or 3"),  # 1D invalid
-        ((10, 10, 10, 10), "length 2 or 3"),  # 4D invalid
+        ((100,), "rank 2 or 3"),  # 1D invalid
+        ((10, 10, 10, 10), "rank 2 or 3"),  # 4D invalid
         ((100, 100, 2), "Channel can only be 1, 3, or 4"),  # Invalid channel count
     ],
 )

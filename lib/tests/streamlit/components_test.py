@@ -42,7 +42,11 @@ from streamlit.dataframe_util import (
     is_pandas_version_less_than,
     is_pyarrow_version_less_than,
 )
-from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
+from streamlit.errors import (
+    DuplicateWidgetID,
+    StreamlitAPIException,
+    StreamlitValueError,
+)
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -624,16 +628,15 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
         assert not proto.HasField("tab_index")
 
-    def test_invalid_tab_index(self):
-        """Test that invalid tab_index values raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException):
-            self.test_component(tab_index=-2, key="invalid_tab_index_1")
-
-        with pytest.raises(StreamlitAPIException):
-            self.test_component(tab_index="not_an_int", key="invalid_tab_index_2")
-
-        with pytest.raises(StreamlitAPIException):
-            self.test_component(tab_index=True, key="invalid_tab_index_3")
+    def test_invalid_tab_index(self) -> None:
+        """Invalid tab_index values raise StreamlitValueError."""
+        for tab_index, key in (
+            (-2, "invalid_tab_index_too_small"),
+            ("not_an_int", "invalid_tab_index_not_int"),
+            (True, "invalid_tab_index_bool"),
+        ):
+            with pytest.raises(StreamlitValueError):
+                self.test_component(tab_index=tab_index, key=key)
 
 
 class IFrameTest(DeltaGeneratorTestCase):

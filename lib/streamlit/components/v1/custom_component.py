@@ -23,7 +23,7 @@ from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
@@ -107,14 +107,13 @@ class CustomComponent(BaseCustomComponent):
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
-        # Validate tab_index according to web specifications
         if tab_index is not None and not (
             isinstance(tab_index, int)
             and not isinstance(tab_index, bool)
             and tab_index >= -1
         ):
-            raise StreamlitAPIException(
-                "tab_index must be None, -1, or a non-negative integer."
+            raise StreamlitValueError(
+                "tab_index", ["None", "-1", "a non-negative integer"]
             )
 
         try:

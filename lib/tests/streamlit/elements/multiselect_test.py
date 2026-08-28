@@ -32,7 +32,6 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
     StreamlitIncompatibleParametersError,
-    StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
     StreamlitValueError,
@@ -485,9 +484,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
             )
 
     def test_max_selections_zero_includes_action(self) -> None:
-        """Raise StreamlitInvalidMaxError with a suggested action when max_selections is 0."""
+        """Raise StreamlitValueError with a suggested action when max_selections is 0."""
         with pytest.raises(
-            StreamlitInvalidMaxError,
+            StreamlitValueError,
             match=r"To disable `st\.multiselect`, use `disabled=True`",
         ):
             st.multiselect("the label", ["a", "b", "c"], max_selections=0)
@@ -499,10 +498,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
         ]
     )
     def test_max_selections_negative_no_action(self, max_selections: int) -> None:
-        """Raise StreamlitInvalidMaxError without an action for negative max_selections."""
+        """Raise StreamlitValueError without an action for negative max_selections."""
         with pytest.raises(
-            StreamlitInvalidMaxError,
-            match=r"must be a positive integer\.$",
+            StreamlitValueError,
+            match=r"Supported values: a positive integer\.$",
         ):
             st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
 

@@ -1930,7 +1930,7 @@ class TestAppRun:
         script.write_text("import streamlit as st\n")
         app = App(script)
 
-        with pytest.raises(StreamlitAPIException, match="config must be a mapping"):
+        with pytest.raises(StreamlitAPIException, match=r"Invalid `config` type"):
             app.run(config=["server.port"])  # type: ignore[arg-type]
 
 

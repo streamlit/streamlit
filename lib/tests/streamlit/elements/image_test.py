@@ -38,7 +38,10 @@ from streamlit.elements.lib.image_utils import (
     marshall_images,
 )
 from streamlit.elements.lib.layout_utils import LayoutConfig
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueError,
+)
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
@@ -367,16 +370,13 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         - check shape 3 but dims 1, 3, 4
         - if only one channel convert to just 2 dimensions.
         """
-        with pytest.raises(StreamlitAPIException) as shape_exc:
+        with pytest.raises(StreamlitValueError, match="rank 2 or 3"):
             st.image(np.ndarray(shape=1))
-        assert str(shape_exc.value) == "Numpy shape has to be of length 2 or 3."
 
-        with pytest.raises(StreamlitAPIException) as shape2_exc:
+        with pytest.raises(
+            StreamlitAPIException, match="Channel can only be 1, 3, or 4 got 2"
+        ):
             st.image(np.ndarray(shape=(1, 2, 2)))
-        assert (
-            str(shape2_exc.value)
-            == "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)"
-        )
 
     def test_clip_image(self):
         """Test streamlit.image.clip_image.

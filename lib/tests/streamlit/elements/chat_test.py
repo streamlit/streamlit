@@ -632,11 +632,9 @@ class ChatTest(DeltaGeneratorTestCase):
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
         """Test that invalid max_upload_size values raise an exception for chat_input."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("the label", max_upload_size=max_upload_size)
-        assert "The `max_upload_size` parameter must be a positive integer" in str(
-            exc.value
-        )
+        assert "a positive integer" in str(exc.value)
 
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""

@@ -14,6 +14,8 @@
 
 """radio unit tests."""
 
+from __future__ import annotations
+
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -25,7 +27,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.radio import RadioSerde
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -153,13 +159,18 @@ class RadioTest(DeltaGeneratorTestCase):
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.radio("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
         with pytest.raises(StreamlitAPIException):
             st.radio("the label", ("m", "f"), 2)
+
+    def test_invalid_caption_type(self):
+        """Test that captions must be strings or None."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.radio("the label", ("m", "f"), captions=[1, 2])
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""

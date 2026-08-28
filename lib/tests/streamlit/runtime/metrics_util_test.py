@@ -37,6 +37,7 @@ from streamlit.errors import (
     StreamlitIncompatibleParametersError,
     StreamlitInvalidLayoutContextError,
     StreamlitInvalidParameterTypeError,
+    StreamlitInvalidRangeError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
@@ -886,6 +887,10 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitInvalidParameterTypeError:spec",
         ),
         (
+            StreamlitInvalidRangeError(10, 5),
+            "StreamlitInvalidRangeError",
+        ),
+        (
             StreamlitIncompatibleParametersError(
                 "wrap=False", "unsafe_allow_html=True"
             ),
@@ -964,6 +969,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "streamlit-value-error-detail",
         "streamlit-missing-required-parameter",
         "invalid-parameter-type",
+        "invalid-range",
         "incompatible-parameters",
         "invalid-context-no-command-suffix",
         "modulenotfound-message-fallback",

@@ -20,7 +20,7 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.iframe import IframeMixin, _is_file, marshall
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -46,9 +46,9 @@ def test_marshall_with_valid_tab_index(tab_index: int | None) -> None:
     ids=["string", "float", "bool", "list", "dict", "minus_two", "minus_hundred"],
 )
 def test_marshall_with_invalid_tab_index(invalid_value: object) -> None:
-    """Test that invalid tab_index types and values raise StreamlitAPIException."""
+    """Test that invalid tab_index types and values raise StreamlitValueError."""
     proto = IFrameProto()
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitValueError):
         marshall(proto, src="https://example.com", tab_index=invalid_value)
 
 
@@ -329,7 +329,7 @@ class StIframeTest(DeltaGeneratorTestCase):
 
     def test_iframe_with_invalid_tab_index_raises(self):
         """Test that invalid tab_index values raise an exception."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.iframe("https://example.com", height=400, tab_index=-2)
 
     def test_iframe_with_invalid_width_raises(self):

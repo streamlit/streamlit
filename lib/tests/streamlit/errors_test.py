@@ -238,32 +238,45 @@ def test_selection_count_exceeds_max_pluralization(
     assert f"{max_sel} {expected_options_noun}" in msg
 
 
-# StreamlitInvalidMaxError tests
+# StreamlitInvalidRangeError tests
 
 
-def test_invalid_max_error_without_corrective_action() -> None:
-    """Test message without corrective action."""
-    exc = errors.StreamlitInvalidMaxError(
-        widget_name="st.multiselect",
-        parameter_name="max_selections",
-        value=-1,
+def test_invalid_range_error_message() -> None:
+    """Range errors name both bounds."""
+    exc = errors.StreamlitInvalidRangeError(10, 5)
+    assert str(exc) == (
+        "The `min_value`, set to 10, must be less than the `max_value`, set to 5."
     )
-    msg = str(exc)
-    assert "st.multiselect" in msg
-    assert "max_selections" in msg
-    assert "-1" in msg
 
 
-def test_invalid_max_error_with_corrective_action() -> None:
-    """Test message includes corrective action when provided."""
-    exc = errors.StreamlitInvalidMaxError(
-        widget_name="st.text_input",
-        parameter_name="max_chars",
-        value=0,
-        corrective_action="Set it to None to allow unlimited characters.",
+@pytest.mark.parametrize(
+    ("url", "protocols", "expected_prefixes"),
+    [
+        (
+            "www.example.com",
+            ("http", "https", "mailto"),
+            '"http://", "https://", or "mailto:"',
+        ),
+        ("www.example.com", ("http", "https"), '"http://" or "https://"'),
+        ("ftp://example.com", ("https",), '"https://"'),
+    ],
+    ids=["three-protocols", "two-protocols", "one-protocol"],
+)
+def test_invalid_url_error_formats_protocols(
+    url: str, protocols: tuple[str, ...], expected_prefixes: str
+) -> None:
+    """Protocol lists are rendered as prefixes in the error message."""
+    exc = errors.StreamlitInvalidURLError(url, protocols)
+    assert str(exc) == (
+        f'"{url}" is not a valid URL. '
+        f"You must use a fully qualified domain beginning with {expected_prefixes}."
     )
-    msg = str(exc)
-    assert "Set it to None" in msg
+
+
+def test_bidi_component_error_hierarchy() -> None:
+    """Specialized bidi errors share a ``BidiComponentError`` base."""
+    exc = errors.BidiComponentInvalidIdError("base", "__")
+    assert isinstance(exc, errors.BidiComponentError)
 
 
 # StreamlitMissingRequiredParameterError tests

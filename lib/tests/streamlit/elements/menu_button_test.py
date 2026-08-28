@@ -28,6 +28,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
 )
 from streamlit.proto.Common_pb2 import StringTriggerValue
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -160,9 +161,9 @@ class MenuButtonTest(DeltaGeneratorTestCase):
 
     def test_empty_options_raises(self):
         """Test that empty options raises an exception."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.menu_button("the label", [])
-        assert "must contain at least one option" in str(exc.value)
+        assert "The `options` parameter is required" in str(exc.value)
 
     def test_duplicate_formatted_labels_raises(self):
         """Test that duplicate formatted labels raise an exception."""

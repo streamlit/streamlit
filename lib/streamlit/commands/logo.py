@@ -21,7 +21,11 @@ from typing import Literal
 from streamlit import url_util
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidURLError,
+    StreamlitValueError,
+)
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Logo_pb2 import Logo as LogoProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -217,10 +221,7 @@ def logo(
         if url_util.is_url(link, ("http", "https")):
             fwd_msg.logo.link = link
         else:
-            raise StreamlitAPIException(
-                f"Invalid link: {link} - the link param supports external links only and must "
-                f"start with either http:// or https://."
-            )
+            raise StreamlitInvalidURLError(link, ("http", "https"))
 
     if icon_image:
         try:

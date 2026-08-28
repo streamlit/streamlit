@@ -28,6 +28,7 @@ from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
@@ -95,7 +96,7 @@ class SliderTest(DeltaGeneratorTestCase):
 
     def test_invalid_options(self):
         """Test that it raises an error on an empty options"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.select_slider("the label", options=[])
 
     def test_none_value(self):

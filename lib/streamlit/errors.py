@@ -186,13 +186,22 @@ class LocalizableStreamlitException(StreamlitAPIException):
 
 
 class StreamlitInvalidURLError(LocalizableStreamlitException):
-    """Exception raised when an invalid URL is specified for any of the menu items except for “About”."""
+    """Raised when a URL is malformed or uses an unsupported protocol."""
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, protocols: Collection[str]) -> None:
+        prefixes = [
+            f'"{protocol}://"' if protocol in {"http", "https"} else f'"{protocol}:"'
+            for protocol in protocols
+        ]
+        if len(prefixes) <= 2:
+            protocols_text = " or ".join(prefixes)
+        else:
+            protocols_text = f"{', '.join(prefixes[:-1])}, or {prefixes[-1]}"
         super().__init__(
-            '"{url}" is a not a valid URL. '
-            'You must use a fully qualified domain beginning with "http://", "https://", or "mailto:".',
+            '"{url}" is not a valid URL. '
+            "You must use a fully qualified domain beginning with {protocols}.",
             url=url,
+            protocols=protocols_text,
         )
 
 
@@ -229,30 +238,6 @@ class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
             else "options",
             max_selections_count=max_selections_count,
             options_noun="option" if max_selections_count == 1 else "options",
-        )
-
-
-class StreamlitInvalidMaxError(LocalizableStreamlitException):
-    """Exception raised when an invalid max value is provided (e.g. zero or negative)."""
-
-    def __init__(
-        self,
-        widget_name: str,
-        parameter_name: str,
-        value: int,
-        corrective_action: str | None = None,
-    ) -> None:
-        message = (
-            "In `{widget_name}`, `{parameter_name}` was set to {value}. "
-            "`{parameter_name}` must be a positive integer."
-        )
-        if corrective_action:
-            message += " " + corrective_action
-        super().__init__(
-            message,
-            widget_name=widget_name,
-            parameter_name=parameter_name,
-            value=value,
         )
 
 
@@ -325,6 +310,18 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
         super().__init__(
             "The `value` {value} is greater than the `max_value` {max_value}.",
             value=value,
+            max_value=max_value,
+        )
+
+
+class StreamlitInvalidRangeError(LocalizableStreamlitException):
+    """Raised when ``min_value`` is not less than ``max_value``."""
+
+    def __init__(self, min_value: object, max_value: object) -> None:
+        super().__init__(
+            "The `min_value`, set to {min_value}, must be less than "
+            "the `max_value`, set to {max_value}.",
+            min_value=min_value,
             max_value=max_value,
         )
 
@@ -451,7 +448,14 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
 
 
 # Bidirectional Components
-class BidiComponentInvalidIdError(LocalizableStreamlitException):
+class BidiComponentError(LocalizableStreamlitException):  # pragma: no cover
+    """Base class for bidirectional (CCv2) component errors.
+
+    ``except BidiComponentError`` catches all specialized bidi errors.
+    """
+
+
+class BidiComponentInvalidIdError(BidiComponentError):
     """Exception raised when an invalid ID component is provided."""
 
     def __init__(self, part: str, delimiter: str) -> None:
@@ -463,7 +467,7 @@ class BidiComponentInvalidIdError(LocalizableStreamlitException):
         )
 
 
-class BidiComponentInvalidCallbackNameError(LocalizableStreamlitException):
+class BidiComponentInvalidCallbackNameError(BidiComponentError):
     """Exception raised when a callback with an invalid name is provided."""
 
     def __init__(self, callback_name: str) -> None:
@@ -475,7 +479,7 @@ class BidiComponentInvalidCallbackNameError(LocalizableStreamlitException):
         )
 
 
-class BidiComponentInvalidDefaultKeyError(LocalizableStreamlitException):
+class BidiComponentInvalidDefaultKeyError(BidiComponentError):
     """Exception raised when an invalid key is provided in the default dict."""
 
     def __init__(self, state_key: str, available_keys: list[str]) -> None:
@@ -488,7 +492,7 @@ class BidiComponentInvalidDefaultKeyError(LocalizableStreamlitException):
         )
 
 
-class BidiComponentUnserializableDataError(LocalizableStreamlitException):
+class BidiComponentUnserializableDataError(BidiComponentError):
     """Exception raised when data provided to a bidirectional component cannot be serialized."""
 
     def __init__(self) -> None:
@@ -613,7 +617,7 @@ class StreamlitValueError(LocalizableStreamlitException):
     def __init__(
         self,
         parameter: str,
-        valid_values: list[str],
+        valid_values: Collection[str],
         *,
         detail: str | None = None,
     ) -> None:

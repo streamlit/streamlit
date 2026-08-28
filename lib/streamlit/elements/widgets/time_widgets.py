@@ -46,6 +46,9 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
+    StreamlitInvalidRangeError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
     StreamlitValueError,
 )
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
@@ -87,6 +90,17 @@ DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
+_SUPPORTED_DATE_FORMATS: Final = [
+    "'YYYY/MM/DD'",
+    "'DD/MM/YYYY'",
+    "'MM/DD/YYYY'",
+    "'YYYY.MM.DD'",
+    "'DD.MM.YYYY'",
+    "'MM.DD.YYYY'",
+    "'YYYY-MM-DD'",
+    "'DD-MM-YYYY'",
+    "'MM-DD-YYYY'",
+]
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
@@ -388,16 +402,13 @@ class _DateTimeInputValues:
 
     def __post_init__(self) -> None:
         if self.min > self.max:
-            raise StreamlitAPIException(
-                f"The `min_value`, set to {self.min}, shouldn't be larger "
-                f"than the `max_value`, set to {self.max}."
-            )
+            raise StreamlitInvalidRangeError(self.min, self.max)
 
-        if self.value is not None and (self.value < self.min or self.value > self.max):
-            raise StreamlitAPIException(
-                f"The default `value` of {self.value} must lie between the `min_value` "
-                f"of {self.min} and the `max_value` of {self.max}, inclusively."
-            )
+        if self.value is not None:
+            if self.value < self.min:
+                raise StreamlitValueBelowMinError(self.value, self.min)
+            if self.value > self.max:
+                raise StreamlitValueAboveMaxError(self.value, self.max)
 
 
 @dataclass(frozen=True)
@@ -440,21 +451,16 @@ class _DateInputValues:
 
     def __post_init__(self) -> None:
         if self.min > self.max:
-            raise StreamlitAPIException(
-                f"The `min_value`, set to {self.min}, shouldn't be larger "
-                f"than the `max_value`, set to {self.max}."
-            )
+            raise StreamlitInvalidRangeError(self.min, self.max)
 
         if self.value:
             start_value = self.value[0]
             end_value = self.value[-1]
 
-            if (start_value < self.min) or (end_value > self.max):
-                raise StreamlitAPIException(
-                    f"The default `value` of {self.value} "
-                    f"must lie between the `min_value` of {self.min} "
-                    f"and the `max_value` of {self.max}, inclusively."
-                )
+            if start_value < self.min:
+                raise StreamlitValueBelowMinError(start_value, self.min)
+            if end_value > self.max:
+                raise StreamlitValueAboveMaxError(end_value, self.max)
 
 
 @dataclass
@@ -1469,11 +1475,7 @@ class TimeWidgetsMixin:
         del value, min_value, max_value
 
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitAPIException(
-                f"The provided format (`{format}`) is not valid. DateTimeInput format "
-                "should be one of `YYYY/MM/DD`, `DD/MM/YYYY`, or `MM/DD/YYYY` "
-                "and can also use a period (.) or hyphen (-) as separators."
-            )
+            raise StreamlitValueError("format", _SUPPORTED_DATE_FORMATS)
 
         if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
             raise StreamlitInvalidParameterTypeError(
@@ -1973,11 +1975,7 @@ class TimeWidgetsMixin:
             width=width,
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitAPIException(
-                f"The provided format (`{format}`) is not valid. DateInput format "
-                "should be one of `YYYY/MM/DD`, `DD/MM/YYYY`, or `MM/DD/YYYY` "
-                "and can also use a period (.) or hyphen (-) as separators."
-            )
+            raise StreamlitValueError("format", _SUPPORTED_DATE_FORMATS)
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,

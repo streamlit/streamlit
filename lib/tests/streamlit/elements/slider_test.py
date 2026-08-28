@@ -35,6 +35,7 @@ from streamlit.elements.widgets.slider import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
+    StreamlitInvalidRangeError,
     StreamlitInvalidWidthError,
     StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
@@ -221,9 +222,9 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.max == 101
 
     def test_min_equals_max(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
             st.slider("oh no", min_value=10, max_value=10)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidRangeError, match="must be less than"):
             date = datetime(2024, 4, 3)
             st.slider("datetime", min_value=date, max_value=date)
 
@@ -431,9 +432,10 @@ class SliderTest(DeltaGeneratorTestCase):
         assert "too far from 1970" in str(exc.value)
 
     def test_step_zero(self):
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)
-        assert str(exc.value) == "Slider components cannot be passed a `step` of 0."
+        assert "a nonzero number" in str(exc.value)
+        assert "timedelta" in str(exc.value)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -1005,10 +1007,7 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
 
     def test_overlong_value_sequence_raises(self):
         """A list or tuple longer than 2 items raises StreamlitAPIException."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match="list/tuple of 0 to 2",
-        ):
+        with pytest.raises(StreamlitValueError, match="containing up to two"):
             st.slider("the label", value=[1, 2, 3])
 
     def test_mixed_types_in_value_raises(self):

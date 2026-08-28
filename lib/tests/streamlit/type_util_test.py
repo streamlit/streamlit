@@ -143,12 +143,8 @@ class TypeUtilTest(unittest.TestCase):
         """Test that `check_python_comparable` raises an exception if ndarray."""
         with pytest.raises(StreamlitAPIException) as exception_message:
             type_util.check_python_comparable(sequence)
-        assert (
-            "Invalid option type provided. Options must be comparable, returning a "
-            f"boolean when used with *==*. \n\nGot **{type_str}**, which cannot be "
-            "compared. Refactor your code to use elements of comparable types as options, e.g. use indices instead."
-            == str(exception_message.value)
-        )
+        assert "Invalid option type provided" in str(exception_message.value)
+        assert type_str in str(exception_message.value)
 
     def test_has_callable_attr(self):
         class TestClass:

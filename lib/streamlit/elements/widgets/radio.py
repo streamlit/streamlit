@@ -41,7 +41,10 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+)
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -489,9 +492,11 @@ class RadioMixin:
             width=width,
         )
 
-        if not isinstance(index, int) and index is not None:
-            raise StreamlitAPIException(
-                f"Radio Value has invalid type: {type(index).__name__}"
+        if index is not None and not isinstance(index, int):
+            raise StreamlitInvalidParameterTypeError(
+                "index",
+                type(index).__name__,
+                ["int", "None"],
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
@@ -504,8 +509,10 @@ class RadioMixin:
                 return ""
             if isinstance(caption, str):
                 return caption
-            raise StreamlitAPIException(
-                f"Radio captions must be strings. Passed type: {type(caption).__name__}"
+            raise StreamlitInvalidParameterTypeError(
+                "captions",
+                type(caption).__name__,
+                ["str", "None"],
             )
 
         session_state = get_session_state().filtered_state

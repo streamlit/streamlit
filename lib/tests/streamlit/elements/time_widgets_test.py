@@ -29,7 +29,11 @@ from streamlit.elements.widgets.time_widgets import (
     _parse_max_date,
     _parse_min_date,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitInvalidRangeError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -77,7 +81,7 @@ def test_convert_datetimelike_rejects_unparseable_string() -> None:
 
 def test_date_input_values_rejects_min_after_max() -> None:
     """Test that constructing date bounds with min > max raises an exception."""
-    with pytest.raises(StreamlitAPIException, match="min_value"):
+    with pytest.raises(StreamlitInvalidRangeError, match="min_value"):
         _DateInputValues(
             value=None,
             is_range=False,

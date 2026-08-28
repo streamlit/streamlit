@@ -27,7 +27,10 @@ from streamlit.elements.widgets.time_widgets import DateTimeInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
+    StreamlitInvalidRangeError,
     StreamlitInvalidWidthError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
@@ -292,7 +295,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         """Test that min_value > max_value raises an exception."""
         min_value = datetime(2030, 1, 1, 12, 0)
         max_value = datetime(2020, 1, 1, 12, 0)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidRangeError):
             st.datetime_input("Label", min_value=min_value, max_value=max_value)
 
     def test_initial_value_out_of_bounds_exception(self):
@@ -300,7 +303,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         min_value = datetime(2020, 1, 1, 12, 0)
         max_value = datetime(2030, 1, 1, 12, 0)
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueBelowMinError):
             st.datetime_input(
                 "Label",
                 value=datetime(2010, 1, 1),
@@ -308,7 +311,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
                 max_value=max_value,
             )
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueAboveMaxError):
             st.datetime_input(
                 "Label",
                 value=datetime(2040, 1, 1),

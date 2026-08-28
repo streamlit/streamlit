@@ -179,18 +179,25 @@ generic `StreamlitAPIException` with a one-off message.
   - `StreamlitInvalidColorError`
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (numeric /
     date/time bounds)
+  - `StreamlitInvalidRangeError` (`min_value` must be less than `max_value`,
+    including when they are equal)
+  - `StreamlitInvalidURLError(url, protocols)` (`st.logo(link=)`, page-config
+    menu items). Pass the allowed schemes, for example `["http", "https"]`.
   - `StreamlitInvalidFormCallbackError` (form callback policy)
   - `StreamlitInvalidLayoutContextError` (command used in a disallowed layout,
     form, dialog, or fragment context — including opening a second dialog in the
-    same run, or writing to a container across a parallel-fragment boundary)
+    same run, writing to a container across a parallel-fragment boundary, or
+    `st.rerun(scope="fragment")` outside a fragment rerun)
   - `StreamlitDuplicateElementKey` (duplicate user `key`, including `st.form`)
   - `StreamlitWidgetAlreadyInstantiatedError` (session state assigned after the
     widget with that key is instantiated this run)
-  - `StreamlitDefaultNotInOptionsError` (default/index not in widget `options`;
-    `st.tabs` `default` uses `StreamlitValueError` because this message is
-    worded for widget options, not tab labels)
+  - `StreamlitDefaultNotInOptionsError` (default value not in widget `options`;
+    `st.tabs` `default` and integer `index` use `StreamlitValueError` because
+    this message is worded for option values, not tab labels or indices)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
+  - `BidiComponentError` (base for CCv2 bidi errors; keep the unprefixed
+    specialized subclasses — no `Streamlit` prefix)
 
 Reserve bare `StreamlitAPIException` for one-off cases that no shared type
 covers and that users are expected to hit uncommonly (serialization failures

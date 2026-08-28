@@ -187,12 +187,10 @@ class FileUploaderTest(DeltaGeneratorTestCase):
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object):
         """Test that invalid max_upload_size values raise an exception."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.file_uploader("the label", max_upload_size=max_upload_size)
 
-        assert "The `max_upload_size` parameter must be a positive integer" in str(
-            exc.value
-        )
+        assert "a positive integer" in str(exc.value)
 
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_unique_uploaded_file_instance(self, get_upload_files_patch):

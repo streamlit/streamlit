@@ -348,10 +348,12 @@ def validate_menu_items(menu_items: MenuItems) -> None:
                 ["'Get help'", "'Report a bug'", "'About'"],
                 detail=f"`{k}` is not a supported menu item key.",
             )
-        if v is not None and (
-            not is_url(v, ("http", "https", "mailto")) and k != ABOUT_KEY
+        if (
+            v is not None
+            and k != ABOUT_KEY
+            and not is_url(v, ("http", "https", "mailto"))
         ):
-            raise StreamlitInvalidURLError(url=v)
+            raise StreamlitInvalidURLError(v, ("http", "https", "mailto"))
 
 
 def valid_menu_item_key(key: str) -> TypeGuard[MenuKey]:
