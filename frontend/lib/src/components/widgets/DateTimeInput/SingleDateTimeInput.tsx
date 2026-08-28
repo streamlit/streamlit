@@ -166,10 +166,10 @@ function SingleDateTimeInput({
     undefined
   )
 
-  // Which time control the user focused last. The inline segments and the
-  // popover TimeField can hold different times at once, so the later edit wins.
-  // Focus alone flips this, which is harmless: an untouched control reads as
-  // null and `resolveGivenTime` falls back to the other.
+  // Resolves conflicting visible times by preferring the control that received
+  // focus most recently, falling back to the other when that one is empty. Focus
+  // rather than edit, so merely tabbing through flips it — harmless, because an
+  // untouched control reads as null and the fallback applies.
   const lastTimeSourceRef = useRef<"inline" | "popover">("inline")
   // A complete time set in the popover before any date exists. React Aria resets
   // the TimeField's segments from its controlled `value` the moment they
@@ -202,8 +202,10 @@ function SingleDateTimeInput({
   /** The time to merge into a date the user selects: the buffered display
    * value's if the field already holds one, otherwise whichever of the two time
    * controls they focused most recently, falling back to the other if that one
-   * is empty. Null when they have given no time at all, in which case the caller
-   * defaults to midnight.
+   * is empty. Null when they have given no time at all — what that means is the
+   * caller's choice: `handleCalendarChange` substitutes midnight, because picking
+   * a day is an affirmative selection, while `completeFromVisibleParts` declines
+   * to complete at all, because dismissing a field is not.
    *
    * Both controls are read from their rendered segments, because neither reports
    * a partial time through `onChange`. Reading them here rather than tracking
@@ -256,72 +258,75 @@ function SingleDateTimeInput({
    * value. Returns true if the field holds a valid (committed or unchanged)
    * value, false if it was reverted. Calls both onChange (React state) and
    * formCommit (sync WM write) to prevent the form-submit race. */
-  const commitOrRevert = useCallback((): boolean => {
-    if (!triggerRef.current) return false
-    const { isPartiallyTyped, isFullyCleared } = getSegmentState(
-      triggerRef.current
-    )
+  const commitOrRevert = useCallback(
+    ({ popoverStaysOpen = false } = {}): boolean => {
+      if (!triggerRef.current) return false
+      const { isPartiallyTyped, isFullyCleared } = getSegmentState(
+        triggerRef.current
+      )
 
-    // A date typed inline with its time given only in the popover reads as
-    // partially typed, because the field withholds onChange while the hour and
-    // minute are placeholders. Both halves are on screen, so complete the value
-    // from them rather than discarding a date and time the user can see.
-    //
-    // The gate also requires the field to hold no value of its own. Clearing one
-    // segment of an existing value reads as partially typed too — React Aria
-    // reports nothing unless every segment is cleared — and that is an edit in
-    // progress, not two halves to combine, so it still reverts.
-    //
-    // Read before `setPendingTime(null)` below, so the merge never depends on
-    // React batching that clear: flushing it would blank the popover's segments.
-    const completedFromParts =
-      isPartiallyTyped && !displayValueRef.current
-        ? completeFromVisibleParts()
-        : null
+      // When the field reports no value of its own, the two controls may still
+      // describe one between them — a date typed inline with its time given only in
+      // the popover — because the field withholds onChange while any segment is a
+      // placeholder. Complete the value from what is on screen instead of
+      // discarding halves the user can see.
+      //
+      // Keyed off the field having no value rather than off `isPartiallyTyped`:
+      // clearing one segment of an existing value also reads as partially typed
+      // (React Aria reports nothing unless every segment is cleared), and that is
+      // an edit in progress rather than two halves to combine. Using the readers
+      // also keeps this working on iOS, where `getSegmentState` matches nothing.
+      //
+      // Read before `setPendingTime(null)` below, so the merge never depends on
+      // React batching that clear: flushing it would blank the popover's segments.
+      const completedFromParts = displayValueRef.current
+        ? null
+        : completeFromVisibleParts()
 
-    // A time given in the popover lives only as long as that popover session:
-    // every path here either commits it into the value or discards it. Without
-    // this, a dismissed time would be restored into the remounted TimeField and
-    // then merged into a date picked in a later session, with nothing on screen
-    // explaining where it came from.
-    setPendingTime(null)
+      // A time given in the popover lives only as long as that popover session:
+      // once it closes, every path here has either committed the time or discarded
+      // it, and a dismissed one must not come back in a later session. Enter
+      // commits without closing, so it keeps a time that is still on screen.
+      if (!popoverStaysOpen) setPendingTime(null)
 
-    // Safe to reach twice: an outside click commits on pointerdown and the
-    // browser then fires blur, by which point the popover is unmounted and its
-    // half unreadable. This branch touches only local display and error state, so
-    // it cannot undo the commit that just happened.
-    if (
-      (isPartiallyTyped && !completedFromParts) ||
-      (isFullyCleared && !clearable)
-    ) {
-      setDisplayValue(value)
-      onCloseRef.current(true)
-      return false
-    }
+      // Safe to reach twice: an outside click commits on pointerdown and the
+      // browser then fires blur, by which point the popover is unmounted and its
+      // half unreadable. This branch touches only local display and error state, so
+      // it cannot undo the commit that just happened.
+      if (
+        (isPartiallyTyped && !completedFromParts) ||
+        (isFullyCleared && !clearable)
+      ) {
+        setDisplayValue(value)
+        onCloseRef.current(true)
+        return false
+      }
 
-    const pending =
-      completedFromParts ?? (isFullyCleared ? null : displayValueRef.current)
+      const pending =
+        completedFromParts ?? (isFullyCleared ? null : displayValueRef.current)
 
-    if (validateDateTime(pending, minDateTime, maxDateTime)) {
-      setDisplayValue(value)
-      onCloseRef.current(true)
-      return false
-    }
+      if (validateDateTime(pending, minDateTime, maxDateTime)) {
+        setDisplayValue(value)
+        onCloseRef.current(true)
+        return false
+      }
 
-    if (dateTimesEqual(pending, value)) return true
+      if (dateTimesEqual(pending, value)) return true
 
-    if (
-      lastCommittedRef.current !== undefined &&
-      dateTimesEqual(pending, lastCommittedRef.current)
-    ) {
+      if (
+        lastCommittedRef.current !== undefined &&
+        dateTimesEqual(pending, lastCommittedRef.current)
+      ) {
+        return true
+      }
+
+      lastCommittedRef.current = pending
+      onChangeRef.current(pending)
+      formCommitRef.current?.(pending)
       return true
-    }
-
-    lastCommittedRef.current = pending
-    onChangeRef.current(pending)
-    formCommitRef.current?.(pending)
-    return true
-  }, [value, clearable, minDateTime, maxDateTime, completeFromVisibleParts])
+    },
+    [value, clearable, minDateTime, maxDateTime, completeFromVisibleParts]
+  )
 
   // Reset state when the popover opens: clear the commit-dedup guard and
   // sync the calendar's focused month to the committed value so a prior
@@ -547,7 +552,9 @@ function SingleDateTimeInput({
 
       if (e.key === "Enter") {
         e.preventDefault()
-        const valid = commitOrRevert()
+        // Enter commits without dismissing, so a popover time that is still on
+        // screen has to survive the commit.
+        const valid = commitOrRevert({ popoverStaysOpen: true })
         if (valid && !error) formSubmit?.()
         return
       }

@@ -235,23 +235,6 @@ export function getSegmentState(container: HTMLElement): SegmentState {
   }
 }
 
-/**
- * Read one segment's numeric value from a container, or null when it is absent,
- * a placeholder, or outside `max`.
- *
- * Matches on `data-type` rather than `role`, because React Aria renders segments
- * as textboxes, not spinbuttons, on iOS — and falls back to the rendered text,
- * because it drops `aria-valuenow` there too. Safe to parse: both fields are
- * pinned to en-US so the digits are ASCII, and `shouldForceLeadingZeros` only
- * ever prefixes a zero.
- *
- * The `data-placeholder` filter also guards the text fallback, where a
- * placeholder's dashes would otherwise parse.
- *
- * Range-guarded so a value the caller cannot represent degrades to "not given"
- * rather than reaching a `Time` or `CalendarDate` constructor: `Time` stores
- * whatever it is handed, and `CalendarDate` silently clamps.
- */
 const SEGMENT_MAX = {
   hour: 23,
   minute: 59,
@@ -260,6 +243,22 @@ const SEGMENT_MAX = {
   day: 31,
 } as const
 
+/**
+ * Recover one segment's value from the DOM, for the window before the field has
+ * emitted an `onChange`. Null when the segment is absent, still a placeholder, or
+ * outside its range.
+ *
+ * Matches on `data-type` rather than `role`, so iOS is included: React Aria
+ * renders segments there as textboxes, not spinbuttons, and drops
+ * `aria-valuenow`, hence the `textContent` fallback. Safe to parse — both fields
+ * are pinned to en-US so the digits are ASCII, and `shouldForceLeadingZeros` only
+ * ever prefixes a zero. The `data-placeholder` filter also guards that fallback,
+ * where a placeholder's dashes would otherwise parse.
+ *
+ * Range-guarded so a value the caller cannot represent degrades to "not given"
+ * rather than reaching a `Time` or `CalendarDate` constructor: `Time` stores
+ * whatever it is handed, and `CalendarDate` silently clamps.
+ */
 function readSegment(
   container: HTMLElement | null,
   type: keyof typeof SEGMENT_MAX

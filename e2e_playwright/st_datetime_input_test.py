@@ -238,8 +238,10 @@ def test_keeps_time_given_before_a_date(app: Page):
     The field reports no value until every segment is filled, so a time entered
     while the date segments are still empty has to be read back out of the
     field's segment state when a date completes the value — otherwise it silently
-    becomes midnight. Covers both entry points: the inline segments and the
-    popover TimeField.
+    becomes midnight. Covers all three entry points: the inline segments, the
+    popover TimeField, and a date typed inline with the time given only in the
+    popover — the last dismissed by an outside click, which runs the commit path
+    twice.
     """
     datetime_input = get_datetime_input(app, "Datetime input 8 (empty)")
     datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")

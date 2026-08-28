@@ -2549,6 +2549,58 @@ describe("DateTimeInput widget", () => {
       expect(spy).not.toHaveBeenCalled()
     })
 
+    it("keeps a popover time when Enter leaves the popover open", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const popoverSegments = within(
+        screen.getByTestId("stDateTimeInputPopoverTime")
+      ).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("0945")
+
+      // Enter from the inline field commits without closing the popover, so the
+      // time is still on screen and must not be forgotten out from under it.
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputField")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("{Enter}")
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+      expect(popoverSegments[0]).toHaveTextContent("09")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T09:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T00:00"],
+        expect.anything()
+      )
+    })
+
     it("completes the value when Tab leaves the field, not just on dismissal", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
@@ -2738,6 +2790,13 @@ describe("DateTimeInput widget", () => {
           "spinbutton"
         )[0]
       ).toHaveAttribute("data-placeholder", "true")
+      // A blank display could also mean it committed and was then reset, so pin
+      // that the time never reached widget state.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        expect.arrayContaining([expect.stringContaining("09:45")]),
+        expect.anything()
+      )
     })
   })
 })

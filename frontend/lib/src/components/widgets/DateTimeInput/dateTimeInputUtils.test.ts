@@ -391,7 +391,7 @@ describe("getTypedTimeFromDom", () => {
   /** Builds a container of rendered segments in the shape React Aria produces:
    * a numeric `aria-valuenow` once the user has typed, and `data-placeholder`
    * with no `aria-valuenow` until then. */
-  const container = (
+  const renderTimeSegments = (
     segments: Partial<Record<"year" | "hour" | "minute", number | null>>
   ): HTMLElement => {
     const el = document.createElement("div")
@@ -411,34 +411,40 @@ describe("getTypedTimeFromDom", () => {
 
   it("returns null when neither hour nor minute is typed", () => {
     expect(
-      getTypedTimeFromDom(container({ year: null, hour: null, minute: null }))
+      getTypedTimeFromDom(
+        renderTimeSegments({ year: null, hour: null, minute: null })
+      )
     ).toBeNull()
   })
 
   it("reads a time typed while the date segments are still placeholders", () => {
     expect(
-      getTypedTimeFromDom(container({ year: null, hour: 3, minute: 24 }))
+      getTypedTimeFromDom(
+        renderTimeSegments({ year: null, hour: 3, minute: 24 })
+      )
     ).toMatchObject({ hour: 3, minute: 24 })
   })
 
   it("treats an untyped half of the pair as zero", () => {
     expect(
-      getTypedTimeFromDom(container({ hour: 3, minute: null }))
+      getTypedTimeFromDom(renderTimeSegments({ hour: 3, minute: null }))
     ).toMatchObject({ hour: 3, minute: 0 })
     expect(
-      getTypedTimeFromDom(container({ hour: null, minute: 24 }))
+      getTypedTimeFromDom(renderTimeSegments({ hour: null, minute: 24 }))
     ).toMatchObject({ hour: 0, minute: 24 })
   })
 
   it("reads hour 0 as typed rather than as absent", () => {
     expect(
-      getTypedTimeFromDom(container({ hour: 0, minute: 30 }))
+      getTypedTimeFromDom(renderTimeSegments({ hour: 0, minute: 30 }))
     ).toMatchObject({ hour: 0, minute: 30 })
   })
 
   it("returns null when only the date segments are typed", () => {
     expect(
-      getTypedTimeFromDom(container({ year: 2025, hour: null, minute: null }))
+      getTypedTimeFromDom(
+        renderTimeSegments({ year: 2025, hour: null, minute: null })
+      )
     ).toBeNull()
   })
 
