@@ -145,7 +145,8 @@ class PdfMixin:
                         file_param = file.read()
                 except (FileNotFoundError, PermissionError) as e:
                     raise StreamlitAPIException(
-                        f"Unable to read file '{data_str}': {e}"
+                        f"Unable to read file '{data_str}': {e}",
+                        error_id="pdf-unable-to-read-file",
                     )
 
         elif isinstance(data, bytes):
@@ -186,8 +187,9 @@ class PdfMixin:
             "The PDF viewer requires the `streamlit-pdf` component to be installed.\n\n"
             "Please run `pip install streamlit[pdf]` to install it.\n\n"
             "For more information, see the Streamlit PDF documentation at "
-            "https://docs.streamlit.io/develop/api-reference/media/st.pdf."
+            "https://docs.streamlit.io/develop/api-reference/media/st.pdf.",
             # TODO: Update this URL when docs are updated
+            error_id="pdf-component-not-installed",
         )
 
     @property

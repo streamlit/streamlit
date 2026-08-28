@@ -478,7 +478,8 @@ def _validate_selection_state(
     if not isinstance(value, dict) or not isinstance(value.get("selection"), dict):
         raise StreamlitAPIException(
             "Selection state must be a dictionary with a 'selection' key "
-            "containing 'rows', 'columns', and 'cells' arrays."
+            "containing 'rows', 'columns', and 'cells' arrays.",
+            error_id="dataframe-invalid-selection-state",
         )
 
     selection = value["selection"]
@@ -1362,7 +1363,8 @@ def marshall(
         # and `None` otherwise.
         if not isinstance(default_uuid, str):
             raise StreamlitAPIException(
-                "Default UUID must be a string for Styler data."
+                "Default UUID must be a string for Styler data.",
+                error_id="styler-default-uuid-must-be-string",
             )
         marshall_styler(proto, data, default_uuid)
 

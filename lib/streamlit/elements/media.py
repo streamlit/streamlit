@@ -571,7 +571,10 @@ def marshall_video(
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
-        raise StreamlitAPIException("Invalid start_time and end_time combination.")
+        raise StreamlitAPIException(
+            "Invalid start_time and end_time combination.",
+            error_id="media-invalid-start-end-time",
+        )
 
     proto.start_time = start_time
     proto.muted = muted
@@ -648,7 +651,8 @@ def marshall_video(
                 )
             except (TypeError, ValueError) as original_err:
                 raise StreamlitAPIException(
-                    f"Failed to process the provided subtitle: {label}"
+                    f"Failed to process the provided subtitle: {label}",
+                    error_id="video-failed-processing-subtitle",
                 ) from original_err
 
     if autoplay:
@@ -684,7 +688,9 @@ def _parse_start_time_end_time(
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
             param_name="start_time", param_value=start_time
         )
-        raise StreamlitAPIException(error_msg) from None
+        raise StreamlitAPIException(
+            error_msg, error_id="media-invalid-start-time"
+        ) from None
 
     try:
         end_time = time_to_seconds(end_time, coerce_none_to_inf=False)
@@ -694,7 +700,9 @@ def _parse_start_time_end_time(
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
             param_name="end_time", param_value=end_time
         )
-        raise StreamlitAPIException(error_msg) from None
+        raise StreamlitAPIException(
+            error_msg, error_id="media-invalid-end-time"
+        ) from None
 
     return start_time, end_time
 
@@ -733,7 +741,10 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
         nchan = transformed_data.shape[0]
         transformed_data = transformed_data.T.ravel()
     else:
-        raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
+        raise StreamlitAPIException(
+            "Numpy array audio input must be a 1D or 2D array.",
+            error_id="audio-numpy-invalid-rank",
+        )
 
     if transformed_data.size == 0:
         return transformed_data.astype(np.int16).tobytes(), nchan

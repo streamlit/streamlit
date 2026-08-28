@@ -376,7 +376,8 @@ class MenuButtonMixin:
         if len(formatted_options) != len(formatted_option_to_option_index):
             raise StreamlitAPIException(
                 "The `format_func` produced duplicate labels for the menu button "
-                "options. Each formatted option label must be unique."
+                "options. Each formatted option label must be unique.",
+                error_id="menu-button-duplicate-format-labels",
             )
 
         element_id = compute_and_register_element_id(

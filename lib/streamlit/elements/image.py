@@ -199,7 +199,8 @@ class ImageMixin:
             if len(image_list_proto.imgs) > 1:
                 raise StreamlitAPIException(
                     "The `link` parameter is only supported when displaying a single image. "
-                    f"You passed {len(image_list_proto.imgs)} images."
+                    f"You passed {len(image_list_proto.imgs)} images.",
+                    error_id="image-link-requires-single-image",
                 )
             image_list_proto.link = link
 

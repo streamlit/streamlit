@@ -576,7 +576,8 @@ def _melt_data(
     ):
         raise StreamlitAPIException(
             "The columns used for rendering the chart contain too many values with "
-            "mixed types. Please select the columns manually via the y parameter."
+            "mixed types. Please select the columns manually via the y parameter.",
+            error_id="chart-mixed-type-columns",
         )
 
     # Arrow has problems with object types after melting two different dtypes

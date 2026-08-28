@@ -214,7 +214,10 @@ def logo(
         fwd_msg.logo.image = image_value
         fwd_msg.logo.image_type = image_type
     except Exception as ex:
-        raise StreamlitAPIException(_invalid_logo_text("image")) from ex
+        raise StreamlitAPIException(
+            _invalid_logo_text("image"),
+            error_id="logo-invalid-image",
+        ) from ex
 
     if link:
         # Handle external links:
@@ -231,7 +234,10 @@ def logo(
             fwd_msg.logo.icon_image = icon_image_value
             fwd_msg.logo.icon_image_type = icon_image_type
         except Exception as ex:
-            raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
+            raise StreamlitAPIException(
+                _invalid_logo_text("icon_image"),
+                error_id="logo-invalid-icon-image",
+            ) from ex
 
     def validate_size(size: str) -> str:
         if isinstance(size, str):

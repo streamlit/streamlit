@@ -363,7 +363,8 @@ def _navigation(
                 if default_page is not None:
                     raise StreamlitAPIException(
                         "Multiple Pages specified with `default=True`. "
-                        "At most one Page can be set to default."
+                        "At most one Page can be set to default.",
+                        error_id="navigation-multiple-default-pages",
                     )
                 default_page = page
 
@@ -372,7 +373,8 @@ def _navigation(
         if not non_external_pages:
             raise StreamlitAPIException(
                 "At least one non-external page is required. "
-                "External URL pages cannot be the default page."
+                "External URL pages cannot be the default page.",
+                error_id="navigation-external-only-pages",
             )
         default_page = non_external_pages[0]
         default_page._default = True
@@ -396,7 +398,8 @@ def _navigation(
                 raise StreamlitAPIException(
                     f"Multiple Pages specified with URL pathname {page.url_path}. "
                     "URL pathnames must be unique. The url pathname may be "
-                    "inferred from the filename, callable name, or title."
+                    "inferred from the filename, callable name, or title.",
+                    error_id="navigation-duplicate-url-pathname",
                 )
 
             pagehash_to_pageinfo[script_hash] = {

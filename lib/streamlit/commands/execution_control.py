@@ -308,7 +308,8 @@ def switch_page(  # type: ignore[misc]
         if page.is_external:
             raise StreamlitAPIException(
                 "Cannot use st.switch_page with external URL pages. "
-                "Use st.page_link instead to create a link to external pages."
+                "Use st.page_link instead to create a link to external pages.",
+                error_id="switch-page-external-url-not-supported",
             )
         _validate_registered_page(page)
         page_script_hash = page._script_hash

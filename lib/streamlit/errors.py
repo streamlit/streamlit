@@ -84,7 +84,15 @@ class StreamlitAPIException(MarkdownFormattedException):
     entries from the stack trace so that the user doesn't see a bunch of
     noise related to Streamlit internals.
 
+    Prefer a more specific subclass when one fits. When this base type is
+    still right, pass a kebab-case ``error_id`` so uncaught-exception
+    telemetry can distinguish raise sites (``StreamlitAPIException:<error_id>``).
+    Do not put widget keys, file paths, or free-text values in ``error_id``.
     """
+
+    def __init__(self, *args: Any, error_id: str | None = None) -> None:
+        super().__init__(*args)
+        self.error_id = error_id
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -173,11 +181,15 @@ class LocalizableStreamlitException(StreamlitAPIException):
 
     Users can localize the message from ``exec_kwargs``, for example in an
     ``on_script_error`` handler on ``st.App``. Kwargs are used for telemetry
-    only in a few specific cases (for example ``parameter``).
+    only in a few specific cases (for example ``parameter``). ``error_id`` is
+    reserved for telemetry and is not interpolated into the message.
     """
 
     def __init__(self, message: str, **kwargs: Any) -> None:
-        super().__init__((message).format(**kwargs))
+        # Pop ``error_id`` so telemetry can store it without interpolating it
+        # into the message.
+        error_id = kwargs.pop("error_id", None)
+        super().__init__((message).format(**kwargs), error_id=error_id)
         self._exec_kwargs = kwargs
 
     @property

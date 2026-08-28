@@ -499,14 +499,16 @@ class ButtonClickSerde:
             or not isinstance(parsed.get("label"), str)
         ):
             raise StreamlitAPIException(
-                "Invalid button click state: expected {row: int, label: str}."
+                "Invalid button click state: expected {row: int, label: str}.",
+                error_id="button-column-invalid-click-state",
             )
 
         # Validate row is non-negative (bounds check - row < num_rows is
         # checked downstream when accessing the data)
         if parsed["row"] < 0:
             raise StreamlitAPIException(
-                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
+                f"Invalid button click row index: {parsed['row']}. Row must be >= 0.",
+                error_id="button-column-invalid-click-row",
             )
 
         return ButtonColumnClickState(parsed)
@@ -696,7 +698,8 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
         )
     except ValueError as ex:
         raise StreamlitAPIException(
-            f"The provided column config cannot be serialized into JSON: {ex}"
+            f"The provided column config cannot be serialized into JSON: {ex}",
+            error_id="column-config-json-serialize-failed",
         ) from ex
 
 

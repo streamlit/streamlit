@@ -504,10 +504,16 @@ class TokensProxy(Mapping[str, str]):
         if name.startswith("_"):
             super().__setattr__(name, value)
         else:
-            raise StreamlitAPIException("st.user.tokens cannot be modified")
+            raise StreamlitAPIException(
+                "st.user.tokens cannot be modified",
+                error_id="user-tokens-cannot-be-modified",
+            )
 
     def __setitem__(self, name: str, value: Any) -> None:
-        raise StreamlitAPIException("st.user.tokens cannot be modified")
+        raise StreamlitAPIException(
+            "st.user.tokens cannot be modified",
+            error_id="user-tokens-cannot-be-modified",
+        )
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._tokens)
@@ -665,10 +671,16 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
             raise AttributeError(f'st.user has no attribute "{key}".')
 
     def __setattr__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.user cannot be modified")
+        raise StreamlitAPIException(
+            "st.user cannot be modified",
+            error_id="user-cannot-be-modified",
+        )
 
     def __setitem__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.user cannot be modified")
+        raise StreamlitAPIException(
+            "st.user cannot be modified",
+            error_id="user-cannot-be-modified",
+        )
 
     def __iter__(self) -> Iterator[str]:
         return iter(_get_user_info())

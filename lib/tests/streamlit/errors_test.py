@@ -16,9 +16,82 @@
 
 from __future__ import annotations
 
+import ast
+import re
+from collections import Counter
+from pathlib import Path
+
 import pytest
 
 from streamlit import errors
+
+_KEBAB_CASE_ERROR_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+# Bare ``StreamlitAPIException`` constructions without ``error_id`` are pending
+# migration to a specialized type in ``errors.py``. Do not tag them with
+# ``error_id``; migrate them in a follow-up instead.
+_UNTAGGED_STREAMLIT_API_EXCEPTION_SITES: dict[str, int] = {
+    "components/v2/__init__.py": 1,
+    "connections/sql_connection.py": 2,
+    "dataframe/lazy_df_source.py": 3,
+    "elements/arrow.py": 3,
+    "elements/deck_gl_json_chart.py": 2,
+    "elements/lib/built_in_chart_utils.py": 2,
+    "elements/markdown.py": 1,
+    "elements/pdf.py": 1,
+    "elements/pyplot.py": 1,
+    "elements/vega_charts.py": 3,
+    "elements/widgets/button_group.py": 1,
+    "elements/widgets/color_picker.py": 2,
+    "elements/widgets/pagination.py": 2,
+    "elements/widgets/slider.py": 1,
+    "elements/write.py": 1,
+    "runtime/connection_factory.py": 1,
+    "runtime/fragment.py": 1,
+    "runtime/theme_util.py": 2,
+    "web/server/starlette/starlette_app.py": 1,
+}
+
+
+def _is_streamlit_api_exception_call(func: ast.expr) -> bool:
+    if isinstance(func, ast.Name):
+        return func.id == "StreamlitAPIException"
+    return isinstance(func, ast.Attribute) and func.attr == "StreamlitAPIException"
+
+
+def _iter_streamlit_api_exception_calls() -> list[tuple[str, ast.Call]]:
+    """Return production ``StreamlitAPIException(...)`` calls as (relative path, node)."""
+    lib_root = Path(errors.__file__).parent
+    calls: list[tuple[str, ast.Call]] = []
+    for path in lib_root.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and _is_streamlit_api_exception_call(
+                node.func
+            ):
+                calls.append((str(path.relative_to(lib_root)), node))
+    return calls
+
+
+# StreamlitAPIException tests
+
+
+def test_api_exception_error_id_defaults_to_none() -> None:
+    """Bare constructions keep ``error_id`` unset so existing callers stay valid."""
+    exc = errors.StreamlitAPIException("oh no")
+    assert str(exc) == "oh no"
+    assert exc.error_id is None
+
+
+def test_api_exception_stores_error_id() -> None:
+    """``error_id`` is stored on the exception and does not change the message."""
+    exc = errors.StreamlitAPIException(
+        "Failed to load secrets",
+        error_id="failed-loading-secrets-file",
+    )
+    assert str(exc) == "Failed to load secrets"
+    assert exc.error_id == "failed-loading-secrets-file"
+
 
 # LocalizableStreamlitException tests
 
@@ -47,6 +120,53 @@ def test_localizable_exception_exec_kwargs_empty() -> None:
     """Test exec_kwargs is empty when no kwargs provided."""
     exc = errors.LocalizableStreamlitException("Simple message")
     assert exc.exec_kwargs == {}
+
+
+def test_localizable_exception_error_id_is_reserved() -> None:
+    """``error_id`` is stored on the exception and omitted from ``exec_kwargs``."""
+    exc = errors.LocalizableStreamlitException(
+        "Error parsing secrets file at {path}",
+        path="secrets.toml",
+        error_id="failed-parsing-secrets-file",
+    )
+    assert str(exc) == "Error parsing secrets file at secrets.toml"
+    assert exc.error_id == "failed-parsing-secrets-file"
+    assert exc.exec_kwargs == {"path": "secrets.toml"}
+
+
+def test_streamlit_api_exception_error_ids_are_kebab_case() -> None:
+    """Literal ``error_id`` values must be kebab-case slugs.
+
+    ``ast.Name`` is allowed for computed category slugs (for example
+    ``delta_generator``). Interpolated or call-built values are not.
+    """
+    invalid: list[str] = []
+    for rel, node in _iter_streamlit_api_exception_calls():
+        error_id_kw = next((kw for kw in node.keywords if kw.arg == "error_id"), None)
+        if error_id_kw is None:
+            continue
+        value = error_id_kw.value
+        if isinstance(value, ast.Name):
+            continue
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            if not _KEBAB_CASE_ERROR_ID.fullmatch(value.value):
+                invalid.append(f"{rel}:{node.lineno}:{value.value}")
+            continue
+        invalid.append(f"{rel}:{node.lineno}:{type(value).__name__}")
+    assert invalid == [], "error_id values must be kebab-case:\n" + "\n".join(invalid)
+
+
+def test_untagged_api_exceptions_are_pending_specialized_types() -> None:
+    """Untagged ``StreamlitAPIException`` sites must stay on the specialized-type follow-up list.
+
+    New one-off raises should pass ``error_id``. Sites in the allowlist should be
+    migrated to a specialized type in ``errors.py`` rather than tagged.
+    """
+    untagged: Counter[str] = Counter()
+    for rel, node in _iter_streamlit_api_exception_calls():
+        if not any(kw.arg == "error_id" for kw in node.keywords):
+            untagged[rel] += 1
+    assert dict(untagged) == _UNTAGGED_STREAMLIT_API_EXCEPTION_SITES
 
 
 # StreamlitAPIWarning tests

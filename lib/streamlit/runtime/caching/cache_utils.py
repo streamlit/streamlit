@@ -266,7 +266,8 @@ def get_session_id_or_throw() -> str:
         raise StreamlitAPIException(
             "A session-scoped cache was accessed outside of the app execution thread. "
             "Make sure all session-scoped caches are read during rendering and not "
-            "read in background threads."
+            "read in background threads.",
+            error_id="session-scoped-cache-outside-app-thread",
         )
     return ctx.session_id
 

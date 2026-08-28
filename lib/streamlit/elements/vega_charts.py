@@ -1486,7 +1486,8 @@ class VegaChartsMixin:
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
             raise StreamlitAPIException(
                 "Streamlit does not support non-stacked (grouped) bar charts with "
-                "Altair 4.x. Please upgrade to Version 5."
+                "Altair 4.x. Please upgrade to Version 5.",
+                error_id="altair4-grouped-bar-not-supported",
             )
 
         bar_chart_type = (
@@ -2255,7 +2256,8 @@ class VegaChartsMixin:
                 "Streamlit does not support selections with Altair 4.x. Please upgrade "
                 "to Version 5. "
                 "If you would like to use Altair 4.x with selections, please upvote "
-                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516)."
+                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516).",
+                error_id="altair4-selections-not-supported",
             )
 
         vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)

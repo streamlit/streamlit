@@ -401,16 +401,19 @@ class DeltaGenerator(
                         f"Method `{name}()` does not exist for "
                         f"`st.sidebar`. Did you mean `st.{name}()`?"
                     )
+                    error_id = "sidebar-method-does-not-exist"
                 else:
                     message = (
                         f"Method `{name}()` does not exist for "
                         "`DeltaGenerator` objects. Did you mean "
                         f"`st.{name}()`?"
                     )
+                    error_id = "delta-generator-method-does-not-exist"
             else:
                 message = f"`{name}()` is not a valid Streamlit command."
+                error_id = "invalid-streamlit-command"
 
-            raise StreamlitAPIException(message)
+            raise StreamlitAPIException(message, error_id=error_id)
 
         return wrapper
 
