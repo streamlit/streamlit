@@ -35,6 +35,7 @@ import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
+import { ClearEvictedFragmentNodesVisitor } from "./visitors/ClearEvictedFragmentNodesVisitor"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
@@ -370,6 +371,39 @@ export class AppRoot {
 
   public clearTransientNodes(fragmentIdsThisRun?: Array<string>): AppRoot {
     const visitor = new ClearTransientNodesVisitor(fragmentIdsThisRun)
+    const newChildren = this.root.children.map(node =>
+      this.ensureBlockNode(node.accept(visitor))
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      new BlockNode(
+        this.mainScriptHash,
+        newChildren,
+        new BlockProto({ allowEmpty: true }),
+        this.main.scriptRunId
+      ),
+      this.appLogo
+    )
+  }
+
+  /**
+   * Remove nodes belonging to fragments the server has evicted.
+   *
+   * Upholds the invariant that an evicted fragment owns no nodes in the element
+   * tree, which `clearStaleNodes` cannot guarantee on its own: a fragment rerun
+   * that ends as `FINISHED_EARLY_FOR_RERUN` skips stale-node cleanup, and later
+   * runs are scoped to other fragments, so the evicted subtree is never
+   * revisited.
+   */
+  public clearEvictedFragmentNodes(
+    evictedFragmentIds: ReadonlySet<string>
+  ): AppRoot {
+    if (evictedFragmentIds.size === 0) {
+      return this
+    }
+
+    const visitor = new ClearEvictedFragmentNodesVisitor(evictedFragmentIds)
     const newChildren = this.root.children.map(node =>
       this.ensureBlockNode(node.accept(visitor))
     )

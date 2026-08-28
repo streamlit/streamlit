@@ -4092,6 +4092,55 @@ describe("App", () => {
       expect(idsAfterStop).not.toContain("fragmentA")
       expect(idsAfterStop.every(id => id === "fragmentB")).toBe(true)
     })
+
+    it("drops the evicted fragment's elements on a stopAutoRerun message", async () => {
+      renderApp(getProps())
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      const sendFragmentText = (
+        fragmentId: string,
+        body: string,
+        deltaPath: number[]
+      ): void => {
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            fragmentId,
+            newElement: { type: "text", text: { body, help: "" } },
+          },
+          { deltaPath, activeScriptHash: "hash1" }
+        )
+      }
+
+      act(() => {
+        sendFragmentText("fragmentA", "from evicted fragment", [0, 0])
+        sendFragmentText("fragmentB", "from surviving fragment", [0, 1])
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText("from evicted fragment")).toBeInTheDocument()
+      })
+      expect(screen.getByText("from surviving fragment")).toBeInTheDocument()
+
+      // The server evicts fragmentA. Its elements must go even though no
+      // successful run follows to trigger the usual stale-node cleanup.
+      act(() => {
+        sendForwardMessage("stopAutoRerun", { fragmentIds: ["fragmentA"] })
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("from evicted fragment")
+        ).not.toBeInTheDocument()
+      })
+      // An unrelated fragment's elements must survive.
+      expect(screen.getByText("from surviving fragment")).toBeInTheDocument()
+    })
   })
 
   describe("App.requestFileURLs", () => {
