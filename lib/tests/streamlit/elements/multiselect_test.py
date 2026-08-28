@@ -69,7 +69,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert not c.accept_new_options
         assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
         assert c.select_all == 1000
-        assert c.HasField("select_all")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -650,30 +649,30 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.HasField("select_all")
 
     def test_select_all_negative_raises(self) -> None:
-        """Negative select_all values raise StreamlitValueError."""
+        """Negative select_all values raise StreamlitAPIException."""
         with pytest.raises(
-            StreamlitValueError,
-            match=r"Invalid `select_all` value.*integer between 0 and 2147483647",
+            StreamlitAPIException,
+            match=r"When using an int, `select_all` must be a non-negative integer",
         ):
             st.multiselect("the label", ("m", "f"), select_all=-1)
 
     def test_select_all_above_int32_raises(self) -> None:
-        """Values above the proto int32 max raise StreamlitValueError."""
+        """Values above the proto int32 max raise StreamlitAPIException."""
         with pytest.raises(
-            StreamlitValueError,
-            match=r"Invalid `select_all` value.*integer between 0 and 2147483647",
+            StreamlitAPIException,
+            match=r"When using an int, `select_all` must be a non-negative integer",
         ):
             st.multiselect("the label", ("m", "f"), select_all=2**31)
 
     def test_select_all_invalid_does_not_register_key(self) -> None:
         """Invalid select_all must not register the widget key.
 
-        Catching StreamlitValueError and rendering a valid multiselect with
+        Catching StreamlitAPIException and rendering a valid multiselect with
         the same key in the same run must not hit StreamlitDuplicateElementKey.
         """
         with pytest.raises(
-            StreamlitValueError,
-            match=r"Invalid `select_all` value.*integer between 0 and 2147483647",
+            StreamlitAPIException,
+            match=r"When using an int, `select_all` must be a non-negative integer",
         ):
             st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=-1)
         st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=False)

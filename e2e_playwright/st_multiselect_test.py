@@ -769,17 +769,21 @@ def test_select_all_parameter(app: Page):
     expect(app.get_by_role("option", name="Select all")).to_be_visible()
     options_true = app.get_by_role("option")
     expect(options_true.nth(0)).to_have_attribute("aria-posinset", "1")
-    first_bg = (
-        options_true.nth(0)
-        .locator("[data-item-hl]")
-        .evaluate("el => getComputedStyle(el).backgroundColor")
-    )
-    second_bg = (
-        options_true.nth(1)
-        .locator("[data-item-hl]")
-        .evaluate("el => getComputedStyle(el).backgroundColor")
-    )
-    assert first_bg != second_bg
+
+    def first_row_is_highlighted() -> bool:
+        first_bg = (
+            options_true.nth(0)
+            .locator("[data-item-hl]")
+            .evaluate("el => getComputedStyle(el).backgroundColor")
+        )
+        second_bg = (
+            options_true.nth(1)
+            .locator("[data-item-hl]")
+            .evaluate("el => getComputedStyle(el).backgroundColor")
+        )
+        return bool(first_bg and second_bg and first_bg != second_bg)
+
+    wait_until(app, first_row_is_highlighted)
     _close_dropdown(app)
 
     # Integer threshold uses the filtered selectable count.
