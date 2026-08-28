@@ -999,12 +999,17 @@ class ChatMixin:
             )
 
         if max_upload_size is not None and (
-            not isinstance(max_upload_size, int) or max_upload_size <= 0
+            isinstance(max_upload_size, bool)
+            or not isinstance(max_upload_size, int)
+            or max_upload_size < 1
         ):
-            raise StreamlitAPIException(
-                "The `max_upload_size` parameter must be a positive integer "
-                "representing the maximum file size in megabytes, or None "
-                "to fall back to the `server.maxUploadSize` configuration option."
+            raise StreamlitValueError(
+                "max_upload_size",
+                ["a positive integer"],
+                detail=(
+                    "Set it to None to fall back to the `server.maxUploadSize` "
+                    "configuration option."
+                ),
             )
 
         ctx = get_script_run_ctx()

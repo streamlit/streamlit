@@ -17,8 +17,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -166,10 +166,13 @@ def register_widget(
     if bind == "query-params":
         user_key = user_key_from_element_id(element_id)
         if user_key is None:
-            raise StreamlitAPIException(
-                "When using bind='query-params', the widget must have a unique 'key' "
-                "parameter specified. This 'key' will be used as the name of the "
-                "query parameter."
+            raise StreamlitMissingRequiredParameterError(
+                "key",
+                detail=(
+                    "When using bind='query-params', the widget must have a unique "
+                    "'key' parameter specified. This 'key' will be used as the name "
+                    "of the query parameter."
+                ),
             )
         # Internal API check: clearable must be set for query param binding
         if clearable is None:
@@ -183,10 +186,13 @@ def register_widget(
         if persist_state not in {"page", "session"}:
             raise StreamlitValueError("persist_state", ["'page'", "'session'", "None"])
         if user_key_from_element_id(element_id) is None:
-            raise StreamlitAPIException(
-                "When using persist_state, the widget must have a unique 'key' "
-                "parameter specified so its value can be preserved across reruns "
-                "and page switches."
+            raise StreamlitMissingRequiredParameterError(
+                "key",
+                detail=(
+                    "When using persist_state, the widget must have a unique 'key' "
+                    "parameter specified so its value can be preserved across reruns "
+                    "and page switches."
+                ),
             )
 
     # Create the widget's updated metadata, and register it with session_state.

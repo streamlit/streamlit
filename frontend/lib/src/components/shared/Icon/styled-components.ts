@@ -139,15 +139,15 @@ interface StyledEmojiIconProps {
 
 export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
   ({ size, margin, padding, theme, color }) => {
-    // Emojis are rendered 10% smaller to visually match the size of Material icons:
+    // Shrink via font-size; width/height 1em track it so inherit does not compound.
     const adjustedIconSize = `calc(${getIconCssSize(size, theme.iconSizes)} * 0.90)`
     return {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       fontSize: adjustedIconSize,
-      width: adjustedIconSize,
-      height: adjustedIconSize,
+      width: "1em",
+      height: "1em",
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
       color: color,

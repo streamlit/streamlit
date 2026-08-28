@@ -13,11 +13,16 @@
 # limitations under the License.
 
 import re
+from functools import partial
 
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
@@ -28,9 +33,9 @@ from e2e_playwright.shared.app_utils import (
 )
 
 # Does not include divider header/subheaders
-TITLE_COUNT = 13
-HEADER_COUNT = 12
-SUBHEADER_COUNT = 14
+TITLE_COUNT = 16
+HEADER_COUNT = 14
+SUBHEADER_COUNT = 16
 
 
 def _get_title_elements(app: Page) -> Locator:
@@ -484,3 +489,41 @@ def test_heading_icon_respects_text_alignment(
     expect(right_aligned).to_have_css("text-align", "right")
     expect(right_aligned.get_by_test_id("stHeadingIcon")).to_be_visible()
     assert_snapshot(right_aligned, name="st_header-icon_text_alignment_right")
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+
+def test_wrap_false_ellipsizes_headings_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False keeps titles, headers, and subheaders on one line and exposes
+    the full text via a native title.
+    """
+    container = get_element_by_key(app, "wrap_false_headings")
+    expect(container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(3)
+
+    def heading_overflows(locator: Locator) -> bool:
+        return bool(
+            locator.evaluate(
+                "el => { const t = el.querySelector('span'); "
+                "return t ? t.scrollWidth > t.clientWidth : "
+                "el.scrollWidth > el.clientWidth; }"
+            )
+        )
+
+    for tag in ("h1", "h2", "h3"):
+        heading = container.locator(tag)
+        wait_until(app, partial(heading_overflows, heading))
+    expect(container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(3)
+    assert_snapshot(container, name="st_heading-wrap_false")
+
+    wrap_true = get_element_by_key(app, "wrap_true_headings")
+    expect(wrap_true.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
+
+    extra_lines = get_element_by_key(app, "wrap_false_heading_extra_lines")
+    expect(extra_lines.get_by_text("Second line that must not appear")).to_have_count(0)
+    expect(extra_lines.get_by_title("First line", exact=True)).to_be_visible()
+    expect(
+        extra_lines.get_by_title("First line\nSecond line that must not appear")
+    ).to_have_count(0)

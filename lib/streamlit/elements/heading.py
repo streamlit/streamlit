@@ -17,7 +17,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
-from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.elements.lib.layout_utils import create_layout_config, validate_wrap
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
@@ -54,6 +54,7 @@ class HeadingMixin:
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
         icon: str | None = None,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in header formatting.
 
@@ -142,6 +143,17 @@ class HeadingMixin:
             The icon is decorative: it is not included in the heading's
             accessible name and does not affect the auto-generated anchor.
 
+        wrap : bool
+            Whether the header can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the header is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The header stays on one line. Overflow is truncated
+              with an ellipsis. Extra body lines after the first newline are
+              omitted so the heading stays one line. Anchor and help icons
+              remain visible.
+
         Examples
         --------
         >>> import streamlit as st
@@ -175,6 +187,7 @@ class HeadingMixin:
                 help=help,
                 divider=divider,
                 icon=icon,
+                wrap=wrap,
             ),
             layout_config=layout_config,
         )
@@ -190,6 +203,7 @@ class HeadingMixin:
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
         icon: str | None = None,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
@@ -278,6 +292,17 @@ class HeadingMixin:
             The icon is decorative: it is not included in the heading's
             accessible name and does not affect the auto-generated anchor.
 
+        wrap : bool
+            Whether the subheader can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the subheader is too wide for the element,
+              it wraps onto additional lines.
+            - ``False``: The subheader stays on one line. Overflow is truncated
+              with an ellipsis. Extra body lines after the first newline are
+              omitted so the heading stays one line. Anchor and help icons
+              remain visible.
+
         Examples
         --------
         >>> import streamlit as st
@@ -311,6 +336,7 @@ class HeadingMixin:
                 help=help,
                 divider=divider,
                 icon=icon,
+                wrap=wrap,
             ),
             layout_config=layout_config,
         )
@@ -325,6 +351,7 @@ class HeadingMixin:
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
         icon: str | None = None,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in title formatting.
 
@@ -408,6 +435,17 @@ class HeadingMixin:
             The icon is decorative: it is not included in the heading's
             accessible name and does not affect the auto-generated anchor.
 
+        wrap : bool
+            Whether the title can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the title is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The title stays on one line. Overflow is truncated
+              with an ellipsis. Extra body lines after the first newline are
+              omitted so the heading stays one line. Anchor and help icons
+              remain visible.
+
         Examples
         --------
         >>> import streamlit as st
@@ -435,6 +473,7 @@ class HeadingMixin:
                 anchor=anchor,
                 help=help,
                 icon=icon,
+                wrap=wrap,
             ),
             layout_config=layout_config,
         )
@@ -474,12 +513,15 @@ class HeadingMixin:
         help: str | None = None,
         divider: Divider = False,
         icon: str | None = None,
+        wrap: bool = True,
     ) -> HeadingProto:
+        validate_wrap(wrap)
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
         # Treat "" like None so callers can pass page.icon (which is "" when unset).
         proto.icon = validate_icon_or_emoji(None if icon == "" else icon)
+        proto.wrap = wrap
         if divider:
             proto.divider = HeadingMixin._handle_divider_color(divider)
         if anchor is not None:

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Literal
 from streamlit import env_util
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
@@ -274,8 +275,10 @@ class Page:
                     ),
                 )
             if default:
-                raise StreamlitAPIException(
-                    "External URL pages cannot be set as the default page."
+                raise StreamlitIncompatibleParametersError(
+                    "page=<external URL>",
+                    "default=True",
+                    explanation="External URL pages cannot be set as the default page.",
                 )
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
@@ -291,9 +294,12 @@ class Page:
             # Validate url_path for external URLs (same constraints as internal pages)
             self._url_path = self._url_path.strip().strip("/")
             if self._url_path == "":
-                raise StreamlitAPIException(
-                    "The URL path cannot be empty. Please provide a valid `url_path` "
-                    "or a `title` that can be converted to a valid URL path."
+                raise StreamlitMissingRequiredParameterError(
+                    "url_path",
+                    detail=(
+                        "Provide a non-empty `url_path`, or omit it and provide a "
+                        "`title` that can be converted to a valid URL path."
+                    ),
                 )
             if "/" in self._url_path:
                 raise StreamlitAPIException(
@@ -364,8 +370,9 @@ class Page:
             url_path_trimmed = url_path.strip()
             stripped_url_path = url_path_trimmed.strip("/")
             if stripped_url_path.strip() == "" and not default:
-                raise StreamlitAPIException(
-                    "The URL path cannot be an empty string unless the page is the default page."
+                raise StreamlitMissingRequiredParameterError(
+                    "url_path",
+                    detail="It can only be empty for the default page.",
                 )
 
             self._url_path = stripped_url_path

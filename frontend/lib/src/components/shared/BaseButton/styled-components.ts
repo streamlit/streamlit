@@ -505,6 +505,8 @@ export const StyledBorderlessIconButtonActive = styled(
 
 export const StyledTooltipNormal = styled.div(({ theme }) => ({
   display: "block",
+  maxWidth: "100%",
+  minWidth: 0,
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     display: "none",
   },
@@ -512,6 +514,8 @@ export const StyledTooltipNormal = styled.div(({ theme }) => ({
 
 export const StyledTooltipMobile = styled.div(({ theme }) => ({
   display: "none",
+  maxWidth: "100%",
+  minWidth: 0,
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     display: "block",
   },

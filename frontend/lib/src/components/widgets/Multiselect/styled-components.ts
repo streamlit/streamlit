@@ -291,6 +291,18 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingRight: theme.spacing.none,
   listStyle: "none",
   margin: theme.spacing.none,
+  // First collection item is the Enter target when nothing is keyboard-focused
+  // or hovered. Hover is tracked separately in Multiselect keydown because it
+  // paints data-hovered without setting RAC focusedKey.
+  // Virtualizer wraps each option in its own [role=presentation], so :first-of-type
+  // would match every row. aria-posinset marks the true first item.
+  // TODO: Drive this highlight from RAC focusedKey / aria-activedescendant instead
+  // of CSS. Wiring state.open("first") is a ComboBox focus-management follow-up
+  // (menuTrigger="manual", type-then-Enter, virtualizer), not a small patch.
+  "&:not(:has([data-focused])):not(:has([data-hovered])) [role='option'][aria-posinset='1'] [data-item-hl]":
+    {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
 }))
 
 export const StyledEmptyState = styled.span(({ theme }) => ({

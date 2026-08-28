@@ -32,10 +32,7 @@ from typing import (
 )
 
 from streamlit import util
-from streamlit.errors import (
-    StreamlitAPIException,
-    StreamlitValueError,
-)
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 
 if TYPE_CHECKING:
     from streamlit.runtime.state.session_state import SessionState
@@ -291,7 +288,10 @@ def require_valid_user_key(key: str) -> None:
     if key == "":
         # Empty string is invalid input, not a missing required parameter: key is
         # optional on most widgets.
-        raise StreamlitAPIException("The `key` argument must be non-empty.")
+        raise StreamlitValueError(
+            "key",
+            ["a non-empty string"],
+        )
     if is_element_id(key):
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."

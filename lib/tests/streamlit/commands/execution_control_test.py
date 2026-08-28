@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -26,6 +28,8 @@ from streamlit.commands.execution_control import (
 from streamlit.errors import (
     NoSessionContext,
     StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+    StreamlitInvalidParameterTypeError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
 )
@@ -43,7 +47,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
         ctx = MagicMock()
         ctx.fragment_ids_this_run = []
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidLayoutContextError):
             _new_fragment_id_queue(ctx, scope="fragment")
 
     def test_asserts_if_curr_id_not_in_queue(self):
@@ -251,7 +255,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx):
-    """Test that invalid query_params types raise a StreamlitAPIException."""
+    """Invalid query_params types raise StreamlitInvalidParameterTypeError."""
     ctx = MagicMock()
     ctx.session_state = MagicMock()
     ctx.script_requests = MagicMock()
@@ -271,7 +275,9 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
-    with pytest.raises(StreamlitAPIException, match=r"`query_params` must be"):
+    with pytest.raises(
+        StreamlitInvalidParameterTypeError, match=r"Invalid `query_params` type"
+    ):
         switch_page(mocked_page, query_params="not valid")  # type: ignore[arg-type]
 
     ctx.script_requests.request_rerun.assert_not_called()
@@ -289,10 +295,7 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
     mock_page = MagicMock(spec=Page)
     mock_page.is_external = True
 
-    with pytest.raises(
-        StreamlitAPIException,
-        match=r"Cannot use st\.switch_page with external URL pages",
-    ):
+    with pytest.raises(StreamlitAPIException, match=r"external URL pages"):
         switch_page(mock_page)
 
     ctx.script_requests.request_rerun.assert_not_called()

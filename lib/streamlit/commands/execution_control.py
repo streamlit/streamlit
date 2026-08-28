@@ -25,6 +25,8 @@ import streamlit as st
 from streamlit.errors import (
     NoSessionContext,
     StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+    StreamlitInvalidParameterTypeError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
 )
@@ -101,7 +103,7 @@ def _new_fragment_id_queue(
     # fragment-scoped rerun happen during a full script run to begin with, it seems
     # reasonable to just disallow this completely for now.
     if not curr_queue:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidLayoutContextError(
             'scope="fragment" can only be specified from `@st.fragment`-decorated '
             "functions during fragment reruns."
         )
@@ -137,8 +139,10 @@ def _set_query_params_for_switch(
         query_params_state.from_dict(new_query_params)
         return
 
-    raise StreamlitAPIException(
-        f"`query_params` must be a mapping or an iterable of (key, value) pairs not a `{type(new_query_params)}`."
+    raise StreamlitInvalidParameterTypeError(
+        "query_params",
+        type(new_query_params).__name__,
+        ["mapping", "iterable of (key, value) pairs"],
     )
 
 

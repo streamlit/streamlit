@@ -26,7 +26,10 @@ from streamlit.elements.media import (
     _maybe_convert_to_wav_bytes,
     _parse_start_time_end_time,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
@@ -118,13 +121,10 @@ class AudioTest(DeltaGeneratorTestCase):
 
         valid_np_array = np.array([1, 2, 3, 4, 5])
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
             st.audio(valid_np_array)
 
-        assert (
-            str(e.value)
-            == "`sample_rate` must be specified when `data` is a numpy array."
-        )
+        assert "sample_rate" in str(e.value)
 
     def test_st_audio_sample_rate_raises_warning(self):
         """Test st.audio raises streamlit warning when sample_rate parameter provided,

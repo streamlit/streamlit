@@ -22,6 +22,7 @@ from streamlit import config
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.navigation.page import Page
@@ -348,8 +349,8 @@ def _navigation(
     page_list = pages_from_nav_sections(nav_sections)
 
     if not page_list:
-        raise StreamlitAPIException(
-            "`st.navigation` must be called with at least one `st.Page`."
+        raise StreamlitMissingRequiredParameterError(
+            "pages", detail="Provide at least one `st.Page`."
         )
 
     default_page = None
@@ -430,9 +431,10 @@ def _navigation(
             # Don't set visible_items - leave it unset to use default
     elif isinstance(expanded, int):
         if expanded < 0:
-            raise StreamlitAPIException(
-                f"Invalid value for expanded: {expanded!r}. "
-                "When using an int, expanded must be a non-negative integer."
+            raise StreamlitValueError(
+                "expanded",
+                ["True", "False", "a non-negative integer"],
+                detail=f"Provided value: {expanded!r}.",
             )
         if expanded == 0:
             # Documented default behavior: collapsed, default visible_items
@@ -443,9 +445,10 @@ def _navigation(
             msg.navigation.expanded = False
             msg.navigation.visible_items = expanded
     else:
-        raise StreamlitAPIException(
-            f"Invalid type for expanded: {type(expanded).__name__!s}. "
-            "expanded must be a bool or a non-negative integer."
+        raise StreamlitInvalidParameterTypeError(
+            "expanded",
+            type(expanded).__name__,
+            ["bool", "int"],
         )
 
     msg.navigation.sections[:] = nav_sections.keys()

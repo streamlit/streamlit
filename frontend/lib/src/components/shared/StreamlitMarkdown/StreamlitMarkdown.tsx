@@ -61,6 +61,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
@@ -71,6 +72,7 @@ import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import {
   StyledHeadingActionElements,
+  StyledHeadingText,
   StyledHeadingWithActionElements,
   StyledHelpIconWrapper,
   StyledLinkIcon,
@@ -339,6 +341,11 @@ interface HeadingWithActionElementsProps {
   help?: string
   /** Optional decorative leading icon rendered inside the heading tag. */
   icon?: ReactNode
+  /**
+   * When true, the heading text stays on one line and ellipsizes.
+   * Action icons remain visible.
+   */
+  truncate?: boolean
 }
 
 export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
@@ -349,6 +356,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   children,
   tagProps,
   icon,
+  truncate = false,
 }) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
@@ -407,6 +415,14 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   }, [children, propsAnchor, applyAnchor])
 
   const isInSidebarOrDialog = isInSidebar || isInDialog
+  // Title is derived from the rendered DOM (children are React nodes).
+  // Pass `tag` as the identity key so a same-path title→header swap
+  // (h1→h2) re-attaches the observer to the new heading node.
+  const { titleRef, labelTextRef } = useLabelTitleTooltip<HTMLSpanElement>(
+    truncate,
+    tag
+  )
+
   const actionElements = (
     <HeaderActionElements
       elementId={elementId}
@@ -444,6 +460,25 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     ...ariaLabelledbyAttribute,
   }
   const Tag = tag
+  const needsHeadingTextSpan = Boolean(headingTextId) || truncate
+  const headingText = needsHeadingTextSpan ? (
+    <StyledHeadingText
+      id={headingTextId}
+      ref={titleRef}
+      $truncate={truncate}
+      data-heading-text=""
+    >
+      {truncate ? (
+        <span ref={labelTextRef} style={{ display: "contents" }}>
+          {children}
+        </span>
+      ) : (
+        children
+      )}
+    </StyledHeadingText>
+  ) : (
+    children
+  )
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
@@ -454,24 +489,22 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const headerElementWithActions = (
     <Tag {...tagProps} {...mergedAttributes}>
       {icon}
-      {headingTextId ? (
-        <span id={headingTextId} data-heading-text="">
-          {children}
-        </span>
-      ) : (
-        children
-      )}
+      {headingText}
       {actionElements}
     </Tag>
   )
 
-  // we don't want to apply styling, so return the "raw" header
-  if (isInSidebarOrDialog) {
+  // Truncated headings need this wrapper to ellipsize, including in the
+  // sidebar and dialog. Skip it otherwise so those contexts stay unstyled.
+  if (isInSidebarOrDialog && !truncate) {
     return headerElementWithActions
   }
 
   return (
-    <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
+    <StyledHeadingWithActionElements
+      $truncate={truncate}
+      data-testid="stHeadingWithActionElements"
+    >
       {headerElementWithActions}
     </StyledHeadingWithActionElements>
   )
@@ -499,6 +532,14 @@ StreamingContext.displayName = "StreamingContext"
  */
 const HideAnchorsContext = createContext<boolean>(false)
 HideAnchorsContext.displayName = "HideAnchorsContext"
+
+/**
+ * True when markdown is truncated to one line. Fenced code must stay inline
+ * so it cannot grow into a syntax highlighter or mermaid diagram. Widget
+ * labels that are not truncating keep fenced-code rendering unchanged.
+ */
+const TruncateContext = createContext(false)
+TruncateContext.displayName = "TruncateContext"
 
 const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
@@ -554,6 +595,12 @@ interface RenderedMarkdownProps {
    * visible anchor link icon is not rendered.
    */
   hideAnchors?: boolean
+
+  /**
+   * Truncate to one line. When set with isLabel, fenced code is unwrapped
+   * so the element cannot grow into a syntax-highlighted block.
+   */
+  truncate?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -571,6 +618,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 }) => {
   const match = /language-(\w+)/.exec(className || "")
   const isStreaming = useContext(StreamingContext)
+  const truncate = useContext(TruncateContext)
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
@@ -578,9 +626,20 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const language = match?.[1] || ""
 
+  // Truncated text stays inline: fenced blocks must not grow into syntax
+  // highlighters or mermaid diagrams. Non-truncated labels keep fenced-code
+  // highlighting.
+  if (inline || truncate) {
+    return (
+      <StyledInlineCode className={className} {...omit(props, "node")}>
+        {children}
+      </StyledInlineCode>
+    )
+  }
+
   // Handle mermaid code blocks: render as a diagram unless streaming
   // (see StreamingContext for rationale).
-  if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
+  if (language.toLowerCase() === "mermaid" && !isStreaming) {
     return (
       <ErrorBoundary>
         <Suspense
@@ -594,7 +653,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     )
   }
 
-  return !inline ? (
+  return (
     <ErrorBoundary>
       <Suspense
         fallback={
@@ -609,10 +668,6 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
         </StreamlitSyntaxHighlighter>
       </Suspense>
     </ErrorBoundary>
-  ) : (
-    <StyledInlineCode className={className} {...omit(props, "node")}>
-      {children}
-    </StyledInlineCode>
   )
 }
 
@@ -1118,8 +1173,10 @@ const BASE_REMARK_PLUGINS = [
 
 // Sets disallowed markdown for widget labels
 const LABEL_DISALLOWED_ELEMENTS = [
-  // Restricts table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-  // Note that images are allowed but have a max height equal to the text height
+  // Restricts table elements, headings, unordered/ordered lists, task lists,
+  // horizontal rules, and blockquotes. Images are allowed but have a max height
+  // equal to the text height. Fenced `pre` stays allowed so labels keep
+  // syntax-highlighted code; truncation unwraps it separately.
   "table",
   "thead",
   "tbody",
@@ -1140,8 +1197,15 @@ const LABEL_DISALLOWED_ELEMENTS = [
   "blockquote",
 ]
 
+// Truncation also unwraps fenced code so wrap=False text stays one line.
+const TRUNCATE_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "pre"]
+
 // Add link disallowing to the base disallowed elements
 const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
+const TRUNCATE_LINKS_DISALLOWED_ELEMENTS = [
+  ...TRUNCATE_DISALLOWED_ELEMENTS,
+  "a",
+]
 
 interface LinkProps {
   node?: Element
@@ -1185,6 +1249,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   helpText,
   unterminatedParsing,
   hideAnchors,
+  truncate,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1321,8 +1386,13 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
+    if (truncate) {
+      return disableLinks
+        ? TRUNCATE_LINKS_DISALLOWED_ELEMENTS
+        : TRUNCATE_DISALLOWED_ELEMENTS
+    }
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
-  }, [isLabel, disableLinks])
+  }, [isLabel, truncate, disableLinks])
 
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
@@ -1339,22 +1409,32 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     )
   }
 
+  const markdown = (
+    <ReactMarkdown
+      remarkPlugins={remarkPlugins}
+      rehypePlugins={rehypePlugins}
+      components={renderers}
+      urlTransform={transformLinkUri}
+      disallowedElements={disallowed}
+      // unwrap and render children from invalid markdown
+      unwrapDisallowed={true}
+    >
+      {processedSource}
+    </ReactMarkdown>
+  )
+
   return (
     <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
       <HelpTextContext.Provider value={helpText}>
         <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
           <ErrorBoundary>
-            <ReactMarkdown
-              remarkPlugins={remarkPlugins}
-              rehypePlugins={rehypePlugins}
-              components={renderers}
-              urlTransform={transformLinkUri}
-              disallowedElements={disallowed}
-              // unwrap and render children from invalid markdown
-              unwrapDisallowed={true}
-            >
-              {processedSource}
-            </ReactMarkdown>
+            {truncate ? (
+              <TruncateContext.Provider value={true}>
+                {markdown}
+              </TruncateContext.Provider>
+            ) : (
+              markdown
+            )}
           </ErrorBoundary>
         </HideAnchorsContext.Provider>
       </HelpTextContext.Provider>
@@ -1405,6 +1485,7 @@ const StreamlitMarkdown: FC<Props> = ({
         helpText={helpText}
         unterminatedParsing={unterminatedParsing}
         hideAnchors={hideAnchors}
+        truncate={truncate}
       />
     </StyledStreamlitMarkdown>
   )

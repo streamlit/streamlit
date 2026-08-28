@@ -139,3 +139,18 @@ with st.container(key="heading_icons_alignment"):
         icon="🚀",
         text_alignment="right",
     )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_headings", width=200):
+    st.title(_WRAP_TEXT, wrap=False)
+    st.header(_WRAP_TEXT, wrap=False)
+    st.subheader(_WRAP_TEXT, wrap=False)
+
+with st.container(key="wrap_true_headings", width=200):
+    st.title(_WRAP_TEXT, wrap=True)
+    st.header(_WRAP_TEXT, wrap=True)
+    st.subheader(_WRAP_TEXT, wrap=True)
+
+with st.container(key="wrap_false_heading_extra_lines", width=200):
+    st.title("First line\nSecond line that must not appear", wrap=False)

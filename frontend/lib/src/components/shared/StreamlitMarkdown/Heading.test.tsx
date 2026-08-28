@@ -61,6 +61,139 @@ describe("Heading", () => {
     expect(headingElement).toHaveClass("stHeading")
   })
 
+  it("hides extra body lines when wrap is false", async () => {
+    const props = getHeadingProps({ wrap: false })
+    render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent("hello world")
+    expect(screen.queryByText("this is a new line")).not.toBeInTheDocument()
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.queryByTitle(/this is a new line/)).not.toBeInTheDocument()
+  })
+
+  it("exposes the full heading via a native title when wrap is false", async () => {
+    const props = getHeadingProps({ body: "hello world", wrap: false })
+    render(<Heading {...props} />)
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(await screen.findByTitle("hello world")).toHaveStyle({
+      flex: "1",
+    })
+  })
+
+  it("sets a native title when wrap is false, including when help is set", async () => {
+    const props = getHeadingProps({
+      body: "hello world",
+      wrap: false,
+      help: "help text",
+    })
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByTestId("stTooltipIcon").closest("[title]")).toBeNull()
+  })
+
+  it("clears the native title when wrap becomes true", async () => {
+    const { rerender } = render(
+      <Heading
+        {...getHeadingProps({
+          body: "hello world",
+          wrap: false,
+          help: "help text",
+        })}
+      />
+    )
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+
+    rerender(
+      <Heading
+        {...getHeadingProps({
+          body: "hello world",
+          wrap: true,
+          help: "help text",
+        })}
+      />
+    )
+
+    expect(screen.queryByTitle("hello world")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
+  })
+
+  it("re-attaches the native title when the heading tag changes", async () => {
+    const { rerender } = render(
+      <Heading {...getHeadingProps({ body: "hello world", wrap: false })} />
+    )
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByRole("heading", { level: 1 })).toBeVisible()
+
+    rerender(
+      <Heading
+        {...getHeadingProps({ body: "hello world", wrap: false, tag: "h2" })}
+      />
+    )
+
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByRole("heading", { level: 2 })).toBeVisible()
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["sidebar", IsSidebarContext],
+    ["dialog", IsDialogContext],
+  ])("ellipsizes %s headings when wrap is false", async (_name, Context) => {
+    const props = getHeadingProps({ body: "hello world", wrap: false })
+    render(
+      <Context.Provider value={true}>
+        <Heading {...props} />
+      </Context.Provider>
+    )
+
+    expect(
+      screen.getByTestId("stHeadingWithActionElements")
+    ).toBeInTheDocument()
+    expect(await screen.findByTitle("hello world")).toBeVisible()
+    expect(screen.getByRole("heading")).toHaveStyle({
+      overflow: "hidden",
+      display: "flex",
+    })
+    expect(await screen.findByTitle("hello world")).toHaveStyle({
+      flex: "1",
+    })
+  })
+
+  it.each([
+    ["sidebar", IsSidebarContext],
+    ["dialog", IsDialogContext],
+  ])(
+    "keeps the help icon visible for truncated %s headings",
+    async (_name, Context) => {
+      const props = getHeadingProps({
+        body: "hello world",
+        wrap: false,
+        help: "help text",
+      })
+      render(
+        <Context.Provider value={true}>
+          <Heading {...props} />
+        </Context.Provider>
+      )
+
+      expect(
+        screen.getByTestId("stHeadingWithActionElements")
+      ).toBeInTheDocument()
+      expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
+      expect(await screen.findByTitle("hello world")).toBeVisible()
+      expect(screen.getByTestId("stTooltipIcon").closest("[title]")).toBeNull()
+      expect(screen.getByRole("heading")).toHaveStyle({
+        overflow: "hidden",
+        display: "flex",
+      })
+    }
+  )
+
   it("renders properly without a new line", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)

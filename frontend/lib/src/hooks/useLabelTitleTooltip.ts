@@ -16,6 +16,24 @@
 
 import { RefObject, useEffect, useRef } from "react"
 
+/**
+ * Read plain text from a label, inserting a space where leftover block
+ * elements or hard breaks would otherwise concatenate (`onetwo`). CSS
+ * generated content is not included in `textContent`.
+ */
+function plainTextWithBlockGaps(root: HTMLElement): string {
+  const clone = root.cloneNode(true) as HTMLElement
+  clone.querySelectorAll("br").forEach(br => {
+    br.replaceWith(document.createTextNode(" "))
+  })
+  clone.querySelectorAll("p").forEach((paragraph, index) => {
+    if (index > 0) {
+      paragraph.prepend(document.createTextNode(" "))
+    }
+  })
+  return (clone.textContent ?? "").replace(/\s+/g, " ").trim()
+}
+
 interface LabelTitleTooltipRefs<
   ContainerElement extends HTMLElement,
   LabelElement extends HTMLElement,
@@ -41,7 +59,8 @@ interface LabelTitleTooltipRefs<
  *   `addTitleTooltip` is false, no observer is attached.
  *
  * @param addTitleTooltip Whether to attach the native title tooltip.
- * @param label The raw label source, used to re-sync when it changes.
+ * @param identityKey Value whose change forces a title re-sync. Usually the
+ *   raw label source; headings pass their tag.
  * @returns Refs to attach to the title container and the label text wrapper.
  */
 export function useLabelTitleTooltip<
@@ -49,10 +68,13 @@ export function useLabelTitleTooltip<
   LabelElement extends HTMLElement = HTMLSpanElement,
 >(
   addTitleTooltip: boolean,
-  label: string | null | undefined
+  identityKey: string | null | undefined
 ): LabelTitleTooltipRefs<ContainerElement, LabelElement> {
   const titleRef = useRef<ContainerElement>(null)
   const labelTextRef = useRef<LabelElement>(null)
+  // Skip identityKey in the dependency list when the tooltip is off so
+  // streaming updates on this shared renderer do not re-run a no-op effect.
+  const effectIdentityKey = addTitleTooltip ? identityKey : undefined
 
   useEffect(() => {
     const node = titleRef.current
@@ -66,7 +88,12 @@ export function useLabelTitleTooltip<
     }
 
     const syncTitle = (): void => {
-      const labelText = labelTextRef.current?.textContent ?? ""
+      const labelNode = labelTextRef.current
+      if (!labelNode) {
+        node.removeAttribute("title")
+        return
+      }
+      const labelText = plainTextWithBlockGaps(labelNode)
       if (labelText) {
         node.title = labelText
       } else {
@@ -83,7 +110,7 @@ export function useLabelTitleTooltip<
       characterData: true,
     })
     return () => observer.disconnect()
-  }, [addTitleTooltip, label])
+  }, [addTitleTooltip, effectIdentityKey])
 
   return { titleRef, labelTextRef }
 }

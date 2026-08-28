@@ -99,7 +99,7 @@ class LinkButtonTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("empty", "", r"`key` argument must be non-empty"),
+            ("empty", "", r"Invalid `key` value.*a non-empty string"),
             ("reserved", "$$ID-reserved", r"Keys beginning with \$\$ID are reserved"),
         ]
     )

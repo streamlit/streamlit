@@ -76,8 +76,10 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const { tag, anchor, body, help, hideAnchor, divider, icon } = element
   const isInDialog = useContext(IsDialogContext)
   const flexContext = useContext(FlexContext)
-  // st.header can contain new lines which are just interpreted as new
-  // markdown to be rendered as such.
+  const truncate = element.wrap === false
+  // Heading bodies may contain newlines. Render the first line as the heading
+  // and, when wrapping is enabled, render the remainder as Markdown below it.
+  // With wrap=false the extra lines are dropped so the element stays one line tall.
   const [heading, ...rest] = body.split("\n")
 
   // Render the icon as an inline sibling of the body text instead of
@@ -93,6 +95,8 @@ function Heading(props: HeadingProtoProps): ReactElement {
 
   return (
     <div className="stHeading" data-testid="stHeading">
+      {/* Truncation CSS lives on HeadingWithActionElements. Applying it here
+          would flatten the heading to display:inline and clip help icons. */}
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
         isInDialog={isInDialog}
@@ -105,6 +109,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
           hideAnchor={hideAnchor}
           tag={tag}
           icon={headingIcon}
+          truncate={truncate}
         >
           <RenderedMarkdown
             allowHTML={false}
@@ -113,8 +118,8 @@ function Heading(props: HeadingProtoProps): ReactElement {
             overrideComponents={OVERRIDE_COMPONENTS}
           />
         </HeadingWithActionElements>
-        {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
-        {rest.length > 0 && (
+        {/* wrap=false keeps only the first line; extra body lines would otherwise render as markdown below. */}
+        {!truncate && rest.length > 0 && (
           <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
         )}
       </StyledStreamlitMarkdown>

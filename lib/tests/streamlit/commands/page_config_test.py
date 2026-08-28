@@ -160,7 +160,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert c.get_help_url == "https://get_help.com"
 
     def test_set_page_config_menu_items_empty_string(self):
-        with pytest.raises(StreamlitInvalidURLError):
+        with pytest.raises(StreamlitInvalidURLError, match="mailto:"):
             menu_items = {"report a bug": "", "GET HELP": "", "about": ""}
             st.set_page_config(menu_items=menu_items)
 
