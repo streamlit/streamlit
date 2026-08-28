@@ -442,7 +442,8 @@ class MetricMixin:
                     raise StreamlitAPIException(
                         "Only numeric values are supported for chart data sequence. The "
                         f"value '{val}' is of type {type(val)} and "
-                        "cannot be converted to float."
+                        "cannot be converted to float.",
+                        error_id="metric-chart-data-not-numeric",
                     ) from ex
             if len(prepared_data) > 0:
                 metric_proto.chart_data.extend(prepared_data)

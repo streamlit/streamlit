@@ -303,7 +303,8 @@ class Page:
                 )
             if "/" in self._url_path:
                 raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                    "The URL path cannot contain a nested path (e.g. foo/bar).",
+                    error_id="page-nested-url-path",
                 )
 
             self._can_be_called: bool = False
@@ -313,7 +314,8 @@ class Page:
             page_path = str(page)
             if "\x00" in page_path:
                 raise StreamlitAPIException(
-                    "Unable to create Page. Page paths must not contain null bytes."
+                    "Unable to create Page. Page paths must not contain null bytes.",
+                    error_id="page-path-contains-null-bytes",
                 )
 
             # Reject UNC paths before resolve/is_file can initiate an SMB connection
@@ -322,7 +324,8 @@ class Page:
             # passing an absolute page path is part of the public st.Page contract.
             if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
                 raise StreamlitAPIException(
-                    "Unable to create Page. Network paths are not supported."
+                    "Unable to create Page. Network paths are not supported.",
+                    error_id="page-network-path-not-supported",
                 )
 
         main_path = ctx.pages_manager.main_script_parent
@@ -378,7 +381,8 @@ class Page:
             self._url_path = stripped_url_path
             if "/" in self._url_path:
                 raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                    "The URL path cannot contain a nested path (e.g. foo/bar).",
+                    error_id="page-nested-url-path",
                 )
 
         if self._icon:
@@ -467,7 +471,8 @@ class Page:
         """
         if not self._can_be_called:
             raise StreamlitAPIException(
-                "This page cannot be called directly. Only the page returned from st.navigation can be called once."
+                "This page cannot be called directly. Only the page returned from st.navigation can be called once.",
+                error_id="page-cannot-be-called-directly",
             )
 
         self._can_be_called = False
@@ -545,7 +550,8 @@ def _validate_registered_page(page: Page) -> None:
                 f"registered with `st.navigation` for URL pathname "
                 f"`/{page.url_path}` (`{registered_source}`). Pass the page "
                 "object returned by `st.navigation` or re-create the page "
-                "with the matching source."
+                "with the matching source.",
+                error_id="page-source-mismatch-file",
             )
     elif callable(page._page) and registered_script_path:
         raise StreamlitAPIException(
@@ -553,7 +559,8 @@ def _validate_registered_page(page: Page) -> None:
             f"(`{registered_script_path}`) is registered with `st.navigation` "
             f"for URL pathname `/{page.url_path}`. Pass the page object "
             "returned by `st.navigation` or re-create the page with the "
-            "matching source."
+            "matching source.",
+            error_id="page-source-mismatch-callable",
         )
     # Callable-vs-callable collisions fall through intentionally: PageInfo
     # only stores an empty script_path for callables, so we have no identity

@@ -294,7 +294,8 @@ def require_valid_user_key(key: str) -> None:
         )
     if is_element_id(key):
         raise StreamlitAPIException(
-            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
+            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved.",
+            error_id="reserved-generated-element-id-prefix",
         )
 
 

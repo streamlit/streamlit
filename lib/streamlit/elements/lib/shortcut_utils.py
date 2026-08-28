@@ -114,7 +114,8 @@ def _normalize_key_token(lower_token: str) -> str:
 
     raise StreamlitAPIException(
         "shortcut must include a single character or one of the supported keys "
-        "(e.g. Enter, Space, Tab, Escape)."
+        "(e.g. Enter, Space, Tab, Escape).",
+        error_id="shortcut-missing-character-or-key",
     )
 
 
@@ -150,7 +151,8 @@ def normalize_shortcut(shortcut: str) -> str:
     tokens = [token.strip() for token in shortcut.split("+") if token.strip()]
     if not tokens:
         raise StreamlitAPIException(
-            "The `shortcut` must contain at least one key or modifier."
+            "The `shortcut` must contain at least one key or modifier.",
+            error_id="shortcut-empty",
         )
 
     modifiers: list[str] = []
@@ -166,20 +168,23 @@ def normalize_shortcut(shortcut: str) -> str:
 
         if key is not None:
             raise StreamlitAPIException(
-                "The `shortcut` may only specify a single non-modifier key."
+                "The `shortcut` may only specify a single non-modifier key.",
+                error_id="shortcut-multiple-non-modifier-keys",
             )
 
         normalized_key = _normalize_key_token(lower_token)
         if normalized_key in _RESERVED_KEYS:
             raise StreamlitAPIException(
-                "The `shortcut` cannot use the keys 'C' or 'R', with or without modifiers."
+                "The `shortcut` cannot use the keys 'C' or 'R', with or without modifiers.",
+                error_id="shortcut-reserved-key",
             )
 
         key = normalized_key
 
     if key is None:
         raise StreamlitAPIException(
-            "The `shortcut` must include a non-modifier key such as 'K' or 'Ctrl+K'."
+            "The `shortcut` must include a non-modifier key such as 'K' or 'Ctrl+K'.",
+            error_id="shortcut-missing-non-modifier-key",
         )
 
     normalized_tokens: list[str] = [

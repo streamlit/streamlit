@@ -115,13 +115,17 @@ def _validate_run_config(
     for config_key in validated_config:
         config_option = config._config_options_template.get(config_key)
         if config_option is None:
-            raise StreamlitAPIException(f"Unrecognized config option: {config_key!r}")
+            raise StreamlitAPIException(
+                f"Unrecognized config option: {config_key!r}",
+                error_id="app-run-unrecognized-config-option",
+            )
 
         if config_option.sensitive:
             raise StreamlitAPIException(
                 f"Setting {config_key!r} option using App.run(config=...) is not "
                 "allowed. Set this option in the configuration file or environment "
-                f"variable: {config_option.env_var!r}"
+                f"variable: {config_option.env_var!r}",
+                error_id="app-run-sensitive-config-option",
             )
 
     return validated_config
@@ -584,7 +588,8 @@ class App:
             raise StreamlitAPIException(
                 "A Streamlit server is already running in this process; call "
                 "App.run() only once, and not when the app is also served via "
-                "streamlit run, uvicorn, or mounted on another framework."
+                "streamlit run, uvicorn, or mounted on another framework.",
+                error_id="app-already-running",
             )
 
         # Guard on `sys.argv[0]` representing a script path, not just on

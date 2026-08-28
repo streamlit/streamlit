@@ -225,6 +225,7 @@ class Secrets(Mapping[str, Any]):
                 "Error parsing secrets file at {path}: {error}",
                 path=path,
                 error=str(ex),
+                error_id="failed-parsing-secrets-file",
             ) from ex
 
         return secrets, found_secrets_file
@@ -254,6 +255,7 @@ class Secrets(Mapping[str, Any]):
                     "{sub_folder_path} is not a folder. "
                     "To use directory based secrets, mount every secret in a subfolder under the secret directory",
                     sub_folder_path=sub_folder_path,
+                    error_id="secrets-directory-entry-not-folder",
                 )
             sub_secrets = {}
 
@@ -286,6 +288,7 @@ class Secrets(Mapping[str, Any]):
         raise StreamlitSecretNotFoundError(
             "Invalid secrets path: {path}: path is not a .toml file or a directory",
             path=path,
+            error_id="invalid-secrets-path",
         )
 
     def _parse(self) -> Mapping[str, Any]:
@@ -321,6 +324,7 @@ class Secrets(Mapping[str, Any]):
                 raise StreamlitSecretNotFoundError(
                     "No secrets found. Valid paths for a secrets.toml file or secret directories are: {file_paths}",
                     file_paths=", ".join(file_paths),
+                    error_id="no-secrets-found",
                 )
 
             for k, v in secrets.items():

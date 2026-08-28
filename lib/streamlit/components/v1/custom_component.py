@@ -135,7 +135,8 @@ PyArrow. To do so locally:
 
 `pip install pyarrow`
 
-And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
+And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
+                error_id="custom-component-missing-pyarrow",
             )
 
         check_cache_replay_rules()

@@ -209,7 +209,8 @@ class WriteMixin:
         except TypeError as exc:
             raise StreamlitAPIException(
                 f"The provided input (type: {type(stream)}) cannot be iterated. "
-                "Please make sure that it is a generator, generator function or iterable."
+                "Please make sure that it is a generator, generator function or iterable.",
+                error_id="write-stream-not-iterable",
             ) from exc
 
         # Iterate through the generator and write each chunk to the app
@@ -230,7 +231,8 @@ class WriteMixin:
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent OpenAI update. You might be able to fix this "
                         "by downgrading the OpenAI library or upgrading Streamlit. Also, "
-                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues.",
+                        error_id="write-stream-openai-chat-parse-failed",
                     ) from err
 
             elif type_util.is_openai_response_event(chunk):
@@ -246,7 +248,8 @@ class WriteMixin:
                         "The most likely cause is a change of the event object structure "
                         "due to a recent OpenAI update. You might be able to fix this "
                         "by downgrading the OpenAI library or upgrading Streamlit. Also, "
-                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues.",
+                        error_id="write-stream-openai-response-parse-failed",
                     ) from err
 
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
@@ -259,7 +262,8 @@ class WriteMixin:
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent LangChain update. You might be able to fix this "
                         "by downgrading the LangChain library or upgrading Streamlit. Also, "
-                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues.",
+                        error_id="write-stream-langchain-parse-failed",
                     ) from err
 
             if isinstance(chunk, str):
@@ -451,7 +455,8 @@ class WriteMixin:
                 "Cannot replace a single element with multiple elements.\n\n"
                 "The `write()` method only supports multiple elements when "
                 "inserting elements rather than replacing. That is, only "
-                "when called as `st.write()` or `st.sidebar.write()`."
+                "when called as `st.write()` or `st.sidebar.write()`.",
+                error_id="write-cannot-replace-with-multiple-elements",
             )
 
         def flush_buffer() -> None:

@@ -27,7 +27,7 @@ from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
-from streamlit.errors import LocalizableStreamlitException
+from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -557,6 +557,8 @@ def format_uncaught_exception(exc: BaseException) -> str:
     - missing top-level ``streamlit`` attributes → ``"AttributeError:<attribute>"``
     - ``LocalizableStreamlitException`` with a ``parameter`` kwarg
       → ``"<Type>:<parameter>"``
+    - ``StreamlitAPIException`` with ``error_id`` (when there is no
+      ``parameter``) → ``"<Type>:<error_id>"``
 
     Does not append user values such as widget keys or file paths.
     Enrichment failures are swallowed so telemetry cannot interrupt script
@@ -597,10 +599,14 @@ def format_uncaught_exception(exc: BaseException) -> str:
                 match = _STREAMLIT_ATTRIBUTE_RE.fullmatch(str(exc))
                 if match:
                     return f"{name}:{match.group(1)}"
-        elif isinstance(exc, LocalizableStreamlitException):
-            parameter = exc.exec_kwargs.get("parameter")
-            if isinstance(parameter, str) and parameter:
-                return f"{name}:{parameter}"
+        elif isinstance(exc, StreamlitAPIException):
+            if isinstance(exc, LocalizableStreamlitException):
+                parameter = exc.exec_kwargs.get("parameter")
+                if isinstance(parameter, str) and parameter:
+                    return f"{name}:{parameter}"
+            error_id = exc.error_id
+            if isinstance(error_id, str) and error_id:
+                return f"{name}:{error_id}"
     return name
 
 

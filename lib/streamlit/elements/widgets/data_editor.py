@@ -661,7 +661,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"All column names are required to be unique for usage with data editor. "
             f"The following column names are duplicated: {list(duplicated_columns)}. "
-            f"Please rename the duplicated columns in the provided data."
+            f"Please rename the duplicated columns in the provided data.",
+            error_id="data-editor-duplicate-column-names",
         )
 
     # Check if the column names are not named "_index" and raise an exception if so.
@@ -669,7 +670,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"The column name '{INDEX_IDENTIFIER}' is reserved for the index column "
             f"and can't be used for data columns. Please rename the column in the "
-            f"provided data."
+            f"provided data.",
+            error_id="data-editor-reserved-index-column-name",
         )
 
 
@@ -732,7 +734,8 @@ def _check_type_compatibilities(
                     f"`{column_name}` is not compatible for editing the underlying "
                     f"data type `{column_data_kind}`.\n\nYou have following options to "
                     f"fix this: 1) choose a compatible type 2) disable the column "
-                    f"3) convert the column into a compatible data type."
+                    f"3) convert the column into a compatible data type.",
+                    error_id="data-editor-incompatible-column-type",
                 )
 
 
@@ -1221,7 +1224,8 @@ class DataEditorMixin:
         if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
-                "yet supported by the data editor."
+                "yet supported by the data editor.",
+                error_id="data-editor-unsupported-index-type",
             )
 
         # Check if the column names are valid and unique.

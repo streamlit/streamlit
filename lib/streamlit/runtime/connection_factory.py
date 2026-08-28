@@ -125,14 +125,18 @@ def _create_connection(
 
 def _get_first_party_connection(connection_class: str) -> type[BaseConnection[Any]]:
     if connection_class == _SNOWPARK_CONNECTION_TYPE:
-        raise StreamlitAPIException(_SNOWPARK_CONNECTION_REMOVED_ERROR)
+        raise StreamlitAPIException(
+            _SNOWPARK_CONNECTION_REMOVED_ERROR,
+            error_id="snowpark-connection-removed",
+        )
 
     if connection_class in _FIRST_PARTY_CONNECTIONS:
         return _FIRST_PARTY_CONNECTIONS[connection_class]
 
     raise StreamlitAPIException(
         f"Invalid connection '{connection_class}'. "
-        f"Supported connection classes: {_FIRST_PARTY_CONNECTIONS}"
+        f"Supported connection classes: {_FIRST_PARTY_CONNECTIONS}",
+        error_id="invalid-first-party-connection",
     )
 
 
@@ -431,7 +435,10 @@ def connection_factory(  # type: ignore
         # through to the secrets.toml lookup and raise a confusing "no secrets" error
         # instead of the actionable removal message.
         if name == _SNOWPARK_CONNECTION_TYPE:
-            raise StreamlitAPIException(_SNOWPARK_CONNECTION_REMOVED_ERROR)
+            raise StreamlitAPIException(
+                _SNOWPARK_CONNECTION_REMOVED_ERROR,
+                error_id="snowpark-connection-removed",
+            )
 
         if name in _FIRST_PARTY_CONNECTIONS:
             # We allow users to simply write `st.connection("sql")` instead of

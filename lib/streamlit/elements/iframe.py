@@ -455,7 +455,8 @@ class IframeMixin:
                 UnicodeDecodeError,
             ) as e:
                 raise StreamlitAPIException(
-                    f"Unable to read file '{file_path}': {e}"
+                    f"Unable to read file '{file_path}': {e}",
+                    error_id="iframe-unable-to-read-html-file",
                 ) from e
             return True
         # Non-HTML files: upload to media storage
@@ -464,7 +465,8 @@ class IframeMixin:
                 file_data = f.read()
         except (FileNotFoundError, PermissionError, OSError) as e:
             raise StreamlitAPIException(
-                f"Unable to read file '{file_path}': {e}"
+                f"Unable to read file '{file_path}': {e}",
+                error_id="iframe-unable-to-read-file",
             ) from e
 
         mimetype, _ = mimetypes.guess_type(file_path)

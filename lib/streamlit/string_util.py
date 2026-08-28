@@ -99,7 +99,8 @@ def validate_emoji(maybe_emoji: str | None) -> str:
         return maybe_emoji
     raise StreamlitAPIException(
         f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, '
-        "please use a single character instead."
+        "please use a single character instead.",
+        error_id="invalid-emoji",
     )
 
 
@@ -126,7 +127,8 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is '
             "not a valid Material icon. Please use a Material icon shortcode like "
-            f"**`:material{invisible_white_space}/thumb_up:`**"
+            f"**`:material{invisible_white_space}/thumb_up:`**",
+            error_id="invalid-material-icon",
         )
 
     pack_name, icon_name = icon_match.groups()
@@ -139,7 +141,8 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a '
             "valid Material icon. Please use a Material icon shortcode like "
-            f"**`:material{invisible_white_space}/thumb_up:`**."
+            f"**`:material{invisible_white_space}/thumb_up:`**.",
+            error_id="invalid-material-icon",
         )
 
     return f":{pack_name}/{icon_name}:"

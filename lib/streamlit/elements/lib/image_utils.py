@@ -165,7 +165,8 @@ def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
         )
     if len(shape) == 3 and shape[-1] not in {1, 3, 4}:
         raise StreamlitAPIException(
-            f"Channel can only be 1, 3, or 4 got {shape[-1]}. Shape is {shape}"
+            f"Channel can only be 1, 3, or 4 got {shape[-1]}. Shape is {shape}",
+            error_id="image-invalid-channel-count",
         )
 
     # If there's only one channel, convert is to x, y
@@ -334,7 +335,8 @@ def image_to_url(
             else:
                 raise StreamlitAPIException(
                     'When using `channels="BGR"`, the input image should '
-                    "have exactly 3 color channels"
+                    "have exactly 3 color channels",
+                    error_id="image-bgr-requires-three-channels",
                 )
 
         image_data = _np_array_to_bytes(array=image, output_format=output_format)
@@ -430,7 +432,8 @@ def marshall_images(
 
     if len(captions) != len(images):
         raise StreamlitAPIException(
-            f"Cannot pair {len(captions)} captions with {len(images)} images."
+            f"Cannot pair {len(captions)} captions with {len(images)} images.",
+            error_id="image-caption-count-mismatch",
         )
 
     # Each image in an image list needs to be kept track of at its own coordinates.

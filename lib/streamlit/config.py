@@ -188,7 +188,10 @@ def set_user_option(key: str, value: Any) -> None:
     try:
         opt = _config_options_template[key]
     except KeyError as ke:
-        raise StreamlitAPIException(f"Unrecognized config option: {key}") from ke
+        raise StreamlitAPIException(
+            f"Unrecognized config option: {key}",
+            error_id="unrecognized-config-option",
+        ) from ke
     # Allow e2e tests to set any option
     if opt.scriptable:
         set_option(key, value)
@@ -196,7 +199,8 @@ def set_user_option(key: str, value: Any) -> None:
 
     raise StreamlitAPIException(
         f"{key} cannot be set on the fly. Set as command line option, e.g. "
-        f"streamlit run script.py --{key}, or in config.toml instead."
+        f"streamlit run script.py --{key}, or in config.toml instead.",
+        error_id="config-option-not-scriptable",
     )
 
 

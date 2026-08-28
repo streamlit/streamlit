@@ -353,7 +353,8 @@ def _get_native_row_count(source: DataframeSource, lazy: bool | None) -> int | N
         if lazy is True:
             raise StreamlitAPIException(
                 "`lazy=True` is not supported for this object because Streamlit "
-                "could not determine its row count for lazy loading."
+                "could not determine its row count for lazy loading.",
+                error_id="lazy-could-not-determine-row-count",
             ) from ex
         _LOGGER.info(
             "Could not determine row count for native lazy dataframe source; "
@@ -365,7 +366,8 @@ def _get_native_row_count(source: DataframeSource, lazy: bool | None) -> int | N
     if row_count is None and lazy is True:
         raise StreamlitAPIException(
             "`lazy=True` is not supported for this object because the first "
-            "lazy dataframe version requires a known row count."
+            "lazy dataframe version requires a known row count.",
+            error_id="lazy-requires-known-row-count",
         )
     return row_count
 
@@ -493,7 +495,8 @@ def resolve_lazy_source(
                 "`lazy=True` is not supported for this object because no lazy "
                 "adapter is available for it yet. Remove `lazy=True` to use the "
                 "default preview behavior, or convert it to a pandas/Polars "
-                "dataframe first."
+                "dataframe first.",
+                error_id="lazy-no-adapter-available",
             )
         return None
 
