@@ -1345,17 +1345,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.stopAutoRerun messages. The server sends this when
-   * it evicts fragments (e.g. a nested ``run_every`` fragment whose ancestor
-   * stopped rendering it), so we cancel their pending auto-rerun timers and
-   * drop any of their nodes still in the element tree.
+   * Handle server eviction of fragments by cancelling their timers and pruning
+   * their nodes.
    *
-   * Dropping the nodes here is what keeps an evicted fragment from lingering on
-   * screen. The end-of-run `clearStaleNodes` is skipped when a run finishes as
-   * `FINISHED_EARLY_FOR_RERUN`, and the runs that follow are scoped to other
-   * fragments, so the evicted subtree is never revisited. Since its auto-rerun
-   * is cancelled just above, those nodes would otherwise stay frozen on screen
-   * showing stale content until a full rerun.
+   * Dropping the nodes keeps an evicted fragment from lingering on screen; its
+   * timer is cancelled here too, so without this the nodes would sit frozen
+   * showing stale content. See `ClearEvictedFragmentNodesVisitor` for why
+   * end-of-run `clearStaleNodes` cannot reach them.
    */
   handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
     stopAutoRerun.fragmentIds.forEach(fragmentId => {

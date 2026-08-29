@@ -390,11 +390,9 @@ export class AppRoot {
   /**
    * Remove nodes belonging to fragments the server has evicted.
    *
-   * Upholds the invariant that an evicted fragment owns no nodes in the element
-   * tree, which `clearStaleNodes` cannot guarantee on its own: a fragment rerun
-   * that ends as `FINISHED_EARLY_FOR_RERUN` skips stale-node cleanup, and later
-   * runs are scoped to other fragments, so the evicted subtree is never
-   * revisited.
+   * Enforces the invariant that an evicted fragment owns no nodes in the element
+   * tree; see `ClearEvictedFragmentNodesVisitor` for why `clearStaleNodes`
+   * cannot guarantee this.
    */
   public clearEvictedFragmentNodes(
     evictedFragmentIds: ReadonlySet<string>
@@ -407,6 +405,12 @@ export class AppRoot {
     const newChildren = this.root.children.map(node =>
       this.ensureBlockNode(node.accept(visitor))
     )
+
+    // No matching fragment was in the tree. Returning the same AppRoot keeps
+    // `state.elements` referentially stable so `App` does not re-render.
+    if (newChildren.every((child, i) => child === this.root.children[i])) {
+      return this
+    }
 
     return new AppRoot(
       this.mainScriptHash,

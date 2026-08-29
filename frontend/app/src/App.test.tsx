@@ -4101,31 +4101,61 @@ describe("App", () => {
         )
       })
 
-      const sendFragmentText = (
+      // Text elements make the removal observable in the DOM; widget elements
+      // carry ids, which is what `removeInactiveWidgetState` acts on. The "$$ID"
+      // prefix is required by `isValidElementId`
+      // (GENERATED_ELEMENT_ID_PREFIX in ~lib/util/utils).
+      const evictedWidgetId = "$$ID-evicted-widget"
+      const survivingWidgetId = "$$ID-surviving-widget"
+
+      const sendFragmentDelta = (
         fragmentId: string,
-        body: string,
+        newElement: Record<string, unknown>,
         deltaPath: number[]
       ): void => {
         sendForwardMessage(
           "delta",
-          {
-            type: "newElement",
-            fragmentId,
-            newElement: { type: "text", text: { body, help: "" } },
-          },
+          { type: "newElement", fragmentId, newElement },
           { deltaPath, activeScriptHash: "hash1" }
         )
       }
 
       act(() => {
-        sendFragmentText("fragmentA", "from evicted fragment", [0, 0])
-        sendFragmentText("fragmentB", "from surviving fragment", [0, 1])
+        sendFragmentDelta(
+          "fragmentA",
+          { type: "text", text: { body: "from evicted fragment", help: "" } },
+          [0, 0]
+        )
+        sendFragmentDelta(
+          "fragmentA",
+          {
+            type: "textInput",
+            textInput: { id: evictedWidgetId, label: "evicted widget" },
+          },
+          [0, 1]
+        )
+        sendFragmentDelta(
+          "fragmentB",
+          {
+            type: "text",
+            text: { body: "from surviving fragment", help: "" },
+          },
+          [0, 2]
+        )
+        sendFragmentDelta(
+          "fragmentB",
+          {
+            type: "textInput",
+            textInput: { id: survivingWidgetId, label: "surviving widget" },
+          },
+          [0, 3]
+        )
       })
 
       await waitFor(() => {
-        expect(screen.getByText("from evicted fragment")).toBeInTheDocument()
+        expect(screen.getByText("from evicted fragment")).toBeVisible()
       })
-      expect(screen.getByText("from surviving fragment")).toBeInTheDocument()
+      expect(screen.getByText("from surviving fragment")).toBeVisible()
 
       // Pruning must be paired with widget-state cleanup, as it is on every
       // other pruning path. Otherwise an evicted fragment's widget values keep
@@ -4145,8 +4175,14 @@ describe("App", () => {
         ).not.toBeInTheDocument()
       })
       // An unrelated fragment's elements must survive.
-      expect(screen.getByText("from surviving fragment")).toBeInTheDocument()
+      expect(screen.getByText("from surviving fragment")).toBeVisible()
+
+      // Assert the active-id set itself, not just that cleanup ran: a call made
+      // with the pre-prune set would still have removed nothing.
       expect(removeInactive).toHaveBeenCalled()
+      const activeIds = removeInactive.mock.calls.at(-1)?.[0] as Set<string>
+      expect(activeIds.has(evictedWidgetId)).toBe(false)
+      expect(activeIds.has(survivingWidgetId)).toBe(true)
     })
   })
 

@@ -69,6 +69,38 @@ describe("ClearEvictedFragmentNodesVisitor", () => {
     expect(noFragment.accept(visitor)).toBe(noFragment)
   })
 
+  it("preserves a toast emitted by an evicted fragment (issue #7740)", () => {
+    // A fragment's toast carries that fragment's id. If the eviction lands in
+    // the same batch as the toast delta, pruning the node here would drop the
+    // notification before the Toast component registers it with the queue.
+    const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
+    const toast = new ElementNode(
+      new Element({ toast: { body: "Toast survives eviction" } }),
+      ForwardMsgMetadata.create(),
+      SCRIPT_RUN_ID,
+      FAKE_SCRIPT_HASH,
+      "nested"
+    )
+
+    expect(toast.accept(visitor)).toBe(toast)
+  })
+
+  it("keeps an evicted fragment's toast while removing its other elements", () => {
+    const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
+    const toast = new ElementNode(
+      new Element({ toast: { body: "Toast survives eviction" } }),
+      ForwardMsgMetadata.create(),
+      SCRIPT_RUN_ID,
+      FAKE_SCRIPT_HASH,
+      "nested"
+    )
+    const parent = blockNode([toast, elementNode("gone", "nested")], "outer")
+
+    const result = parent.accept(visitor) as BlockNode
+
+    expect(result.children).toEqual([toast])
+  })
+
   it("removes a block belonging to an evicted fragment, with its subtree", () => {
     const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
     const nestedBlock = blockNode([elementNode("inner")], "nested")
@@ -89,7 +121,7 @@ describe("ClearEvictedFragmentNodesVisitor", () => {
     expect(result).not.toBe(parent)
     expect(result.children).toHaveLength(1)
     expect(result.children[0]).toBe(kept)
-    // Identity of the surviving parent's own metadata is preserved.
+    // The surviving parent keeps its fragmentId and scriptRunId.
     expect(result.fragmentId).toBe("outer")
     expect(result.scriptRunId).toBe(SCRIPT_RUN_ID)
   })

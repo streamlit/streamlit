@@ -19,28 +19,13 @@ import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
- * Visitor that removes nodes belonging to fragments the server has evicted.
+ * Removes nodes whose `fragmentId` the server has evicted.
  *
- * Enforces the invariant that a fragment the server has dropped owns no nodes
- * in the element tree. The server reports evicted fragments explicitly (see
- * `clear_stale_descendants`, which reports every evicted fragment and not only
- * those with a `run_every` timer), so this does not depend on inferring
- * staleness from script run ids.
- *
- * `ClearStaleNodeVisitor` cannot be relied on for this: it prunes a nested
- * fragment only during a run that both writes the ancestor's subtree and
- * completes successfully. A fragment rerun that ends as
- * `FINISHED_EARLY_FOR_RERUN` skips that cleanup entirely, and the runs that
- * follow are scoped to other fragments, so nothing revisits the evicted
- * fragment's subtree. Its auto-rerun is cancelled at the same time, leaving the
- * nodes frozen on screen showing stale content until a full rerun.
- *
- * Usage:
- * ```typescript
- * const visitor = new ClearEvictedFragmentNodesVisitor(evictedFragmentIds)
- * const newNode = node.accept(visitor)
- * // newNode will be undefined if the node should be filtered out
- * ```
+ * Evicted ids arrive in `stopAutoRerun` (every evicted fragment, not only those
+ * with a `run_every` timer). `ClearStaleNodeVisitor` cannot cover this: it only
+ * prunes during a successful ancestor run, and `FINISHED_EARLY_FOR_RERUN` skips
+ * that cleanup. Later runs are scoped to other fragments, so the evicted
+ * subtree would stay on screen until a full rerun.
  */
 export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
   AppNode | undefined
@@ -56,6 +41,8 @@ export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
   }
 
   visitBlockNode(node: BlockNode): AppNode | undefined {
+    // Drop the subtree: descendants belong to this fragment, or to nested
+    // fragments the server also reports as evicted.
     if (this.isEvicted(node.fragmentId)) {
       return undefined
     }
@@ -90,6 +77,17 @@ export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
   }
 
   visitElementNode(node: ElementNode): AppNode | undefined {
+    // Toasts are fire-and-forget: the frontend toast queue owns their lifetime,
+    // not the element tree. A toast emitted from a fragment carries that
+    // fragment's id, so an eviction applied in the same batch as the toast delta
+    // would remove the node before the Toast component registers it with the
+    // queue, silently dropping the notification (issue #7740). The node renders
+    // nothing on its own, so keeping it is safe. `ClearStaleNodeVisitor` makes
+    // the same exception.
+    if (node.element.type === "toast") {
+      return node
+    }
+
     return this.isEvicted(node.fragmentId) ? undefined : node
   }
 
@@ -99,15 +97,14 @@ export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
       element => element.accept(this) as ElementNode | undefined
     )
 
-    // Performance optimization: nothing in this subtree was evicted, so keep
-    // the same node. `updateTransientNodes` always allocates a fresh array, so
-    // this has to compare contents rather than the array reference. Checked
-    // before the collapse cases below, which would otherwise replace an
-    // untouched TransientNode with its anchor.
+    // Keep the same node when nothing in this subtree was evicted; a fresh node
+    // would re-render it. `updateTransientNodes` either keeps an element
+    // identically or drops it, so an unchanged length means nothing was
+    // removed. This must precede the collapse cases below, which would
+    // otherwise swap an untouched node for its anchor.
     if (
       anchorNode === node.anchor &&
-      transientNodes.length === node.transientNodes.length &&
-      transientNodes.every((element, i) => element === node.transientNodes[i])
+      transientNodes.length === node.transientNodes.length
     ) {
       return node
     }
