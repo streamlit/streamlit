@@ -95,6 +95,7 @@ runner's system Python.
 | `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
 | `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
 | `python-bare-executions.yml` | Push/PR to `develop` | Bare Python execution tests |
+| `windows-meta-skill-discovery.yml` | Push/PR (path-filtered: meta-skill, discovery tests, `skills.py`, packaging) | Windows `windows-latest` job for meta-skill `discover.py` (Python 3.12, pytest only; no `make` / frontend) |
 | `flaky-test-verification.yml` | `flaky-verify` label | Runs E2E tests multiple times to verify flakiness fixes |
 | `flaky-js-test-verification.yml` | `flaky-verify-js` label | Runs JS unit tests multiple times to verify flakiness fixes |
 

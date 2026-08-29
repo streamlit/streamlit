@@ -1,7 +1,8 @@
 ---
 name: developing-with-streamlit
 description: "Use for ALL Streamlit tasks: creating, editing, debugging, beautifying, styling, theming, optimizing, or deploying Streamlit apps. Also custom components, st.components.v2, HTML/JS/CSS work. Discovers and loads version-matched reference docs from the user's installed Streamlit (>=1.57). Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, CCv2, session state, performance, cache, fragment, slow rerun, deploy."
-allowed-tools: Bash(python ${CLAUDE_SKILL_DIR}/scripts/discover.py:*) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/discover.py:*)
+license: Apache-2.0
+allowed-tools: Read Glob Bash(py -3 ${CLAUDE_SKILL_DIR}/scripts/discover.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/discover.py *) Bash(python ${CLAUDE_SKILL_DIR}/scripts/discover.py *)
 ---
 
 # Developing with Streamlit
@@ -10,15 +11,55 @@ Streamlit (>=1.57) ships detailed reference documentation for building Streamlit
 
 ## Usage
 
-Run the discovery script with the user's project directory:
+Run the discovery script with the user's project directory. Quote paths. If `${CLAUDE_PROJECT_DIR}` is left unexpanded (shown as a literal), the script warns and uses the project cwd.
 
-```bash
-python <SKILL_DIR>/scripts/discover.py --project-dir <USER_PROJECT_DIR>
+Windows (try first):
+
+```text
+py -3 "${CLAUDE_SKILL_DIR}/scripts/discover.py" --project-dir "${CLAUDE_PROJECT_DIR}"
 ```
 
-The script prints either:
+POSIX (and Windows fallback):
 
-- **A path on stdout** (exit 0) — the bundled `SKILL.md`. Read it; it points into `references/`.
-- **An `ERROR:` block on stderr** (non-zero exit). Follow the printed instructions and re-run.
+```text
+python3 "${CLAUDE_SKILL_DIR}/scripts/discover.py" --project-dir "${CLAUDE_PROJECT_DIR}"
+python "${CLAUDE_SKILL_DIR}/scripts/discover.py" --project-dir "${CLAUDE_PROJECT_DIR}"
+```
 
-`<SKILL_DIR>` is the directory containing this file; `<USER_PROJECT_DIR>` is the absolute path to the user's project. Passing `--project-dir` matters because the script resolves `.venv`, `../.venv`, `Pipfile`, `poetry.lock`, `pdm.lock`, and `uv.lock` relative to it.
+- Exit 0: stdout is one path — the bundled `SKILL.md`. **Read** that path; it points into `references/`.
+- Non-zero: follow [Manual discovery](#manual-discovery). Do not install or change packages unless the user asked.
+
+`<SKILL_DIR>` is the directory containing this file. Passing `--project-dir` matters because the script resolves `.venv` / `venv`, lockfiles, and environment prefixes relative to it.
+
+## Manual discovery
+
+Read-only. Stop at the first existing file. **One physical line** each.
+
+### 1. Project interpreter
+
+Windows PowerShell:
+
+```powershell
+& ".\.venv\Scripts\python.exe" -c "import importlib.util, pathlib, sys; sys.path=[p for p in sys.path if p and pathlib.Path(p).resolve()!=pathlib.Path('.').resolve()]; s=importlib.util.find_spec('streamlit'); p=(pathlib.Path(s.origin).resolve().parent/'.agents'/'skills'/'developing-with-streamlit'/'SKILL.md') if (s and s.origin and s.submodule_search_locations and pathlib.Path(s.origin).name=='__init__.py') else None; print(p if p is not None and p.is_file() else '')"
+```
+
+POSIX:
+
+```bash
+".venv/bin/python" -c "import importlib.util, pathlib, sys; sys.path=[p for p in sys.path if p and pathlib.Path(p).resolve()!=pathlib.Path('.').resolve()]; s=importlib.util.find_spec('streamlit'); p=(pathlib.Path(s.origin).resolve().parent/'.agents'/'skills'/'developing-with-streamlit'/'SKILL.md') if (s and s.origin and s.submodule_search_locations and pathlib.Path(s.origin).name=='__init__.py') else None; print(p if p is not None and p.is_file() else '')"
+```
+
+Empty print / missing venv → step 2. `py -3` only if the venv interpreter is missing. Optional: `"<that-python>" -m pip show streamlit` and append `/streamlit/.agents/skills/developing-with-streamlit/SKILL.md` to `Location:`.
+
+### 2. Glob (project and parent only)
+
+Do not glob `$HOME` — it is slow, can pick the wrong install, and many agent globs skip gitignored `.venv`. Prefer a hit under the project `.venv`/`venv`. Search tools may need to include ignored files.
+
+- `**/site-packages/streamlit/.agents/skills/developing-with-streamlit/SKILL.md`
+- `**/Lib/site-packages/streamlit/.agents/skills/developing-with-streamlit/SKILL.md`
+
+### 3. Docs fallback
+
+https://docs.streamlit.io/llms-full.txt
+
+Do not change dependencies unless the user asked.

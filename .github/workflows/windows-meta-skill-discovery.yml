@@ -1,0 +1,56 @@
+name: Windows Meta-Skill Discovery
+
+on:
+  push:
+    branches:
+      - "develop"
+    paths:
+      - "lib/streamlit/.agents/**"
+      - "lib/tests/streamlit/web/meta_skill_discover_test.py"
+      - "lib/streamlit/web/skills.py"
+      - "lib/pyproject.toml"
+      - ".github/workflows/windows-meta-skill-discovery.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "lib/streamlit/.agents/**"
+      - "lib/tests/streamlit/web/meta_skill_discover_test.py"
+      - "lib/streamlit/web/skills.py"
+      - "lib/pyproject.toml"
+      - ".github/workflows/windows-meta-skill-discovery.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-windows-meta-skill-discovery
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  meta-skill-discover:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest and editable Streamlit
+        run: |
+          Copy-Item README.md lib/README.md
+          python -m pip install pytest
+          python -m pip install -e lib
+
+      - name: Run meta-skill discovery tests
+        run: |
+          python -m pytest -c lib/pyproject.toml lib/tests/streamlit/web/meta_skill_discover_test.py -o addopts= -q
