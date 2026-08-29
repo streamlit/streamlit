@@ -1175,6 +1175,8 @@ def _get_color_encoding(
                 title=" ",
             )
 
+        # Chart color also accepts a column name and a list of colors, which
+        # StreamlitInvalidColorError does not document.
         raise StreamlitAPIException(
             f"""
 This does not look like a valid color argument: `{color_from_user}`.

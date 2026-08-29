@@ -146,8 +146,7 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
         return _srt_to_vtt(content_string)
     raise StreamlitValueError(
         "subtitles",
-        ["VTT", "SRT"],
-        detail="The provided string neither matches valid VTT nor SRT format.",
+        ["VTT-formatted text", "SRT-formatted text"],
     )
 
 

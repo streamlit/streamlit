@@ -150,8 +150,7 @@ def validate_label_visibility(label_visibility: str | None) -> None:
     """Raise if ``label_visibility`` is not a supported value."""
     if label_visibility not in {"visible", "hidden", "collapsed"}:
         raise errors.StreamlitValueError(
-            "label_visibility",
-            ["'visible'", "'hidden'", "'collapsed'"],
+            "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
         )
 
 

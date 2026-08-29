@@ -501,7 +501,7 @@ def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
         raise StreamlitInvalidParameterTypeError(
             parameter,
             type(value).__name__,
-            ["int", "float"],
+            ["int", "float", "Decimal"],
             detail="Convert the value to a number type.",
         ) from ex
 

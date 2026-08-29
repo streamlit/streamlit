@@ -216,7 +216,7 @@ class VideoTest(DeltaGeneratorTestCase):
 
         assert exc_info.value.error_id == "video-failed-processing-subtitle"
         assert "'default'" in str(exc_info.value)
-        assert "neither matches valid VTT nor SRT" in str(exc_info.value)
+        assert "VTT-formatted text" in str(exc_info.value)
 
     def test_invalid_subtitle_in_dict_raises(self):
         """An invalid subtitle in a dict names the failing track."""
@@ -234,4 +234,4 @@ class VideoTest(DeltaGeneratorTestCase):
             )
 
         assert exc_info.value.error_id == "video-failed-processing-subtitle"
-        assert "neither matches valid VTT nor SRT" in str(exc_info.value)
+        assert "VTT-formatted text" in str(exc_info.value)

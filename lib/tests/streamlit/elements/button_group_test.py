@@ -883,9 +883,26 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert c.default[:] == expected
         assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
 
-    @parameterized.expand(get_command_matrix([]))
+    @parameterized.expand(
+        [
+            (
+                lambda *args, **kwargs: st.pills("label", *args, **kwargs),
+                "pills",
+            ),
+            (
+                lambda *args, **kwargs: st.segmented_control("label", *args, **kwargs),
+                "segmented_control",
+            ),
+            (
+                lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
+                    st._main, *args, **kwargs
+                ),
+                "segmented_control",
+            ),
+        ]
+    )
     def test_default_for_single_select_must_be_single_value(
-        self, command: Callable[..., None]
+        self, command: Callable[..., None], expected_command: str
     ):
         """Test that passing multiple values as default for single select raises an
         exception."""
@@ -895,11 +912,9 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 default=["Coffee", "Tea"],
                 selection_mode="single",
             )
-        assert "must be a single value when `selection_mode='single'`." in str(
-            exception.value
-        )
-        assert "`st.pills`" in str(exception.value) or "`st.segmented_control`" in str(
-            exception.value
+        assert str(exception.value) == (
+            f"The default argument to `st.{expected_command}` must be a single "
+            "value when `selection_mode='single'`."
         )
 
     @parameterized.expand(

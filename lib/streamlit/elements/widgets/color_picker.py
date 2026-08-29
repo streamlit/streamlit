@@ -306,10 +306,11 @@ class ColorPickerMixin:
                 "value",
                 type(value).__name__,
                 ["str"],
-                detail="Expects a hex string like '#00FFAA' or '#000'.",
+                detail="Pass a hex string like `'#00FFAA'` or `'#000'`.",
             )
 
-        # validate the value and expects a hex string
+        # StreamlitInvalidColorError also documents RGB sequences, which
+        # st.color_picker does not accept.
         if not _HEX_COLOR_RE.match(value):
             raise StreamlitAPIException(
                 f"'{value}' is not a valid hex code for colors. Valid ones are like "

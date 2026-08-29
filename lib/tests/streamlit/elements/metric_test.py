@@ -384,7 +384,7 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert exc.value.exec_kwargs["parameter"] == "value"
         assert "Invalid `value` type" in str(exc.value)
-        assert "Expected one of: int, float." in str(exc.value)
+        assert "Expected one of: int, float, Decimal." in str(exc.value)
 
     def test_invalid_delta(self):
         with pytest.raises(StreamlitInvalidParameterTypeError) as exc:

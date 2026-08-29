@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.shared.app_utils import expect_exception
@@ -26,5 +29,10 @@ def test_error_handling_messages(app: Page) -> None:
 
     # Markdown-rendered messages drop literal backticks (`css` becomes <code>).
     # The provided-type clause is omitted because it is PosixPath vs WindowsPath.
-    expect_exception(app, "Invalid css type. Expected one of: str, None.")
-    expect_exception(app, "Pass a string path or glob.")
+    expect_exception(
+        app,
+        re.compile(
+            r"Invalid css type\. Expected one of: str, None\..*"
+            r"Pass a string path or glob\."
+        ),
+    )

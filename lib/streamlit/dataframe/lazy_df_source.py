@@ -417,7 +417,7 @@ def resolve_lazy_source(
         if lazy is True:
             raise StreamlitIncompatibleParametersError(
                 "lazy=True",
-                "on_select",
+                "on_select!='ignore'",
                 explanation=(
                     "Lazy dataframes cannot use position-based selection in this "
                     'version. Set `on_select="ignore"` or remove `lazy=True`.'
