@@ -4092,7 +4092,9 @@ describe("App", () => {
       expect(idsAfterStop).not.toContain("fragmentA")
       expect(idsAfterStop.every(id => id === "fragmentB")).toBe(true)
     })
+  })
 
+  describe("App.handleStopAutoRerun", () => {
     it("drops the evicted fragment's elements on a stopAutoRerun message", async () => {
       renderApp(getProps())
       act(() => {
