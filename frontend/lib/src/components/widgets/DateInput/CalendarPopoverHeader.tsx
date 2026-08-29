@@ -28,6 +28,7 @@ import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import { ArrowBack, ArrowForward } from "@emotion-icons/material-rounded"
 import {
   CalendarDate,
+  DateValue,
   endOfMonth,
   startOfMonth,
   toCalendar,
@@ -188,13 +189,18 @@ type CalendarHeaderState =
  *
  * See https://github.com/streamlit/streamlit/issues/16686.
  *
- * Keys are year numbers, which is safe only because the bounds are converted
- * into the focused date's calendar first: the visitor's locale picks the
- * calendar system, so `minValue`/`maxValue` arrive Gregorian while `focusedDate`
- * may be Buddhist or Persian. React Aria keys by index to survive era resets in
- * calendars like the Japanese; that can't reach us, because the locale comes
- * from `window.navigator.language` (see `LibConfigContext`), which never carries
- * `-u-ca-japanese`.
+ * Keys are year numbers. `minValue`/`maxValue` must therefore be converted into
+ * `focusedDate`'s calendar before their years are read — the visitor's locale
+ * picks the calendar system, so the bounds arrive Gregorian while `focusedDate`
+ * may be Buddhist or Persian.
+ *
+ * React Aria keys by index instead, which also survives Japanese era resets
+ * (Heisei 31 -> Reiwa 1), where converted year numbers stop increasing. Numeric
+ * keys are safe here because Streamlit never selects that calendar: the locale
+ * is `window.navigator.language` (see `LibConfigContext`), and browsers do not
+ * put `-u-ca-japanese` on it. `getSafeLocale` would preserve such an extension
+ * if one ever arrived, so the year window is clamped to a non-empty range below
+ * rather than trusting the bounds to be ordered.
  */
 function useYearPickerItems(state: CalendarHeaderState): {
   items: HeaderPickerItem[]
@@ -214,25 +220,33 @@ function useYearPickerItems(state: CalendarHeaderState): {
 
   /** Reads a bound's year in the focused date's calendar system. */
   const boundYear = (
-    bound: typeof state.minValue,
+    bound: DateValue | null | undefined,
     fallback: number
   ): number =>
     bound ? toCalendar(toCalendarDate(bound), calendar).year : fallback
 
+  // The fallbacks split the window evenly and are defensive — Streamlit's
+  // backend always sends both bounds. The anchor below mirrors React Aria's
+  // off-center window, [focused - 10, focused + 9], hence the different halves.
   const halfWindow = Math.floor(VISIBLE_YEARS / 2)
-  // The fallbacks are defensive: Streamlit's backend always sends both bounds.
   const minYear = boundYear(state.minValue, focusedYear - halfWindow)
   const maxYear = boundYear(state.maxValue, focusedYear + halfWindow)
 
   // Anchor a VISIBLE_YEARS window on the focused year, then slide it inside
-  // [minYear, maxYear]. React Aria centers the window as
-  // [focused - 10, focused + 9]; mirror that.
+  // [minYear, maxYear].
   const anchorEnd = Math.min(
     focusedYear + Math.ceil(VISIBLE_YEARS / 2) - 1,
     maxYear
   )
   const startYear = Math.max(anchorEnd - VISIBLE_YEARS + 1, minYear)
-  const endYear = Math.min(startYear + VISIBLE_YEARS - 1, maxYear)
+  // Never let the range invert: `maxYear < startYear` would emit no options at
+  // all, blanking the trigger — the failure this hook exists to prevent. Only
+  // reachable if the bounds' years stop increasing after conversion, as they do
+  // across a Japanese era reset.
+  const endYear = Math.max(
+    Math.min(startYear + VISIBLE_YEARS - 1, maxYear),
+    startYear
+  )
 
   const items: HeaderPickerItem[] = []
   for (let year = startYear; year <= endYear; year++) {
@@ -242,12 +256,11 @@ function useYearPickerItems(state: CalendarHeaderState): {
     })
   }
 
-  // The window always contains the focused year when `focusedDate` is in
-  // bounds. It can fall outside for a single render, while React Aria corrects
-  // a controlled `focusedValue` through `onFocusChange`; clamp so the trigger
-  // shows a year rather than going blank. Clamping rather than widening keeps
-  // the list bounded — a focused year far outside the bounds would otherwise
-  // stretch it to hundreds of options.
+  // Clamp the selected key into the window so the trigger never goes blank.
+  // `focusedDate` is in bounds once React Aria has applied `onFocusChange`, but
+  // can sit outside it for a single render of a controlled `focusedValue`.
+  // Widening the list to reach that year instead would let a far-out-of-range
+  // focus stretch it to hundreds of options.
   return {
     items,
     value: Math.min(Math.max(focusedYear, startYear), endYear),

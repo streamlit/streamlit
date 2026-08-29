@@ -3136,10 +3136,10 @@ describe("DateInput year picker with a constrained range", () => {
           button => button.getAttribute("aria-haspopup") === "listbox"
         )[1]
 
-      // Exact localized year strings break with ICU data changes, so compare
-      // digits against the grid's accessible name — React Aria formats that
-      // from `focusedDate` independently of this hook, so it witnesses the year
-      // actually on screen.
+      // Localized year strings vary with browser locale data, so compare the
+      // numeric year in the trigger against the grid's accessible name — React
+      // Aria formats that from `focusedDate` independently of this hook, so it
+      // witnesses the year actually on screen.
       const triggerText = yearTrigger.textContent
       const triggerYear = triggerText?.match(/\p{Nd}+/gu)?.at(-1)
       expect(triggerYear).toBeTruthy()
