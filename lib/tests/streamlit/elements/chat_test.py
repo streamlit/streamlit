@@ -257,7 +257,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         assert (
             str(ex.value)
-            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'. Got 'invalid'."
         )
 
     def test_file_type(self):

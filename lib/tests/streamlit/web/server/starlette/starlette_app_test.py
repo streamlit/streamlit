@@ -35,7 +35,7 @@ from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
@@ -1930,7 +1930,9 @@ class TestAppRun:
         script.write_text("import streamlit as st\n")
         app = App(script)
 
-        with pytest.raises(StreamlitAPIException, match="config must be a mapping"):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match=r"Invalid `config` type"
+        ):
             app.run(config=["server.port"])  # type: ignore[arg-type]
 
 

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import ast
 import re
-from collections import Counter
 from functools import cache
 from pathlib import Path
 
@@ -27,31 +26,6 @@ import pytest
 from streamlit import errors
 
 _KEBAB_CASE_ERROR_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-
-# Bare ``StreamlitAPIException`` constructions without ``error_id`` are pending
-# migration to a specialized type in ``errors.py``. Do not tag them with
-# ``error_id``; migrate them in a follow-up instead.
-_UNTAGGED_STREAMLIT_API_EXCEPTION_SITES: dict[str, int] = {
-    "components/v2/__init__.py": 1,
-    "connections/sql_connection.py": 2,
-    "dataframe/lazy_df_source.py": 3,
-    "elements/arrow.py": 3,
-    "elements/deck_gl_json_chart.py": 2,
-    "elements/lib/built_in_chart_utils.py": 2,
-    "elements/markdown.py": 1,
-    "elements/pdf.py": 1,
-    "elements/pyplot.py": 1,
-    "elements/vega_charts.py": 3,
-    "elements/widgets/button_group.py": 1,
-    "elements/widgets/color_picker.py": 2,
-    "elements/widgets/pagination.py": 2,
-    "elements/widgets/slider.py": 1,
-    "elements/write.py": 1,
-    "runtime/connection_factory.py": 1,
-    "runtime/fragment.py": 1,
-    "runtime/theme_util.py": 2,
-    "web/server/starlette/starlette_app.py": 1,
-}
 
 
 def _constructor_name(func: ast.expr) -> str | None:
@@ -199,21 +173,15 @@ def test_streamlit_api_exception_error_ids_are_kebab_case() -> None:
     assert invalid == [], "error_id values must be kebab-case:\n" + "\n".join(invalid)
 
 
-def test_untagged_api_exceptions_are_pending_specialized_types() -> None:
-    """Untagged ``StreamlitAPIException`` sites must stay on the specialized-type follow-up list.
-
-    New one-off raises should pass ``error_id``. Sites in the allowlist should be
-    migrated to a specialized type in ``errors.py`` rather than tagged.
-    """
-    untagged: Counter[str] = Counter()
-    for rel, node in _iter_streamlit_api_exception_calls():
-        if not any(kw.arg == "error_id" for kw in node.keywords):
-            untagged[rel] += 1
-    assert dict(untagged) == _UNTAGGED_STREAMLIT_API_EXCEPTION_SITES, (
-        "Untagged StreamlitAPIException sites changed. Pass error_id on one-off "
-        "raises, or add the site to _UNTAGGED_STREAMLIT_API_EXCEPTION_SITES if it "
-        "should become a specialized type in errors.py. "
-        f"Found: {dict(untagged)}"
+def test_streamlit_api_exceptions_have_error_id() -> None:
+    """Every production ``StreamlitAPIException(...)`` call must pass ``error_id``."""
+    untagged = [
+        f"{rel}:{node.lineno}"
+        for rel, node in _iter_streamlit_api_exception_calls()
+        if not any(kw.arg == "error_id" for kw in node.keywords)
+    ]
+    assert untagged == [], (
+        "Every StreamlitAPIException must pass error_id=...:\n" + "\n".join(untagged)
     )
 
 

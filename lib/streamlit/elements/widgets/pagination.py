@@ -263,7 +263,8 @@ class PaginationMixin:
             or num_pages < 1
         ):
             raise StreamlitAPIException(
-                f"`num_pages` must be an integer of at least 1. Got {num_pages}."
+                f"`num_pages` must be an integer of at least 1. Got {num_pages}.",
+                error_id="pagination-invalid-num-pages",
             )
 
         # bool is a subclass of int, so True would otherwise be treated as page 1.
@@ -284,7 +285,8 @@ class PaginationMixin:
         ):
             raise StreamlitAPIException(
                 f"`max_visible_pages` must be a non-negative integer or None. "
-                f"Got {max_visible_pages}."
+                f"Got {max_visible_pages}.",
+                error_id="pagination-invalid-max-visible-pages",
             )
 
         check_widget_policies(self.dg, key, on_change, default_value=default)

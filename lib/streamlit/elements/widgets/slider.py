@@ -45,7 +45,6 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitJSNumberBoundsError,
@@ -1116,7 +1115,7 @@ class SliderMixin:
             prepared_value = [min_value, max_value]
 
         # Bounds checks. JSNumber produces human-readable exceptions that
-        # we simply re-package as StreamlitAPIExceptions.
+        # we re-raise as StreamlitJSNumberBoundsError.
         # (We check `min_value` and `max_value` here; `value` and `step` are
         # already known to be in the [min_value, max_value] range.)
         # Timelike bounds are checked further down instead, after the conversion to
@@ -1183,7 +1182,7 @@ class SliderMixin:
                 ("`max_value`", max_value),
             ):
                 if abs(micros) > JSNumber.MAX_SAFE_INTEGER:
-                    raise StreamlitAPIException(
+                    raise StreamlitJSNumberBoundsError(
                         f"{name} is too far from 1970 for Streamlit to represent "
                         "exactly. Use a value between "
                         f"{_MIN_SAFE_DAY:%Y-%m-%d} and "

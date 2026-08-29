@@ -230,12 +230,18 @@ def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
         if clamp:
             data = np.clip(image, 0, 1.0)
         elif np.amin(image) < 0.0 or np.amax(image) > 1.0:
-            raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
+            raise StreamlitAPIException(
+                "Data is outside [0.0, 1.0] and clamp is not set.",
+                error_id="image-out-of-range",
+            )
         data = data * 255  # noqa: PLR6104
     elif clamp:
         data = np.clip(image, 0, 255)
     elif np.amin(image) < 0 or np.amax(image) > 255:
-        raise RuntimeError("Data is outside [0, 255] and clamp is not set.")
+        raise StreamlitAPIException(
+            "Data is outside [0, 255] and clamp is not set.",
+            error_id="image-out-of-range",
+        )
     return data
 
 

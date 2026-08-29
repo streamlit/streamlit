@@ -32,7 +32,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 
 from streamlit import config, dataframe_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitIncompatibleParametersError
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -329,7 +329,8 @@ def _validate_lazy_columns(data: object) -> None:
         raise StreamlitAPIException(
             "`lazy=True` is not supported for dataframes with multi-level "
             "(`MultiIndex`) column headers. Flatten the column headers or set "
-            "`lazy=False`."
+            "`lazy=False`.",
+            error_id="lazy-multiindex-columns",
         )
 
 
@@ -387,9 +388,12 @@ def resolve_lazy_source(
 
     Raises
     ------
+    StreamlitIncompatibleParametersError
+        If ``lazy=True`` is requested with an incompatible option such as
+        ``on_select``.
     StreamlitAPIException
-        If ``lazy=True`` is requested for an input or option combination that
-        cannot be served lazily.
+        If ``lazy=True`` is requested for an object Streamlit cannot serve
+        lazily, including ``pandas.Styler`` and MultiIndex columns.
     """
     if data is None:
         # An empty dataframe is always rendered eagerly.
@@ -404,16 +408,20 @@ def resolve_lazy_source(
             raise StreamlitAPIException(
                 "`lazy=True` is not supported for `pandas.Styler` objects. "
                 "Styler output is tied to the fully materialized table. Remove "
-                "`lazy=True` or pass the underlying dataframe instead."
+                "`lazy=True` or pass the underlying dataframe instead.",
+                error_id="lazy-styler-not-supported",
             )
         return None
 
     if is_selection_activated:
         if lazy is True:
-            raise StreamlitAPIException(
-                "`lazy=True` is not supported together with `on_select`. "
-                "Lazy dataframes cannot use position-based selection in this "
-                'version. Set `on_select="ignore"` or remove `lazy=True`.'
+            raise StreamlitIncompatibleParametersError(
+                "lazy=True",
+                "on_select",
+                explanation=(
+                    "Lazy dataframes cannot use position-based selection in this "
+                    'version. Set `on_select="ignore"` or remove `lazy=True`.'
+                ),
             )
         # For lazy=None we fall back to eager rendering to preserve the existing
         # selection behavior.

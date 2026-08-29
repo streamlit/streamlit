@@ -20,7 +20,10 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.user_info import UserInfoProxy
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -76,7 +79,7 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         )
         assert el.width_config.use_stretch is True
 
-        with pytest.raises(TypeError):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.json(
                 {
                     "level1": {"level2": {"level3": {"a": "b"}}, "c": "d"},

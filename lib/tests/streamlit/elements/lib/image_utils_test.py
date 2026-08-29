@@ -166,8 +166,8 @@ def test_clip_image_int_without_clamp_valid_range() -> None:
     ],
 )
 def test_clip_image_invalid_without_clamp(array: np.ndarray, error_substr: str) -> None:
-    """Test _clip_image raises error for out-of-range values without clamping."""
-    with pytest.raises(RuntimeError) as exc:
+    """Test _clip_image raises StreamlitAPIException for out-of-range values without clamping."""
+    with pytest.raises(StreamlitAPIException) as exc:
         _clip_image(array, clamp=False)
     assert error_substr in str(exc.value)
 

@@ -933,7 +933,8 @@ class DataframeUtilTest(unittest.TestCase):
 
         if metadata.expected_data_format == dataframe_util.DataFormat.UNKNOWN:
             with pytest.raises(
-                ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+                StreamlitDataframeConversionError,
+                match=r"Unsupported input data format: DataFormat.UNKNOWN",
             ):
                 dataframe_util.convert_pandas_df_to_data_format(
                     converted_df, metadata.expected_data_format
@@ -976,7 +977,8 @@ class DataframeUtilTest(unittest.TestCase):
         passed an unknown data format.
         """
         with pytest.raises(
-            ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+            StreamlitDataframeConversionError,
+            match=r"Unsupported input data format: DataFormat.UNKNOWN",
         ):
             dataframe_util.convert_pandas_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), dataframe_util.DataFormat.UNKNOWN
@@ -1299,7 +1301,7 @@ def test_convert_pandas_df_to_data_format_requires_single_column_for_series_like
 ) -> None:
     """Series-like targets reject multi-column frames."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util.convert_pandas_df_to_data_format(df, fmt)
 
 
@@ -1636,9 +1638,9 @@ def test_downcast_large_list_schema_replaces_large_list() -> None:
 
 
 def test_pandas_df_to_series_raises_on_multi_column() -> None:
-    """``_pandas_df_to_series`` raises ValueError on multi-column inputs."""
+    """``_pandas_df_to_series`` raises StreamlitDataframeConversionError on multi-column inputs."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util._pandas_df_to_series(df)
 
 

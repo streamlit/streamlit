@@ -275,7 +275,7 @@ class SliderTest(DeltaGeneratorTestCase):
         in a JavaScript number. Past MAX_SAFE_INTEGER the value cannot round-trip, so
         it has to fail rather than silently shift to a different instant.
         """
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider(
                 "Label", min_value=min_value, max_value=max_value, value=min_value
             )
@@ -385,11 +385,11 @@ class SliderTest(DeltaGeneratorTestCase):
         just_above = datetime.combine(_MAX_SAFE_DAY + timedelta(days=1), time(23, 59))
         in_range = datetime.combine(_MIN_SAFE_DAY, time(12))
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", min_value=just_below, max_value=in_range, value=in_range)
         assert "`min_value` is too far from 1970" in str(exc.value)
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", min_value=in_range, max_value=just_above, value=in_range)
         assert "`max_value` is too far from 1970" in str(exc.value)
 
@@ -427,7 +427,7 @@ class SliderTest(DeltaGeneratorTestCase):
         surfacing as a bare ``OverflowError``. It should report the representable range
         instead.
         """
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", value=value)
         assert "too far from 1970" in str(exc.value)
 

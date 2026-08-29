@@ -35,7 +35,11 @@ from streamlit.elements.deck_gl_json_chart import (
     _get_pydeck_width,
     parse_selection_mode,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -221,11 +225,11 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
     def test_selection_mode_set(self):
         """
-        Test that it throws an StreamlitAPIException when a set is given for
+        Test that it throws an StreamlitInvalidParameterTypeError when a set is given for
         selection_mode
         """
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -236,7 +240,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
                 selection_mode={"multi-object"},
             )
 
-        assert "Invalid selection mode: {'multi-object'}." in str(e.value)
+        assert "Invalid `selection_mode` type" in str(e.value)
 
     @patch_config_options({"mapbox.token": "MOCK_CONFIG_KEY"})
     def test_mapbox_token_config(self):
@@ -727,14 +731,14 @@ class ParseSelectionModeTest(DeltaGeneratorTestCase):
         assert "Invalid `selection_mode` value" in str(e.value)
 
     def test_set_selection_mode_raises_exception(self):
-        """Test that a set of selection modes raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that a set of selection modes raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             parse_selection_mode({"single-object", "multi-object"})
         assert "Selection mode must be a single value" in str(e.value)
 
     def test_list_selection_mode_raises_exception(self):
-        """Test that a list of selection modes raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that a list of selection modes raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             parse_selection_mode(["single-object"])
         assert "Selection mode must be a single value" in str(e.value)
 

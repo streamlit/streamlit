@@ -145,7 +145,10 @@ reStructuredText directives. Follow these guidelines:
 
 User-facing API errors raised from `st.*` commands belong in
 `streamlit.errors`. Prefer existing reusable exception types over raising a
-generic `StreamlitAPIException` with a one-off message.
+generic `StreamlitAPIException` with a one-off message. Do not raise native
+`ValueError`, `TypeError`, or `RuntimeError` for user-facing `st.*`
+validation. Optional-dependency import failures may stay native
+(`st.connection` `ModuleNotFoundError`, `st.pyplot` matplotlib `ImportError`).
 
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits. When a bare
@@ -215,13 +218,14 @@ generic `StreamlitAPIException` with a one-off message.
     worded for widget options, not tab labels)
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
+  - `StreamlitDataframeConversionError` (value cannot be converted to a
+    DataFrame, Arrow table, Series, or single-column list)
 
 Reserve bare `StreamlitAPIException` for one-off cases that no shared type
 covers and that users are expected to hit uncommonly (serialization failures
-and similar). Always pass `error_id` at those remaining sites. Do not tag
-sites in `_UNTAGGED_STREAMLIT_API_EXCEPTION_SITES` in
-`lib/tests/streamlit/errors_test.py`; those await a specialized-type
-migration — update the allowlist when migrating them.
+and similar). Always pass `error_id` at those remaining sites. The inventory
+test in `lib/tests/streamlit/errors_test.py` fails if any production
+`StreamlitAPIException(...)` omits `error_id`.
 
 ## Theming and Layout
 
