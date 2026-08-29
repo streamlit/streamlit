@@ -330,7 +330,8 @@ def test_resolve_selection_lazy_true_raises() -> None:
     """``lazy=True`` raises when selections are activated."""
     df = pd.DataFrame({"a": np.arange(FORCED_LAZY_MIN_ROWS + 1)})
     with pytest.raises(
-        StreamlitIncompatibleParametersError, match="on_select!='ignore'"
+        StreamlitIncompatibleParametersError,
+        match=r"`on_select` cannot be used together",
     ):
         resolve_lazy_source(df, True, is_selection_activated=True)
 

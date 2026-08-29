@@ -309,9 +309,9 @@ class ColorPickerMixin:
                 detail="Pass a hex string like `'#00FFAA'` or `'#000'`.",
             )
 
-        # StreamlitInvalidColorError also documents RGB sequences, which
-        # st.color_picker does not accept.
         if not _HEX_COLOR_RE.match(value):
+            # Not StreamlitInvalidColorError: its message documents RGB
+            # sequences, which st.color_picker does not accept.
             raise StreamlitAPIException(
                 f"'{value}' is not a valid hex code for colors. Valid ones are like "
                 "'#00FFAA' or '#000'.",
