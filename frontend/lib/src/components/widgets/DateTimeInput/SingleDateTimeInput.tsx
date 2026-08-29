@@ -212,9 +212,11 @@ function SingleDateTimeInput({
     setDisplayValue(value)
     setPendingTime(null)
     // A clear ends the interaction, so the dedup memory goes with it: re-entering
-    // the value that was just submitted has to commit again. In practice the
-    // clear also changes `value`, which resets this in the block above, but that
-    // is a coincidence of the two paths rather than something to rely on.
+    // the value that was just submitted has to commit again. The block above does
+    // not cover this — on Enter-to-submit the clear overwrites the pending value
+    // with the default before `value` ever becomes the datetime, so
+    // `prevValue !== value` never fires — and the popover stays open, so the
+    // open-effect reset does not run either.
     lastCommittedRef.current = undefined
     shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
       document.activeElement
@@ -616,9 +618,7 @@ function SingleDateTimeInput({
       if (e.key !== "Tab" || !isOpen) return
       const wrapper = triggerRef.current
       if (!wrapper) return
-      const segments = wrapper.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
+      const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
       const isLeavingField =
         (!e.shiftKey && e.target === segments[segments.length - 1]) ||
         (e.shiftKey && e.target === segments[0])
@@ -895,6 +895,11 @@ function SingleDateTimeInput({
                 </StyledPopoverTimeLabel>
                 <I18nProvider locale="en-US">
                   <StyledPopoverTimeField
+                    // Remount on form clear, like the inline field. Segments the
+                    // user typed but did not complete are RE-SEEDed only when the
+                    // controlled value changes, so this does not depend on
+                    // `popoverTimeValue` happening to differ across the clear.
+                    key={formResetKey}
                     aria-labelledby={`${id}-time-label`}
                     aria-describedby={error ? errorId : undefined}
                     isInvalid={!!error}

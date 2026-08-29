@@ -2743,6 +2743,62 @@ describe("DateTimeInput widget", () => {
       })
     })
 
+    it("forgets an incomplete popover time across a form clear", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+
+      // A complete value inline, which populates the popover time field...
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.keyboard("1200")
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // ...then clear one of its segments, which is neither cleared nor complete,
+      // so React Aria reports nothing and `pendingTime` never learns about it.
+      const popover = within(
+        screen.getByTestId("stDateTimeInputPopoverTime")
+      ).getAllByRole("spinbutton")
+      await clearSegment(user, popover[1])
+      expect(popover[0]).toHaveTextContent("12")
+
+      // Enter keeps the popover mounted across the clear, so the leftover hour
+      // must not survive to be merged into a date picked afterwards.
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+      spy.mockClear()
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T00:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T12:00"],
+        expect.anything()
+      )
+    })
+
     it("merges a lone popover hour as the top of that hour", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
