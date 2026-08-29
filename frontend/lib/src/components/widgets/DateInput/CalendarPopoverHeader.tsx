@@ -194,13 +194,15 @@ type CalendarHeaderState =
  * picks the calendar system, so the bounds arrive Gregorian while `focusedDate`
  * may be Buddhist or Persian.
  *
- * React Aria keys by index instead, which also survives Japanese era resets
- * (Heisei 31 -> Reiwa 1), where converted year numbers stop increasing. Numeric
- * keys are safe here because Streamlit never selects that calendar: the locale
- * is `window.navigator.language` (see `LibConfigContext`), and browsers do not
- * put `-u-ca-japanese` on it. `getSafeLocale` would preserve such an extension
- * if one ever arrived, so the year window is clamped to a non-empty range below
- * rather than trusting the bounds to be ordered.
+ * React Aria keys by index instead, so its list survives a Japanese era reset
+ * (Heisei 31 -> Reiwa 1), where converted year numbers stop increasing.
+ * Numeric keys cover the calendars Streamlit actually selects:
+ *
+ * - The locale is `window.navigator.language` (see `LibConfigContext`); browsers
+ *   do not put `-u-ca-japanese` on it.
+ * - `getSafeLocale` would preserve an explicit `-u-ca-*` extension if one arrived,
+ *   so the year window below is clamped to a non-empty range rather than assuming
+ *   converted bounds stay ordered.
  */
 function useYearPickerItems(state: CalendarHeaderState): {
   items: HeaderPickerItem[]
@@ -225,9 +227,9 @@ function useYearPickerItems(state: CalendarHeaderState): {
   ): number =>
     bound ? toCalendar(toCalendarDate(bound), calendar).year : fallback
 
-  // The fallbacks split the window evenly and are defensive — Streamlit's
-  // backend always sends both bounds. The anchor below mirrors React Aria's
-  // off-center window, [focused - 10, focused + 9], hence the different halves.
+  // Streamlit's backend always sends both bounds; these fallbacks only apply if
+  // a bound is missing. They are then clipped to React Aria's off-center window,
+  // [focused - 10, focused + 9], below.
   const halfWindow = Math.floor(VISIBLE_YEARS / 2)
   const minYear = boundYear(state.minValue, focusedYear - halfWindow)
   const maxYear = boundYear(state.maxValue, focusedYear + halfWindow)
@@ -239,10 +241,9 @@ function useYearPickerItems(state: CalendarHeaderState): {
     maxYear
   )
   const startYear = Math.max(anchorEnd - VISIBLE_YEARS + 1, minYear)
-  // Never let the range invert: `maxYear < startYear` would emit no options at
-  // all, blanking the trigger — the failure this hook exists to prevent. Only
-  // reachable if the bounds' years stop increasing after conversion, as they do
-  // across a Japanese era reset.
+  // Keep the range non-empty: an inverted range would emit no options and blank
+  // the trigger, the failure this hook exists to prevent. Only reachable if the
+  // converted bounds stop increasing, as they do across a Japanese era reset.
   const endYear = Math.max(
     Math.min(startYear + VISIBLE_YEARS - 1, maxYear),
     startYear

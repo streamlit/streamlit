@@ -3110,9 +3110,17 @@ describe("DateInput year picker with a constrained range", () => {
   // The visitor's locale chooses the calendar system, so `focusedDate` may be
   // Buddhist or Persian while the min/max props stay Gregorian. Reading years
   // off both without converting left the trigger blank. See #16686.
-  it.each(["th", "fa-IR"])(
-    "shows the focused year in a non-Gregorian calendar — %s",
-    async locale => {
+  it.each([
+    // Buddhist months align with Gregorian ones, so only January and February
+    // 2568 (= 2025) hold a selectable day, exactly as in the Gregorian case.
+    { locale: "th", enabledMonths: 2 },
+    // Persian months straddle Gregorian ones: the bounds fall inside Solar
+    // Hijri 1403, spanning its months 5-11. A different count from `th` is what
+    // proves the month bounds are evaluated in the visitor's calendar.
+    { locale: "fa-IR", enabledMonths: 7 },
+  ])(
+    "shows the focused year and reachable months in a non-Gregorian calendar — $locale",
+    async ({ locale, enabledMonths }) => {
       const user = userEvent.setup()
       renderWithContexts(
         <DateInput
@@ -3130,11 +3138,9 @@ describe("DateInput year picker with a constrained range", () => {
       // month is the first picker trigger, year the second.
       await user.click(within(region).getAllByRole("spinbutton")[0])
       const calendar = await screen.findByTestId("stDateInputCalendar")
-      const yearTrigger = within(calendar)
+      const [monthTrigger, yearTrigger] = within(calendar)
         .getAllByRole("button")
-        .filter(
-          button => button.getAttribute("aria-haspopup") === "listbox"
-        )[1]
+        .filter(button => button.getAttribute("aria-haspopup") === "listbox")
 
       // Localized year strings vary with browser locale data, so compare the
       // numeric year in the trigger against the grid's accessible name — React
@@ -3146,6 +3152,23 @@ describe("DateInput year picker with a constrained range", () => {
       expect(within(calendar).getByRole("grid")).toHaveAccessibleName(
         new RegExp(String(triggerYear))
       )
+
+      // Month availability is compared on absolute days rather than converted
+      // year numbers, so it needs its own non-Gregorian coverage: a month-off
+      // result would otherwise be silent. Counts rather than localized month
+      // names, which shift with locale data.
+      await user.click(monthTrigger)
+      const monthOptions = await screen.findAllByRole("option")
+      const reachable = monthOptions.filter(
+        option => option.getAttribute("aria-disabled") !== "true"
+      )
+      expect(monthOptions).toHaveLength(12)
+      expect(reachable).toHaveLength(enabledMonths)
+      // The month on screen must be one the user can still choose.
+      expect(reachable.map(option => option.textContent)).toContain(
+        monthTrigger.textContent
+      )
+      await user.keyboard("{Escape}")
 
       await user.click(yearTrigger)
       const options = (await screen.findAllByRole("option")).map(
